@@ -18,6 +18,7 @@ import qs.modules.ii.background.widgets
 import qs.modules.ii.background.widgets.clock
 import qs.modules.ii.background.widgets.weather
 import qs.modules.ii.background.widgets.media
+import qs.modules.ii.background.widgets.images
 
 Variants {
     id: root
@@ -276,6 +277,16 @@ Variants {
                                 mediaTimer.running = true
                             })
                         }
+                    }
+                }
+                FadeLoader {
+                    shown: Config.options.background.widgets.images.enable
+                    sourceComponent: ImageConverterWidget {
+                        screenWidth:        bgRoot.screen.width
+                        screenHeight:       bgRoot.screen.height
+                        scaledScreenWidth:  bgRoot.screen.width
+                        scaledScreenHeight: bgRoot.screen.height
+                        wallpaperScale:     1
                     }
                 }
             }

@@ -657,6 +657,22 @@ ContentPage {
         }
 
         ContentSection {
+            icon: "image"
+            shape: MaterialShape.Shape.Flower 
+            title: Translation.tr("Widget: Image Converter")
+
+            ConfigSwitch {
+                Layout.fillWidth: true
+                buttonIcon: "check"
+                text: Translation.tr("Enable")
+                checked: Config.options.background.widgets.images.enable
+                onCheckedChanged: {
+                    Config.options.background.widgets.images.enable = checked;
+                }
+            }
+        }
+
+        ContentSection {
             icon: "music_note"
             shape: MaterialShape.Shape.Cookie4Sided
             title: Translation.tr("Widget: Music")
