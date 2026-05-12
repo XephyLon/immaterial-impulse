@@ -205,6 +205,36 @@ ContentPage {
                         }
                     }
                 }
+                ConfigRow {
+                    uniform: true
+                    MaterialTextArea {
+                        Layout.fillWidth: true
+                        placeholderText: Translation.tr("Apps")
+                        text: Config.options.search.prefix.app
+                        wrapMode: TextEdit.Wrap
+                        onTextChanged: {
+                            Config.options.search.prefix.app = text;
+                        }
+                    }
+                    MaterialTextArea {
+                        Layout.fillWidth: true
+                        placeholderText: Translation.tr("Keybinds")
+                        text: Config.options.search.prefix.keybinds
+                        wrapMode: TextEdit.Wrap
+                        onTextChanged: {
+                            Config.options.search.prefix.keybinds = text;
+                        }
+                    }
+                    MaterialTextArea {
+                        Layout.fillWidth: true
+                        placeholderText: Translation.tr("Math")
+                        text: Config.options.search.prefix.math
+                        wrapMode: TextEdit.Wrap
+                        onTextChanged: {
+                            Config.options.search.prefix.math = text;
+                        }
+                    }
+                }
             }
             ContentSubsection {
                 title: Translation.tr("Web search")

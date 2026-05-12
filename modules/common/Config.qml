@@ -513,6 +513,7 @@ Singleton {
                     property string app: ">"
                     property string clipboard: ";"
                     property string emojis: ":"
+                    property string keybinds: "<"
                     property string symbols: "."
                     property string math: "="
                     property string shellCommand: "$"

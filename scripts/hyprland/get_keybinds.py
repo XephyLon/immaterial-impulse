@@ -1,222 +1,210 @@
-#!/usr/bin/env -S\_/bin/sh\_-c\_"source\_\$(eval\_echo\_\$ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate&&exec\_python\_-E\_"\$0"\_"\$@""
+#!/usr/bin/env python3
 import argparse
 import re
 import os
-from os.path import expandvars as os_expandvars
-from typing import Dict, List
+import json
+from typing import Dict, List, Optional
 
-TITLE_REGEX = "#+!"
-HIDE_COMMENT = "[hidden]"
-MOD_SEPARATORS = ['+', ' ']
-COMMENT_BIND_PATTERN = "#/#"
+HIDE_MARKERS = ["[hidden]", "# [hidden]"]
 
-parser = argparse.ArgumentParser(description='Hyprland keybind reader')
-parser.add_argument('--path', type=str, default="$HOME/.config/hypr/hyprland.conf", help='path to keybind file (sourcing isn\'t supported)')
+parser = argparse.ArgumentParser(description='Hyprland Lua keybind reader')
+parser.add_argument('--path', type=str, default="$HOME/.config/hypr/hyprland/keybinds.lua")
 args = parser.parse_args()
+
 content_lines = []
 reading_line = 0
 
-# Little Parser made for hyprland keybindings conf file
-Variables: Dict[str, str] = {}
-
 
 class KeyBinding(dict):
-    def __init__(self, mods, key, dispatcher, params, comment) -> None:
-        self["mods"] = mods
-        self["key"] = key
+    def __init__(self, mods, key, dispatcher, params, comment):
+        self["mods"]       = mods
+        self["key"]        = key
         self["dispatcher"] = dispatcher
-        self["params"] = params
-        self["comment"] = comment
+        self["params"]     = params
+        self["comment"]    = comment
+
 
 class Section(dict):
-    def __init__(self, children, keybinds, name) -> None:
+    def __init__(self, children, keybinds, name):
         self["children"] = children
         self["keybinds"] = keybinds
-        self["name"] = name
+        self["name"]     = name
 
 
 def read_content(path: str) -> str:
-    if (not os.access(os.path.expanduser(os.path.expandvars(path)), os.R_OK)):
-        return ("error")
-    with open(os.path.expanduser(os.path.expandvars(path)), "r") as file:
-        return file.read()
+    expanded = os.path.expanduser(os.path.expandvars(path))
+    if not os.access(expanded, os.R_OK):
+        return "error"
+    with open(expanded, "r") as f:
+        return f.read()
 
+
+def parse_key_string(key_str: str):
+    """Parse 'SUPER + SHIFT + Q' into (['SUPER', 'SHIFT'], 'Q')"""
+    known_mods = {"SUPER", "SHIFT", "CTRL", "ALT", "META", "SUPER_L", "SUPER_R"}
+    parts = [p.strip() for p in key_str.split("+")]
+    mods, key = [], ""
+    for p in parts:
+        if p.upper() in known_mods:
+            mods.append(p)
+        else:
+            key = p
+    return mods, key
 
 def autogenerate_comment(dispatcher: str, params: str = "") -> str:
-    match dispatcher:
-
-        case "resizewindow":
-            return "Resize window"
-
-        case "movewindow":
-            if(params == ""):
-                return "Move window"
-            else:
-                return "Window: move in {} direction".format({
-                    "l": "left",
-                    "r": "right",
-                    "u": "up",
-                    "d": "down",
-                }.get(params, "null"))
-
-        case "pin":
-            return "Window: pin (show on all workspaces)"
-
-        case "splitratio":
-            return "Window split ratio {}".format(params)
-
-        case "togglefloating":
-            return "Float/unfloat window"
-
-        case "resizeactive":
-            return "Resize window by {}".format(params)
-
-        case "killactive":
-            return "Close window"
-
-        case "fullscreen":
-            return "Toggle {}".format(
-                {
-                    "0": "fullscreen",
-                    "1": "maximization",
-                    "2": "fullscreen on Hyprland's side",
-                }.get(params, "null")
-            )
-
-        case "fakefullscreen":
-            return "Toggle fake fullscreen"
-
-        case "workspace":
-            if params == "+1":
-                return "Workspace: focus right"
-            elif params == "-1":
-                return "Workspace: focus left"
-            return "Focus workspace {}".format(params)
-
-        case "movefocus":
-            return "Window: move focus {}".format(
-                {
-                    "l": "left",
-                    "r": "right",
-                    "u": "up",
-                    "d": "down",
-                }.get(params, "null")
-            )
-
-        case "swapwindow":
-            return "Window: swap in {} direction".format(
-                {
-                    "l": "left",
-                    "r": "right",
-                    "u": "up",
-                    "d": "down",
-                }.get(params, "null")
-            )
-
-        case "movetoworkspace":
-            if params == "+1":
-                return "Window: move to right workspace (non-silent)"
-            elif params == "-1":
-                return "Window: move to left workspace (non-silent)"
-            return "Window: move to workspace {} (non-silent)".format(params)
-
-        case "movetoworkspacesilent":
-            if params == "+1":
-                return "Window: move to right workspace"
-            elif params == "-1":
-                return "Window: move to right workspace"
-            return "Window: move to workspace {}".format(params)
-
-        case "togglespecialworkspace":
-            return "Workspace: toggle special"
-
-        case "exec":
-            return "Execute: {}".format(params)
-
-        case _:
+    d = dispatcher.lower()
+    if "exec_cmd" in d or "exec" in d:
+        # Si contiene variables Lua, no generar comentario
+        if any(x in params for x in ["qsIsAlive", "qsIpcCall", "qsScripts", "hyprScripts", "grimhyprctl", "mediaNextCommand", ".."]):
             return ""
+        return "Execute: {}".format(params[:60] + "..." if len(params) > 60 else params)
 
-def get_keybind_at_line(line_number, line_start = 0):
-    global content_lines
-    line = content_lines[line_number]
-    _, keys = line.split("=", 1)
-    keys, *comment = keys.split("#", 1)
+def is_hidden(line: str) -> bool:
+    for marker in HIDE_MARKERS:
+        if marker in line:
+            return True
+    return False
 
-    mods, key, dispatcher, *params = list(map(str.strip, keys.split(",", 4)))
-    params = "".join(map(str.strip, params))
 
-    # Remove empty spaces
-    comment = list(map(str.strip, comment))
-    # Add comment if it exists, else generate it
-    if comment:
-        comment = comment[0]
-        if comment.startswith("[hidden]"):
-            return None
+def parse_lua_bind(line: str, override_comment: str = "") -> Optional[KeyBinding]:
+    """
+    Handles:
+      hl.bind("SUPER + Q", hl.dsp.window.close(), {description = "Close"})
+      hl.bind("SUPER + Q", function() ... end, {description = "..."})
+    """
+    if is_hidden(line):
+        return None
+
+    # Must start with hl.bind
+    m = re.match(r'\s*hl\.bind\s*\(\s*"([^"]+)"\s*,\s*(.*)', line, re.DOTALL)
+    if not m:
+        return None
+
+    key_str = m.group(1).strip()
+    rest    = m.group(2)
+
+    # Extract description from options table
+    desc_match = re.search(r'description\s*=\s*"([^"]+)"', rest)
+    comment    = override_comment or (desc_match.group(1) if desc_match else "")
+
+    if is_hidden(rest) or is_hidden(comment):
+        return None
+
+    # Extract dispatcher name
+    disp_match = re.match(r'(hl\.dsp\.[a-zA-Z_.]+)', rest)
+    if disp_match:
+        dispatcher = disp_match.group(1)
+        # Extract params inside dispatcher call parens
+        params_match = re.search(r'hl\.dsp\.[a-zA-Z_.]+\(([^)]*)\)', rest)
+        params = params_match.group(1).strip() if params_match else ""
+    elif rest.strip().startswith("function"):
+        dispatcher = "function"
+        params     = ""
     else:
+        dispatcher = rest.split(",")[0].strip()
+        params     = ""
+
+    if not comment:
         comment = autogenerate_comment(dispatcher, params)
 
-    if mods:
-        modstring = mods + MOD_SEPARATORS[0] # Add separator at end to ensure last mod is read
-        mods = []
-        p = 0
-        for index, char in enumerate(modstring):
-            if(char in MOD_SEPARATORS):
-                if(index - p > 1):
-                    mods.append(modstring[p:index])
-                p = index+1
-    else:
-        mods = []
+    if not comment:
+        return None  # Skip binds with no useful description
 
+    mods, key = parse_key_string(key_str)
     return KeyBinding(mods, key, dispatcher, params, comment)
 
-def get_binds_recursive(current_content, scope):
-    global content_lines
-    global reading_line
-    # print("get_binds_recursive({0}, {1}) [@L{2}]".format(current_content, scope, reading_line + 1))
-    while reading_line < len(content_lines): # TODO: Adjust condition
+
+def get_binds_recursive(current_content: Section, scope: int) -> Section:
+    global content_lines, reading_line
+
+    while reading_line < len(content_lines):
         line = content_lines[reading_line]
-        heading_search_result = re.search(TITLE_REGEX, line)
-        # print("Read line {0}: {1}\tisHeading: {2}".format(reading_line + 1, content_lines[reading_line], "[{0}, {1}, {2}]".format(heading_search_result.start(), heading_search_result.start() == 0, ((heading_search_result != None) and (heading_search_result.start() == 0))) if heading_search_result != None else "No"))
-        if ((heading_search_result != None) and (heading_search_result.start() == 0)): # Found title
-            # Determine scope
-            heading_scope = line.find('!')
-            # Lower? Return
-            if(heading_scope <= scope):
+
+        # ── Section headings ──────────────────────────────────────────
+        # --##! Title  (scope 2)
+        # --###! Title (scope 3)
+        heading_match = re.match(r'^(-+#+)!\s*(.*)', line)
+        if heading_match:
+            heading_scope = heading_match.group(1).count("#")
+            section_name  = heading_match.group(2).strip()
+            if heading_scope <= scope:
                 reading_line -= 1
                 return current_content
-
-            section_name = line[(heading_scope+1):].strip()
-            # print("[[ Found h{0} at line {1} ]] {2}".format(heading_scope, reading_line+1, content_lines[reading_line]))
             reading_line += 1
-            current_content["children"].append(get_binds_recursive(Section([], [], section_name), heading_scope))
+            current_content["children"].append(
+                get_binds_recursive(Section([], [], section_name), heading_scope)
+            )
+            reading_line += 1
+            continue
 
-        elif line.startswith(COMMENT_BIND_PATTERN):
-            keybind = get_keybind_at_line(reading_line, line_start=len(COMMENT_BIND_PATTERN))
-            if(keybind != None):
-                current_content["keybinds"].append(keybind)
+        # ── Special comment bind: --#/# hl.bind(...) ─────────────────
+        # Used for loop-generated binds that need a custom label
+        # e.g.: --#/# bind = SUPER + ←/↑/→/↓,, -- Focus in direction
+        comment_bind_match = re.match(r'^--#/#\s*(.*)', line)
+        if comment_bind_match:
+            rest = comment_bind_match.group(1).strip()
+            # It might be a descriptive comment like "bind = SUPER + ←, -- Focus left"
+            # Extract the comment after "--"
+            comment_part = ""
+            if " -- " in rest:
+                comment_part = rest.split(" -- ", 1)[1].strip()
+                if is_hidden(comment_part):
+                    reading_line += 1
+                    continue
+            # Try to parse as hl.bind if it starts with hl.bind
+            if rest.startswith("hl.bind"):
+                kb = parse_lua_bind(rest, override_comment=comment_part)
+                if kb:
+                    current_content["keybinds"].append(kb)
+            elif comment_part:
+                # It's a descriptive placeholder like "bind = SUPER + ←/→ -- Focus in direction"
+                # Extract key hint from before " -- "
+                key_hint = rest.split(" -- ")[0].strip()
+                # Build a synthetic KeyBinding for display
+                kb = KeyBinding([], key_hint, "comment", "", comment_part)
+                current_content["keybinds"].append(kb)
+            reading_line += 1
+            continue
 
-        elif line == "" or not line.lstrip().startswith("bind"): # Comment, ignore
-            pass
+        # ── Normal hl.bind(...) ───────────────────────────────────────
+        if re.match(r'\s*hl\.bind\s*\(', line):
+            # Handle multiline binds by collecting until closing paren+bracket
+            full_line = line
+            depth = full_line.count("(") - full_line.count(")")
+            lookahead = reading_line + 1
+            while depth > 0 and lookahead < len(content_lines):
+                next_line = content_lines[lookahead]
+                full_line += " " + next_line.strip()
+                depth += next_line.count("(") - next_line.count(")")
+                lookahead += 1
 
-        else: # Normal keybind
-            keybind = get_keybind_at_line(reading_line)
-            if(keybind != None):
-                current_content["keybinds"].append(keybind)
+            # Check trailing comment for hidden marker
+            # e.g. ) -- # [hidden]
+            if is_hidden(full_line):
+                reading_line = lookahead
+                continue
+
+            kb = parse_lua_bind(full_line)
+            if kb:
+                current_content["keybinds"].append(kb)
+            reading_line = lookahead
+            continue
 
         reading_line += 1
 
-    return current_content;
+    return current_content
 
-def parse_keys(path: str) -> Dict[str, List[KeyBinding]]:
-    global content_lines
-    content_lines = read_content(path).splitlines()
-    if content_lines[0] == "error":
-        return "error"
+
+def parse_keys(path: str) -> Section:
+    global content_lines, reading_line
+    raw = read_content(path)
+    if raw == "error":
+        return Section([], [], "error")
+    content_lines = raw.splitlines()
+    reading_line  = 0
     return get_binds_recursive(Section([], [], ""), 0)
 
 
 if __name__ == "__main__":
-    import json
-
-    ParsedKeys = parse_keys(args.path)
-    print(json.dumps(ParsedKeys))
+    result = parse_keys(args.path)
+    print(json.dumps(result))
