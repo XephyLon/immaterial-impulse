@@ -49,7 +49,8 @@ ContentPage {
         { id: "activeWindow",      name: Translation.tr("Active Window"),        icon: "subtitles" },
         { id: "powerButton",       name: Translation.tr("Power Button"),         icon: "power_settings_new" },
         { id: "updatesCount",      name: Translation.tr("Updates"),              icon: "deployed_code_update" },
-        { id: "docktoPanel",       name: Translation.tr("Dock to Panel"),        icon: "apps" }
+        { id: "docktoPanel",       name: Translation.tr("Dock to Panel"),        icon: "apps" },
+        { id: "visualizer",        name: Translation.tr("Visualizer"),           icon: "graphic_eq" },
     ]
 
     function availableFor() {
@@ -58,7 +59,8 @@ ContentPage {
             ...Config.options.bar.layouts.middleLayout,
             ...Config.options.bar.layouts.rightLayout
         ]
-        return allWidgets.filter(w => !used.includes(w.id))
+        const multipleAllowed = ["visualizer"]
+        return allWidgets.filter(w => !used.includes(w.id) || multipleAllowed.includes(w.id))
     }
 
     function getWidgetName(id) {

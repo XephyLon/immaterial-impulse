@@ -33,6 +33,7 @@ Singleton {
     property bool workspaceShowNumbers: false
     property string settingsPage: ""
     property Item currentPageInstance: null
+    property list<real> visualizerPoints: []
 
     onSidebarRightOpenChanged: {
         if (GlobalStates.sidebarRightOpen) {

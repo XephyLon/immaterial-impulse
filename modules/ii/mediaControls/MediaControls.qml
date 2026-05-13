@@ -22,7 +22,6 @@ Scope {
     readonly property real widgetWidth: Appearance.sizes.mediaControlsWidth
     readonly property real widgetHeight: Appearance.sizes.mediaControlsHeight
     property real popupRounding: Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut + 1
-    property list<real> visualizerPoints: []
 
     readonly property string mediaPosition: {
         if (Config.options.bar.layouts.leftLayout.includes("media")) return "left"
@@ -62,18 +61,20 @@ Scope {
 
     Process {
         id: cavaProc
-        running: mediaControlsLoader.active
+        running: GlobalStates.mediaControlsOpen || 
+            Config.options.bar.layouts.leftLayout.includes("visualizer") ||
+            Config.options.bar.layouts.middleLayout.includes("visualizer") ||
+            Config.options.bar.layouts.rightLayout.includes("visualizer")
         onRunningChanged: {
             if (!cavaProc.running) {
-                root.visualizerPoints = [];
+                GlobalStates.visualizerPoints = [];
             }
         }
         command: ["cava", "-p", `${FileUtils.trimFileProtocol(Directories.scriptPath)}/cava/raw_output_config.txt`]
         stdout: SplitParser {
             onRead: data => {
-                // Parse `;`-separated values into the visualizerPoints array
                 let points = data.split(";").map(p => parseFloat(p.trim())).filter(p => !isNaN(p));
-                root.visualizerPoints = points;
+                GlobalStates.visualizerPoints = points;
             }
         }
     }
@@ -159,7 +160,7 @@ Scope {
                     delegate: Player {
                         required property MprisPlayer modelData
                         player: modelData
-                        visualizerPoints: root.visualizerPoints
+                        visualizerPoints: GlobalStates.visualizerPoints  
                         implicitWidth: root.widgetWidth
                         implicitHeight: showLyrics ? 290 : Appearance.sizes.mediaControlsHeight
                         radius: root.popupRounding
