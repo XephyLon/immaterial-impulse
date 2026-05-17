@@ -45,7 +45,6 @@ ContentPage {
             shape: MaterialShape.Shape.Clover4Leaf
 
             ContentSubsection {
-                visible: !Config.options.background.widgets.clock.showOnlyWhenLocked
                 title: Translation.tr("Transition")
                 Layout.fillWidth: true
 
