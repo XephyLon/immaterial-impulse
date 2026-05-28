@@ -71,8 +71,8 @@ Singleton {
             temp.precip = ((rainMm + snowMm) * 0.0394).toFixed(2) + " in"
             temp.visib = ((data?.visibility || 0) / 1609).toFixed(1) + " mi"
             temp.press = (data?.main?.pressure || 0) + " hPa"
-            temp.temp = (data?.main?.temp || 0) + "°F"
-            temp.tempFeelsLike = (data?.main?.feels_like || 0) + "°F"
+            temp.temp = Math.round(data?.main?.temp || 0) + "°F"
+            temp.tempFeelsLike = Math.round(data?.main?.feels_like || 0) + "°F"
         } else {
             temp.wind = (data?.wind?.speed || 0) + " m/s"
             temp.precip = (rainMm + snowMm).toFixed(1) + " mm"
