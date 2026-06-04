@@ -109,19 +109,6 @@ Item {
                 Layout.fillHeight: false
                 Layout.fillWidth: true
                 Layout.preferredHeight: implicitHeight
-
-                QuickToggleButton {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.margins: 4
-                    toggled: false
-                    visible: bottomWidgetGroup.collapsed 
-                    buttonIcon: "mode_off_on"
-                    onClicked: GlobalStates.sessionOpen = true
-                    StyledToolTip {
-                        text: Translation.tr("Session")
-                    }
-                }
             }
         }
     }
@@ -315,6 +302,14 @@ Item {
                 }
                 StyledToolTip {
                     text: Translation.tr("Settings")
+                }
+            }
+            QuickToggleButton {
+                toggled: false
+                buttonIcon: "mode_off_on"
+                onClicked: GlobalStates.sessionOpen = true
+                StyledToolTip {
+                    text: Translation.tr("Session")
                 }
             }
         }
