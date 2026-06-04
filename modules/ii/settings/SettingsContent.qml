@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
+import Qt5Compat.GraphicalEffects
 import qs
 import qs.services
 import qs.modules.common
@@ -107,27 +109,111 @@ Item {
             Layout.fillHeight: true
             spacing: contentPadding
 
-            Item {
+            Rectangle {
                 id: navRailWrapper
                 Layout.fillHeight: true
-                Layout.margins: 5
-                implicitWidth: navRail.expanded ? 150 : fab.baseSize
+                Layout.margins: 0
+                implicitWidth: navRail.expanded ? 200 : fab.baseSize
+                color: Appearance.m3colors.m3surfaceContainerLow
+                radius: Appearance.rounding.normal
+
                 Behavior on implicitWidth {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                 }
 
                 NavigationRail {
                     id: navRail
-                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: 20 }
                     spacing: 10
                     expanded: root.width > 900
 
-                    NavigationRailExpandButton {
-                        focus: GlobalStates.settingsOpen
+                    RowLayout {
+                        visible: navRail.expanded
+                        spacing: 10
+                        Layout.fillWidth: true
+                        Layout.margins: 5
+                        Layout.topMargin: 15
+
+                        Rectangle {
+                            id: avatarRect
+                            width: 48
+                            height: 48
+                            radius: width / 2
+                            color: Appearance.colors.colPrimaryContainer
+
+                            Image {
+                                id: avatarImage
+                                anchors.fill: parent
+                                source: "file:///home/" + (Quickshell.env("USER") ?? "user") + "/.face"
+                                fillMode: Image.PreserveAspectCrop
+                                layer.enabled: true
+                                layer.effect: OpacityMask {
+                                    maskSource: Rectangle {
+                                        width: avatarRect.width
+                                        height: avatarRect.height
+                                        radius: avatarRect.radius
+                                    }
+                                }
+                                onStatusChanged: {
+                                    if (status === Image.Error)
+                                        visible = false
+                                }
+                            }
+
+                            MaterialSymbol {
+                                anchors.centerIn: parent
+                                text: "account_circle"
+                                iconSize: 32
+                                color: Appearance.colors.colOnPrimaryContainer
+                                visible: avatarImage.status === Image.Error
+                            }
+                        }
+
+                        ColumnLayout {
+                            spacing: 2
+                            Layout.fillWidth: true
+
+                            StyledText {
+                                text: Quickshell.env("USER") ?? Quickshell.env("LOGNAME") ?? "user"
+                                font.pixelSize: Appearance.font.pixelSize.normal
+                                color: Appearance.colors.colOnLayer1
+                                font.weight: Font.Medium
+                            }
+
+                            StyledText {
+                                id: distroText
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                color: Appearance.colors.colSubtext
+
+                                Process {
+                                    id: distroProc
+                                    command: ["bash", "-c", "source /etc/os-release && echo $PRETTY_NAME"]
+                                    running: true
+                                    stdout: SplitParser {
+                                        onRead: data => distroText.text = data.trim()
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 160
+                        Layout.topMargin: -5
+                        height: 2
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: "transparent" }
+                            GradientStop { position: 0.2; color: Appearance.colors.colOutline }
+                            GradientStop { position: 0.8; color: Appearance.colors.colOutline }
+                            GradientStop { position: 1.0; color: "transparent" }
+                        }
+                        opacity: 0.15
                     }
 
                     FloatingActionButton {
                         id: fab
+                        Layout.bottomMargin: -25
                         property bool justCopied: false
                         iconText: justCopied ? "check" : "edit"
                         buttonText: justCopied ? Translation.tr("Path copied") : Translation.tr("Config file")
@@ -174,7 +260,7 @@ Item {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                color: Appearance.m3colors.m3surfaceContainerLow
+                color: "transparent"
                 radius: Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut
 
                 Item {
