@@ -58,7 +58,7 @@ Item {
             RowLayout {
                 id: leftRow
                 anchors.fill: parent
-                spacing: root.isMaterial ? 4 : 2
+                spacing: root.isMaterial ? 4 : Config.options.bar.borderless === "transparent" ? -7 : 2
 
                 Repeater {
                     model: Config.options.bar.layouts.leftLayout
@@ -108,7 +108,7 @@ Item {
             RowLayout {
                 id: middleRow
                 anchors.fill: parent
-                spacing: root.isMaterial ? 4 : 2
+                spacing: root.isMaterial ? 4 : Config.options.bar.borderless === "transparent" ? -7 : 2
 
                 Repeater {
                     model: Config.options.bar.layouts.middleLayout
@@ -158,7 +158,7 @@ Item {
             RowLayout {
                 id: rightRow
                 anchors.fill: parent
-                spacing: root.isMaterial ? 4 : 2
+                spacing: root.isMaterial ? 4 : Config.options.bar.borderless === "transparent" ? -7 : 2
 
                 Repeater {
                     model: Config.options.bar.layouts.rightLayout
