@@ -23,7 +23,7 @@ StyledPopup {
 
             MaterialShapeWrappedMaterialSymbol {
                 shape: MaterialShape.Shape.Circle
-                text: "location_on"
+                text: Icons.getWeatherIcon(Weather.data.wCode) ?? "cloud"
                 iconSize: Appearance.font.pixelSize.large
                 implicitSize: 36
                 color: Appearance.colors.colPrimaryContainer
@@ -46,7 +46,7 @@ StyledPopup {
                 StyledText {
                     font.pixelSize: Appearance.font.pixelSize.smaller
                     color: Appearance.colors.colOnSurfaceVariant
-                    text: Translation.tr("Feels like %1").arg(Weather.data?.tempFeelsLike ?? "")
+                    text: Weather.data?.description ?? ""
                     opacity: 0.6
                 }
             }
