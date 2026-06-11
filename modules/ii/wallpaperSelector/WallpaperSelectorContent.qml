@@ -429,7 +429,7 @@ MouseArea {
                                     id: filterField
                                     placeholderText: focus
                                         ? Translation.tr("Search wallpapers")
-                                        : Translation.tr("Hit \"/\" to search")
+                                        : Translation.tr("Search wallpapers")
                                     clip: true
                                     font.pixelSize: Appearance.font.pixelSize.small
                                     onTextChanged: Wallpapers.searchQuery = text
