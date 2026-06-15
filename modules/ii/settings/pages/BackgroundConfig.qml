@@ -277,8 +277,18 @@ ContentPage {
                     placeholderText: Translation.tr("Font family")
                     text: Config.options.background.widgets.clock.digital.font.family
                     wrapMode: TextEdit.Wrap
+
+                    Timer {
+                        id: debounceTimer
+                        interval: 500
+                        repeat: false
+                        onTriggered: {
+                            Config.options.background.widgets.clock.digital.font.family = parent.text
+                        }
+                    }
+
                     onTextChanged: {
-                        Config.options.background.widgets.clock.digital.font.family = text;
+                        debounceTimer.restart()
                     }
                 }
 
@@ -594,6 +604,14 @@ ContentPage {
                     checked: Config.options.background.widgets.clock.quote.enable
                     onCheckedChanged: {
                         Config.options.background.widgets.clock.quote.enable = checked;
+                    }
+                }
+                ConfigSwitch {
+                    buttonIcon: "font_download"
+                    text: Translation.tr("Clock Font")
+                    checked: Config.options.background.widgets.clock.quote.followClock
+                    onCheckedChanged: {
+                        Config.options.background.widgets.clock.quote.followClock = checked;
                     }
                 }
                 MaterialTextArea {

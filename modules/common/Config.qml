@@ -245,6 +245,7 @@ Singleton {
                         property JsonObject quote: JsonObject {
                             property bool enable: false
                             property string text: ""
+                            property bool followClock: false
                         }
                     }
                     property JsonObject weather: JsonObject {
