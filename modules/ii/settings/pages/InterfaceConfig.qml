@@ -339,6 +339,18 @@ ContentPage {
                 }
 
                 ConfigSpinBox {
+                    icon: "deblur"
+                    text: Translation.tr("Samples")
+                    value: Config.options.lock.blur.size
+                    from: 20
+                    to: 200
+                    stepSize: 10
+                    onValueChanged: {
+                        Config.options.lock.blur.size = value;
+                    }
+                }                
+
+                ConfigSpinBox {
                     icon: "loupe"
                     text: Translation.tr("Extra wallpaper zoom (%)")
                     value: Config.options.lock.blur.extraZoom * 100

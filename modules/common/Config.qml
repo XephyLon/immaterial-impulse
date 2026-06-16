@@ -468,6 +468,7 @@ Singleton {
                     property bool enable: true
                     property real radius: 100
                     property real extraZoom: 1.1
+                    property int size: 20
                 }
                 property bool centerClock: true
                 property bool showLockedText: true
