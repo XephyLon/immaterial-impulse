@@ -32,6 +32,7 @@ Item {
     property bool showWifiDialog: false
     property bool editMode: false
     property bool showIconPickerDialog: false
+    property string hostname: "arch"
 
     Connections {
         target: GlobalStates
@@ -60,6 +61,18 @@ Item {
                     Config.options.sidebar.bannerImage = path
                 }
             }
+        }
+    }
+
+    Process {
+        id: hostnameProcess
+        command: ["cat", "/etc/hostname"]
+        running: true
+        stdout: StdioCollector {
+            id: hostnameOutput
+        }
+        onExited: {
+            hostname = hostnameOutput.text.trim()
         }
     }
 
@@ -192,7 +205,7 @@ Item {
                                 }
 
                                 StyledText {
-                                    text: (Quickshell.env("USER") ?? "user") + "@" + (Quickshell.env("HOSTNAME") ?? "arch")
+                                    text: (Quickshell.env("USER") ?? "user") + "@" + hostname
                                     font.pixelSize: Appearance.font.pixelSize.small
                                     font.weight: Font.SemiBold
                                     color: Appearance.colors.colOnLayer1
