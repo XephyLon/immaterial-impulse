@@ -145,6 +145,8 @@ Item {
                                 id: avatarImage
                                 anchors.fill: parent
                                 source: "file:///home/" + (Quickshell.env("USER") ?? "user") + "/.face"
+                                sourceSize.width: avatarImage.width * 2
+                                sourceSize.height: avatarImage.height * 2
                                 fillMode: Image.PreserveAspectCrop
                                 layer.enabled: true
                                 layer.effect: OpacityMask {
