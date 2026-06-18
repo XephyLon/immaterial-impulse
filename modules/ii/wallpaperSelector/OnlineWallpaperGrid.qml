@@ -172,70 +172,10 @@ Item {
         anchors.fill: parent
         visible: !root.missingKey
 
-        // Unsplash header
-        Item {
-            id: unsplashHeader
-            visible: root.provider === "unsplash"
-            height: visible ? headerLayout.implicitHeight + 20 : 0
-            anchors {
-                top: parent.top
-                left: parent.left
-                right: parent.right
-                leftMargin: 16
-                rightMargin: 16
-                topMargin: 8
-            }
-
-            ColumnLayout {
-                id: headerLayout
-                anchors.fill: parent
-                spacing: -6
-
-                StyledText {
-                    text: "F E A T U R E D"
-                    font.pixelSize: Appearance.font.pixelSize.small
-                    font.letterSpacing: 4
-                    color: Appearance.colors.colSubtext
-                }
-                StyledText {
-                    text: root.hoveredItem?.title ?? ""
-                    font.pixelSize: Appearance.font.pixelSize.larger
-                    color: Appearance.colors.colOnLayer1
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
-                RowLayout {
-                    spacing: 6
-                    StyledText {
-                        text: Translation.tr("by") + " • " + (root.hoveredItem?.author ?? "")
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        color: Appearance.colors.colSubtext
-                    }
-                    StyledText {
-                        text: "·"
-                        color: Appearance.colors.colSubtext
-                        font.pixelSize: Appearance.font.pixelSize.small
-                    }
-                    StyledText {
-                        text: root.hoveredItem
-                            ? (root.hoveredItem.width + " × " + root.hoveredItem.height)
-                            : ""
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        color: Appearance.colors.colSubtext
-                    }
-                    StyledText {
-                        text: root.hoveredItem ? "♥ " + root.hoveredItem.likes : ""
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        color: Appearance.colors.colSubtext
-                    }
-                }
-            }
-        }
-
         GridView {
             id: grid
             anchors {
-                top: unsplashHeader.visible ? unsplashHeader.bottom : parent.top
+                top: parent.top
                 left: parent.left
                 right: parent.right
                 bottom: parent.bottom

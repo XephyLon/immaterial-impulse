@@ -219,23 +219,22 @@ MouseArea {
                     Layout.leftMargin: 20
                     implicitHeight: 56
 
-                    StyledComboBox {
-                        id: sourceCombo
+                    RowLayout {
                         anchors {
                             left: parent.left
                             verticalCenter: parent.verticalCenter
                         }
-                        width: 150
-                        model: [
-                            { value: "local",     displayName: Translation.tr("Local") },
-                            { value: "wallhaven", displayName: Translation.tr("Wallhaven") },
-                            { value: "unsplash",  displayName: Translation.tr("Unsplash") },
-                            { value: "pexels",    displayName: Translation.tr("Pexels") },
-                        ]
-                        textRole: "displayName"
-                        onCurrentIndexChanged: {
-                            root.source = model[currentIndex].value
-                            root.forceActiveFocus()
+                        spacing: 8
+
+                        MaterialShapeWrappedMaterialSymbol {
+                            wrappedShape: MaterialShape.Shape.Gem
+                            text: "image"
+                            iconSize: Appearance.font.pixelSize.larger
+                        }
+
+                        StyledText {
+                            text: Translation.tr("Wallpaper Selector")
+                            font.pixelSize: Appearance.font.pixelSize.large
                         }
                     }
 
@@ -310,35 +309,55 @@ MouseArea {
                         }
                     }
 
-                    RippleButton {
+                    RowLayout {
                         anchors {
                             right: parent.right
                             rightMargin: 8
                             verticalCenter: parent.verticalCenter
                         }
-                        implicitWidth: 36
-                        implicitHeight: 36
-                        buttonRadius: height / 2
-                        toggled: root.toolbarVisible
-                        colBackground: Appearance.colors.colSecondaryContainer
-                        onClicked: {
-                            if (Config.options.wallpaperSelector.showSearchbar) {
-                                Config.options.wallpaperSelector.showSearchbar = false
-                                showControls = false
-                            } else {
-                                showControls = !showControls
+                        spacing: 6
+
+                        StyledComboBox {
+                            id: sourceCombo
+                            implicitWidth: 120
+                            model: [
+                                { value: "local",     displayName: Translation.tr("Local") },
+                                { value: "wallhaven", displayName: Translation.tr("Wallhaven") },
+                                { value: "unsplash",  displayName: Translation.tr("Unsplash") },
+                                { value: "pexels",    displayName: Translation.tr("Pexels") },
+                            ]
+                            textRole: "displayName"
+                            onCurrentIndexChanged: {
+                                root.source = model[currentIndex].value
+                                root.forceActiveFocus()
                             }
                         }
-                        contentItem: MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "search"
-                            iconSize: Appearance.font.pixelSize.larger
-                            color: root.toolbarVisible
-                                ? Appearance.colors.colOnPrimary
-                                : Appearance.colors.colOnSecondaryContainer
-                        }
-                        StyledToolTip {
-                            text: Translation.tr("Toggle search toolbar (Ctrl+F)")
+
+                        RippleButton {
+                            implicitWidth: 36
+                            implicitHeight: 36
+                            buttonRadius: height / 2
+                            toggled: root.toolbarVisible
+                            colBackground: Appearance.colors.colSecondaryContainer
+                            onClicked: {
+                                if (Config.options.wallpaperSelector.showSearchbar) {
+                                    Config.options.wallpaperSelector.showSearchbar = false
+                                    showControls = false
+                                } else {
+                                    showControls = !showControls
+                                }
+                            }
+                            contentItem: MaterialSymbol {
+                                anchors.centerIn: parent
+                                text: "search"
+                                iconSize: Appearance.font.pixelSize.larger
+                                color: root.toolbarVisible
+                                    ? Appearance.colors.colOnPrimary
+                                    : Appearance.colors.colOnSecondaryContainer
+                            }
+                            StyledToolTip {
+                                text: Translation.tr("Toggle search toolbar (Ctrl+F)")
+                            }
                         }
                     }
                 }
