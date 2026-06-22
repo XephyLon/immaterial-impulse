@@ -9,7 +9,6 @@ import qs.modules.common.widgets
 GroupButton {
     id: root
     
-    // Info to be passed to by repeater
     required property int buttonIndex
     required property var buttonData
     required property bool expandedSize
@@ -17,11 +16,12 @@ GroupButton {
     required property real baseCellHeight
     required property real cellSpacing
     required property int cellSize
+    property var dropIndicatorRef: null
+    property bool isUnused: false 
+    property var gridRef: null
 
-    // Signals
     signal openMenu()
 
-    // Declared in specific toggles
     property QuickToggleModel toggleModel
     property string name: toggleModel?.name ?? ""
     property string statusText: (toggleModel?.hasStatusText) ? (toggleModel?.statusText || (toggled ? Translation.tr("On") : Translation.tr("Off"))) : ""
@@ -32,10 +32,8 @@ GroupButton {
     property var mainAction: toggleModel?.mainAction ?? null
     altAction: toggleModel?.hasMenu ? (() => root.openMenu()) : (toggleModel?.altAction ?? null)
 
-    // Edit mode state
     property bool editMode: false
 
-    // Sizing shenanigans
     baseWidth: root.baseCellWidth * cellSize + cellSpacing * (cellSize - 1)
     baseHeight: root.baseCellHeight
     enableImplicitWidthAnimation: !editMode && root.mouseArea.containsMouse
@@ -47,9 +45,7 @@ GroupButton {
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
     }
     opacity: 0
-    Component.onCompleted: {
-        opacity = 1
-    }
+    Component.onCompleted: { opacity = 1 }
     Behavior on opacity {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
@@ -74,7 +70,6 @@ GroupButton {
     }
 
     contentItem: RowLayout {
-        id: contentItem
         spacing: 4
         anchors {
             centerIn: root.expandedSize ? undefined : parent
@@ -83,7 +78,6 @@ GroupButton {
             rightMargin: root.horizontalPadding
         }
 
-        // Icon
         MouseArea {
             id: iconMouseArea
             hoverEnabled: true
@@ -95,7 +89,6 @@ GroupButton {
             implicitHeight: iconBackground.implicitHeight
             implicitWidth: iconBackground.implicitWidth
             cursorShape: Qt.PointingHandCursor
-
             onClicked: root.mainAction()
 
             Rectangle {
@@ -108,13 +101,8 @@ GroupButton {
                     const transparentizeAmount = (root.altAction && root.expandedSize) ? 0 : 1
                     return ColorUtils.transparentize(baseColor, transparentizeAmount)
                 }
-
-                Behavior on radius {
-                    animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
-                }
-                Behavior on color {
-                    animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-                }
+                Behavior on radius { animation: Appearance.animation.elementMove.numberAnimation.createObject(this) }
+                Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
 
                 MaterialSymbol {
                     anchors.centerIn: parent
@@ -124,22 +112,18 @@ GroupButton {
                     text: root.buttonIcon
                 }
 
-                // State layer
                 Loader {
                     anchors.fill: parent
                     active: (root.expandedSize && root.altAction)
                     sourceComponent: Rectangle {
                         radius: iconBackground.radius
                         color: ColorUtils.transparentize(root.colIcon, iconMouseArea.containsPress ? 0.88 : iconMouseArea.containsMouse ? 0.95 : 1)
-                        Behavior on color {
-                            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-                        }
+                        Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
                     }
                 }
             }
         }
 
-        // Text column for expanded size
         Loader {
             Layout.alignment: Qt.AlignVCenter
             Layout.fillWidth: true
@@ -147,29 +131,18 @@ GroupButton {
             active: visible
             sourceComponent: Column {
                 spacing: -2
-
                 StyledText {
-                    anchors {
-                        left: parent.left
-                        right: parent.right
-                    }
+                    anchors { left: parent.left; right: parent.right }
                     font.pixelSize: Appearance.font.pixelSize.smallie
                     font.weight: 600
                     color: root.colText
                     elide: Text.ElideRight
                     text: root.name
                 }
-
                 StyledText {
                     visible: root.statusText
-                    anchors {
-                        left: parent.left
-                        right: parent.right
-                    }
-                    font {
-                        pixelSize: Appearance.font.pixelSize.smaller
-                        weight: 100
-                    }
+                    anchors { left: parent.left; right: parent.right }
+                    font { pixelSize: Appearance.font.pixelSize.smaller; weight: 100 }
                     color: root.colText
                     elide: Text.ElideRight
                     text: root.statusText
@@ -178,65 +151,218 @@ GroupButton {
         }
     }
 
-    MouseArea { // Blocking MouseArea for edit interactions
+    // Edit mode
+    Item {
         id: editModeInteraction
-        visible: root.editMode
+        visible: root.editMode && !root.isUnused
+        anchors.fill: parent
+
+        property bool isDragging: false
+
+        DragHandler {
+            id: dragHandler
+            target: null
+
+            function getAllSiblings() {
+                const siblings = [];
+                if (!root.gridRef) return siblings;
+                for (let r = 0; r < root.gridRef.children.length; r++) {
+                    const row = root.gridRef.children[r];
+                    if (!row || !row.visible) continue;
+                    const rowLayout = row.children[0];
+                    if (!rowLayout) continue;
+                    for (let c = 0; c < rowLayout.children.length; c++) {
+                        const sib = rowLayout.children[c];
+                        if (!sib || !sib.visible || !sib.buttonData) continue;
+                        siblings.push(sib);
+                    }
+                }
+                return siblings;
+            }
+
+            function findNearest(sceneX, sceneY) {
+                const siblings = getAllSiblings();
+                let nearest = null;
+                let minDist = Infinity;
+                for (let i = 0; i < siblings.length; i++) {
+                    const sib = siblings[i];
+                    if (sib.buttonData.type === root.buttonData.type) continue;
+                    const sibScene = sib.mapToItem(null, sib.width / 2, sib.height / 2);
+                    const dx = sceneX - sibScene.x;
+                    const dy = sceneY - sibScene.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = sib;
+                    }
+                }
+                return nearest;
+            }
+
+            onActiveChanged: {
+                editModeInteraction.isDragging = active;
+
+                if (!active) {
+                    if (root.dropIndicatorRef) root.dropIndicatorRef.visible = false;
+                    const sceneX = centroid.scenePosition.x;
+                    const sceneY = centroid.scenePosition.y;
+                    const nearest = findNearest(sceneX, sceneY);
+                    if (nearest) {
+                        const toggleList = Config.options.sidebar.quickToggles.android.toggles;
+                        const myType = root.buttonData.type;
+                        const sibType = nearest.buttonData.type;
+                        const myIdx = toggleList.findIndex(t => t.type === myType);
+                        const sibIdx = toggleList.findIndex(t => t.type === sibType);
+                        if (myIdx !== -1 && sibIdx !== -1 && myIdx !== sibIdx) {
+                            const temp = toggleList[myIdx];
+                            toggleList[myIdx] = toggleList[sibIdx];
+                            toggleList[sibIdx] = temp;
+                        }
+                    }
+                }
+            }
+
+            onCentroidChanged: {
+                if (!active || !root.dropIndicatorRef || !root.gridRef) return;
+                const sceneX = centroid.scenePosition.x;
+                const sceneY = centroid.scenePosition.y;
+                const nearest = findNearest(sceneX, sceneY);
+
+                if (nearest) {
+                    const nearestScene = nearest.mapToItem(null, 0, 0);
+                    const myScene = root.mapToItem(null, 0, 0);
+                    const goesAfter = nearestScene.x > myScene.x || nearestScene.y > myScene.y;
+                    const nearestLocal = nearest.mapToItem(root.gridRef, 0, 0);
+
+                    root.dropIndicatorRef.x = goesAfter
+                        ? nearestLocal.x + nearest.width + 1
+                        : nearestLocal.x - 5;
+                    root.dropIndicatorRef.y = nearestLocal.y;
+                    root.dropIndicatorRef.height = nearest.height;
+                    root.dropIndicatorRef.visible = true;
+                } else {
+                    root.dropIndicatorRef.visible = false;
+                }
+            }
+        }
+
+        HoverHandler {
+            cursorShape: editModeInteraction.isDragging ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+        }
+    }
+
+    MouseArea {
+        visible: root.editMode && root.isUnused
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        hoverEnabled: true
-        acceptedButtons: Qt.AllButtons
-
-        function toggleEnabled() {
-            const index = root.buttonIndex;
+        onClicked: {
             const toggleList = Config.options.sidebar.quickToggles.android.toggles;
             const buttonType = root.buttonData.type;
-            if (!toggleList.find(toggle => toggle.type === buttonType)) {
+            if (!toggleList.find(t => t.type === buttonType))
                 toggleList.push({ type: buttonType, size: 1 });
-            } else {
-                toggleList.splice(index, 1);
+        }
+    }
+
+    // del
+    Rectangle {
+        id: deleteBtn
+        visible: root.editMode && !root.isUnused
+        z: 10
+        width: 20
+        height: 20
+        radius: 10
+        color: deleteHover.containsMouse ? Appearance.colors.colError : ColorUtils.transparentize(Appearance.colors.colError, 0.15)
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.topMargin: -6
+        anchors.leftMargin: -6
+
+        Behavior on color {
+            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+        }
+
+        MaterialSymbol {
+            anchors.centerIn: parent
+            text: "close"
+            iconSize: 13
+            color: Appearance.colors.colOnError 
+            Behavior on color {
+                animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
             }
         }
 
-        function toggleSize() {
-            const index = root.buttonIndex;
-            const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-            const buttonType = root.buttonData.type;
-            if (!toggleList.find(toggle => toggle.type === buttonType)) return;
-            toggleList[index].size = 3 - toggleList[index].size; // Alternate between 1 and 2
-        }
-
-        function movePositionBy(offset) {
-            const index = root.buttonIndex;
-            const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-            const buttonType = root.buttonData.type;
-            const targetIndex = index + offset;
-            if (!toggleList.find(toggle => toggle.type === buttonType)) return;
-            if (targetIndex < 0 || targetIndex >= toggleList.length) return;
-            const temp = toggleList[index];
-            toggleList[index] = toggleList[targetIndex];
-            toggleList[targetIndex] = temp;
-        }
-
-        onReleased: (event) => {
-            if (event.button === Qt.LeftButton)
-                toggleEnabled();
-        }
-        onPressed: (event) => {
-            if (event.button === Qt.RightButton) toggleSize();
-        }
-        onPressAndHold: (event) => { // Also toggle size
-            toggleSize();
-        }
-        onWheel: (event) => {
-            const index = root.buttonIndex;
-            const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-            const buttonType = root.buttonData.type;
-            if (event.angleDelta.y < 0) { // Move to right
-                movePositionBy(1);
-            } else if (event.angleDelta.y > 0) { // Move to left
-                movePositionBy(-1);
+        MouseArea {
+            id: deleteHover
+            anchors.fill: parent
+            anchors.margins: -4
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                const toggleList = Config.options.sidebar.quickToggles.android.toggles;
+                const buttonType = root.buttonData.type;
+                const idx = toggleList.findIndex(t => t.type === buttonType);
+                if (idx !== -1) toggleList.splice(idx, 1);
             }
-            event.accepted = true;
+        }
+    }
+
+    // resize
+    Rectangle {
+        id: resizeBtn
+        visible: root.editMode && !root.isUnused
+        z: 10
+        width: 20
+        height: 20
+        radius: 4
+        color: resizeHover.containsMouse ? Appearance.colors.colPrimary : ColorUtils.transparentize(Appearance.colors.colPrimary, 0.15)
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        anchors.bottomMargin: -6
+        anchors.rightMargin: -6
+
+        Behavior on color {
+            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+        }
+
+        MaterialSymbol {
+            anchors.centerIn: parent
+            text: "open_in_full"
+            iconSize: 13
+            color: Appearance.colors.colOnPrimary
+            Behavior on color {
+                animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+            }
+        }
+
+        MouseArea {
+            id: resizeHover
+            anchors.fill: parent
+            anchors.margins: -4
+            hoverEnabled: true
+            cursorShape: Qt.SizeFDiagCursor
+            preventStealing: true
+
+            property real pressSceneX: 0
+            property real pressSize: 1
+
+            onPressed: event => {
+                const scene = resizeBtn.mapToItem(null, event.x, event.y);
+                pressSceneX = scene.x;
+                pressSize = root.cellSize;
+            }
+            onPositionChanged: event => {
+                if (!pressed) return;
+                const scene = resizeBtn.mapToItem(null, event.x, event.y);
+                const dx = scene.x - pressSceneX;
+                const steps = Math.round(dx / root.baseCellWidth);
+                const newSize = Math.max(1, Math.min(3, pressSize + steps));
+                if (newSize !== root.cellSize) {
+                    const toggleList = Config.options.sidebar.quickToggles.android.toggles;
+                    const buttonType = root.buttonData.type;
+                    const idx = toggleList.findIndex(t => t.type === buttonType);
+                    if (idx !== -1) toggleList[idx].size = newSize;
+                }
+            }
         }
     }
 

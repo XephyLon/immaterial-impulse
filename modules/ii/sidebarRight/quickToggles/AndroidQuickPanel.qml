@@ -13,7 +13,6 @@ AbstractQuickPanel {
     property bool editMode: false
     Layout.fillWidth: true
 
-    // Sizes
     implicitHeight: (editMode ? contentItem.implicitHeight : usedRows.implicitHeight) + root.padding * 2
     Behavior on implicitHeight {
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
@@ -21,14 +20,11 @@ AbstractQuickPanel {
     property real spacing: 6
     property real padding: 6
     readonly property real baseCellWidth: {
-        // This is the wrong calculation, but it looks correct in reality???
-        // (theoretically spacing should be multiplied by 1 column less)
         const availableWidth = root.width - (root.padding * 2) - (root.spacing * (root.columns))
         return availableWidth / root.columns
     }
     readonly property real baseCellHeight: 56
 
-    // Toggles
     readonly property list<string> availableToggleTypes: ["network", "bluetooth", "idleInhibitor", "easyEffects", "nightLight", "darkMode", "cloudflareWarp", "gameMode", "screenSnip", "colorPicker", "onScreenKeyboard", "mic", "audio", "notifications", "powerProfile","musicRecognition", "antiFlashbang"]
     readonly property int columns: Config.options.sidebar.quickToggles.android.columns
     readonly property list<var> toggles: Config.ready ? Config.options.sidebar.quickToggles.android.toggles : []
@@ -39,10 +35,12 @@ AbstractQuickPanel {
     }
     readonly property list<var> unusedToggleRows: toggleRowsForList(unusedToggles)
 
+    property alias dropIndicator: dropIndicator
+
     function toggleRowsForList(togglesList) {
         var rows = [];
         var row = [];
-        var totalSize = 0; // Total cols taken in current row
+        var totalSize = 0;
         for (var i = 0; i < togglesList.length; i++) {
             if (!togglesList[i]) continue;
             if (totalSize + togglesList[i].size > columns) {
@@ -53,9 +51,7 @@ AbstractQuickPanel {
             row.push(togglesList[i]);
             totalSize += togglesList[i].size;
         }
-        if (row.length > 0) {
-            rows.push(row);
-        }
+        if (row.length > 0) rows.push(row);
         return rows;
     }
 
@@ -66,7 +62,7 @@ AbstractQuickPanel {
             margins: root.padding
         }
         spacing: 12
-        
+
         Column {
             id: usedRows
             spacing: root.spacing
@@ -83,9 +79,7 @@ AbstractQuickPanel {
                     property int startingIndex: {
                         const rows = root.toggleRows;
                         let sum = 0;
-                        for (let i = 0; i < index; i++) {
-                            sum += rows[i].length;
-                        }
+                        for (let i = 0; i < index; i++) sum += rows[i].length;
                         return sum;
                     }
                     spacing: root.spacing
@@ -98,6 +92,9 @@ AbstractQuickPanel {
                         delegate: AndroidToggleDelegateChooser {
                             startingIndex: toggleRow.startingIndex
                             editMode: root.editMode
+                            gridRef: usedRows
+                            dropIndicatorRef: dropIndicator
+                            isUnused: false
                             baseCellWidth: root.baseCellWidth
                             baseCellHeight: root.baseCellHeight
                             spacing: root.spacing
@@ -108,6 +105,33 @@ AbstractQuickPanel {
                             onOpenWifiDialog: root.openWifiDialog()
                         }
                     }
+                }
+            }
+
+            Rectangle {
+                id: dropIndicator
+                visible: false
+                z: 99
+                width: 3
+                radius: 2
+                color: Appearance.colors.colPrimary
+
+                Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                Behavior on y { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    anchors.topMargin: -4
+                    width: 8; height: 8; radius: 4
+                    color: Appearance.colors.colPrimary
+                }
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: -4
+                    width: 8; height: 8; radius: 4
+                    color: Appearance.colors.colPrimary
                 }
             }
         }
@@ -150,6 +174,7 @@ AbstractQuickPanel {
                             delegate: AndroidToggleDelegateChooser {
                                 startingIndex: -1
                                 editMode: root.editMode
+                                isUnused: true
                                 baseCellWidth: root.baseCellWidth
                                 baseCellHeight: root.baseCellHeight
                                 spacing: root.spacing
@@ -157,6 +182,21 @@ AbstractQuickPanel {
                         }
                     }
                 }
+            }
+        }
+
+        ConfigSpinBox {
+            visible: root.editMode
+            width: parent.width 
+            enabled: Config.options.sidebar.quickToggles.style === "android"
+            icon: "add_column_left"
+            text: Translation.tr("Columns")
+            value: Config.options.sidebar.quickToggles.android.columns
+            from: 1
+            to: 8
+            stepSize: 1
+            onValueChanged: {
+                Config.options.sidebar.quickToggles.android.columns = value;
             }
         }
     }
