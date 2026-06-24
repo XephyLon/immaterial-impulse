@@ -198,7 +198,7 @@ ContentSubsection {
                             let list = root.layout.slice()
                             list.push(modelData.id)
                             root.onUpdate(list)
-                            dropdown.visible = false
+                            dropdown.dropdownOpen = false
                         }
                     }
                 }
