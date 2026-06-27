@@ -13,7 +13,7 @@ MouseArea {
     property bool isMaterial: Config.options.bar.cornerStyle === 3
 
     implicitWidth: vertical ? Appearance.sizes.verticalBarWidth : root.isMaterial ? (rowLoader.item?.implicitWidth ?? 0) : (rowLoader.item?.implicitWidth ?? 0) + 6
-    implicitHeight: vertical ? (colLoader.item?.implicitHeight ?? 0) + 6 : Appearance.sizes.barHeight
+    implicitHeight: vertical ? (colLoader.item?.implicitHeight ?? 0) : Appearance.sizes.barHeight
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     hoverEnabled: !Config.options.bar.tooltips.clickToShow
 
@@ -130,8 +130,8 @@ MouseArea {
             Rectangle {
                 color: Appearance.colors.colPrimaryContainer
                 radius: Appearance.rounding.full
-                implicitWidth: 30
-                implicitHeight: pillCol.implicitHeight + 8
+                implicitWidth: 36
+                implicitHeight: pillCol.implicitHeight + 12
 
                 ColumnLayout {
                     id: pillCol
