@@ -9,7 +9,7 @@ MouseArea {
     property bool alwaysShowAllResources: false
     property bool isMaterial: Config.options.bar.cornerStyle === 3
 
-    implicitWidth:  vertical ? (colLoader.item?.implicitWidth -8 ?? 0) : (rowLoader.item?.implicitWidth  ?? 0) + 12
+    implicitWidth:  vertical ? (colLoader.item?.implicitWidth - 10 ?? 0) : (rowLoader.item?.implicitWidth  ?? 0) + 12
     implicitHeight: vertical ? (colLoader.item?.implicitHeight ?? 0) + (isMaterial ? 15 : 10) : Appearance.sizes.barHeight - 8
     hoverEnabled: !Config.options.bar.tooltips.clickToShow
 

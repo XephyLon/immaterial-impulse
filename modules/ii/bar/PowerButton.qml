@@ -42,8 +42,8 @@ Item {
     Component {
         id: materialStyle
         RippleButton {
-            implicitWidth: root.vertical ? 36 : 32
-            implicitHeight: root.vertical ? 36 : 32
+            implicitWidth: 32
+            implicitHeight: 32
             buttonRadius: Appearance.rounding.full
             colBackground: Appearance.colors.colPrimary
             colBackgroundHover: Appearance.colors.colPrimaryHover
