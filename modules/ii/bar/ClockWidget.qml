@@ -11,6 +11,8 @@ Item {
     property bool showDate: Config.options.bar.verbose
     property bool isMaterial: Config.options.bar.cornerStyle === 3
     property var today: new Date()
+    readonly property string dateTimeString: DateTime.time
+    readonly property bool hasAmPm: dateTimeString.toLowerCase().includes("am") || dateTimeString.toLowerCase().includes("pm")
 
     Timer {
         interval: 60000
@@ -33,25 +35,36 @@ Item {
         Component {
             id: colDefault
             ColumnLayout {
-                spacing: 0
-                Repeater {
-                    model: DateTime.time.split(/[: ]/)
-                    delegate: StyledText {
-                        required property string modelData
-                        Layout.alignment: Qt.AlignHCenter
-                        font.pixelSize: modelData.match(/am|pm/i) ?
-                            Appearance.font.pixelSize.smaller :
-                            Appearance.font.pixelSize.large
-                        color: Appearance.colors.colOnLayer1
-                        text: modelData.padStart(2, "0")
+                id: column
+                anchors.centerIn: parent
+                spacing: root.hasAmPm ? 6 : 0
+
+                Column {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: -4
+
+                    Repeater {
+                        model: root.dateTimeString.split(/[: ]/)
+                        delegate: StyledText {
+                            required property string modelData
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            font.pixelSize: {
+                                if (modelData.match(/am|pm/i))
+                                    return Appearance.font.pixelSize.smaller;
+                                else
+                                    // Smaller "am"/"pm" text
+                                    return Appearance.font.pixelSize.large;
+                            }
+                            color: Appearance.colors.colOnLayer1
+                            text: modelData.padStart(2, "0")
+                        }
                     }
                 }
                 StyledText {
-                    Layout.alignment: Qt.AlignHCenter
                     Layout.bottomMargin: 5
+                    anchors.horizontalCenter: parent.horizontalCenter
                     font.pixelSize: Appearance.font.pixelSize.smallest
                     color: Appearance.colors.colOnLayer1
-                    opacity: 0.8
                     text: DateTime.shortDate
                 }
             }
