@@ -48,7 +48,9 @@ Item {
                         delegate: StyledText {
                             required property string modelData
                             width: implicitWidth
-                            horizontalAlignment: Text.AlignHCenter 
+                            horizontalAlignment: Text.AlignHCenter
+                            font.letterSpacing: -0.2
+                            font.features: { "tnum": 1 } 
                             font.pixelSize: {
                                 if (modelData.match(/am|pm/i))
                                     return Appearance.font.pixelSize.smaller;
