@@ -171,7 +171,7 @@ ContentPage {
     ContentSection {
         Layout.fillWidth: true
         Layout.topMargin: 30
-        Layout.leftMargin: 50
+        Layout.leftMargin: 15
         bgColor: "transparent"
 
         ColumnLayout {
