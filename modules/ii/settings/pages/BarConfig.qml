@@ -206,6 +206,12 @@ ContentPage {
                     }
                 }
             }
+            ConfigSwitch {
+                buttonIcon: "variable_insert"
+                text: Translation.tr("Show Background")
+                checked: Config.options.bar.showBackground
+                onCheckedChanged: { Config.options.bar.showBackground = checked; }
+            }
         }
 
         ContentSection {
