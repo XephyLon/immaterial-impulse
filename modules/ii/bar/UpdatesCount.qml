@@ -114,7 +114,7 @@ MouseArea {
                 spacing: 4
                 MaterialSymbol {
                     Layout.alignment: Qt.AlignVCenter
-                    text: "package"
+                    text: "deployed_code_update"
                     iconSize: Appearance.font.pixelSize.normal
                     color: Updates.updateStronglyAdvised ? Appearance.m3colors.m3error
                         : Updates.updateAdvised ? Appearance.colors.colTertiary
@@ -150,7 +150,7 @@ MouseArea {
 
                         MaterialSymbol {
                             anchors.centerIn: parent
-                            text: "package"
+                            text: "deployed_code_update"
                             iconSize: Appearance.font.pixelSize.normal
                             color: Appearance.colors.colOnPrimary
                         }
@@ -179,7 +179,7 @@ MouseArea {
                 spacing: 4
                 MaterialSymbol {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "package"
+                    text: "deployed_code_update"
                     iconSize: Appearance.font.pixelSize.normal
                     color: Updates.updateStronglyAdvised ? Appearance.m3colors.m3error
                         : Updates.updateAdvised ? Appearance.colors.colTertiary
@@ -216,7 +216,7 @@ MouseArea {
 
                         MaterialSymbol {
                             anchors.centerIn: parent
-                            text: "package"
+                            text: "deployed_code_update"
                             iconSize: Appearance.font.pixelSize.normal
                             color: Appearance.colors.colOnPrimary
                         }
