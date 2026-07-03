@@ -51,21 +51,21 @@ ContentPage {
     }
 
     function runSystemUpdate() {
-        GlobalStates.settingsOpen = false
         Quickshell.execDetached([
             "kitty", "--hold",
             "fish", "-i", "-l", "-c",
             "yay -Syu --combinedupgrade=false"
         ])
+        Qt.callLater(() => GlobalStates.settingsOpen = false)
     }
 
     function runUpdateDots() {
-        GlobalStates.settingsOpen = false
         Quickshell.execDetached([
             "kitty", "--hold",
             "bash", "-c",
             "killall qs; sleep 0.5; cd ~/.config/quickshell/ && rm -rf end4-pC && git clone https://github.com/pctrade/end4-pC.git && nohup qs -c end4-pC > /tmp/qs.log 2>&1 &"
         ])
+        Qt.callLater(() => GlobalStates.settingsOpen = false)
     }
 
     Component.onCompleted: refresh()
