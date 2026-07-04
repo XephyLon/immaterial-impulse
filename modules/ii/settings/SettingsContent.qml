@@ -52,7 +52,7 @@ Item {
     onCurrentPageChanged: {
         if (currentPage === 7) {
             if (SystemInfo.cpu === "") SystemInfo.refresh()
-            else SystemInfo.refreshUpdates()
+            Updates.refresh()
         }
     }
     
