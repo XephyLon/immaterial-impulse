@@ -245,7 +245,7 @@ ContentPage {
                             MaterialSymbol {
                                 text: "swap_vert"
                                 iconSize: Appearance.font.pixelSize.normal + 4
-                                color: Appearance.colors.colPrimary
+                                color: Appearance.colors.colOnLayer1
                             }
                             StyledText {
                                 text: Translation.tr("Bar position")
@@ -292,7 +292,7 @@ ContentPage {
                             MaterialSymbol {
                                 text: "settop_component"
                                 iconSize: Appearance.font.pixelSize.normal + 4
-                                color: Appearance.colors.colPrimary
+                                color: Appearance.colors.colOnLayer1
                             }
                             StyledText {
                                 text: Translation.tr("Bar style")
@@ -333,7 +333,7 @@ ContentPage {
                             MaterialSymbol {
                                 text: "tab_group"
                                 iconSize: Appearance.font.pixelSize.normal + 4
-                                color: Appearance.colors.colPrimary
+                                color: Appearance.colors.colOnLayer1
                             }
                             StyledText {
                                 text: Translation.tr("Group style")
@@ -375,7 +375,7 @@ ContentPage {
                             MaterialSymbol {
                                 text: "rounded_corner"
                                 iconSize: Appearance.font.pixelSize.normal + 4
-                                color: Appearance.colors.colPrimary
+                                color: Appearance.colors.colOnLayer1
                             }
                             StyledText {
                                 text: Translation.tr("Screen round corner")
