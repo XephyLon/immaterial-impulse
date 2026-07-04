@@ -277,7 +277,7 @@ Singleton {
                     }
 
                     property JsonObject visualizer: JsonObject {
-                        property bool enable: true
+                        property bool enable: false
                         property string placementStrategy: "free"
                         property real x: 0
                         property real y: 0
