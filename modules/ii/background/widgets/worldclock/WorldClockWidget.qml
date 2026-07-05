@@ -157,7 +157,7 @@ AbstractBackgroundWidget {
 
                         color: cityCard.modelData.isDay
                             ? Appearance.colors.colPrimary
-                            : Appearance.colors.colLayer0
+                            : Appearance.colors.colSurfaceContainerLow
                         property color fg: cityCard.modelData.isDay
                             ? Appearance.colors.colOnPrimary
                             : Appearance.colors.colOnLayer0
