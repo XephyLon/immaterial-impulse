@@ -143,8 +143,8 @@ AbstractBackgroundWidget {
             Rectangle {
                 color: Appearance.colors.colLayer0
                 radius: Appearance.rounding.normal
-                implicitWidth: weeksColumn.implicitWidth + 17
-                implicitHeight: weeksColumn.implicitHeight + 17
+                implicitWidth: weeksColumn.implicitWidth + 16
+                implicitHeight: weeksColumn.implicitHeight + 16
 
                 ColumnLayout {
                     id: weeksColumn
