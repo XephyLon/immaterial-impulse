@@ -31,7 +31,7 @@ AbstractBackgroundWidget {
         if (desc.includes("rain"))
             return { text: `${temp} • raining, grab a coffee`, icon: "coffee" };
         if (desc.includes("clear"))
-            return { text: `${temp} • clear, good day to touch grass`, icon: "eco" };
+            return { text: `${temp} • good day to touch grass`, icon: "eco" };
         if (desc.includes("cloud"))
             return { text: `${temp} • a bit cloudy today`, icon: "cloud" };
         if (desc.includes("snow"))
