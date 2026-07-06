@@ -23,7 +23,7 @@ Item {
         anchors.centerIn: parent
         color: isMaterial ? Appearance.colors.colPrimaryContainer : "transparent"
         radius: Appearance.rounding.full
-        implicitWidth: isMaterial && !root.vertical ? flow.implicitWidth + 10 : root.vertical ? Appearance.sizes.verticalBarWidth - 10 : flow.implicitWidth + 4
+        implicitWidth: isMaterial && !root.vertical ? flow.implicitWidth + 10 : root.vertical ? Appearance.sizes.verticalBarWidth - 12 : flow.implicitWidth + 4
         implicitHeight: isMaterial && root.vertical ? flow.implicitHeight + 10 : isMaterial ? 32 : root.vertical ? flow.implicitHeight + 4 : Appearance.sizes.barHeight
 
         Flow {
