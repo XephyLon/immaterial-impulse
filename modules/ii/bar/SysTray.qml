@@ -19,8 +19,8 @@ Item {
     readonly property bool isMaterial: Config.options.bar.cornerStyle === 3
 
     visible: SystemTray.items.values.length > 0
-    implicitWidth: vertical ? Appearance.sizes.verticalBarWidth : (isMaterial ? pill.implicitWidth : gridLayout.implicitWidth)
-    implicitHeight: vertical ? gridLayout.implicitHeight : Appearance.sizes.barHeight
+    implicitWidth: 32
+    implicitHeight: 32
 
     property list<var> pinnedItems: TrayService.pinnedItems
     property list<var> unpinnedItems: TrayService.unpinnedItems
@@ -64,8 +64,8 @@ Item {
         anchors.centerIn: parent
         color: Appearance.colors.colPrimaryContainer
         radius: Appearance.rounding.full
-        implicitWidth: root.vertical ? 36 : gridLayout.implicitWidth + 8
-        implicitHeight: root.vertical ? gridLayout.implicitHeight : 32
+        implicitWidth: 32
+        implicitHeight: 32
     }
 
     GridLayout {
@@ -92,7 +92,7 @@ Item {
             contentItem: MaterialSymbol {
                 anchors.centerIn: parent
                 iconSize: Appearance.font.pixelSize.larger
-                text: "expand_more"
+                text: Config.options.bar.bottom ? "keyboard_control_key" : "expand_more"
                 horizontalAlignment: Text.AlignHCenter
                 color: root.trayOverflowOpen ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer2
                 rotation: (root.trayOverflowOpen ? 180 : 0) - (90 * root.vertical) + (180 * root.invertSide)
@@ -136,8 +136,8 @@ Item {
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
                 Layout.fillHeight: !root.vertical
                 Layout.fillWidth: root.vertical
-                Layout.leftMargin:  root.isOnLeft ? 4 : 6
-                Layout.rightMargin: root.isOnLeft ? 6 : 4
+                Layout.leftMargin:  6
+                Layout.rightMargin: 6
                 onMenuClosed: root.releaseFocus()
                 onMenuOpened: (qsWindow) => root.setExtraWindowAndGrabFocus(qsWindow)
             }
