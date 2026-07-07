@@ -19,8 +19,8 @@ Item {
     readonly property bool isMaterial: Config.options.bar.cornerStyle === 3
 
     visible: SystemTray.items.values.length > 0
-    implicitWidth: 32
-    implicitHeight: 32
+    implicitWidth: vertical ? Appearance.sizes.verticalBarWidth : (isMaterial ? pill.implicitWidth : gridLayout.implicitWidth)
+    implicitHeight: vertical ? gridLayout.implicitHeight + 12 : Appearance.sizes.barHeight
 
     property list<var> pinnedItems: TrayService.pinnedItems
     property list<var> unpinnedItems: TrayService.unpinnedItems
