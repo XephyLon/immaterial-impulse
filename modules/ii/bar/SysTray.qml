@@ -73,7 +73,7 @@ Item {
         columns: root.vertical ? 1 : -1
         anchors.centerIn: parent
         rowSpacing: 4
-        columnSpacing: 4
+        columnSpacing: -6
 
         RippleButton {
             id: trayOverflowButton
