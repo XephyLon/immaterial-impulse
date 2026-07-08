@@ -104,7 +104,7 @@ Item {
                 Layout.preferredWidth: Math.min(parent.width * 1, parent.height * 0.45)
                 Layout.preferredHeight: Layout.preferredWidth
                 radius: Appearance.rounding.normal
-                color: ColorUtils.transparentize(blendedColors.colLayer1, 0.5)
+                color: Appearance.colors.colPrimaryContainer
 
                 layer.enabled: true
                 layer.effect: OpacityMask {
@@ -121,8 +121,17 @@ Item {
                     fillMode: Image.PreserveAspectCrop
                     cache: false
                     antialiasing: true
-                    sourceSize.width: artBackground.width
-                    sourceSize.height: artBackground.height
+                    sourceSize.width: artBackground.width * 2
+                    sourceSize.height: artBackground.height * 2
+                }
+
+                MaterialSymbol {
+                    visible: MprisController.activePlayer === null
+                    anchors.centerIn: parent 
+                    fill: 1
+                    text: "music_note"
+                    color: Appearance.colors.colPrimary
+                    iconSize: Appearance.font.pixelSize.hugeass + 100
                 }
             }
 
@@ -147,7 +156,7 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         elide: Text.ElideRight
-                        text: StringUtils.cleanMusicTitle(root.player?.trackTitle) || "Untitled"
+                        text: StringUtils.cleanMusicTitle(root.player?.trackTitle) || "Play"
 
                         Behavior on text {
                             SequentialAnimation {
@@ -173,7 +182,7 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         elide: Text.ElideRight
-                        text: root.player?.trackArtist || "Unknown Artist"
+                        text: root.player?.trackArtist || "Something"
 
                         Behavior on text {
                             SequentialAnimation {
@@ -189,6 +198,7 @@ Item {
             // ── Lyrics ──
             Lyrics {
                 id: lyricsComp
+                opacity: MprisController.activePlayer !== null ? 1 : 0 
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 textAlignment: Text.AlignHCenter
