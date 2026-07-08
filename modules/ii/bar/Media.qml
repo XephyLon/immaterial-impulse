@@ -76,7 +76,7 @@ Item {
 
     Layout.fillHeight: true
     implicitWidth:  vertical ? Appearance.sizes.verticalBarWidth : (isMaterial ? materialRow.implicitWidth : Math.min(rowLayout.implicitWidth + 8, 280))
-    implicitHeight: vertical ? (isMaterial ? 36 : mediaCircProg.implicitHeight + 6) : Appearance.sizes.barHeight
+    implicitHeight: vertical ? (isMaterial ? 32 : mediaCircProg.implicitHeight) : Appearance.sizes.barHeight
 
     Timer {
         running: activePlayer?.playbackState == MprisPlaybackState.Playing
