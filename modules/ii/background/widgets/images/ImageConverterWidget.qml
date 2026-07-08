@@ -141,9 +141,11 @@ AbstractBackgroundWidget {
         converter.running = true
     }
 
-    Item {
+    Rectangle {
         id: contentItem
-        implicitWidth: 320
+        color: Appearance.colors.colPrimaryContainer
+        radius: Appearance.rounding.normal
+        implicitWidth: 340
         implicitHeight: columnLayout.implicitHeight + 24
 
         ColumnLayout {
@@ -154,13 +156,13 @@ AbstractBackgroundWidget {
                 top: parent.top
                 margins: 12
             }
-            spacing: 10
+            spacing: 12
 
             StyledText {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 font.pixelSize: Appearance.font.pixelSize.smaller
-                color: Appearance.colors.colOnLayer1
+                color: Appearance.colors.colOnPrimaryContainer
                 opacity: 0.4
                 text: "PNG · JPG · WEBP · AVIF · BMP · PDF · TIFF"
             }
@@ -179,7 +181,7 @@ AbstractBackgroundWidget {
                                                 Appearance.colors.colError.r,
                                                 Appearance.colors.colError.g,
                                                 Appearance.colors.colError.b, 0.15)
-                        default:           return Appearance.colors.colLayer1
+                        default:           return Appearance.colors.colSurfaceContainerHigh
                     }
                 }
                 border.color: {
@@ -188,7 +190,7 @@ AbstractBackgroundWidget {
                         case "converting": return Appearance.colors.colSecondary
                         case "done":       return Appearance.colors.colTertiary
                         case "error":      return Appearance.colors.colError
-                        default:           return Appearance.colors.colOutline
+                        default:           return Appearance.colors.colOnPrimaryContainer
                     }
                 }
                 border.width: root.dropStatus === "hover" ? 2 : 1
@@ -282,42 +284,34 @@ AbstractBackgroundWidget {
                 }
             }
 
-            StyledText {
-                text: "Convert to:"
-                font.pixelSize: Appearance.font.pixelSize.small
-                color: Appearance.colors.colOnLayer1
-                opacity: 0.7
-            }
-
-            Flow {
-                id: formatSelector
+            RowLayout {
                 Layout.fillWidth: true
-                spacing: 2
+                spacing: 8
 
-                Repeater {
+                StyledText {
+                    text: "Convert to:"
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    color: Appearance.colors.colOnLayer1
+                    opacity: 0.7
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                StyledComboBox {
+                    Layout.fillWidth: true
                     model: root.formatOptions
-                    delegate: SelectionGroupButton {
-                        id: fmtBtn
-                        required property var modelData
-                        required property int index
-
-                        onYChanged: {
-                            if (index === 0) {
-                                fmtBtn.leftmost = true
-                            } else {
-                                var prev = formatSelector.children[index - 1]
-                                var newLine = prev && prev.y !== fmtBtn.y
-                                fmtBtn.leftmost = newLine
-                                if (prev) prev.rightmost = newLine
-                            }
+                    colBackground: Appearance.colors.colSurfaceContainerLow
+                    colBackgroundHover: Appearance.colors.colSurfaceContainerLow
+                    colBackgroundActive: Appearance.colors.colSurfaceContainerLow // same color I didn't like the hover 
+                    textRole: "displayName"
+                    valueRole: "value"
+                    currentIndex: {
+                        for (var i = 0; i < model.length; i++) {
+                            if (model[i].value === root.selectedFormat) return i;
                         }
-
-                        leftmost:  index === 0
-                        rightmost: index === root.formatOptions.length - 1
-                        buttonIcon: modelData.icon
-                        buttonText: modelData.displayName
-                        toggled:    root.selectedFormat === modelData.value
-                        onClicked:  root.selectedFormat = modelData.value
+                        return 0;
+                    }
+                    onActivated: (index) => {
+                        root.selectedFormat = model[index].value
                     }
                 }
             }
