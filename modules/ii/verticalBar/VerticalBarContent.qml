@@ -152,7 +152,7 @@ Item {
                 id: topCol
                 anchors.fill: parent
                 visible: !root.isMaterial
-                spacing: 2
+                spacing: Config.options.bar.borderless === "transparent" ? -4 : 2
 
                 Repeater {
                     model: Config.options.bar.layouts.leftLayout
@@ -228,7 +228,7 @@ Item {
                 id: middleCol
                 anchors.fill: parent
                 visible: !root.isMaterial
-                spacing: 2
+                spacing: Config.options.bar.borderless === "transparent" ? -4 : 2
 
                 Repeater {
                     model: Config.options.bar.layouts.middleLayout
@@ -305,7 +305,7 @@ Item {
                 id: bottomCol
                 anchors.fill: parent
                 visible: !root.isMaterial
-                spacing: 2
+                spacing: Config.options.bar.borderless === "transparent" ? -4 : 2
 
                 Repeater {
                     model: Config.options.bar.layouts.rightLayout

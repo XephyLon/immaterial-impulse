@@ -2,7 +2,7 @@ import QtQuick
 import qs.modules.common
 
 Item {
-    property bool vertical: false
+    property bool vertical: Config.options.bar.vertical
     property real btnSize: 40
     property real btnSpacing: 2
     property bool isMaterial: Config.options.bar.cornerStyle === 3
