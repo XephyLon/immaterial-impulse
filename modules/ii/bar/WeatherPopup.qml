@@ -20,7 +20,7 @@ StyledPopup {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 125
-                        
+
             topLeftRadius: Appearance.rounding.normal - 2
             topRightRadius: Appearance.rounding.normal - 2
             bottomLeftRadius: Appearance.rounding.normal
@@ -34,7 +34,6 @@ StyledPopup {
             Item {
                 anchors.fill: parent
                 anchors.margins: 16 
-                z: 0
 
                 ColumnLayout {
                     anchors.left: parent.left
