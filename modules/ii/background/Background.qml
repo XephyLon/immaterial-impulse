@@ -303,21 +303,38 @@ Variants {
                 height: bgRoot.centeredWallpaperSize
                 color: bgRoot.centeredWallpaperColor
                 shape: bgRoot.centeredWallpaperShape
-
                 transformOrigin: Item.Center
-                opacity: bgRoot.centeredWallpaperEnabled ? 1 : 0
-                scale: bgRoot.centeredWallpaperEnabled ? 1 : 0
                 visible: opacity > 0
 
-                Behavior on opacity {
-                    animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
-                }
-                Behavior on scale {
-                    NumberAnimation {
-                        duration: Appearance.animation.elementMove.duration
-                        easing.type: Easing.InOutCubic
+                state: bgRoot.centeredWallpaperEnabled ? "shown" : "hidden"
+
+                states: [
+                    State {
+                        name: "shown"
+                        PropertyChanges { target: centeredWallpaperShapeItem; scale: 1; opacity: 1 }
+                    },
+                    State {
+                        name: "hidden"
+                        PropertyChanges { target: centeredWallpaperShapeItem; scale: 1.4; opacity: 0 }
                     }
-                }
+                ]
+
+                transitions: [
+                    Transition {
+                        to: "shown"
+                        ParallelAnimation {
+                            NumberAnimation { target: centeredWallpaperShapeItem; property: "scale"; from: 0; duration: Appearance.animation.elementMove.duration; easing.type: Easing.InOutCubic }
+                            NumberAnimation { target: centeredWallpaperShapeItem; property: "opacity"; duration: Appearance.animation.elementMove.duration; easing.type: Easing.InOutCubic }
+                        }
+                    },
+                    Transition {
+                        to: "hidden"
+                        ParallelAnimation {
+                            NumberAnimation { target: centeredWallpaperShapeItem; property: "scale"; duration: Appearance.animation.elementMove.duration; easing.type: Easing.InOutCubic }
+                            NumberAnimation { target: centeredWallpaperShapeItem; property: "opacity"; duration: Appearance.animation.elementMove.duration; easing.type: Easing.InOutCubic }
+                        }
+                    }
+                ]
 
                 layer.enabled: true
                 layer.effect: OpacityMask {
