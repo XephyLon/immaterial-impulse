@@ -29,6 +29,7 @@ AbstractBackgroundWidget {
         property string label: ""
         property int shape: MaterialShape.Shape.Cookie12Sided
         property color bgColor: Appearance.colors.colPrimaryContainer
+        property color shapeColor: Appearance.colors.colPrimary
 
         implicitWidth: root.cardWidth
         implicitHeight: root.cardHeight
@@ -50,7 +51,7 @@ AbstractBackgroundWidget {
             MaterialShapeWrappedMaterialSymbol {
                 Layout.alignment: Qt.AlignRight
                 shape: statCard.shape
-                color: Appearance.colors.colPrimary
+                color: statCard.shapeColor
                 colSymbol: Appearance.colors.colOnPrimary
                 text: statCard.icon
                 iconSize: 18
@@ -95,6 +96,7 @@ AbstractBackgroundWidget {
             label: "RAM"
             shape: MaterialShape.Shape.Cookie4Sided
             bgColor: Appearance.colors.colSecondaryContainer
+            shapeColor: Appearance.colors.colSecondary
         }
 
         StatCard {
@@ -105,6 +107,7 @@ AbstractBackgroundWidget {
             label: root.hasBattery ? "Battery" : "Disk"
             shape: MaterialShape.Shape.Cookie12Sided
             bgColor: Appearance.colors.colTertiaryContainer
+            shapeColor: Appearance.colors.colTertiary
         }
     }
 }
