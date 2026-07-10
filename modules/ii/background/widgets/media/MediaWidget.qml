@@ -80,6 +80,11 @@ AbstractBackgroundWidget {
         onExited: { root.downloaded = true }
     }
 
+    StyledRectangularShadow {
+        target: card
+        z: -2
+    }
+
     Rectangle {
         id: card
         implicitWidth: root.widgetWidth
@@ -90,11 +95,6 @@ AbstractBackgroundWidget {
 
         Behavior on implicitHeight {
             NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-        }
-
-        StyledRectangularShadow {
-            target: card
-            z: -2
         }
 
         Column {
