@@ -60,6 +60,14 @@ hl.env("qsConfig", "end4-pC")
 
 ---
 
+### ⚙️ Settings keybind
+
+To open the settings panel, add this to your Hyprland config: eg
+
+```lua
+hl.bind("SUPER + escape", hl.dsp.global("quickshell:settingsToggle"), {description = "Toggle settings"})
+```
+
 ## 🙏 Credits
 
 Huge thanks to the people who made this possible:
