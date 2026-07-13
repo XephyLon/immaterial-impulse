@@ -79,6 +79,7 @@ MouseArea {
                         Layout.topMargin: (root.isCharging && root.percentage < 1) ? 8 : 4
                         font: batteryProgress.font
                         text: root.displayText
+                        visible: root.percentage < 100
                     }
                 }
             }
