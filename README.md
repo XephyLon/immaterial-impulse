@@ -15,7 +15,7 @@ Customized and maintained by **pctrade**
 
 ## 🎬 Showcase
 
-https://github.com/user-attachments/assets/1711c779-94b5-415e-8c8a-36fdd14ff883
+https://www.youtube.com/watch?v=o0Vsh7eVchs
 
 </div>
 
