@@ -54,4 +54,19 @@ Singleton {
             root.superDown = false
         }
     }
+
+    IpcHandler {
+        target: "background"
+        function toggleCenteredWallpaper(): void {
+            Config.options.background.centeredWallpaper = !Config.options.background.centeredWallpaper
+        }
+    }
+
+    GlobalShortcut {
+        name: "centeredWallpaperToggle"
+        description: "Toggles centered wallpaper"
+        onPressed: {
+            Config.options.background.centeredWallpaper = !Config.options.background.centeredWallpaper
+        }
+    }
 }
