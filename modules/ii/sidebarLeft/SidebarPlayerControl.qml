@@ -79,7 +79,7 @@ Item {
         anchors.rightMargin: 4
         anchors.topMargin: -1
         anchors.bottomMargin: 4
-        color: Appearance.colors.colLayer2
+        color: ColorUtils.transparentize(artDominantColor, 0.9)
         radius: Appearance.rounding.normal
 
         ColumnLayout {
