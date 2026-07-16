@@ -12,7 +12,7 @@ import Quickshell.Hyprland
 Loader {
     id: root
     property bool vertical: false
-    property color color: Appearance.colors.colOnSurfaceVariante
+    property color color: Appearance.colors.colOnSurfaceVariant
 
     sourceComponent: Item {
         implicitWidth: root.vertical ? null : rowLayout.implicitWidth + 8
