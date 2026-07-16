@@ -29,6 +29,18 @@ Scope {
             id: "gamma",
             sourceUrl: "indicators/GammaIndicator.qml"
         },
+        {
+            id: "keyboardLayout",
+            sourceUrl: "indicators/KeyboardLayoutIndicator.qml"
+        },
+        {
+            id: "audioOutput",
+            sourceUrl: "indicators/AudioOutputIndicator.qml"
+        },
+        {
+            id: "audioInput",
+            sourceUrl: "indicators/AudioInputIndicator.qml"
+        },
     ]
 
     function triggerOsd() {
@@ -88,6 +100,30 @@ Scope {
         function onSinkProtectionTriggered(reason) {
             root.protectionMessage = reason;
             root.currentIndicator = "volume";
+            root.triggerOsd();
+        }
+        function onSinkChanged() {
+            if (!Audio.sink) return;
+            root.protectionMessage = "";
+            root.currentIndicator = "audioOutput";
+            root.triggerOsd();
+        }
+        function onSourceChanged() {
+            if (!Audio.source) return;
+            root.protectionMessage = "";
+            root.currentIndicator = "audioInput";
+            root.triggerOsd();
+        }
+    }
+
+    Connections {
+        // Listen to keyboard layout switches
+        target: HyprlandXkb
+        function onCurrentLayoutNameChanged() {
+            // Nothing to announce a switch to/from if there's only one layout
+            if (HyprlandXkb.layoutCodes.length <= 1) return;
+            root.protectionMessage = "";
+            root.currentIndicator = "keyboardLayout";
             root.triggerOsd();
         }
     }
