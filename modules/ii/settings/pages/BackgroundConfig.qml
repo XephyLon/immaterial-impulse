@@ -340,6 +340,30 @@ ContentPage {
                     }
                 }
 
+                GroupedList {
+                    ConfigSwitch {
+                        id: autoColorSwitch
+                        buttonIcon: "auto_awesome"
+                        text: Translation.tr("Automatic colors")
+                        checked: Config.options.background.widgets.clock.color === ""
+                        onCheckedChanged: {
+                            if (checked) {
+                                Config.options.background.widgets.clock.color = ""
+                            }
+                        }
+                    }
+
+                    ColorSelectionArray {
+                        icon: "palette"
+                        text: Translation.tr("Color")
+                        currentValue: Config.options.background.widgets.clock.color
+                        onSelected: newValue => {
+                            Config.options.background.widgets.clock.color = newValue
+                            autoColorSwitch.checked = false
+                        }
+                    }
+                }
+
                 MaterialTextArea {
                     Layout.fillWidth: true
                     placeholderText: Translation.tr("Font family")
