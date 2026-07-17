@@ -73,6 +73,33 @@ When introducing or removing elements from the screen:
 - **Entrance**: `Appearance.animation.elementMoveEnter` (`emphasizedDecel`, 400ms).
 - **Exit**: `Appearance.animation.elementMoveExit` (`emphasizedAccel`, 200ms).
 
+### Expandable Content
+
+- Content revealed inside a list must animate into and out of the layout; do not toggle `visible`
+  directly and make neighboring rows jump.
+- Treat expansion and collapse as spatial motion. Animate the container's height with
+  `elementMoveEnter` for expansion and `elementMoveExit` for collapse. The slower decelerating
+  entrance gives incoming content time to settle, while the faster accelerating exit removes it
+  without making the interface feel blocked.
+- Pair the spatial transition with an opacity transition using `elementMoveFast`. Clip the animated
+  container so partially revealed controls cannot paint or receive input outside its current bounds.
+- Keep the item instantiated until its exit animation reaches zero height; hide it only after (or
+  whenever) the animated size is zero.
+- Indent expandable child content from the leading edge with an existing spacing token while keeping
+  the trailing edge aligned with its parent. This gives nested controls a clear hierarchy without
+  unnecessarily reducing their usable width.
+
+### Component Entrance and Exit
+
+- When a standalone component is added to or removed from a surface, combine spatial transformation
+  with an effects transition so its origin and destination remain legible. A subtle scale transition
+  paired with opacity is appropriate for desktop widgets that appear in place.
+- Use `elementMoveEnter` for the scale entrance and `elementMoveExit` for the scale exit; use
+  `elementMoveFast` for opacity. Do not destroy the component as soon as its enabled state changes:
+  retain it until the exit transition completes, then deactivate it.
+- Animate the component's outer presentation container rather than its content. This keeps entrance
+  and exit motion independent from live internal updates and interaction animations such as dragging.
+
 ## 3. Existing Nonconformances
 
 The following existing widgets contain hardcoded values that violate these strict guidelines. They have been explicitly identified and should be fixed in future PRs (do not copy their implementation for new widgets):

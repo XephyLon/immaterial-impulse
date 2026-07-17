@@ -62,12 +62,43 @@ ContentPage {
                         }
                     }
 
-                    GroupedList {
-                        Layout.fillWidth: true
-                        visible: configSwitch.checked
+                    Item {
+                        id: optionsRevealer
 
-                        PluginOptions {
-                            manifest: pluginGroup.modelData
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Appearance.rounding.verysmall
+                        implicitHeight: expanded ? optionsList.implicitHeight : 0
+                        opacity: expanded ? 1 : 0
+                        visible: expanded || implicitHeight > 0
+                        enabled: expanded
+                        clip: true
+
+                        readonly property bool expanded: configSwitch.checked
+
+                        Behavior on implicitHeight {
+                            NumberAnimation {
+                                duration: optionsRevealer.expanded
+                                    ? Appearance.animation.elementMoveEnter.duration
+                                    : Appearance.animation.elementMoveExit.duration
+                                easing.type: Easing.BezierSpline
+                                easing.bezierCurve: optionsRevealer.expanded
+                                    ? Appearance.animation.elementMoveEnter.bezierCurve
+                                    : Appearance.animation.elementMoveExit.bezierCurve
+                            }
+                        }
+
+                        Behavior on opacity {
+                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                        }
+
+                        GroupedList {
+                            id: optionsList
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+
+                            PluginOptions {
+                                manifest: pluginGroup.modelData
+                            }
                         }
                     }
                 }

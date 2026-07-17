@@ -511,19 +511,47 @@ Variants {
                 }
 
                 Repeater {
-                    model: Config.options.plugins.enabled
+                    model: PluginManager.availablePlugins
+
                     FadeLoader {
-                        required property string modelData
-                        shown: true
+                        id: pluginLoader
+
+                        required property var modelData
+                        shown: modelData.desktopWidget !== undefined
+                            && Config.options.plugins.enabled.includes(modelData.id)
+                        property real presentationScale: shown ? 1 : 0.92
+
+                        transform: Scale {
+                            origin.x: pluginLoader.item
+                                ? pluginLoader.item.x + pluginLoader.item.width / 2
+                                : 0
+                            origin.y: pluginLoader.item
+                                ? pluginLoader.item.y + pluginLoader.item.height / 2
+                                : 0
+                            xScale: pluginLoader.presentationScale
+                            yScale: pluginLoader.presentationScale
+                        }
+
+                        Behavior on presentationScale {
+                            NumberAnimation {
+                                duration: pluginLoader.shown
+                                    ? Appearance.animation.elementMoveEnter.duration
+                                    : Appearance.animation.elementMoveExit.duration
+                                easing.type: Easing.BezierSpline
+                                easing.bezierCurve: pluginLoader.shown
+                                    ? Appearance.animation.elementMoveEnter.bezierCurve
+                                    : Appearance.animation.elementMoveExit.bezierCurve
+                            }
+                        }
+
                         sourceComponent: PluginWidget {
-                            manifest: PluginManager.manifestsMap[modelData] || null
+                            manifest: pluginLoader.modelData
                             screenName: bgRoot.screen.name
                             screenWidth: bgRoot.screen.width
                             screenHeight: bgRoot.screen.height
                             scaledScreenWidth: bgRoot.screen.width
                             scaledScreenHeight: bgRoot.screen.height
                             wallpaperScale: 1
-                            visible: manifest !== null && manifest.desktopWidget !== undefined
                         }
                     }
                 }

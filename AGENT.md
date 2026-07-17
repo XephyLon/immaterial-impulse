@@ -281,6 +281,10 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   values. Desktop backdrop blur is also per-plugin state: a manifest opts into its default with
   `desktopWidget.blur: true`, while the generated **Blur background** option always lets the user
   override it. Do not make `PluginWidget` blur every plugin unconditionally.
+- Desktop plugin delegates are retained for every available manifest and gated through an animated
+  `FadeLoader`, rather than repeating only the enabled ids. Removing a model delegate destroys it
+  immediately and makes an M3 exit transition impossible; keep disabled loaders dormant until their
+  fade-and-scale exit reaches zero opacity.
 
 ## Design language
 
