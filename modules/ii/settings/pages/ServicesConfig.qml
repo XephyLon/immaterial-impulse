@@ -122,42 +122,41 @@ ContentPage {
                                     }
                                 }
 
-                                MaterialTextArea {
-                                    Layout.fillWidth: true
+                                ConfigInput {
+                                    buttonIcon: "badge"
+                                    text: Translation.tr("Name")
                                     placeholderText: Translation.tr("Provider Name (e.g. OpenRouter)")
-                                    text: Config.options.ai.customProviders[index].name
-                                    wrapMode: TextEdit.Wrap
-                                    onTextChanged: {
+                                    value: Config.options.ai.customProviders[index].name
+                                    onValueChanged: {
                                         let providers = [...Config.options.ai.customProviders];
-                                        if (providers[index].name !== text) {
-                                            providers[index].name = text;
+                                        if (providers[index].name !== value) {
+                                            providers[index].name = value;
                                             Config.options.ai.customProviders = providers;
                                         }
                                     }
                                 }
 
-                                MaterialTextArea {
-                                    Layout.fillWidth: true
-                                    placeholderText: Translation.tr("Base URL (e.g. https://openrouter.ai/api/v1)")
-                                    text: Config.options.ai.customProviders[index].baseUrl
-                                    wrapMode: TextEdit.Wrap
-                                    onTextChanged: {
+                                ConfigInput {
+                                    buttonIcon: "link"
+                                    text: Translation.tr("Base URL")
+                                    placeholderText: Translation.tr("e.g. https://openrouter.ai/api/v1")
+                                    fieldWidth: 240
+                                    value: Config.options.ai.customProviders[index].baseUrl
+                                    onValueChanged: {
                                         let providers = [...Config.options.ai.customProviders];
-                                        if (providers[index].baseUrl !== text) {
-                                            providers[index].baseUrl = text;
+                                        if (providers[index].baseUrl !== value) {
+                                            providers[index].baseUrl = value;
                                             Config.options.ai.customProviders = providers;
                                         }
                                     }
                                 }
 
-                                MaterialTextField {
-                                    Layout.fillWidth: true
-                                    placeholderText: Translation.tr("API Key")
-                                    text: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.[`custom_provider_${index}`] || "") : ""
-                                    echoMode: TextInput.Password
-                                    inputMethodHints: Qt.ImhSensitiveData
-                                    onTextChanged: {
-                                        let currentText = text;
+                                ConfigPassword {
+                                    buttonIcon: "key"
+                                    text: Translation.tr("API Key")
+                                    value: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.[`custom_provider_${index}`] || "") : ""
+                                    onValueChanged: {
+                                        let currentText = value;
                                         Qt.callLater(() => {
                                             if (KeyringStorage.loaded) {
                                                 KeyringStorage.setNestedField(["apiKeys", `custom_provider_${index}`], currentText);
