@@ -16,7 +16,23 @@ The shell uses dynamic, tonal color palettes derived from the wallpaper or theme
   - `colLayer1` through `colLayer4`: Backgrounds for cards or elements **nested inside an already-opaque parent surface** (e.g., a list item inside a sidebar that already has `colLayer0`). These use `contentTransparency`. *Do not use these for standalone popups, as they will render with unblurred transparency.*
 - **Text and Icons**: Use `colOnLayer0`, `colOnLayer1`, `colOnSurface`, `colSubtext`, etc., ensuring contrast is maintained across dark/light modes.
 - **Primary/Secondary/Tertiary**: Use `colPrimary`, `colSecondary`, `colTertiary` (and their respective `Hover` / `Active` variants) for interactive or accented elements.
-- **Borders and Outlines**: Use `colOutline`, `colOutlineVariant`, or `colLayer0Border` when a visible border is needed to separate adjacent surfaces. Do not hardcode border colors or rely solely on elevation unless explicitly part of the M3 spec for that component type.
+### Borders and Outlines
+Visible borders are not required for every surface. Many components rely entirely on elevation shadows or tonal contrast (e.g., `GroupedList` relies purely on `colLayer1` against the background without a border). When borders are used, adhere to the following strict conventions:
+
+- **Border Width**: 
+  - Use `border.width: 1` for standard structural outlines (e.g., `AboutCard`, `BarIsland`, `StyledPopup`, `StyledSwitch`).
+  - Use `border.width: 2` to emphasize active/selected states (e.g., `StyledRadioButton`, `ColorSelectionArray`, `GroupButton`, `MonitorRect` when dragged).
+  - *Never* use fractional or ad hoc border widths (e.g., `1.5`).
+
+- **Border Colors**:
+  - `colLayer0Border`: The standard 1px outline for standalone floating surfaces and prominent containers. Often combined with `StyledRectangularShadow` (as seen in `StyledPopup`).
+  - `colOutline`: Used for high-contrast interior dividers or form field outlines (e.g., `WindowDialogSeparator`).
+  - `colOutlineVariant`: Used for subtle dividers or secondary structural boundaries (e.g., `DockSeparator`, `SecondaryTabBar`).
+  - `colError`: Used for semantic error states (e.g., high usage in `ResourceCard`).
+
+- **Combining with Shadows**:
+  - Standalone popups and floating elements (like `StyledPopup`, `Toolbar`) combine `StyledRectangularShadow` with a 1px `colLayer0Border` to clearly define edges against complex backgrounds.
+  - Interiors and nested menus (e.g., `GroupedList`) drop the border and shadow entirely in favor of tonal contrast (`colLayer1`+).
 
 ### Corner Rounding (Radii)
 Always use predefined rounding values from `Appearance.rounding`. Never use hardcoded pixel values (e.g., `radius: 12`) or arbitrary maximum values (e.g., `radius: 9999`).
@@ -58,5 +74,8 @@ The following existing widgets contain hardcoded values that violate these stric
   - Arbitrary pixel values (e.g., `35`, `14`, `8`, `6`, `4`, `2`, `1`) in `CliphistImage.qml`, `ClippedProgressBar.qml`, `ClockPicker.qml`, `LayoutSection.qml`, `PlayerControlsLyrics.qml`, `ResourceCard.qml`, `StyledDropShadow.qml`, `ThemeCarousel.qml`, and shapes.
 - **Hardcoded Colors**:
   - Hex values (e.g., `#ffffff`, `#000000`, `#605790`) in `DashedBorder.qml`, `RoundCorner.qml`, `SineCookie.qml`, and the `shapes/` directory.
+- **Inconsistent Borders/Outlines**:
+  - `StyledComboBox` uses a floating popup but lacks the standard 1px `colLayer0Border` outline found on `StyledPopup`.
+  - `ResourceCard.qml` uses `border.width: 1.5`, which is a non-standard fractional width.
 - **Hardcoded Motion**:
   - Ad hoc integer durations (`50`, `110`, `150`, `200`, `300`, `350`, `400`) and arbitrary easing curves (e.g., `Easing.OutCubic`) in `AndroidClock.qml`, `ConfigSelectionShapeArray.qml`, `DragApps.qml`, `ErrorShakeAnimation.qml`, `LayoutSection.qml`, `Lyrics.qml`, `MaterialLoadingIndicator.qml`, `MonitorRect.qml`, `SelectionGroupButton.qml`, `StyledScrollBar.qml`, `StyledSwitch.qml`, `StyledText.qml`, `ThemeCarousel.qml`, `VerticalTabBar.qml`, and `widgetCanvas/WidgetCanvas.qml`.
