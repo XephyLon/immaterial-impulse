@@ -64,11 +64,11 @@ Singleton {
         command: ["bash", "-c", "df -k / | awk 'NR==2{print $2,$3,$4}'"]
         stdout: StdioCollector {
             onStreamFinished: {
-                const parts = text.trim().split(" ").map(Number)
-                if (parts.length >= 3) {
-                    root.diskTotal = parts[0]
-                    root.diskUsed  = parts[1]
-                    root.diskFree  = parts[2]
+                const parsed = root.parseDf(text)
+                if (parsed) {
+                    root.diskTotal = parsed.diskTotal
+                    root.diskUsed  = parsed.diskUsed
+                    root.diskFree  = parsed.diskFree
                 }
             }
         }
@@ -79,12 +79,12 @@ Singleton {
         command: ["bash", "-c", "nvidia-smi --query-gpu=temperature.gpu,utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null | head -1"]
         stdout: StdioCollector {
             onStreamFinished: {
-                const parts = text.trim().split(",").map(s => parseFloat(s.trim()))
-                if (parts.length >= 4 && !parts.some(isNaN)) {
-                    root.gpuTemp   = parts[0]
-                    root.gpuUsage  = parts[1] / 100
-                    root.vramUsed  = parts[2] * 1024 // MiB -> KB, to match /proc/meminfo units
-                    root.vramTotal = parts[3] * 1024
+                const parsed = root.parseNvidiaSmi(text)
+                if (parsed) {
+                    root.gpuTemp   = parsed.gpuTemp
+                    root.gpuUsage  = parsed.gpuUsage
+                    root.vramUsed  = parsed.vramUsed
+                    root.vramTotal = parsed.vramTotal
                 }
             }
         }
@@ -106,6 +106,40 @@ Singleton {
 
     function kbToGbString(kb) {
         return (kb / (1024 * 1024)).toFixed(1) + " GB"
+    }
+
+    function parseMeminfo(text) {
+        return {
+            memoryTotal: Number(text.match(/MemTotal: *(\d+)/)?.[1] ?? 1),
+            memoryFree:  Number(text.match(/MemAvailable: *(\d+)/)?.[1] ?? 0),
+            swapTotal:   Number(text.match(/SwapTotal: *(\d+)/)?.[1] ?? 1),
+            swapFree:    Number(text.match(/SwapFree: *(\d+)/)?.[1] ?? 0)
+        };
+    }
+
+    function parseDf(text) {
+        const parts = text.trim().split(/\s+/).map(Number)
+        if (parts.length >= 3 && !parts.some(isNaN)) {
+            return {
+                diskTotal: parts[0],
+                diskUsed:  parts[1],
+                diskFree:  parts[2]
+            };
+        }
+        return null;
+    }
+
+    function parseNvidiaSmi(text) {
+        const parts = text.trim().split(",").map(s => parseFloat(s.trim()))
+        if (parts.length >= 4 && !parts.some(isNaN)) {
+            return {
+                gpuTemp:   parts[0],
+                gpuUsage:  parts[1] / 100,
+                vramUsed:  parts[2] * 1024, // MiB -> KB, to match /proc/meminfo units
+                vramTotal: parts[3] * 1024
+            };
+        }
+        return null;
     }
 
     function updateMemoryUsageHistory() {
@@ -150,10 +184,11 @@ Singleton {
             fileStat.reload()
 
             const textMeminfo = fileMeminfo.text()
-            memoryTotal = Number(textMeminfo.match(/MemTotal: *(\d+)/)?.[1] ?? 1)
-            memoryFree  = Number(textMeminfo.match(/MemAvailable: *(\d+)/)?.[1] ?? 0)
-            swapTotal   = Number(textMeminfo.match(/SwapTotal: *(\d+)/)?.[1] ?? 1)
-            swapFree    = Number(textMeminfo.match(/SwapFree: *(\d+)/)?.[1] ?? 0)
+            const parsed = root.parseMeminfo(textMeminfo)
+            memoryTotal = parsed.memoryTotal
+            memoryFree  = parsed.memoryFree
+            swapTotal   = parsed.swapTotal
+            swapFree    = parsed.swapFree
 
             const textStat = fileStat.text()
             const cpuLine  = textStat.match(/^cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/)
