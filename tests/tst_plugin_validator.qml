@@ -9,7 +9,7 @@ TestCase {
         var manifest = {
             "id": "my_clock",
             "name": "My Clock",
-            "root": {
+            "desktopWidget": {
                 "type": "StyledRectangularShadow",
                 "props": { "radius": 17 },
                 "children": [
@@ -28,7 +28,7 @@ TestCase {
     function test_missingId() {
         var manifest = {
             "name": "My Clock",
-            "root": { "type": "Item" }
+            "desktopWidget": { "type": "Item" }
         };
         var result = PluginValidator.validateManifest(manifest);
         verify(!result.valid);
@@ -39,34 +39,34 @@ TestCase {
         var manifest = {
             "id": "bad_plugin",
             "name": "Bad Plugin",
-            "root": {
+            "desktopWidget": {
                 "type": "Process", // not whitelisted
             }
         };
         var result = PluginValidator.validateManifest(manifest);
         verify(!result.valid);
-        compare(result.error, "Component type 'Process' is not whitelisted");
+        compare(result.error, "Invalid desktopWidget: Component type 'Process' is not whitelisted");
     }
 
     function test_invalidBindingTarget() {
         var manifest = {
             "id": "bad_binding",
             "name": "Bad Binding",
-            "root": {
+            "desktopWidget": {
                 "type": "StyledText",
                 "bindings": { "text": "Config.options.lock.enable" } // not whitelisted
             }
         };
         var result = PluginValidator.validateManifest(manifest);
         verify(!result.valid);
-        compare(result.error, "Binding target 'Config.options.lock.enable' is not whitelisted");
+        compare(result.error, "Invalid desktopWidget: Binding target 'Config.options.lock.enable' is not whitelisted");
     }
 
     function test_nestedInvalidChild() {
         var manifest = {
             "id": "nested_invalid",
             "name": "Nested",
-            "root": {
+            "desktopWidget": {
                 "type": "Column",
                 "children": [
                     { "type": "StyledText" },
@@ -76,6 +76,6 @@ TestCase {
         };
         var result = PluginValidator.validateManifest(manifest);
         verify(!result.valid);
-        compare(result.error, "Component type 'UnknownType' is not whitelisted");
+        compare(result.error, "Invalid desktopWidget: Component type 'UnknownType' is not whitelisted");
     }
 }

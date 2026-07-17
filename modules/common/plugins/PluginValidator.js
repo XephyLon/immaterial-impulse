@@ -23,11 +23,25 @@ function validateManifest(manifest) {
     if (!manifest.name || typeof manifest.name !== 'string') {
         return { valid: false, error: "Manifest must have a string 'name'" };
     }
-    if (!manifest.root || typeof manifest.root !== 'object') {
-        return { valid: false, error: "Manifest must have a 'root' node object" };
+    const entryPoints = ["desktopWidget", "barWidget", "controlCenterWidget", "launcherProvider", "panel", "settingsUi"];
+    let hasEntryPoint = false;
+
+    for (let i = 0; i < entryPoints.length; i++) {
+        let ep = entryPoints[i];
+        if (manifest[ep]) {
+            hasEntryPoint = true;
+            let res = validateNode(manifest[ep]);
+            if (!res.valid) {
+                return { valid: false, error: "Invalid " + ep + ": " + res.error };
+            }
+        }
     }
 
-    return validateNode(manifest.root);
+    if (!hasEntryPoint) {
+        return { valid: false, error: "Manifest must have at least one entry point (e.g. desktopWidget, barWidget)" };
+    }
+
+    return { valid: true };
 }
 
 function validateNode(node) {

@@ -18,7 +18,7 @@ Singleton {
         let loaded = [];
         let map = {};
         for (let i = 0; i < plugins.length; i++) {
-            let path = Quickshell.shellPath("modules/common/plugins/bundled/" + plugins[i] + ".json");
+            let path = Quickshell.shellPath("modules/common/plugins/bundled/" + plugins[i] + "/manifest.json");
             let req = new XMLHttpRequest();
             req.open("GET", "file://" + path, false);
             req.send(null);

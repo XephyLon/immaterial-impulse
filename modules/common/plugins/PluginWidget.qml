@@ -32,7 +32,7 @@ AbstractBackgroundWidget {
 
     PluginNode {
         id: pluginNode
-        manifestNode: rootWidget.manifest.root
+        manifestNode: rootWidget.manifest ? rootWidget.manifest.desktopWidget : null
         anchors.centerIn: parent
     }
 }

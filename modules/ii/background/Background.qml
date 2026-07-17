@@ -522,7 +522,7 @@ Variants {
                             scaledScreenWidth: bgRoot.screen.width
                             scaledScreenHeight: bgRoot.screen.height
                             wallpaperScale: 1
-                            visible: manifest !== null
+                            visible: manifest !== null && manifest.desktopWidget !== undefined
                         }
                     }
                 }
