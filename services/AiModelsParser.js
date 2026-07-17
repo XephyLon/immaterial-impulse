@@ -13,7 +13,7 @@ function guessModelName(model) {
     return result;
 }
 
-function parseCustomProviderModels(responseJsonString, baseUrl, providerName) {
+function parseCustomProviderModels(responseJsonString, baseUrl, providerName, keyId) {
     try {
         if (!responseJsonString || responseJsonString.trim() === "") return [];
         const data = JSON.parse(responseJsonString);
@@ -31,7 +31,7 @@ function parseCustomProviderModels(responseJsonString, baseUrl, providerName) {
                 description: `Online | Custom (${providerName}) | ${model.id}`,
                 endpoint: sanitizedBaseUrl + "/chat/completions",
                 requires_key: true,
-                key_id: "custom_provider",
+                key_id: keyId,
                 api_format: "openai"
             });
         });

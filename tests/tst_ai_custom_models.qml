@@ -14,7 +14,7 @@ TestCase {
             ]
         });
 
-        var parsed = AiModelsParser.parseCustomProviderModels(validResponse, "https://api.example.com/", "Example")
+        var parsed = AiModelsParser.parseCustomProviderModels(validResponse, "https://api.example.com/", "Example", "custom_provider")
         compare(parsed.length, 2)
 
         compare(parsed[0].model, "model-1")
@@ -28,19 +28,19 @@ TestCase {
         verify(parsed[1].name !== undefined)
 
         // No trailing slash baseUrl
-        var parsedNoSlash = AiModelsParser.parseCustomProviderModels(validResponse, "https://api.example.com", "Example")
+        var parsedNoSlash = AiModelsParser.parseCustomProviderModels(validResponse, "https://api.example.com", "Example", "custom_provider")
         compare(parsedNoSlash[0].endpoint, "https://api.example.com/chat/completions")
 
         // Invalid JSON
-        var parsedInvalid = AiModelsParser.parseCustomProviderModels("invalid json", "https://api.example.com", "Example")
+        var parsedInvalid = AiModelsParser.parseCustomProviderModels("invalid json", "https://api.example.com", "Example", "custom_provider")
         compare(parsedInvalid.length, 0)
 
         // Missing data array
-        var parsedMissingData = AiModelsParser.parseCustomProviderModels(JSON.stringify({ other: "data" }), "https://api.example.com", "Example")
+        var parsedMissingData = AiModelsParser.parseCustomProviderModels(JSON.stringify({ other: "data" }), "https://api.example.com", "Example", "custom_provider")
         compare(parsedMissingData.length, 0)
 
         // Empty response
-        var parsedEmpty = AiModelsParser.parseCustomProviderModels("", "https://api.example.com", "Example")
+        var parsedEmpty = AiModelsParser.parseCustomProviderModels("", "https://api.example.com", "Example", "custom_provider")
         compare(parsedEmpty.length, 0)
     }
 }

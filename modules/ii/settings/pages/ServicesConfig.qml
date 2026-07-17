@@ -58,50 +58,99 @@ ContentPage {
             }
 
             ContentSubsection {
-                title: Translation.tr("Custom OpenAI-compatible Provider")
-                
-                GroupedList {
-                    ConfigSwitch {
-                        text: Translation.tr("Enable custom provider")
-                        checked: Config.options.ai.customProvider.enabled
-                        onCheckedChanged: {
-                            Config.options.ai.customProvider.enabled = checked;
+                title: Translation.tr("Custom OpenAI-compatible Providers")
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 15
+
+                    Repeater {
+                        model: Config.options.ai.customProviders ? Config.options.ai.customProviders.length : 0
+
+                        delegate: ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Appearance.rounding.small
+
+                            GroupedList {
+                                ConfigSwitch {
+                                    text: Translation.tr("Enable provider %1").arg(index + 1)
+                                    checked: Config.options.ai.customProviders[index].enabled
+                                    onCheckedChanged: {
+                                        let providers = [...Config.options.ai.customProviders];
+                                        providers[index].enabled = checked;
+                                        Config.options.ai.customProviders = providers;
+                                    }
+                                }
+                            }
+
+                            MaterialTextArea {
+                                Layout.fillWidth: true
+                                placeholderText: Translation.tr("Provider Name (e.g. OpenRouter)")
+                                text: Config.options.ai.customProviders[index].name
+                                wrapMode: TextEdit.Wrap
+                                onTextChanged: {
+                                    let providers = [...Config.options.ai.customProviders];
+                                    if (providers[index].name !== text) {
+                                        providers[index].name = text;
+                                        Config.options.ai.customProviders = providers;
+                                    }
+                                }
+                            }
+
+                            MaterialTextArea {
+                                Layout.fillWidth: true
+                                placeholderText: Translation.tr("Base URL (e.g. https://openrouter.ai/api/v1)")
+                                text: Config.options.ai.customProviders[index].baseUrl
+                                wrapMode: TextEdit.Wrap
+                                onTextChanged: {
+                                    let providers = [...Config.options.ai.customProviders];
+                                    if (providers[index].baseUrl !== text) {
+                                        providers[index].baseUrl = text;
+                                        Config.options.ai.customProviders = providers;
+                                    }
+                                }
+                            }
+
+                            MaterialTextArea {
+                                Layout.fillWidth: true
+                                placeholderText: Translation.tr("API Key")
+                                text: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.[`custom_provider_${index}`] || "") : ""
+                                wrapMode: TextEdit.Wrap
+                                onTextChanged: {
+                                    let currentText = text;
+                                    Qt.callLater(() => {
+                                        if (KeyringStorage.loaded) {
+                                            KeyringStorage.setNestedField(["apiKeys", `custom_provider_${index}`], currentText);
+                                        }
+                                    });
+                                }
+                            }
+
+                            RippleButton {
+                                Layout.alignment: Qt.AlignRight
+                                buttonText: Translation.tr("Remove Provider")
+                                onClicked: {
+                                    let providers = [...Config.options.ai.customProviders];
+                                    providers.splice(index, 1);
+                                    Config.options.ai.customProviders = providers;
+                                    
+                                    if (KeyringStorage.loaded) {
+                                        KeyringStorage.setNestedField(["apiKeys", `custom_provider_${index}`], "");
+                                    }
+                                }
+                            }
                         }
                     }
-                }
 
-                MaterialTextArea {
-                    Layout.fillWidth: true
-                    placeholderText: Translation.tr("Provider Name (e.g. OpenRouter)")
-                    text: Config.options.ai.customProvider.name
-                    wrapMode: TextEdit.Wrap
-                    onTextChanged: {
-                        Config.options.ai.customProvider.name = text;
-                    }
-                }
-
-                MaterialTextArea {
-                    Layout.fillWidth: true
-                    placeholderText: Translation.tr("Base URL (e.g. https://openrouter.ai/api/v1)")
-                    text: Config.options.ai.customProvider.baseUrl
-                    wrapMode: TextEdit.Wrap
-                    onTextChanged: {
-                        Config.options.ai.customProvider.baseUrl = text;
-                    }
-                }
-
-                MaterialTextArea {
-                    Layout.fillWidth: true
-                    placeholderText: Translation.tr("API Key")
-                    text: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.custom_provider || "") : ""
-                    wrapMode: TextEdit.Wrap
-                    onTextChanged: {
-                        let currentText = text;
-                        Qt.callLater(() => {
-                            if (KeyringStorage.loaded) {
-                                KeyringStorage.setNestedField(["apiKeys", "custom_provider"], currentText);
-                            }
-                        });
+                    RippleButton {
+                        Layout.alignment: Qt.AlignCenter
+                        Layout.topMargin: 10
+                        buttonText: Translation.tr("Add Provider")
+                        onClicked: {
+                            let providers = [...(Config.options.ai.customProviders || [])];
+                            providers.push({ enabled: false, name: "New Provider", baseUrl: "" });
+                            Config.options.ai.customProviders = providers;
+                        }
                     }
                 }
 

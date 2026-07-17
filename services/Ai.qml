@@ -352,9 +352,62 @@ Singleton {
 
     property string customProviderFeedbackText: ""
 
+    Component {
+        id: customModelFetcherComponent
+        Process {
+            id: fetcherProcess
+            property string baseUrl
+            property string apiKey
+            property string providerName
+            property int providerIndex
+            
+            command: ["bash", "-c", `curl -sL --max-time 10 -H "Authorization: Bearer ${apiKey}" "${baseUrl}/models" 2>/dev/null`]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    if (text.length === 0) {
+                        root.customProviderFeedbackText = Translation.tr("Failed to fetch from %1.").arg(fetcherProcess.providerName);
+                        return;
+                    }
+                    const parsedModels = AiModelsParser.parseCustomProviderModels(text, fetcherProcess.baseUrl, fetcherProcess.providerName, `custom_provider_${fetcherProcess.providerIndex}`);
+                    if (parsedModels.length > 0) {
+                        parsedModels.forEach(model => {
+                            const safeModelName = root.safeModelName(model.model);
+                            root.addModel(safeModelName, model);
+                        });
+                        root.modelList = Object.keys(root.models);
+                        root.customProviderFeedbackText = Translation.tr("Successfully fetched from %1.").arg(fetcherProcess.providerName);
+                    } else {
+                        root.customProviderFeedbackText = Translation.tr("No models found from %1.").arg(fetcherProcess.providerName);
+                    }
+                }
+            }
+            onExited: {
+                Qt.callLater(() => fetcherProcess.destroy());
+            }
+        }
+    }
+
     function fetchCustomModels() {
         customProviderFeedbackText = Translation.tr("Fetching models...");
-        getCustomModels.running = true;
+        let providers = Config.options.ai.customProviders || [];
+        let anyEnabled = false;
+        
+        for (let i = 0; i < providers.length; i++) {
+            let provider = providers[i];
+            if (!provider.enabled) continue;
+            anyEnabled = true;
+            let fetcher = customModelFetcherComponent.createObject(root, {
+                baseUrl: provider.baseUrl || "",
+                apiKey: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.[`custom_provider_${i}`] || "") : "",
+                providerName: provider.name || "Custom",
+                providerIndex: i
+            });
+            fetcher.running = true;
+        }
+        
+        if (!anyEnabled) {
+            customProviderFeedbackText = Translation.tr("No custom providers enabled.");
+        }
     }
 
     function addModel(modelName, data) {
@@ -391,34 +444,6 @@ Singleton {
                 } catch (e) {
                     console.log("Could not fetch Ollama models:", e);
                 }
-            }
-        }
-    }
-
-    Process {
-        id: getCustomModels
-        running: false
-        property string baseUrl: Config.options.ai.customProvider?.baseUrl || ""
-        property string apiKey: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.custom_provider || "") : ""
-        command: ["bash", "-c", `curl -sL --max-time 10 -H "Authorization: Bearer ${apiKey}" "${baseUrl}/models" 2>/dev/null`]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (text.length === 0) {
-                    root.customProviderFeedbackText = Translation.tr("Failed to fetch. Check base URL or network.");
-                    return;
-                }
-                const parsedModels = AiModelsParser.parseCustomProviderModels(text, getCustomModels.baseUrl, Config.options.ai.customProvider?.name || "Custom");
-                if (parsedModels.length === 0) {
-                    root.customProviderFeedbackText = Translation.tr("No models found or invalid response format.");
-                    return;
-                }
-                
-                parsedModels.forEach(model => {
-                    const safeModelName = root.safeModelName(model.model);
-                    root.addModel(safeModelName, model);
-                });
-                root.modelList = Object.keys(root.models);
-                root.customProviderFeedbackText = Translation.tr("Successfully fetched and added %1 models.").arg(parsedModels.length);
             }
         }
     }
