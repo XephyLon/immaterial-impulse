@@ -1,0 +1,30 @@
+{
+    "id": "clock_plugin",
+    "name": "Digital Clock Plugin",
+    "description": "A simple declarative digital clock plugin",
+    "defaultWidth": 300,
+    "defaultHeight": 120,
+    "root": {
+        "type": "Rectangle",
+        "props": {
+            "radius": "Appearance.rounding.large",
+            "color": "Appearance.colors.colLayer0",
+            "width": 300,
+            "height": 120
+        },
+        "children": [
+            {
+                "type": "StyledText",
+                "props": {
+                    "anchors.centerIn": "parent",
+                    "font.pixelSize": 48,
+                    "font.weight": 700,
+                    "color": "Appearance.colors.colOnLayer0"
+                },
+                "bindings": {
+                    "text": "DateTime.time"
+                }
+            }
+        ]
+    }
+}
