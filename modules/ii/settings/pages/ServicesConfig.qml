@@ -8,6 +8,35 @@ ContentPage {
     id: page
     forceWidth: true
 
+    component IconButton : RippleButton {
+        id: iRoot
+        property string iconName
+        property string textString
+        property color textColor: Appearance.colors.colOnPrimary
+
+        toggled: true
+        implicitHeight: 36
+        padding: 14
+        implicitWidth: layoutItem.implicitWidth + padding * 2
+        buttonRadius: Appearance.rounding.full
+
+        contentItem: RowLayout {
+            id: layoutItem
+            anchors.centerIn: parent
+            spacing: 6
+            MaterialSymbol {
+                text: iRoot.iconName
+                color: iRoot.textColor
+                iconSize: Appearance.font.pixelSize.normal
+            }
+            StyledText {
+                text: iRoot.textString
+                color: iRoot.textColor
+                font.pixelSize: Appearance.font.pixelSize.small
+            }
+        }
+    }
+
     //This was intended to go into the results more deeply but in the end I didn't like it but I left it just in case lol
     function goTo(term) {
         const t = term.toLowerCase().trim()
@@ -126,11 +155,14 @@ ContentPage {
                                 }
                             }
 
-                            DialogButton {
+                            IconButton {
                                 Layout.alignment: Qt.AlignRight
-                                buttonText: Translation.tr("Remove Provider")
-                                toggled: true
-                                colEnabled: Appearance.colors.colOnPrimary
+                                textString: Translation.tr("Remove Provider")
+                                iconName: "delete"
+                                colBackgroundToggled: Appearance.colors.colError
+                                colBackgroundToggledHover: Appearance.colors.colErrorHover
+                                colRippleToggled: Appearance.colors.colErrorActive
+                                textColor: Appearance.colors.colOnError
                                 onClicked: {
                                     let providers = [...Config.options.ai.customProviders];
                                     providers.splice(index, 1);
@@ -144,12 +176,11 @@ ContentPage {
                         }
                     }
 
-                    DialogButton {
+                    IconButton {
                         Layout.alignment: Qt.AlignCenter
                         Layout.topMargin: 10
-                        buttonText: Translation.tr("Add Provider")
-                        toggled: true
-                        colEnabled: Appearance.colors.colOnPrimary
+                        textString: Translation.tr("Add Provider")
+                        iconName: "add"
                         onClicked: {
                             let providers = [...(Config.options.ai.customProviders || [])];
                             providers.push({ enabled: false, name: "New Provider", baseUrl: "" });
@@ -158,12 +189,11 @@ ContentPage {
                     }
                 }
 
-                DialogButton {
+                IconButton {
                     Layout.alignment: Qt.AlignRight
                     Layout.topMargin: 10
-                    buttonText: Translation.tr("Fetch Models")
-                    toggled: true
-                    colEnabled: Appearance.colors.colOnPrimary
+                    textString: Translation.tr("Fetch Models")
+                    iconName: "sync"
                     onClicked: {
                         Ai.fetchCustomModels();
                     }
