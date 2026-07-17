@@ -126,7 +126,7 @@ ContentPage {
                                 }
                             }
 
-                            RippleButton {
+                            DialogButton {
                                 Layout.alignment: Qt.AlignRight
                                 buttonText: Translation.tr("Remove Provider")
                                 onClicked: {
@@ -142,7 +142,7 @@ ContentPage {
                         }
                     }
 
-                    RippleButton {
+                    DialogButton {
                         Layout.alignment: Qt.AlignCenter
                         Layout.topMargin: 10
                         buttonText: Translation.tr("Add Provider")
@@ -154,7 +154,7 @@ ContentPage {
                     }
                 }
 
-                RippleButton {
+                DialogButton {
                     Layout.alignment: Qt.AlignRight
                     Layout.topMargin: 10
                     buttonText: Translation.tr("Fetch Models")
