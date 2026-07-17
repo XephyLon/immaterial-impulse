@@ -94,9 +94,12 @@ When introducing or removing elements from the screen:
 - When a standalone component is added to or removed from a surface, combine spatial transformation
   with an effects transition so its origin and destination remain legible. A subtle scale transition
   paired with opacity is appropriate for desktop widgets that appear in place.
-- Use `elementMoveEnter` for the scale entrance and `elementMoveExit` for the scale exit; use
-  `elementMoveFast` for opacity. Do not destroy the component as soon as its enabled state changes:
-  retain it until the exit transition completes, then deactivate it.
+- Use `elementMoveEnter` for the entrance and `elementMoveExit` for the exit, and drive opacity with
+  the *same* duration and easing curve as the scale, not `elementMoveFast`. Scale and opacity are one
+  transition, not two independent ones - if opacity finishes on a different schedule than scale, the
+  component visibly reaches full opacity while still growing or shrinking, which reads as a hiccup
+  rather than a single cohesive motion. Do not destroy the component as soon as its enabled state
+  changes: retain it until the exit transition completes, then deactivate it.
 - Animate the component's outer presentation container rather than its content. This keeps entrance
   and exit motion independent from live internal updates and interaction animations such as dragging.
 

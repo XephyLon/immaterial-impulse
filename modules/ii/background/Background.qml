@@ -521,6 +521,17 @@ Variants {
                             && Config.options.plugins.enabled.includes(modelData.id)
                         property real presentationScale: shown ? 1 : 0.92
 
+                        // Opacity and scale are one combined entrance/exit transition, so they
+                        // must share the same duration and easing curve. FadeLoader's default
+                        // opacity Behavior always used elementMoveFast (200ms, expressiveEffects),
+                        // which fell out of sync with the 400ms elementMoveEnter scale below - the
+                        // widget hit full opacity while still visibly growing, reading as a
+                        // hiccup. Mirror the scale Behavior's duration/easing instead.
+                        enterDuration: Appearance.animation.elementMoveEnter.duration
+                        enterEasingCurve: Appearance.animation.elementMoveEnter.bezierCurve
+                        exitDuration: Appearance.animation.elementMoveExit.duration
+                        exitEasingCurve: Appearance.animation.elementMoveExit.bezierCurve
+
                         transform: Scale {
                             origin.x: pluginLoader.item
                                 ? pluginLoader.item.x + pluginLoader.item.width / 2
