@@ -18,6 +18,7 @@ import qs.modules.ii.background.widgets
 import qs.modules.ii.background.widgets.clock
 import qs.modules.ii.background.widgets.weather
 import qs.modules.ii.background.widgets.media
+import qs.modules.common.plugins
 import qs.modules.ii.background.widgets.images
 import qs.modules.ii.background.widgets.resources
 import qs.modules.ii.background.widgets.visualizer
@@ -506,6 +507,23 @@ Variants {
                         scaledScreenWidth: bgRoot.screen.width
                         scaledScreenHeight: bgRoot.screen.height
                         wallpaperScale: 1
+                    }
+                }
+
+                Repeater {
+                    model: Config.options.plugins.enabled
+                    FadeLoader {
+                        required property string modelData
+                        shown: true
+                        sourceComponent: PluginWidget {
+                            manifest: qs.modules.common.plugins.PluginManager.manifestsMap[modelData] || null
+                            screenWidth: bgRoot.screen.width
+                            screenHeight: bgRoot.screen.height
+                            scaledScreenWidth: bgRoot.screen.width
+                            scaledScreenHeight: bgRoot.screen.height
+                            wallpaperScale: 1
+                            visible: manifest !== null
+                        }
                     }
                 }
             }
