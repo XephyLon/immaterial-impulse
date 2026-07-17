@@ -3,13 +3,31 @@
 This is a workflow guide for agents (Claude Code or similar) making changes in this repo. For what
 the project *is* and how it's structured, read `AGENT.md` first.
 
-## Use the `superpowers` skill system if it's available
+## Hard rule: the `superpowers` skill system is required, not optional
 
-Both Claude Code (`~/.claude/plugins/.../superpowers-marketplace`) and Antigravity/Gemini CLI
-(`~/.gemini/extensions/superpowers`) on this machine have the `superpowers` skill/extension
-installed. If your environment exposes it (a `Skill`/`skill`/`activate_skill` tool, or a
-`using-superpowers` entry in your available-skills listing), use it - don't skip straight to
-default behavior when a relevant skill exists. Skills particularly relevant to this repo:
+Every agent working in this repo - Claude Code, Antigravity/`agy`, or otherwise - must have
+`superpowers` installed and active before starting work. This is not a "use it if it happens to be
+there" suggestion: **check for it first, and install it if it's missing**, before making any edits.
+
+How to check:
+- Claude Code: look for a `using-superpowers` entry in your available-skills listing, or a
+  `Skill`/`skill` tool. If present, invoke it - see "Skill Priority" in its own instructions.
+- Antigravity/`agy` (Gemini CLI-based): check `/skills` or for an `activate_skill` tool. This
+  machine already has the extension at `~/.gemini/extensions/superpowers`; if your session doesn't
+  see it, that's a signal to install/import it (see below), not to proceed without it.
+
+How to install if it's missing:
+- Claude Code: the marketplace is already added on this machine
+  (`~/.claude/plugins/marketplaces/superpowers-marketplace`) - install with
+  `/plugin install superpowers@superpowers-marketplace` (and `superpowers-chrome` if browser
+  access is needed for the task).
+- Antigravity/`agy`: `agy plugin import gemini` to pick up the existing
+  `~/.gemini/extensions/superpowers` extension, or `agy plugin install superpowers@<marketplace>`
+  if a marketplace source is configured. If neither works, say so explicitly rather than silently
+  continuing without it.
+
+Once active, don't skip straight to default behavior when a relevant skill exists - invoke it.
+Skills particularly relevant to this repo:
 
 - **`test-driven-development`** - use before writing implementation code for any feature or
   bugfix, and required reading before touching this repo's test suite (see `tests/` once it
