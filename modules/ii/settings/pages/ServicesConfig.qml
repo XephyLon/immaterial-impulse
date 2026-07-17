@@ -20,19 +20,25 @@ ContentPage {
         implicitWidth: layoutItem.implicitWidth + padding * 2
         buttonRadius: Appearance.rounding.full
 
-        contentItem: RowLayout {
-            id: layoutItem
-            anchors.centerIn: parent
-            spacing: 6
-            MaterialSymbol {
-                text: iRoot.iconName
-                color: iRoot.textColor
-                iconSize: Appearance.font.pixelSize.normal
-            }
-            StyledText {
-                text: iRoot.textString
-                color: iRoot.textColor
-                font.pixelSize: Appearance.font.pixelSize.small
+        contentItem: Item {
+            implicitWidth: layoutItem.implicitWidth
+            implicitHeight: layoutItem.implicitHeight
+            RowLayout {
+                id: layoutItem
+                anchors.centerIn: parent
+                spacing: 6
+                MaterialSymbol {
+                    text: iRoot.iconName
+                    color: iRoot.textColor
+                    iconSize: Appearance.font.pixelSize.normal
+                    Layout.alignment: Qt.AlignVCenter
+                }
+                StyledText {
+                    text: iRoot.textString
+                    color: iRoot.textColor
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    Layout.alignment: Qt.AlignVCenter
+                }
             }
         }
     }
