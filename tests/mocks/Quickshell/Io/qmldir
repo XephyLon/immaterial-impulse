@@ -1,0 +1,6 @@
+module Quickshell.Io
+JsonAdapter 1.0 JsonAdapter.qml
+JsonObject 1.0 JsonObject.qml
+FileView 1.0 FileView.qml
+Process 1.0 Process.qml
+StdioCollector 1.0 StdioCollector.qml

@@ -1,0 +1,7 @@
+module qs.modules.common
+singleton Appearance Appearance.qml
+singleton Config Config.qml
+singleton Directories Directories.qml
+singleton Icons Icons.qml
+singleton Images Images.qml
+singleton Persistent Persistent.qml

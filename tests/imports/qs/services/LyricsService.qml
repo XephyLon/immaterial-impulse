@@ -1,0 +1,1 @@
+../../../../services/LyricsService.qml
