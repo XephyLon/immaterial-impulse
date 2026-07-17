@@ -285,6 +285,23 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   `FadeLoader`, rather than repeating only the enabled ids. Removing a model delegate destroys it
   immediately and makes an M3 exit transition impossible; keep disabled loaders dormant until their
   fade-and-scale exit reaches zero opacity.
+- **A `Process`'s `onExited` handler that ignores its `exitCode` argument will happily act on stale
+  data.** `TempScreenshotProcess` writes to a deterministic path (`image-${screen.name}`), so a failed
+  `grim` run used to leave the *previous* successful capture sitting there untouched - the region
+  selector/screen translator would silently proceed against stale image data with no error, since
+  nothing actually "failed" from QML's perspective. Always check `exitCode` in `onExited` before
+  trusting the process's output exists or is fresh; `rm -f`-ing the target path before launching the
+  process (see `TempScreenshotProcess.qml`) turns a silent stale-reuse into an honest empty-file
+  failure instead.
+- **An overlay `Item` placed on top of an interactive control (e.g. a decorative `Flickable`-based
+  mask drawn over a `TextField`) will silently eat the clicks meant to focus that control**, unless
+  the overlay is `enabled: false`. `ConfigInput`'s `password: true` mode draws `PasswordChars` (a
+  `Flickable`) directly over the real `TextField` to render Material-shape dots in place of the
+  native echo glyphs; without `enabled: false` on that overlay's `Loader`, clicking the field just
+  fed the click to the Flickable instead, so the field never focused and typing appeared to do
+  nothing. This only surfaces where focus is obtained by clicking - `LockSurface.qml`'s password box
+  uses the identical overlay structure but never hit this, since it `forceActiveFocus()`s itself
+  programmatically instead of depending on a click.
 
 ## Design language
 
@@ -299,8 +316,14 @@ durations, both for dark/light theme correctness and for consistency with the re
 Shared building blocks to reach for before writing something from scratch: `StyledText`,
 `StyledComboBox`, `StyledSlider`, `StyledToolTip`/`StyledToolTipContent`, `RippleButton`,
 `MaterialSymbol`, `ResourceCard`, `GroupedList` + `ConfigSwitch`/`ConfigSpinBox`/
-`ConfigSelectionArray` (settings rows), `StyledPopup`, `StyledRectangularShadow`. All in
-`modules/common/widgets/`.
+`ConfigSelectionArray`/`ConfigInput` (settings rows), `StyledPopup`, `StyledRectangularShadow`. All
+in `modules/common/widgets/`.
+
+`ConfigInput` is the text-entry counterpart to `ConfigSwitch` (icon + label/description on the left,
+a lockscreen-style pill `TextField` on the right). Set `password: true` for masked input - this
+draws the lockscreen's `PasswordChars` Material-shape dots over the field instead of the native echo
+glyphs, and shows an optional reveal toggle (`revealButton`, defaults to `password`). There is no
+separate `ConfigPassword`; it was folded into this one flag.
 
 `GroupedList` normally separates and subtly rounds each row. Set `cohesive: true` when several
 controls form one continuous semantic unit (for example, the fields and actions for a single custom
