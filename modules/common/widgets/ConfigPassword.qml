@@ -5,8 +5,10 @@ import QtQuick.Layouts
 import QtQuick.Controls
 
 // Password counterpart to ConfigInput: same left label/description, but the field
-// is masked like the lockscreen's password box (LockSurface.qml's ToolbarTextField),
-// with an optional show/hide reveal toggle (set revealButton: false to omit it).
+// is masked like the lockscreen's password box (LockSurface.qml's ToolbarTextField +
+// PasswordChars: the actual echoMode: Password characters are made transparent, and
+// a row of Material shapes is drawn on top in their place), with an optional
+// show/hide reveal toggle (set revealButton: false to omit it).
 RowLayout {
     id: root
     property string text: ""
@@ -64,7 +66,10 @@ RowLayout {
             echoMode: root.revealed ? TextInput.Normal : TextInput.Password
             inputMethodHints: Qt.ImhSensitiveData
             placeholderTextColor: Appearance.colors.colSubtext
-            color: Appearance.colors.colOnLayer1
+            // The native echoMode: Password glyphs are drawn but made invisible - the
+            // MaterialShape dots below stand in for them, same trick as LockSurface's
+            // passwordBox ("We're drawing dots manually").
+            color: root.revealed ? Appearance.colors.colOnLayer1 : "transparent"
             selectedTextColor: Appearance.colors.colOnSecondaryContainer
             selectionColor: Appearance.colors.colSecondaryContainer
             renderType: Text.NativeRendering
@@ -78,6 +83,22 @@ RowLayout {
             background: Rectangle {
                 color: Appearance.colors.colLayer1
                 radius: Appearance.rounding.full
+            }
+
+            Loader {
+                active: !root.revealed
+                anchors {
+                    fill: parent
+                    leftMargin: inputField.padding
+                    rightMargin: inputField.padding
+                }
+                sourceComponent: PasswordChars {
+                    charSize: 16
+                    length: inputField.text.length
+                    selectionStart: inputField.selectionStart
+                    selectionEnd: inputField.selectionEnd
+                    cursorPosition: inputField.cursorPosition
+                }
             }
         }
 
