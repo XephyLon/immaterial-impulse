@@ -5,7 +5,7 @@ import qs.services
 
 Item {
     id: rootNode
-    required property var manifestNode
+    property var manifestNode
 
     implicitWidth: componentLoader.item ? (componentLoader.item.implicitWidth || componentLoader.item.width) : 0
     implicitHeight: componentLoader.item ? (componentLoader.item.implicitHeight || componentLoader.item.height) : 0
@@ -46,6 +46,11 @@ Item {
                 case "Item": return itemComponent;
                 case "Rectangle": return rectangleComponent;
                 case "RippleButton": return rippleButtonComponent;
+                case "StyledRectangularShadow": return styledRectangularShadowComponent;
+                case "GroupedList": return groupedListComponent;
+                case "ConfigSwitch": return configSwitchComponent;
+                case "NoticeBox": return noticeBoxComponent;
+                case "StyledPopup": return styledPopupComponent;
                 default: return null;
             }
         }
@@ -55,23 +60,41 @@ Item {
             if (manifestNode.props) {
                 for (let prop in manifestNode.props) {
                     let val = manifestNode.props[prop];
+                    let finalVal = val;
+                    
                     if (typeof val === "string" && val.startsWith("Appearance.colors.")) {
                         let colorName = val.substring(18);
-                        item[prop] = Qt.binding(function() { return qs.modules.common.Appearance.colors[colorName]; });
+                        finalVal = Qt.binding(function() { return qs.modules.common.Appearance.colors[colorName]; });
                     } else if (typeof val === "string" && val.startsWith("Appearance.rounding.")) {
                         let rName = val.substring(20);
-                        item[prop] = Qt.binding(function() { return qs.modules.common.Appearance.rounding[rName]; });
-                    } else {
-                        item[prop] = val;
+                        finalVal = Qt.binding(function() { return qs.modules.common.Appearance.rounding[rName]; });
+                    } else if (typeof val === "string" && val === "parent" && prop.startsWith("anchors")) {
+                        finalVal = item.parent;
                     }
+                    
+                    let parts = prop.split('.');
+                    let obj = item;
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        if (obj[parts[i]] === undefined) break;
+                        obj = obj[parts[i]];
+                    }
+                    obj[parts[parts.length - 1]] = finalVal;
                 }
             }
             if (manifestNode.bindings) {
                 for (let prop in manifestNode.bindings) {
                     let bindTarget = manifestNode.bindings[prop];
-                    item[prop] = Qt.binding(function() {
+                    let finalVal = Qt.binding(function() {
                         return rootNode.resolveBinding(bindTarget);
                     });
+                    
+                    let parts = prop.split('.');
+                    let obj = item;
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        if (obj[parts[i]] === undefined) break;
+                        obj = obj[parts[i]];
+                    }
+                    obj[parts[parts.length - 1]] = finalVal;
                 }
             }
         }
@@ -85,42 +108,92 @@ Item {
     Component { id: materialShapeComponent; MaterialShape {
         Repeater {
             model: manifestNode.children || []
-            PluginNode { manifestNode: modelData }
+            Loader {
+                source: "PluginNode.qml"
+                onLoaded: { if (item) item.manifestNode = modelData }
+            }
         }
     }}
 
     Component { id: rowComponent; Row {
         Repeater {
             model: manifestNode.children || []
-            PluginNode { manifestNode: modelData }
+            Loader {
+                source: "PluginNode.qml"
+                onLoaded: { if (item) item.manifestNode = modelData }
+            }
         }
     }}
 
     Component { id: columnComponent; Column {
         Repeater {
             model: manifestNode.children || []
-            PluginNode { manifestNode: modelData }
+            Loader {
+                source: "PluginNode.qml"
+                onLoaded: { if (item) item.manifestNode = modelData }
+            }
         }
     }}
 
     Component { id: itemComponent; Item {
         Repeater {
             model: manifestNode.children || []
-            PluginNode { manifestNode: modelData }
+            Loader {
+                source: "PluginNode.qml"
+                onLoaded: { if (item) item.manifestNode = modelData }
+            }
         }
     }}
 
     Component { id: rectangleComponent; Rectangle {
         Repeater {
             model: manifestNode.children || []
-            PluginNode { manifestNode: modelData }
+            Loader {
+                source: "PluginNode.qml"
+                onLoaded: { if (item) item.manifestNode = modelData }
+            }
         }
     }}
     
     Component { id: rippleButtonComponent; RippleButton {
         Repeater {
             model: manifestNode.children || []
-            PluginNode { manifestNode: modelData }
+            Loader {
+                source: "PluginNode.qml"
+                onLoaded: { if (item) item.manifestNode = modelData }
+            }
+        }
+    }}
+
+    Component { id: styledRectangularShadowComponent; StyledRectangularShadow {
+        Repeater {
+            model: manifestNode.children || []
+            Loader {
+                source: "PluginNode.qml"
+                onLoaded: { if (item) item.manifestNode = modelData }
+            }
+        }
+    }}
+
+    Component { id: groupedListComponent; GroupedList {
+        Repeater {
+            model: manifestNode.children || []
+            Loader {
+                source: "PluginNode.qml"
+                onLoaded: { if (item) item.manifestNode = modelData }
+            }
+        }
+    }}
+
+    Component { id: configSwitchComponent; ConfigSwitch {} }
+    Component { id: noticeBoxComponent; NoticeBox {} }
+    Component { id: styledPopupComponent; StyledPopup {
+        Repeater {
+            model: manifestNode.children || []
+            Loader {
+                source: "PluginNode.qml"
+                onLoaded: { if (item) item.manifestNode = modelData }
+            }
         }
     }}
 }

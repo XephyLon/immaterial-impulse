@@ -8,7 +8,7 @@ AbstractBackgroundWidget {
     id: rootWidget
     required property var manifest
 
-    configEntryName: "plugin_" + manifest.id
+    configEntryName: manifest ? "plugin_" + manifest.id : "plugin_unknown"
 
     // AbstractBackgroundWidget binds configEntry to Config.options.background.widgets[configEntryName]
     // If it's undefined, we provide a fallback for x, y
@@ -27,8 +27,8 @@ AbstractBackgroundWidget {
         Config.setNestedValue("background.widgets." + configEntryName + ".placementStrategy", placementStrategy);
     }
 
-    width: Math.max(manifest.defaultWidth || 0, pluginNode.width)
-    height: Math.max(manifest.defaultHeight || 0, pluginNode.height)
+    width: Math.max(manifest ? (manifest.defaultWidth || 0) : 0, pluginNode.width)
+    height: Math.max(manifest ? (manifest.defaultHeight || 0) : 0, pluginNode.height)
 
     PluginNode {
         id: pluginNode

@@ -516,7 +516,7 @@ Variants {
                         required property string modelData
                         shown: true
                         sourceComponent: PluginWidget {
-                            manifest: qs.modules.common.plugins.PluginManager.manifestsMap[modelData] || null
+                            manifest: PluginManager.manifestsMap[modelData] || null
                             screenWidth: bgRoot.screen.width
                             screenHeight: bgRoot.screen.height
                             scaledScreenWidth: bgRoot.screen.width

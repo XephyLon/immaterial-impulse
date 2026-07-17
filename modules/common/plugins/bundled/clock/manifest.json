@@ -4,7 +4,7 @@
     "description": "A simple declarative digital clock plugin",
     "defaultWidth": 300,
     "defaultHeight": 120,
-    "root": {
+    "desktopWidget": {
         "type": "Rectangle",
         "props": {
             "radius": "Appearance.rounding.large",

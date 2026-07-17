@@ -4,7 +4,7 @@
     "description": "A declarative battery status indicator",
     "defaultWidth": 200,
     "defaultHeight": 100,
-    "root": {
+    "desktopWidget": {
         "type": "Rectangle",
         "props": {
             "radius": "Appearance.rounding.large",
