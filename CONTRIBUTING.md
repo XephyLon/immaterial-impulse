@@ -92,6 +92,14 @@ Two real examples from this project's history that justify the paranoia:
   per-namespace `ignore_alpha` blur threshold the way `colLayer0` does. "Uses a real design token"
   is not the same as "uses the *right* design token for this position in the surface hierarchy" -
   see AGENT.md's `colLayer0` vs `colLayer1` note.
+- A commit claiming to have "migrated existing plugins to the new format" only moved the files into
+  new subdirectories - it never actually renamed the JSON schema key their content used, so both
+  bundled example plugins silently stopped rendering. **A commit message describing what a change
+  did is not evidence it did that** - re-read the actual diff/file content against the claim,
+  especially for rename/migration-style changes where "moved" and "renamed the thing inside" are
+  easy to conflate. The unit tests here didn't catch it either, because they validated the schema
+  function in isolation and never loaded the real bundled manifest files - a passing test suite is
+  not the same as the real data path working.
 
 ## Don't guess at `hyprctl` CLI syntax on this machine
 

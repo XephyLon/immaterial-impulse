@@ -200,6 +200,27 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   `Appearance.colors.colLayer*` token matters for a floating popup, not just picking "a" transparent
   one - see the Design language section below.
 
+## Dynamic/data-driven QML gotchas
+
+Relevant to anything that instantiates QML components from external data (JSON manifests, config
+arrays, etc.) rather than static declarations - e.g. the plugin system in
+`modules/common/plugins/`:
+
+- **`item[propName] = value` (JS bracket assignment) only resolves real top-level property names.**
+  It does not walk a dotted path into a grouped property - `item["anchors.centerIn"] = parent` or
+  `item["font.pixelSize"] = 20` will not do what it looks like it should; the real properties are
+  `item.anchors.centerIn` and `item.font.pixelSize`, which bracket-notation string keys don't
+  resolve into. If a data-driven schema needs to set grouped properties, either give the renderer
+  explicit dot-path-splitting logic, or keep the schema flat and avoid grouped-property keys
+  entirely.
+- **A component-type/binding-target whitelist and the renderer that's supposed to honor it are two
+  separate lists that can drift apart.** `PluginValidator.js`'s `componentWhitelist` and
+  `PluginNode.qml`'s renderer `switch` need to name exactly the same set of component types - a type
+  present in one but not the other means either "validates fine but silently renders nothing" or (if
+  the renderer's list is the wider one) an unvalidated type reaching the renderer. Treat this the
+  same as the Config-schema/settings-page two-sidedness described above: a change to one side isn't
+  done until the other side matches.
+
 ## Design language
 
 The shell follows **Material 3 / Material 3 Expressive**. `Appearance.qml` is the single source of
