@@ -146,11 +146,12 @@ ContentPage {
                                 }
                             }
 
-                            MaterialTextArea {
+                            MaterialTextField {
                                 Layout.fillWidth: true
                                 placeholderText: Translation.tr("API Key")
                                 text: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.[`custom_provider_${index}`] || "") : ""
-                                wrapMode: TextEdit.Wrap
+                                echoMode: TextInput.Password
+                                inputMethodHints: Qt.ImhSensitiveData
                                 onTextChanged: {
                                     let currentText = text;
                                     Qt.callLater(() => {
@@ -163,45 +164,49 @@ ContentPage {
 
                             IconButton {
                                 Layout.alignment: Qt.AlignRight
+                                toggled: false
                                 textString: Translation.tr("Remove Provider")
                                 iconName: "delete"
-                                colBackgroundToggled: Appearance.colors.colError
-                                colBackgroundToggledHover: Appearance.colors.colErrorHover
-                                colRippleToggled: Appearance.colors.colErrorActive
-                                textColor: Appearance.colors.colOnError
+                                textColor: Appearance.colors.colError
+                                colRipple: Appearance.colors.colErrorActive
                                 onClicked: {
+                                    const removedIndex = index;
                                     let providers = [...Config.options.ai.customProviders];
-                                    providers.splice(index, 1);
+                                    providers.splice(removedIndex, 1);
                                     Config.options.ai.customProviders = providers;
-                                    
+
                                     if (KeyringStorage.loaded) {
-                                        KeyringStorage.setNestedField(["apiKeys", `custom_provider_${index}`], "");
+                                        KeyringStorage.setNestedField(["apiKeys", `custom_provider_${removedIndex}`], "");
                                     }
                                 }
                             }
                         }
                     }
 
-                    IconButton {
-                        Layout.alignment: Qt.AlignCenter
+                    RowLayout {
+                        Layout.alignment: Qt.AlignRight
                         Layout.topMargin: 10
-                        textString: Translation.tr("Add Provider")
-                        iconName: "add"
-                        onClicked: {
-                            let providers = [...(Config.options.ai.customProviders || [])];
-                            providers.push({ enabled: false, name: "New Provider", baseUrl: "" });
-                            Config.options.ai.customProviders = providers;
-                        }
-                    }
-                }
+                        spacing: 10
 
-                IconButton {
-                    Layout.alignment: Qt.AlignRight
-                    Layout.topMargin: 10
-                    textString: Translation.tr("Fetch Models")
-                    iconName: "sync"
-                    onClicked: {
-                        Ai.fetchCustomModels();
+                        IconButton {
+                            textString: Translation.tr("Add Provider")
+                            iconName: "add"
+                            onClicked: {
+                                let providers = [...(Config.options.ai.customProviders || [])];
+                                providers.push({ enabled: false, name: "New Provider", baseUrl: "" });
+                                Config.options.ai.customProviders = providers;
+                            }
+                        }
+
+                        IconButton {
+                            toggled: false
+                            textColor: Appearance.colors.colPrimary
+                            textString: Translation.tr("Fetch Models")
+                            iconName: "sync"
+                            onClicked: {
+                                Ai.fetchCustomModels();
+                            }
+                        }
                     }
                 }
 
