@@ -87,6 +87,46 @@ into every layout variant that repeats the pattern (this codebase often has near
 for e.g. horizontal-bar vs vertical-bar vs "material style" variants of the same widget - grep for
 the sibling property name to find all of them before considering the wiring complete).
 
+## Multi-agent / parallel workflows (git worktrees)
+
+This repo lives at `~/.config/quickshell/end4-pC` and is loaded by exactly one running process,
+`qs -c end4-pC`, pointed at that exact directory. That has real consequences once more than one
+agent (main session + subagents, or several parallel Claude Code sessions) is touching the repo at
+once:
+
+- **Only the primary checkout hot-reloads against the live shell.** A `git worktree add
+  ../end4-pC-<feature> <branch>` checkout elsewhere is a completely separate directory - editing
+  files there does *not* trigger the running instance's hot-reload, and the log-grepping /
+  `console.log` verification loop above will show nothing for it. If an agent needs live verification
+  from inside a worktree, either point a second, disposable `qs -c <path-to-worktree>` instance at it
+  (fine for checking "does this even load without errors," but a second instance means a second OSD/
+  bar/etc. on screen - don't leave it running), or accept that real verification happens after
+  merging back into the primary checkout, not before.
+- **Partition work by file/module, not just by feature name, before going parallel.** Two agents
+  editing the same file concurrently (even in separate worktrees) just means a merge conflict later
+  instead of a collision now - worktrees don't prevent that, they only defer it. Before starting
+  parallel agent work, check whether the planned changes touch the same files; if they do, either
+  serialize that part of the work or explicitly split who owns which section.
+- **Treat `Config.qml`, `Appearance.qml`, and `GlobalStates.qml` as hot spots.** Nearly every feature
+  ends up adding a property to one of these three files. If two parallel agents both add settings in
+  the same nested `JsonObject`, or both touch the same color-token block, that's a near-guaranteed
+  merge conflict even with unrelated features - flag this to the user up front rather than
+  discovering it at merge time.
+- **Small, single-purpose commits (see below) are what make parallel branches mergeable at all.** A
+  worktree whose entire session is one giant commit is much more likely to conflict messily on merge
+  than one with granular commits a reviewer (human or agent) can cherry-pick or rebase around.
+- **Re-run the live-verification loop against the primary checkout after merging**, even if each
+  worktree "passed" its own review - the merge itself, and the fact that the changes were never
+  actually hot-reloaded together until now, are both new sources of breakage.
+- **Clean up (`git worktree remove <path>`) once a branch is merged.** Stale worktrees pointing at
+  already-merged or abandoned branches are easy to lose track of and easy to mistake for
+  still-in-progress work later.
+
+If the planned changes are small or touch a single, self-contained module, plain sequential work in
+the primary checkout is usually faster than the overhead of standing up a worktree - reach for
+worktrees when tasks are genuinely independent (different modules/files) and worth running
+concurrently, not as a default for every subagent dispatch.
+
 ## Git conventions
 
 - Commit **one logical change per commit** unless told otherwise - a bug fix, a new feature, a typo
