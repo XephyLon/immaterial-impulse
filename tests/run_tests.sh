@@ -9,7 +9,9 @@ QMLTESTRUNNER=""
 POSSIBLE_PATHS=(
     "/usr/lib/qt6/bin/qmltestrunner"
     "/usr/lib64/qt6/bin/qmltestrunner"
+    "/usr/lib/x86_64-linux-gnu/qt6/bin/qmltestrunner"
     "qmltestrunner-qt6"
+    "qmltestrunner6"
     "qmltestrunner"
 )
 
