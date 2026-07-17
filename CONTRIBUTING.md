@@ -3,6 +3,29 @@
 This is a workflow guide for agents (Claude Code or similar) making changes in this repo. For what
 the project *is* and how it's structured, read `AGENT.md` first.
 
+## Use the `superpowers` skill system if it's available
+
+Both Claude Code (`~/.claude/plugins/.../superpowers-marketplace`) and Antigravity/Gemini CLI
+(`~/.gemini/extensions/superpowers`) on this machine have the `superpowers` skill/extension
+installed. If your environment exposes it (a `Skill`/`skill`/`activate_skill` tool, or a
+`using-superpowers` entry in your available-skills listing), use it - don't skip straight to
+default behavior when a relevant skill exists. Skills particularly relevant to this repo:
+
+- **`test-driven-development`** - use before writing implementation code for any feature or
+  bugfix, and required reading before touching this repo's test suite (see `tests/` once it
+  exists).
+- **`using-git-worktrees`** / **`dispatching-parallel-agents`** / **`subagent-driven-development`**
+  - directly applicable to the "Multi-agent / parallel workflows" section below; prefer these over
+  ad hoc worktree/subagent handling if the skill is available.
+- **`systematic-debugging`** - use before proposing a fix for any bug or unexpected behavior; pairs
+  with this file's "Verify against the live shell" section below.
+- **`verification-before-completion`** - run before claiming anything is fixed/complete/passing;
+  the same evidence-before-assertions spirit as this file's live-verification loop.
+
+If a skill's instructions and this file disagree, the more specific/current one wins - skills get
+updated independently of this file, so don't assume this file has the last word if a skill exists
+that covers the exact situation.
+
 ## Verify against the live shell, not just "no syntax errors"
 
 There's no test suite and no compiler to catch mistakes — QML errors only surface at runtime, in
