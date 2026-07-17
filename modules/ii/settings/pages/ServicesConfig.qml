@@ -108,7 +108,9 @@ ContentPage {
 
                             GroupedList {
                                 ConfigSwitch {
-                                    text: Translation.tr("Enable provider %1").arg(index + 1)
+                                    text: Config.options.ai.customProviders[index].name
+                                        ? Translation.tr("Enable %1").arg(Config.options.ai.customProviders[index].name)
+                                        : Translation.tr("Enable provider %1").arg(index + 1)
                                     checked: Config.options.ai.customProviders[index].enabled
                                     onCheckedChanged: {
                                         let providers = [...Config.options.ai.customProviders];
