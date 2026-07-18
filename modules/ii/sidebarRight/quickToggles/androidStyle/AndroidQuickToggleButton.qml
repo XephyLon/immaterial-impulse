@@ -51,7 +51,7 @@ GroupButton {
     }
 
     enabled: available || editMode
-    padding: 6
+    padding: Appearance.spacing.small
     horizontalPadding: padding
     verticalPadding: padding
 
@@ -70,7 +70,7 @@ GroupButton {
     }
 
     contentItem: RowLayout {
-        spacing: 4
+        spacing: Appearance.spacing.verysmall
         anchors {
             centerIn: root.expandedSize ? undefined : parent
             fill: root.expandedSize ? parent : undefined

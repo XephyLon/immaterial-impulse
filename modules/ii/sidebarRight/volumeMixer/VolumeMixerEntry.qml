@@ -19,7 +19,7 @@ Item {
     RowLayout {
         id: rowLayout
         anchors.fill: parent
-        spacing: 6
+        spacing: Appearance.spacing.small
 
         MouseArea {
             property real size: 36

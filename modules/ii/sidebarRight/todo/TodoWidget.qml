@@ -53,10 +53,10 @@ Item {
 
         SwipeView {
             id: swipeView
-            Layout.topMargin: 10
+            Layout.topMargin: Appearance.spacing.normal
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 10
+            spacing: Appearance.spacing.normal
             clip: true
             currentIndex: tabBar.currentIndex
 
@@ -154,12 +154,12 @@ Item {
             ColumnLayout {
                 id: dialogColumnLayout
                 anchors.fill: parent
-                spacing: 16
+                spacing: Appearance.spacing.large
 
                 StyledText {
-                    Layout.topMargin: 16
-                    Layout.leftMargin: 16
-                    Layout.rightMargin: 16
+                    Layout.topMargin: Appearance.spacing.large
+                    Layout.leftMargin: Appearance.spacing.large
+                    Layout.rightMargin: Appearance.spacing.large
                     Layout.alignment: Qt.AlignLeft
                     color: Appearance.m3colors.m3onSurface
                     font.pixelSize: Appearance.font.pixelSize.larger
@@ -169,9 +169,9 @@ Item {
                 TextField {
                     id: todoInput
                     Layout.fillWidth: true
-                    Layout.leftMargin: 16
-                    Layout.rightMargin: 16
-                    padding: 10
+                    Layout.leftMargin: Appearance.spacing.large
+                    Layout.rightMargin: Appearance.spacing.large
+                    padding: Appearance.spacing.normal
                     color: activeFocus ? Appearance.m3colors.m3onSurface : Appearance.m3colors.m3onSurfaceVariant
                     renderType: Text.NativeRendering
                     selectedTextColor: Appearance.m3colors.m3onSecondaryContainer
@@ -197,11 +197,11 @@ Item {
                 }
 
                 RowLayout {
-                    Layout.bottomMargin: 16
-                    Layout.leftMargin: 16
-                    Layout.rightMargin: 16
+                    Layout.bottomMargin: Appearance.spacing.large
+                    Layout.leftMargin: Appearance.spacing.large
+                    Layout.rightMargin: Appearance.spacing.large
                     Layout.alignment: Qt.AlignRight
-                    spacing: 5
+                    spacing: Appearance.spacing.small
 
                     DialogButton {
                         buttonText: Translation.tr("Cancel")

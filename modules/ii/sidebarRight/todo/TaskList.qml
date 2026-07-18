@@ -61,15 +61,15 @@ Item {
                     StyledText {
                         id: todoContentText
                         Layout.fillWidth: true // Needed for wrapping
-                        Layout.leftMargin: 10
-                        Layout.rightMargin: 10
+                        Layout.leftMargin: Appearance.spacing.normal
+                        Layout.rightMargin: Appearance.spacing.normal
                         Layout.topMargin: todoListItemPadding
                         text: todoItem.modelData.content
                         wrapMode: Text.Wrap
                     }
                     RowLayout {
-                        Layout.leftMargin: 10
-                        Layout.rightMargin: 10
+                        Layout.leftMargin: Appearance.spacing.normal
+                        Layout.rightMargin: Appearance.spacing.normal
                         Layout.bottomMargin: todoListItemPadding
                         Item {
                             Layout.fillWidth: true
@@ -121,7 +121,7 @@ Item {
 
         ColumnLayout {
             anchors.centerIn: parent
-            spacing: 5
+            spacing: Appearance.spacing.small
 
             MaterialSymbol {
                 Layout.alignment: Qt.AlignHCenter
