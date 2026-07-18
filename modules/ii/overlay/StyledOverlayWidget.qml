@@ -36,7 +36,7 @@ AbstractOverlayWidget {
     property real minimumWidth: contentItem.implicitWidth
     property real minimumHeight: contentItem.implicitHeight
     property real resizeMargin: 8
-    property real padding: 6
+    property real padding: Appearance.spacing.small
     property real contentRadius: radius - padding
 
     // Resizing
@@ -236,14 +236,14 @@ AbstractOverlayWidget {
                         fill: parent
                         margins: root.padding
                     }
-                    spacing: 2
+                    spacing: Appearance.spacing.unsharpen
 
                     MaterialSymbol {
                         text: root.materialSymbol
-                        Layout.leftMargin: 6
+                        Layout.leftMargin: Appearance.spacing.small
                         iconSize: 20
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.rightMargin: 4
+                        Layout.rightMargin: Appearance.spacing.verysmall
                     }
                     
                     StyledText {

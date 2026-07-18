@@ -12,7 +12,7 @@ import qs.modules.common.widgets.widgetCanvas
 Rectangle {
     id: root
 
-    property real padding: 8
+    property real padding: Appearance.spacing.small
 
     opacity: GlobalStates.overlayOpen ? 1 : 0
     implicitWidth: contentRow.implicitWidth + (padding * 2)
@@ -32,10 +32,10 @@ Rectangle {
             fill: parent
             margins: root.padding
         }
-        spacing: 6
+        spacing: Appearance.spacing.small
 
         Row {
-            spacing: 4
+            spacing: Appearance.spacing.verysmall
             Repeater {
                 model: ScriptModel {
                     values: OverlayContext.availableWidgets
@@ -62,14 +62,14 @@ Rectangle {
         implicitWidth: 1
         color: Appearance.colors.colOutlineVariant
         Layout.fillHeight: true
-        Layout.topMargin: 10
-        Layout.bottomMargin: 10
+        Layout.topMargin: Appearance.spacing.normal
+        Layout.bottomMargin: Appearance.spacing.normal
     }
 
     component TimeWidget: StyledText {
         Layout.alignment: Qt.AlignVCenter
-        Layout.leftMargin: 8
-        Layout.rightMargin: 6
+        Layout.leftMargin: Appearance.spacing.small
+        Layout.rightMargin: Appearance.spacing.small
 
         text: DateTime.time
         color: Appearance.colors.colOnSurface
@@ -83,9 +83,9 @@ Rectangle {
     component BatteryWidget: Row {
         id: batteryWidget
         Layout.alignment: Qt.AlignVCenter
-        Layout.leftMargin: 6
-        Layout.rightMargin: 6
-        spacing: 2
+        Layout.leftMargin: Appearance.spacing.small
+        Layout.rightMargin: Appearance.spacing.small
+        spacing: Appearance.spacing.unsharpen
         property color colText: Battery.isLowAndNotCharging ? Appearance.colors.colError : Appearance.colors.colOnSurface
 
         MaterialSymbol {

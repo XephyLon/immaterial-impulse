@@ -16,15 +16,15 @@ StyledOverlayWidget {
     contentItem: OverlayBackground {
         id: contentItem
         radius: root.contentRadius
-        property real padding: 8
+        property real padding: Appearance.spacing.small
         ColumnLayout {
             id: contentColumn
             anchors.centerIn: parent
-            spacing: 10
+            spacing: Appearance.spacing.normal
 
             Row {
                 Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
-                spacing: 10
+                spacing: Appearance.spacing.normal
 
                 BigRecorderButton {
                     materialSymbol: "screenshot_region"
@@ -76,7 +76,7 @@ StyledOverlayWidget {
                 }
                 contentItem: Row {
                     anchors.centerIn: parent
-                    spacing: 6
+                    spacing: Appearance.spacing.small
                     MaterialSymbol {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "animated_images"

@@ -202,7 +202,7 @@ OverlayBackground {
                         buttonRadius: height / 2
                         y: modelData.y
                         anchors.right: parent.right
-                        anchors.rightMargin: 10
+                        anchors.rightMargin: Appearance.spacing.normal
                         z: 5
 
                         Timer {
@@ -237,7 +237,7 @@ OverlayBackground {
         StyledText {
             id: statusLabel
             Layout.fillWidth: true
-            Layout.margins: 16
+            Layout.margins: Appearance.spacing.large
             horizontalAlignment: Text.AlignRight
             text: saveDebounce.running ? Translation.tr("Saving...") : Translation.tr("Saved    ")
             color: Appearance.colors.colSubtext

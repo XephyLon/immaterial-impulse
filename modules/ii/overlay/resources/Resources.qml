@@ -39,14 +39,14 @@ StyledOverlayWidget {
     contentItem: OverlayBackground {
         id: contentItem
         radius: root.contentRadius
-        property real padding: 4
+        property real padding: Appearance.spacing.verysmall
         ColumnLayout {
             id: contentColumn
             anchors {
                 fill: parent
                 margins: parent.padding
             }
-            spacing: 8
+            spacing: Appearance.spacing.small
 
             SecondaryTabBar {
                 id: tabBar
@@ -68,7 +68,7 @@ StyledOverlayWidget {
             }
 
             ResourceSummary {
-                Layout.margins: 8
+                Layout.margins: Appearance.spacing.small
                 history: root.resources[tabBar.currentIndex]?.history ?? []
                 maxAvailableString: root.resources[tabBar.currentIndex]?.maxAvailableString ?? "--"
             }
@@ -81,10 +81,10 @@ StyledOverlayWidget {
         required property string maxAvailableString
         Layout.fillWidth: true
         Layout.fillHeight: true
-        spacing: 12
+        spacing: Appearance.spacing.normal
 
         ColumnLayout {
-            spacing: 2
+            spacing: Appearance.spacing.unsharpen
             StyledText {
                 text: (resourceSummary.history[resourceSummary.history.length - 1] * 100).toFixed(1) + "%"
                 font {
