@@ -156,10 +156,10 @@ Item {
         visible: active
         anchors.fill: parent
         sourceComponent: RowLayout {
-            spacing: 4
+            spacing: Appearance.spacing.verysmall
             ClippedFilledCircularProgress {
                 Layout.alignment: Qt.AlignVCenter
-                Layout.leftMargin: 3
+                Layout.leftMargin: Appearance.spacing.verysmall
                 implicitSize: 20
                 lineWidth: Appearance.rounding.unsharpen
                 value: root.activePlayer?.position / root.activePlayer?.length
@@ -200,7 +200,7 @@ Item {
         sourceComponent: RowLayout {
             id: innerRow
             anchors.centerIn: parent
-            spacing: 6
+            spacing: Appearance.spacing.small
 
             // No platyer 
             Loader {
@@ -208,7 +208,7 @@ Item {
                 visible: active
                 Layout.alignment: Qt.AlignVCenter
                 sourceComponent: RowLayout {
-                    spacing: 6
+                    spacing: Appearance.spacing.small
 
                     // Avatar
                     Rectangle {
@@ -255,7 +255,7 @@ Item {
                     ColumnLayout {
                         spacing: -3
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.topMargin: 2
+                        Layout.topMargin: Appearance.spacing.unsharpen
 
                         StyledText {
                             text: SystemInfo.username
@@ -271,7 +271,7 @@ Item {
                             color: Appearance.colors.colOnSecondaryContainer
                             opacity: 0.7
                             elide: Text.ElideRight
-                            Layout.rightMargin: 8
+                            Layout.rightMargin: Appearance.spacing.small
                             Layout.maximumWidth: 120
                             text: SystemInfo.distroName
                         }
@@ -285,7 +285,7 @@ Item {
                 visible: active
                 Layout.alignment: Qt.AlignVCenter
                 sourceComponent: RowLayout {
-                    spacing: 6
+                    spacing: Appearance.spacing.small
 
                     // Art
                     Rectangle {
@@ -330,7 +330,7 @@ Item {
                     ColumnLayout {
                         spacing: -4
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.topMargin: 2
+                        Layout.topMargin: Appearance.spacing.unsharpen
 
                         StyledText {
                             id: artistText

@@ -51,7 +51,7 @@ BarWidgetSwitcher {
 
             StyledText {
                 Layout.alignment: Qt.AlignHCenter
-                Layout.bottomMargin: 5
+                Layout.bottomMargin: Appearance.spacing.small
                 font.pixelSize: Appearance.font.pixelSize.smallest
                 color: Appearance.colors.colOnLayer1
                 text: DateTime.shortDate
@@ -62,12 +62,12 @@ BarWidgetSwitcher {
     colMaterial: Component {
         ColumnLayout {
             id: clockWidget
-            spacing: 2
+            spacing: Appearance.spacing.unsharpen
             Layout.alignment: Qt.AlignHCenter
 
             Column {
                 Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: 2
+                Layout.topMargin: Appearance.spacing.unsharpen
                 spacing: -4
 
                 Repeater {
@@ -107,7 +107,7 @@ BarWidgetSwitcher {
 
     rowDefault: Component {
         RowLayout {
-            spacing: 4
+            spacing: Appearance.spacing.verysmall
             StyledText {
                 visible: root.showDate
                 font.pixelSize: Appearance.font.pixelSize.small
@@ -132,7 +132,7 @@ BarWidgetSwitcher {
 
     rowMaterial: Component {
         RowLayout {
-            spacing: 4
+            spacing: Appearance.spacing.verysmall
             id: pill
 
             property var timeParts: DateTime.time.split(/[: ]/)
@@ -146,7 +146,7 @@ BarWidgetSwitcher {
                 color: Appearance.colors.colOnPrimaryContainer
                 text: DateTime.longDate
                 Layout.alignment: Qt.AlignVCenter
-                leftPadding: 5
+                leftPadding: Appearance.spacing.small
             }
 
             Rectangle {

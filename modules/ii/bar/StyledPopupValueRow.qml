@@ -8,7 +8,7 @@ RowLayout {
     required property string icon
     required property string label
     required property string value
-    spacing: 4
+    spacing: Appearance.spacing.verysmall
 
     MaterialSymbol {
         text: root.icon

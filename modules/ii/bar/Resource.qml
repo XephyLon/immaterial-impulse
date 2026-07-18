@@ -79,7 +79,7 @@ Item {
     RowLayout {
         id: resourceRowLayout
         visible: !root.vertical
-        spacing: 2
+        spacing: Appearance.spacing.unsharpen
         x: shown ? 0 : -resourceRowLayout.width
         anchors.verticalCenter: parent.verticalCenter
 

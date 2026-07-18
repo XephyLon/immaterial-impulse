@@ -68,7 +68,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.leftMargin: 3
+        anchors.leftMargin: Appearance.spacing.verysmall
         spacing: -4
 
         StyledText {

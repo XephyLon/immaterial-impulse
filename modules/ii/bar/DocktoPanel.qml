@@ -161,7 +161,7 @@ Item {
 
                             Flow {
                                 flow: root.vertical ? Flow.TopToBottom : Flow.LeftToRight
-                                spacing: 2
+                                spacing: Appearance.spacing.unsharpen
                                 anchors {
                                     left:   root.vertical ? pinnedIcon.right    : undefined
                                     top:    root.vertical ? undefined            : pinnedIcon.bottom
@@ -321,7 +321,7 @@ Item {
 
                             Flow {
                                 flow: root.vertical ? Flow.TopToBottom : Flow.LeftToRight
-                                spacing: 2
+                                spacing: Appearance.spacing.unsharpen
                                 anchors {
                                     left:   root.vertical ? activeIcon.right    : undefined
                                     top:    root.vertical ? undefined            : activeIcon.bottom

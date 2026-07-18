@@ -38,6 +38,6 @@ RippleButton {
         color: Appearance.colors.colOnPrimary
         colSymbol: Appearance.colors.colPrimary
         wrappedShape: MaterialShape.Shape.Cookie12Sided
-        padding: 2
+        padding: Appearance.spacing.unsharpen
     }
 }
