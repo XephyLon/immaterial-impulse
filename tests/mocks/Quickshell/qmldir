@@ -1,4 +1,5 @@
 module Quickshell
 Singleton 1.0 Singleton.qml
 singleton Quickshell 1.0 Quickshell.qml
+singleton DesktopEntries 1.0 DesktopEntries.qml
 ColorQuantizer 1.0 ColorQuantizer.qml
