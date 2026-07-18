@@ -12,10 +12,10 @@ StyledPopup {
     }
 
     Row {
-        spacing: 5
+        spacing: Appearance.spacing.small
 
         Column {
-            spacing: 5
+            spacing: Appearance.spacing.small
 
             ResourceCard {
                 label: "RAM"
@@ -38,7 +38,7 @@ StyledPopup {
         }
 
         Column {
-            spacing: 5
+            spacing: Appearance.spacing.small
 
             ResourceCard {
                 label: "Swap"
@@ -58,7 +58,7 @@ StyledPopup {
         }
 
         Column {
-            spacing: 5
+            spacing: Appearance.spacing.small
 
             ResourceCard {
                 label: "GPU"

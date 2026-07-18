@@ -21,7 +21,7 @@ Loader {
         RowLayout {
             id: rowLayout
             anchors.centerIn: parent
-            spacing: 5
+            spacing: Appearance.spacing.small
 
             StyledText {
                 id: layoutCodeText

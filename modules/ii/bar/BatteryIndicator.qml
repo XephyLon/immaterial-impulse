@@ -41,7 +41,7 @@ MouseArea {
                     spacing: 0
                     MaterialSymbol {
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.topMargin: 2
+                        Layout.topMargin: Appearance.spacing.unsharpen
                         Layout.leftMargin: -2
                         Layout.rightMargin: -2
                         fill: 1
@@ -51,7 +51,7 @@ MouseArea {
                     }
                     StyledText {
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.topMargin: 2
+                        Layout.topMargin: Appearance.spacing.unsharpen
                         font: batteryProgress.font
                         text: batteryProgress.text
                     }
@@ -70,7 +70,7 @@ MouseArea {
                         Layout.alignment: Qt.AlignHCenter
                         fill: 1
                         text: "bolt"
-                        Layout.topMargin: 4
+                        Layout.topMargin: Appearance.spacing.verysmall
                         iconSize: Appearance.font.pixelSize.smaller
                         visible: root.isCharging && root.percentage < 1
                     }

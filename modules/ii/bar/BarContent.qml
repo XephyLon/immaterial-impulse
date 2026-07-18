@@ -129,7 +129,7 @@ Item {
                 RowLayout {
                     id: leftMaterialRow
                     anchors.centerIn: parent
-                    spacing: 3
+                    spacing: Appearance.spacing.verysmall
 
                     Repeater {
                         model: root.effectiveLeftLayout
@@ -222,7 +222,7 @@ Item {
                 RowLayout {
                     id: centerMaterialRow
                     anchors.centerIn: parent
-                    spacing: 3
+                    spacing: Appearance.spacing.verysmall
 
                     Repeater {
                         model: root.effectiveMiddleLayout
@@ -315,7 +315,7 @@ Item {
                 RowLayout {
                     id: rightMaterialRow
                     anchors.centerIn: parent
-                    spacing: 3
+                    spacing: Appearance.spacing.verysmall
 
                     Repeater {
                         model: root.effectiveRightLayout

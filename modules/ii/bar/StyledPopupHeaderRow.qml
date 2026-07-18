@@ -7,7 +7,7 @@ Row {
     id: root
     required property var icon
     required property var label
-    spacing: 5
+    spacing: Appearance.spacing.small
 
     MaterialSymbol {
         anchors.verticalCenter: parent.verticalCenter
