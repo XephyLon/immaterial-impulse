@@ -18,7 +18,7 @@ ContentPage {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 2
+            spacing: Appearance.spacing.unsharpen
 
             Repeater {
                 model: PluginManager.availablePlugins
@@ -28,7 +28,7 @@ ContentPage {
                     required property var modelData
 
                     Layout.fillWidth: true
-                    spacing: 2
+                    spacing: Appearance.spacing.unsharpen
 
                     Rectangle {
                         Layout.fillWidth: true
@@ -39,7 +39,7 @@ ContentPage {
                         ConfigSwitch {
                             id: configSwitch
                             anchors.fill: parent
-                            anchors.margins: 8
+                            anchors.margins: Appearance.spacing.small
 
                             property var modelData: pluginGroup.modelData
                             text: modelData.name
