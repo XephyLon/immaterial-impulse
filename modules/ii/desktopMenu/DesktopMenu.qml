@@ -134,8 +134,8 @@ Scope {
 
                 ColumnLayout {
                     id: menuCol
-                    anchors { fill: parent; margins: 8 }
-                    spacing: 4
+                    anchors { fill: parent; margins: Appearance.spacing.small }
+                    spacing: Appearance.spacing.verysmall
 
                     Rectangle {
                         Layout.fillWidth: true
@@ -146,7 +146,7 @@ Scope {
 
                         Carousel {
                             anchors.fill: parent
-                            anchors.margins: 10
+                            anchors.margins: Appearance.spacing.normal
                             model: root.carouselModel
                             onWallpaperSelected: (path) => {
                                 Wallpapers.select(path, Appearance.m3colors.darkmode)
@@ -166,8 +166,8 @@ Scope {
                             colBackground: "transparent"
                             colBackgroundHover: Appearance.colors.colLayer2
                             contentItem: RowLayout {
-                                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-                                spacing: 12
+                                anchors { fill: parent; leftMargin: Appearance.spacing.normal; rightMargin: Appearance.spacing.normal }
+                                spacing: Appearance.spacing.normal
                                 MaterialSymbol { text: "format_paint"; iconSize: Appearance.font.pixelSize.larger; color: Appearance.colors.colOnLayer1 }
                                 StyledText { Layout.fillWidth: true; text: "Wallpaper & style"; font.pixelSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1 }
                                 MaterialSymbol { text: "chevron_right"; iconSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1; opacity: 0.4 }
@@ -197,8 +197,8 @@ Scope {
                             colBackground: "transparent"
                             colBackgroundHover: Appearance.colors.colLayer2
                             contentItem: RowLayout {
-                                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-                                spacing: 12
+                                anchors { fill: parent; leftMargin: Appearance.spacing.normal; rightMargin: Appearance.spacing.normal }
+                                spacing: Appearance.spacing.normal
                                 MaterialSymbol { text: "widgets"; iconSize: Appearance.font.pixelSize.larger; color: Appearance.colors.colOnLayer1 }
                                 StyledText { Layout.fillWidth: true; text: "Widgets"; font.pixelSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1 }
                                 MaterialSymbol { text: "chevron_right"; iconSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1; opacity: 0.4 }
@@ -227,8 +227,8 @@ Scope {
                             colBackground: "transparent"
                             colBackgroundHover: Appearance.colors.colLayer2
                             contentItem: RowLayout {
-                                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-                                spacing: 12
+                                anchors { fill: parent; leftMargin: Appearance.spacing.normal; rightMargin: Appearance.spacing.normal }
+                                spacing: Appearance.spacing.normal
                                 MaterialSymbol { text: "settings"; iconSize: Appearance.font.pixelSize.larger; color: Appearance.colors.colOnLayer1 }
                                 StyledText { Layout.fillWidth: true; text: "Settings"; font.pixelSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1 }
                                 MaterialSymbol { text: "chevron_right"; iconSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1; opacity: 0.4 }
