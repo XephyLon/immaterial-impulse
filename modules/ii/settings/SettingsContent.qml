@@ -104,16 +104,16 @@ Item {
 
                 NavigationRail {
                     id: navRail
-                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: 20 }
-                    spacing: 10
+                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: Appearance.spacing.verylarge }
+                    spacing: Appearance.spacing.normal
                     expanded: root.width > 900
 
                     RowLayout {
                         visible: navRail.expanded
-                        spacing: 10
+                        spacing: Appearance.spacing.normal
                         Layout.fillWidth: true
-                        Layout.margins: 5
-                        Layout.topMargin: 15
+                        Layout.margins: Appearance.spacing.small
+                        Layout.topMargin: Appearance.spacing.large
 
                         Rectangle {
                             id: avatarRect
@@ -155,7 +155,7 @@ Item {
                         }
 
                         ColumnLayout {
-                            spacing: 2
+                            spacing: Appearance.spacing.unsharpen
                             Layout.fillWidth: true
 
                             StyledText {

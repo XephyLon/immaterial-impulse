@@ -77,7 +77,7 @@ ContentPage {
         id: mainLayout 
         Layout.fillWidth: true   
         Layout.fillHeight: true
-        spacing: 20
+        spacing: Appearance.spacing.verylarge
 
         ContentSection {
             icon: "monitor"
@@ -87,7 +87,7 @@ ContentPage {
             ContentSubsection {
                 title: Translation.tr("Show bar on")
                 Flow {
-                    Layout.fillWidth: true; spacing: 2
+                    Layout.fillWidth: true; spacing: Appearance.spacing.unsharpen
                     SelectionGroupButton {
                         leftmost: true; rightmost: Hyprland.monitors.length === 0
                         buttonIcon: "tv_displays"; buttonText: Translation.tr("All")

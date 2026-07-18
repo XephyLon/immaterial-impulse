@@ -37,7 +37,7 @@ ContentPage {
         id: mainLayout 
         Layout.fillWidth: true   
         Layout.fillHeight: true
-        spacing: 20
+        spacing: Appearance.spacing.verylarge
     
         ContentSection { // I see that for many the overview is important, I put it first why not
             icon: "overview_key"
@@ -403,7 +403,7 @@ ContentPage {
                     ColumnLayout {
                         id: crosshairCol
                         anchors { fill: parent; margins: 14 }
-                        spacing: 8
+                        spacing: Appearance.spacing.small
 
                         ConfigTextArea {
                             id: crosshairCodeField
@@ -429,7 +429,7 @@ ContentPage {
                         RowLayout {
                             Layout.fillWidth: true
                             StyledText {
-                                Layout.leftMargin: 8
+                                Layout.leftMargin: Appearance.spacing.small
                                 Layout.fillWidth: true
                                 text: Translation.tr("Press Super+G to open the overlay and pin the crosshair")
                                 font.pixelSize: Appearance.font.pixelSize.smaller
@@ -439,7 +439,7 @@ ContentPage {
                             RippleButtonWithIcon {
                                 id: editorButton
                                 Layout.fillWidth: true
-                                Layout.rightMargin: 6
+                                Layout.rightMargin: Appearance.spacing.small
                                 Layout.preferredHeight: 40
                                 buttonRadius: Appearance.rounding.normal
                                 materialIcon: "open_in_new"

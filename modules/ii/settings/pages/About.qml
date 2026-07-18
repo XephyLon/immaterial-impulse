@@ -35,7 +35,7 @@ ContentPage {
         Layout.fillWidth: true
         Layout.alignment: Qt.AlignHCenter
         Layout.topMargin: 50
-        spacing: 16
+        spacing: Appearance.spacing.large
 
         IconImage {
             implicitWidth: 134
@@ -45,7 +45,7 @@ ContentPage {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 4
+            spacing: Appearance.spacing.verysmall
 
             StyledText {
                 text: SystemInfo.distroName
@@ -96,11 +96,11 @@ ContentPage {
 
     ColumnLayout {
         Layout.fillWidth: true
-        spacing: 8
+        spacing: Appearance.spacing.small
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Appearance.spacing.small
 
             AboutCard {
                 icon: "planner_review"
@@ -168,7 +168,7 @@ ContentPage {
     }
 
     RowLayout {
-        spacing: 8
+        spacing: Appearance.spacing.small
         Layout.alignment: Qt.AlignRight
 
         RippleButton {
@@ -183,8 +183,8 @@ ContentPage {
             contentItem: StyledText {
                 text: parent.buttonText
                 horizontalAlignment: Text.AlignHCenter
-                leftPadding: 10
-                rightPadding: 10
+                leftPadding: Appearance.spacing.normal
+                rightPadding: Appearance.spacing.normal
             }
         }
 
@@ -199,8 +199,8 @@ ContentPage {
             contentItem: StyledText {
                 text: parent.buttonText
                 horizontalAlignment: Text.AlignHCenter
-                leftPadding: 10
-                rightPadding: 10
+                leftPadding: Appearance.spacing.normal
+                rightPadding: Appearance.spacing.normal
             }
         }
     }

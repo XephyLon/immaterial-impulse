@@ -46,7 +46,7 @@ ContentPage {
         id: mainLayout 
         Layout.fillWidth: true   
         Layout.fillHeight: true
-        spacing: 20
+        spacing: Appearance.spacing.verylarge
 
         ContentSection {
             icon: "nest_clock_farsight_analog"
@@ -80,7 +80,7 @@ ContentPage {
                 RowLayout {
                     anchors.fill: parent
                     anchors.margins: 24
-                    spacing: 16
+                    spacing: Appearance.spacing.large
 
                     ColumnLayout {
                         StyledText {
@@ -114,7 +114,7 @@ ContentPage {
                     }
 
                     AndroidClock {
-                        Layout.rightMargin: 6
+                        Layout.rightMargin: Appearance.spacing.small
                         width: 130
                         height: 130
                         backgroundColor: Appearance.colors.colPrimaryContainer
@@ -183,7 +183,7 @@ ContentPage {
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: Appearance.spacing.small
 
                 Rectangle {
                     Layout.fillWidth: true
@@ -196,8 +196,8 @@ ContentPage {
 
                     ColumnLayout {
                         id: mediaCol
-                        anchors { fill: parent; margins: 12 }
-                        spacing: 8
+                        anchors { fill: parent; margins: Appearance.spacing.normal }
+                        spacing: Appearance.spacing.small
 
                         MaterialSymbol {
                             text: "music_note_2"
@@ -232,7 +232,7 @@ ContentPage {
 
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 8
+                    spacing: Appearance.spacing.small
 
                     Rectangle {
                         Layout.fillWidth: true
@@ -244,8 +244,8 @@ ContentPage {
 
                         ColumnLayout {
                             id: aiCol
-                            anchors { fill: parent; margins: 12 }
-                            spacing: 8
+                            anchors { fill: parent; margins: Appearance.spacing.normal }
+                            spacing: Appearance.spacing.small
 
                             MaterialSymbol {
                                 text: "smart_toy"
@@ -282,8 +282,8 @@ ContentPage {
 
                         ColumnLayout {
                             id: weebCol
-                            anchors { fill: parent; margins: 12 }
-                            spacing: 8
+                            anchors { fill: parent; margins: Appearance.spacing.normal }
+                            spacing: Appearance.spacing.small
 
                             MaterialSymbol {
                                 text: "playing_cards"
@@ -314,7 +314,7 @@ ContentPage {
 
             Rectangle {
                 Layout.fillWidth: true
-                Layout.topMargin: 4
+                Layout.topMargin: Appearance.spacing.verysmall
                 implicitHeight: translatorCol.implicitHeight + 24
                 radius: Appearance.rounding.normal
                 color: Appearance.colors.colLayer1
@@ -323,11 +323,11 @@ ContentPage {
 
                 ColumnLayout {
                     id: translatorCol
-                    anchors { fill: parent; margins: 12 }
-                    spacing: 8
+                    anchors { fill: parent; margins: Appearance.spacing.normal }
+                    spacing: Appearance.spacing.small
 
                     RowLayout {
-                        spacing: 8
+                        spacing: Appearance.spacing.small
                         ConfigSwitch {
                             buttonIcon: "translate"
                             text: Translation.tr("Enable Translator")
@@ -684,7 +684,7 @@ ContentPage {
                 ColumnLayout {
                     id: translationCol
                     anchors { fill: parent; margins: 0 }
-                    spacing: 8
+                    spacing: Appearance.spacing.small
 
                     ConfigTextArea {
                         id: localeField
@@ -700,7 +700,7 @@ ContentPage {
                         Layout.fillWidth: false
                         Layout.alignment: Qt.AlignRight
                         Layout.preferredHeight: 50
-                        Layout.rightMargin: 8
+                        Layout.rightMargin: Appearance.spacing.small
                         nerdIcon: ""
                         enabled: !translationProc.running || (translationProc.locale !== localeField.value.trim())
                         mainText: enabled ? Translation.tr("Generate\nTypically takes 2 minutes") : Translation.tr("Generating...\nDon't close this window!")

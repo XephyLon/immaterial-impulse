@@ -40,7 +40,7 @@ ContentPage {
         id: mainLayout 
         Layout.fillWidth: true   
         Layout.fillHeight: true
-        spacing: 20
+        spacing: Appearance.spacing.verylarge
             
         ContentSection {
             icon: "panorama"
@@ -157,7 +157,7 @@ ContentPage {
                     }
                 }
                 GroupedList {
-                    Layout.topMargin: 10
+                    Layout.topMargin: Appearance.spacing.normal
                     visible: Config.options.background.centeredWallpaper
                     ColorSelectionArray {
                         visible: Config.options.background.centeredWallpaper
@@ -373,7 +373,7 @@ ContentPage {
                     }
                 }
                 GroupedList {
-                    Layout.topMargin: 10
+                    Layout.topMargin: Appearance.spacing.normal
                     ConfigSlider {
                         text: Translation.tr("Font weight")
                         value: Config.options.background.widgets.clock.digital.font.weight
@@ -501,7 +501,7 @@ ContentPage {
             }
 
             GroupedList {
-                Layout.topMargin: 10
+                Layout.topMargin: Appearance.spacing.normal
                 visible: settingsClock.cookiePresent
                 ConfigSelectionArray {
                     text: "Dial Style"
@@ -755,7 +755,7 @@ ContentPage {
             ContentSubsection {
                 title: Translation.tr("Show widgets on")
                 visible: Hyprland.monitors.values.length > 1
-                Layout.bottomMargin: 10
+                Layout.bottomMargin: Appearance.spacing.normal
 
                 WidgetsMonitorSelector {
                     configEntry: Config.options.background
@@ -822,7 +822,7 @@ ContentPage {
                                 top: parent.top
                                 left: parent.left
                                 right: parent.right
-                                margins: 12
+                                margins: Appearance.spacing.normal
                             }
                             spacing: 0
                             RowLayout {
@@ -872,7 +872,7 @@ ContentPage {
             }
             ContentSubsection {
                 title: Translation.tr("Canvas")
-                Layout.bottomMargin: 10
+                Layout.bottomMargin: Appearance.spacing.normal
 
                 GroupedList {
                     ConfigSwitch {
