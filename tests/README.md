@@ -61,3 +61,9 @@ The initial phase covers components that represent pure logic and do not require
 * **Audio Device Name Priority (`tst_audio.qml`)**: Validates the priority selection of friendly audio device names (`description` > `nickname` > `"Unknown"`) and application display names.
 * **System Stats Parser (`tst_resource_usage.qml`)**: Tests parsing functions for `/proc/meminfo` contents, `df -k` disk usage output, and `nvidia-smi` GPU/VRAM statistics.
 * **Live Desktop Entry Resolution (`tst_live_desktop_entry.qml`)**: Tests `LiveDesktopEntry.qml` against a mock `DesktopEntries` (`tests/mocks/Quickshell/DesktopEntries.qml`) that can simulate `applications` populating after the resolver already exists, guarding against the dock's pinned-launcher regression where a `heuristicLookup()`-based binding never refreshed once the desktop entry database finished loading.
+
+## Static Lints
+
+In addition to the QML unit tests, `run_tests.sh` runs static lint checks first:
+
+* **QML import lint (`lint_qml_imports.sh`)**: Fails if any `.qml` under `modules/` references the `Appearance` singleton as a bareword without `import qs.modules.common`. That import is not transitive through `qs.modules.common.widgets`; omitting it throws `ReferenceError: Appearance is not defined` per binding evaluation, and when the missing token feeds a positioner's `spacing`/`margin` the resulting NaN geometry pegs the shell at 100% CPU. A bulk token migration introduced exactly this, so the lint prevents recurrence.
