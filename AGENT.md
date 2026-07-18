@@ -75,8 +75,8 @@ ReloadPopup.qml, welcome.qml, killDialog.qml   Misc top-level overlays
 modules/common/             Shared, feature-agnostic building blocks
   Config.qml                 Singleton: the entire settings schema + JSON persistence (see below)
   Appearance.qml              Singleton: design tokens - colors (M3 color roles), font sizes,
-                              rounding, animation curves/durations, sizes. Every widget reads from
-                              here rather than hardcoding values.
+                              rounding, spacing, border widths, animation curves/durations, sizes.
+                              Every widget reads from here rather than hardcoding values.
   Directories.qml            Singleton: XDG paths + shell-specific cache/state paths
   Icons.qml, Images.qml       Icon/image lookup helpers
   Persistent.qml              Helper for persisting fixed-schema values outside Config's JSON
@@ -347,7 +347,8 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
 
 The shell follows **Material 3 / Material 3 Expressive**. `Appearance.qml` is the single source of
 design tokens - color roles (`Appearance.colors.col*`, `Appearance.m3colors.m3*`), font sizes
-(`Appearance.font.pixelSize.*`), rounding (`Appearance.rounding.*`), animation curves/durations
+(`Appearance.font.pixelSize.*`), rounding (`Appearance.rounding.*`), spacing
+(`Appearance.spacing.*`), border widths (`Appearance.borderWidth.*`), animation curves/durations
 (`Appearance.animation.*`). New UI should pull from these rather than hardcoding colors/sizes/
 durations, both for dark/light theme correctness and for consistency with the rest of the shell.
 

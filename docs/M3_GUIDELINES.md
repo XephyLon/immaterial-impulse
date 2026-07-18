@@ -20,9 +20,9 @@ The shell uses dynamic, tonal color palettes derived from the wallpaper or theme
 Visible borders are not required for every surface. Many components rely entirely on elevation shadows or tonal contrast (e.g., `GroupedList` relies purely on `colLayer1` against the background without a border). When borders are used, adhere to the following strict conventions:
 
 - **Border Width**: 
-  - Use `border.width: 1` for standard structural outlines (e.g., `AboutCard`, `BarIsland`, `StyledPopup`, `StyledSwitch`).
-  - Use `border.width: 2` to emphasize active/selected states (e.g., `StyledRadioButton`, `ColorSelectionArray`, `GroupButton`, `MonitorRect` when dragged).
-  - *Never* use fractional or ad hoc border widths (e.g., `1.5`).
+  - Use `border.width: Appearance.borderWidth.standard` (1px) for standard structural outlines (e.g., `AboutCard`, `BarIsland`, `StyledPopup`, `StyledSwitch`).
+  - Use `border.width: Appearance.borderWidth.emphasis` (2px) to emphasize active/selected states (e.g., `StyledRadioButton`, `ColorSelectionArray`, `GroupButton`, `MonitorRect` when dragged).
+  - *Never* use fractional or ad hoc border widths (e.g., `1.5`). A deliberately thicker accent border (e.g., a clock hand) is a real exception to this scale and may stay a literal - but it must not be `border.width: 1` or `2` re-typed as a raw number.
 
 - **Border Colors**:
   - `colLayer0Border`: The standard 1px outline for standalone floating surfaces and prominent containers. Often combined with `StyledRectangularShadow` (as seen in `StyledPopup`).
@@ -45,13 +45,32 @@ Visible borders are not required for every surface. Many components rely entirel
 ### Corner Rounding (Radii)
 Always use predefined rounding values from `Appearance.rounding`. Never use hardcoded pixel values (e.g., `radius: 12`) or arbitrary maximum values (e.g., `radius: 9999`).
 
-- `unsharpen` (2px) / `unsharpenmore` (6px): Extremely subtle rounding for small, nearly square elements.
+- `unsharpen` (2px) / `unsharpenslight` (4px) / `unsharpenmore` (6px): Extremely subtle rounding for small, nearly square elements.
 - `verysmall` (8px): Tooltips, small indicators.
 - `small` (12px): Small chips, standard buttons.
 - `normal` (17px): Standard cards, list items, menus.
 - `large` (23px) / `windowRounding` (18px): Large standalone widgets, floating windows.
 - `verylarge` (30px): Prominent dialogs, major distinct UI blocks.
 - `full` (9999px): Circular elements, full-bleed pills, FABs.
+
+A radius that is deliberately *computed* from a parent's radius (e.g. a child nested inside a
+rounded parent, sized to the parent's radius minus its inset so the corners nest correctly) is not
+a violation of this rule - keep the computed expression rather than snapping it to a token.
+
+### Spacing
+
+Always use predefined values from `Appearance.spacing` for `spacing`, `padding`, and margin
+properties. Never hardcode pixel gaps (e.g., `spacing: 12`).
+
+- `unsharpen` (2px): Hairline gaps, icon-to-text kerning.
+- `verysmall` (4px): Tightest padding, chip internal insets.
+- `small` (8px): Standard tight spacing.
+- `normal` (12px): Default row/item spacing.
+- `large` (16px): Section/group spacing.
+- `verylarge` (20px): Outer container padding, generous gaps.
+
+Values that don't cleanly fit this scale (large one-off outer margins, etc.) may remain literals
+rather than being force-fit onto the nearest token.
 
 ## 2. Motion and Animation
 
@@ -66,7 +85,9 @@ For elements changing position, dimensions, or layout:
 
 ### Effects and State Changes (Color, Opacity)
 For color fades, opacities, and non-spatial state transitions:
-- **Fast Effects**: `Appearance.animation.elementMoveFast` (200ms, `expressiveEffects`). 
+- **Fast Effects**: `Appearance.animation.elementMoveFast` (200ms, `expressiveEffects`).
+- **Faster Effects**: `Appearance.animation.elementMoveFaster` (150ms, `expressiveEffects`). Use for
+  the smallest, snappiest state changes where even `elementMoveFast` reads as sluggish.
 
 ### Entrance and Exit (Emphasized)
 When introducing or removing elements from the screen:
@@ -108,12 +129,32 @@ When introducing or removing elements from the screen:
 The following existing widgets contain hardcoded values that violate these strict guidelines. They have been explicitly identified and should be fixed in future PRs (do not copy their implementation for new widgets):
 
 - **Hardcoded Radii**:
-  - `radius: 9999` instead of `Appearance.rounding.full` (e.g., `CircularProgress.qml`).
-  - Arbitrary pixel values (e.g., `35`, `14`, `8`, `6`, `4`, `2`, `1`) in `CliphistImage.qml`, `ClippedProgressBar.qml`, `ClockPicker.qml`, `LayoutSection.qml`, `PlayerControlsLyrics.qml`, `ResourceCard.qml`, `StyledDropShadow.qml`, `ThemeCarousel.qml`, and shapes.
+  - `radius: 10` in `TargetRegion.qml` and `IconPickerDialog.qml` - a recurring value with no clean
+    fit in the current token scale (equidistant between `unsharpenmore` and `small`).
+  - `radius: 1` in `ClippedProgressBar.qml` (progress-bar end caps) and `TodoWidget.qml` (a 1px text
+    cursor) - deliberately near-zero on already-tiny elements; snapping to `unsharpen` (2px) would
+    double their rounding proportionally, so these are left as literals rather than force-fit.
+  - (`CliphistImage.qml`'s `GaussianBlur.radius`, `UserCardWidget.qml`/`WallpaperSelectorContent.qml`'s
+    `FastBlur.radius`, `StyledDropShadow.qml`'s `radius`, and `Config.qml`'s lock-screen blur radius
+    option are *blur* radii, a different semantic axis from corner rounding, and are not violations.)
 - **Hardcoded Colors**:
   - Hex values (e.g., `#ffffff`, `#000000`, `#605790`) in `DashedBorder.qml`, `RoundCorner.qml`, `SineCookie.qml`, and the `shapes/` directory.
 - **Inconsistent Borders/Outlines**:
   - `StyledComboBox` uses a floating popup but lacks the standard 1px `colLayer0Border` outline found on `StyledPopup`.
-  - `ResourceCard.qml` uses `border.width: 1.5`, which is a non-standard fractional width.
+- **Hardcoded Spacing**:
+  - Most `spacing`/`padding`/margin literals matching or closely matching an `Appearance.spacing.*`
+    value have been migrated. Values outside that scale (`0`, `1`, `7`, `9`, `11`, `13`, `14`,
+    `17`-`19`, `>=21`, and negative offsets used for deliberate overlap/bleed effects) are left as
+    literals rather than force-fit onto the nearest token - re-evaluate case by case if a widget is
+    touched again, rather than bulk-snapping them.
 - **Hardcoded Motion**:
-  - Ad hoc integer durations (`50`, `110`, `150`, `200`, `300`, `350`, `400`) and arbitrary easing curves (e.g., `Easing.OutCubic`) in `AndroidClock.qml`, `ConfigSelectionShapeArray.qml`, `DragApps.qml`, `ErrorShakeAnimation.qml`, `LayoutSection.qml`, `Lyrics.qml`, `MaterialLoadingIndicator.qml`, `MonitorRect.qml`, `SelectionGroupButton.qml`, `StyledScrollBar.qml`, `StyledSwitch.qml`, `StyledText.qml`, `ThemeCarousel.qml`, `VerticalTabBar.qml`, and `widgetCanvas/WidgetCanvas.qml`.
+  - Ad hoc integer durations with no matching `Appearance.animation.*` value (e.g. `30`, `40`, `50`,
+    `80`, `110`, `120`, `180`, `250`, `900`, `1200`, `1400`ms) and arbitrary easing curves (e.g.,
+    `Easing.OutCubic`, `Easing.OutQuad`, `Easing.InQuad`) remain across many widgets - the easing
+    *curve shape* in particular was deliberately left untouched during the token migration, since
+    swapping curve shape (unlike reusing a matching duration number) is visually perceptible and
+    wasn't verified against a running compositor. `StyledSwitch.qml` intentionally keeps a custom
+    bezier curve (`[0.42, 1.5, 0.28, 0.95, 1, 1]`, durations `320`/`160`) tuned for its snap feel -
+    this is a deliberate exception, not an oversight, and should not be folded into
+    `Appearance.animation.*`. `MaterialLoadingIndicator.qml`'s 12000ms spinner rotation is
+    real-world physical timing, not M3 motion, and is likewise not a violation.

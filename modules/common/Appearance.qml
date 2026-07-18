@@ -11,6 +11,8 @@ Singleton {
     property QtObject animationCurves
     property QtObject colors
     property QtObject rounding
+    property QtObject spacing
+    property QtObject borderWidth
     property QtObject font
     property QtObject sizes
     property string syntaxHighlightingTheme
@@ -200,6 +202,7 @@ Singleton {
 
     rounding: QtObject {
         property int unsharpen: 2
+        property int unsharpenslight: 4
         property int unsharpenmore: 6
         property int verysmall: 8
         property int small: 12
@@ -209,6 +212,20 @@ Singleton {
         property int full: 9999
         property int screenRounding: large
         property int windowRounding: 18
+    }
+
+    spacing: QtObject {
+        property int unsharpen: 2
+        property int verysmall: 4
+        property int small: 8
+        property int normal: 12
+        property int large: 16
+        property int verylarge: 20
+    }
+
+    borderWidth: QtObject {
+        property int standard: 1
+        property int emphasis: 2
     }
 
     font: QtObject {
@@ -341,6 +358,24 @@ Singleton {
                 duration: root.animation.elementMoveFast.duration
                 easing.type: root.animation.elementMoveFast.type
                 easing.bezierCurve: root.animation.elementMoveFast.bezierCurve
+            }}
+        }
+
+        property QtObject elementMoveFaster: QtObject {
+            property int duration: 150
+            property int type: Easing.BezierSpline
+            property list<real> bezierCurve: animationCurves.expressiveEffects
+            property int velocity: 850
+            property Component colorAnimation: Component { ColorAnimation {
+                duration: root.animation.elementMoveFaster.duration
+                easing.type: root.animation.elementMoveFaster.type
+                easing.bezierCurve: root.animation.elementMoveFaster.bezierCurve
+            }}
+            property Component numberAnimation: Component { NumberAnimation {
+                alwaysRunToEnd: true
+                duration: root.animation.elementMoveFaster.duration
+                easing.type: root.animation.elementMoveFaster.type
+                easing.bezierCurve: root.animation.elementMoveFaster.bezierCurve
             }}
         }
 
