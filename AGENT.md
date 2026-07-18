@@ -352,6 +352,16 @@ design tokens - color roles (`Appearance.colors.col*`, `Appearance.m3colors.m3*`
 (`Appearance.animation.*`). New UI should pull from these rather than hardcoding colors/sizes/
 durations, both for dark/light theme correctness and for consistency with the rest of the shell.
 
+**Any `.qml` that references `Appearance` (or any other `qs.modules.common` singleton) as a bareword
+must `import qs.modules.common`.** That import is *not* transitive - a file that only has
+`import qs.modules.common.widgets` does not get `Appearance` in scope, and the reference silently
+throws `ReferenceError: Appearance is not defined` on every binding evaluation. This is not just a
+cosmetic error: when the missing token feeds a positioner's `spacing`/`margin`, the binding yields
+`undefined` -> NaN geometry, and QtQuick relayout never converges - it pegs a core at 100% CPU and
+freezes the shell (this is exactly what a bulk token migration did to `ConfigRow.qml`,
+`NotificationListView.qml`, `PluginOptions.qml`, and `StyledPopupMenu.qml`). `tests/lint_qml_imports.sh`
+(run by `tests/run_tests.sh` and CI) guards against reintroducing it.
+
 **Strict UI Guidelines:** See [`docs/M3_GUIDELINES.md`](docs/M3_GUIDELINES.md) for the definitive rules on tokens, rounding, layering, and expressive motion that all new components must follow.
 
 Shared building blocks to reach for before writing something from scratch: `StyledText`,
