@@ -17,7 +17,7 @@ Item {
     ColumnLayout {
         id: keyRows
         anchors.fill: parent
-        spacing: 5
+        spacing: Appearance.spacing.small
 
         Repeater {
             model: root.currentLayout.keys
@@ -25,7 +25,7 @@ Item {
             delegate: RowLayout {
                 id: keyRow
                 required property var modelData
-                spacing: 5
+                spacing: Appearance.spacing.small
                 
                 Repeater {
                     model: modelData
