@@ -41,6 +41,7 @@ ContentPage {
         { id: "weatherBar",        name: Translation.tr("Weather"),              icon: "flare" },
         { id: "media",             name: Translation.tr("Media"),                icon: "music_note" },
         { id: "resources",         name: Translation.tr("Resources"),            icon: "empty_dashboard" },
+        { id: "dockerPlugin",      name: Translation.tr("Docker"),               icon: "deployed_code" },
         { id: "systemIcons",       name: Translation.tr("System Icons"),         icon: "info" },
         { id: "clockWidget",       name: Translation.tr("Clock"),                icon: "schedule" },
         { id: "utilButtons",       name: Translation.tr("Util Buttons"),         icon: "toggle_on" },

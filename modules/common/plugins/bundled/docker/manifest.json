@@ -4,6 +4,51 @@
     "description": "A declarative docker status indicator",
     "defaultWidth": 200,
     "defaultHeight": 100,
+    "barWidget": {
+        "type": "Row",
+        "props": {
+            "spacing": 6
+        },
+        "children": [
+            {
+                "type": "MaterialSymbol",
+                "props": {
+                    "text": "deployed_code",
+                    "font.pixelSize": 18,
+                    "color": "Appearance.colors.colOnLayer1"
+                }
+            },
+            {
+                "type": "StyledText",
+                "props": {
+                    "font.pixelSize": 14,
+                    "font.weight": 600,
+                    "color": "Appearance.colors.colOnLayer1"
+                },
+                "bindings": {
+                    "text": "Docker.runningCount"
+                }
+            },
+            {
+                "type": "StyledText",
+                "props": {
+                    "text": "/",
+                    "font.pixelSize": 14,
+                    "color": "Appearance.colors.colOnLayer1"
+                }
+            },
+            {
+                "type": "StyledText",
+                "props": {
+                    "font.pixelSize": 14,
+                    "color": "Appearance.colors.colOnLayer1"
+                },
+                "bindings": {
+                    "text": "Docker.totalCount"
+                }
+            }
+        ]
+    },
     "desktopWidget": {
         "blur": true,
         "type": "Rectangle",
