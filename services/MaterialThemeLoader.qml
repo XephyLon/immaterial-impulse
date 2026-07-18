@@ -15,6 +15,7 @@ Singleton {
     id: root
     property string filePath: Directories.generatedMaterialThemePath
     property string requestedLockWallpaper: ""
+    property var activeColorAnimations: []
     readonly property bool lockThemeActive: GlobalStates.screenLocked
         && Config.options.background.lockWall !== ""
 
@@ -25,7 +26,7 @@ Singleton {
     function restoreNormalTheme() {
         const fileContent = themeFileView.text();
         if (fileContent && fileContent.trim() !== "") {
-            root.applyColors(fileContent);
+            root.applyColors(fileContent, true);
         } else {
             // Keep the existing startup/failure recovery behavior when the file
             // has not been loaded yet.
@@ -33,8 +34,19 @@ Singleton {
         }
     }
 
-    function applyColors(fileContent) {
+    function stopColorAnimations() {
+        colorAnimationCleanup.stop();
+        for (const animation of activeColorAnimations) {
+            animation.stop();
+            animation.destroy();
+        }
+        activeColorAnimations = [];
+    }
+
+    function applyColors(fileContent, animated = false) {
         const json = JSON.parse(fileContent)
+        root.stopColorAnimations();
+        const animations = [];
         for (const key in json) {
             if (json.hasOwnProperty(key)) {
                 // Convert snake_case to CamelCase
@@ -43,12 +55,28 @@ Singleton {
                 // The generator also emits internal palette-key colors which are not
                 // public Appearance roles. Ignore those instead of attempting to add
                 // dynamic properties to the fixed QtObject.
-                if (Appearance.m3colors[m3Key] !== undefined)
+                if (Appearance.m3colors[m3Key] === undefined) continue;
+                if (animated) {
+                    const animation = colorAnimationComponent.createObject(root, {
+                        target: Appearance.m3colors,
+                        property: m3Key,
+                        from: Appearance.m3colors[m3Key],
+                        to: json[key]
+                    });
+                    animations.push(animation);
+                } else {
                     Appearance.m3colors[m3Key] = json[key]
+                }
             }
         }
-        
-        Appearance.m3colors.darkmode = (Appearance.m3colors.m3background.hslLightness < 0.5)
+
+        if (animated) {
+            activeColorAnimations = animations;
+            for (const animation of animations) animation.start();
+            colorAnimationCleanup.restart();
+        } else {
+            Appearance.m3colors.darkmode = (Appearance.m3colors.m3background.hslLightness < 0.5)
+        }
     }
 
     function applyGeneratedColors(fileContent) {
@@ -59,7 +87,7 @@ Singleton {
             if (!match || match[1] === "darkmode" || match[1] === "transparent") continue;
             colors[match[1]] = match[2].trim();
         }
-        root.applyColors(JSON.stringify(colors));
+        root.applyColors(JSON.stringify(colors), true);
     }
 
     function generateLockTheme() {
@@ -122,6 +150,24 @@ Singleton {
                     && root.requestedLockWallpaper === Config.options.background.lockWall) {
                 root.applyGeneratedColors(lockThemeOutput.text);
             }
+        }
+    }
+
+    Component {
+        id: colorAnimationComponent
+        ColorAnimation {
+            duration: Appearance.wallpaperTransitionDuration
+            easing.type: Easing.InOutCubic
+        }
+    }
+
+    Timer {
+        id: colorAnimationCleanup
+        interval: Appearance.wallpaperTransitionDuration + 50
+        onTriggered: {
+            for (const animation of root.activeColorAnimations) animation.destroy();
+            root.activeColorAnimations = [];
+            Appearance.m3colors.darkmode = (Appearance.m3colors.m3background.hslLightness < 0.5);
         }
     }
 

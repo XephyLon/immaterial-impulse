@@ -200,7 +200,7 @@ Variants {
             property: "transitionProgress"
             from: 0.0
             to: 1.0
-            duration: 1200
+            duration: Appearance.wallpaperTransitionDuration
             easing.type: Easing.InOutCubic
             onFinished: {
                 previousWallpaper.source = ""
