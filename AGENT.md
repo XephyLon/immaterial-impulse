@@ -310,11 +310,18 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   depends on `applications`, so `deskEntry` came back `null` (evaluated before the scan finished)
   and then never updated. Any pinned app that wasn't already running at shell startup became
   permanently unlaunchable for that session - clicking it silently no-op'd via `deskEntry?.execute()`.
-  `DockAppButton.qml` and `DocktoPanel.qml` already work around this with an explicit
-  `Connections { target: DesktopEntries; function onApplicationsChanged() { ... } }` that reassigns
-  the property by hand; `DragApps.qml` was missing the same fix. When a binding depends on the
-  result of an invokable rather than a property, add an explicit `Connections` re-fetch on the
-  relevant `*Changed` signal instead of trusting the binding to track it.
+  `DockAppButton.qml` and `DocktoPanel.qml` had independently worked around this with their own
+  `Connections { target: DesktopEntries; function onApplicationsChanged() { ... } }`, but
+  `DragApps.qml` was missing the same fix - this was three copies of the same fragile pattern with
+  one left unpatched. Consolidated into `modules/common/widgets/LiveDesktopEntry.qml`, a small
+  non-visual `Item` that takes an `appId` and exposes a live-refreshing `entry`; all three call
+  sites now use it (`deskEntry: liveDeskEntry.entry` instead of duplicating the `Connections`).
+  Covered by `tests/tst_live_desktop_entry.qml` against a mock `DesktopEntries`
+  (`tests/mocks/Quickshell/DesktopEntries.qml`) that can simulate `applications` populating late via
+  `mockSetEntries()`. When a binding depends on the result of an invokable rather than a property,
+  add an explicit `Connections` re-fetch on the relevant `*Changed` signal instead of trusting the
+  binding to track it - and prefer extracting it into a reusable, testable component over
+  re-inlining the same fix at each call site.
 
 ## Design language
 
