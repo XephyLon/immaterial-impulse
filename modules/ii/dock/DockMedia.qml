@@ -145,7 +145,7 @@ Item {
             width:  card.width
             height: card.height
             clip:   true
-            spacing: 8
+            spacing: Appearance.spacing.small
             z: 3
 
             // Art
@@ -208,9 +208,9 @@ Item {
 
             // Buttons
             RowLayout {
-                Layout.rightMargin: 4
+                Layout.rightMargin: Appearance.spacing.verysmall
                 Layout.alignment:   Qt.AlignVCenter
-                spacing: 3
+                spacing: Appearance.spacing.verysmall
 
                 // Play / Pause
                 RippleButton {

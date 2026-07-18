@@ -119,11 +119,11 @@ Scope {
                             anchors.top: parent.top
                             anchors.bottom: parent.bottom
                             anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: 3
-                            property real padding: 5
+                            spacing: Appearance.spacing.verysmall
+                            property real padding: Appearance.spacing.small
 
                             VerticalButtonGroup {
-                                Layout.topMargin: 3
+                                Layout.topMargin: Appearance.spacing.verysmall
                                 Layout.leftMargin:  root.pinned
                                     ? Appearance.sizes.hyprlandGapsOut + 4
                                     : Appearance.sizes.hyprlandGapsOut
@@ -202,7 +202,7 @@ Scope {
                                         visible: Config.options.dock.showMedia
                                         Layout.fillHeight: true
                                         Layout.topMargin: 11
-                                        Layout.bottomMargin: 6
+                                        Layout.bottomMargin: Appearance.spacing.small
                                         Layout.leftMargin: 0
                                         buttonPadding: dockRow.padding
                                     }
