@@ -33,6 +33,14 @@ fi
 echo "Using test runner: $QMLTESTRUNNER"
 echo "Running QML unit test suite..."
 
+# Static lint: catch Appearance.* usage missing its qs.modules.common import
+# before running the QML tests (this class of bug pegs the shell at 100% CPU).
+echo "Running QML import lint..."
+if ! "$SCRIPT_DIR/lint_qml_imports.sh"; then
+    echo "Import lint failed."
+    exit 1
+fi
+
 # Run the test runner
 "$QMLTESTRUNNER" \
     -import "$PROJECT_ROOT/tests/mocks" \

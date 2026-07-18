@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
+import qs.modules.common
 import "material-shapes.js" as MaterialShapes
 import "shapes/corner-rounding.js" as CornerRounding
 import "geometry/offset.js" as Offset
