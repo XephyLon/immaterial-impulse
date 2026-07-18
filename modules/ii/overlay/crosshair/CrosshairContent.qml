@@ -48,7 +48,7 @@ Item {
     property string colorCode: "#FFFFFF"
     property bool outline: true
     property real outlineOpacity: 0.5
-    property int outlineThickness: 1
+    property int outlineThickness: Appearance.borderWidth.standard
     property bool centerDot: false
     property real centerDotOpacity: 1
     property int centerDotSize: 2

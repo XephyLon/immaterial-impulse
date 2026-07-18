@@ -191,7 +191,7 @@ ContentPage {
                     implicitHeight: mediaCol.implicitHeight + 24
                     radius: Appearance.rounding.normal
                     color: Appearance.colors.colLayer1
-                    border.width: 1
+                    border.width: Appearance.borderWidth.standard
                     border.color: "transparent"
 
                     ColumnLayout {
@@ -239,7 +239,7 @@ ContentPage {
                         implicitHeight: aiCol.implicitHeight + 24
                         radius: Appearance.rounding.normal
                         color: Appearance.colors.colLayer1
-                        border.width: 1
+                        border.width: Appearance.borderWidth.standard
                         border.color: "transparent"
 
                         ColumnLayout {
@@ -277,7 +277,7 @@ ContentPage {
                         implicitHeight: weebCol.implicitHeight + 24
                         radius: Appearance.rounding.normal
                         color: Appearance.colors.colLayer1
-                        border.width: 1
+                        border.width: Appearance.borderWidth.standard
                         border.color: "transparent"
 
                         ColumnLayout {
@@ -318,7 +318,7 @@ ContentPage {
                 implicitHeight: translatorCol.implicitHeight + 24
                 radius: Appearance.rounding.normal
                 color: Appearance.colors.colLayer1
-                border.width: 1
+                border.width: Appearance.borderWidth.standard
                 border.color: "transparent"
 
                 ColumnLayout {

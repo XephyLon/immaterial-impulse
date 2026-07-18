@@ -815,7 +815,7 @@ ContentPage {
                         Layout.preferredHeight: 105
                         radius: Appearance.rounding.normal
                         color: Appearance.colors.colLayer1
-                        border.width: 1
+                        border.width: Appearance.borderWidth.standard
                         border.color: Appearance.colors.colLayer0Border
                         ColumnLayout {
                             anchors {

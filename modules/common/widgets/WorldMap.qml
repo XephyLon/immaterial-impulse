@@ -113,7 +113,7 @@ Item {
             height: 14
             radius: width / 2
             color: "transparent"
-            border.width: 2
+            border.width: Appearance.borderWidth.emphasis
             border.color: root.markerColor
             opacity: 0.8
 

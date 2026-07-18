@@ -110,7 +110,7 @@ Item {
         anchors.fill: parent
         radius: Appearance.rounding.normal
         color: Appearance.colors.colLayer1
-        border.width: 1
+        border.width: Appearance.borderWidth.standard
         border.color: Appearance.colors.colLayer0Border
 
         Item {

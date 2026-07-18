@@ -233,7 +233,7 @@ ContentPage {
                     Layout.preferredHeight: barPosCol.implicitHeight + 24
                     radius: Appearance.rounding.normal
                     color: Appearance.colors.colLayer1
-                    border.width: 1
+                    border.width: Appearance.borderWidth.standard
                     border.color: "transparent"
 
                     ColumnLayout {
@@ -280,7 +280,7 @@ ContentPage {
                     Layout.preferredHeight: barStyleCol.implicitHeight + 24
                     radius: Appearance.rounding.normal
                     color: Appearance.colors.colLayer1
-                    border.width: 1
+                    border.width: Appearance.borderWidth.standard
                     border.color: "transparent"
 
                     ColumnLayout {

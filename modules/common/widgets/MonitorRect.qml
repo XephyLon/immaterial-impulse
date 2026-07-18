@@ -66,7 +66,7 @@ Rectangle {
         radius: root.radius
         color: "transparent"
         border.color: Appearance.colors.colPrimary
-        border.width: 2
+        border.width: Appearance.borderWidth.emphasis
         opacity: 0.6
     }
 

@@ -14,7 +14,7 @@ Rectangle {
 
     radius: Appearance.rounding.full
     color: Appearance.colors.colLayer0
-    border.width: 1
+    border.width: Appearance.borderWidth.standard
     border.color: Appearance.colors.colLayer0Border
 
     RowLayout {

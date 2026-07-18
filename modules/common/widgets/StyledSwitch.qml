@@ -24,7 +24,7 @@ Switch {
             anchors.fill: parent
             radius: parent.radius
             color: "transparent"
-            border.width: 1
+            border.width: Appearance.borderWidth.standard
             border.color: Qt.rgba(1, 1, 1, 0.06)
         }
 

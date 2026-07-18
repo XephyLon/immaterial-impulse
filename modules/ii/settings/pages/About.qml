@@ -85,7 +85,7 @@ ContentPage {
                             radius: width / 2
                             color: modelData
                             z: index
-                            border.width: 2
+                            border.width: Appearance.borderWidth.emphasis
                             border.color: Appearance.colors.colLayer1
                         }
                     }

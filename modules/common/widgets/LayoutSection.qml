@@ -180,7 +180,7 @@ ContentSubsection {
             implicitHeight: dropdownFlow.implicitHeight + 16
             color: Appearance.colors.colLayer1
             radius: Appearance.rounding.large
-            border.width: 1
+            border.width: Appearance.borderWidth.standard
             border.color: Appearance.colors.colLayer0Border
 
             Flow {

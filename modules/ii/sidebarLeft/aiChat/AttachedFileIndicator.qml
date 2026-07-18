@@ -147,7 +147,7 @@ Rectangle {
                     Rectangle {
                         anchors.fill: parent
                         color: "transparent"
-                        border.width: 1
+                        border.width: Appearance.borderWidth.standard
                         border.color: Appearance.colors.colOutlineVariant
                         radius: Appearance.rounding.normal
                     }

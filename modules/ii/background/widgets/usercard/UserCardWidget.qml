@@ -178,7 +178,7 @@ AbstractBackgroundWidget {
                         implicitHeight: 40
                         radius: Appearance.rounding.full
                         color: "transparent"
-                        border.width: 1
+                        border.width: Appearance.borderWidth.standard
                         border.color: Appearance.colors.colOnPrimaryContainer
                         MaterialSymbol {
                             anchors.centerIn: parent
@@ -198,7 +198,7 @@ AbstractBackgroundWidget {
                         implicitHeight: 40
                         radius: Appearance.rounding.full
                         color: "transparent"
-                        border.width: 1
+                        border.width: Appearance.borderWidth.standard
                         border.color: Appearance.colors.colOnPrimaryContainer
                         MaterialSymbol {
                             anchors.centerIn: parent

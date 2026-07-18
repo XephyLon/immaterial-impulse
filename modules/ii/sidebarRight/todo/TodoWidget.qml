@@ -184,7 +184,7 @@ Item {
                     background: Rectangle {
                         anchors.fill: parent
                         radius: Appearance.rounding.verysmall
-                        border.width: 2
+                        border.width: Appearance.borderWidth.emphasis
                         border.color: todoInput.activeFocus ? Appearance.colors.colPrimary : Appearance.m3colors.m3outline
                         color: "transparent"
                     }

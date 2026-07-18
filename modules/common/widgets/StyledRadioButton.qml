@@ -32,7 +32,7 @@ RadioButton {
             height: 20
             radius: Appearance?.rounding.full
             border.color: checked ? root.activeColor : root.inactiveColor
-            border.width: 2
+            border.width: Appearance.borderWidth.emphasis
             color: "transparent"
 
             // Checked indicator

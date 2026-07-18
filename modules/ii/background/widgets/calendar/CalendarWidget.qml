@@ -295,7 +295,7 @@ AbstractBackgroundWidget {
                     Rectangle {
                         implicitWidth: 26; implicitHeight: 26; radius: Appearance.rounding.full
                         color: "transparent"
-                        border.width: 1
+                        border.width: Appearance.borderWidth.standard
                         border.color: Appearance.colors.colPrimary
                         MaterialSymbol {
                             anchors.centerIn: parent
@@ -313,7 +313,7 @@ AbstractBackgroundWidget {
                     Rectangle {
                         implicitWidth: 26; implicitHeight: 26; radius: Appearance.rounding.full
                         color: "transparent"
-                        border.width: 1
+                        border.width: Appearance.borderWidth.standard
                         border.color: Appearance.colors.colPrimary
                         MaterialSymbol {
                             anchors.centerIn: parent

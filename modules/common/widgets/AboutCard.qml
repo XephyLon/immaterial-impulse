@@ -21,7 +21,7 @@ Rectangle {
     implicitHeight: Math.max(64, cardRow.implicitHeight)
     radius: Appearance.rounding.normal
     color: Appearance.colors.colLayer1
-    border.width: 1
+    border.width: Appearance.borderWidth.standard
     border.color: "transparent"
     clip: true
 

@@ -237,7 +237,7 @@ Item {
             anchors.fill: parent
             color: ColorUtils.transparentize(Appearance.colors.colSecondary, 0.6)
             radius: Appearance.rounding.normal
-            border.width: 2
+            border.width: Appearance.borderWidth.emphasis
             border.color: Appearance.colors.colSecondary
         }
     }
@@ -360,7 +360,7 @@ Item {
                         height: root.getWinH(rowItem.activeWin, rowItem.wsFitScale)
                         radius: Appearance.rounding.normal
                         color: "transparent"
-                        border.width: 2
+                        border.width: Appearance.borderWidth.emphasis
                         border.color: Appearance.colors.colSecondary
                         z: 10
                         Behavior on x { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration } }
@@ -375,7 +375,7 @@ Item {
                         anchors.fill: parent
                         radius: Appearance.rounding.normal
                         color: ColorUtils.transparentize(Appearance.colors.colSecondary, 0.88)
-                        border.width: 2
+                        border.width: Appearance.borderWidth.emphasis
                         border.color: Appearance.colors.colSecondary
                         z: 0
                     }

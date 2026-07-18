@@ -22,7 +22,7 @@ Rectangle {
     z: 2
     color: fillColor
     border.color: borderColor
-    border.width: targeted ? 4 : 2
+    border.width: targeted ? 4 : Appearance.borderWidth.emphasis
     radius: Appearance.rounding.unsharpenslight
 
     Behavior on color {
@@ -52,7 +52,7 @@ Rectangle {
             property real horizontalPadding: 10
             radius: 10
             color: root.colBackground
-            border.width: 1
+            border.width: Appearance.borderWidth.standard
             border.color: Appearance.m3colors.m3outlineVariant
             implicitWidth: regionInfoRow.implicitWidth + horizontalPadding * 2
             implicitHeight: regionInfoRow.implicitHeight + verticalPadding * 2
