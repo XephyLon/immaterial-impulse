@@ -4,6 +4,7 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.common.functions
 import Quickshell.Hyprland
 
 
@@ -47,69 +48,152 @@ ContentPage {
             title: Translation.tr("Wallpaper")
             shape: MaterialShape.Shape.Clover4Leaf
 
-            ContentSubsection {
-                title: Translation.tr("Transition")
+            Rectangle {
                 Layout.fillWidth: true
+                implicitHeight: wrapperCol.implicitHeight + 16
+                topLeftRadius: Appearance.rounding.verylarge
+                topRightRadius: Appearance.rounding.verylarge
+                bottomLeftRadius: Appearance.rounding.normal
+                bottomRightRadius: Appearance.rounding.normal
+                color: Appearance.colors.colLayer1
 
-                ConfigSelectionArray {
+                ColumnLayout {
+                    id: wrapperCol
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 8
+
+                    Carousel {
+                        Layout.fillWidth: true
+                        implicitHeight: 280
+                        largeItemWidthRatio: 0.5
+                        mediumItemWidthRatio: 0.485
+                        itemSpacing: 8
+                        model: [
+                            Config.options.background.wallpaperPath,
+                            Config.options.background.lockWall !== ""
+                                ? Config.options.background.lockWall
+                                : Config.options.background.wallpaperPath
+                        ]
+                        wheelEnabled: false
+                        dragEnabled: false
+                        clickAction: (index, modelData) => {
+                            GlobalStates.wallpaperSelectorTarget = index === 1 ? "lockWall" : "wallpaper"
+                            GlobalStates.wallpaperSelectorOpen = true
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: 24
+                            radius: Appearance.rounding.normal
+                            color: "transparent"
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 8
+                                MaterialSymbol {
+                                    text: "desktop_windows"
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: Appearance.colors.colPrimary
+                                }
+                                StyledText {
+                                    text: Translation.tr("Desktop")
+                                    font.pixelSize: Appearance.font.pixelSize.normal
+                                    font.weight: Font.Medium
+                                    color: Appearance.colors.colOnLayer1
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: 24
+                            radius: Appearance.rounding.normal
+                            color: "transparent"
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 8
+                                MaterialSymbol {
+                                    text: "lock"
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: Appearance.colors.colPrimary
+                                }
+                                StyledText {
+                                    text: Translation.tr("Lockscreen")
+                                    font.pixelSize: Appearance.font.pixelSize.normal
+                                    font.weight: Font.Medium
+                                    color: Appearance.colors.colOnLayer1
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            GroupedList {
+                Layout.topMargin: -2
+
+                ConfigSwitch {
+                    id: syncWallpaperSwitch
+                    buttonIcon: "sync"
+                    text: Translation.tr("Use same wallpaper for both")
+                    checked: Config.options.background.lockWall === ""
+                    onCheckedChanged: {
+                        if (checked) {
+                            Config.options.background.lockWall = "";
+                        }
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "timer"
+                    text: Translation.tr("Wallpaper change interval (min)")
+                    value: Config.options.wallpaperSelector.changeInterval / 60000
+                    from: 0
+                    to: 1440
+                    stepSize: 5
+                    onValueChanged: {
+                        Config.options.wallpaperSelector.changeInterval = value * 60000;
+                    }
+                }
+
+                ConfigComboBox {
+                    Layout.fillWidth: true
+                    buttonIcon: "texture"
+                    text: Translation.tr("Transitions")
+                    fieldWidth: 50
+                    model: [
+                        { displayName: Translation.tr("None"), icon: "block", value: "" },
+                        { displayName: Translation.tr("Circle"), icon: "circle", value: "circleSelect" },
+                        { displayName: Translation.tr("Circle Pit"), icon: "blur_circular", value: "circlePit" },
+                        { displayName: Translation.tr("Magic"), icon: "auto_awesome", value: "magic" },
+                        { displayName: Translation.tr("Doom"), icon: "whatshot", value: "Doom" },
+                        { displayName: Translation.tr("Peel"), icon: "layers", value: "Peel" },
+                        { displayName: Translation.tr("Fade"), icon: "gradient", value: "transition" },
+                        { displayName: Translation.tr("Pixelate"), icon: "grain", value: "pixelate" },
+                        { displayName: Translation.tr("Stripes"), icon: "texture_minus", value: "stripes" },
+                        { displayName: Translation.tr("Random"), icon: "shuffle", value: "random" },
+                    ]
                     currentValue: Config.options.background.wallpaperAnimation
                     onSelected: newValue => {
                         Config.options.background.wallpaperAnimation = newValue;
                     }
-                    options: [
-                        {
-                            displayName: Translation.tr(""),
-                            icon: "block",
-                            value: ""
-                        },
-                        {
-                            displayName: Translation.tr("Circle"),
-                            icon: "circle",
-                            value: "circleSelect"
-                        },
-                        {
-                            displayName: Translation.tr("Circle Pit"),
-                            icon: "blur_circular",
-                            value: "circlePit"
-                        },
-                        {
-                            displayName: Translation.tr("Magic"),
-                            icon: "auto_awesome",
-                            value: "magic"
-                        },
-                        {
-                            displayName: Translation.tr("Doom"),
-                            icon: "whatshot",
-                            value: "Doom"
-                        },
-                        {
-                            displayName: Translation.tr("Peel"),
-                            icon: "layers",
-                            value: "Peel"
-                        },
-                        {
-                            displayName: Translation.tr("Fade"),
-                            icon: "gradient",
-                            value: "transition"
-                        },
-                        {
-                            displayName: Translation.tr("Pixelate"),
-                            icon: "grain",
-                            value: "pixelate"
-                        },
-                        {
-                            displayName: Translation.tr("Stripes"),
-                            icon: "texture_minus",
-                            value: "stripes"
-                        },
-                        {
-                            displayName: Translation.tr("Random"),
-                            icon: "shuffle",
-                            value: "random"
-                        },
-                    ]
                 }
             }
+
+            Connections {
+                target: Config.options.background
+                function onLockWallChanged() {
+                    syncWallpaperSwitch.checked = Qt.binding(() => Config.options.background.lockWall === "")
+                }
+            }
+        
             ContentSubsection {
                 title: Translation.tr("Centered wallpaper")
                 Layout.fillWidth: true

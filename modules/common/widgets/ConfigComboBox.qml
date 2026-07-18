@@ -50,7 +50,7 @@ RowLayout {
         }
     }
 
-    StyledComboBoxSearch {
+    StyledComboBox {
         id: comboBox
         Layout.preferredWidth: root.fieldWidth
         Layout.alignment: Qt.AlignVCenter

@@ -59,7 +59,13 @@ MouseArea {
 
     function selectWallpaperPath(filePath) {
         if (filePath && filePath.length > 0) {
-            Wallpapers.select(filePath, root.useDarkMode);
+            if (GlobalStates.wallpaperSelectorTarget === "lockWall") {
+                Config.options.background.lockWall = filePath;
+                GlobalStates.wallpaperSelectorTarget = "wallpaper";
+                GlobalStates.wallpaperSelectorOpen = false;
+            } else {
+                Wallpapers.select(filePath, root.useDarkMode);
+            }
         }
     }
 

@@ -117,6 +117,9 @@ ContentPage {
                         onClicked: {
                             Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--noswitch", "--color"]);
                         }
+                        StyledToolTip {
+                            text: "Change accent color"
+                        }
                     }
                 }
 

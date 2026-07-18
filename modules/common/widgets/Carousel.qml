@@ -17,8 +17,13 @@ Item {
     property real itemSpacing: 6
     property alias currentIndex: listView.currentIndex
 
+    property bool wheelEnabled: true
+    property bool dragEnabled: true
+
     property int hoveredIndex: -1
     readonly property int focusedIndex: hoveredIndex >= 0 ? hoveredIndex : listView.currentIndex
+    
+    property var clickAction: null
 
     signal wallpaperSelected(string path)
 
@@ -30,13 +35,22 @@ Item {
         return width * smallItemWidthRatio
     }
 
+    function handleItemClick(index, modelData) {
+        if (root.clickAction) {
+            root.clickAction(index, modelData);
+            return;
+        }
+        listView.currentIndex = index;
+        root.wallpaperSelected(modelData);
+    }
+
     ListView {
         id: listView
         anchors.fill: parent
         orientation: ListView.Horizontal
         spacing: root.itemSpacing
         clip: true
-        interactive: true
+        interactive: root.dragEnabled
         snapMode: ListView.SnapOneItem
         highlightRangeMode: ListView.StrictlyEnforceRange
         preferredHighlightBegin: 0
@@ -47,6 +61,7 @@ Item {
         WheelHandler {
             id: wheelHandler
             target: listView
+            enabled: root.wheelEnabled
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
             property bool coolingDown: false
             onWheel: (event) => {
@@ -129,10 +144,7 @@ Item {
                     onEntered: root.hoveredIndex = itemRoot.index
                     onExited: if (root.hoveredIndex === itemRoot.index)
                                 root.hoveredIndex = -1
-                    onClicked: {
-                        listView.currentIndex = itemRoot.index
-                        root.wallpaperSelected(itemRoot.modelData)
-                    }
+                    onClicked: root.handleItemClick(itemRoot.index, itemRoot.modelData)
                 }
             }
         }

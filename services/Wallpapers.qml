@@ -80,6 +80,20 @@ Singleton {
         root.select(filePath, darkMode);
     }
 
+    function getRandomWallpaperPath(excludePath = "") {
+        if (folderModel.count === 0) return "";
+        const excludeClean = FileUtils.trimFileProtocol(excludePath);
+        const candidates = [];
+        for (let i = 0; i < folderModel.count; i++) {
+            const path = folderModel.get(i, "filePath") || FileUtils.trimFileProtocol(folderModel.get(i, "fileURL"));
+            if (path && path.length && FileUtils.trimFileProtocol(path) !== excludeClean) {
+                candidates.push(path);
+            }
+        }
+        if (candidates.length === 0) return "";
+        return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+
     Process {
         id: validateDirProc
         property string nicePath: ""

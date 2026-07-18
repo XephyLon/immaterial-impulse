@@ -213,6 +213,7 @@ Singleton {
             }
 
             property JsonObject background: JsonObject {
+                property string lockWall: ""
                 property bool widgetsLocked: false
                 property bool showGrid: true
                 property bool showSnapLines: true
