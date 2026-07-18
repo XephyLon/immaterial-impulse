@@ -458,13 +458,13 @@ ContentPage {
 
             GroupedList {
                 ConfigTextArea {
+                    id: preferredPlayerField
                     Layout.fillWidth: true
                     buttonIcon: "play_circle"
                     text: Translation.tr("Preferred Player")
                     placeholderText: Translation.tr("e.g. spotify, firefox")
                     value: Config.options.bar.media.preferredPlayer
                     onValueChanged: {
-                        Config.options.bar.media.preferredPlayer = value;
                         mediaDebounceTimer.restart();
                     }
 
@@ -472,7 +472,9 @@ ContentPage {
                         id: mediaDebounceTimer
                         interval: 600
                         repeat: false
-                        onTriggered: {}
+                        onTriggered: {
+                            Config.options.bar.media.preferredPlayer = preferredPlayerField.value;
+                        }
                     }
                 }
                 ConfigSwitch {
