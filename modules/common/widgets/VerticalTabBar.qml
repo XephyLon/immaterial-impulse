@@ -74,7 +74,7 @@ Item {
                 visible: isCurrent
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: 12
+                anchors.bottomMargin: Appearance.spacing.normal
                 width: 30
                 height: 4
                 radius: height / 2
@@ -85,8 +85,8 @@ Item {
             RowLayout {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
-                anchors.leftMargin: 12
-                spacing: 6
+                anchors.leftMargin: Appearance.spacing.normal
+                spacing: Appearance.spacing.small
 
                 MaterialSymbol {
                     text: parent.parent.modelData.icon

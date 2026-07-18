@@ -33,8 +33,8 @@ Item {
         model: themeModel
         orientation: ListView.Horizontal
         spacing: carouselRoot.itemSpacing
-        leftMargin: 16
-        rightMargin: 16
+        leftMargin: Appearance.spacing.large
+        rightMargin: Appearance.spacing.large
         clip: true
 
         snapMode: ListView.SnapToItem

@@ -11,7 +11,7 @@ TextField {
 
     Layout.fillHeight: true
     implicitWidth: 200
-    padding: 10
+    padding: Appearance.spacing.normal
 
     placeholderTextColor: Appearance.colors.colSubtext
     color: Appearance.colors.colOnLayer1

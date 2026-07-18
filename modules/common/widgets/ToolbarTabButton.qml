@@ -23,7 +23,7 @@ RippleButton {
     contentItem: Row {
         id: contentRow
         anchors.centerIn: parent
-        spacing: 6
+        spacing: Appearance.spacing.small
 
         MaterialSymbol {
             id: icon

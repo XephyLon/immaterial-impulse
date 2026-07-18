@@ -34,8 +34,8 @@ Column {
         anchors {
             left: parent.left
             right: parent.right
-            leftMargin: 4
-            rightMargin: 4
+            leftMargin: Appearance.spacing.verysmall
+            rightMargin: Appearance.spacing.verysmall
         }
         configuration: StyledSlider.Configuration.S
         onMoved: root.moved()
