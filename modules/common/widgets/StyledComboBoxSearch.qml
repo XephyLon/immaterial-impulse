@@ -99,7 +99,7 @@ ComboBox {
     StyledToolTip {
         extraVisibleCondition: false
         alternativeVisibleCondition: root.hovered && buttonLabel.truncated
-        delay: 500
+        delay: 0
         text: buttonLabel.text
     }
 
@@ -180,7 +180,7 @@ ComboBox {
         StyledToolTip {
             extraVisibleCondition: false
             alternativeVisibleCondition: itemDelegate.hovered && label.truncated
-            delay: 500
+            delay: 0
             text: label.text
         }
     }
