@@ -52,7 +52,7 @@ Item {
         descTimeout.restart()
     }
 
-    property int margins: 8
+    property int margins: Appearance.spacing.small
     implicitWidth: content.implicitWidth + margins * 2
     implicitHeight: content.implicitHeight + margins * 2
 
@@ -60,7 +60,7 @@ Item {
         id: content
         anchors.centerIn: parent
 
-        property real padding: 8
+        property real padding: Appearance.spacing.small
         implicitHeight: 38
         implicitWidth: root.showDescription ? contentRow.implicitWidth + padding * 2 : implicitHeight
         clip: true
@@ -86,7 +86,7 @@ Item {
                 left: parent.left
                 leftMargin: content.padding
             }
-            spacing: 12
+            spacing: Appearance.spacing.normal
 
             MaterialSymbol {
                 anchors.verticalCenter: parent.verticalCenter
@@ -104,7 +104,7 @@ Item {
                     color: Appearance.colors.colOnPrimary
                     text: root.description
                     anchors.right: parent.right
-                    anchors.rightMargin: 6
+                    anchors.rightMargin: Appearance.spacing.small
                 }
             }
         }

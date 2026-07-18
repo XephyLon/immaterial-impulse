@@ -68,7 +68,7 @@ Item {
         anchors {
             top: selectionBorder.bottom
             right: selectionBorder.right
-            margins: 8
+            margins: Appearance.spacing.small
         }
         color: root.color
         text: `${Math.round(root.regionWidth)} x ${Math.round(root.regionHeight)}`

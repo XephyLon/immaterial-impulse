@@ -60,7 +60,7 @@ Rectangle {
             Row {
                 id: regionInfoRow
                 anchors.centerIn: parent
-                spacing: 4
+                spacing: Appearance.spacing.verysmall
 
                 Loader {
                     id: regionIconLoader
