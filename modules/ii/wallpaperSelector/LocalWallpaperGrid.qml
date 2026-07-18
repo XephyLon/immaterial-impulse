@@ -56,13 +56,13 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            anchors.margins: 8
+            anchors.margins: Appearance.spacing.small
             color: Qt.rgba(0, 0, 0, 0.45)
             radius: Appearance.rounding.normal
         }
         Row {
             anchors.centerIn: parent
-            spacing: 12
+            spacing: Appearance.spacing.normal
             RippleButton {
                 implicitWidth: 36; implicitHeight: 36
                 buttonRadius: height / 2
@@ -101,8 +101,8 @@ Item {
             bottom: grid.top
             left: parent.left
             right: parent.right
-            leftMargin: 4
-            rightMargin: 4
+            leftMargin: Appearance.spacing.verysmall
+            rightMargin: Appearance.spacing.verysmall
         }
     }
 

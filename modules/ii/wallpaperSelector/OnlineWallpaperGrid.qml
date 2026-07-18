@@ -116,7 +116,7 @@ Item {
 
         ColumnLayout {
             anchors.centerIn: parent
-            spacing: 16
+            spacing: Appearance.spacing.large
 
             MaterialSymbol {
                 Layout.alignment: Qt.AlignHCenter
@@ -165,8 +165,8 @@ Item {
             top: parent.top
             left: parent.left
             right: parent.right
-            leftMargin: 4
-            rightMargin: 4
+            leftMargin: Appearance.spacing.verysmall
+            rightMargin: Appearance.spacing.verysmall
         }
     }
 
@@ -292,7 +292,7 @@ Item {
         ColumnLayout {
             anchors.centerIn: parent
             visible: wallpaperModel.count === 0 && !OnlineWallpapers.loading
-            spacing: 12
+            spacing: Appearance.spacing.normal
 
             MaterialSymbol {
                 Layout.alignment: Qt.AlignHCenter
@@ -316,7 +316,7 @@ Item {
                 onClicked: OnlineWallpapers.fetch()
                 contentItem: RowLayout {
                     anchors.centerIn: parent
-                    spacing: 6
+                    spacing: Appearance.spacing.small
                     MaterialSymbol {
                         text: "refresh"
                         iconSize: Appearance.font.pixelSize.larger
