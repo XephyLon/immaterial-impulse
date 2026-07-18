@@ -149,7 +149,7 @@ PanelWindow {
             anchors.bottomMargin = 8;
         }
 
-        spacing: 6
+        spacing: Appearance.spacing.small
 
         Toolbar {
             id: toolbar
@@ -181,7 +181,7 @@ PanelWindow {
 
                 RowLayout {
                     anchors.left: parent.left
-                    spacing: 6
+                    spacing: Appearance.spacing.small
                     Item {} // extra padding
                     ToolbarTextField {
                         id: keyInput

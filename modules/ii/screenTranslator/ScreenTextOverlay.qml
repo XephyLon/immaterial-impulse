@@ -72,7 +72,7 @@ Item {
         Column {
             visible: !root.error
             anchors.centerIn: parent
-            spacing: 10 * root.scaleFactor
+            spacing: Appearance.spacing.normal * root.scaleFactor
             MaterialLoadingIndicator {
                 anchors.horizontalCenter: parent.horizontalCenter
                 implicitSize: 100 * root.scaleFactor
@@ -103,13 +103,13 @@ Item {
         Column {
             visible: root.error
             anchors.centerIn: parent
-            spacing: 10 * root.scaleFactor
+            spacing: Appearance.spacing.normal * root.scaleFactor
 
             MaterialShapeWrappedMaterialSymbol {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "exclamation"
                 iconSize: 80 * root.scaleFactor
-                padding: 6 * root.scaleFactor
+                padding: Appearance.spacing.small * root.scaleFactor
                 color: Appearance.colors.colError
                 colSymbol: Appearance.colors.colOnError
                 shape: MaterialShape.Shape.Sunny
