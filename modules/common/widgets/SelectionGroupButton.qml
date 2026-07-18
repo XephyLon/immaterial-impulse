@@ -29,7 +29,7 @@ GroupButton {
     colBackgroundActive: Appearance.colors.colSecondaryContainerActive
 
     contentItem: RowLayout {
-        spacing: 4 * (root.buttonText?.length > 0)
+        spacing: Appearance.spacing.verysmall * (root.buttonText?.length > 0)
 
         Loader {
             Layout.alignment: Qt.AlignVCenter

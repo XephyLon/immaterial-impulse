@@ -28,8 +28,8 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 12
-        spacing: 6
+        anchors.margins: Appearance.spacing.normal
+        spacing: Appearance.spacing.small
 
         RowLayout {
             Layout.fillWidth: true

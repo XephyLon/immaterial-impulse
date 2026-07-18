@@ -43,7 +43,7 @@ Item {
     RowLayout {
         anchors.fill: parent
         anchors.margins: 13
-        spacing: 15
+        spacing: Appearance.spacing.large
 
         Rectangle {
             id: artBackground
@@ -78,7 +78,7 @@ Item {
 
         ColumnLayout {
             Layout.fillHeight: true
-            spacing: 2
+            spacing: Appearance.spacing.unsharpen
 
             StyledText {
                 id: trackTitle
@@ -113,7 +113,7 @@ Item {
                 StyledText {
                     id: trackTime
                     anchors.bottom: sliderRow.top
-                    anchors.bottomMargin: 5
+                    anchors.bottomMargin: Appearance.spacing.small
                     anchors.left: parent.left
                     font.pixelSize: Appearance.font.pixelSize.small
                     color: root.blendedColors.colSubtext
@@ -187,7 +187,7 @@ Item {
                     id: playPauseButton
                     anchors.right: parent.right
                     anchors.bottom: sliderRow.top
-                    anchors.bottomMargin: 5
+                    anchors.bottomMargin: Appearance.spacing.small
                     property real size: 44
                     implicitWidth: size
                     implicitHeight: size

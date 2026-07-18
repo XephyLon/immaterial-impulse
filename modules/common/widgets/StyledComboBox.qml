@@ -54,9 +54,9 @@ ComboBox {
         RowLayout {
             id: buttonLayout
             anchors.fill: parent
-            spacing: 8
-            anchors.leftMargin: 16
-            anchors.rightMargin: 16
+            spacing: Appearance.spacing.small
+            anchors.leftMargin: Appearance.spacing.large
+            anchors.rightMargin: Appearance.spacing.large
 
             Loader {
                 Layout.alignment: Qt.AlignVCenter
@@ -130,9 +130,9 @@ ComboBox {
         }
 
         contentItem: RowLayout {
-            spacing: 8
-            anchors.leftMargin: 12
-            anchors.rightMargin: 12
+            spacing: Appearance.spacing.small
+            anchors.leftMargin: Appearance.spacing.normal
+            anchors.rightMargin: Appearance.spacing.normal
 
             Loader {
                 Layout.alignment: Qt.AlignVCenter
@@ -177,7 +177,7 @@ ComboBox {
         y: root.height + 4
         width: root.width
         height: Math.min(listView.contentHeight + topPadding + bottomPadding, 300)
-        padding: 8
+        padding: Appearance.spacing.small
 
         enter: Transition {
             PropertyAnimation {
@@ -216,7 +216,7 @@ ComboBox {
             id: listView
             clip: true
             implicitHeight: contentHeight
-            spacing: 2
+            spacing: Appearance.spacing.unsharpen
             model: root.popup.visible ? root.delegateModel : null
             currentIndex: root.highlightedIndex
         }

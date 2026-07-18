@@ -32,13 +32,13 @@ Rectangle {
             right: parent.right
             margins: 0
         }
-        spacing: 6
+        spacing: Appearance.spacing.small
 
         // Header
         RowLayout{
-            Layout.leftMargin: 10
-            Layout.topMargin: 6
-            spacing: 10
+            Layout.leftMargin: Appearance.spacing.normal
+            Layout.topMargin: Appearance.spacing.small
+            spacing: Appearance.spacing.normal
             MaterialShapeWrappedMaterialSymbol {
                 id: avatarShape
                 shape: MaterialShape.Shape.Circle 
@@ -74,7 +74,7 @@ Rectangle {
             }
             MaterialSymbol {
                 Layout.alignment: Qt.AlignRight // im a placeholder someday I will do something =P
-                Layout.rightMargin: 12
+                Layout.rightMargin: Appearance.spacing.normal
                 font.pixelSize: Appearance.font.pixelSize.huge
                 text: "more_vert"
             }
@@ -84,7 +84,7 @@ Rectangle {
         Rectangle {
             id: imageRect
             Layout.fillWidth: true
-            Layout.bottomMargin: 4
+            Layout.bottomMargin: Appearance.spacing.verysmall
             implicitHeight: 130
             radius: 0
             color: Appearance.colors.colLayer2
@@ -121,9 +121,9 @@ Rectangle {
         // Buttons
         RowLayout {
             Layout.fillWidth: true
-            Layout.rightMargin: 8
+            Layout.rightMargin: Appearance.spacing.small
             Layout.bottomMargin: -4
-            spacing: 8
+            spacing: Appearance.spacing.small
 
             Item { Layout.fillWidth: true }
 

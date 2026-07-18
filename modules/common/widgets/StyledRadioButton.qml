@@ -10,7 +10,7 @@ import Quickshell.Services.Pipewire
 
 RadioButton {
     id: root
-    padding: 4
+    padding: Appearance.spacing.verysmall
     implicitHeight: contentItem.implicitHeight + padding * 2
     property string description
     property color activeColor: Appearance?.colors.colPrimary ?? "#685496"
@@ -23,7 +23,7 @@ RadioButton {
     contentItem: RowLayout {
         id: contentItem
         Layout.fillWidth: true
-        spacing: 12
+        spacing: Appearance.spacing.normal
         Rectangle {
             id: radio
             Layout.fillWidth: false

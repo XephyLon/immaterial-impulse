@@ -41,7 +41,7 @@ Item {
         ColumnLayout {
             id: dialogColumnLayout
             anchors.fill: parent
-            spacing: 16
+            spacing: Appearance.spacing.large
 
             StyledText {
                 id: dialogTitle
@@ -68,7 +68,7 @@ Item {
                 Layout.fillHeight: true
                 clip: true
                 currentIndex: root.defaultChoice !== undefined ? root.items.indexOf(root.defaultChoice) : -1
-                spacing: 6
+                spacing: Appearance.spacing.small
 
                 model: ScriptModel {
                     id: choiceModel

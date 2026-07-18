@@ -43,12 +43,12 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 13
-        spacing: 10
+        spacing: Appearance.spacing.normal
 
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 15
+            spacing: Appearance.spacing.large
 
             Rectangle {
                 id: artBackground
@@ -103,7 +103,7 @@ Item {
         ColumnLayout {
             id: infoColumn
             Layout.fillWidth: true
-            Layout.bottomMargin: 5
+            Layout.bottomMargin: Appearance.spacing.small
 
             StyledText {
                 id: trackTitle
@@ -213,7 +213,7 @@ Item {
                     id: playPauseButton
                     anchors.right: parent.right
                     anchors.bottom: sliderRow.top
-                    anchors.bottomMargin: 5
+                    anchors.bottomMargin: Appearance.spacing.small
                     property real size: 44
                     implicitWidth: size
                     implicitHeight: size

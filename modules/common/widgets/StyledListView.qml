@@ -8,7 +8,7 @@ import QtQuick.Controls
  */
 ListView {
     id: root
-    spacing: 5
+    spacing: Appearance.spacing.small
     property real removeOvershoot: 20 // Account for gaps and bouncy animations
     property int dragIndex: -1
     property real dragDistance: 0

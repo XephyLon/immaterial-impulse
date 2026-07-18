@@ -64,9 +64,9 @@ ComboBox {
         RowLayout {
             id: buttonLayout
             anchors.fill: parent
-            spacing: 8
-            anchors.leftMargin: 16
-            anchors.rightMargin: 16
+            spacing: Appearance.spacing.small
+            anchors.leftMargin: Appearance.spacing.large
+            anchors.rightMargin: Appearance.spacing.large
 
             Loader {
                 Layout.alignment: Qt.AlignVCenter
@@ -144,9 +144,9 @@ ComboBox {
         }
 
         contentItem: RowLayout {
-            spacing: 8
-            anchors.leftMargin: 12
-            anchors.rightMargin: 12
+            spacing: Appearance.spacing.small
+            anchors.leftMargin: Appearance.spacing.normal
+            anchors.rightMargin: Appearance.spacing.normal
 
             Loader {
                 Layout.alignment: Qt.AlignVCenter
@@ -193,7 +193,7 @@ ComboBox {
             searchField.implicitHeight + 20 + (visibleCount * 42) + topPadding + bottomPadding,
             320
         )
-        padding: 8
+        padding: Appearance.spacing.small
 
         onVisibleChanged: {
             if (visible) {
@@ -232,7 +232,7 @@ ComboBox {
         }
 
         contentItem: ColumnLayout {
-            spacing: 4
+            spacing: Appearance.spacing.verysmall
 
             Rectangle {
                 Layout.fillWidth: true
@@ -242,11 +242,11 @@ ComboBox {
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.margins: 4
-                    spacing: 6
+                    anchors.margins: Appearance.spacing.verysmall
+                    spacing: Appearance.spacing.small
 
                     MaterialSymbol {
-                        Layout.leftMargin: 6
+                        Layout.leftMargin: Appearance.spacing.small
                         text: "search"
                         iconSize: Appearance.font.pixelSize.larger
                         color: Appearance.colors.colSubtext
@@ -276,7 +276,7 @@ ComboBox {
                         text: "close"
                         iconSize: Appearance.font.pixelSize.normal
                         color: Appearance.colors.colSubtext
-                        Layout.rightMargin: 6
+                        Layout.rightMargin: Appearance.spacing.small
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
@@ -294,7 +294,7 @@ ComboBox {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.min(contentHeight, 320 - searchField.implicitHeight - 8 - 46)
                 clip: true
-                spacing: 2
+                spacing: Appearance.spacing.unsharpen
                 model: root.popup.visible ? root.delegateModel : null
                 currentIndex: root.highlightedIndex
             }

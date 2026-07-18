@@ -56,8 +56,8 @@ Item {
                 ColumnLayout {
                     id: layout
                     anchors.fill: parent
-                    anchors.margins: 8
-                    spacing: 2
+                    anchors.margins: Appearance.spacing.small
+                    spacing: Appearance.spacing.unsharpen
 
                     Repeater {
                         id: repeater
