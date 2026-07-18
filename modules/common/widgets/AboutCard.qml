@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import qs
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.common.functions
 
 Rectangle {
     id: root
@@ -13,7 +14,7 @@ Rectangle {
 
     property color avatarColor: Appearance.colors.colPrimary
     property color avatarOnColor: Appearance.colors.colOnPrimary
-    property color iconPanelColor: Appearance.colors.colPrimaryContainer
+    property color iconPanelColor: ColorUtils.transparentize(Appearance?.colors.colPrimaryContainer, 0.9)
     property color iconOnColor: Appearance.colors.colOnPrimaryContainer
 
     implicitWidth: 260
