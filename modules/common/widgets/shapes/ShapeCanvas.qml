@@ -1,3 +1,4 @@
+import qs.modules.common
 import QtQuick
 import "shapes/morph.js" as Morph
 
@@ -22,9 +23,9 @@ Canvas {
     property double progress: 1
     property var morph: new Morph.Morph(roundedPolygon, roundedPolygon)
     property Animation animation: NumberAnimation {
-        duration: 350
+        duration: Appearance.animationCurves.expressiveFastSpatialDuration
         easing.type: Easing.BezierSpline
-        easing.bezierCurve: [0.42, 1.67, 0.21, 0.90, 1, 1] // Material 3 Expressive fast spatial (https://m3.material.io/styles/motion/overview/specs)
+        easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
     }
 
     onRoundedPolygonChanged: {

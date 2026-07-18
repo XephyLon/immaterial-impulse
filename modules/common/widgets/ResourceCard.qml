@@ -90,6 +90,6 @@ Rectangle {
         }
     }
 
-    border.width: root.value > 0.9 ? 1.5 : 0
+    border.width: root.value > 0.9 ? Appearance.borderWidth.emphasis : 0
     border.color: root.value > 0.9 ? Appearance.colors.colError : "transparent"
 }
