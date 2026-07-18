@@ -27,7 +27,7 @@ ContentPage {
             RowLayout {
                 id: layoutItem
                 anchors.centerIn: parent
-                spacing: 6
+                spacing: Appearance.spacing.small
                 MaterialSymbol {
                     text: iRoot.iconName
                     color: iRoot.textColor
@@ -74,7 +74,7 @@ ContentPage {
         id: mainLayout 
         Layout.fillWidth: true   
         Layout.fillHeight: true
-        spacing: 20
+        spacing: Appearance.spacing.verylarge
 
         ContentSection {
             icon: "neurology"
@@ -98,7 +98,7 @@ ContentPage {
 
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 15
+                    spacing: Appearance.spacing.large
 
                     Repeater {
                         model: Config.options.ai.customProviders ? Config.options.ai.customProviders.length : 0
@@ -201,8 +201,8 @@ ContentPage {
                     RowLayout {
                         id: sectionActionsRow
                         Layout.alignment: Qt.AlignRight
-                        Layout.topMargin: 10
-                        spacing: 10
+                        Layout.topMargin: Appearance.spacing.normal
+                        spacing: Appearance.spacing.normal
 
                         IconButton {
                             id: addProviderButton
