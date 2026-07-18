@@ -33,7 +33,7 @@ StyledPopup {
 
             Item {
                 anchors.fill: parent
-                anchors.margins: Appearance.spacing.large 
+                anchors.margins: Appearance.spacing.large
 
                 ColumnLayout {
                     anchors.left: parent.left
