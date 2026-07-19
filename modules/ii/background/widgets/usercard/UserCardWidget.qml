@@ -63,7 +63,9 @@ AbstractBackgroundWidget {
         Image {
             id: bgImage
             anchors.fill: parent
-            source: "file://" + Config.options.background.wallpaperPath
+            source: "file://" + (GlobalStates.screenLocked && Config.options.background.lockWall !== ""
+                ? Config.options.background.lockWall
+                : Config.options.background.wallpaperPath)
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             cache: false
