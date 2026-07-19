@@ -428,7 +428,10 @@ main() {
         imgpath="$(kdialog --getopenfilename . --title 'Choose wallpaper')"
     fi
 
-    if [[ -n "$imgpath" && -z "$noswitch_flag" ]]; then
+    # A color-only run is transient (e.g. the lock screen recoloring); it must
+    # not wipe the user's configured accent color. When an accent is set it
+    # still wins over the image, same as a normal switch.
+    if [[ -n "$imgpath" && -z "$noswitch_flag" && -z "$coloronly_flag" ]]; then
         set_accent_color ""
         color_flag=""
         color=""

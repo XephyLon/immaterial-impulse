@@ -92,6 +92,27 @@ Scope {
         surface: root.sessionLockSurface
     }
 
+    // Recolor the shell theme from the lock wallpaper while locked, reverting to
+    // the desktop wallpaper's colors on unlock. Uses --coloronly, so the desktop
+    // wallpaper image and the user's configured accent are left untouched. Only
+    // acts when a distinct lock wallpaper is set.
+    property bool lockColorsApplied: false
+    Connections {
+        target: GlobalStates
+        function onScreenLockedChanged() {
+            const lockWall = Config.options.background.lockWall;
+            if (GlobalStates.screenLocked) {
+                if (lockWall && lockWall.length > 0) {
+                    Wallpapers.applyColorsOnly(lockWall);
+                    root.lockColorsApplied = true;
+                }
+            } else if (root.lockColorsApplied) {
+                Wallpapers.applyColorsOnly(Config.options.background.wallpaperPath);
+                root.lockColorsApplied = false;
+            }
+        }
+    }
+
     function lock() {
         if (Config.options.lock.useHyprlock) {
             Quickshell.execDetached(["bash", "-c", "pidof hyprlock || hyprlock"]);
