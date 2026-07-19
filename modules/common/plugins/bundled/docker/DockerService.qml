@@ -36,9 +36,15 @@ Singleton {
             if (!line) continue;
             try {
                 const obj = JSON.parse(line);
+                const id = obj.ID || obj.Id || "";
+                const name = obj.Names || obj.Name || "";
+                // A valid `docker ps --format '{{json .}}'` row always has
+                // both fields. Ignore syntactically valid but incomplete JSON
+                // rather than exposing a phantom unnamed container.
+                if (!id || !name) continue;
                 parsedContainers.push({
-                    id: obj.ID || obj.Id || "",
-                    name: obj.Names || obj.Name || "",
+                    id: id,
+                    name: name,
                     state: String(obj.State || "").toLowerCase(),
                     status: obj.Status || obj.State || "",
                     image: obj.Image || "",

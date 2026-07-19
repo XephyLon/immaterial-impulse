@@ -26,7 +26,7 @@ TestCase {
         var invalidData = "invalid data\n{}\n";
         var parsedInvalid = docker.parseDockerPs(invalidData);
         verify(parsedInvalid !== null);
-        compare(parsedInvalid.totalCount, 1);
+        compare(parsedInvalid.totalCount, 0);
         compare(parsedInvalid.runningCount, 0);
         compare(parsedInvalid.containerNames.length, 0);
     }
