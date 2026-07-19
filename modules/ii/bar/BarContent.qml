@@ -7,6 +7,7 @@ import Quickshell.Services.SystemTray
 import qs
 import qs.services
 import qs.modules.common
+import qs.modules.common.plugins
 import qs.modules.common.widgets
 import qs.modules.common.functions
 
@@ -22,8 +23,12 @@ Item {
     readonly property bool trayHasItems: SystemTray.items.values.length > 0
 
     function filterLayout(layout) {
-        if (trayHasItems) return layout
-        return layout.filter(name => name !== "sysTray")
+        return layout.filter(name => {
+            if (name === "sysTray" && !trayHasItems) return false;
+            if (name === "dockerPlugin"
+                    && !PluginState.option("docker_plugin", "showBarWidget", true)) return false;
+            return true;
+        });
     }
 
     readonly property var effectiveLeftLayout:   filterLayout(Config.options.bar.layouts.leftLayout)

@@ -4,6 +4,15 @@
     "description": "A declarative docker status indicator",
     "defaultWidth": 200,
     "defaultHeight": 100,
+    "options": [
+        {
+            "key": "showBarWidget",
+            "type": "boolean",
+            "label": "Show bar widget",
+            "icon": "view_day",
+            "default": true
+        }
+    ],
     "barWidget": {
         "type": "Row",
         "props": {
