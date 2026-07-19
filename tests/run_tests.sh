@@ -41,6 +41,14 @@ if ! "$SCRIPT_DIR/lint_qml_imports.sh"; then
     exit 1
 fi
 
+# Static lint: spacing/padding/margin must use Appearance.spacing tokens, not
+# raw pixel literals in the token range.
+echo "Running spacing token lint..."
+if ! python3 "$SCRIPT_DIR/lint_spacing.py"; then
+    echo "Spacing lint failed."
+    exit 1
+fi
+
 # Run the test runner
 "$QMLTESTRUNNER" \
     -import "$PROJECT_ROOT/tests/mocks" \
