@@ -24,7 +24,7 @@ StyledPopup {
         RowLayout {
             Layout.fillWidth: true
             Layout.leftMargin: Appearance.spacing.verysmall
-            spacing: 7
+            spacing: Appearance.spacing.small
 
             MaterialShapeWrappedMaterialSymbol {
                 shape: MaterialShape.Shape.ClamShell
@@ -37,7 +37,7 @@ StyledPopup {
 
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: -3
+                spacing: -Appearance.spacing.verysmall
 
                 StyledText {
                     text: Translation.tr("Battery")

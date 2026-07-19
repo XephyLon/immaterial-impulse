@@ -11,7 +11,7 @@ Item {
     default property alias data: tabBarColumn.data  
     implicitHeight: tabBarColumn.implicitHeight
     implicitWidth: tabBarColumn.implicitWidth
-    Layout.topMargin: 25
+    Layout.topMargin: Appearance.spacing.huge
 
     Rectangle {
         property real itemHeight: tabBarColumn.children[0]?.baseSize ?? 56

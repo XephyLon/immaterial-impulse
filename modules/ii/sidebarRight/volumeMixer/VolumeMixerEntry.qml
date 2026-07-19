@@ -82,7 +82,7 @@ Item {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: -4
+            spacing: -Appearance.spacing.verysmall
 
             StyledText {
                 Layout.fillWidth: true

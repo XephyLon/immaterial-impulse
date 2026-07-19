@@ -253,7 +253,7 @@ Item {
                     }
 
                     ColumnLayout {
-                        spacing: -3
+                        spacing: -Appearance.spacing.verysmall
                         Layout.alignment: Qt.AlignVCenter
                         Layout.topMargin: Appearance.spacing.unsharpen
 
@@ -328,7 +328,7 @@ Item {
 
                     // Title + Artist
                     ColumnLayout {
-                        spacing: -4
+                        spacing: -Appearance.spacing.verysmall
                         Layout.alignment: Qt.AlignVCenter
                         Layout.topMargin: Appearance.spacing.unsharpen
 
@@ -389,7 +389,7 @@ Item {
                     RippleButton {
                         implicitWidth: 26
                         implicitHeight: 26
-                        Layout.leftMargin: -4
+                        Layout.leftMargin: -Appearance.spacing.verysmall
                         buttonRadius: 13
                         colBackground: "transparent"
                         colBackgroundHover: Appearance.colors.colPrimaryContainerHover

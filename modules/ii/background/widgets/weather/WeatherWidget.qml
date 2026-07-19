@@ -76,7 +76,7 @@ AbstractBackgroundWidget {
                     fill: parent
                     margins: 14
                 }
-                spacing: -4
+                spacing: -Appearance.spacing.verysmall
 
                 MaterialShapeWrappedMaterialSymbol {
                     Layout.alignment: Qt.AlignRight
@@ -125,7 +125,7 @@ AbstractBackgroundWidget {
                     spacing: Appearance.spacing.small
 
                     ColumnLayout {
-                        spacing: -4
+                        spacing: -Appearance.spacing.verysmall
                         StyledText {
                             text: Weather.data?.temp ?? "--°"
                             font.pixelSize: Appearance.font.pixelSize.hugeass
@@ -151,7 +151,7 @@ AbstractBackgroundWidget {
                     Item { Layout.fillWidth: true }
 
                     MaterialShapeWrappedMaterialSymbol {
-                        Layout.topMargin: -19
+                        Layout.topMargin: -Appearance.spacing.verylarge
                         shape: MaterialShape.Shape.Cookie12Sided
                         color: Appearance.colors.colPrimary
                         colSymbol: Appearance.colors.colOnPrimary
@@ -269,7 +269,7 @@ AbstractBackgroundWidget {
                     Item { Layout.fillWidth: true }
 
                     MaterialShapeWrappedMaterialSymbol {
-                        Layout.topMargin: -5
+                        Layout.topMargin: -Appearance.spacing.verysmall
                         Layout.alignment: Qt.AlignVCenter
                         shape: MaterialShape.Shape.Cookie12Sided
                         color: Appearance.colors.colPrimary
@@ -357,9 +357,9 @@ AbstractBackgroundWidget {
                     Item { Layout.fillWidth: true }
 
                     ColumnLayout{
-                        Layout.topMargin: -5
+                        Layout.topMargin: -Appearance.spacing.verysmall
                         Layout.rightMargin: Appearance.spacing.small
-                        spacing: 1
+                        spacing: Appearance.spacing.hairline
                         RowLayout {
                             spacing: Appearance.spacing.verysmall
                             MaterialSymbol {

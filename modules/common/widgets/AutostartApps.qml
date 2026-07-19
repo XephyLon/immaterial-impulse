@@ -84,7 +84,7 @@ ColumnLayout {
 
     Item {
         Layout.fillWidth: true
-        Layout.bottomMargin: -4
+        Layout.bottomMargin: -Appearance.spacing.verysmall
         height: 24
         visible: Config.options.hyprland.autostartApps.apps.length > 0 && Config.options.hyprland.autostartApps.enable
 

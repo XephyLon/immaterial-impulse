@@ -18,7 +18,7 @@ WindowDialog {
     }
 
     WindowDialogSeparator {
-        Layout.topMargin: -22
+        Layout.topMargin: -Appearance.spacing.huge
         Layout.leftMargin: 0
         Layout.rightMargin: 0
     }

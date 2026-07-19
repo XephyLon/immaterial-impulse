@@ -69,7 +69,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.leftMargin: Appearance.spacing.verysmall
-        spacing: -4
+        spacing: -Appearance.spacing.verysmall
 
         StyledText {
             Layout.fillWidth: true

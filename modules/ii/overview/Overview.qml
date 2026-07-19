@@ -75,7 +75,7 @@ Scope {
                 horizontalCenter: parent.horizontalCenter
                 top: parent.top
             }
-            spacing: -8
+            spacing: -Appearance.spacing.small
 
             Keys.onPressed: event => {
                 if (event.key === Qt.Key_Escape) {

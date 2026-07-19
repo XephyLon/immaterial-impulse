@@ -27,7 +27,7 @@ BarWidgetSwitcher {
 
             Column {
                 Layout.alignment: Qt.AlignHCenter
-                spacing: -4
+                spacing: -Appearance.spacing.verysmall
 
                 Repeater {
                     model: root.dateTimeString.split(/[: ]/)
@@ -68,7 +68,7 @@ BarWidgetSwitcher {
             Column {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: Appearance.spacing.unsharpen
-                spacing: -4
+                spacing: -Appearance.spacing.verysmall
 
                 Repeater {
                     model: DateTime.time.split(/[: ]/)
@@ -175,7 +175,7 @@ BarWidgetSwitcher {
                 radius: Appearance.rounding.full
                 color: Appearance.colors.colTertiaryContainer
                 Layout.alignment: Qt.AlignVCenter
-                Layout.leftMargin: -10
+                Layout.leftMargin: -Appearance.spacing.normal
                 StyledText {
                     id: ampmText
                     anchors.centerIn: parent

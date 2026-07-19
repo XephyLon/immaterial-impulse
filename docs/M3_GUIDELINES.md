@@ -22,7 +22,8 @@ Visible borders are not required for every surface. Many components rely entirel
 - **Border Width**: 
   - Use `border.width: Appearance.borderWidth.standard` (1px) for standard structural outlines (e.g., `AboutCard`, `BarIsland`, `StyledPopup`, `StyledSwitch`).
   - Use `border.width: Appearance.borderWidth.emphasis` (2px) to emphasize active/selected states (e.g., `StyledRadioButton`, `ColorSelectionArray`, `GroupButton`, `MonitorRect` when dragged).
-  - *Never* use fractional or ad hoc border widths (e.g., `1.5`). A deliberately thicker accent border (e.g., a clock hand) is a real exception to this scale and may stay a literal - but it must not be `border.width: 1` or `2` re-typed as a raw number.
+  - Use `border.width: Appearance.borderWidth.heavy` (4px) for a deliberately thick accent border (e.g., a clock hand, a strongly-targeted region).
+  - Border widths are the one scale not restricted to multiples of 4 - the tokens are `1`, `2`, `4`. *Never* use fractional or ad hoc border widths (e.g., `1.5`), and never re-type `1`/`2`/`4` as a raw number.
 
 - **Border Colors**:
   - `colLayer0Border`: The standard 1px outline for standalone floating surfaces and prominent containers. Often combined with `StyledRectangularShadow` (as seen in `StyledPopup`).
@@ -60,17 +61,23 @@ a violation of this rule - keep the computed expression rather than snapping it 
 ### Spacing
 
 Always use predefined values from `Appearance.spacing` for `spacing`, `padding`, and margin
-properties. Never hardcode pixel gaps (e.g., `spacing: 12`).
+properties. Never hardcode pixel gaps (e.g., `spacing: 12`). The scale gives fine control for small
+elements at the bottom (1, 2), then a strict **multiple-of-4** rhythm: `1, 2, 4, 8, 12, 16, 20, 24`.
+Snap any raw spacing/padding/margin value to the nearest token.
 
+- `hairline` (1px): 1px alignment nudges.
 - `unsharpen` (2px): Hairline gaps, icon-to-text kerning.
 - `verysmall` (4px): Tightest padding, chip internal insets.
 - `small` (8px): Standard tight spacing.
 - `normal` (12px): Default row/item spacing.
 - `large` (16px): Section/group spacing.
 - `verylarge` (20px): Outer container padding, generous gaps.
+- `huge` (24px): Largest step, prominent section separation.
 
-Values that don't cleanly fit this scale (large one-off outer margins, etc.) may remain literals
-rather than being force-fit onto the nearest token.
+Only genuine large one-off *dimensions* outside the 1-24 range (a specific carousel height, a 35px
+offset) stay literals. Negative offsets use the negated token (`-Appearance.spacing.verysmall`).
+`tests/lint_spacing.py` (run by `tests/run_tests.sh` / CI) fails on any raw spacing literal in the
+token range.
 
 ## 2. Motion and Animation
 

@@ -13,9 +13,9 @@ StyledPopup {
         implicitWidth: 340 
         spacing: Appearance.spacing.small
 
-        Layout.topMargin: -8
-        Layout.leftMargin: -8
-        Layout.rightMargin: -8
+        Layout.topMargin: -Appearance.spacing.small
+        Layout.leftMargin: -Appearance.spacing.small
+        Layout.rightMargin: -Appearance.spacing.small
 
         Rectangle {
             Layout.fillWidth: true
@@ -38,8 +38,8 @@ StyledPopup {
                 ColumnLayout {
                     anchors.left: parent.left
                     anchors.top: parent.top
-                    anchors.topMargin: -6
-                    spacing: -2
+                    anchors.topMargin: -Appearance.spacing.small
+                    spacing: -Appearance.spacing.unsharpen
 
                     StyledText {
                         text: Weather.data?.city ?? "Paris, France"
@@ -59,7 +59,7 @@ StyledPopup {
                 RowLayout {
                     anchors.left: parent.left
                     anchors.bottom: parent.bottom
-                    anchors.bottomMargin: -8
+                    anchors.bottomMargin: -Appearance.spacing.small
                     spacing: Appearance.spacing.verysmall
 
                     StyledText {
@@ -73,7 +73,7 @@ StyledPopup {
                 MaterialShapeWrappedMaterialSymbol {
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    anchors.topMargin: -3
+                    anchors.topMargin: -Appearance.spacing.verysmall
                     shape: MaterialShape.Shape.Sunny
                     text: Icons.getWeatherIcon(Weather.data.wCode) ?? "cloud"
                     iconSize: 40
@@ -86,8 +86,8 @@ StyledPopup {
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
                     anchors.rightMargin: Appearance.spacing.small
-                    anchors.bottomMargin: -1
-                    spacing: -2
+                    anchors.bottomMargin: -Appearance.spacing.hairline
+                    spacing: -Appearance.spacing.unsharpen
 
                     RowLayout {
                         spacing: Appearance.spacing.verysmall

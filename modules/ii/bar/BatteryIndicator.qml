@@ -42,8 +42,8 @@ MouseArea {
                     MaterialSymbol {
                         Layout.alignment: Qt.AlignVCenter
                         Layout.topMargin: Appearance.spacing.unsharpen
-                        Layout.leftMargin: -2
-                        Layout.rightMargin: -2
+                        Layout.leftMargin: -Appearance.spacing.unsharpen
+                        Layout.rightMargin: -Appearance.spacing.unsharpen
                         fill: 1
                         text: "bolt"
                         iconSize: Appearance.font.pixelSize.smaller
@@ -65,7 +65,7 @@ MouseArea {
                 anchors.centerIn: parent
                 sourceComponent: ColumnLayout {
                     rotation: 90
-                    spacing: -7
+                    spacing: -Appearance.spacing.small
                     MaterialSymbol {
                         Layout.alignment: Qt.AlignHCenter
                         fill: 1

@@ -17,7 +17,7 @@ ContentPage {
 
         toggled: true
         implicitHeight: 36
-        padding: 14
+        padding: Appearance.spacing.large
         implicitWidth: layoutItem.implicitWidth + padding * 2
         buttonRadius: Appearance.rounding.full
 

@@ -354,7 +354,7 @@ AbstractBackgroundWidget {
 
                     ColumnLayout {
                         anchors.centerIn: parent
-                        spacing: -3
+                        spacing: -Appearance.spacing.verysmall
 
                         Repeater {
                             model: root.weeks

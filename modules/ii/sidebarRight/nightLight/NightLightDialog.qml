@@ -26,14 +26,14 @@ WindowDialog {
     }
 
     WindowDialogSeparator {
-        Layout.topMargin: -22
+        Layout.topMargin: -Appearance.spacing.huge
         Layout.leftMargin: 0
         Layout.rightMargin: 0
     }
 
     Column {
         id: nightLightColumn
-        Layout.topMargin: -16
+        Layout.topMargin: -Appearance.spacing.large
         Layout.fillWidth: true
 
         ConfigSwitch {
@@ -86,14 +86,14 @@ WindowDialog {
     }
 
     WindowDialogSeparator {
-        Layout.topMargin: -22
+        Layout.topMargin: -Appearance.spacing.huge
         Layout.leftMargin: 0
         Layout.rightMargin: 0
     }
 
     Column {
         id: antiFlashbangColumn
-        Layout.topMargin: -16
+        Layout.topMargin: -Appearance.spacing.large
         Layout.fillWidth: true
 
         ConfigSwitch {
@@ -137,14 +137,14 @@ WindowDialog {
     }
 
     WindowDialogSeparator {
-        Layout.topMargin: -22
+        Layout.topMargin: -Appearance.spacing.huge
         Layout.leftMargin: 0
         Layout.rightMargin: 0
     }
 
     Column {
         id: brightnessColumn
-        Layout.topMargin: -16
+        Layout.topMargin: -Appearance.spacing.large
         Layout.fillWidth: true
 
         WindowDialogSlider {
@@ -164,14 +164,14 @@ WindowDialog {
     }
 
     WindowDialogSeparator {
-        Layout.topMargin: -22
+        Layout.topMargin: -Appearance.spacing.huge
         Layout.leftMargin: 0
         Layout.rightMargin: 0
     }
 
     Column {
         id: gammaColumn
-        Layout.topMargin: -16
+        Layout.topMargin: -Appearance.spacing.large
         Layout.fillWidth: true
         Layout.fillHeight: true
 

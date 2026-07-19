@@ -332,7 +332,7 @@ MouseArea {
                     
                     Column {
                         Layout.alignment: Qt.AlignVCenter
-                        spacing: -2
+                        spacing: -Appearance.spacing.unsharpen
                         
                         StyledText {
                             horizontalAlignment: Text.AlignLeft

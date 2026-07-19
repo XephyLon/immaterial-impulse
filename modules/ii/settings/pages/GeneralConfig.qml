@@ -79,7 +79,7 @@ ContentPage {
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.margins: 24
+                    anchors.margins: Appearance.spacing.huge
                     spacing: Appearance.spacing.large
 
                     ColumnLayout {
@@ -125,7 +125,7 @@ ContentPage {
             }
 
             GroupedList {
-                Layout.topMargin: -2
+                Layout.topMargin: -Appearance.spacing.unsharpen
                 ConfigSelectionArray {
                     text: Translation.tr("Format")
                     icon: "schedule"

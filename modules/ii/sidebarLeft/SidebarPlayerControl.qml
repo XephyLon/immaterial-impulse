@@ -77,7 +77,7 @@ Item {
         anchors.fill: parent
         anchors.leftMargin: Appearance.spacing.verysmall
         anchors.rightMargin: Appearance.spacing.verysmall
-        anchors.topMargin: -1
+        anchors.topMargin: -Appearance.spacing.hairline
         anchors.bottomMargin: Appearance.spacing.verysmall
         color: ColorUtils.transparentize(artDominantColor, 0.9)
         radius: Appearance.rounding.normal

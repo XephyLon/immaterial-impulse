@@ -22,7 +22,7 @@ Rectangle {
             fill: parent
             margins: Appearance.spacing.normal
         }
-        spacing: -4
+        spacing: -Appearance.spacing.verysmall
 
         RowLayout {
             Layout.fillWidth: true

@@ -51,7 +51,7 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
             }
             ColumnLayout{
-                spacing: -4
+                spacing: -Appearance.spacing.verysmall
                 StyledText {
                     Layout.fillWidth: true
                     text: root.title
@@ -122,7 +122,7 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             Layout.rightMargin: Appearance.spacing.small
-            Layout.bottomMargin: -4
+            Layout.bottomMargin: -Appearance.spacing.verysmall
             spacing: Appearance.spacing.small
 
             Item { Layout.fillWidth: true }

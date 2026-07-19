@@ -42,7 +42,7 @@ Item {
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: 13
+        anchors.margins: Appearance.spacing.normal
         spacing: Appearance.spacing.large
 
         Rectangle {

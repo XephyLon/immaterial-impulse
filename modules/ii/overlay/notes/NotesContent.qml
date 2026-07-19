@@ -142,7 +142,7 @@ OverlayBackground {
     ColumnLayout {
         id: contentItem
         anchors.fill: parent
-        spacing: -16
+        spacing: -Appearance.spacing.large
 
         ScrollView {
             id: editorScrollView
@@ -164,7 +164,7 @@ OverlayBackground {
                 persistentSelection: true
                 textFormat: TextEdit.PlainText
                 background: null
-                padding: 24
+                padding: Appearance.spacing.huge
 
                 onTextChanged: {
                     if (textInput.activeFocus) {

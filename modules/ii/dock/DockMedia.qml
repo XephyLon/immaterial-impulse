@@ -182,7 +182,7 @@ Item {
             ColumnLayout {
                 Layout.fillWidth:  true
                 Layout.fillHeight: true
-                spacing: -2
+                spacing: -Appearance.spacing.unsharpen
 
                 Item { Layout.fillHeight: true }
 

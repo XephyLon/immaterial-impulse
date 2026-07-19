@@ -130,7 +130,7 @@ GroupButton {
             visible: root.expandedSize
             active: visible
             sourceComponent: Column {
-                spacing: -2
+                spacing: -Appearance.spacing.unsharpen
                 StyledText {
                     anchors { left: parent.left; right: parent.right }
                     font.pixelSize: Appearance.font.pixelSize.smallie
@@ -274,8 +274,8 @@ GroupButton {
         color: deleteHover.containsMouse ? Appearance.colors.colError : ColorUtils.transparentize(Appearance.colors.colError, 0.15)
         anchors.top: parent.top
         anchors.left: parent.left
-        anchors.topMargin: -6
-        anchors.leftMargin: -6
+        anchors.topMargin: -Appearance.spacing.small
+        anchors.leftMargin: -Appearance.spacing.small
 
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
@@ -294,7 +294,7 @@ GroupButton {
         MouseArea {
             id: deleteHover
             anchors.fill: parent
-            anchors.margins: -4
+            anchors.margins: -Appearance.spacing.verysmall
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
@@ -317,8 +317,8 @@ GroupButton {
         color: resizeHover.containsMouse ? Appearance.colors.colPrimary : ColorUtils.transparentize(Appearance.colors.colPrimary, 0.15)
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        anchors.bottomMargin: -6
-        anchors.rightMargin: -6
+        anchors.bottomMargin: -Appearance.spacing.small
+        anchors.rightMargin: -Appearance.spacing.small
 
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
@@ -337,7 +337,7 @@ GroupButton {
         MouseArea {
             id: resizeHover
             anchors.fill: parent
-            anchors.margins: -4
+            anchors.margins: -Appearance.spacing.verysmall
             hoverEnabled: true
             cursorShape: Qt.SizeFDiagCursor
             preventStealing: true

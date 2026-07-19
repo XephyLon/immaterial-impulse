@@ -47,7 +47,7 @@ AbstractBackgroundWidget {
                 fill: parent
                 margins: 14
             }
-            spacing: -4
+            spacing: -Appearance.spacing.verysmall
 
             MaterialShapeWrappedMaterialSymbol {
                 Layout.alignment: Qt.AlignRight

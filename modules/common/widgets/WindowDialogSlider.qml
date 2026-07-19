@@ -19,7 +19,7 @@ Column {
 
     signal moved()
     
-    spacing: -2
+    spacing: -Appearance.spacing.unsharpen
     ContentSubsectionLabel {
         id: sliderName
         visible: text?.length > 0

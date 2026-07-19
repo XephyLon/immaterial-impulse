@@ -112,7 +112,7 @@ AbstractBackgroundWidget {
             RowLayout {
                 id: statusTextRow
                 anchors.centerIn: parent
-                spacing: 14
+                spacing: Appearance.spacing.large
                 Item {
                     Layout.fillWidth: root.textHorizontalAlignment !== Text.AlignLeft
                     implicitWidth: 1

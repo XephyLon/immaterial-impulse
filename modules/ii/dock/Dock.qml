@@ -195,13 +195,13 @@ Scope {
                                 RowLayout {
                                     id: activeRow
                                     anchors.fill: parent
-                                    spacing: -4
+                                    spacing: -Appearance.spacing.verysmall
 
                                     DockMedia {
                                         id: dockMedia
                                         visible: Config.options.dock.showMedia
                                         Layout.fillHeight: true
-                                        Layout.topMargin: 11
+                                        Layout.topMargin: Appearance.spacing.normal
                                         Layout.bottomMargin: Appearance.spacing.small
                                         Layout.leftMargin: 0
                                         buttonPadding: dockRow.padding

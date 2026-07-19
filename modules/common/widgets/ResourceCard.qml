@@ -33,7 +33,7 @@ Rectangle {
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.topMargin: -4
+            Layout.topMargin: -Appearance.spacing.verysmall
             spacing: 0
 
             MaterialShapeWrappedMaterialSymbol {
@@ -60,7 +60,7 @@ Rectangle {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 1
+            spacing: Appearance.spacing.hairline
 
             StyledText {
                 text: root.label

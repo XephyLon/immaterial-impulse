@@ -42,7 +42,7 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 13
+        anchors.margins: Appearance.spacing.normal
         spacing: Appearance.spacing.normal
 
         RowLayout {
@@ -120,7 +120,7 @@ Item {
             StyledText {
                 id: trackArtist
                 Layout.fillWidth: true
-                Layout.topMargin: -6
+                Layout.topMargin: -Appearance.spacing.small
                 font.pixelSize: Appearance.font.pixelSize.smaller
                 color: root.blendedColors.colSubtext
                 elide: Text.ElideRight

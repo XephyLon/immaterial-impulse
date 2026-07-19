@@ -86,7 +86,7 @@ AbstractBackgroundWidget {
                     }
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: -2
+                        spacing: -Appearance.spacing.unsharpen
                         StyledText {
                             font.pixelSize: Appearance.font.pixelSize.normal
                             font.weight: Font.Medium
@@ -116,7 +116,7 @@ AbstractBackgroundWidget {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignRight
-                    spacing: -4
+                    spacing: -Appearance.spacing.verysmall
                     StyledText {
                         Layout.alignment: Qt.AlignRight
                         font.pixelSize: 42; font.weight: Font.Bold

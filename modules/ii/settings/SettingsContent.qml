@@ -189,7 +189,7 @@ Item {
 
                     Rectangle {
                         width: 160
-                        Layout.topMargin: -5
+                        Layout.topMargin: -Appearance.spacing.verysmall
                         height: 2
                         gradient: Gradient {
                             orientation: Gradient.Horizontal
@@ -203,7 +203,7 @@ Item {
 
                     FloatingActionButton {
                         id: fab
-                        Layout.bottomMargin: -25
+                        Layout.bottomMargin: -Appearance.spacing.huge
                         property bool justCopied: false
                         iconText: justCopied ? "check" : "edit"
                         buttonText: justCopied ? Translation.tr("Path copied") : Translation.tr("Config file")

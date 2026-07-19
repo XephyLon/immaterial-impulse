@@ -64,8 +64,8 @@ ColumnLayout {
 
     component DialogSectionListView: StyledListView {
         Layout.fillWidth: true
-        Layout.topMargin: -22
-        Layout.bottomMargin: -16
+        Layout.topMargin: -Appearance.spacing.huge
+        Layout.bottomMargin: -Appearance.spacing.large
         Layout.leftMargin: -Appearance.rounding.large
         Layout.rightMargin: -Appearance.rounding.large
         topMargin: Appearance.spacing.normal

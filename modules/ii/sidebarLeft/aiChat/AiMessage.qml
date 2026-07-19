@@ -90,7 +90,7 @@ Rectangle {
                     fill: parent
                     margins: Appearance.spacing.verysmall
                 }
-                spacing: 18
+                spacing: Appearance.spacing.verylarge
 
                 Item { // Name
                     id: nameWrapper

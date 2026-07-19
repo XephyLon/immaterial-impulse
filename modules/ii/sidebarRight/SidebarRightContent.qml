@@ -185,7 +185,7 @@ Item {
                                     leftMargin: 13
                                     bottomMargin: Appearance.spacing.small
                                 }
-                                spacing: 1
+                                spacing: Appearance.spacing.hairline
 
                                 Rectangle {
                                     id: avatarRect
@@ -326,10 +326,10 @@ Item {
                 active: root.activePlayer !== null && GlobalStates.sidebarRightOpen && Config.options.sidebar.mediaPlayer
                 visible: active
                 Layout.fillWidth: true
-                Layout.topMargin: -10
-                Layout.bottomMargin: -10
-                Layout.leftMargin: -10
-                Layout.rightMargin: -10
+                Layout.topMargin: -Appearance.spacing.normal
+                Layout.bottomMargin: -Appearance.spacing.normal
+                Layout.leftMargin: -Appearance.spacing.normal
+                Layout.rightMargin: -Appearance.spacing.normal
                 sourceComponent: Player {
                     player: root.activePlayer
                     visualizerPoints: GlobalStates.visualizerPoints

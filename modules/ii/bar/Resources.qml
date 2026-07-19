@@ -129,7 +129,7 @@ BarWidgetSwitcherArea {
 
     colDefault: Component {
         ColumnLayout {
-            spacing: 7
+            spacing: Appearance.spacing.small
             Resource {
                 Layout.alignment: Qt.AlignHCenter
                 iconName: "memory"
@@ -196,7 +196,7 @@ BarWidgetSwitcherArea {
 
     colMaterial: Component {
         ColumnLayout {
-            spacing: 7
+            spacing: Appearance.spacing.small
             Resource {
                 Layout.alignment: Qt.AlignHCenter
                 iconName: "memory"

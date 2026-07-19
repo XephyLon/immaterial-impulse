@@ -212,7 +212,7 @@ MouseArea {
             anchors.bottomMargin: Appearance.spacing.small
             anchors.leftMargin: Appearance.spacing.small
             anchors.rightMargin: Appearance.spacing.small
-            spacing: -4
+            spacing: -Appearance.spacing.verysmall
             z: 1
 
             ColumnLayout {

@@ -160,7 +160,7 @@ AbstractBackgroundWidget {
                         leftMargin: Appearance.spacing.large
                         rightMargin: 14
                     }
-                    spacing: -10
+                    spacing: -Appearance.spacing.normal
 
                     // Artist + Title
                     ColumnLayout {

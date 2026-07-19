@@ -50,8 +50,8 @@ ColumnLayout {
                 id: codeBlockLanguage
                 Layout.alignment: Qt.AlignLeft
                 Layout.fillWidth: false
-                Layout.topMargin: 7
-                Layout.bottomMargin: 7
+                Layout.topMargin: Appearance.spacing.small
+                Layout.bottomMargin: Appearance.spacing.small
                 Layout.leftMargin: Appearance.spacing.normal
                 font.pixelSize: Appearance.font.pixelSize.small
                 font.weight: Font.DemiBold

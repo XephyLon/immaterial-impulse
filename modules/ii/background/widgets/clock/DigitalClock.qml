@@ -52,7 +52,7 @@ ColumnLayout {
     // Date
     ClockText {
         visible: Config.options.background.widgets.clock.digital.showDate
-        Layout.topMargin: -20
+        Layout.topMargin: -Appearance.spacing.verylarge
         Layout.fillWidth: true
         text: DateTime.longDate
         color: clockColumn.colText

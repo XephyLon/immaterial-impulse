@@ -47,8 +47,8 @@ ContentPage {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.margins: 24
-            spacing: 24
+            anchors.margins: Appearance.spacing.huge
+            spacing: Appearance.spacing.huge
 
             Rectangle {
                 Layout.alignment: Qt.AlignVCenter
@@ -90,7 +90,7 @@ ContentPage {
 
                 Row {
                     id: colorRow
-                    spacing: -6
+                    spacing: -Appearance.spacing.small
 
                     Repeater {
                         model: [
@@ -130,8 +130,8 @@ ContentPage {
                     contentItem: StyledText {
                         text: parent.buttonText
                         horizontalAlignment: Text.AlignHCenter
-                        leftPadding: 10
-                        rightPadding: 10
+                        leftPadding: Appearance.spacing.normal
+                        rightPadding: Appearance.spacing.normal
                     }
                 }
             }

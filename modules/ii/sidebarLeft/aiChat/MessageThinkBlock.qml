@@ -82,8 +82,8 @@ Item {
 
                 MaterialSymbol {
                     Layout.fillWidth: false
-                    Layout.topMargin: 7
-                    Layout.bottomMargin: 7
+                    Layout.topMargin: Appearance.spacing.small
+                    Layout.bottomMargin: Appearance.spacing.small
                     Layout.leftMargin: Appearance.spacing.verysmall
                     text: "linked_services"
                 }

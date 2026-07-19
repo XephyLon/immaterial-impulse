@@ -131,7 +131,7 @@ ContentPage {
                         uniform: true
                         visible: Config.options.overview.style !== "niri"
                         Layout.alignment: Qt.AlignHCenter
-                        Layout.leftMargin: 24
+                        Layout.leftMargin: Appearance.spacing.huge
                         ConfigSelectionArray {
                             Layout.alignment: Qt.AlignHCenter
                             currentValue: Config.options.overview.orderRightLeft

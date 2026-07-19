@@ -218,17 +218,22 @@ Singleton {
     }
 
     spacing: QtObject {
+        // Fine control for small elements at the bottom (1, 2), then a
+        // multiple-of-4 rhythm from 4 up: 1, 2, 4, 8, 12, 16, 20, 24.
+        property int hairline: 1
         property int unsharpen: 2
         property int verysmall: 4
         property int small: 8
         property int normal: 12
         property int large: 16
         property int verylarge: 20
+        property int huge: 24
     }
 
     borderWidth: QtObject {
         property int standard: 1
         property int emphasis: 2
+        property int heavy: 4
     }
 
     font: QtObject {
