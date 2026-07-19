@@ -57,9 +57,9 @@ if re.search(r"\bTimer\s*\{[^{}]*\brepeat\s*:\s*true", docker_service, re.DOTALL
         "docker/DockerService.qml: repeated polling timers are prohibited; refresh on demand")
 
 docker_widget = (PLUGIN_ROOT / "docker/DockerWidget.qml").read_text(encoding="utf-8")
-if not re.search(r"DockerPopup\s*\{[^}]*hoverTarget\s*:\s*null", docker_widget, re.DOTALL):
+if not re.search(r"DockerPopup\s*\{[^}]*hoverTarget\s*:\s*root", docker_widget, re.DOTALL):
     failures.append(
-        "docker/DockerWidget.qml: interactive Docker popup must be click-only, never hover-loaded")
+        "docker/DockerWidget.qml: popup must use its click-only root as a positioning target")
 docker_widget_code = re.sub(r"//.*", "", docker_widget)
 if re.search(r"\bHoverHandler\s*\{", docker_widget_code) \
         or "containsMouse" in docker_widget_code \
@@ -98,21 +98,21 @@ if re.search(r"\banchors\.fill\s*:\s*parent\b", bar_host):
         "modules/ii/bar/PluginBarWidget.qml: package Loader must not fill its implicit-size host")
 
 bar_content = (ROOT / "modules/ii/bar/BarContent.qml").read_text(encoding="utf-8")
-if not re.search(
+if re.search(
         r'name\s*===\s*["\']plugin:docker_plugin["\']\s*\)\s*return\s+false',
         bar_content):
     failures.append(
-        "modules/ii/bar/BarContent.qml: unstable Docker bar entry must remain quarantined")
+        "modules/ii/bar/BarContent.qml: Docker native adapter must remain visible for testing")
 if not re.search(
         r'name\s*===\s*["\']plugin:docker_plugin["\'].*DockerPlugin\.qml',
-        bar_content):
+        bar_content, re.DOTALL):
     failures.append(
         "modules/ii/bar/BarContent.qml: bundled Docker must use its direct native bar component")
-if len(re.findall(
+if re.search(
         r'Layout\.preferredWidth\s*:\s*modelData\s*===\s*["\']plugin:docker_plugin["\']',
-        bar_content)) != 6:
+        bar_content):
     failures.append(
-        "modules/ii/bar/BarContent.qml: every grouped bar loader must reserve Docker's bounded width")
+        "modules/ii/bar/BarContent.qml: Docker must use the same content-driven sizing as native widgets")
 
 docker_adapter = (ROOT / "modules/ii/bar/DockerPlugin.qml").read_text(encoding="utf-8")
 docker_adapter_code = re.sub(r"//.*", "", docker_adapter)
@@ -122,7 +122,7 @@ if "DockerPackage.DockerWidget" in docker_adapter_code:
 for required in (
         "DockerPackage.DockerService", "DockerPackage.DockerPopup",
         "hoverEnabled: false", "active: root.popupOpen",
-        "width: implicitWidth", "height: implicitHeight"):
+        "id: contentLoader", "contentLoader.item?.implicitWidth"):
     if required not in docker_adapter_code:
         failures.append(
             f"modules/ii/bar/DockerPlugin.qml: missing stable native adapter contract: {required}")

@@ -118,19 +118,28 @@ Docker refreshes once at service startup, when its popup opens, and after contai
 restore an automatic polling timer: repeated refreshes reproduced roughly 400 MB of RSS growth per
 cycle and eventually froze the shell. The process-lifecycle lint guards this restriction.
 
-The Docker Manager popup is click-only. Do not reconnect its `hoverTarget`: constructing the full
+The Docker Manager popup is click-only. Keep `hoverEnabled: false`; constructing the full
 interactive container and Compose delegate tree from pointer entry reproduced another complete
-Quickshell freeze. Hover must remain a lightweight bar interaction; opening the manager and its
-on-demand refresh belong to the explicit click path. The entire popup stays behind a click-driven
-`Loader` and is destroyed when closed. Do not animate layout-derived `implicitHeight` in its cards;
-use bounded opacity, scale, color, and icon animations to avoid geometry allocation loops.
+Quickshell freeze. `hoverTarget` is retained only as the `StyledPopup` positioning anchor. Opening
+the manager and its on-demand refresh belong to the explicit click path. The entire popup stays
+behind a click-driven `Loader` and is destroyed when closed. Do not animate layout-derived
+`implicitHeight` in its cards; use bounded opacity, scale, color, and icon animations to avoid
+geometry allocation loops.
 
-Despite those lifecycle bounds, the bundled Docker bar entry remains quarantined by
-`BarContent.filterLayout`. Multiple direct and package-native geometry implementations reproduced
-rapid multi-gigabyte RSS growth and complete Quickshell freezes, including while no popup was open.
-Do not remove this filter based on visual or unit tests alone: re-enabling requires an isolated
-Wayland harness that exercises idle, hover, open, close, and repeated-open cycles while enforcing a
-hard RSS ceiling.
+The native Docker bar entry follows WeatherBar's content-driven implicit sizing. Do not add forced
+`width`, `height`, or host `Layout.preferredWidth` bindings: those competing geometry owners caused
+the one-pixel rendering failure and allocation runaway. `DockerRuntimeTest.qml` exercises idle,
+open, close, and repeated-open cycles; run it through a transient user service with `MemoryMax` and
+`MemorySwapMax=0` before changing Docker geometry, popup ownership, or lifecycle behavior.
+
+The native entry is enabled in `BarContent` after both isolated and complete bar-host harnesses
+passed the hard memory ceiling. Keep `DockerBarHostRuntimeTest.qml` representative of the production
+layout, and never use an uncapped live shell as the first memory test after changing this path.
+Click-away dismissal uses a bounded `HyprlandFocusGrab`: resolve the popup window imperatively,
+assign the window list once, and clear both `active` and `windows` when closing. Do not bind the grab's
+window list directly to `popupLoader.item?.item`; that reactive object graph drove the genuine bar
+host into rapid unbounded growth. The integration test defaults to a 1.5 GB ceiling because the
+complete no-Docker bar can transiently exceed 512 MB on this configuration.
 
 Avoid editing many live-loaded QML files in rapid succession. Quickshell reloads the configuration
 for each change, and moving service/module files during those reloads can impose severe session

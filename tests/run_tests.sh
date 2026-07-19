@@ -85,6 +85,17 @@ if ! python3 "$SCRIPT_DIR/test_expressive_design_system.py"; then
     exit 1
 fi
 
+echo "Running Docker memory-safety contract tests..."
+if ! python3 "$SCRIPT_DIR/test_docker_memory_safety.py"; then
+    echo "Docker memory-safety contract tests failed."
+    exit 1
+fi
+
+if [[ "${RUN_DOCKER_RUNTIME_MEMORY_TEST:-0}" == "1" ]]; then
+    echo "Running capped Docker runtime memory test..."
+    bash "$SCRIPT_DIR/run_docker_memory_test.sh"
+fi
+
 # Run the test runner
 "$QMLTESTRUNNER" \
     -import "$PROJECT_ROOT/tests/mocks" \

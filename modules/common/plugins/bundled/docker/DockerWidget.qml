@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Hyprland
 import qs.modules.common
 import qs.modules.common.widgets
 import "."
@@ -14,6 +15,7 @@ MouseArea {
     property bool vertical: Config.options.bar.vertical
     property bool isMaterial: Config.options.bar.cornerStyle === 3
     property bool popupOpen: false
+    property bool useOutsideClickGrab: true
 
     // This bar entry owns a fixed, bounded canvas. Never derive the host size
     // from a child Layout: the surrounding BarGroup Loader also derives its
@@ -27,9 +29,20 @@ MouseArea {
     // pointer entry. Only a real left-button click can instantiate the manager.
     acceptedButtons: Qt.LeftButton
     hoverEnabled: false
+    cursorShape: Qt.PointingHandCursor
     onClicked: {
         root.popupOpen = !root.popupOpen;
         if (root.popupOpen) DockerService.refresh();
+    }
+    onPopupOpenChanged: {
+        if (root.popupOpen) {
+            focusArm.attempts = 0;
+            focusArm.restart();
+        } else {
+            focusArm.stop();
+            popupFocus.active = false;
+            popupFocus.windows = [];
+        }
     }
 
     Item {
@@ -109,11 +122,37 @@ MouseArea {
         active: root.popupOpen
         sourceComponent: DockerPopup {
             pinnedOpen: true
-            // Do not bind this popup's lifecycle to pointer position.
-            hoverTarget: null
+            // Needed for popup positioning; root does not track hover.
+            hoverTarget: root
             onPinnedOpenChanged: {
                 if (!pinnedOpen) root.popupOpen = false;
-            }
         }
     }
+
+    Timer {
+        id: focusArm
+        property int attempts: 0
+        interval: 16
+        repeat: true
+        onTriggered: {
+            const popupWindow = popupLoader.item?.item;
+            if (!root.popupOpen || !root.useOutsideClickGrab || attempts++ >= 30) {
+                stop();
+                return;
+            }
+            if (!popupWindow) return;
+            popupFocus.windows = [root.QsWindow?.window, popupWindow].filter(window => window);
+            popupFocus.active = true;
+            stop();
+        }
+    }
+
+    HyprlandFocusGrab {
+        id: popupFocus
+        active: false
+        windows: []
+        onCleared: root.popupOpen = false
+    }
+}
+
 }

@@ -28,55 +28,6 @@ StyledPopup {
         Qt.callLater(() => popupEnter.restart());
     }
 
-    ParallelAnimation {
-        id: popupEnter
-        NumberAnimation {
-            target: panelContent; property: "opacity"; from: 0; to: 1
-            duration: Appearance.animation.elementMoveEnter.duration
-            easing.type: Easing.BezierSpline
-            easing.bezierCurve: Appearance.animationCurves.expressiveEffects
-        }
-        NumberAnimation {
-            target: panelContent; property: "scale"; from: 0.92; to: 1
-            duration: Appearance.animation.elementMoveEnter.duration
-            easing.type: Easing.BezierSpline
-            easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
-        }
-    }
-
-    SequentialAnimation {
-        id: viewTransition
-        ParallelAnimation {
-            NumberAnimation {
-                target: viewSurface; property: "opacity"; to: 0
-                duration: Appearance.animation.elementMoveFast.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animationCurves.expressiveEffects
-            }
-            NumberAnimation {
-                target: viewSurface; property: "scale"; to: 0.96
-                duration: Appearance.animation.elementMoveFast.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
-            }
-        }
-        ScriptAction { script: root.composeView = root.pendingComposeView }
-        ParallelAnimation {
-            NumberAnimation {
-                target: viewSurface; property: "opacity"; to: 1
-                duration: Appearance.animation.elementMoveEnter.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animationCurves.expressiveEffects
-            }
-            NumberAnimation {
-                target: viewSurface; property: "scale"; to: 1
-                duration: Appearance.animation.elementMoveEnter.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
-            }
-        }
-    }
-
     function containerActions(container) {
         return [
             { icon: container.isRunning ? "restart_alt" : "play_arrow", label: container.isRunning ? "Restart" : "Start", action: container.isRunning ? "restart" : "start", enabled: true },
@@ -98,6 +49,58 @@ StyledPopup {
         implicitWidth: 480
         spacing: Appearance.spacing.space150
         transformOrigin: Item.Top
+
+        // StyledPopup's default property only accepts visual items. Keep the
+        // animation objects in this Item-derived content tree so they do not
+        // invalidate the entire popup type at load time.
+        ParallelAnimation {
+            id: popupEnter
+            NumberAnimation {
+                target: panelContent; property: "opacity"; from: 0; to: 1
+                duration: Appearance.animation.elementMoveEnter.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+            }
+            NumberAnimation {
+                target: panelContent; property: "scale"; from: 0.92; to: 1
+                duration: Appearance.animation.elementMoveEnter.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
+            }
+        }
+
+        SequentialAnimation {
+            id: viewTransition
+            ParallelAnimation {
+                NumberAnimation {
+                    target: viewSurface; property: "opacity"; to: 0
+                    duration: Appearance.animation.elementMoveFast.duration
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+                }
+                NumberAnimation {
+                    target: viewSurface; property: "scale"; to: 0.96
+                    duration: Appearance.animation.elementMoveFast.duration
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
+                }
+            }
+            ScriptAction { script: root.composeView = root.pendingComposeView }
+            ParallelAnimation {
+                NumberAnimation {
+                    target: viewSurface; property: "opacity"; to: 1
+                    duration: Appearance.animation.elementMoveEnter.duration
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+                }
+                NumberAnimation {
+                    target: viewSurface; property: "scale"; to: 1
+                    duration: Appearance.animation.elementMoveEnter.duration
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
+                }
+            }
+        }
 
         RowLayout {
             Layout.fillWidth: true
@@ -222,6 +225,8 @@ StyledPopup {
         property string iconText
         property string label
         property bool animateIcon: false
+        readonly property color contentColor: toggled
+            ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
         signal triggered
         implicitWidth: contentRow.implicitWidth + Appearance.spacing.space200
         implicitHeight: 34
@@ -244,7 +249,7 @@ StyledPopup {
                 anchors.verticalCenter: parent.verticalCenter
                 text: actionButton.iconText
                 iconSize: Appearance.font.pixelSize.normal
-                color: Appearance.colors.colOnLayer1
+                color: actionButton.contentColor
                 rotation: 0
                 RotationAnimation on rotation {
                     from: 0; to: 360
@@ -257,7 +262,7 @@ StyledPopup {
                 anchors.verticalCenter: parent.verticalCenter
                 text: actionButton.label
                 font.pixelSize: Appearance.font.pixelSize.small
-                color: Appearance.colors.colOnLayer1
+                color: actionButton.contentColor
             }
         }
     }
