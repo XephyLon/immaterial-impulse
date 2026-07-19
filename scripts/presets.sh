@@ -40,7 +40,8 @@ case "$action" in
             echo "Error: preset not found: $name" >&2
             exit 1
         fi
-        cp -f "$preset_file" "$CONFIG_FILE"
+        jq -s '.[0] * .[1] | del(._presetMeta)' "$CONFIG_FILE" "$preset_file" \
+            > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
         "$SWITCHWALL" --noswitch
         ;;
     *)

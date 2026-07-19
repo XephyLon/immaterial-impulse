@@ -220,10 +220,9 @@ ContentPage {
                     }
                 }
 
-                ContentSubsection {
+                GroupedList {
+                    Layout.topMargin: 0
                     visible: Config.options.background.centeredWallpaper
-                    title: Translation.tr("Shape")
-
                     ConfigSelectionShapeArray {
                         currentValue: Config.options.background.centeredWallpaperShape
                         shapeColor: Appearance.colors.colPrimary
@@ -239,10 +238,6 @@ ContentPage {
                             Config.options.background.centeredWallpaperShape = newValue
                         }
                     }
-                }
-                GroupedList {
-                    Layout.topMargin: Appearance.spacing.normal
-                    visible: Config.options.background.centeredWallpaper
                     ColorSelectionArray {
                         visible: Config.options.background.centeredWallpaper
                         icon: "palette"
@@ -808,11 +803,6 @@ ContentPage {
                         Config.options.background.widgets.customImage.enable = checked;
                     }
                 }
-            }
-
-            ContentSubsection {
-                title: Translation.tr("Background shape")
-                            
                 ConfigSelectionShapeArray {
                     currentValue: Config.options.background.widgets.customImage.shape
                     shapeColor: Appearance.colors.colPrimary
