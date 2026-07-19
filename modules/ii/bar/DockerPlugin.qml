@@ -1,3 +1,3 @@
-import qs.modules.common.plugins
+import "../../common/plugins/bundled/docker" as DockerPackage
 
-PluginBarWidget { pluginId: "docker_plugin" }
+DockerPackage.DockerWidget {}

@@ -47,6 +47,14 @@ docker_manifest = json.loads(
 if "desktopWidget" in docker_manifest:
     failures.append(
         "docker/manifest.json: Docker must not auto-load as a desktop widget; use its bar entry")
+if any(option.get("key") == "pollingInterval" for option in docker_manifest.get("options", [])):
+    failures.append(
+        "docker/manifest.json: repeated Docker polling is disabled after live memory-runaway reproduction")
+
+docker_service = (PLUGIN_ROOT / "docker/DockerService.qml").read_text(encoding="utf-8")
+if re.search(r"\bTimer\s*\{[^{}]*\brepeat\s*:\s*true", docker_service, re.DOTALL):
+    failures.append(
+        "docker/DockerService.qml: repeated polling timers are prohibited; refresh on demand")
 
 # A package bar entry must have one Loader as its sizing boundary. Nesting the
 # package Loader inside PluginNode made the outer bar Loader, PluginNode, and
@@ -59,6 +67,16 @@ if re.search(r"\bPluginNode\s*\{", bar_host):
 if len(re.findall(r"\bLoader\s*\{", bar_host)) != 1:
     failures.append(
         "modules/ii/bar/PluginBarWidget.qml: package bar entries require exactly one Loader")
+if re.search(r"\banchors\.fill\s*:\s*parent\b", bar_host):
+    failures.append(
+        "modules/ii/bar/PluginBarWidget.qml: package Loader must not fill its implicit-size host")
+
+bar_content = (ROOT / "modules/ii/bar/BarContent.qml").read_text(encoding="utf-8")
+if not re.search(
+        r'name\s*===\s*["\']plugin:docker_plugin["\'].*DockerPlugin\.qml',
+        bar_content):
+    failures.append(
+        "modules/ii/bar/BarContent.qml: bundled Docker must use its direct native bar component")
 
 for path in PLUGIN_ROOT.rglob("*.qml"):
     for block in process_blocks(path.read_text(encoding="utf-8")):

@@ -74,6 +74,15 @@ layout-assigned geometry previously collapsed the visible widget to a one-pixel 
 Quickshell above 5 GB RSS in roughly two minutes. Preserve the corresponding lint check and use a
 guarded live run with RSS sampling when changing package-host geometry.
 
+Do not make the package loader fill that implicit-size host. Doing so made the Docker content
+visible but restored the allocation loop (3.8 GB RSS before termination). Bundled native plugins
+such as Docker should use a direct bar adapter, as `DockerPlugin.qml` does, while installed packages
+remain behind the non-filling generic host.
+
+Docker refreshes once at service startup, when its popup opens, and after container actions. Do not
+restore an automatic polling timer: repeated refreshes reproduced roughly 400 MB of RSS growth per
+cycle and eventually froze the shell. The process-lifecycle lint guards this restriction.
+
 Avoid editing many live-loaded QML files in rapid succession. Quickshell reloads the configuration
 for each change, and moving service/module files during those reloads can impose severe session
 load. Stop Quickshell or develop in a worktree, run headless tests, then do one controlled live load.

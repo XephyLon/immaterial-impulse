@@ -14,7 +14,6 @@ Singleton {
     readonly property string dockerBinary: PluginState.option(pluginId, "dockerBinary", "docker")
     readonly property string terminalApp: PluginState.option(pluginId, "terminalApp", "kitty")
     readonly property string shellPath: PluginState.option(pluginId, "shellPath", "/bin/sh")
-    readonly property int pollingInterval: PluginState.option(pluginId, "pollingInterval", 15000)
 
     property bool dockerAvailable: false
     property bool refreshing: false
@@ -221,13 +220,6 @@ Singleton {
     }
 
     Timer { id: actionRefresh; interval: 800; onTriggered: root.refresh() }
-    Timer {
-        interval: Math.max(1000, root.pollingInterval)
-        running: root.pollingInterval > 0
-        repeat: true
-        onTriggered: root.refresh()
-    }
-
     onDockerBinaryChanged: Qt.callLater(root.refresh)
     Component.onCompleted: root.refresh()
 }

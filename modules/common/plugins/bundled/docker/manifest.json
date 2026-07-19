@@ -54,16 +54,6 @@
                 { "displayName": "/bin/ash", "value": "/bin/ash" }
             ]
         },
-        {
-            "key": "pollingInterval",
-            "type": "number",
-            "label": "Fallback polling interval",
-            "icon": "sync",
-            "default": 15000,
-            "from": 0,
-            "to": 120000,
-            "step": 5000
-        },
         { "key": "showPorts", "type": "boolean", "label": "Show port mappings", "icon": "lan", "default": true }
     ],
     "barWidget": { "component": "DockerWidget.qml" }
