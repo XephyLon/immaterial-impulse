@@ -351,6 +351,10 @@ design tokens - color roles (`Appearance.colors.col*`, `Appearance.m3colors.m3*`
 (`Appearance.spacing.*`), border widths (`Appearance.borderWidth.*`), animation curves/durations
 (`Appearance.animation.*`). New UI should pull from these rather than hardcoding colors/sizes/
 durations, both for dark/light theme correctness and for consistency with the rest of the shell.
+`Appearance.spacing.*` is a fixed scale (`1, 2, 4, 8, 12, 16, 20, 24` - fine control at the bottom,
+then multiples of 4); `Appearance.borderWidth.*` is `1/2/4`. Snap any raw spacing/padding/margin to
+the nearest token - `tests/lint_spacing.py` (run by `tests/run_tests.sh`) fails on raw literals in
+that range.
 
 **Any `.qml` that references `Appearance` (or any other `qs.modules.common` singleton) as a bareword
 must `import qs.modules.common`.** That import is *not* transitive - a file that only has

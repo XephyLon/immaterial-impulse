@@ -224,7 +224,7 @@ AbstractBackgroundWidget {
             height: root.avatarSize + 10
             radius: width / 2
             color: Appearance.colors.colPrimaryContainer
-            border.width: 3
+            border.width: Appearance.borderWidth.heavy
             border.color: Appearance.colors.colLayer1
             z: 2
 

@@ -36,7 +36,7 @@ Item {
         radius: root.style === "classic" ? 2 : root.handWidth / 2
         color : Qt.rgba(root.color.r, root.color.g, root.color.b, root.fillColorAlpha)
         border.color: root.color
-        border.width: 4
+        border.width: Appearance.borderWidth.heavy
 
         Behavior on x {
             animation: Appearance.animation.elementResize.numberAnimation.createObject(this)

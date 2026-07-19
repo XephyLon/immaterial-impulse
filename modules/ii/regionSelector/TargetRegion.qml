@@ -22,7 +22,7 @@ Rectangle {
     z: 2
     color: fillColor
     border.color: borderColor
-    border.width: targeted ? 4 : Appearance.borderWidth.emphasis
+    border.width: targeted ? Appearance.borderWidth.heavy : Appearance.borderWidth.emphasis
     radius: Appearance.rounding.unsharpenslight
 
     Behavior on color {
