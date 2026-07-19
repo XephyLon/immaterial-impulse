@@ -20,7 +20,7 @@ Item {
     }
 
     // Configuration
-    property int paddingWeeks: 2 // 1 should be sufficient with proper clipping and no padding
+    property int paddingWeeks: Appearance.spacing.space25 // 1 should be sufficient with proper clipping and no padding
     property var locale: Qt.locale() // Should be of type Locale but QML is being funny
 
     // Scrolling
@@ -85,7 +85,7 @@ Item {
     // Sizes
     property real verticalPadding: 0
     property real buttonSize: 40
-    property real buttonSpacing: 2
+    property real buttonSpacing: Appearance.spacing.space25
     property real buttonVerticalSpacing: buttonSpacing
     implicitHeight: (6 * buttonSize) + (5 * buttonVerticalSpacing) + (2 * verticalPadding)
     implicitWidth: weeksColumn.implicitWidth

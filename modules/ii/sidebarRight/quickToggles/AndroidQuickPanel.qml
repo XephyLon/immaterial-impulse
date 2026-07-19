@@ -17,8 +17,8 @@ AbstractQuickPanel {
     Behavior on implicitHeight {
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
     }
-    property real spacing: Appearance.spacing.small
-    property real padding: Appearance.spacing.small
+    property real spacing: Appearance.spacing.space100
+    property real padding: Appearance.spacing.space100
     readonly property real baseCellWidth: {
         const availableWidth = root.width - (root.padding * 2) - (root.spacing * (root.columns))
         return availableWidth / root.columns
@@ -61,7 +61,7 @@ AbstractQuickPanel {
             fill: parent
             margins: root.padding
         }
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.space150
 
         Column {
             id: usedRows
@@ -122,14 +122,14 @@ AbstractQuickPanel {
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.top: parent.top
-                    anchors.topMargin: -Appearance.spacing.verysmall
+                    anchors.topMargin: -Appearance.spacing.space50
                     width: 8; height: 8; radius: Appearance.rounding.full
                     color: Appearance.colors.colPrimary
                 }
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.bottom: parent.bottom
-                    anchors.bottomMargin: -Appearance.spacing.verysmall
+                    anchors.bottomMargin: -Appearance.spacing.space50
                     width: 8; height: 8; radius: Appearance.rounding.full
                     color: Appearance.colors.colPrimary
                 }

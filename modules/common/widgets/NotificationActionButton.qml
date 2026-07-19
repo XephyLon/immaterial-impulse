@@ -9,8 +9,8 @@ RippleButton {
     property string urgency
 
     implicitHeight: 34
-    leftPadding: Appearance.spacing.large
-    rightPadding: Appearance.spacing.large
+    leftPadding: Appearance.spacing.space200
+    rightPadding: Appearance.spacing.space200
     buttonRadius: Appearance.rounding.small
     colBackground: (urgency == NotificationUrgency.Critical) ? Appearance.colors.colSecondaryContainer : Appearance.colors.colLayer4
     colBackgroundHover: (urgency == NotificationUrgency.Critical) ? Appearance.colors.colSecondaryContainerHover : Appearance.colors.colLayer4Hover

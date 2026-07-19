@@ -16,8 +16,8 @@ Item {
     id: root
 
     property real cardWidth:     240
-    property real buttonPadding: 5
-    property real artMargin:     5
+    property real buttonPadding: Appearance.spacing.space50
+    property real artMargin:     Appearance.spacing.space50
 
     property var player: MprisController.activePlayer
 
@@ -145,7 +145,7 @@ Item {
             width:  card.width
             height: card.height
             clip:   true
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
             z: 3
 
             // Art
@@ -182,7 +182,7 @@ Item {
             ColumnLayout {
                 Layout.fillWidth:  true
                 Layout.fillHeight: true
-                spacing: -Appearance.spacing.unsharpen
+                spacing: -Appearance.spacing.space25
 
                 Item { Layout.fillHeight: true }
 
@@ -208,9 +208,9 @@ Item {
 
             // Buttons
             RowLayout {
-                Layout.rightMargin: Appearance.spacing.verysmall
+                Layout.rightMargin: Appearance.spacing.space50
                 Layout.alignment:   Qt.AlignVCenter
-                spacing: Appearance.spacing.verysmall
+                spacing: Appearance.spacing.space50
 
                 // Play / Pause
                 RippleButton {

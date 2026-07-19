@@ -19,12 +19,12 @@ StyledPopup {
         || Battery.energyRate <= 0.01)
 
     ColumnLayout {
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.space150
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.leftMargin: Appearance.spacing.verysmall
-            spacing: Appearance.spacing.small
+            Layout.leftMargin: Appearance.spacing.space50
+            spacing: Appearance.spacing.space100
 
             MaterialShapeWrappedMaterialSymbol {
                 shape: MaterialShape.Shape.ClamShell
@@ -37,7 +37,7 @@ StyledPopup {
 
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: -Appearance.spacing.verysmall
+                spacing: -Appearance.spacing.space50
 
                 StyledText {
                     text: Translation.tr("Battery")
@@ -65,7 +65,7 @@ StyledPopup {
             Item { Layout.fillWidth: true }
 
             StyledText {
-                Layout.rightMargin: Appearance.spacing.small
+                Layout.rightMargin: Appearance.spacing.space100
                 font.pixelSize: Appearance.font.pixelSize.huge
                 font.weight: Font.Bold
                 color: Appearance.colors.colPrimary
@@ -75,7 +75,7 @@ StyledPopup {
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             ResourceCard {
                 label: Translation.tr("Health")

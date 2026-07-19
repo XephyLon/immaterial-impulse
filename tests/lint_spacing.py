@@ -5,12 +5,11 @@
 # 0,2,4,6,8,10,12,14,16,20,24,32,36,40,48,56,64,72. Any raw spacing value in
 # that range should be snapped to the nearest token.
 #
-# Conservative on purpose: it flags a property *assignment* whose value is a bare
-# integer in the token range (|n| in 1..24). It ignores:
+# It flags property assignments and spacing-like local property declarations
+# containing integer literals in the M3 token range. It ignores:
 #   - 0 (a real "no gap")
 #   - large one-off dimensions (|n| > 72)
-#   - property *declarations* (e.g. `property int padding: 10` - a config/default,
-#     not a usage), matched only when the property starts the line.
+#   - Config.qml schema defaults (Appearance depends on Config)
 #
 # Exits non-zero listing offenders. Wired into run_tests.sh / CI.
 
@@ -23,19 +22,45 @@ PROP = re.compile(
     r'^\s*(spacing|padding|topPadding|bottomPadding|leftPadding|rightPadding'
     r'|Layout\.(?:margins|leftMargin|rightMargin|topMargin|bottomMargin)'
     r'|anchors\.(?:margins|leftMargin|rightMargin|topMargin|bottomMargin))'
-    r'\s*:\s*(-?\d+)\s*$'
+    r'\s*:\s*(.+)$'
+)
+
+DECL = re.compile(
+    r'^\s*property\s+(?:int|real)\s+'
+    r'(\w*(?:spacing|padding|margin)\w*)\s*:\s*(.+)$',
+    re.IGNORECASE,
+)
+
+BARE_LITERAL = re.compile(r'^\s*(-?\d+)\s*$')
+BRANCH_LITERAL = re.compile(r'(?:\?|:)\s*(-?\d+)(?=\s*(?:[:,)]|$))')
+
+LEGACY_ALIAS = re.compile(
+    r'Appearance\.spacing\.(hairline|unsharpen|verysmall|small|normal|large|verylarge|huge)\b'
 )
 
 violations = []
 for f in glob.glob(ROOT + "/**/*.qml", recursive=True):
+    rel = os.path.relpath(f, ROOT)
     for i, line in enumerate(open(f)):
+        legacy = LEGACY_ALIAS.search(line)
+        if legacy:
+            violations.append((rel, i + 1,
+                               "legacy alias", legacy.group(1)))
+            continue
+
         m = PROP.match(line)
+        if not m and rel != "common/Config.qml":
+            m = DECL.match(line)
         if not m:
             continue
-        n = int(m.group(2))
-        if n == 0 or abs(n) > 72:
-            continue
-        violations.append((os.path.relpath(f, ROOT), i + 1, m.group(1), n))
+        expression = m.group(2).split("//", 1)[0]
+        bare = BARE_LITERAL.match(expression)
+        literals = [bare.group(1)] if bare else BRANCH_LITERAL.findall(expression)
+        for literal in literals:
+            n = int(literal)
+            if n == 0 or abs(n) > 72:
+                continue
+            violations.append((rel, i + 1, m.group(1), n))
 
 if violations:
     print("Spacing lint FAILED: raw pixel values must use Appearance.spacing tokens "

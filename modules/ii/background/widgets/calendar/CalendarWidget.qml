@@ -12,7 +12,7 @@ AbstractBackgroundWidget {
     configEntryName: "calendar"
     hoverEnabled: true
 
-    readonly property real cardSpacing: 12
+    readonly property real cardSpacing: Appearance.spacing.space150
     readonly property real singleWidth: 132
     readonly property real cardHeight: 120
 
@@ -161,7 +161,7 @@ AbstractBackgroundWidget {
 
                         RowLayout {
                             anchors.centerIn: parent
-                            spacing: Appearance.spacing.verysmall
+                            spacing: Appearance.spacing.space50
                             StyledText {
                                 text: root.today.toLocaleDateString(Qt.locale(), "MMM").toUpperCase()
                                 font.pixelSize: Appearance.font.pixelSize.normal
@@ -199,10 +199,10 @@ AbstractBackgroundWidget {
             id: oneByTwoContent
             ColumnLayout {
                 anchors { fill: parent; margins: 14 }
-                spacing: Appearance.spacing.small
+                spacing: Appearance.spacing.space100
 
                 Rectangle {
-                    Layout.leftMargin: Appearance.spacing.verysmall
+                    Layout.leftMargin: Appearance.spacing.space50
                     implicitHeight: 28
                     implicitWidth: monthText.implicitWidth + 20
                     radius: Appearance.rounding.full
@@ -223,7 +223,7 @@ AbstractBackgroundWidget {
                     rowSpacing: 4
                     columnSpacing: 0
                     Layout.fillWidth: true
-                    Layout.topMargin: Appearance.spacing.verysmall
+                    Layout.topMargin: Appearance.spacing.space50
 
                     Repeater {
                         model: ["Mo","Tu","We","Th","Fr","Sa","Su"]
@@ -277,12 +277,12 @@ AbstractBackgroundWidget {
         Component {
             id: twoByTwoContent
             ColumnLayout {
-                anchors { fill: parent; margins: Appearance.spacing.large }
-                spacing: Appearance.spacing.verysmall
+                anchors { fill: parent; margins: Appearance.spacing.space200 }
+                spacing: Appearance.spacing.space50
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: Appearance.spacing.verysmall
+                    spacing: Appearance.spacing.space50
 
                     StyledText {
                         Layout.fillWidth: true
@@ -331,7 +331,7 @@ AbstractBackgroundWidget {
 
                 RowLayout {
                     Layout.alignment: Qt.AlignHCenter
-                    spacing: Appearance.spacing.verysmall
+                    spacing: Appearance.spacing.space50
                     Repeater {
                         model: ["Mo","Tu","We","Th","Fr","Sa","Su"]
                         delegate: StyledText {
@@ -354,13 +354,13 @@ AbstractBackgroundWidget {
 
                     ColumnLayout {
                         anchors.centerIn: parent
-                        spacing: -Appearance.spacing.verysmall
+                        spacing: -Appearance.spacing.space50
 
                         Repeater {
                             model: root.weeks
                             delegate: RowLayout {
                                 required property var modelData
-                                spacing: Appearance.spacing.verysmall
+                                spacing: Appearance.spacing.space50
                                 Repeater {
                                     model: parent.modelData
                                     delegate: DayCell {
@@ -381,7 +381,7 @@ AbstractBackgroundWidget {
             id: resizeHandle
             width: 16; height: 16; radius: Appearance.rounding.unsharpenslight
             color: Appearance.colors.colOnPrimaryContainer
-            anchors { right: card.right; bottom: card.bottom; margins: Appearance.spacing.verysmall }
+            anchors { right: card.right; bottom: card.bottom; margins: Appearance.spacing.space50 }
             opacity: (root.containsMouse || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
             visible: opacity > 0 && !Config.options.background.widgetsLocked
             Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration } }
@@ -417,7 +417,7 @@ AbstractBackgroundWidget {
             id: toggleHandle
             width: 16; height: 16; radius: Appearance.rounding.unsharpenslight
             color: Appearance.colors.colOnPrimaryContainer
-            anchors { left: card.left; bottom: card.bottom; margins: Appearance.spacing.verysmall }
+            anchors { left: card.left; bottom: card.bottom; margins: Appearance.spacing.space50 }
             opacity: (root.containsMouse || toggleArea.containsMouse) && root.sizeMode !== "1x1" ? 0.5 : 0
             visible: opacity > 0 && !Config.options.background.widgetsLocked
             Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration } }

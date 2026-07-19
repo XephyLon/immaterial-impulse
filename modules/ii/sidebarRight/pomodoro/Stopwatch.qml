@@ -15,9 +15,9 @@ Item {
     Item {
         anchors {
             fill: parent
-            topMargin: Appearance.spacing.small
-            leftMargin: Appearance.spacing.large
-            rightMargin: Appearance.spacing.large
+            topMargin: Appearance.spacing.space100
+            leftMargin: Appearance.spacing.space200
+            rightMargin: Appearance.spacing.space200
         }
 
         RowLayout { // Elapsed
@@ -27,7 +27,7 @@ Item {
                 top: undefined
                 verticalCenter: parent.verticalCenter
                 left: controlButtons.left
-                leftMargin: Appearance.spacing.small
+                leftMargin: Appearance.spacing.space100
             }
 
             states: State {
@@ -81,10 +81,10 @@ Item {
                 bottom: controlButtons.top
                 left: parent.left
                 right: parent.right
-                topMargin: Appearance.spacing.large
-                bottomMargin: Appearance.spacing.large
+                topMargin: Appearance.spacing.space200
+                bottomMargin: Appearance.spacing.space200
             }
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
             clip: true
             popin: true
 
@@ -157,9 +157,9 @@ Item {
             anchors {
                 horizontalCenter: parent.horizontalCenter
                 bottom: parent.bottom
-                bottomMargin: Appearance.spacing.small
+                bottomMargin: Appearance.spacing.space100
             }
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
 
             RippleButton {
                 Layout.preferredHeight: 35

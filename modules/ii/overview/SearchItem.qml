@@ -37,9 +37,9 @@ RippleButton {
     property bool blurImage: entry?.blurImage ?? false
     
     visible: root.entryShown
-    property int horizontalMargin: 10
-    property int buttonHorizontalPadding: 10
-    property int buttonVerticalPadding: 6
+    property int horizontalMargin: Appearance.spacing.space125
+    property int buttonHorizontalPadding: Appearance.spacing.space125
+    property int buttonVerticalPadding: Appearance.spacing.space75
     property bool keyboardDown: false
     readonly property bool selected: (root.hovered || root.focus)
 
@@ -130,7 +130,7 @@ RippleButton {
 
     RowLayout {
         id: rowLayout
-        spacing: iconLoader.sourceComponent === null ? 0 : 10
+        spacing: iconLoader.sourceComponent === null ? 0 : Appearance.spacing.space125
         anchors.fill: parent
         anchors.leftMargin: root.horizontalMargin + root.buttonHorizontalPadding
         anchors.rightMargin: root.horizontalMargin + root.buttonHorizontalPadding
@@ -265,7 +265,7 @@ RippleButton {
             Layout.alignment: Qt.AlignTop
             Layout.topMargin: root.buttonVerticalPadding
             Layout.bottomMargin: -root.buttonVerticalPadding // Why is this necessary? Good question.
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
             Repeater {
                 model: (root.entry.actions ?? []).slice(0, 4)
                 delegate: RippleButton {

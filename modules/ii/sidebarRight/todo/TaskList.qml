@@ -12,8 +12,8 @@ Item {
     required property var taskList
     property string emptyPlaceholderIcon
     property string emptyPlaceholderText
-    property int todoListItemSpacing: 5
-    property int todoListItemPadding: 8
+    property int todoListItemSpacing: Appearance.spacing.space50
+    property int todoListItemPadding: Appearance.spacing.space100
     property int listBottomPadding: 80
 
     StyledListView {
@@ -61,15 +61,15 @@ Item {
                     StyledText {
                         id: todoContentText
                         Layout.fillWidth: true // Needed for wrapping
-                        Layout.leftMargin: Appearance.spacing.normal
-                        Layout.rightMargin: Appearance.spacing.normal
+                        Layout.leftMargin: Appearance.spacing.space150
+                        Layout.rightMargin: Appearance.spacing.space150
                         Layout.topMargin: todoListItemPadding
                         text: todoItem.modelData.content
                         wrapMode: Text.Wrap
                     }
                     RowLayout {
-                        Layout.leftMargin: Appearance.spacing.normal
-                        Layout.rightMargin: Appearance.spacing.normal
+                        Layout.leftMargin: Appearance.spacing.space150
+                        Layout.rightMargin: Appearance.spacing.space150
                         Layout.bottomMargin: todoListItemPadding
                         Item {
                             Layout.fillWidth: true
@@ -121,7 +121,7 @@ Item {
 
         ColumnLayout {
             anchors.centerIn: parent
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             MaterialSymbol {
                 Layout.alignment: Qt.AlignHCenter

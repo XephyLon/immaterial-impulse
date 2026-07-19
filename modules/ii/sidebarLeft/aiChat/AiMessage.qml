@@ -13,8 +13,8 @@ Rectangle {
     property var messageData
     property var messageInputField
 
-    property real messagePadding: 7
-    property real contentSpacing: 3
+    property real messagePadding: Appearance.spacing.space100
+    property real contentSpacing: Appearance.spacing.space50
 
     property bool enableMouseSelection: false
     property bool renderMarkdown: true
@@ -88,9 +88,9 @@ Rectangle {
                 id: headerRowLayout
                 anchors {
                     fill: parent
-                    margins: Appearance.spacing.verysmall
+                    margins: Appearance.spacing.space50
                 }
-                spacing: Appearance.spacing.verylarge
+                spacing: Appearance.spacing.space250
 
                 Item { // Name
                     id: nameWrapper
@@ -103,9 +103,9 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.leftMargin: Appearance.spacing.normal
-                        anchors.rightMargin: Appearance.spacing.normal
-                        spacing: Appearance.spacing.normal
+                        anchors.leftMargin: Appearance.spacing.space150
+                        anchors.rightMargin: Appearance.spacing.space150
+                        spacing: Appearance.spacing.space150
 
                         Item {
                             Layout.alignment: Qt.AlignVCenter
@@ -175,7 +175,7 @@ Rectangle {
                 }
 
                 ButtonGroup {
-                    spacing: Appearance.spacing.small
+                    spacing: Appearance.spacing.space100
 
                     AiMessageControlButton {
                         id: regenButton
@@ -325,7 +325,7 @@ Rectangle {
 
         Flow { // Annotations
             visible: root.messageData?.annotationSources?.length > 0
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignLeft
 
@@ -343,7 +343,7 @@ Rectangle {
 
         Flow { // Search queries
             visible: root.messageData?.searchQueries?.length > 0
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignLeft
 

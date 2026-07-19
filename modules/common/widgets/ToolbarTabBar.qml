@@ -40,7 +40,7 @@ Item {
         id: contentItem
         z: 1
         anchors.centerIn: parent
-        spacing: Appearance.spacing.verysmall
+        spacing: Appearance.spacing.space50
 
         Repeater {
             model: root.tabButtonList

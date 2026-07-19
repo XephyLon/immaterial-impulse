@@ -21,7 +21,7 @@ StyledFlickable {
         anchors {
             top: parent.top
             horizontalCenter: parent.horizontalCenter
-            margins: Appearance.spacing.verylarge
+            margins: Appearance.spacing.space250
         }
     spacing: Appearance.spacing.space400
     }

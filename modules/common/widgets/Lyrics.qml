@@ -21,7 +21,7 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: Appearance.spacing.verysmall
+        spacing: Appearance.spacing.space50
 
         Item {
             Layout.fillWidth: true
@@ -30,7 +30,7 @@ Item {
 
             ColumnLayout {
                 anchors.centerIn: parent
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.space150
 
                 MaterialLoadingIndicator {
                     Layout.alignment: Qt.AlignHCenter
@@ -46,7 +46,7 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             visible: LyricsService.status === "ok"
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             Repeater {
                 model: 7

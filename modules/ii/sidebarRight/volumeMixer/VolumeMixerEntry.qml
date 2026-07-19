@@ -19,7 +19,7 @@ Item {
     RowLayout {
         id: rowLayout
         anchors.fill: parent
-        spacing: Appearance.spacing.small
+        spacing: Appearance.spacing.space100
 
         MouseArea {
             property real size: 36
@@ -82,7 +82,7 @@ Item {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: -Appearance.spacing.verysmall
+            spacing: -Appearance.spacing.space50
 
             StyledText {
                 Layout.fillWidth: true

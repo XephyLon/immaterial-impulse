@@ -119,11 +119,11 @@ Scope {
                             anchors.top: parent.top
                             anchors.bottom: parent.bottom
                             anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: Appearance.spacing.verysmall
-                            property real padding: Appearance.spacing.small
+                            spacing: Appearance.spacing.space50
+                            property real padding: Appearance.spacing.space100
 
                             VerticalButtonGroup {
-                                Layout.topMargin: Appearance.spacing.verysmall
+                                Layout.topMargin: Appearance.spacing.space50
                                 Layout.leftMargin:  root.pinned
                                     ? Appearance.sizes.hyprlandGapsOut + 4
                                     : Appearance.sizes.hyprlandGapsOut
@@ -157,7 +157,7 @@ Scope {
                                 id: dragSlots
                                 Layout.fillHeight: true
                                 Layout.topMargin: 0
-                                Layout.leftMargin: Config.options.dock.showPinButton ? 0 : -15
+                                Layout.leftMargin: Config.options.dock.showPinButton ? 0 : -Appearance.spacing.space200
 
                                 pinnedApps:    Config.options?.dock.pinnedApps ?? []
                                 buttonPadding: dockRow.padding
@@ -195,14 +195,14 @@ Scope {
                                 RowLayout {
                                     id: activeRow
                                     anchors.fill: parent
-                                    spacing: -Appearance.spacing.verysmall
+                                    spacing: -Appearance.spacing.space50
 
                                     DockMedia {
                                         id: dockMedia
                                         visible: Config.options.dock.showMedia
                                         Layout.fillHeight: true
-                                        Layout.topMargin: Appearance.spacing.normal
-                                        Layout.bottomMargin: Appearance.spacing.small
+                                        Layout.topMargin: Appearance.spacing.space150
+                                        Layout.bottomMargin: Appearance.spacing.space100
                                         Layout.leftMargin: 0
                                         buttonPadding: dockRow.padding
                                     }
@@ -213,8 +213,8 @@ Scope {
                                             required property var modelData
                                             appToplevel: modelData
                                             Layout.topMargin: 0
-                                            Layout.rightMargin: Config.options.dock.showAppsButton ? 0 : 4
-                                            Layout.leftMargin: dockMedia.visible ? 4 : 0
+                                            Layout.rightMargin: Config.options.dock.showAppsButton ? 0 : Appearance.spacing.space50
+                                            Layout.leftMargin: dockMedia.visible ? Appearance.spacing.space50 : 0
                                             appListRoot: appListBridge
                                             topInset:    dockRow.padding
                                             bottomInset: dockRow.padding
@@ -231,7 +231,7 @@ Scope {
 
                             DockSeparator {
                                 visible: Config.options.dock.showAppsButton
-                                Layout.leftMargin: Config.options.dock.showAppsButton ? 0 : -3
+                                Layout.leftMargin: Config.options.dock.showAppsButton ? 0 : -Appearance.spacing.space50
                             }
 
                             DockButton {

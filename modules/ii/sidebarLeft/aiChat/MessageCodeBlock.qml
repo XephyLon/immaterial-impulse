@@ -23,8 +23,8 @@ ColumnLayout {
     property var displayLang: (isCommandRequest ? "bash" : segmentLang)
 
     property real codeBlockBackgroundRounding: Appearance.rounding.small
-    property real codeBlockHeaderPadding: 3
-    property real codeBlockComponentSpacing: 2
+    property real codeBlockHeaderPadding: Appearance.spacing.space50
+    property real codeBlockComponentSpacing: Appearance.spacing.space25
 
     spacing: codeBlockComponentSpacing
 
@@ -44,15 +44,15 @@ ColumnLayout {
             anchors.right: parent.right
             anchors.leftMargin: codeBlockHeaderPadding
             anchors.rightMargin: codeBlockHeaderPadding
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             StyledText {
                 id: codeBlockLanguage
                 Layout.alignment: Qt.AlignLeft
                 Layout.fillWidth: false
-                Layout.topMargin: Appearance.spacing.small
-                Layout.bottomMargin: Appearance.spacing.small
-                Layout.leftMargin: Appearance.spacing.normal
+                Layout.topMargin: Appearance.spacing.space100
+                Layout.bottomMargin: Appearance.spacing.space100
+                Layout.leftMargin: Appearance.spacing.space150
                 font.pixelSize: Appearance.font.pixelSize.small
                 font.weight: Font.DemiBold
                 color: Appearance.colors.colOnLayer2
@@ -137,9 +137,9 @@ ColumnLayout {
                 anchors {
                     left: parent.left
                     right: parent.right
-                    rightMargin: Appearance.spacing.small
+                    rightMargin: Appearance.spacing.space100
                     top: parent.top
-                    topMargin: Appearance.spacing.small
+                    topMargin: Appearance.spacing.space100
                 }
                 spacing: 0
                 
@@ -187,7 +187,7 @@ ColumnLayout {
                         anchors.bottom: parent.bottom
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        padding: Appearance.spacing.small
+                        padding: Appearance.spacing.space100
                         policy: ScrollBar.AsNeeded
                         opacity: visualSize == 1 ? 0 : 1
                         visible: opacity > 0
@@ -252,7 +252,7 @@ ColumnLayout {
                     active: root.isCommandRequest && root.messageData.functionPending
                     visible: active
                     Layout.fillWidth: true
-                    Layout.margins: Appearance.spacing.small
+                    Layout.margins: Appearance.spacing.space100
                     Layout.topMargin: 0
                     sourceComponent: RowLayout {
                         Item { Layout.fillWidth: true }

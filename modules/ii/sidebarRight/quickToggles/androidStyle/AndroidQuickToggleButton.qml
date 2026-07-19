@@ -51,7 +51,7 @@ GroupButton {
     }
 
     enabled: available || editMode
-    padding: Appearance.spacing.small
+    padding: Appearance.spacing.space100
     horizontalPadding: padding
     verticalPadding: padding
 
@@ -70,7 +70,7 @@ GroupButton {
     }
 
     contentItem: RowLayout {
-        spacing: Appearance.spacing.verysmall
+        spacing: Appearance.spacing.space50
         anchors {
             centerIn: root.expandedSize ? undefined : parent
             fill: root.expandedSize ? parent : undefined
@@ -130,7 +130,7 @@ GroupButton {
             visible: root.expandedSize
             active: visible
             sourceComponent: Column {
-                spacing: -Appearance.spacing.unsharpen
+                spacing: -Appearance.spacing.space25
                 StyledText {
                     anchors { left: parent.left; right: parent.right }
                     font.pixelSize: Appearance.font.pixelSize.smallie
@@ -274,8 +274,8 @@ GroupButton {
         color: deleteHover.containsMouse ? Appearance.colors.colError : ColorUtils.transparentize(Appearance.colors.colError, 0.15)
         anchors.top: parent.top
         anchors.left: parent.left
-        anchors.topMargin: -Appearance.spacing.small
-        anchors.leftMargin: -Appearance.spacing.small
+        anchors.topMargin: -Appearance.spacing.space100
+        anchors.leftMargin: -Appearance.spacing.space100
 
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
@@ -294,7 +294,7 @@ GroupButton {
         MouseArea {
             id: deleteHover
             anchors.fill: parent
-            anchors.margins: -Appearance.spacing.verysmall
+            anchors.margins: -Appearance.spacing.space50
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
@@ -317,8 +317,8 @@ GroupButton {
         color: resizeHover.containsMouse ? Appearance.colors.colPrimary : ColorUtils.transparentize(Appearance.colors.colPrimary, 0.15)
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        anchors.bottomMargin: -Appearance.spacing.small
-        anchors.rightMargin: -Appearance.spacing.small
+        anchors.bottomMargin: -Appearance.spacing.space100
+        anchors.rightMargin: -Appearance.spacing.space100
 
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
@@ -337,7 +337,7 @@ GroupButton {
         MouseArea {
             id: resizeHover
             anchors.fill: parent
-            anchors.margins: -Appearance.spacing.verysmall
+            anchors.margins: -Appearance.spacing.space50
             hoverEnabled: true
             cursorShape: Qt.SizeFDiagCursor
             preventStealing: true

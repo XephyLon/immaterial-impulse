@@ -12,7 +12,7 @@ import Quickshell
 
 Item {
     id: root
-    property real padding: Appearance.spacing.verysmall
+    property real padding: Appearance.spacing.space50
 
     property var inputField: tagInputField
     readonly property var responses: Booru.responses
@@ -172,7 +172,7 @@ Item {
                 id: booruResponseListView
                 z: 0
                 anchors.fill: parent
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.space150
                 
                 touchpadScrollFactor: Config.options.interactions.scrolling.touchpadScrollFactor * 1.4
                 mouseScrollFactor: Config.options.interactions.scrolling.mouseScrollFactor * 1.4
@@ -230,7 +230,7 @@ Item {
                 anchors {
                     horizontalCenter: parent.horizontalCenter
                     bottom: parent.bottom
-                    bottomMargin: Appearance.spacing.verylarge + (root.pullLoading ? 0 : Math.max(0, (root.normalizedPullDistance - 0.5) * 50))
+                    bottomMargin: Appearance.spacing.space250 + (root.pullLoading ? 0 : Math.max(0, (root.normalizedPullDistance - 0.5) * 50))
                     Behavior on bottomMargin {
                         NumberAnimation {
                             duration: Appearance.animation.elementMoveFast.duration
@@ -255,7 +255,7 @@ Item {
             visible: root.suggestionList.length > 0 && tagInputField.text.length > 0
             property int selectedIndex: 0
             Layout.fillWidth: true
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             Repeater {
                 id: tagSuggestionRepeater
@@ -269,7 +269,7 @@ Item {
                     bounce: false
                     contentItem: RowLayout {
                         anchors.centerIn: parent
-                        spacing: Appearance.spacing.small
+                        spacing: Appearance.spacing.space100
                         StyledText {
                             Layout.fillWidth: false
                             font.pixelSize: Appearance.font.pixelSize.small
@@ -321,7 +321,7 @@ Item {
 
         Rectangle { // Tag input area
             id: tagInputContainer
-            property real columnSpacing: 5
+            property real columnSpacing: Appearance.spacing.space50
             Layout.fillWidth: true
             radius: Appearance.rounding.normal - root.padding
             color: Appearance.colors.colLayer2
@@ -339,14 +339,14 @@ Item {
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.topMargin: Appearance.spacing.small
+                anchors.topMargin: Appearance.spacing.space100
                 spacing: 0
 
                 StyledTextArea { // The actual TextArea
                     id: tagInputField
                     wrapMode: TextArea.Wrap
                     Layout.fillWidth: true
-                    padding: Appearance.spacing.normal
+                    padding: Appearance.spacing.space150
                     color: activeFocus ? Appearance.m3colors.m3onSurface : Appearance.m3colors.m3onSurfaceVariant
                     renderType: Text.NativeRendering
                     placeholderText: Translation.tr('Enter tags, or "%1" for commands').arg(root.commandPrefix)
@@ -440,7 +440,7 @@ Item {
                 RippleButton { // Send button
                     id: sendButton
                     Layout.alignment: Qt.AlignTop
-                    Layout.rightMargin: Appearance.spacing.small
+                    Layout.rightMargin: Appearance.spacing.space100
                     implicitWidth: 40
                     implicitHeight: 40
                     buttonRadius: Appearance.rounding.small
@@ -472,10 +472,10 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: Appearance.spacing.small
-                anchors.leftMargin: Appearance.spacing.small
-                anchors.rightMargin: Appearance.spacing.small
-                spacing: Appearance.spacing.small
+                anchors.bottomMargin: Appearance.spacing.space100
+                anchors.leftMargin: Appearance.spacing.space100
+                anchors.rightMargin: Appearance.spacing.space100
+                spacing: Appearance.spacing.space100
 
                 property var commandsShown: [
                     {
@@ -515,12 +515,12 @@ Item {
 
                     RowLayout {
                         id: switchesRow
-                        spacing: Appearance.spacing.small
+                        spacing: Appearance.spacing.space100
                         anchors.centerIn: parent
 
                         StyledText {
                             Layout.fillHeight: true
-                            Layout.leftMargin: Appearance.spacing.normal
+                            Layout.leftMargin: Appearance.spacing.space150
                             Layout.alignment: Qt.AlignVCenter
                             font.pixelSize: Appearance.font.pixelSize.smaller
                             color: nsfwSwitch.enabled ? Appearance.colors.colOnLayer1 : Appearance.m3colors.m3outline

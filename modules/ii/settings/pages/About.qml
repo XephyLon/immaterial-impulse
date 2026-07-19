@@ -37,8 +37,8 @@ ContentPage {
         Layout.fillWidth: true
         Layout.preferredHeight: 156 
         Layout.topMargin: Appearance.spacing.space450
-        Layout.leftMargin: Appearance.spacing.large
-        Layout.rightMargin: Appearance.spacing.large
+        Layout.leftMargin: Appearance.spacing.space200
+        Layout.rightMargin: Appearance.spacing.space200
 
         radius: 24
         color: Appearance.colors.colLayer1
@@ -47,8 +47,8 @@ ContentPage {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.margins: Appearance.spacing.huge
-            spacing: Appearance.spacing.huge
+            anchors.margins: Appearance.spacing.space300
+            spacing: Appearance.spacing.space300
 
             Rectangle {
                 Layout.alignment: Qt.AlignVCenter
@@ -68,7 +68,7 @@ ContentPage {
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
-                spacing: Appearance.spacing.verysmall
+                spacing: Appearance.spacing.space50
 
                 StyledText {
                     Layout.fillWidth: true
@@ -90,7 +90,7 @@ ContentPage {
 
                 Row {
                     id: colorRow
-                    spacing: -Appearance.spacing.small
+                    spacing: -Appearance.spacing.space100
 
                     Repeater {
                         model: [
@@ -119,7 +119,7 @@ ContentPage {
                 anchors.bottom: parent.bottom
                 anchors.right: parent.right
                 anchors.margins: 0
-                spacing: Appearance.spacing.small
+                spacing: Appearance.spacing.space100
                 RippleButton {
                     buttonText: Translation.tr("Update Dots")
                     buttonRadius: Appearance.rounding.full
@@ -130,8 +130,8 @@ ContentPage {
                     contentItem: StyledText {
                         text: parent.buttonText
                         horizontalAlignment: Text.AlignHCenter
-                        leftPadding: Appearance.spacing.normal
-                        rightPadding: Appearance.spacing.normal
+                        leftPadding: Appearance.spacing.space150
+                        rightPadding: Appearance.spacing.space150
                     }
                 }
             }
@@ -140,11 +140,11 @@ ContentPage {
 
     ColumnLayout {
         Layout.fillWidth: true
-        spacing: Appearance.spacing.small
+        spacing: Appearance.spacing.space100
 
         RowLayout { //This is not in the grid because I was planning to do something else.
             Layout.fillWidth: true
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             AboutCard {
                 icon: "planner_review"

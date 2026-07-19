@@ -17,7 +17,7 @@ Item {
     readonly property list<real> points: GlobalStates.visualizerPoints
     property int barCount: 20
     property real dotSize: 3
-    property real dotSpacing: 3
+    property real dotSpacing: Appearance.spacing.space50
     property real maxBarHeight: (vertical
         ? Appearance.sizes.verticalBarWidth
         : Appearance.sizes.barHeight) * 0.7

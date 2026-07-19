@@ -83,7 +83,7 @@ LazyLoader {
 
         Rectangle {
             id: popupBackground
-            readonly property real margin: 8
+            readonly property real margin: Appearance.spacing.space100
 
             anchors {
                 fill: parent

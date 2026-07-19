@@ -13,7 +13,7 @@ ColumnLayout {
     readonly property list<var> appPwNodes: isSink ? Audio.outputAppNodes : Audio.inputAppNodes
     readonly property list<var> devices: isSink ? Audio.outputDevices : Audio.inputDevices
     readonly property bool hasApps: appPwNodes.length > 0
-    spacing: Appearance.spacing.large
+    spacing: Appearance.spacing.space200
 
     DialogSectionListView {
         Layout.fillHeight: true
@@ -42,7 +42,7 @@ ColumnLayout {
         id: deviceSelector
         Layout.fillHeight: false
         Layout.fillWidth: true
-        Layout.bottomMargin: Appearance.spacing.small
+        Layout.bottomMargin: Appearance.spacing.space100
         model: root.devices.map(node => Audio.friendlyDeviceName(node))
         currentIndex: root.devices.findIndex(item => {
             if (root.isSink) {
@@ -64,17 +64,17 @@ ColumnLayout {
 
     component DialogSectionListView: StyledListView {
         Layout.fillWidth: true
-        Layout.topMargin: -Appearance.spacing.huge
-        Layout.bottomMargin: -Appearance.spacing.large
+        Layout.topMargin: -Appearance.spacing.space300
+        Layout.bottomMargin: -Appearance.spacing.space200
         Layout.leftMargin: -Appearance.rounding.large
         Layout.rightMargin: -Appearance.rounding.large
-        topMargin: Appearance.spacing.normal
-        bottomMargin: Appearance.spacing.normal
-        leftMargin: Appearance.spacing.verylarge
-        rightMargin: Appearance.spacing.verylarge
+        topMargin: Appearance.spacing.space150
+        bottomMargin: Appearance.spacing.space150
+        leftMargin: Appearance.spacing.space250
+        rightMargin: Appearance.spacing.space250
 
         clip: true
-        spacing: Appearance.spacing.verysmall
+        spacing: Appearance.spacing.space50
         animateAppearance: false
     }
 

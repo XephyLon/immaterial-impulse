@@ -17,7 +17,7 @@ AbstractBackgroundWidget {
     readonly property list<real> points: GlobalStates.visualizerPoints
 
     property real barWidth: 4
-    property real barSpacing: 8
+    property real barSpacing: Appearance.spacing.space100
     property real maxBarHeight: 220
     property real maxVisualizerValue: 1000
     property real smoothingDuration: 150

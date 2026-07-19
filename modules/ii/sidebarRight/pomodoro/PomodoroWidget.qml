@@ -60,10 +60,10 @@ Item {
 
         SwipeView {
             id: swipeView
-            Layout.topMargin: Appearance.spacing.normal
+            Layout.topMargin: Appearance.spacing.space150
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.space150
             clip: true
             currentIndex: tabBar.currentIndex
 

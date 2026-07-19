@@ -4,6 +4,6 @@ import qs.modules.common
 
 RowLayout {
     property bool uniform: false
-    spacing: Appearance.spacing.verysmall
+    spacing: Appearance.spacing.space50
     uniformCellSizes: uniform
 }

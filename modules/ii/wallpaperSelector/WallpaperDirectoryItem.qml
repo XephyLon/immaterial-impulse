@@ -37,7 +37,7 @@ MouseArea {
         ColumnLayout {
             id: wallpaperItemColumnLayout
             anchors.fill: parent
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
 
             Item {
                 id: wallpaperItemImageContainer
@@ -113,8 +113,8 @@ MouseArea {
                 id: wallpaperItemName
                 visible: root.showLabel 
                 Layout.fillWidth: true
-                Layout.leftMargin: Appearance.spacing.normal
-                Layout.rightMargin: Appearance.spacing.normal
+                Layout.leftMargin: Appearance.spacing.space150
+                Layout.rightMargin: Appearance.spacing.space150
 
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight

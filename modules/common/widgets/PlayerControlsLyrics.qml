@@ -42,13 +42,13 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Appearance.spacing.normal
-        spacing: Appearance.spacing.normal
+        anchors.margins: Appearance.spacing.space150
+        spacing: Appearance.spacing.space150
 
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: Appearance.spacing.large
+            spacing: Appearance.spacing.space200
 
             Rectangle {
                 id: artBackground
@@ -103,7 +103,7 @@ Item {
         ColumnLayout {
             id: infoColumn
             Layout.fillWidth: true
-            Layout.bottomMargin: Appearance.spacing.small
+            Layout.bottomMargin: Appearance.spacing.space100
 
             StyledText {
                 id: trackTitle
@@ -120,7 +120,7 @@ Item {
             StyledText {
                 id: trackArtist
                 Layout.fillWidth: true
-                Layout.topMargin: -Appearance.spacing.small
+                Layout.topMargin: -Appearance.spacing.space100
                 font.pixelSize: Appearance.font.pixelSize.smaller
                 color: root.blendedColors.colSubtext
                 elide: Text.ElideRight
@@ -213,7 +213,7 @@ Item {
                     id: playPauseButton
                     anchors.right: parent.right
                     anchors.bottom: sliderRow.top
-                    anchors.bottomMargin: Appearance.spacing.small
+                    anchors.bottomMargin: Appearance.spacing.space100
                     property real size: 44
                     implicitWidth: size
                     implicitHeight: size

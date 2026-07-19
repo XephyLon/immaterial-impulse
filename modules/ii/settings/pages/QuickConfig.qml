@@ -41,7 +41,7 @@ ContentPage {
         id: smallLightDarkPreferenceButton
         required property bool dark
         property color colText: toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer2
-        padding: Appearance.spacing.small
+        padding: Appearance.spacing.space100
         Layout.fillWidth: true
         Layout.fillHeight: true
         toggled: Appearance.m3colors.darkmode === dark
@@ -74,7 +74,7 @@ ContentPage {
         id: mainLayout
         Layout.fillWidth: true
         Layout.fillHeight: true
-        spacing: Appearance.spacing.large
+        spacing: Appearance.spacing.space200
 
         ContentSection {
             icon: "screenshot_monitor"
@@ -84,7 +84,7 @@ ContentPage {
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: Appearance.spacing.verysmall
+                spacing: Appearance.spacing.space50
 
                 Rectangle {
                     Layout.preferredWidth: 420
@@ -112,7 +112,7 @@ ContentPage {
                     ToolbarPairedFab {
                         anchors.bottom: parent.bottom
                         anchors.right: parent.right
-                        anchors.margins: Appearance.spacing.small
+                        anchors.margins: Appearance.spacing.space100
                         iconText: "colorize"
                         onClicked: {
                             Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--noswitch", "--color"]);
@@ -125,12 +125,12 @@ ContentPage {
 
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: Appearance.spacing.verysmall
+                    spacing: Appearance.spacing.space50
 
                     RowLayout {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        spacing: Appearance.spacing.unsharpen
+                        spacing: Appearance.spacing.space25
                         uniformCellSizes: true
                         SmallLightDarkPreferenceButton { dark: false }
                         SmallLightDarkPreferenceButton { dark: true }
@@ -170,7 +170,7 @@ ContentPage {
                                 MaterialSymbol {
                                     anchors.top: parent.top
                                     anchors.left: parent.left
-                                    anchors.margins: Appearance.spacing.small
+                                    anchors.margins: Appearance.spacing.space100
                                     text: modelData.icon
                                     iconSize: Appearance.font.pixelSize.larger
                                     color: parent.isSelected ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
@@ -179,7 +179,7 @@ ContentPage {
                                 StyledText {
                                     anchors.bottom: parent.bottom
                                     anchors.right: parent.right
-                                    anchors.margins: Appearance.spacing.small
+                                    anchors.margins: Appearance.spacing.space100
                                     text: modelData.displayName
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                     font.weight: Font.Medium
@@ -241,11 +241,11 @@ ContentPage {
 
                     ColumnLayout {
                         id: barPosCol
-                        anchors { fill: parent; margins: Appearance.spacing.normal }
-                        spacing: Appearance.spacing.small
+                        anchors { fill: parent; margins: Appearance.spacing.space150 }
+                        spacing: Appearance.spacing.space100
 
                         RowLayout {
-                            spacing: Appearance.spacing.small
+                            spacing: Appearance.spacing.space100
                             MaterialSymbol {
                                 text: "swap_vert"
                                 iconSize: Appearance.font.pixelSize.normal + 4
@@ -288,11 +288,11 @@ ContentPage {
 
                     ColumnLayout {
                         id: barStyleCol
-                        anchors { fill: parent; margins: Appearance.spacing.normal }
-                        spacing: Appearance.spacing.small
+                        anchors { fill: parent; margins: Appearance.spacing.space150 }
+                        spacing: Appearance.spacing.space100
 
                         RowLayout {
-                            spacing: Appearance.spacing.small
+                            spacing: Appearance.spacing.space100
                             MaterialSymbol {
                                 text: "settop_component"
                                 iconSize: Appearance.font.pixelSize.normal + 4
@@ -329,11 +329,11 @@ ContentPage {
                     color: Appearance.colors.colLayer1
                     ColumnLayout {
                         id: groupStyleCol
-                        anchors { fill: parent; margins: Appearance.spacing.normal }
-                        spacing: Appearance.spacing.small
+                        anchors { fill: parent; margins: Appearance.spacing.space150 }
+                        spacing: Appearance.spacing.space100
 
                         RowLayout {
-                            spacing: Appearance.spacing.small
+                            spacing: Appearance.spacing.space100
                             MaterialSymbol {
                                 text: "tab_group"
                                 iconSize: Appearance.font.pixelSize.normal + 4
@@ -371,11 +371,11 @@ ContentPage {
 
                     ColumnLayout {
                         id: screenRoundCol
-                        anchors { fill: parent; margins: Appearance.spacing.normal }
-                        spacing: Appearance.spacing.small
+                        anchors { fill: parent; margins: Appearance.spacing.space150 }
+                        spacing: Appearance.spacing.space100
 
                         RowLayout {
-                            spacing: Appearance.spacing.small
+                            spacing: Appearance.spacing.space100
                             MaterialSymbol {
                                 text: "rounded_corner"
                                 iconSize: Appearance.font.pixelSize.normal + 4

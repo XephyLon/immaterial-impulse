@@ -6,16 +6,16 @@ import qs.modules.common.widgets
 RowLayout {
     id: root
     Layout.fillWidth: true
-    Layout.leftMargin: Appearance.spacing.small
-    Layout.rightMargin: Appearance.spacing.small
-    spacing: Appearance.spacing.normal
+    Layout.leftMargin: Appearance.spacing.space100
+    Layout.rightMargin: Appearance.spacing.space100
+    spacing: Appearance.spacing.space150
 
     property string icon: "palette"
     property string text: "Color"
     property string currentValue: ""
     property var options: ["primary", "secondary", "tertiary", "primaryContainer", "secondaryContainer", "tertiaryContainer", "layer1", "layer0"]
     property bool showLabel: true
-    property real itemSpacing: 10
+    property real itemSpacing: Appearance.spacing.space125
     signal selected(string newValue)
 
     MaterialSymbol {

@@ -12,7 +12,7 @@ Column {
     property color color: Appearance.colors.colOnSecondaryContainer
 
     property bool hourMarksEnabled: Config.options.background.widgets.clock.cookie.hourMarks
-    spacing: -Appearance.spacing.large
+    spacing: -Appearance.spacing.space200
 
     Repeater {
         model: root.clockNumbers

@@ -37,7 +37,7 @@ ContentPage {
         id: mainLayout 
         Layout.fillWidth: true   
         Layout.fillHeight: true
-        spacing: Appearance.spacing.verylarge
+        spacing: Appearance.spacing.space250
     
         ContentSection { // I see that for many the overview is important, I put it first why not
             icon: "overview_key"
@@ -131,7 +131,7 @@ ContentPage {
                         uniform: true
                         visible: Config.options.overview.style !== "niri"
                         Layout.alignment: Qt.AlignHCenter
-                        Layout.leftMargin: Appearance.spacing.huge
+                        Layout.leftMargin: Appearance.spacing.space300
                         ConfigSelectionArray {
                             Layout.alignment: Qt.AlignHCenter
                             currentValue: Config.options.overview.orderRightLeft
@@ -403,7 +403,7 @@ ContentPage {
                     ColumnLayout {
                         id: crosshairCol
                         anchors { fill: parent; margins: 14 }
-                        spacing: Appearance.spacing.small
+                        spacing: Appearance.spacing.space100
 
                         ConfigTextArea {
                             id: crosshairCodeField
@@ -429,7 +429,7 @@ ContentPage {
                         RowLayout {
                             Layout.fillWidth: true
                             StyledText {
-                                Layout.leftMargin: Appearance.spacing.small
+                                Layout.leftMargin: Appearance.spacing.space100
                                 Layout.fillWidth: true
                                 text: Translation.tr("Press Super+G to open the overlay and pin the crosshair")
                                 font.pixelSize: Appearance.font.pixelSize.smaller
@@ -439,7 +439,7 @@ ContentPage {
                             RippleButtonWithIcon {
                                 id: editorButton
                                 Layout.fillWidth: true
-                                Layout.rightMargin: Appearance.spacing.small
+                                Layout.rightMargin: Appearance.spacing.space100
                                 Layout.preferredHeight: 40
                                 buttonRadius: Appearance.rounding.normal
                                 materialIcon: "open_in_new"

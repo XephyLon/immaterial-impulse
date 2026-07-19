@@ -157,16 +157,16 @@ AbstractBackgroundWidget {
                         right: parent.right
                         top: parent.top
                         bottom: parent.bottom
-                        leftMargin: Appearance.spacing.large
+                        leftMargin: Appearance.spacing.space200
                         rightMargin: 14
                     }
-                    spacing: -Appearance.spacing.normal
+                    spacing: -Appearance.spacing.space150
 
                     // Artist + Title
                     ColumnLayout {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter
-                        spacing: Appearance.spacing.unsharpen
+                        spacing: Appearance.spacing.space25
 
                         StyledText {
                             Layout.fillWidth: true
@@ -199,7 +199,7 @@ AbstractBackgroundWidget {
                         RowLayout {
                             id: controlsRow
                             anchors.centerIn: parent
-                            spacing: Appearance.spacing.unsharpen
+                            spacing: Appearance.spacing.space25
                     
                             RippleButton {
                                 implicitWidth: root.buttonSize
@@ -230,7 +230,7 @@ AbstractBackgroundWidget {
                                 text: root.currentPlayer?.isPlaying ? "pause" : "play_arrow"
                                 iconSize: root.buttonIconSize + 12
                                 fill: 1
-                                padding: Appearance.spacing.small
+                                padding: Appearance.spacing.space100
 
                                 MouseArea {
                                     anchors.fill: parent
@@ -289,8 +289,8 @@ AbstractBackgroundWidget {
 
                 Lyrics {
                     anchors.fill: parent
-                    anchors.leftMargin: Appearance.spacing.large
-                    anchors.rightMargin: Appearance.spacing.large
+                    anchors.leftMargin: Appearance.spacing.space200
+                    anchors.rightMargin: Appearance.spacing.space200
                     textAlignment: Text.AlignHCenter
                     textColor: Appearance.colors.colOnPrimaryContainer
                     activeColor: Appearance.colors.colPrimary

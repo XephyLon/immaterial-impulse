@@ -115,10 +115,10 @@ DockButton {
             }
 
             RowLayout {
-                spacing: Appearance.spacing.verysmall
+                spacing: Appearance.spacing.space50
                 anchors {
                     top: iconImageLoader.bottom
-                    topMargin: Appearance.spacing.unsharpen
+                    topMargin: Appearance.spacing.space25
                     horizontalCenter: parent.horizontalCenter
                 }
                 Repeater {

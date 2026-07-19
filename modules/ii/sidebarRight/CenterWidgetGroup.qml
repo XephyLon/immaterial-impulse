@@ -14,6 +14,6 @@ Rectangle {
 
     NotificationList {
         anchors.fill: parent
-        anchors.margins: Appearance.spacing.small
+        anchors.margins: Appearance.spacing.space100
     }
 }

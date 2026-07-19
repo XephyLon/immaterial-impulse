@@ -112,7 +112,7 @@ Item {
         // Top
         Item {
             anchors.top: parent.top
-            anchors.topMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? 4 : 10)
+            anchors.topMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
             anchors.left: parent.left
             anchors.right: parent.right
             height: root.isMaterial ? topMaterialPill.implicitHeight : topCol.implicitHeight
@@ -129,7 +129,7 @@ Item {
                 ColumnLayout {
                     id: topMaterialCol
                     anchors.centerIn: parent
-                    spacing: Appearance.spacing.verysmall
+                    spacing: Appearance.spacing.space50
 
                     Repeater {
                         model: root.effectiveLeftLayout
@@ -163,7 +163,7 @@ Item {
                 id: topCol
                 anchors.fill: parent
                 visible: !root.isMaterial
-                spacing: Config.options.bar.borderless === "transparent" ? -4 : 2
+                spacing: Config.options.bar.borderless === "transparent" ? -Appearance.spacing.space50 : Appearance.spacing.space25
 
                 Repeater {
                     model: root.effectiveLeftLayout
@@ -205,7 +205,7 @@ Item {
                 ColumnLayout {
                     id: centerMaterialCol
                     anchors.centerIn: parent
-                    spacing: Appearance.spacing.verysmall
+                    spacing: Appearance.spacing.space50
 
                     Repeater {
                         model: root.effectiveMiddleLayout
@@ -239,7 +239,7 @@ Item {
                 id: middleCol
                 anchors.fill: parent
                 visible: !root.isMaterial
-                spacing: Config.options.bar.borderless === "transparent" ? -4 : 2
+                spacing: Config.options.bar.borderless === "transparent" ? -Appearance.spacing.space50 : Appearance.spacing.space25
 
                 Repeater {
                     model: root.effectiveMiddleLayout
@@ -265,7 +265,7 @@ Item {
         // Bottom
         Item {
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? 4 : 10)
+            anchors.bottomMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
             anchors.left: parent.left
             anchors.right: parent.right
             height: root.isMaterial ? bottomMaterialPill.implicitHeight : bottomCol.implicitHeight
@@ -282,7 +282,7 @@ Item {
                 ColumnLayout {
                     id: bottomMaterialCol
                     anchors.centerIn: parent
-                    spacing: Appearance.spacing.verysmall
+                    spacing: Appearance.spacing.space50
 
                     Repeater {
                         model: root.effectiveRightLayout
@@ -316,7 +316,7 @@ Item {
                 id: bottomCol
                 anchors.fill: parent
                 visible: !root.isMaterial
-                spacing: Config.options.bar.borderless === "transparent" ? -4 : 2
+                spacing: Config.options.bar.borderless === "transparent" ? -Appearance.spacing.space50 : Appearance.spacing.space25
 
                 Repeater {
                     model: root.effectiveRightLayout

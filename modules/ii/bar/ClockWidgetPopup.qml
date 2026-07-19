@@ -15,7 +15,7 @@ StyledPopup {
     }
 
     ColumnLayout {
-        spacing: Appearance.spacing.small
+        spacing: Appearance.spacing.space100
         width: 340
 
         Row {
@@ -37,7 +37,7 @@ StyledPopup {
 
         RowLayout {
             width: parent.width
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
 
             Repeater {
                 model: 7
@@ -67,7 +67,7 @@ StyledPopup {
 
                     ColumnLayout {
                         anchors.centerIn: parent
-                        spacing: Appearance.spacing.unsharpen
+                        spacing: Appearance.spacing.space25
 
                         StyledText {
                             Layout.alignment: Qt.AlignHCenter
@@ -97,10 +97,10 @@ StyledPopup {
 
         Row {
             width: parent.width
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             Column {
-                spacing: Appearance.spacing.unsharpen
+                spacing: Appearance.spacing.space25
                 anchors.verticalCenter: parent.verticalCenter
 
                 MaterialShapeWrappedMaterialSymbol {
@@ -123,7 +123,7 @@ StyledPopup {
 
             Column {
                 width: parent.width - 36 - 6
-                spacing: Appearance.spacing.unsharpen
+                spacing: Appearance.spacing.space25
 
                 Repeater {
                     id: todoRepeater
@@ -150,10 +150,10 @@ StyledPopup {
                         StyledText {
                             anchors {
                                 left: parent.left
-                                leftMargin: Appearance.spacing.normal
+                                leftMargin: Appearance.spacing.space150
                                 verticalCenter: parent.verticalCenter
                                 right: parent.right
-                                rightMargin: Appearance.spacing.normal
+                                rightMargin: Appearance.spacing.space150
                             }
                             text: `    ${todo.content} `
                             font.pixelSize: Appearance.font.pixelSize.smaller
@@ -187,7 +187,7 @@ StyledPopup {
 
             RowLayout {
                 anchors.centerIn: parent
-                spacing: Appearance.spacing.small
+                spacing: Appearance.spacing.space100
 
                 MaterialSymbol {
                     text: "timelapse"

@@ -12,7 +12,7 @@ import qs.modules.common.widgets.widgetCanvas
 Rectangle {
     id: root
 
-    property real padding: Appearance.spacing.small
+    property real padding: Appearance.spacing.space100
 
     opacity: GlobalStates.overlayOpen ? 1 : 0
     implicitWidth: contentRow.implicitWidth + (padding * 2)
@@ -32,10 +32,10 @@ Rectangle {
             fill: parent
             margins: root.padding
         }
-        spacing: Appearance.spacing.small
+        spacing: Appearance.spacing.space100
 
         Row {
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
             Repeater {
                 model: ScriptModel {
                     values: OverlayContext.availableWidgets
@@ -62,14 +62,14 @@ Rectangle {
         implicitWidth: 1
         color: Appearance.colors.colOutlineVariant
         Layout.fillHeight: true
-        Layout.topMargin: Appearance.spacing.normal
-        Layout.bottomMargin: Appearance.spacing.normal
+        Layout.topMargin: Appearance.spacing.space150
+        Layout.bottomMargin: Appearance.spacing.space150
     }
 
     component TimeWidget: StyledText {
         Layout.alignment: Qt.AlignVCenter
-        Layout.leftMargin: Appearance.spacing.small
-        Layout.rightMargin: Appearance.spacing.small
+        Layout.leftMargin: Appearance.spacing.space100
+        Layout.rightMargin: Appearance.spacing.space100
 
         text: DateTime.time
         color: Appearance.colors.colOnSurface
@@ -83,9 +83,9 @@ Rectangle {
     component BatteryWidget: Row {
         id: batteryWidget
         Layout.alignment: Qt.AlignVCenter
-        Layout.leftMargin: Appearance.spacing.small
-        Layout.rightMargin: Appearance.spacing.small
-        spacing: Appearance.spacing.unsharpen
+        Layout.leftMargin: Appearance.spacing.space100
+        Layout.rightMargin: Appearance.spacing.space100
+        spacing: Appearance.spacing.space25
         property color colText: Battery.isLowAndNotCharging ? Appearance.colors.colError : Appearance.colors.colOnSurface
 
         MaterialSymbol {

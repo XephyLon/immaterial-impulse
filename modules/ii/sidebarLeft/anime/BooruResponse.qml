@@ -22,8 +22,8 @@ Rectangle {
 
     property real availableWidth: parent.width
     property real rowTooShortThreshold: 190
-    property real imageSpacing: 5
-    property real responsePadding: 5
+    property real imageSpacing: Appearance.spacing.space50
+    property real responsePadding: Appearance.spacing.space50
 
     anchors.left: parent?.left
     anchors.right: parent?.right
@@ -246,8 +246,8 @@ Rectangle {
 
             Layout.alignment: Qt.AlignRight
             implicitHeight: 30
-            leftPadding: Appearance.spacing.normal
-            rightPadding: Appearance.spacing.small
+            leftPadding: Appearance.spacing.space150
+            rightPadding: Appearance.spacing.space100
 
             onClicked: {
                 tagInputField.text = `${responseData.tags.join(" ")} ${parseInt(root.responseData.page) + 1}`

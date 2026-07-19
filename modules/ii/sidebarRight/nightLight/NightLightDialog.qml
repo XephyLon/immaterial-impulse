@@ -26,14 +26,14 @@ WindowDialog {
     }
 
     WindowDialogSeparator {
-        Layout.topMargin: -Appearance.spacing.huge
+        Layout.topMargin: -Appearance.spacing.space300
         Layout.leftMargin: 0
         Layout.rightMargin: 0
     }
 
     Column {
         id: nightLightColumn
-        Layout.topMargin: -Appearance.spacing.large
+        Layout.topMargin: -Appearance.spacing.space200
         Layout.fillWidth: true
 
         ConfigSwitch {
@@ -68,8 +68,8 @@ WindowDialog {
             anchors {
                 left: parent.left
                 right: parent.right
-                leftMargin: Appearance.spacing.verysmall
-                rightMargin: Appearance.spacing.verysmall
+                leftMargin: Appearance.spacing.space50
+                rightMargin: Appearance.spacing.space50
             }
             text: Translation.tr("Intensity")
             from: 6500
@@ -86,14 +86,14 @@ WindowDialog {
     }
 
     WindowDialogSeparator {
-        Layout.topMargin: -Appearance.spacing.huge
+        Layout.topMargin: -Appearance.spacing.space300
         Layout.leftMargin: 0
         Layout.rightMargin: 0
     }
 
     Column {
         id: antiFlashbangColumn
-        Layout.topMargin: -Appearance.spacing.large
+        Layout.topMargin: -Appearance.spacing.space200
         Layout.fillWidth: true
 
         ConfigSwitch {
@@ -137,22 +137,22 @@ WindowDialog {
     }
 
     WindowDialogSeparator {
-        Layout.topMargin: -Appearance.spacing.huge
+        Layout.topMargin: -Appearance.spacing.space300
         Layout.leftMargin: 0
         Layout.rightMargin: 0
     }
 
     Column {
         id: brightnessColumn
-        Layout.topMargin: -Appearance.spacing.large
+        Layout.topMargin: -Appearance.spacing.space200
         Layout.fillWidth: true
 
         WindowDialogSlider {
             anchors {
                 left: parent.left
                 right: parent.right
-                leftMargin: Appearance.spacing.verysmall
-                rightMargin: Appearance.spacing.verysmall
+                leftMargin: Appearance.spacing.space50
+                rightMargin: Appearance.spacing.space50
             }
             value: root.brightnessMonitor.brightness
             onMoved: root.brightnessMonitor.setBrightness(value)
@@ -164,14 +164,14 @@ WindowDialog {
     }
 
     WindowDialogSeparator {
-        Layout.topMargin: -Appearance.spacing.huge
+        Layout.topMargin: -Appearance.spacing.space300
         Layout.leftMargin: 0
         Layout.rightMargin: 0
     }
 
     Column {
         id: gammaColumn
-        Layout.topMargin: -Appearance.spacing.large
+        Layout.topMargin: -Appearance.spacing.space200
         Layout.fillWidth: true
         Layout.fillHeight: true
 
@@ -179,8 +179,8 @@ WindowDialog {
             anchors {
                 left: parent.left
                 right: parent.right
-                leftMargin: Appearance.spacing.verysmall
-                rightMargin: Appearance.spacing.verysmall
+                leftMargin: Appearance.spacing.space50
+                rightMargin: Appearance.spacing.space50
             }
             from: Hyprsunset.gammaLowerLimit / 100
             value: Hyprsunset.gamma / 100

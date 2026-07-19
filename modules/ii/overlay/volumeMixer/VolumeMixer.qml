@@ -15,7 +15,7 @@ StyledOverlayWidget {
 
     contentItem: OverlayBackground {
         radius: root.contentRadius
-        property real padding: Appearance.spacing.small
+        property real padding: Appearance.spacing.space100
 
         ColumnLayout {
             id: contentColumn
@@ -23,7 +23,7 @@ StyledOverlayWidget {
                 fill: parent
                 margins: parent.padding
             }
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             SecondaryTabBar {
                 id: tabBar
@@ -65,7 +65,7 @@ StyledOverlayWidget {
     component PaddedVolumeDialogContent: Item {
         id: paddedVolumeDialogContent
         property alias isSink: volDialogContent.isSink
-        property real padding: Appearance.spacing.normal
+        property real padding: Appearance.spacing.space150
         implicitWidth: volDialogContent.implicitWidth + padding * 2
         implicitHeight: volDialogContent.implicitHeight + padding * 2
 

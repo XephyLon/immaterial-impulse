@@ -7,8 +7,8 @@ import Quickshell
 
 Item {
     id: root
-    property real dialogPadding: 15
-    property real dialogMargin: 30
+    property real dialogPadding: Appearance.spacing.space200
+    property real dialogMargin: Appearance.spacing.space400
     property string titleText: "Selection Dialog"
     property alias items: choiceModel.values
     property int selectedId: choiceListView.currentIndex
@@ -41,7 +41,7 @@ Item {
         ColumnLayout {
             id: dialogColumnLayout
             anchors.fill: parent
-            spacing: Appearance.spacing.large
+            spacing: Appearance.spacing.space200
 
             StyledText {
                 id: dialogTitle
@@ -68,7 +68,7 @@ Item {
                 Layout.fillHeight: true
                 clip: true
                 currentIndex: root.defaultChoice !== undefined ? root.items.indexOf(root.defaultChoice) : -1
-                spacing: Appearance.spacing.small
+                spacing: Appearance.spacing.space100
 
                 model: ScriptModel {
                     id: choiceModel

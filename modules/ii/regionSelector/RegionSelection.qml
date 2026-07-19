@@ -523,7 +523,7 @@ PanelWindow {
             Behavior on anchors.bottomMargin {
                 animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
             }
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             OptionsToolbar {
                 Synchronizer on action {

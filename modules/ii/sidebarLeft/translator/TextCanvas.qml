@@ -40,7 +40,7 @@ Rectangle {
                 textFormat: TextEdit.PlainText
                 font.pixelSize: Appearance.font.pixelSize.small
                 color: Appearance.colors.colOnLayer1
-                padding: Appearance.spacing.large
+                padding: Appearance.spacing.space200
                 background: null
                 onTextChanged: root.inputTextChanged()
             }
@@ -53,7 +53,7 @@ Rectangle {
             Layout.fillWidth: true
             sourceComponent: StyledText { // Output area
                 id: outputTextArea
-                padding: Appearance.spacing.large
+                padding: Appearance.spacing.space200
                 wrapMode: Text.Wrap
                 font.pixelSize: Appearance.font.pixelSize.small
                 color: root.text.length > 0 ? Appearance.colors.colOnLayer1 : Appearance.colors.colSubtext
@@ -65,13 +65,13 @@ Rectangle {
 
         RowLayout { // Status row
             Layout.fillWidth: true
-            Layout.margins: Appearance.spacing.normal
-            spacing: Appearance.spacing.normal
+            Layout.margins: Appearance.spacing.space150
+            spacing: Appearance.spacing.space150
 
             Loader {
                 active: root.isInput
                 visible: root.isInput
-                Layout.leftMargin: Appearance.spacing.normal
+                Layout.leftMargin: Appearance.spacing.space150
                 sourceComponent: StyledText {
                     text: Translation.tr("%1 characters").arg(inputLoader.item?.text.length ?? 0)
                     color: Appearance.colors.colOnLayer1

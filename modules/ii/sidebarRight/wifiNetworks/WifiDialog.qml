@@ -20,16 +20,16 @@ WindowDialog {
     StyledIndeterminateProgressBar {
         visible: Network.wifiScanning
         Layout.fillWidth: true
-        Layout.topMargin: -Appearance.spacing.small
-        Layout.bottomMargin: -Appearance.spacing.small
+        Layout.topMargin: -Appearance.spacing.space100
+        Layout.bottomMargin: -Appearance.spacing.space100
         Layout.leftMargin: -Appearance.rounding.large
         Layout.rightMargin: -Appearance.rounding.large
     }
     ListView {
         Layout.fillHeight: true
         Layout.fillWidth: true
-        Layout.topMargin: -Appearance.spacing.large
-        Layout.bottomMargin: -Appearance.spacing.large
+        Layout.topMargin: -Appearance.spacing.space200
+        Layout.bottomMargin: -Appearance.spacing.space200
         Layout.leftMargin: -Appearance.rounding.large
         Layout.rightMargin: -Appearance.rounding.large
 

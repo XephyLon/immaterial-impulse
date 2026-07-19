@@ -44,7 +44,7 @@ AbstractBackgroundWidget {
     Column {
         id: contentColumn
         anchors.centerIn: parent
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.space150
 
         FadeLoader {
             id: cookieClockLoader
@@ -52,7 +52,7 @@ AbstractBackgroundWidget {
             shown: root.clockStyle === "cookie" && (root.shouldShow)
             fade: false
             sourceComponent: Column {
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.space150
                 CookieClock {
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
@@ -112,7 +112,7 @@ AbstractBackgroundWidget {
             RowLayout {
                 id: statusTextRow
                 anchors.centerIn: parent
-                spacing: Appearance.spacing.large
+                spacing: Appearance.spacing.space200
                 Item {
                     Layout.fillWidth: root.textHorizontalAlignment !== Text.AlignLeft
                     implicitWidth: 1
@@ -148,7 +148,7 @@ AbstractBackgroundWidget {
         Behavior on opacity {
             animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
         }
-        spacing: Appearance.spacing.verysmall
+        spacing: Appearance.spacing.space50
         MaterialSymbol {
             id: statusIconWidget
             anchors.verticalCenter: statusTextRow.verticalCenter

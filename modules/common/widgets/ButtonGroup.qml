@@ -11,7 +11,7 @@ Rectangle {
     id: root
     default property alias data: rowLayout.data
     property alias uniformCellSizes: rowLayout.uniformCellSizes
-    property real spacing: Appearance.spacing.small
+    property real spacing: Appearance.spacing.space100
     property real padding: 0
     property alias clickIndex: rowLayout.clickIndex
     property alias childrenCount: rowLayout.childrenCount

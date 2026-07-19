@@ -29,7 +29,7 @@ Item {
         RowLayout {
             id: contentRow
             anchors.centerIn: parent
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.space150
 
             MaterialSymbol {
                 Layout.alignment: Qt.AlignVCenter

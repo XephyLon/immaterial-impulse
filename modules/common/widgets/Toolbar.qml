@@ -11,7 +11,7 @@ Item {
     id: root
 
     property bool enableShadow: true
-    property real padding: Appearance.spacing.small
+    property real padding: Appearance.spacing.space100
     property alias colBackground: background.color
     property alias spacing: toolbarLayout.spacing
     default property alias data: toolbarLayout.data
@@ -38,7 +38,7 @@ Item {
 
         RowLayout {
             id: toolbarLayout
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
             anchors {
                 fill: parent
                 margins: root.padding

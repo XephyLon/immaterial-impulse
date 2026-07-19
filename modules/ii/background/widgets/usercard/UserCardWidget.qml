@@ -17,7 +17,7 @@ AbstractBackgroundWidget {
     implicitHeight: 252
 
     property int cardWidth: 276
-    property int blurMargin: 18   
+    property int blurMargin: Appearance.spacing.space250
     property int avatarSize: 64
     property string hostname: Quickshell.env("HOSTNAME") ?? "host"
     property string username: SystemInfo.username
@@ -107,10 +107,10 @@ AbstractBackgroundWidget {
                     top: parent.top
                     left: parent.left
                     right: parent.right
-                    margins: Appearance.spacing.large
+                    margins: Appearance.spacing.space200
                 }
                 Layout.topMargin: root.avatarSize / 2 + 4
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.space150
 
                 Item {
                     Layout.fillWidth: true
@@ -119,11 +119,11 @@ AbstractBackgroundWidget {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: Appearance.spacing.small
+                    spacing: Appearance.spacing.space100
 
                     MaterialSymbol {
                         Layout.alignment: Qt.AlignTop
-                        Layout.topMargin: Appearance.spacing.unsharpen
+                        Layout.topMargin: Appearance.spacing.space25
                         iconSize: Appearance.font.pixelSize.normal
                         text: root.currentQuip.icon
                         color: Appearance.colors.colOnPrimaryContainer
@@ -142,8 +142,8 @@ AbstractBackgroundWidget {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.topMargin: Appearance.spacing.verysmall
-                    spacing: Appearance.spacing.small
+                    Layout.topMargin: Appearance.spacing.space50
+                    spacing: Appearance.spacing.space100
 
                     Rectangle {
                         Layout.fillWidth: true
@@ -153,7 +153,7 @@ AbstractBackgroundWidget {
 
                         RowLayout {
                             anchors.centerIn: parent
-                            spacing: Appearance.spacing.verysmall
+                            spacing: Appearance.spacing.space50
                             MaterialSymbol {
                                 iconSize: Appearance.font.pixelSize.normal
                                 text: "lock"
@@ -231,7 +231,7 @@ AbstractBackgroundWidget {
             Image {
                 id: avatarImage
                 anchors.fill: parent
-                anchors.margins: Appearance.spacing.verysmall
+                anchors.margins: Appearance.spacing.space50
                 source: Config.options.profile.avatarPath !== ""
                     ? "file://" + Config.options.profile.avatarPicture
                     : "file:///home/" + (Quickshell.env("USER") ?? "user") + "/.face"

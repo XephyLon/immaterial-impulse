@@ -11,7 +11,7 @@ RippleButton {
     property string iconText: "add"
     property bool expanded: false
     property real baseSize: 56
-    property real elementSpacing: 5
+    property real elementSpacing: Appearance.spacing.space50
     implicitWidth: expanded ? (Math.max(contentRowLayout.implicitWidth + 10 * 2, baseSize)) : baseSize
     implicitHeight: baseSize
     buttonRadius: baseSize / 14 * 4

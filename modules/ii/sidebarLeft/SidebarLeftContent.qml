@@ -10,7 +10,7 @@ import Qt.labs.synchronizer
 Item {
     id: root
     required property var scopeRoot
-    property int sidebarPadding: 10
+    property int sidebarPadding: Appearance.spacing.space125
     anchors.fill: parent
     property bool aiChatEnabled: Config.options.policies.ai !== 0
     property bool translatorEnabled: Config.options.sidebar.translator.enable
@@ -47,7 +47,7 @@ Item {
             fill: parent
             margins: sidebarPadding
         }
-        spacing: verticalTabBar.expanded ? -2 : 0
+        spacing: verticalTabBar.expanded ? -Appearance.spacing.space25 : 0
 
         VerticalTabBar {
             id: verticalTabBar
@@ -72,7 +72,7 @@ Item {
             SwipeView { // Content pages
                 id: swipeView
                 anchors.fill: parent
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.space150
                 currentIndex: tabBar.currentIndex
 
                 clip: true

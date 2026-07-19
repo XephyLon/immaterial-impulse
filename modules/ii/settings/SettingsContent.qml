@@ -13,7 +13,7 @@ import qs.modules.common.functions as CF
 
 Item {
     id: root
-    property real contentPadding: 8
+    property real contentPadding: Appearance.spacing.space100
     property int currentPage: 0
     property bool showingProfile: false
 
@@ -104,16 +104,16 @@ Item {
 
                 NavigationRail {
                     id: navRail
-                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: Appearance.spacing.verylarge }
-                    spacing: Appearance.spacing.normal
+                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: Appearance.spacing.space250 }
+                    spacing: Appearance.spacing.space150
                     expanded: root.width > 900
 
                     RowLayout {
                         visible: navRail.expanded
-                        spacing: Appearance.spacing.normal
+                        spacing: Appearance.spacing.space150
                         Layout.fillWidth: true
-                        Layout.margins: Appearance.spacing.small
-                        Layout.topMargin: Appearance.spacing.large
+                        Layout.margins: Appearance.spacing.space100
+                        Layout.topMargin: Appearance.spacing.space200
 
                         Rectangle {
                             id: avatarRect
@@ -155,7 +155,7 @@ Item {
                         }
 
                         ColumnLayout {
-                            spacing: Appearance.spacing.unsharpen
+                            spacing: Appearance.spacing.space25
                             Layout.fillWidth: true
 
                             StyledText {
@@ -189,7 +189,7 @@ Item {
 
                     Rectangle {
                         width: 160
-                        Layout.topMargin: -Appearance.spacing.verysmall
+                        Layout.topMargin: -Appearance.spacing.space50
                         height: 2
                         gradient: Gradient {
                             orientation: Gradient.Horizontal
@@ -203,7 +203,7 @@ Item {
 
                     FloatingActionButton {
                         id: fab
-                        Layout.bottomMargin: -Appearance.spacing.huge
+                        Layout.bottomMargin: -Appearance.spacing.space300
                         property bool justCopied: false
                         iconText: justCopied ? "check" : "edit"
                         buttonText: justCopied ? Translation.tr("Path copied") : Translation.tr("Config file")
@@ -231,8 +231,8 @@ Item {
                     StyledFlickable {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        Layout.topMargin: 25 // counter-offset to the FAB's -25 bottomMargin, preserving the original gap
-                        Layout.bottomMargin: Appearance.spacing.small
+                        Layout.topMargin: Appearance.spacing.space300 // Counter-offset to the FAB, preserving the original gap.
+                        Layout.bottomMargin: Appearance.spacing.space100
                         contentHeight: tabArray.implicitHeight
                         clip: true
                         expressiveScroll: true
@@ -291,7 +291,7 @@ Item {
                             opacity: isActive ? 1 : 0
                             enabled: isActive
                             visible: isActive
-                            anchors.topMargin: isActive ? 0 : 12
+                            anchors.topMargin: isActive ? 0 : Appearance.spacing.space150
 
                             onLoaded: {
                                 if (root.currentPage === index) {
@@ -326,7 +326,7 @@ Item {
                         opacity: isActive ? 1 : 0
                         enabled: isActive
                         visible: isActive
-                        anchors.topMargin: isActive ? 0 : 12
+                        anchors.topMargin: isActive ? 0 : Appearance.spacing.space150
 
                         onIsActiveChanged: {
                             if (isActive && item) {

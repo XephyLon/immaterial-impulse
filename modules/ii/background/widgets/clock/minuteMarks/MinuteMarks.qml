@@ -16,7 +16,7 @@ Item {
         id: dotsLoader
         anchors {
             fill: parent
-            margins: Appearance.spacing.normal
+            margins: Appearance.spacing.space150
         }
         shown: root.style === "dots"
         sourceComponent: Dots {
@@ -33,7 +33,7 @@ Item {
         sourceComponent: BigHourNumbers {
             numberSize: 80
             color: root.color
-            margins: Appearance.spacing.verylarge - 10 * bigHourNumbersLoader.opacity
+            margins: Appearance.spacing.space250 - 10 * bigHourNumbersLoader.opacity
         }
     }
 
@@ -42,7 +42,7 @@ Item {
         id: linesLoader
         anchors {
             fill: parent
-            margins: Appearance.spacing.normal
+            margins: Appearance.spacing.space150
         }
         shown: root.style === "full"
         sourceComponent: Lines {

@@ -9,7 +9,7 @@ Flow {
     id: root
     required property var configEntry 
     Layout.fillWidth: true
-    spacing: Appearance.spacing.unsharpen
+    spacing: Appearance.spacing.space25
 
     SelectionGroupButton {
         leftmost: true

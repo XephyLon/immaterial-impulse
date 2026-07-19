@@ -32,8 +32,8 @@ Item {
 
     ColumnLayout {
         id: col
-        anchors { fill: parent; margins: Appearance.spacing.small }
-        spacing: Appearance.spacing.unsharpen
+        anchors { fill: parent; margins: Appearance.spacing.space100 }
+        spacing: Appearance.spacing.space25
 
         ConfigSwitch {
             Layout.fillWidth: true
@@ -45,8 +45,8 @@ Item {
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.topMargin: Appearance.spacing.verysmall
-            Layout.bottomMargin: Appearance.spacing.verysmall
+            Layout.topMargin: Appearance.spacing.space50
+            Layout.bottomMargin: Appearance.spacing.space50
             implicitHeight: 1
             color: Appearance.colors.colOutlineVariant
             opacity: 0.4

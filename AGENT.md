@@ -373,9 +373,9 @@ durations, both for dark/light theme correctness and for consistency with the re
 `Appearance.spacing.*` follows Material 3's system scale (`0, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24,
 32, 36, 40, 48, 56, 64, 72`), named `space0` through `space900`; `space100` (8px) is the base unit.
 Prefer multiples of 8 for the main rhythm and the recommended intermediate tokens for nested
-spacing. Legacy semantic names remain compatibility aliases. `Appearance.borderWidth.*` is
-`1/2/4`. Snap raw spacing/padding/margin to the nearest spacing token - `tests/lint_spacing.py`
-(run by `tests/run_tests.sh`) enforces that range.
+spacing. Use canonical `spaceNNN` names directly; semantic aliases are not supported.
+`Appearance.borderWidth.*` is `1/2/4`. Snap raw spacing/padding/margin to the nearest spacing token -
+`tests/lint_spacing.py` (run by `tests/run_tests.sh`) enforces declarations and assignments.
 
 **Any `.qml` that references `Appearance` (or any other `qs.modules.common` singleton) as a bareword
 must `import qs.modules.common`.** That import is *not* transitive - a file that only has

@@ -204,7 +204,7 @@ Scope {
                         anchors.centerIn: parent
                         color: Appearance.colors.colLayer0
                         radius: root.popupRounding
-                        property real padding: Appearance.spacing.verylarge
+                        property real padding: Appearance.spacing.space250
                         implicitWidth: placeholderLayout.implicitWidth + padding * 2
                         implicitHeight: placeholderLayout.implicitHeight + padding * 2
 

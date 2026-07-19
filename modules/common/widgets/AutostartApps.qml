@@ -15,7 +15,7 @@ ColumnLayout {
     id: root
     Layout.fillWidth: true
     width: parent.width
-    spacing: Appearance.spacing.verysmall
+    spacing: Appearance.spacing.space50
 
     function addEntry() {
         let list = []
@@ -84,7 +84,7 @@ ColumnLayout {
 
     Item {
         Layout.fillWidth: true
-        Layout.bottomMargin: -Appearance.spacing.verysmall
+        Layout.bottomMargin: -Appearance.spacing.space50
         height: 24
         visible: Config.options.hyprland.autostartApps.apps.length > 0 && Config.options.hyprland.autostartApps.enable
 
@@ -92,7 +92,7 @@ ColumnLayout {
             id: headerRightGroup
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             StyledText {
                 width: 118
@@ -118,7 +118,7 @@ ColumnLayout {
         StyledText {
             anchors.left: parent.left
             anchors.right: headerRightGroup.left
-            anchors.rightMargin: Appearance.spacing.small
+            anchors.rightMargin: Appearance.spacing.space100
             anchors.verticalCenter: parent.verticalCenter
             text: Translation.tr("App or Command")
             color: Appearance.colors.colSubtext
@@ -143,7 +143,7 @@ ColumnLayout {
                 id: rightGroup
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: Appearance.spacing.small
+                spacing: Appearance.spacing.space100
 
                 ConfigSpinBox {
                     width: 118
@@ -198,7 +198,7 @@ ColumnLayout {
                 id: cmdArea
                 anchors.left: parent.left
                 anchors.right: rightGroup.left
-                anchors.rightMargin: Appearance.spacing.small
+                anchors.rightMargin: Appearance.spacing.space100
                 placeholderText: Translation.tr("App (e.g. firefox)")
                 text: entryRow.modelData.cmd ?? ""
                 wrapMode: TextEdit.Wrap
@@ -226,7 +226,7 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        Layout.topMargin: Appearance.spacing.verysmall
+        Layout.topMargin: Appearance.spacing.space50
 
         Item { Layout.fillWidth: true }
 

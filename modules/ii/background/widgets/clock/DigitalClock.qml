@@ -7,7 +7,7 @@ import QtQuick.Layouts
 
 ColumnLayout {
     id: clockColumn
-    spacing: Appearance.spacing.verysmall
+    spacing: Appearance.spacing.space50
 
     property bool isVertical: Config.options.background.widgets.clock.digital.vertical
     property color colText: Appearance.colors.colOnSecondaryContainer
@@ -52,7 +52,7 @@ ColumnLayout {
     // Date
     ClockText {
         visible: Config.options.background.widgets.clock.digital.showDate
-        Layout.topMargin: -Appearance.spacing.verylarge
+        Layout.topMargin: -Appearance.spacing.space250
         Layout.fillWidth: true
         text: DateTime.longDate
         color: clockColumn.colText

@@ -57,7 +57,7 @@ Window {
         anchors {
             horizontalCenter: parent.horizontalCenter
             top: parent.top
-            topMargin: Appearance.spacing.small
+            topMargin: Appearance.spacing.space100
         }
         color: "#E6E1E3"
         text: "Shape %1/%2".arg(root.shapeIndex+1).arg(root.shapeGetters.length)

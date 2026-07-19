@@ -35,8 +35,8 @@ AbstractOverlayWidget {
     property real radius: Appearance.rounding.windowRounding
     property real minimumWidth: contentItem.implicitWidth
     property real minimumHeight: contentItem.implicitHeight
-    property real resizeMargin: 8
-    property real padding: Appearance.spacing.small
+    property real resizeMargin: Appearance.spacing.space100
+    property real padding: Appearance.spacing.space100
     property real contentRadius: radius - padding
 
     // Resizing
@@ -236,14 +236,14 @@ AbstractOverlayWidget {
                         fill: parent
                         margins: root.padding
                     }
-                    spacing: Appearance.spacing.unsharpen
+                    spacing: Appearance.spacing.space25
 
                     MaterialSymbol {
                         text: root.materialSymbol
-                        Layout.leftMargin: Appearance.spacing.small
+                        Layout.leftMargin: Appearance.spacing.space100
                         iconSize: 20
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.rightMargin: Appearance.spacing.verysmall
+                        Layout.rightMargin: Appearance.spacing.space50
                     }
                     
                     StyledText {

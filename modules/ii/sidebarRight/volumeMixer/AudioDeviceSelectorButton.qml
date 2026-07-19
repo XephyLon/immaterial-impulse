@@ -19,13 +19,13 @@ RippleButton {
 
     contentItem: RowLayout {
         anchors.fill: parent
-        anchors.margins: Appearance.spacing.small
-        spacing: Appearance.spacing.small
+        anchors.margins: Appearance.spacing.space100
+        spacing: Appearance.spacing.space100
 
         MaterialSymbol {
             Layout.alignment: Qt.AlignVCenter
             Layout.fillWidth: false
-            Layout.leftMargin: Appearance.spacing.small
+            Layout.leftMargin: Appearance.spacing.space100
             color: Appearance.colors.colOnLayer2
             iconSize: Appearance.font.pixelSize.hugeass
             text: input ? "mic_external_on" : "media_output"
@@ -33,7 +33,7 @@ RippleButton {
 
         ColumnLayout {
             Layout.fillWidth: true
-            Layout.rightMargin: Appearance.spacing.small
+            Layout.rightMargin: Appearance.spacing.space100
             spacing: 0
             StyledText {
                 Layout.fillWidth: true

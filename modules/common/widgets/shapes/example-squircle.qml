@@ -22,7 +22,7 @@ Window {
     RowLayout {
         id: rowLayout
         anchors.centerIn: parent
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.space150
         Text {
             text: "Liquid"
             color: "#E6E1E3"
@@ -76,7 +76,7 @@ Window {
         anchors {
             horizontalCenter: parent.horizontalCenter
             top: parent.top
-            topMargin: Appearance.spacing.small
+            topMargin: Appearance.spacing.space100
         }
         color: "#E6E1E3"
         text: "Custom Squircle Shape"

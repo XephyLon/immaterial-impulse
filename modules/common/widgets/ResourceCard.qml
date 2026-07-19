@@ -28,12 +28,12 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Appearance.spacing.normal
-        spacing: Appearance.spacing.small
+        anchors.margins: Appearance.spacing.space150
+        spacing: Appearance.spacing.space100
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.topMargin: -Appearance.spacing.verysmall
+            Layout.topMargin: -Appearance.spacing.space50
             spacing: 0
 
             MaterialShapeWrappedMaterialSymbol {
@@ -60,7 +60,7 @@ Rectangle {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.hairline
+            spacing: Appearance.spacing.space25
 
             StyledText {
                 text: root.label

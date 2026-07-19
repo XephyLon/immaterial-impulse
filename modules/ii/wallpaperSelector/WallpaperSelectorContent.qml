@@ -161,7 +161,7 @@ MouseArea {
         implicitHeight: gridColumnLayout.implicitHeight
 
         Item {
-            anchors { fill: parent; margins: Appearance.spacing.small }
+            anchors { fill: parent; margins: Appearance.spacing.space100 }
             z: 0
 
             Rectangle {
@@ -209,10 +209,10 @@ MouseArea {
             id: mainLayout
             anchors.fill: parent
             anchors.topMargin: 0
-            anchors.bottomMargin: Appearance.spacing.small
-            anchors.leftMargin: Appearance.spacing.small
-            anchors.rightMargin: Appearance.spacing.small
-            spacing: -Appearance.spacing.verysmall
+            anchors.bottomMargin: Appearance.spacing.space100
+            anchors.leftMargin: Appearance.spacing.space100
+            anchors.rightMargin: Appearance.spacing.space100
+            spacing: -Appearance.spacing.space50
             z: 1
 
             ColumnLayout {
@@ -223,8 +223,8 @@ MouseArea {
                 Item {
                     id: topBar
                     Layout.fillWidth: true
-                    Layout.margins: Appearance.spacing.large
-                    Layout.leftMargin: Appearance.spacing.verylarge
+                    Layout.margins: Appearance.spacing.space200
+                    Layout.leftMargin: Appearance.spacing.space250
                     implicitHeight: 56
 
                     RowLayout {
@@ -232,7 +232,7 @@ MouseArea {
                             left: parent.left
                             verticalCenter: parent.verticalCenter
                         }
-                        spacing: Appearance.spacing.small
+                        spacing: Appearance.spacing.space100
 
                         MaterialShapeWrappedMaterialSymbol {
                             wrappedShape: MaterialShape.Shape.Gem
@@ -253,7 +253,7 @@ MouseArea {
                             active: root.source === "local"
                             visible: active
                             sourceComponent: RowLayout {
-                                spacing: Appearance.spacing.verysmall
+                                spacing: Appearance.spacing.space50
                                 Repeater {
                                     model: root.quickDirs
                                     delegate: RippleButton {
@@ -269,9 +269,9 @@ MouseArea {
                                         onClicked: Wallpapers.setDirectory(modelData.path)
                                         contentItem: RowLayout {
                                             anchors.fill: parent
-                                            anchors.leftMargin: Appearance.spacing.normal
-                                            anchors.rightMargin: Appearance.spacing.normal
-                                            spacing: Appearance.spacing.small
+                                            anchors.leftMargin: Appearance.spacing.space150
+                                            anchors.rightMargin: Appearance.spacing.space150
+                                            spacing: Appearance.spacing.space100
                                             MaterialSymbol {
                                                 text: dirBtn.modelData.icon
                                                 iconSize: Appearance.font.pixelSize.larger
@@ -292,7 +292,7 @@ MouseArea {
                             active: root.source !== "local"
                             visible: active
                             sourceComponent: RowLayout {
-                                spacing: Appearance.spacing.verysmall
+                                spacing: Appearance.spacing.space50
                                 Repeater {
                                     model: ["1080p", "2K", "4K"]
                                     delegate: RippleButton {
@@ -320,10 +320,10 @@ MouseArea {
                     RowLayout {
                         anchors {
                             right: parent.right
-                            rightMargin: Appearance.spacing.small
+                            rightMargin: Appearance.spacing.space100
                             verticalCenter: parent.verticalCenter
                         }
-                        spacing: Appearance.spacing.small
+                        spacing: Appearance.spacing.space100
 
                         StyledComboBox {
                             id: sourceCombo
@@ -405,9 +405,9 @@ MouseArea {
                         anchors {
                             bottom: parent.bottom
                             horizontalCenter: parent.horizontalCenter
-                            bottomMargin: Appearance.spacing.small
+                            bottomMargin: Appearance.spacing.space100
                         }
-                        spacing: Appearance.spacing.small
+                        spacing: Appearance.spacing.space100
                         z: root.toolbarVisible ? 2 : -1
                         opacity: root.toolbarVisible ? 1 : 0
                         transform: Translate {

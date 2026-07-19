@@ -7,9 +7,9 @@ import qs.modules.common.widgets
 
 RowLayout {
     id: root
-    spacing: Appearance.spacing.verysmall
+    spacing: Appearance.spacing.space50
 
     // These shouldn't be needed but it would be a terrible waste of space to follow the spec
-    Layout.margins: -Appearance.spacing.small
+    Layout.margins: -Appearance.spacing.space100
     Layout.topMargin: 0
 }

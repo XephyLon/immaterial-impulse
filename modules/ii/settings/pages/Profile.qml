@@ -85,7 +85,7 @@ ContentPage {
         id: mainLayout
         Layout.fillWidth: true
         Layout.fillHeight: true
-        spacing: Appearance.spacing.verylarge
+        spacing: Appearance.spacing.space250
 
         ContentSection {
             icon: "person"
@@ -125,10 +125,10 @@ ContentPage {
             }
 
             Flow {
-                Layout.topMargin: Appearance.spacing.normal
-                Layout.bottomMargin: Appearance.spacing.normal
+                Layout.topMargin: Appearance.spacing.space150
+                Layout.bottomMargin: Appearance.spacing.space150
                 Layout.fillWidth: true
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.space150
                 visible: Config.options.profile.avatarPath !== ""
 
                 Repeater {
@@ -162,8 +162,8 @@ ContentPage {
                             visible: parent.isSelected
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
-                            anchors.rightMargin: Appearance.spacing.unsharpen
-                            anchors.bottomMargin: Appearance.spacing.unsharpen
+                            anchors.rightMargin: Appearance.spacing.space25
+                            anchors.bottomMargin: Appearance.spacing.space25
                             width: 20
                             height: width
                             radius: width / 2
@@ -250,10 +250,10 @@ ContentPage {
             }
 
             Flow {
-                Layout.topMargin: Appearance.spacing.normal
+                Layout.topMargin: Appearance.spacing.space150
                 Layout.fillWidth: true
                 width: parent.width
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.space150
                 visible: presetsFolderModel.count > 0
 
                 Repeater {

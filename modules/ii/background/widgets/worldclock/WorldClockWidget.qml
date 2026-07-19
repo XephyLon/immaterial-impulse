@@ -70,13 +70,13 @@ AbstractBackgroundWidget {
             // 2x2
             ColumnLayout {
                 id: mainColumn
-                anchors { fill: parent; margins: Appearance.spacing.normal }
-                spacing: Appearance.spacing.normal
+                anchors { fill: parent; margins: Appearance.spacing.space150 }
+                spacing: Appearance.spacing.space150
                 visible: sizeMode === "2x2" && !root.showingSettings
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: Appearance.spacing.verysmall
+                    spacing: Appearance.spacing.space50
 
                     MaterialSymbol {
                         iconSize: Appearance.font.pixelSize.hugeass
@@ -86,7 +86,7 @@ AbstractBackgroundWidget {
                     }
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: -Appearance.spacing.unsharpen
+                        spacing: -Appearance.spacing.space25
                         StyledText {
                             font.pixelSize: Appearance.font.pixelSize.normal
                             font.weight: Font.Medium
@@ -116,7 +116,7 @@ AbstractBackgroundWidget {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignRight
-                    spacing: -Appearance.spacing.verysmall
+                    spacing: -Appearance.spacing.space50
                     StyledText {
                         Layout.alignment: Qt.AlignRight
                         font.pixelSize: 42; font.weight: Font.Bold
@@ -155,8 +155,8 @@ AbstractBackgroundWidget {
                             Behavior on color { ColorAnimation { duration: 400 } }
 
                             ColumnLayout {
-                                anchors { fill: parent; margins: Appearance.spacing.small }
-                                spacing: Appearance.spacing.unsharpen
+                                anchors { fill: parent; margins: Appearance.spacing.space100 }
+                                spacing: Appearance.spacing.space25
                                 RowLayout {
                                     Layout.fillWidth: true
                                     StyledText {
@@ -174,7 +174,7 @@ AbstractBackgroundWidget {
                                     }
                                 }
                                 RowLayout {
-                                    Layout.fillWidth: true; spacing: Appearance.spacing.verysmall
+                                    Layout.fillWidth: true; spacing: Appearance.spacing.space50
                                     StyledText {
                                         font.pixelSize: Appearance.font.pixelSize.normal
                                         font.weight: Font.Bold
@@ -200,11 +200,11 @@ AbstractBackgroundWidget {
                 visible: sizeMode === "2x2" && root.showingSettings
 
                 ColumnLayout {
-                    anchors { fill: parent; margins: Appearance.spacing.normal }
-                    spacing: Appearance.spacing.normal
+                    anchors { fill: parent; margins: Appearance.spacing.space150 }
+                    spacing: Appearance.spacing.space150
 
                     RowLayout {
-                        Layout.fillWidth: true; spacing: Appearance.spacing.small
+                        Layout.fillWidth: true; spacing: Appearance.spacing.space100
                         Rectangle {
                             radius: Appearance.rounding.full
                             color: "transparent"
@@ -254,8 +254,8 @@ AbstractBackgroundWidget {
 
             // 4x1
             RowLayout {
-                anchors { fill: parent; margins: Appearance.spacing.small }
-                spacing: Appearance.spacing.small
+                anchors { fill: parent; margins: Appearance.spacing.space100 }
+                spacing: Appearance.spacing.space100
                 visible: sizeMode === "4x1"
 
                 Repeater {
@@ -302,7 +302,7 @@ AbstractBackgroundWidget {
                 id: toggleHandle
                 width: 16; height: 16; radius: Appearance.rounding.unsharpenslight
                 color: Appearance.colors.colOnPrimaryContainer
-                anchors { right: parent.right; bottom: parent.bottom; margins: Appearance.spacing.verysmall }
+                anchors { right: parent.right; bottom: parent.bottom; margins: Appearance.spacing.space50 }
                 opacity: (root.containsMouse || toggleArea.containsMouse || toggleArea.pressed) ? 0.5 : 0
                 visible: opacity > 0 && !Config.options.background.widgetsLocked
 

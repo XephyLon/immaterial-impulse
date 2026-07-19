@@ -20,7 +20,7 @@ Item {
     ColumnLayout {
         id: col
         width: root.width
-        spacing: Appearance.spacing.small
+        spacing: Appearance.spacing.space100
 
         // Scheme
         Rectangle {
@@ -31,7 +31,7 @@ Item {
 
             GridLayout {
                 id: schemeGrid
-                anchors { left: parent.left; right: parent.right; top: parent.top; margins: Appearance.spacing.normal }
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: Appearance.spacing.space150 }
                 columns: 3
                 rowSpacing: 6
                 columnSpacing: 6
@@ -125,8 +125,8 @@ Item {
 
             ColumnLayout {
                 id: centeredCol
-                anchors { fill: parent; margins: Appearance.spacing.small }
-                spacing: Appearance.spacing.small
+                anchors { fill: parent; margins: Appearance.spacing.space100 }
+                spacing: Appearance.spacing.space100
 
                 ConfigSwitch {
                     Layout.fillWidth: true
@@ -147,7 +147,7 @@ Item {
 
                 ConfigSelectionShapeArray {
                     Layout.fillWidth: true
-                    Layout.topMargin: Appearance.spacing.unsharpen
+                    Layout.topMargin: Appearance.spacing.space25
                     visible: Config.options.background.centeredWallpaper
                     currentValue: Config.options.background.centeredWallpaperShape
                     shapeColor: Appearance.colors.colPrimary
@@ -192,7 +192,7 @@ Item {
 
             ColumnLayout {
                 id: transCol
-                anchors { fill: parent; margins: Appearance.spacing.small }
+                anchors { fill: parent; margins: Appearance.spacing.space100 }
 
                 Repeater {
                     model: [
@@ -215,8 +215,8 @@ Item {
                         colRippleToggled: Appearance.colors.colSecondaryContainerActive
                         onClicked: Config.options.background.wallpaperAnimation = transRow.modelData.value
                         contentItem: RowLayout {
-                            anchors { fill: parent; leftMargin: Appearance.spacing.normal; rightMargin: Appearance.spacing.normal }
-                            spacing: Appearance.spacing.normal
+                            anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }
+                            spacing: Appearance.spacing.space150
                             MaterialSymbol {
                                 text: transRow.modelData.icon
                                 iconSize: Appearance.font.pixelSize.larger

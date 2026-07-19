@@ -14,7 +14,7 @@ AbstractBackgroundWidget {
     hoverEnabled: true
 
     property real widgetWidth: 420
-    property real cardSpacing: 12
+    property real cardSpacing: Appearance.spacing.space150
     property real cardHeight: 120
     property real cardWidth: (widgetWidth - cardSpacing * 2) / 3
     property bool isVertical: root.configEntry.vertical ?? false
@@ -47,7 +47,7 @@ AbstractBackgroundWidget {
                 fill: parent
                 margins: 14
             }
-            spacing: -Appearance.spacing.verysmall
+            spacing: -Appearance.spacing.space50
 
             MaterialShapeWrappedMaterialSymbol {
                 Layout.alignment: Qt.AlignRight
@@ -57,7 +57,7 @@ AbstractBackgroundWidget {
                 text: statCard.icon
                 iconSize: 18
                 fill: 1
-                padding: Appearance.spacing.small
+                padding: Appearance.spacing.space100
                 implicitWidth: 34
                 implicitHeight: 34
             }

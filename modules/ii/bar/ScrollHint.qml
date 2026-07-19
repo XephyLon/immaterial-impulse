@@ -39,7 +39,7 @@ Revealer { // Scroll hint
             anchors {
                 fill: parent
             }
-            spacing: -Appearance.spacing.verysmall
+            spacing: -Appearance.spacing.space50
             MaterialSymbol {
                 text: "keyboard_arrow_up"
                 iconSize: 14

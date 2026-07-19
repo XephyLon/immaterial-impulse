@@ -139,10 +139,10 @@ Item { // Wrapper
 
             SearchBar {
                 id: searchBar
-                property real verticalPadding: 4
+                property real verticalPadding: Appearance.spacing.space50
                 Layout.fillWidth: true
-                Layout.leftMargin: Appearance.spacing.normal
-                Layout.rightMargin: Appearance.spacing.verysmall
+                Layout.leftMargin: Appearance.spacing.space150
+                Layout.rightMargin: Appearance.spacing.space50
                 Layout.topMargin: verticalPadding
                 Layout.bottomMargin: verticalPadding
                 Synchronizer on searchingText {
@@ -164,9 +164,9 @@ Item { // Wrapper
                 Layout.fillWidth: true
                 implicitHeight: Math.min(600, appResults.contentHeight + topMargin + bottomMargin)
                 clip: true
-                topMargin: Appearance.spacing.normal
-                bottomMargin: Appearance.spacing.normal
-                spacing: Appearance.spacing.unsharpen
+                topMargin: Appearance.spacing.space150
+                bottomMargin: Appearance.spacing.space150
+                spacing: Appearance.spacing.space25
                 KeyNavigation.up: searchBar
                 highlightMoveDuration: 100
 

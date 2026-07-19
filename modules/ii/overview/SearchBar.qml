@@ -10,7 +10,7 @@ import qs.modules.common.functions
 
 RowLayout {
     id: root
-    spacing: Appearance.spacing.small
+    spacing: Appearance.spacing.space100
     property bool animateWidth: false
     property alias searchInput: searchInput
     property string searchingText
@@ -66,8 +66,8 @@ RowLayout {
     }
     ToolbarTextField { // Search box
         id: searchInput
-        Layout.topMargin: Appearance.spacing.verysmall
-        Layout.bottomMargin: Appearance.spacing.verysmall
+        Layout.topMargin: Appearance.spacing.space50
+        Layout.bottomMargin: Appearance.spacing.space50
         implicitHeight: 40
         focus: GlobalStates.overviewOpen
         font.pixelSize: Appearance.font.pixelSize.small
@@ -108,8 +108,8 @@ RowLayout {
     }
 
     IconToolbarButton {
-        Layout.topMargin: Appearance.spacing.verysmall
-        Layout.bottomMargin: Appearance.spacing.verysmall
+        Layout.topMargin: Appearance.spacing.space50
+        Layout.bottomMargin: Appearance.spacing.space50
         onClicked: {
             GlobalStates.overviewOpen = false;
             Quickshell.execDetached(["qs", "-p", Quickshell.shellPath(""), "ipc", "call", "region", "search"]);
@@ -122,9 +122,9 @@ RowLayout {
 
     IconToolbarButton {
         id: songRecButton
-        Layout.topMargin: Appearance.spacing.verysmall
-        Layout.bottomMargin: Appearance.spacing.verysmall
-        Layout.rightMargin: Appearance.spacing.verysmall
+        Layout.topMargin: Appearance.spacing.space50
+        Layout.bottomMargin: Appearance.spacing.space50
+        Layout.rightMargin: Appearance.spacing.space50
         toggled: SongRec.running
         onClicked: SongRec.toggleRunning()
         text: "music_cast"

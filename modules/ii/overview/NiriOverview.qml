@@ -26,7 +26,7 @@ Item {
 
     readonly property int maxWorkspaces: Config.options.bar.workspaces.shown ?? 10
     readonly property real wsHeight: (screen?.height ?? 1080) * 0.18
-    readonly property real wsPadding: 10
+    readonly property real wsPadding: Appearance.spacing.space125
     readonly property real scale: Config.options.overview.scale
 
     readonly property real monitorW: screen?.width ?? 1920

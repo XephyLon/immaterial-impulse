@@ -6,7 +6,7 @@ MouseArea {
     id: root
     property bool vertical: false
     property bool isMaterial: Config.options.bar.cornerStyle === 3
-    property real horizontalExtraPadding: 12
+    property real horizontalExtraPadding: Appearance.spacing.space150
 
     property Component colDefault
     property Component colMaterial

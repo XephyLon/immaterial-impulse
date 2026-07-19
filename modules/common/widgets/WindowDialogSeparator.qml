@@ -11,6 +11,6 @@ Rectangle {
     Layout.fillWidth: true
     Layout.leftMargin: -Appearance.rounding.large
     Layout.rightMargin: -Appearance.rounding.large
-    Layout.topMargin: -Appearance.spacing.small
-    Layout.bottomMargin: -Appearance.spacing.small
+    Layout.topMargin: -Appearance.spacing.space100
+    Layout.bottomMargin: -Appearance.spacing.space100
 }

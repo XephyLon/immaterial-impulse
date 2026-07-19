@@ -9,7 +9,7 @@ Item {
     property int totalCount: 0
     property bool isMaterial: Config.options.bar.cornerStyle === 3
     property bool paintMaterialPill: false
-    property real padding: (root.isMaterial && !root.paintMaterialPill) ? 0 : 5
+    property real padding: (root.isMaterial && !root.paintMaterialPill) ? 0 : Appearance.spacing.space50
     property color bgColor: Appearance.colors.colPrimaryContainer
 
     readonly property real fullRadius: height / 2

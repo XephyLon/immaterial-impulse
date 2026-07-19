@@ -15,7 +15,7 @@ Item { // Notification item area
     property bool expanded: false
     property bool onlyNotification: false
     property real fontSize: Appearance.font.pixelSize.small
-    property real padding: onlyNotification ? 0 : 8
+    property real padding: onlyNotification ? 0 : Appearance.spacing.space100
     property real summaryElideRatio: 0.85
 
     property real dragConfirmThreshold: 70 // Drag further to discard notification
@@ -106,7 +106,7 @@ Item { // Notification item area
         image: notificationObject.image
         anchors.right: background.left
         anchors.top: background.top
-        anchors.rightMargin: Appearance.spacing.normal
+        anchors.rightMargin: Appearance.spacing.space150
     }
 
     Rectangle { // Background of notification item
@@ -140,7 +140,7 @@ Item { // Notification item area
             id: contentColumn
             anchors.fill: parent
             anchors.margins: expanded ? root.padding : 0
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
 
             Behavior on anchors.margins {
                 animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)

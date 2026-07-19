@@ -67,7 +67,7 @@ ContentPage {
         id: mainLayout
         Layout.fillWidth: true
         Layout.fillHeight: true
-        spacing: Appearance.spacing.verylarge
+        spacing: Appearance.spacing.space250
 
         // Displays
         ContentSection {
@@ -83,7 +83,7 @@ ContentPage {
             }
 
             ContentSubsection {
-                Layout.topMargin: Appearance.spacing.normal
+                Layout.topMargin: Appearance.spacing.space150
                 title: (monitorConfig.monitors[monitorCanvas.selectedIndex]?.name ?? "")
                     + " · "
                     + (monitorConfig.monitors[monitorCanvas.selectedIndex]?.description ?? "")
@@ -501,7 +501,7 @@ ContentPage {
 
             NoticeBox {
                 Layout.fillWidth: true
-                Layout.topMargin: Appearance.spacing.large
+                Layout.topMargin: Appearance.spacing.space200
                 text: Translation.tr("Animation presets require a require line in your hyprland.lua. Add the following line to enable presets:") + '\n\nrequire("hyprland/shellOverrides/animations")'
 
                 Item { Layout.fillWidth: true }

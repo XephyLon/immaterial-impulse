@@ -23,11 +23,11 @@ BarWidgetSwitcher {
         ColumnLayout {
             id: column
             anchors.centerIn: parent
-            spacing: root.hasAmPm ? 1 : 0
+            spacing: root.hasAmPm ? Appearance.spacing.space25 : 0
 
             Column {
                 Layout.alignment: Qt.AlignHCenter
-                spacing: -Appearance.spacing.verysmall
+                spacing: -Appearance.spacing.space50
 
                 Repeater {
                     model: root.dateTimeString.split(/[: ]/)
@@ -51,7 +51,7 @@ BarWidgetSwitcher {
 
             StyledText {
                 Layout.alignment: Qt.AlignHCenter
-                Layout.bottomMargin: Appearance.spacing.small
+                Layout.bottomMargin: Appearance.spacing.space100
                 font.pixelSize: Appearance.font.pixelSize.smallest
                 color: Appearance.colors.colOnLayer1
                 text: DateTime.shortDate
@@ -62,13 +62,13 @@ BarWidgetSwitcher {
     colMaterial: Component {
         ColumnLayout {
             id: clockWidget
-            spacing: Appearance.spacing.unsharpen
+            spacing: Appearance.spacing.space25
             Layout.alignment: Qt.AlignHCenter
 
             Column {
                 Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: Appearance.spacing.unsharpen
-                spacing: -Appearance.spacing.verysmall
+                Layout.topMargin: Appearance.spacing.space25
+                spacing: -Appearance.spacing.space50
 
                 Repeater {
                     model: DateTime.time.split(/[: ]/)
@@ -107,7 +107,7 @@ BarWidgetSwitcher {
 
     rowDefault: Component {
         RowLayout {
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
             StyledText {
                 visible: root.showDate
                 font.pixelSize: Appearance.font.pixelSize.small
@@ -132,7 +132,7 @@ BarWidgetSwitcher {
 
     rowMaterial: Component {
         RowLayout {
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
             id: pill
 
             property var timeParts: DateTime.time.split(/[: ]/)
@@ -146,7 +146,7 @@ BarWidgetSwitcher {
                 color: Appearance.colors.colOnPrimaryContainer
                 text: DateTime.longDate
                 Layout.alignment: Qt.AlignVCenter
-                leftPadding: Appearance.spacing.small
+                leftPadding: Appearance.spacing.space100
             }
 
             Rectangle {
@@ -175,7 +175,7 @@ BarWidgetSwitcher {
                 radius: Appearance.rounding.full
                 color: Appearance.colors.colTertiaryContainer
                 Layout.alignment: Qt.AlignVCenter
-                Layout.leftMargin: -Appearance.spacing.normal
+                Layout.leftMargin: -Appearance.spacing.space150
                 StyledText {
                     id: ampmText
                     anchors.centerIn: parent

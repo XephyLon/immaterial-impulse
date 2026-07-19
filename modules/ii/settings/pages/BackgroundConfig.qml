@@ -41,7 +41,7 @@ ContentPage {
         id: mainLayout 
         Layout.fillWidth: true   
         Layout.fillHeight: true
-        spacing: Appearance.spacing.verylarge
+        spacing: Appearance.spacing.space250
             
         ContentSection {
             icon: "panorama"
@@ -50,7 +50,7 @@ ContentPage {
 
             Rectangle {
                 Layout.fillWidth: true
-                implicitHeight: wrapperCol.implicitHeight + Appearance.spacing.large
+                implicitHeight: wrapperCol.implicitHeight + Appearance.spacing.space200
                 topLeftRadius: Appearance.rounding.verylarge
                 topRightRadius: Appearance.rounding.verylarge
                 bottomLeftRadius: Appearance.rounding.normal
@@ -60,15 +60,15 @@ ContentPage {
                 ColumnLayout {
                     id: wrapperCol
                     anchors.fill: parent
-                    anchors.margins: Appearance.spacing.small
-                    spacing: Appearance.spacing.small
+                    anchors.margins: Appearance.spacing.space100
+                    spacing: Appearance.spacing.space100
 
                     Carousel {
                         Layout.fillWidth: true
                         implicitHeight: 280
                         largeItemWidthRatio: 0.5
                         mediumItemWidthRatio: 0.485
-                        itemSpacing: Appearance.spacing.small
+                        itemSpacing: Appearance.spacing.space100
                         model: [
                             Config.options.background.wallpaperPath,
                             Config.options.background.lockWall !== ""
@@ -85,7 +85,7 @@ ContentPage {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: Appearance.spacing.small
+                        spacing: Appearance.spacing.space100
 
                         Rectangle {
                             Layout.fillWidth: true
@@ -95,7 +95,7 @@ ContentPage {
 
                             RowLayout {
                                 anchors.centerIn: parent
-                                spacing: Appearance.spacing.small
+                                spacing: Appearance.spacing.space100
                                 MaterialSymbol {
                                     text: "desktop_windows"
                                     iconSize: Appearance.font.pixelSize.larger
@@ -118,7 +118,7 @@ ContentPage {
 
                             RowLayout {
                                 anchors.centerIn: parent
-                                spacing: Appearance.spacing.small
+                                spacing: Appearance.spacing.space100
                                 MaterialSymbol {
                                     text: "lock"
                                     iconSize: Appearance.font.pixelSize.larger
@@ -137,7 +137,7 @@ ContentPage {
             }
 
             GroupedList {
-                Layout.topMargin: -Appearance.spacing.unsharpen
+                Layout.topMargin: -Appearance.spacing.space25
 
                 ConfigSwitch {
                     id: syncWallpaperSwitch
@@ -452,7 +452,7 @@ ContentPage {
                     }
                 }
                 GroupedList {
-                    Layout.topMargin: Appearance.spacing.normal
+                    Layout.topMargin: Appearance.spacing.space150
                     ConfigSlider {
                         text: Translation.tr("Font weight")
                         value: Config.options.background.widgets.clock.digital.font.weight
@@ -580,7 +580,7 @@ ContentPage {
             }
 
             GroupedList {
-                Layout.topMargin: Appearance.spacing.normal
+                Layout.topMargin: Appearance.spacing.space150
                 visible: settingsClock.cookiePresent
                 ConfigSelectionArray {
                     text: "Dial Style"
@@ -829,7 +829,7 @@ ContentPage {
             ContentSubsection {
                 title: Translation.tr("Show widgets on")
                 visible: Hyprland.monitors.values.length > 1
-                Layout.bottomMargin: Appearance.spacing.normal
+                Layout.bottomMargin: Appearance.spacing.space150
 
                 WidgetsMonitorSelector {
                     configEntry: Config.options.background
@@ -896,7 +896,7 @@ ContentPage {
                                 top: parent.top
                                 left: parent.left
                                 right: parent.right
-                                margins: Appearance.spacing.normal
+                                margins: Appearance.spacing.space150
                             }
                             spacing: 0
                             RowLayout {
@@ -946,7 +946,7 @@ ContentPage {
             }
             ContentSubsection {
                 title: Translation.tr("Canvas")
-                Layout.bottomMargin: Appearance.spacing.normal
+                Layout.bottomMargin: Appearance.spacing.space150
 
                 GroupedList {
                     ConfigSwitch {

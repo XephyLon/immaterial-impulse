@@ -11,8 +11,8 @@ Item {
     property string text: ""
     property bool extraVisibleCondition: true
     property bool alternativeVisibleCondition: false
-    property real horizontalPadding: 10
-    property real verticalPadding: 5
+    property real horizontalPadding: Appearance.spacing.space125
+    property real verticalPadding: Appearance.spacing.space50
     property real horizontalMargin: horizontalPadding
     property real verticalMargin: verticalPadding
     

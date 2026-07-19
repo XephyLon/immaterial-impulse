@@ -15,7 +15,7 @@ Item {
     ColumnLayout {
         id: col
         anchors.fill: parent
-        spacing: root.cohesive ? 0 : 2
+        spacing: root.cohesive ? 0 : Appearance.spacing.space25
 
         Repeater {
             model: root.items.length
@@ -41,7 +41,7 @@ Item {
 
                 ColumnLayout {
                     id: contentArea
-                    anchors { fill: parent; margins: Appearance.spacing.small }
+                    anchors { fill: parent; margins: Appearance.spacing.space100 }
                     spacing: 0
                 }
             }

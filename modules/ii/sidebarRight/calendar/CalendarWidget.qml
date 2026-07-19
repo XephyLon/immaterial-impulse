@@ -7,7 +7,7 @@ import QtQuick.Layouts
 
 Item {
     // Layout.topMargin: 10
-    anchors.topMargin: Appearance.spacing.normal
+    anchors.topMargin: Appearance.spacing.space150
     property int monthShift: 0
     property var viewingDate: CalendarLayout.getDateInXMonthsTime(monthShift)
     property var calendarLayout: CalendarLayout.getCalendarLayout(viewingDate, monthShift === 0)
@@ -39,12 +39,12 @@ Item {
     ColumnLayout {
         id: calendarColumn
         anchors.centerIn: parent
-        spacing: Appearance.spacing.small
+        spacing: Appearance.spacing.space100
 
         // Calendar header
         RowLayout {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
             CalendarHeaderButton {
                 clip: true
                 buttonText: `${monthShift != 0 ? "• " : ""}${viewingDate.toLocaleDateString(Qt.locale(), "MMMM yyyy")}`
@@ -88,7 +88,7 @@ Item {
             id: weekDaysRow
             Layout.alignment: Qt.AlignHCenter
             Layout.fillHeight: false
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
             Repeater {
                 model: CalendarLayout.weekDays
                 delegate: CalendarDayButton {
@@ -108,7 +108,7 @@ Item {
             delegate: RowLayout {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.fillHeight: false
-                spacing: Appearance.spacing.small
+                spacing: Appearance.spacing.space100
                 Repeater {
                     model: Array(7).fill(modelData)
                     delegate: CalendarDayButton {

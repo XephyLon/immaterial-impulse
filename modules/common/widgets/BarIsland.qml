@@ -6,8 +6,8 @@ Rectangle {
     id: root
 
     default property alias content: container.data
-    property int padding: Appearance.spacing.normal
-    property int spacing: Appearance.spacing.small
+    property int padding: Appearance.spacing.space150
+    property int spacing: Appearance.spacing.space100
 
     implicitHeight: 34
     implicitWidth: container.implicitWidth + padding

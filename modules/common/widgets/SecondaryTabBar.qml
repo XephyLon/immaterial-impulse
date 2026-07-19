@@ -6,7 +6,7 @@ import qs.modules.common.models
 
 TabBar {
     id: root
-    property real indicatorPadding: 8
+    property real indicatorPadding: Appearance.spacing.space100
     Layout.fillWidth: true
 
     background: Item {

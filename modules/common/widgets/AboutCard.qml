@@ -30,9 +30,9 @@ Rectangle {
     RowLayout {
         id: cardRow
         anchors.fill: parent
-        anchors.leftMargin: Appearance.spacing.large
-        anchors.rightMargin: Appearance.spacing.large
-        spacing: Appearance.spacing.large
+        anchors.leftMargin: Appearance.spacing.space200
+        anchors.rightMargin: Appearance.spacing.space200
+        spacing: Appearance.spacing.space200
 
         MaterialShapeWrappedMaterialSymbol {
             Layout.alignment: Qt.AlignVCenter
@@ -46,7 +46,7 @@ Rectangle {
         ColumnLayout {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignVCenter
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
 
             StyledText {
                 Layout.fillWidth: true

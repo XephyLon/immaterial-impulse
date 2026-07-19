@@ -15,7 +15,7 @@ Item {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: statusRow.top
-        anchors.bottomMargin: Appearance.spacing.small
+        anchors.bottomMargin: Appearance.spacing.space100
 
         clip: true
         layer.enabled: true

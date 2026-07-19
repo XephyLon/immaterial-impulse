@@ -142,7 +142,7 @@ OverlayBackground {
     ColumnLayout {
         id: contentItem
         anchors.fill: parent
-        spacing: -Appearance.spacing.large
+        spacing: -Appearance.spacing.space200
 
         ScrollView {
             id: editorScrollView
@@ -164,7 +164,7 @@ OverlayBackground {
                 persistentSelection: true
                 textFormat: TextEdit.PlainText
                 background: null
-                padding: Appearance.spacing.huge
+                padding: Appearance.spacing.space300
 
                 onTextChanged: {
                     if (textInput.activeFocus) {
@@ -194,7 +194,7 @@ OverlayBackground {
                         required property var modelData
                         readonly property real lineHeight: Math.min(Math.max(modelData.height, Appearance.font.pixelSize.normal + 6), root.maxCopyButtonSize)
                         readonly property real iconSizeLocal: Appearance.font.pixelSize.normal
-                        readonly property real hitPadding: 6
+                        readonly property real hitPadding: Appearance.spacing.space75
                         property bool justCopied: false
 
                         implicitHeight: lineHeight
@@ -202,7 +202,7 @@ OverlayBackground {
                         buttonRadius: height / 2
                         y: modelData.y
                         anchors.right: parent.right
-                        anchors.rightMargin: Appearance.spacing.normal
+                        anchors.rightMargin: Appearance.spacing.space150
                         z: 5
 
                         Timer {
@@ -237,7 +237,7 @@ OverlayBackground {
         StyledText {
             id: statusLabel
             Layout.fillWidth: true
-            Layout.margins: Appearance.spacing.large
+            Layout.margins: Appearance.spacing.space200
             horizontalAlignment: Text.AlignRight
             text: saveDebounce.running ? Translation.tr("Saving...") : Translation.tr("Saved    ")
             color: Appearance.colors.colSubtext

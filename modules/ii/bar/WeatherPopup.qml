@@ -11,11 +11,11 @@ StyledPopup {
     ColumnLayout {
         id: mainLayout
         implicitWidth: 340 
-        spacing: Appearance.spacing.small
+        spacing: Appearance.spacing.space100
 
-        Layout.topMargin: -Appearance.spacing.small
-        Layout.leftMargin: -Appearance.spacing.small
-        Layout.rightMargin: -Appearance.spacing.small
+        Layout.topMargin: -Appearance.spacing.space100
+        Layout.leftMargin: -Appearance.spacing.space100
+        Layout.rightMargin: -Appearance.spacing.space100
 
         Rectangle {
             Layout.fillWidth: true
@@ -33,13 +33,13 @@ StyledPopup {
 
             Item {
                 anchors.fill: parent
-                anchors.margins: Appearance.spacing.large
+                anchors.margins: Appearance.spacing.space200
 
                 ColumnLayout {
                     anchors.left: parent.left
                     anchors.top: parent.top
-                    anchors.topMargin: -Appearance.spacing.small
-                    spacing: -Appearance.spacing.unsharpen
+                    anchors.topMargin: -Appearance.spacing.space100
+                    spacing: -Appearance.spacing.space25
 
                     StyledText {
                         text: Weather.data?.city ?? "Paris, France"
@@ -59,8 +59,8 @@ StyledPopup {
                 RowLayout {
                     anchors.left: parent.left
                     anchors.bottom: parent.bottom
-                    anchors.bottomMargin: -Appearance.spacing.small
-                    spacing: Appearance.spacing.verysmall
+                    anchors.bottomMargin: -Appearance.spacing.space100
+                    spacing: Appearance.spacing.space50
 
                     StyledText {
                         text: Weather.data?.temp ?? "3"
@@ -73,7 +73,7 @@ StyledPopup {
                 MaterialShapeWrappedMaterialSymbol {
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    anchors.topMargin: -Appearance.spacing.verysmall
+                    anchors.topMargin: -Appearance.spacing.space50
                     shape: MaterialShape.Shape.Sunny
                     text: Icons.getWeatherIcon(Weather.data.wCode) ?? "cloud"
                     iconSize: 40
@@ -85,12 +85,12 @@ StyledPopup {
                 ColumnLayout {
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
-                    anchors.rightMargin: Appearance.spacing.small
-                    anchors.bottomMargin: -Appearance.spacing.hairline
-                    spacing: -Appearance.spacing.unsharpen
+                    anchors.rightMargin: Appearance.spacing.space100
+                    anchors.bottomMargin: -Appearance.spacing.space25
+                    spacing: -Appearance.spacing.space25
 
                     RowLayout {
-                        spacing: Appearance.spacing.verysmall
+                        spacing: Appearance.spacing.space50
                         Layout.alignment: Qt.AlignRight
                         MaterialSymbol {
                             text: "wb_twilight"
@@ -106,7 +106,7 @@ StyledPopup {
                     }
 
                     RowLayout {
-                        spacing: Appearance.spacing.verysmall
+                        spacing: Appearance.spacing.space50
                         Layout.alignment: Qt.AlignRight
                         MaterialSymbol {
                             text: "bedtime"
@@ -131,9 +131,9 @@ StyledPopup {
             columnSpacing: 4
             uniformCellWidths: true
             
-            Layout.leftMargin: Appearance.spacing.unsharpen
-            Layout.rightMargin: Appearance.spacing.unsharpen
-            Layout.bottomMargin: Appearance.spacing.unsharpen
+            Layout.leftMargin: Appearance.spacing.space25
+            Layout.rightMargin: Appearance.spacing.space25
+            Layout.bottomMargin: Appearance.spacing.space25
             Layout.fillWidth: true
 
             WeatherCard {

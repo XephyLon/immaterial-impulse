@@ -18,7 +18,7 @@ MouseArea { // Notification group area
     property bool multipleNotifications: notificationCount > 1
     property bool expanded: false
     property bool popup: false
-    property real padding: Appearance.spacing.normal
+    property real padding: Appearance.spacing.space150
     implicitHeight: background.implicitHeight
 
     property real dragConfirmThreshold: 70 // Drag further to discard notification
@@ -150,7 +150,7 @@ MouseArea { // Notification group area
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.margins: root.padding
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.space150
 
             NotificationAppIcon { // Icons
                 Layout.alignment: Qt.AlignTop
@@ -185,7 +185,7 @@ MouseArea { // Notification group area
                         anchors.left: parent.left
                         anchors.right: expandButton.left
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: Appearance.spacing.small
+                        spacing: Appearance.spacing.space100
                         StyledText {
                             id: appName
                             elide: Text.ElideRight
@@ -203,7 +203,7 @@ MouseArea { // Notification group area
                         StyledText {
                             id: timeText
                             // Layout.fillWidth: true
-                            Layout.rightMargin: Appearance.spacing.normal
+                            Layout.rightMargin: Appearance.spacing.space150
                             horizontalAlignment: Text.AlignLeft
                             text: NotificationUtils.getFriendlyNotifTimeString(notificationGroup?.time)
                             font.pixelSize: topRow.fontSize
@@ -230,7 +230,7 @@ MouseArea { // Notification group area
                     id: notificationsColumn
                     implicitHeight: contentHeight
                     Layout.fillWidth: true
-                    spacing: expanded ? 5 : 3
+                    spacing: expanded ? Appearance.spacing.space50 : Appearance.spacing.space50
                     // clip: true
                     interactive: false
                     Behavior on spacing {

@@ -209,7 +209,7 @@ Scope {
                                 id: protectionMessageBackground
                                 anchors.centerIn: parent
                                 color: Appearance.m3colors.m3error
-                                property real padding: Appearance.spacing.normal
+                                property real padding: Appearance.spacing.space150
                                 implicitHeight: protectionMessageRowLayout.implicitHeight + padding * 2
                                 implicitWidth: protectionMessageRowLayout.implicitWidth + padding * 2
                                 radius: Appearance.rounding.normal

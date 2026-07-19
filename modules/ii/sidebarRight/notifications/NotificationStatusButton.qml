@@ -27,7 +27,7 @@ GroupButton {
         RowLayout {
             id: contentRowLayout
             anchors.centerIn: parent
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
             MaterialSymbol {
                 visible: buttonIcon !== ""
                 text: buttonIcon

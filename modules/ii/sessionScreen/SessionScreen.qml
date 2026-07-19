@@ -67,7 +67,7 @@ Scope {
             ColumnLayout { // Content column
                 id: contentColumn
                 anchors.centerIn: parent
-                spacing: Appearance.spacing.large
+                spacing: Appearance.spacing.space200
 
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Escape) {
@@ -241,10 +241,10 @@ Scope {
             ColumnLayout {
                 anchors {
                     top: contentColumn.bottom
-                    topMargin: Appearance.spacing.normal
+                    topMargin: Appearance.spacing.space150
                     horizontalCenter: contentColumn.horizontalCenter
                 }
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.space150
 
                 Loader {
                     Layout.alignment: Qt.AlignHCenter

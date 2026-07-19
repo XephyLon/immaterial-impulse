@@ -23,17 +23,6 @@ TestCase {
             compare(actual[i], expected[i], "space token at index " + i);
     }
 
-    function test_compatibilityAliases() {
-        compare(Appearance.spacing.hairline, Appearance.spacing.space25, "hairline");
-        compare(Appearance.spacing.unsharpen, Appearance.spacing.space25, "unsharpen");
-        compare(Appearance.spacing.verysmall, Appearance.spacing.space50, "verysmall");
-        compare(Appearance.spacing.small, Appearance.spacing.space100, "small");
-        compare(Appearance.spacing.normal, Appearance.spacing.space150, "normal");
-        compare(Appearance.spacing.large, Appearance.spacing.space200, "large");
-        compare(Appearance.spacing.verylarge, Appearance.spacing.space250, "verylarge");
-        compare(Appearance.spacing.huge, Appearance.spacing.space300, "huge");
-    }
-
     function test_borderWidthTokens() {
         compare(Appearance.borderWidth.standard, 1, "border standard");
         compare(Appearance.borderWidth.emphasis, 2, "border emphasis");

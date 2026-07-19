@@ -5,8 +5,8 @@ Rectangle {
     id: root
     property string key
 
-    property real horizontalPadding: 6
-    property real verticalPadding: 1
+    property real horizontalPadding: Appearance.spacing.space75
+    property real verticalPadding: Appearance.spacing.space25
     property real borderWidth: 1
     property real extraBottomBorderWidth: 2
     property color borderColor: Appearance.colors.colOnLayer0

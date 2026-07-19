@@ -19,8 +19,8 @@ Rectangle {
     implicitHeight: contentItem.implicitHeight + root.verticalPadding * 2
     radius: Appearance.rounding.normal
     color: Appearance.colors.colLayer1
-    property real verticalPadding: 4
-    property real horizontalPadding: 12
+    property real verticalPadding: Appearance.spacing.space50
+    property real horizontalPadding: Appearance.spacing.space150
 
     Column {
         id: contentItem

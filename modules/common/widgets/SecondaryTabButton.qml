@@ -91,7 +91,7 @@ TabButton {
         id: buttonBackground
         anchors {
             fill: parent
-            margins: Appearance.spacing.verysmall
+            margins: Appearance.spacing.space50
         }
         radius: Appearance?.rounding.normal
         implicitHeight: 42
@@ -149,7 +149,7 @@ TabButton {
                 id: iconLoader
                 active: buttonIcon?.length > 0
                 sourceComponent: buttonIcon?.length > 0 ? materialSymbolComponent : null
-                Layout.rightMargin: Appearance.spacing.small
+                Layout.rightMargin: Appearance.spacing.space100
             }
 
             Component {

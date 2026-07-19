@@ -16,8 +16,8 @@ AbstractQuickPanel {
 
     ButtonGroup {
         id: buttonGroup
-        spacing: Appearance.spacing.small
-        padding: Appearance.spacing.small
+        spacing: Appearance.spacing.space100
+        padding: Appearance.spacing.space100
         color: Appearance.colors.colLayer1
 
         NetworkToggle {

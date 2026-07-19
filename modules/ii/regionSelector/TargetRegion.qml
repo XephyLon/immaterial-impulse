@@ -18,7 +18,7 @@ Rectangle {
     property color borderColor
     property color fillColor: "transparent"
     property string text: ""
-    property real textPadding: 10
+    property real textPadding: Appearance.spacing.space125
     z: 2
     color: fillColor
     border.color: borderColor
@@ -48,8 +48,8 @@ Rectangle {
         
         active: root.showLabel
         sourceComponent: Rectangle {
-            property real verticalPadding: 5
-            property real horizontalPadding: 10
+            property real verticalPadding: Appearance.spacing.space50
+            property real horizontalPadding: Appearance.spacing.space125
             radius: 10
             color: root.colBackground
             border.width: Appearance.borderWidth.standard
@@ -60,7 +60,7 @@ Rectangle {
             Row {
                 id: regionInfoRow
                 anchors.centerIn: parent
-                spacing: Appearance.spacing.verysmall
+                spacing: Appearance.spacing.space50
 
                 Loader {
                     id: regionIconLoader

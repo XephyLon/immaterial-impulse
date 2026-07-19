@@ -18,7 +18,7 @@ TabButton {
 
     property real baseSize: 56
     property real baseHighlightHeight: 32
-    property real highlightCollapsedTopMargin: 8
+    property real highlightCollapsedTopMargin: Appearance.spacing.space100
     padding: 0
 
     // The navigation item’s target area always spans the full width of the
@@ -118,7 +118,7 @@ TabButton {
             id: itemText
             anchors {
                 top: itemIconBackground.bottom
-                topMargin: Appearance.spacing.unsharpen
+                topMargin: Appearance.spacing.space25
                 horizontalCenter: itemIconBackground.horizontalCenter
             }
             states: State {

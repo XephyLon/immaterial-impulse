@@ -75,10 +75,10 @@ Item {
     Rectangle {
         id: background
         anchors.fill: parent
-        anchors.leftMargin: Appearance.spacing.verysmall
-        anchors.rightMargin: Appearance.spacing.verysmall
-        anchors.topMargin: -Appearance.spacing.hairline
-        anchors.bottomMargin: Appearance.spacing.verysmall
+        anchors.leftMargin: Appearance.spacing.space50
+        anchors.rightMargin: Appearance.spacing.space50
+        anchors.topMargin: -Appearance.spacing.space25
+        anchors.bottomMargin: Appearance.spacing.space50
         color: ColorUtils.transparentize(artDominantColor, 0.9)
         radius: Appearance.rounding.normal
 
@@ -92,7 +92,7 @@ Item {
                 id: playerSelector
                 visible: Mpris.players.values.length > 1
                 Layout.fillWidth: true
-                Layout.bottomMargin: Appearance.spacing.small
+                Layout.bottomMargin: Appearance.spacing.space100
                 model: Mpris.players.values.map(p => p.identity ?? p.desktopEntry ?? "Unknown")
                 currentIndex: 0
             }
@@ -138,8 +138,8 @@ Item {
             // ── Title & Artist ──
             ColumnLayout {
                 Layout.fillWidth: true
-                Layout.topMargin: Appearance.spacing.verylarge
-                spacing: Appearance.spacing.small
+                Layout.topMargin: Appearance.spacing.space250
+                spacing: Appearance.spacing.space100
 
                 Item {
                     Layout.fillWidth: true
@@ -219,8 +219,8 @@ Item {
             // ── Progress ──
             RowLayout {
                 Layout.fillWidth: true
-                Layout.topMargin: Appearance.spacing.small
-                spacing: Appearance.spacing.normal
+                Layout.topMargin: Appearance.spacing.space100
+                spacing: Appearance.spacing.space150
 
                 StyledText {
                     font.pixelSize: Appearance.font.pixelSize.normal
@@ -279,9 +279,9 @@ Item {
             // ── Controls ──
             RowLayout {
                 Layout.fillWidth: true
-                Layout.topMargin: Appearance.spacing.verylarge
+                Layout.topMargin: Appearance.spacing.space250
                 Layout.alignment: Qt.AlignHCenter
-                spacing: Appearance.spacing.large
+                spacing: Appearance.spacing.space200
 
                 RippleButton {
                     property real baseSize: Math.max(42, parent.parent.height * 0.06)
@@ -344,8 +344,8 @@ Item {
             // ── Volume ──
             RowLayout {
                 Layout.fillWidth: true
-                Layout.topMargin: Appearance.spacing.normal
-                spacing: Appearance.spacing.small
+                Layout.topMargin: Appearance.spacing.space150
+                spacing: Appearance.spacing.space100
 
                 RippleButton {
                     property real baseSize: Math.max(36, parent.parent.height * 0.05)

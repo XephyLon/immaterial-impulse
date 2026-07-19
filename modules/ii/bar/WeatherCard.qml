@@ -20,9 +20,9 @@ Rectangle {
         id: columnLayout
         anchors {
             fill: parent
-            margins: Appearance.spacing.normal
+            margins: Appearance.spacing.space150
         }
-        spacing: -Appearance.spacing.verysmall
+        spacing: -Appearance.spacing.space50
 
         RowLayout {
             Layout.fillWidth: true

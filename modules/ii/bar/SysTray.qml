@@ -136,8 +136,8 @@ Item {
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
                 Layout.fillHeight: !root.vertical
                 Layout.fillWidth: root.vertical
-                Layout.leftMargin: Appearance.spacing.small
-                Layout.rightMargin: Appearance.spacing.small
+                Layout.leftMargin: Appearance.spacing.space100
+                Layout.rightMargin: Appearance.spacing.space100
                 onMenuClosed: root.releaseFocus()
                 onMenuOpened: (qsWindow) => root.setExtraWindowAndGrabFocus(qsWindow)
             }

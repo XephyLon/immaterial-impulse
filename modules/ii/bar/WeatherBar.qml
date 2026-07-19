@@ -39,7 +39,7 @@ MouseArea {
     Component {
         id: rowContent
         RowLayout {
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             MaterialSymbol {
                 visible: !root.isMaterial
@@ -64,7 +64,7 @@ MouseArea {
                 color: Appearance.colors.colPrimary
                 text: Weather.data?.temp ?? "--°"
                 Layout.alignment: Qt.AlignVCenter
-                leftPadding: Appearance.spacing.small
+                leftPadding: Appearance.spacing.space100
             }
 
             Rectangle {
@@ -88,7 +88,7 @@ MouseArea {
     Component {
         id: colContent
         ColumnLayout {
-            spacing: root.isMaterial ? 2 : 0
+            spacing: root.isMaterial ? Appearance.spacing.space25 : 0
 
             MaterialSymbol {
                 visible: !root.isMaterial
@@ -113,7 +113,7 @@ MouseArea {
                 color: Appearance.colors.colPrimary
                 text: (Weather.data?.temp ?? "--°").replace(/[CF]$/, "")
                 Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: Appearance.spacing.verysmall
+                Layout.topMargin: Appearance.spacing.space50
             }
 
             Rectangle {

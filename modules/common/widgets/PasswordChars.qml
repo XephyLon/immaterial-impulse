@@ -49,7 +49,7 @@ StyledFlickable {
         anchors {
             left: parent.left
             verticalCenter: parent.verticalCenter
-            leftMargin: Appearance.spacing.verysmall - 5 // -5 to account for spacing being simulated by char item width
+            leftMargin: Appearance.spacing.space50 - 5 // -5 to account for spacing being simulated by char item width
         }
         spacing: 0
 

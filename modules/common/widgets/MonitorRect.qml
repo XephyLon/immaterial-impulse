@@ -72,7 +72,7 @@ Rectangle {
 
     Column {
         anchors.centerIn: parent
-        spacing: Appearance.spacing.unsharpen
+        spacing: Appearance.spacing.space25
 
         MaterialSymbol {
             anchors.horizontalCenter: parent.horizontalCenter

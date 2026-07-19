@@ -68,8 +68,8 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.leftMargin: Appearance.spacing.verysmall
-        spacing: -Appearance.spacing.verysmall
+        anchors.leftMargin: Appearance.spacing.space50
+        spacing: -Appearance.spacing.space50
 
         StyledText {
             Layout.fillWidth: true

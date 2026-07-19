@@ -24,12 +24,12 @@ ButtonMouseArea {
     property bool superPressAndHeld: false // Relevant modifications at bottom of file
 
     property real workspaceButtonWidth: Config.options.bar.cornerStyle === 3 ? 30 : 26
-    property real activeWorkspaceMargin: 2
+    property real activeWorkspaceMargin: Appearance.spacing.space25
     property real activeWorkspaceSize: workspaceButtonWidth - activeWorkspaceMargin * 2
     property real workspaceIconSize: workspaceButtonWidth * 0.69
     property real workspaceIconSizeShrinked: workspaceButtonWidth * 0.55
     property real workspaceIconOpacityShrinked: 1
-    property real workspaceIconMarginShrinked: -4
+    property real workspaceIconMarginShrinked: -Appearance.spacing.space50
     property int workspaceIndexInGroup: (monitor?.activeWorkspace?.id - 1) % wsModel.shownCount
     property real specialTextSize: workspaceButtonWidth * 0.5
 

@@ -68,17 +68,10 @@ is `0, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, 36, 40, 48, 56, 64, 72`, exposed 
 `space900`. `space100` (8px) is the base unit. Prefer multiples of 8 for the main layout rhythm and
 the intervening tokens for nested spacing. Snap raw spacing/padding/margin values to this scale.
 
-- `hairline` / `unsharpen` (2px, alias of `space25`): Hairline gaps and icon-to-text kerning.
-- `verysmall` (4px): Tightest padding, chip internal insets.
-- `small` (8px): Standard tight spacing.
-- `normal` (12px): Default row/item spacing.
-- `large` (16px): Section/group spacing.
-- `verylarge` (20px): Outer container padding, generous gaps.
-- `huge` (24px): Largest step, prominent section separation.
-
-The semantic names above are compatibility aliases; new code should prefer `spaceNNN` names. Only
-genuine large one-off *dimensions* outside the 0-72 range stay literals. Negative offsets use the
-negated token (for example, `-Appearance.spacing.space50`).
+Use the canonical `spaceNNN` names directly; semantic aliases are intentionally not provided because
+they hide the actual spatial relationship. Only genuine large one-off *dimensions* outside the
+0-72 range stay literals. Negative offsets use the negated token (for example,
+`-Appearance.spacing.space50`).
 `tests/lint_spacing.py` (run by `tests/run_tests.sh` / CI) fails on any raw spacing literal in the
 token range.
 

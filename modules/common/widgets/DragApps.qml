@@ -18,8 +18,8 @@ Item {
     id: root
 
     property real btnSize: 46
-    property real btnSpacing: 2
-    property real buttonPadding: 5
+    property real btnSpacing: Appearance.spacing.space25
+    property real buttonPadding: Appearance.spacing.space50
     property var pinnedApps: Config.options?.dock.pinnedApps ?? []
     property real maxWindowPreviewHeight: 200
     property real maxWindowPreviewWidth: 300
@@ -190,10 +190,10 @@ Item {
                     }
 
                     RowLayout {
-                        spacing: Appearance.spacing.verysmall
+                        spacing: Appearance.spacing.space50
                         anchors {
                             top: appIcon.bottom
-                            topMargin: Appearance.spacing.unsharpen
+                            topMargin: Appearance.spacing.space25
                             horizontalCenter: parent.horizontalCenter
                         }
                         Repeater {
@@ -339,7 +339,7 @@ Item {
 
             Rectangle {
                 id: popupBackground
-                property real padding: Appearance.spacing.small
+                property real padding: Appearance.spacing.space100
                 opacity: previewPopup.show ? 1 : 0
                 visible: opacity > 0
                 Behavior on opacity {
@@ -386,7 +386,7 @@ Item {
                                     contentWidth: parent.width - anchors.margins * 2
 
                                     StyledText {
-                                        Layout.margins: Appearance.spacing.small
+                                        Layout.margins: Appearance.spacing.space100
                                         Layout.fillWidth: true
                                         font.pixelSize: Appearance.font.pixelSize.small
                                         text: windowButton.modelData?.title

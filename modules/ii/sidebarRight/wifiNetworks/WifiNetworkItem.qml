@@ -28,7 +28,7 @@ DialogListItem {
 
         RowLayout {
             // Name
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.space150
             MaterialSymbol {
                 iconSize: Appearance.font.pixelSize.larger
                 property int strength: root.wifiNetwork?.strength ?? 0
@@ -52,7 +52,7 @@ DialogListItem {
 
         ColumnLayout { // Password
             id: passwordPrompt
-            Layout.topMargin: Appearance.spacing.small
+            Layout.topMargin: Appearance.spacing.space100
             visible: root.wifiNetwork?.askingPassword ?? false
 
             MaterialTextField {
@@ -94,7 +94,7 @@ DialogListItem {
 
         ColumnLayout { // Public wifi login page
             id: publicWifiPortal
-            Layout.topMargin: Appearance.spacing.small
+            Layout.topMargin: Appearance.spacing.space100
             visible: (root.wifiNetwork?.active && (root.wifiNetwork?.security ?? "").trim().length === 0) ?? false
 
             RowLayout {

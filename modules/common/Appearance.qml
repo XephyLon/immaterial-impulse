@@ -240,16 +240,6 @@ Singleton {
         property int space800: 64
         property int space900: 72
 
-        // Compatibility aliases used throughout the shell. New code should
-        // prefer the canonical spaceNNN token when the intended value is known.
-        property int hairline: space25
-        property int unsharpen: space25
-        property int verysmall: space50
-        property int small: space100
-        property int normal: space150
-        property int large: space200
-        property int verylarge: space250
-        property int huge: space300
     }
 
     borderWidth: QtObject {
@@ -458,7 +448,7 @@ Singleton {
         property real barCenterSideModuleWidthHellaShortened: 190
         property real barShortenScreenWidthThreshold: 1200 // Shorten if screen width is at most this value
         property real barHellaShortenScreenWidthThreshold: 1000 // Shorten even more...
-        property real elevationMargin: 10
+        property real elevationMargin: root.spacing.space125
         property real fabShadowRadius: 5
         property real fabHoveredShadowRadius: 7
         property real hyprlandGapsOut: 5
@@ -475,8 +465,8 @@ Singleton {
             (baseVerticalBarWidth + root.sizes.hyprlandGapsOut * 2) : baseVerticalBarWidth
         property real wallpaperSelectorWidth: 1200
         property real wallpaperSelectorHeight: 690
-        property real wallpaperSelectorItemMargins: 8
-        property real wallpaperSelectorItemPadding: 6
+        property real wallpaperSelectorItemMargins: root.spacing.space100
+        property real wallpaperSelectorItemPadding: root.spacing.space75
     }
 
     syntaxHighlightingTheme: root.m3colors.darkmode ? "Monokai" : "ayu Light"

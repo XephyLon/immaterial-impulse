@@ -80,7 +80,7 @@ Rectangle {
                 fill: parent
                 margins: dialogBackground.radius
             }
-            spacing: Appearance.spacing.large
+            spacing: Appearance.spacing.space200
             opacity: root.show ? 1 : 0
             Behavior on opacity {
                 animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)

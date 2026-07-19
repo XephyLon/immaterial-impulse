@@ -42,7 +42,7 @@ Item {
     property int workspaceZ: 0
     property int windowZ: 1
     property int windowDraggingZ: 99999
-    property real workspaceSpacing: 5
+    property real workspaceSpacing: Appearance.spacing.space50
 
     property int draggingFromWorkspace: -1
     property int draggingTargetWorkspace: -1
@@ -73,7 +73,7 @@ Item {
     }
     Rectangle { // Background
         id: overviewBackground
-        property real padding: Appearance.spacing.normal
+        property real padding: Appearance.spacing.space150
         anchors.fill: parent
         anchors.margins: Appearance.sizes.elevationMargin
 

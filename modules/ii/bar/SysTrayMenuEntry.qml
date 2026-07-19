@@ -27,8 +27,8 @@ RippleButton {
     horizontalPadding: 12
     implicitWidth: contentItem.implicitWidth + horizontalPadding * 2
     implicitHeight: menuEntry.isSeparator ? 1 : 36
-    Layout.topMargin: menuEntry.isSeparator ? 4 : 0
-    Layout.bottomMargin: menuEntry.isSeparator ? 4 : 0
+    Layout.topMargin: menuEntry.isSeparator ? Appearance.spacing.space50 : 0
+    Layout.bottomMargin: menuEntry.isSeparator ? Appearance.spacing.space50 : 0
     Layout.fillWidth: true
 
     Component.onCompleted: {
@@ -58,7 +58,7 @@ RippleButton {
             leftMargin: root.horizontalPadding
             rightMargin: root.horizontalPadding
         }
-        spacing: Appearance.spacing.small
+        spacing: Appearance.spacing.space100
         visible: !root.menuEntry.isSeparator
 
         // Interaction: checkbox or radio button

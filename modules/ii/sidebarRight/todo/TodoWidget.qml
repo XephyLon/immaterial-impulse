@@ -9,9 +9,9 @@ Item {
     id: root
     property var tabButtonList: [{"icon": "checklist", "name": Translation.tr("Unfinished")}, {"name": Translation.tr("Done"), "icon": "check_circle"}]
     property bool showAddDialog: false
-    property int dialogMargins: 20
+    property int dialogMargins: Appearance.spacing.space250
     property int fabSize: 48
-    property int fabMargins: 14
+    property int fabMargins: Appearance.spacing.space175
 
     Keys.onPressed: (event) => {
         if ((event.key === Qt.Key_PageDown || event.key === Qt.Key_PageUp) && event.modifiers === Qt.NoModifier) {
@@ -53,10 +53,10 @@ Item {
 
         SwipeView {
             id: swipeView
-            Layout.topMargin: Appearance.spacing.normal
+            Layout.topMargin: Appearance.spacing.space150
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.space150
             clip: true
             currentIndex: tabBar.currentIndex
 
@@ -154,12 +154,12 @@ Item {
             ColumnLayout {
                 id: dialogColumnLayout
                 anchors.fill: parent
-                spacing: Appearance.spacing.large
+                spacing: Appearance.spacing.space200
 
                 StyledText {
-                    Layout.topMargin: Appearance.spacing.large
-                    Layout.leftMargin: Appearance.spacing.large
-                    Layout.rightMargin: Appearance.spacing.large
+                    Layout.topMargin: Appearance.spacing.space200
+                    Layout.leftMargin: Appearance.spacing.space200
+                    Layout.rightMargin: Appearance.spacing.space200
                     Layout.alignment: Qt.AlignLeft
                     color: Appearance.m3colors.m3onSurface
                     font.pixelSize: Appearance.font.pixelSize.larger
@@ -169,9 +169,9 @@ Item {
                 TextField {
                     id: todoInput
                     Layout.fillWidth: true
-                    Layout.leftMargin: Appearance.spacing.large
-                    Layout.rightMargin: Appearance.spacing.large
-                    padding: Appearance.spacing.normal
+                    Layout.leftMargin: Appearance.spacing.space200
+                    Layout.rightMargin: Appearance.spacing.space200
+                    padding: Appearance.spacing.space150
                     color: activeFocus ? Appearance.m3colors.m3onSurface : Appearance.m3colors.m3onSurfaceVariant
                     renderType: Text.NativeRendering
                     selectedTextColor: Appearance.m3colors.m3onSecondaryContainer
@@ -197,11 +197,11 @@ Item {
                 }
 
                 RowLayout {
-                    Layout.bottomMargin: Appearance.spacing.large
-                    Layout.leftMargin: Appearance.spacing.large
-                    Layout.rightMargin: Appearance.spacing.large
+                    Layout.bottomMargin: Appearance.spacing.space200
+                    Layout.leftMargin: Appearance.spacing.space200
+                    Layout.rightMargin: Appearance.spacing.space200
                     Layout.alignment: Qt.AlignRight
-                    spacing: Appearance.spacing.small
+                    spacing: Appearance.spacing.space100
 
                     DialogButton {
                         buttonText: Translation.tr("Cancel")

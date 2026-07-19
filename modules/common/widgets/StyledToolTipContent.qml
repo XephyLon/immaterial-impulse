@@ -8,8 +8,8 @@ Item {
     id: root
     required property string text
     property bool shown: false
-    property real horizontalPadding: 10
-    property real verticalPadding: 5
+    property real horizontalPadding: Appearance.spacing.space125
+    property real verticalPadding: Appearance.spacing.space50
     property alias font: tooltipTextObject.font
     implicitWidth: tooltipTextObject.implicitWidth + 2 * root.horizontalPadding
     implicitHeight: tooltipTextObject.implicitHeight + 2 * root.verticalPadding

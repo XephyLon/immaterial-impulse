@@ -41,9 +41,9 @@ MouseArea {
                     spacing: 0
                     MaterialSymbol {
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.topMargin: Appearance.spacing.unsharpen
-                        Layout.leftMargin: -Appearance.spacing.unsharpen
-                        Layout.rightMargin: -Appearance.spacing.unsharpen
+                        Layout.topMargin: Appearance.spacing.space25
+                        Layout.leftMargin: -Appearance.spacing.space25
+                        Layout.rightMargin: -Appearance.spacing.space25
                         fill: 1
                         text: "bolt"
                         iconSize: Appearance.font.pixelSize.smaller
@@ -51,7 +51,7 @@ MouseArea {
                     }
                     StyledText {
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.topMargin: Appearance.spacing.unsharpen
+                        Layout.topMargin: Appearance.spacing.space25
                         font: batteryProgress.font
                         text: batteryProgress.text
                     }
@@ -65,18 +65,18 @@ MouseArea {
                 anchors.centerIn: parent
                 sourceComponent: ColumnLayout {
                     rotation: 90
-                    spacing: -Appearance.spacing.small
+                    spacing: -Appearance.spacing.space100
                     MaterialSymbol {
                         Layout.alignment: Qt.AlignHCenter
                         fill: 1
                         text: "bolt"
-                        Layout.topMargin: Appearance.spacing.verysmall
+                        Layout.topMargin: Appearance.spacing.space50
                         iconSize: Appearance.font.pixelSize.smaller
                         visible: root.isCharging && root.percentage < 1
                     }
                     StyledText {
                         Layout.alignment: Qt.AlignHCenter
-                        Layout.topMargin: root.isCharging ? 2 : 4
+                        Layout.topMargin: root.isCharging ? Appearance.spacing.space25 : Appearance.spacing.space50
                         font: batteryProgress.font
                         text: root.percentage * 100 
                         visible: root.percentage < 1

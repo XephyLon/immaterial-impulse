@@ -74,7 +74,7 @@ Scope { // Scope
                 anchors.centerIn: parent
                 color: Appearance.colors.colLayer0
                 radius: Appearance.rounding.windowRounding
-                property real padding: Appearance.spacing.normal
+                property real padding: Appearance.spacing.space150
                 implicitWidth: oskRowLayout.implicitWidth + padding * 2
                 implicitHeight: oskRowLayout.implicitHeight + padding * 2
 
@@ -87,7 +87,7 @@ Scope { // Scope
                 RowLayout {
                     id: oskRowLayout
                     anchors.centerIn: parent
-                    spacing: Appearance.spacing.small
+                    spacing: Appearance.spacing.space100
                     VerticalButtonGroup {
                         OskControlButton { // Pin button
                             toggled: root.pinned
@@ -111,8 +111,8 @@ Scope { // Scope
                         }
                     }
                     Rectangle {
-                        Layout.topMargin: Appearance.spacing.verylarge
-                        Layout.bottomMargin: Appearance.spacing.verylarge
+                        Layout.topMargin: Appearance.spacing.space250
+                        Layout.bottomMargin: Appearance.spacing.space250
                         Layout.fillHeight: true
                         implicitWidth: 1
                         color: Appearance.colors.colOutlineVariant

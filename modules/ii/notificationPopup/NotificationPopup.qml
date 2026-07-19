@@ -39,8 +39,8 @@ Scope {
                 top: parent.top
                 bottom: parent.bottom
                 right: parent.right
-                rightMargin: Appearance.spacing.verysmall
-                topMargin: Appearance.spacing.verysmall
+                rightMargin: Appearance.spacing.space50
+                topMargin: Appearance.spacing.space50
             }
             implicitWidth: parent.width - Appearance.sizes.elevationMargin * 2
             popup: true

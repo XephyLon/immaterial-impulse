@@ -156,10 +156,10 @@ Item {
         visible: active
         anchors.fill: parent
         sourceComponent: RowLayout {
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
             ClippedFilledCircularProgress {
                 Layout.alignment: Qt.AlignVCenter
-                Layout.leftMargin: Appearance.spacing.verysmall
+                Layout.leftMargin: Appearance.spacing.space50
                 implicitSize: 20
                 lineWidth: Appearance.rounding.unsharpen
                 value: root.activePlayer?.position / root.activePlayer?.length
@@ -200,7 +200,7 @@ Item {
         sourceComponent: RowLayout {
             id: innerRow
             anchors.centerIn: parent
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
 
             // No platyer 
             Loader {
@@ -208,7 +208,7 @@ Item {
                 visible: active
                 Layout.alignment: Qt.AlignVCenter
                 sourceComponent: RowLayout {
-                    spacing: Appearance.spacing.small
+                    spacing: Appearance.spacing.space100
 
                     // Avatar
                     Rectangle {
@@ -253,9 +253,9 @@ Item {
                     }
 
                     ColumnLayout {
-                        spacing: -Appearance.spacing.verysmall
+                        spacing: -Appearance.spacing.space50
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.topMargin: Appearance.spacing.unsharpen
+                        Layout.topMargin: Appearance.spacing.space25
 
                         StyledText {
                             text: SystemInfo.username
@@ -271,7 +271,7 @@ Item {
                             color: Appearance.colors.colOnSecondaryContainer
                             opacity: 0.7
                             elide: Text.ElideRight
-                            Layout.rightMargin: Appearance.spacing.small
+                            Layout.rightMargin: Appearance.spacing.space100
                             Layout.maximumWidth: 120
                             text: SystemInfo.distroName
                         }
@@ -285,7 +285,7 @@ Item {
                 visible: active
                 Layout.alignment: Qt.AlignVCenter
                 sourceComponent: RowLayout {
-                    spacing: Appearance.spacing.small
+                    spacing: Appearance.spacing.space100
 
                     // Art
                     Rectangle {
@@ -328,9 +328,9 @@ Item {
 
                     // Title + Artist
                     ColumnLayout {
-                        spacing: -Appearance.spacing.verysmall
+                        spacing: -Appearance.spacing.space50
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.topMargin: Appearance.spacing.unsharpen
+                        Layout.topMargin: Appearance.spacing.space25
 
                         StyledText {
                             id: artistText
@@ -349,7 +349,7 @@ Item {
                         }
                         StyledText {
                             id: titleText
-                            Layout.topMargin: (!root.activePlayer || root.trackArtist.length === 0) ? -13 : 0
+                            Layout.topMargin: (!root.activePlayer || root.trackArtist.length === 0) ? -Appearance.spacing.space175 : 0
                             text: StringUtils.cleanMusicTitle(root.trackTitle) || Translation.tr("No media")
                             font.pixelSize: Appearance.font.pixelSize.smallie
                             color: Appearance.colors.colOnSecondaryContainer
@@ -389,7 +389,7 @@ Item {
                     RippleButton {
                         implicitWidth: 26
                         implicitHeight: 26
-                        Layout.leftMargin: -Appearance.spacing.verysmall
+                        Layout.leftMargin: -Appearance.spacing.space50
                         buttonRadius: 13
                         colBackground: "transparent"
                         colBackgroundHover: Appearance.colors.colPrimaryContainerHover

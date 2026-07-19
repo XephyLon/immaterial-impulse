@@ -6,9 +6,9 @@ Rectangle {
     id: root
     property bool vertical: false
     property real crossAxisSize: 32
-    property real mainAxisPadding: 10
-    property real contentSpacing: 3
-    property real contentTopMargin: 3
+    property real mainAxisPadding: Appearance.spacing.space125
+    property real contentSpacing: Appearance.spacing.space50
+    property real contentTopMargin: Appearance.spacing.space50
     property color bgColor: Appearance.colors.colPrimaryContainer
 
     default property alias content: contentLayout.children

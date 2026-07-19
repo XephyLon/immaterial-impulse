@@ -13,7 +13,7 @@ Item {
     readonly property int  largeWidth:  Math.round(totalUsable * 0.38)
     readonly property int  mediumWidth: Math.round(totalUsable * 0.15)
     readonly property int  smallWidth:  Math.round(totalUsable * 0.03)
-    readonly property int  itemSpacing: 8
+    readonly property int  itemSpacing: Appearance.spacing.space100
 
     ListModel {
         id: themeModel
@@ -33,8 +33,8 @@ Item {
         model: themeModel
         orientation: ListView.Horizontal
         spacing: carouselRoot.itemSpacing
-        leftMargin: Appearance.spacing.large
-        rightMargin: Appearance.spacing.large
+        leftMargin: Appearance.spacing.space200
+        rightMargin: Appearance.spacing.space200
         clip: true
 
         snapMode: ListView.SnapToItem

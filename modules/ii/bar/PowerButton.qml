@@ -8,7 +8,7 @@ RippleButton {
     id: root
     property bool isMaterial: Config.options.bar.cornerStyle === 3
     property bool vertical: Config.options.bar.vertical
-    property real buttonPadding: 5
+    property real buttonPadding: Appearance.spacing.space50
 
     implicitWidth: 32
     implicitHeight: implicitWidth
@@ -38,6 +38,6 @@ RippleButton {
         color: Appearance.colors.colOnPrimary
         colSymbol: Appearance.colors.colPrimary
         wrappedShape: MaterialShape.Shape.Cookie12Sided
-        padding: Appearance.spacing.unsharpen
+        padding: Appearance.spacing.space25
     }
 }

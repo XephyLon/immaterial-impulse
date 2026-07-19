@@ -13,9 +13,9 @@ Item {
     property bool scaleIcon: false
     property alias from: valueProgressBar.from
     property alias to: valueProgressBar.to
-    property real valueIndicatorVerticalPadding: 9
-    property real valueIndicatorLeftPadding: 10
-    property real valueIndicatorRightPadding: 20 // An icon is circle ish, a column isn't, hence the extra padding
+    property real valueIndicatorVerticalPadding: Appearance.spacing.space125
+    property real valueIndicatorLeftPadding: Appearance.spacing.space125
+    property real valueIndicatorRightPadding: Appearance.spacing.space250 // An icon is circle ish, a column isn't, hence the extra padding
 
     implicitWidth: Appearance.sizes.osdWidth + 4 * Appearance.sizes.elevationMargin
     implicitHeight: valueIndicator.implicitHeight + 2 * Appearance.sizes.elevationMargin
@@ -33,9 +33,9 @@ Item {
 
         RowLayout { 
             id: valueRow
-            Layout.margins: Appearance.spacing.normal
+            Layout.margins: Appearance.spacing.space150
             anchors.fill: parent
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.space150
 
             StyledSlider {
                 id: valueProgressBar
@@ -52,7 +52,7 @@ Item {
                     anchors {
                         verticalCenter: valueProgressBar.verticalCenter
                         left: handlePassed ? valueProgressBar.left : valueProgressBar.handle.left
-                        leftMargin: Appearance.spacing.small
+                        leftMargin: Appearance.spacing.space100
                     }
                     color: handlePassed ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
                     renderType: Text.QtRendering

@@ -13,10 +13,10 @@ ColumnLayout {
     default property alias data: sectionContent.data
 
     Layout.fillWidth: true
-    spacing: Appearance.spacing.small
+    spacing: Appearance.spacing.space100
 
     RowLayout {
-        spacing: Appearance.spacing.small
+        spacing: Appearance.spacing.space100
         MaterialShapeWrappedMaterialSymbol {
             text: root.icon
             iconSize: Appearance.font.pixelSize.larger
@@ -33,6 +33,6 @@ ColumnLayout {
     ColumnLayout {
         id: sectionContent
         Layout.fillWidth: true
-        spacing: Appearance.spacing.verysmall
+        spacing: Appearance.spacing.space50
     }
 }

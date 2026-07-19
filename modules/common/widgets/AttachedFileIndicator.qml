@@ -56,8 +56,8 @@ Rectangle {
     }
 
     // Styles/widgets
-    property real horizontalPadding: 10
-    property real verticalPadding: 10
+    property real horizontalPadding: Appearance.spacing.space125
+    property real verticalPadding: Appearance.spacing.space125
     radius: Appearance.rounding.small - anchors.margins
     color: highlight ? Appearance.colors.colPrimary : Appearance.colors.colLayer2
     implicitHeight: visible ? (contentItem.implicitHeight + verticalPadding * 2) : 0
@@ -96,7 +96,7 @@ Rectangle {
 
             StyledText {
                 Layout.fillWidth: true
-                Layout.topMargin: Appearance.spacing.verysmall
+                Layout.topMargin: Appearance.spacing.space50
                 text: root.filePath
                 font.pixelSize: Appearance.font.pixelSize.smaller
                 font.family: Appearance.font.family.monospace

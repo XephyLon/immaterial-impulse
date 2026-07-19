@@ -8,7 +8,7 @@ RippleButton {
     Layout.alignment: Qt.AlignLeft
     implicitWidth: 40
     implicitHeight: 40
-    Layout.leftMargin: Appearance.spacing.small
+    Layout.leftMargin: Appearance.spacing.space100
     downAction: () => {
         parent.expanded = !parent.expanded;
     }

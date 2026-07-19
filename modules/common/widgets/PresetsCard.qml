@@ -32,13 +32,13 @@ Rectangle {
             right: parent.right
             margins: 0
         }
-        spacing: Appearance.spacing.small
+        spacing: Appearance.spacing.space100
 
         // Header
         RowLayout{
-            Layout.leftMargin: Appearance.spacing.normal
-            Layout.topMargin: Appearance.spacing.small
-            spacing: Appearance.spacing.normal
+            Layout.leftMargin: Appearance.spacing.space150
+            Layout.topMargin: Appearance.spacing.space100
+            spacing: Appearance.spacing.space150
             MaterialShapeWrappedMaterialSymbol {
                 id: avatarShape
                 shape: MaterialShape.Shape.Circle 
@@ -51,7 +51,7 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
             }
             ColumnLayout{
-                spacing: -Appearance.spacing.verysmall
+                spacing: -Appearance.spacing.space50
                 StyledText {
                     Layout.fillWidth: true
                     text: root.title
@@ -74,7 +74,7 @@ Rectangle {
             }
             MaterialSymbol {
                 Layout.alignment: Qt.AlignRight // im a placeholder someday I will do something =P
-                Layout.rightMargin: Appearance.spacing.normal
+                Layout.rightMargin: Appearance.spacing.space150
                 font.pixelSize: Appearance.font.pixelSize.huge
                 text: "more_vert"
             }
@@ -84,7 +84,7 @@ Rectangle {
         Rectangle {
             id: imageRect
             Layout.fillWidth: true
-            Layout.bottomMargin: Appearance.spacing.verysmall
+            Layout.bottomMargin: Appearance.spacing.space50
             implicitHeight: 130
             radius: 0
             color: Appearance.colors.colLayer2
@@ -121,9 +121,9 @@ Rectangle {
         // Buttons
         RowLayout {
             Layout.fillWidth: true
-            Layout.rightMargin: Appearance.spacing.small
-            Layout.bottomMargin: -Appearance.spacing.verysmall
-            spacing: Appearance.spacing.small
+            Layout.rightMargin: Appearance.spacing.space100
+            Layout.bottomMargin: -Appearance.spacing.space50
+            spacing: Appearance.spacing.space100
 
             Item { Layout.fillWidth: true }
 

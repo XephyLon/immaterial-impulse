@@ -116,7 +116,7 @@ MouseArea {
         anchors {
             horizontalCenter: parent.horizontalCenter
             bottom: parent.bottom
-            bottomMargin: Appearance.spacing.verylarge
+            bottomMargin: Appearance.spacing.space250
         }
         Behavior on anchors.bottomMargin {
             animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
@@ -127,8 +127,8 @@ MouseArea {
 
         // Fingerprint
         Loader {
-            Layout.leftMargin: Appearance.spacing.normal
-            Layout.rightMargin: Appearance.spacing.small
+            Layout.leftMargin: Appearance.spacing.space150
+            Layout.rightMargin: Appearance.spacing.space100
             Layout.alignment: Qt.AlignVCenter
             active: root.context.fingerprintsConfigured
             visible: active
@@ -249,14 +249,14 @@ MouseArea {
             right: mainIsland.left
             top: mainIsland.top
             bottom: mainIsland.bottom
-            rightMargin: Appearance.spacing.normal
+            rightMargin: Appearance.spacing.space150
         }
         scale: root.toolbarScale
         opacity: root.toolbarOpacity
 
         // Username
         IconAndTextPair {
-            Layout.leftMargin: Appearance.spacing.small
+            Layout.leftMargin: Appearance.spacing.space100
             icon: "account_circle"
             visible: !Config.options.lock.showMedia || MprisController.activePlayer === null
             text: SystemInfo.username
@@ -264,8 +264,8 @@ MouseArea {
 
         // Media player info 
         Loader {
-            Layout.leftMargin: Appearance.spacing.unsharpen
-            Layout.rightMargin: Appearance.spacing.unsharpen
+            Layout.leftMargin: Appearance.spacing.space25
+            Layout.rightMargin: Appearance.spacing.space25
             Layout.alignment: Qt.AlignVCenter
             active: MprisController.activePlayer !== null
             visible: active && Config.options.lock.showMedia
@@ -286,7 +286,7 @@ MouseArea {
                 
                 RowLayout {
                     id: mediaRow
-                    spacing: Appearance.spacing.small
+                    spacing: Appearance.spacing.space100
                     anchors.centerIn: parent
                     
                     Rectangle {
@@ -332,7 +332,7 @@ MouseArea {
                     
                     Column {
                         Layout.alignment: Qt.AlignVCenter
-                        spacing: -Appearance.spacing.unsharpen
+                        spacing: -Appearance.spacing.space25
                         
                         StyledText {
                             horizontalAlignment: Text.AlignLeft
@@ -391,12 +391,12 @@ MouseArea {
 
         // Keyboard layout (Xkb)
         Loader {
-            Layout.rightMargin: Appearance.spacing.small
+            Layout.rightMargin: Appearance.spacing.space100
             Layout.fillHeight: true
             visible: !Config.options.lock.showMedia || MprisController.activePlayer === null
 
             sourceComponent: Row {
-                spacing: Appearance.spacing.small
+                spacing: Appearance.spacing.space100
 
                 MaterialSymbol {
                     id: keyboardIcon
@@ -419,7 +419,7 @@ MouseArea {
 
         // Keyboard layout (Fcitx)
         Bar.SysTray {
-            Layout.rightMargin: Appearance.spacing.normal
+            Layout.rightMargin: Appearance.spacing.space150
             Layout.alignment: Qt.AlignVCenter
             showSeparator: false
             showOverflowMenu: false
@@ -435,7 +435,7 @@ MouseArea {
             left: mainIsland.right
             top: mainIsland.top
             bottom: mainIsland.bottom
-            leftMargin: Appearance.spacing.normal
+            leftMargin: Appearance.spacing.space150
         }
 
         scale: root.toolbarScale
@@ -493,10 +493,10 @@ MouseArea {
         required property string text
         property color color: Appearance.colors.colOnSurfaceVariant
 
-        spacing: Appearance.spacing.verysmall
+        spacing: Appearance.spacing.space50
         Layout.fillHeight: true
-        Layout.leftMargin: Appearance.spacing.normal
-        Layout.rightMargin: Appearance.spacing.normal
+        Layout.leftMargin: Appearance.spacing.space150
+        Layout.rightMargin: Appearance.spacing.space150
         
 
         MaterialSymbol {

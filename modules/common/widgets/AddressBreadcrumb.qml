@@ -19,7 +19,7 @@ ListView {
 
     orientation: ListView.Horizontal
     clip: true
-    spacing: Appearance.spacing.unsharpen
+    spacing: Appearance.spacing.space25
 
     model: breadcrumbDirectory.split("/")
     delegate: SelectionGroupButton {

@@ -20,9 +20,9 @@ Item {
     property bool completed: false
 
     property real thinkBlockBackgroundRounding: Appearance.rounding.small
-    property real thinkBlockHeaderPaddingVertical: 3
-    property real thinkBlockHeaderPaddingHorizontal: 10
-    property real thinkBlockComponentSpacing: 2
+    property real thinkBlockHeaderPaddingVertical: Appearance.spacing.space50
+    property real thinkBlockHeaderPaddingHorizontal: Appearance.spacing.space125
+    property real thinkBlockComponentSpacing: Appearance.spacing.space25
 
     property var collapseAnimation: messageTextBlock.implicitHeight > 40 ? Appearance.animation.elementMoveEnter : Appearance.animation.elementMoveFast
     property bool collapsed: true /* should be root.completed but its kinda buggy rn so nope */
@@ -78,13 +78,13 @@ Item {
                 anchors.right: parent.right
                 anchors.leftMargin: thinkBlockHeaderPaddingHorizontal
                 anchors.rightMargin: thinkBlockHeaderPaddingHorizontal
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.space150
 
                 MaterialSymbol {
                     Layout.fillWidth: false
-                    Layout.topMargin: Appearance.spacing.small
-                    Layout.bottomMargin: Appearance.spacing.small
-                    Layout.leftMargin: Appearance.spacing.verysmall
+                    Layout.topMargin: Appearance.spacing.space100
+                    Layout.bottomMargin: Appearance.spacing.space100
+                    Layout.leftMargin: Appearance.spacing.space50
                     text: "linked_services"
                 }
                 StyledText {

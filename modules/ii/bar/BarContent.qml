@@ -116,7 +116,7 @@ Item {
         // Left
         Item {
             anchors.left: parent.left
-            anchors.leftMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? 4 : 10)
+            anchors.leftMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             width: root.isMaterial ? leftMaterialPill.implicitWidth : leftRow.implicitWidth
@@ -134,7 +134,7 @@ Item {
                 RowLayout {
                     id: leftMaterialRow
                     anchors.centerIn: parent
-                    spacing: Appearance.spacing.verysmall
+                    spacing: Appearance.spacing.space50
 
                     Repeater {
                         model: root.effectiveLeftLayout
@@ -167,7 +167,7 @@ Item {
                 id: leftRow
                 visible: !root.isMaterial
                 anchors.fill: parent
-                spacing: Config.options.bar.borderless === "transparent" ? -7 : 2
+                spacing: Config.options.bar.borderless === "transparent" ? -Appearance.spacing.space100 : Appearance.spacing.space25
 
                 Repeater {
                     model: root.effectiveLeftLayout
@@ -195,7 +195,7 @@ Item {
                     id: leftNoGroupDelegate
                     Loader {
                         Layout.fillHeight: false
-                        Layout.topMargin: Config.options.bar.bottom ? -5 : 3
+                        Layout.topMargin: Config.options.bar.bottom ? -Appearance.spacing.space50 : Appearance.spacing.space50
                         Layout.alignment: Qt.AlignVCenter
                         source: root.getWidgetUrl(modelData)
                         onLoaded: {
@@ -227,7 +227,7 @@ Item {
                 RowLayout {
                     id: centerMaterialRow
                     anchors.centerIn: parent
-                    spacing: Appearance.spacing.verysmall
+                    spacing: Appearance.spacing.space50
 
                     Repeater {
                         model: root.effectiveMiddleLayout
@@ -260,7 +260,7 @@ Item {
                 id: middleRow
                 visible: !root.isMaterial
                 anchors.fill: parent
-                spacing: Config.options.bar.borderless === "transparent" ? -7 : 2
+                spacing: Config.options.bar.borderless === "transparent" ? -Appearance.spacing.space100 : Appearance.spacing.space25
 
                 Repeater {
                     model: root.effectiveMiddleLayout
@@ -288,7 +288,7 @@ Item {
                     id: middleNoGroupDelegate
                     Loader {
                         Layout.fillHeight: false
-                        Layout.topMargin: Config.options.bar.bottom ? -5 : 3
+                        Layout.topMargin: Config.options.bar.bottom ? -Appearance.spacing.space50 : Appearance.spacing.space50
                         source: root.getWidgetUrl(modelData)
                         onLoaded: {
                             if (item && item.hasOwnProperty("mirrored"))
@@ -302,7 +302,7 @@ Item {
         // Right
         Item {
             anchors.right: parent.right
-            anchors.rightMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? 4 : 10)
+            anchors.rightMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             width: root.isMaterial ? rightMaterialPill.implicitWidth : rightRow.implicitWidth
@@ -320,7 +320,7 @@ Item {
                 RowLayout {
                     id: rightMaterialRow
                     anchors.centerIn: parent
-                    spacing: Appearance.spacing.verysmall
+                    spacing: Appearance.spacing.space50
 
                     Repeater {
                         model: root.effectiveRightLayout
@@ -353,7 +353,7 @@ Item {
                 id: rightRow
                 visible: !root.isMaterial
                 anchors.fill: parent
-                spacing: Config.options.bar.borderless === "transparent" ? -7 : 2
+                spacing: Config.options.bar.borderless === "transparent" ? -Appearance.spacing.space100 : Appearance.spacing.space25
 
                 Repeater {
                     model: root.effectiveRightLayout
@@ -381,7 +381,7 @@ Item {
                     id: rightNoGroupDelegate
                     Loader {
                         Layout.fillHeight: false
-                        Layout.topMargin: Config.options.bar.bottom ? -5 : 3
+                        Layout.topMargin: Config.options.bar.bottom ? -Appearance.spacing.space50 : Appearance.spacing.space50
                         source: root.getWidgetUrl(modelData)
                         onLoaded: {
                             if (item && item.hasOwnProperty("mirrored"))

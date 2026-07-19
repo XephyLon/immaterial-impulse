@@ -23,11 +23,11 @@ Item { // Tag suggestion description
 
         RowLayout {
             id: descriptionRow
-            spacing: Appearance.spacing.verysmall
+            spacing: Appearance.spacing.space50
             anchors {
                 fill: parent
-                leftMargin: Appearance.spacing.normal
-                rightMargin: Appearance.spacing.normal
+                leftMargin: Appearance.spacing.space150
+                rightMargin: Appearance.spacing.space150
             }
 
             StyledText {

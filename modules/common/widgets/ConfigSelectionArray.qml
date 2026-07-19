@@ -25,12 +25,12 @@ RowLayout {
 
     signal selected(var newValue)
 
-    spacing: Appearance.spacing.normal
-    Layout.leftMargin: Appearance.spacing.small
-    Layout.rightMargin: Appearance.spacing.small
+    spacing: Appearance.spacing.space150
+    Layout.leftMargin: Appearance.spacing.space100
+    Layout.rightMargin: Appearance.spacing.space100
 
     RowLayout {
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.space150
         visible: root.text !== ""
         OptionalMaterialSymbol {
             icon: root.icon
@@ -49,7 +49,7 @@ RowLayout {
         id: buttonsFlow
         Layout.fillWidth: !root.text
         Layout.alignment: Qt.AlignRight
-        spacing: Appearance.spacing.unsharpen
+        spacing: Appearance.spacing.space25
 
         Repeater {
             model: root.options

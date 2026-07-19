@@ -14,7 +14,7 @@ Item {
         Appearance.colors.colOnPrimary.g,
         Appearance.colors.colOnPrimary.b,
         0.75)
-    property real labelSpacing: 12
+    property real labelSpacing: Appearance.spacing.space150
 
     property real hourAngle:   0
     property real minuteAngle: 0

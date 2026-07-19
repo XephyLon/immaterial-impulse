@@ -13,7 +13,7 @@ OverlayBackground {
 
     enum State { Normal, Success, Error }
 
-    property real padding: Appearance.spacing.large
+    property real padding: Appearance.spacing.space200
     property var currentState: FpsLimiterContent.State.Normal
     implicitWidth: content.implicitWidth + (padding * 2)
     implicitHeight: content.implicitHeight + (padding * 2)
@@ -64,7 +64,7 @@ OverlayBackground {
     RowLayout {
         id: content
         anchors.centerIn: parent
-        spacing: Appearance.spacing.verysmall
+        spacing: Appearance.spacing.space50
 
         ToolbarTextField {
             id: fpsField

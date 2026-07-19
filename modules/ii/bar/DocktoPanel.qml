@@ -17,8 +17,8 @@ Item {
 
     property real iconSize:      23
     property real btnSize:       28
-    property real btnSpacing:    2
-    property real buttonPadding: 4
+    property real btnSpacing:    Appearance.spacing.space25
+    property real buttonPadding: Appearance.spacing.space50
     property bool vertical:    Config.options.bar.vertical
     property bool isMaterial:  Config.options.bar.cornerStyle === 3
     property var pinnedApps: Config.options?.dock.pinnedApps ?? []
@@ -161,7 +161,7 @@ Item {
 
                             Flow {
                                 flow: root.vertical ? Flow.TopToBottom : Flow.LeftToRight
-                                spacing: Appearance.spacing.unsharpen
+                                spacing: Appearance.spacing.space25
                                 anchors {
                                     left:   root.vertical ? pinnedIcon.right    : undefined
                                     top:    root.vertical ? undefined            : pinnedIcon.bottom
@@ -321,7 +321,7 @@ Item {
 
                             Flow {
                                 flow: root.vertical ? Flow.TopToBottom : Flow.LeftToRight
-                                spacing: Appearance.spacing.unsharpen
+                                spacing: Appearance.spacing.space25
                                 anchors {
                                     left:   root.vertical ? activeIcon.right    : undefined
                                     top:    root.vertical ? undefined            : activeIcon.bottom

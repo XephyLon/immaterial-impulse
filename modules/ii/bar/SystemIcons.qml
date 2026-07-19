@@ -29,7 +29,7 @@ Item {
         id: flow
         anchors.centerIn: parent
         flow: root.vertical ? Flow.TopToBottom : Flow.LeftToRight
-        spacing: isMaterial ? 2 : 10
+        spacing: isMaterial ? Appearance.spacing.space25 : Appearance.spacing.space125
 
         Revealer {
             reveal: true

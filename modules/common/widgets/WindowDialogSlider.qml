@@ -19,7 +19,7 @@ Column {
 
     signal moved()
     
-    spacing: -Appearance.spacing.unsharpen
+    spacing: -Appearance.spacing.space25
     ContentSubsectionLabel {
         id: sliderName
         visible: text?.length > 0
@@ -34,8 +34,8 @@ Column {
         anchors {
             left: parent.left
             right: parent.right
-            leftMargin: Appearance.spacing.verysmall
-            rightMargin: Appearance.spacing.verysmall
+            leftMargin: Appearance.spacing.space50
+            rightMargin: Appearance.spacing.space50
         }
         configuration: StyledSlider.Configuration.S
         onMoved: root.moved()

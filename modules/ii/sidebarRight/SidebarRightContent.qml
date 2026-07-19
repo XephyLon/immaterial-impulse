@@ -24,7 +24,7 @@ import qs.modules.ii.sidebarRight.iconPicker
 Item {
     id: root
     property int sidebarWidth: Appearance.sizes.sidebarWidth
-    property int sidebarPadding: 10
+    property int sidebarPadding: Appearance.spacing.space125
     property string settingsQmlPath: Quickshell.shellPath("settings.qml")
     property bool showAudioOutputDialog: false
     property bool showAudioInputDialog: false
@@ -169,9 +169,9 @@ Item {
                                     top: parent.top
                                     left: parent.left
                                     right: parent.right
-                                    topMargin: Appearance.spacing.unsharpen
-                                    leftMargin: Appearance.spacing.unsharpen
-                                    rightMargin: Appearance.spacing.unsharpen
+                                    topMargin: Appearance.spacing.space25
+                                    leftMargin: Appearance.spacing.space25
+                                    rightMargin: Appearance.spacing.space25
                                 }
                                 height: 120
                                 radius: sysRect.radius
@@ -216,9 +216,9 @@ Item {
                                     left: parent.left
                                     bottom: parent.bottom
                                     leftMargin: 13
-                                    bottomMargin: Appearance.spacing.small
+                                    bottomMargin: Appearance.spacing.space100
                                 }
-                                spacing: Appearance.spacing.hairline
+                                spacing: Appearance.spacing.space25
 
                                 Rectangle {
                                     id: avatarRect
@@ -275,10 +275,10 @@ Item {
                                 anchors {
                                     right: parent.right
                                     bottom: parent.bottom
-                                    margins: Appearance.spacing.verysmall
+                                    margins: Appearance.spacing.space50
                                 }
                                 color: "transparent"
-                                padding: Appearance.spacing.verysmall
+                                padding: Appearance.spacing.space50
 
                                 QuickToggleButton {
                                     toggled: root.editMode
@@ -359,10 +359,10 @@ Item {
                 active: root.activePlayer !== null && GlobalStates.sidebarRightOpen && Config.options.sidebar.mediaPlayer
                 visible: active
                 Layout.fillWidth: true
-                Layout.topMargin: -Appearance.spacing.normal
-                Layout.bottomMargin: -Appearance.spacing.normal
-                Layout.leftMargin: -Appearance.spacing.normal
-                Layout.rightMargin: -Appearance.spacing.normal
+                Layout.topMargin: -Appearance.spacing.space150
+                Layout.bottomMargin: -Appearance.spacing.space150
+                Layout.leftMargin: -Appearance.spacing.space150
+                Layout.rightMargin: -Appearance.spacing.space150
                 sourceComponent: Player {
                     player: root.activePlayer
                     visualizerPoints: GlobalStates.visualizerPoints
@@ -496,7 +496,7 @@ Item {
             Row {
                 id: uptimeRow
                 anchors.centerIn: parent
-                spacing: Appearance.spacing.small
+                spacing: Appearance.spacing.space100
                 Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 25
@@ -534,7 +534,7 @@ Item {
                 right: parent.right
             }
             color: Appearance.colors.colLayer1
-            padding: Appearance.spacing.verysmall
+            padding: Appearance.spacing.space50
 
             QuickToggleButton {
                 toggled: root.editMode

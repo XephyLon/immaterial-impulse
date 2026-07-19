@@ -12,8 +12,8 @@ RippleButton {
     property string query
 
     implicitHeight: 30
-    leftPadding: Appearance.spacing.small
-    rightPadding: Appearance.spacing.normal
+    leftPadding: Appearance.spacing.space100
+    rightPadding: Appearance.spacing.space150
     buttonRadius: Appearance.rounding.verysmall
     colBackground: Appearance.colors.colSurfaceContainerHighest
     colBackgroundHover: Appearance.colors.colSurfaceContainerHighestHover
@@ -36,7 +36,7 @@ RippleButton {
         RowLayout {
             id: rowLayout
             anchors.centerIn: parent
-            spacing: Appearance.spacing.small
+            spacing: Appearance.spacing.space100
             MaterialSymbol {
                 text: "search"
                 iconSize: 20

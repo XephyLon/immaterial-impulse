@@ -11,7 +11,7 @@ RippleButton {
     anchors {
         bottom: parent.bottom
         horizontalCenter: parent.horizontalCenter
-        bottomMargin: Appearance.spacing.normal
+        bottomMargin: Appearance.spacing.space150
     }
 
     opacity: !target.atYEnd ? 1 : 0
@@ -38,7 +38,7 @@ RippleButton {
 
     contentItem: Row {
         id: contentItem
-        spacing: Appearance.spacing.verysmall
+        spacing: Appearance.spacing.space50
         MaterialSymbol {
             anchors.verticalCenter: parent.verticalCenter
             text: "arrow_downward"

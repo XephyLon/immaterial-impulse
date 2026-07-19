@@ -8,7 +8,7 @@ import qs.modules.common.functions
 Flow {
     id: root
     Layout.fillWidth: true
-    spacing: Appearance.spacing.unsharpen
+    spacing: Appearance.spacing.space25
 
     property list<string> options: []
     property var currentValue: null

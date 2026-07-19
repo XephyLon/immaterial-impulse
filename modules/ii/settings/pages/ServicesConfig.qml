@@ -17,7 +17,7 @@ ContentPage {
 
         toggled: true
         implicitHeight: 36
-        padding: Appearance.spacing.large
+        padding: Appearance.spacing.space200
         implicitWidth: layoutItem.implicitWidth + padding * 2
         buttonRadius: Appearance.rounding.full
 
@@ -27,7 +27,7 @@ ContentPage {
             RowLayout {
                 id: layoutItem
                 anchors.centerIn: parent
-                spacing: Appearance.spacing.small
+                spacing: Appearance.spacing.space100
                 MaterialSymbol {
                     text: iRoot.iconName
                     color: iRoot.textColor
@@ -74,7 +74,7 @@ ContentPage {
         id: mainLayout 
         Layout.fillWidth: true   
         Layout.fillHeight: true
-        spacing: Appearance.spacing.verylarge
+        spacing: Appearance.spacing.space250
 
         ContentSection {
             icon: "neurology"
@@ -98,7 +98,7 @@ ContentPage {
 
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: Appearance.spacing.large
+                    spacing: Appearance.spacing.space200
 
                     Repeater {
                         model: Config.options.ai.customProviders ? Config.options.ai.customProviders.length : 0
@@ -201,8 +201,8 @@ ContentPage {
                     RowLayout {
                         id: sectionActionsRow
                         Layout.alignment: Qt.AlignRight
-                        Layout.topMargin: Appearance.spacing.normal
-                        spacing: Appearance.spacing.normal
+                        Layout.topMargin: Appearance.spacing.space150
+                        spacing: Appearance.spacing.space150
 
                         IconButton {
                             id: addProviderButton

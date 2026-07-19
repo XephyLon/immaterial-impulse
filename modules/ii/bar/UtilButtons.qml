@@ -22,7 +22,7 @@ Item {
         id: flow
         anchors.centerIn: parent
         flow: root.vertical ? Flow.TopToBottom : Flow.LeftToRight
-        spacing: isMaterial ? 2 : 4
+        spacing: isMaterial ? Appearance.spacing.space25 : Appearance.spacing.space50
 
         Loader {
             active: Config.options.bar.utilButtons.showScreenSnip
@@ -131,7 +131,7 @@ Item {
                 Revealer {
                     id: timerRevealer
                     anchors.left: btn.right
-                    anchors.leftMargin: Appearance.spacing.small
+                    anchors.leftMargin: Appearance.spacing.space100
                     anchors.verticalCenter: btn.verticalCenter
                     reveal: recordingItem.isRecording && !root.vertical
 
@@ -142,7 +142,7 @@ Item {
                         font.features: { "tnum": 1 }
                         font.letterSpacing: -0.3
                         color: Appearance.colors.colOnLayer2
-                        rightPadding: Appearance.spacing.small
+                        rightPadding: Appearance.spacing.space100
                         Component.onCompleted: width = implicitWidth
                     }
                 }
