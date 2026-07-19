@@ -50,6 +50,15 @@ Singleton {
         root.changed()
     }
 
+    // Regenerate the theme from an image without replacing the desktop
+    // wallpaper - used by the lockscreen wallpaper so picking one recolors the
+    // shell without switching the background.
+    function applyColorsOnly(path, darkMode = Appearance.m3colors.darkmode) {
+        if (!path || path.length === 0) return;
+        Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--mode", darkMode ? "dark" : "light", "--coloronly", "--image", path]);
+        root.changed()
+    }
+
     Process {
         id: selectProc
         property string filePath: ""

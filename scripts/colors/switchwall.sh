@@ -167,6 +167,11 @@ switch() {
     type_flag="$3"
     color_flag="$4"
     color="$5"
+    # coloronly: generate the theme from the image but leave the wallpaper
+    # itself untouched (don't write wallpaperPath/thumbnailPath, don't apply).
+    # Used by the lockscreen wallpaper, which drives colors without replacing
+    # the desktop wallpaper.
+    coloronly="$6"
 
     # Start Gemini auto-categorization if enabled
     aiStylingEnabled=$(jq -r '.background.widgets.clock.cookie.aiStyling' "$SHELL_CONFIG_FILE")
@@ -223,28 +228,31 @@ switch() {
                 exit 0
             fi
 
-            # Set wallpaper path
-            set_wallpaper_path "$imgpath"
-
-            # Set video wallpaper
             local video_path="$imgpath"
-            monitors=$(hyprctl monitors -j | jq -r '.[] | .name')
-            for monitor in $monitors; do
-                mpvpaper -o "$VIDEO_OPTS" "$monitor" "$video_path" &
-                sleep 0.1
-            done
+
+            if [[ -z "$coloronly" ]]; then
+                # Set wallpaper path
+                set_wallpaper_path "$imgpath"
+
+                # Set video wallpaper
+                monitors=$(hyprctl monitors -j | jq -r '.[] | .name')
+                for monitor in $monitors; do
+                    mpvpaper -o "$VIDEO_OPTS" "$monitor" "$video_path" &
+                    sleep 0.1
+                done
+            fi
 
             # Extract first frame for color generation
             thumbnail="$THUMBNAIL_DIR/$(basename "$imgpath").jpg"
             ffmpeg -y -i "$imgpath" -vframes 1 "$thumbnail" 2>/dev/null
 
             # Set thumbnail path
-            set_thumbnail_path "$thumbnail"
+            [[ -z "$coloronly" ]] && set_thumbnail_path "$thumbnail"
 
             if [ -f "$thumbnail" ]; then
                 matugen_args+=(image "$thumbnail")
                 generate_colors_material_args=(--path "$thumbnail")
-                create_restore_script "$video_path"
+                [[ -z "$coloronly" ]] && create_restore_script "$video_path"
             else
                 echo "Cannot create image to colorgen"
                 remove_restore
@@ -253,8 +261,8 @@ switch() {
         else
             matugen_args+=(image "$imgpath")
             generate_colors_material_args=(--path "$imgpath")
-            # Update wallpaper path in config
-            set_wallpaper_path "$imgpath"
+            # Update wallpaper path in config (skipped for color-only runs)
+            [[ -z "$coloronly" ]] && set_wallpaper_path "$imgpath"
             remove_restore
         fi
     fi
@@ -323,6 +331,7 @@ main() {
     color_flag=""
     color=""
     noswitch_flag=""
+    coloronly_flag=""
 
     get_type_from_config() {
         jq -r '.appearance.palette.type' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "auto"
@@ -371,6 +380,11 @@ main() {
             --noswitch)
                 noswitch_flag="1"
                 imgpath=$(jq -r '.background.wallpaperPath' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "")
+                shift
+                ;;
+            --coloronly)
+                # Generate the theme from --image without changing the wallpaper.
+                coloronly_flag="1"
                 shift
                 ;;
             *)
@@ -468,7 +482,7 @@ main() {
         fi
     fi
 
-    switch "$imgpath" "$mode_flag" "$type_flag" "$color_flag" "$color"
+    switch "$imgpath" "$mode_flag" "$type_flag" "$color_flag" "$color" "$coloronly_flag"
 }
 
 main "$@"

@@ -62,6 +62,9 @@ MouseArea {
             if (GlobalStates.wallpaperSelectorTarget === "lockWall") {
                 Wallpapers.select(filePath, root.useDarkMode, finalPath => {
                     Config.options.background.lockWall = finalPath;
+                    // Recolor the shell theme from the lock wallpaper without
+                    // replacing the desktop wallpaper.
+                    Wallpapers.applyColorsOnly(finalPath, root.useDarkMode);
                     GlobalStates.wallpaperSelectorTarget = "wallpaper";
                     GlobalStates.wallpaperSelectorOpen = false;
                 });
