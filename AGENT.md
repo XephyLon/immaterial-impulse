@@ -343,6 +343,17 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   binding to track it - and prefer extracting it into a reusable, testable component over
   re-inlining the same fix at each call site.
 
+**Treat repeated binding exceptions as potential resource runaways, not harmless log noise.** A
+sidebar media-player binding called `filterDuplicatePlayers()` without defining the helper in that
+component. The visible log only gained an occasional `ReferenceError` when MPRIS state changed, but
+the `qs` main thread eventually spun at 100% CPU while anonymous resident memory grew past 30 GiB,
+freezing the shell and threatening to freeze the whole machine. If the shell becomes unresponsive,
+inspect the live process before restarting it (`ps -p <pid> -o stat,%cpu,%mem,rss,vsz,nlwp,wchan` and
+`pmap -x <pid>`): a runnable main thread plus rapidly growing anonymous memory points to a QML
+evaluation/allocation loop. Correlate the last `WARN scene` entries with reactive bindings, and
+verify that every locally-called helper exists in that component or comes from an explicitly
+imported singleton/module.
+
 ## Design language
 
 The shell follows **Material 3 / Material 3 Expressive**. `Appearance.qml` is the single source of

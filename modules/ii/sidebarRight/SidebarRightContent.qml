@@ -48,6 +48,39 @@ Item {
         return filterDuplicatePlayers(filtered)
     }
 
+    function filterDuplicatePlayers(players) {
+        let filtered = []
+        let used = new Set()
+
+        for (let i = 0; i < players.length; ++i) {
+            if (used.has(i))
+                continue
+
+            const p1 = players[i]
+            const group = [i]
+
+            for (let j = i + 1; j < players.length; ++j) {
+                const p2 = players[j]
+                const titlesOverlap = p1.trackTitle && p2.trackTitle
+                    && (p1.trackTitle.includes(p2.trackTitle) || p2.trackTitle.includes(p1.trackTitle))
+                const timingMatches = Math.abs(p1.position - p2.position) <= 2
+                    && Math.abs(p1.length - p2.length) <= 2
+
+                if (titlesOverlap || timingMatches)
+                    group.push(j)
+            }
+
+            let chosenIdx = group.find(idx => players[idx].trackArtUrl?.length > 0)
+            if (chosenIdx === undefined)
+                chosenIdx = group[0]
+
+            filtered.push(players[chosenIdx])
+            group.forEach(idx => used.add(idx))
+        }
+
+        return filtered
+    }
+
     Connections {
         target: GlobalStates
         function onSidebarRightOpenChanged() {
