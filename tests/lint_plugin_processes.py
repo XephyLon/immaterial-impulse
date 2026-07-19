@@ -56,6 +56,32 @@ if re.search(r"\bTimer\s*\{[^{}]*\brepeat\s*:\s*true", docker_service, re.DOTALL
     failures.append(
         "docker/DockerService.qml: repeated polling timers are prohibited; refresh on demand")
 
+docker_widget = (PLUGIN_ROOT / "docker/DockerWidget.qml").read_text(encoding="utf-8")
+if not re.search(r"DockerPopup\s*\{[^}]*hoverTarget\s*:\s*null", docker_widget, re.DOTALL):
+    failures.append(
+        "docker/DockerWidget.qml: interactive Docker popup must be click-only, never hover-loaded")
+docker_widget_code = re.sub(r"//.*", "", docker_widget)
+if re.search(r"\bHoverHandler\s*\{", docker_widget_code) \
+        or "containsMouse" in docker_widget_code \
+        or re.search(r"hoverEnabled\s*:\s*true", docker_widget_code) \
+        or not re.search(r"hoverEnabled\s*:\s*false", docker_widget_code):
+    failures.append(
+        "docker/DockerWidget.qml: Docker bar entry must provide clicks without tracking hover")
+if not re.search(r"Loader\s*\{[^}]*active\s*:\s*root\.popupOpen", docker_widget_code, re.DOTALL):
+    failures.append(
+        "docker/DockerWidget.qml: Docker manager content must remain unloaded until explicitly opened")
+if re.search(r"\b(RowLayout|ColumnLayout)\s*\{", docker_widget_code) \
+        or not re.search(r"implicitWidth\s*:\s*root\.vertical\s*\?\s*32\s*:\s*64", docker_widget_code) \
+        or "width: implicitWidth" not in docker_widget_code \
+        or "height: implicitHeight" not in docker_widget_code:
+    failures.append(
+        "docker/DockerWidget.qml: Docker indicator must use bounded geometry, never child Layout sizing")
+
+docker_popup = (PLUGIN_ROOT / "docker/DockerPopup.qml").read_text(encoding="utf-8")
+if re.search(r"Behavior\s+on\s+implicitHeight", docker_popup):
+    failures.append(
+        "docker/DockerPopup.qml: never animate layout-derived implicitHeight; animate bounded visuals")
+
 # A package bar entry must have one Loader as its sizing boundary. Nesting the
 # package Loader inside PluginNode made the outer bar Loader, PluginNode, and
 # package root continually negotiate geometry: the widget collapsed to one
@@ -73,10 +99,33 @@ if re.search(r"\banchors\.fill\s*:\s*parent\b", bar_host):
 
 bar_content = (ROOT / "modules/ii/bar/BarContent.qml").read_text(encoding="utf-8")
 if not re.search(
+        r'name\s*===\s*["\']plugin:docker_plugin["\']\s*\)\s*return\s+false',
+        bar_content):
+    failures.append(
+        "modules/ii/bar/BarContent.qml: unstable Docker bar entry must remain quarantined")
+if not re.search(
         r'name\s*===\s*["\']plugin:docker_plugin["\'].*DockerPlugin\.qml',
         bar_content):
     failures.append(
         "modules/ii/bar/BarContent.qml: bundled Docker must use its direct native bar component")
+if len(re.findall(
+        r'Layout\.preferredWidth\s*:\s*modelData\s*===\s*["\']plugin:docker_plugin["\']',
+        bar_content)) != 6:
+    failures.append(
+        "modules/ii/bar/BarContent.qml: every grouped bar loader must reserve Docker's bounded width")
+
+docker_adapter = (ROOT / "modules/ii/bar/DockerPlugin.qml").read_text(encoding="utf-8")
+docker_adapter_code = re.sub(r"//.*", "", docker_adapter)
+if "DockerPackage.DockerWidget" in docker_adapter_code:
+    failures.append(
+        "modules/ii/bar/DockerPlugin.qml: native adapter must not wrap package-root bar geometry")
+for required in (
+        "DockerPackage.DockerService", "DockerPackage.DockerPopup",
+        "hoverEnabled: false", "active: root.popupOpen",
+        "width: implicitWidth", "height: implicitHeight"):
+    if required not in docker_adapter_code:
+        failures.append(
+            f"modules/ii/bar/DockerPlugin.qml: missing stable native adapter contract: {required}")
 
 for path in PLUGIN_ROOT.rglob("*.qml"):
     for block in process_blocks(path.read_text(encoding="utf-8")):

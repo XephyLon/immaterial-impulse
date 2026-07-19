@@ -134,6 +134,7 @@ Variants {
         }
 
         property real transitionProgress: 1.0
+        property int wallpaperTransitionGeneration: 0
 
         screen: modelData
         exclusionMode: ExclusionMode.Ignore
@@ -171,6 +172,13 @@ Variants {
         }
 
         onWallpaperPathChanged: {
+            // Lock/unlock can request a wallpaper that is still in QML's image
+            // cache. In that case status may remain Ready and emit no change,
+            // so explicitly start the transition on the next event-loop turn.
+            // Stop the previous animation first so its completion handler cannot
+            // clear the sources belonging to this newer request.
+            transitionAnim.stop()
+            const generation = ++bgRoot.wallpaperTransitionGeneration
             if (wallpaperSafetyTriggered) {
                 previousWallpaper.source = ""
                 wallpaper.source = ""
@@ -192,6 +200,11 @@ Variants {
                 bgRoot.currentShader = bgRoot.wallpaperAnimation
             }
             bgRoot.transitionProgress = 0.0
+            Qt.callLater(function() {
+                if (generation !== bgRoot.wallpaperTransitionGeneration) return
+                if (wallpaper.status === Image.Ready && bgRoot.transitionProgress === 0.0)
+                    transitionAnim.restart()
+            })
         }
 
         NumberAnimation {
@@ -568,6 +581,9 @@ Variants {
                             scaledScreenWidth: bgRoot.screen.width
                             scaledScreenHeight: bgRoot.screen.height
                             wallpaperScale: 1
+                            // Use the exact source resolved by this background,
+                            // including lock wallpaper and video thumbnails.
+                            wallpaperPath: bgRoot.wallpaperPath
                         }
                     }
                 }

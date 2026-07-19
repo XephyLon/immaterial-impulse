@@ -13,6 +13,7 @@ LOCK="$PROJECT_ROOT/modules/ii/lock/Lock.qml"
 THEME_LOADER="$PROJECT_ROOT/services/MaterialThemeLoader.qml"
 WRAPPER="$PROJECT_ROOT/scripts/colors/generate-colors-venv.sh"
 APPEARANCE="$PROJECT_ROOT/modules/common/Appearance.qml"
+BACKGROUND="$PROJECT_ROOT/modules/ii/background/Background.qml"
 
 if grep -q 'applyColorsOnly' "$LOCK_SCREEN"; then
     echo "Lockscreen theme lint FAILED: LockScreen must not launch persistent color generation" >&2
@@ -46,6 +47,18 @@ fi
 
 if ! grep -qP '^import qs\s*$' "$APPEARANCE"; then
     echo "Lockscreen theme lint FAILED: Appearance must import GlobalStates from qs" >&2
+    exit 1
+fi
+
+if ! grep -q 'transitionAnim.stop()' "$BACKGROUND" \
+        || ! grep -q 'wallpaperTransitionGeneration' "$BACKGROUND" \
+        || ! grep -q 'Qt.callLater(function()' "$BACKGROUND"; then
+    echo "Lockscreen theme lint FAILED: cached wallpaper transitions must be restarted safely" >&2
+    exit 1
+fi
+
+if ! grep -q 'wallpaperPath: bgRoot.wallpaperPath' "$BACKGROUND"; then
+    echo "Lockscreen theme lint FAILED: plugin blur must share the background wallpaper source" >&2
     exit 1
 fi
 

@@ -25,8 +25,11 @@ Item {
     function filterLayout(layout) {
         return layout.filter(name => {
             if (name === "sysTray" && !trayHasItems) return false;
-            if (name === "dockerPlugin"
-                    && !PluginState.option("docker_plugin", "showBarWidget", true)) return false;
+            // Quarantined: every known Docker bar geometry path has reproduced
+            // rapid multi-gigabyte RSS growth and a complete shell freeze. Keep
+            // the package/settings installed, but never instantiate it in the
+            // persistent bar until an isolated bounded-memory harness passes.
+            if (name === "dockerPlugin" || name === "plugin:docker_plugin") return false;
             return true;
         });
     }
@@ -157,6 +160,8 @@ Item {
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
                                 Layout.fillHeight: true
+                                Layout.preferredWidth: modelData === "plugin:docker_plugin"
+                                    ? (Config.options.bar.vertical ? 32 : 64) : -1
                                 source: root.getWidgetUrl(modelData)
                                 onLoaded: {
                                     if (item && modelData.startsWith("plugin:") && item.hasOwnProperty("pluginId")) item.pluginId = modelData.substring(7)
@@ -189,6 +194,8 @@ Item {
                         totalCount: root.effectiveLeftLayout.length
                         Loader {
                             Layout.fillHeight: true
+                            Layout.preferredWidth: modelData === "plugin:docker_plugin"
+                                ? (Config.options.bar.vertical ? 32 : 64) : -1
                             source: root.getWidgetUrl(modelData)
                             onLoaded: {
                                 if (item && modelData.startsWith("plugin:") && item.hasOwnProperty("pluginId")) item.pluginId = modelData.substring(7)
@@ -253,6 +260,8 @@ Item {
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
                                 Layout.fillHeight: true
+                                Layout.preferredWidth: modelData === "plugin:docker_plugin"
+                                    ? (Config.options.bar.vertical ? 32 : 64) : -1
                                 source: root.getWidgetUrl(modelData)
                                 onLoaded: {
                                     if (item && modelData.startsWith("plugin:") && item.hasOwnProperty("pluginId")) item.pluginId = modelData.substring(7)
@@ -285,6 +294,8 @@ Item {
                         totalCount: root.effectiveMiddleLayout.length
                         Loader {
                             Layout.fillHeight: true
+                            Layout.preferredWidth: modelData === "plugin:docker_plugin"
+                                ? (Config.options.bar.vertical ? 32 : 64) : -1
                             source: root.getWidgetUrl(modelData)
                             onLoaded: {
                                 if (item && modelData.startsWith("plugin:") && item.hasOwnProperty("pluginId")) item.pluginId = modelData.substring(7)
@@ -349,6 +360,8 @@ Item {
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
                                 Layout.fillHeight: true
+                                Layout.preferredWidth: modelData === "plugin:docker_plugin"
+                                    ? (Config.options.bar.vertical ? 32 : 64) : -1
                                 source: root.getWidgetUrl(modelData)
                                 onLoaded: {
                                     if (item && modelData.startsWith("plugin:") && item.hasOwnProperty("pluginId")) item.pluginId = modelData.substring(7)
@@ -381,6 +394,8 @@ Item {
                         totalCount: root.effectiveRightLayout.length
                         Loader {
                             Layout.fillHeight: true
+                            Layout.preferredWidth: modelData === "plugin:docker_plugin"
+                                ? (Config.options.bar.vertical ? 32 : 64) : -1
                             source: root.getWidgetUrl(modelData)
                             onLoaded: {
                                 if (item && modelData.startsWith("plugin:") && item.hasOwnProperty("pluginId")) item.pluginId = modelData.substring(7)

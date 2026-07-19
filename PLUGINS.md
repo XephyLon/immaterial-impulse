@@ -118,6 +118,20 @@ Docker refreshes once at service startup, when its popup opens, and after contai
 restore an automatic polling timer: repeated refreshes reproduced roughly 400 MB of RSS growth per
 cycle and eventually froze the shell. The process-lifecycle lint guards this restriction.
 
+The Docker Manager popup is click-only. Do not reconnect its `hoverTarget`: constructing the full
+interactive container and Compose delegate tree from pointer entry reproduced another complete
+Quickshell freeze. Hover must remain a lightweight bar interaction; opening the manager and its
+on-demand refresh belong to the explicit click path. The entire popup stays behind a click-driven
+`Loader` and is destroyed when closed. Do not animate layout-derived `implicitHeight` in its cards;
+use bounded opacity, scale, color, and icon animations to avoid geometry allocation loops.
+
+Despite those lifecycle bounds, the bundled Docker bar entry remains quarantined by
+`BarContent.filterLayout`. Multiple direct and package-native geometry implementations reproduced
+rapid multi-gigabyte RSS growth and complete Quickshell freezes, including while no popup was open.
+Do not remove this filter based on visual or unit tests alone: re-enabling requires an isolated
+Wayland harness that exercises idle, hover, open, close, and repeated-open cycles while enforcing a
+hard RSS ceiling.
+
 Avoid editing many live-loaded QML files in rapid succession. Quickshell reloads the configuration
 for each change, and moving service/module files during those reloads can impose severe session
 load. Stop Quickshell or develop in a worktree, run headless tests, then do one controlled live load.

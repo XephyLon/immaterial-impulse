@@ -12,7 +12,70 @@ StyledPopup {
     id: root
 
     property bool composeView: false
+    property bool pendingComposeView: false
     readonly property bool showPorts: PluginState.option("docker_plugin", "showPorts", true)
+
+    function selectView(nextComposeView) {
+        if (nextComposeView === root.composeView || viewTransition.running) return;
+        root.pendingComposeView = nextComposeView;
+        viewTransition.restart();
+    }
+
+    onActiveChanged: {
+        if (!active) return;
+        panelContent.opacity = 0;
+        panelContent.scale = 0.92;
+        Qt.callLater(() => popupEnter.restart());
+    }
+
+    ParallelAnimation {
+        id: popupEnter
+        NumberAnimation {
+            target: panelContent; property: "opacity"; from: 0; to: 1
+            duration: Appearance.animation.elementMoveEnter.duration
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+        }
+        NumberAnimation {
+            target: panelContent; property: "scale"; from: 0.92; to: 1
+            duration: Appearance.animation.elementMoveEnter.duration
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
+        }
+    }
+
+    SequentialAnimation {
+        id: viewTransition
+        ParallelAnimation {
+            NumberAnimation {
+                target: viewSurface; property: "opacity"; to: 0
+                duration: Appearance.animation.elementMoveFast.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+            }
+            NumberAnimation {
+                target: viewSurface; property: "scale"; to: 0.96
+                duration: Appearance.animation.elementMoveFast.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
+            }
+        }
+        ScriptAction { script: root.composeView = root.pendingComposeView }
+        ParallelAnimation {
+            NumberAnimation {
+                target: viewSurface; property: "opacity"; to: 1
+                duration: Appearance.animation.elementMoveEnter.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+            }
+            NumberAnimation {
+                target: viewSurface; property: "scale"; to: 1
+                duration: Appearance.animation.elementMoveEnter.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
+            }
+        }
+    }
 
     function containerActions(container) {
         return [
@@ -31,8 +94,10 @@ StyledPopup {
     }
 
     ColumnLayout {
+        id: panelContent
         implicitWidth: 480
         spacing: Appearance.spacing.space150
+        transformOrigin: Item.Top
 
         RowLayout {
             Layout.fillWidth: true
@@ -72,6 +137,7 @@ StyledPopup {
             ActionButton {
                 iconText: DockerService.refreshing ? "progress_activity" : "refresh"
                 label: "Refresh"
+                animateIcon: DockerService.refreshing
                 enabled: !DockerService.refreshing
                 onTriggered: DockerService.refresh()
             }
@@ -90,19 +156,20 @@ StyledPopup {
                 label: "Containers"
                 iconText: "deployed_code"
                 selected: !root.composeView
-                onTriggered: root.composeView = false
+                onTriggered: root.selectView(false)
             }
             ViewButton {
                 label: "Compose"
                 iconText: "account_tree"
                 selected: root.composeView
                 enabled: DockerService.composeProjects.length > 0
-                onTriggered: root.composeView = true
+                onTriggered: root.selectView(true)
             }
             Item { Layout.fillWidth: true }
         }
 
         Rectangle {
+            id: viewSurface
             Layout.fillWidth: true
             Layout.preferredHeight: 440
             radius: Appearance.rounding.normal
@@ -154,10 +221,20 @@ StyledPopup {
         id: actionButton
         property string iconText
         property string label
+        property bool animateIcon: false
         signal triggered
         implicitWidth: contentRow.implicitWidth + Appearance.spacing.space200
         implicitHeight: 34
         buttonRadius: Appearance.rounding.full
+        buttonRadiusPressed: Appearance.rounding.small
+        scale: down ? 0.94 : (hovered ? 1.04 : 1)
+        Behavior on scale {
+            NumberAnimation {
+                duration: Appearance.animation.elementResize.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
+            }
+        }
         releaseAction: () => actionButton.triggered()
         contentItem: Row {
             id: contentRow
@@ -168,6 +245,13 @@ StyledPopup {
                 text: actionButton.iconText
                 iconSize: Appearance.font.pixelSize.normal
                 color: Appearance.colors.colOnLayer1
+                rotation: 0
+                RotationAnimation on rotation {
+                    from: 0; to: 360
+                    duration: Appearance.animationCurves.expressiveSlowSpatialDuration * 2
+                    loops: Animation.Infinite
+                    running: actionButton.animateIcon
+                }
             }
             StyledText {
                 anchors.verticalCenter: parent.verticalCenter
@@ -194,6 +278,9 @@ StyledPopup {
             color: Appearance.colors.colLayer3
             border.width: Appearance.borderWidth.standard
             border.color: expanded ? Appearance.colors.colPrimary : Appearance.colors.colOutlineVariant
+            Behavior on border.color {
+                ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+            }
 
             ColumnLayout {
                 id: cardContent
@@ -282,6 +369,9 @@ StyledPopup {
             color: Appearance.colors.colLayer3
             border.width: Appearance.borderWidth.standard
             border.color: expanded ? Appearance.colors.colPrimary : Appearance.colors.colOutlineVariant
+            Behavior on border.color {
+                ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+            }
 
             ColumnLayout {
                 id: projectContent
