@@ -30,10 +30,12 @@ class PluginUninstallerTargetTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     UNINSTALLER.resolve_target(root, bad)
 
-    def test_missing_plugin_raises(self):
+    def test_missing_plugin_is_idempotent(self):
+        # A listed-but-dirless entry (files removed out of band, or a stale
+        # in-memory ghost) must be clearable, not trapped behind an error: the
+        # goal state - plugin absent - is already reached.
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaises(FileNotFoundError):
-                UNINSTALLER.resolve_target(Path(directory), "ghost")
+            self.assertIsNone(UNINSTALLER.resolve_target(Path(directory), "ghost"))
 
     def test_symlinked_entry_is_returned_for_unlink_not_followed(self):
         # A symlink planted at the plugin path must be reported as the link

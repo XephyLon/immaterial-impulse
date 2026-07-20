@@ -16,13 +16,16 @@ from pathlib import Path
 PLUGIN_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}")
 
 
-def resolve_target(install_root: Path, plugin_id: str) -> Path:
-    """Return the path to remove, or raise if the request is unsafe.
+def resolve_target(install_root: Path, plugin_id: str):
+    """Return the path to remove, None if nothing is there, or raise if unsafe.
 
-    A symlink at the plugin path is returned as-is: the caller unlinks the link
-    itself and never follows it, so a link planted in the install root cannot
-    redirect the removal at whatever it points to. A real entry must resolve to
-    a directory sitting directly under the install root.
+    Removal is idempotent: a plugin whose files are already gone counts as
+    removed (None), so the shell can always clear a listed-but-dirless entry
+    rather than trapping it behind a hard error. A symlink at the plugin path is
+    returned as-is - the caller unlinks the link itself and never follows it, so
+    a link planted in the install root cannot redirect the removal at whatever
+    it points to. A real entry must resolve to a directory sitting directly
+    under the install root.
     """
     if not PLUGIN_ID.fullmatch(plugin_id):
         raise ValueError("invalid plugin id")
@@ -32,7 +35,7 @@ def resolve_target(install_root: Path, plugin_id: str) -> Path:
         return target
 
     if not target.exists():
-        raise FileNotFoundError(f"plugin not installed: {plugin_id}")
+        return None
 
     resolved = target.resolve()
     if resolved.parent != install_root.resolve():
@@ -49,7 +52,9 @@ def main() -> int:
     args = parser.parse_args()
 
     target = resolve_target(args.install_root, args.plugin_id)
-    if target.is_symlink():
+    if target is None:
+        pass  # Already absent; the desired end state is reached.
+    elif target.is_symlink():
         target.unlink()
     else:
         shutil.rmtree(target)

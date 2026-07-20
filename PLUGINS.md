@@ -151,8 +151,11 @@ packages (bundled plugins ship with the shell) and enabled only while the plugin
 running plugin is never pulled out from under itself. Deleting prompts for confirmation, then removes
 `~/.config/illogical-impulse/plugins/<plugin-id>/` through `scripts/plugins/uninstall_plugin.py`. That
 script re-validates the id and refuses to remove anything that resolves outside the install root; a
-symlink planted at the plugin path is unlinked rather than followed. The id is also dropped from
-`plugins.enabled` so a stale entry cannot re-enable a package that no longer exists.
+symlink planted at the plugin path is unlinked rather than followed. Removal is idempotent - a plugin
+whose files are already gone (a listed-but-dirless entry left by an out-of-band deletion or a stale
+scan) still counts as removed, so such a row can always be cleared rather than being trapped behind an
+error. The id is also dropped from `plugins.enabled` so a stale entry cannot re-enable a package that
+no longer exists.
 
 ## Process lifecycle safety
 
