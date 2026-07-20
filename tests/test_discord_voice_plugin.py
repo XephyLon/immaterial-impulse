@@ -136,6 +136,101 @@ class DiscordVoiceBridgeTests(unittest.TestCase):
             asyncio.run(bridge.start_vencord_server())
             self.assertIsNone(bridge.vencord_server)
 
+    def test_companion_socket_is_private_from_the_moment_it_is_bound(self):
+        async def scenario(runtime):
+            with mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": runtime}):
+                bridge = bridge_module.Bridge()
+                await bridge.start_vencord_server()
+                try:
+                    mode = stat.S_IMODE(bridge.vencord_socket_path.stat().st_mode)
+                    self.assertEqual(mode, 0o600)
+                    self.assertIsNotNone(bridge.vencord_socket_inode)
+                finally:
+                    bridge.vencord_server.close()
+                    await bridge.vencord_server.wait_closed()
+
+        with tempfile.TemporaryDirectory() as runtime, contextlib.redirect_stdout(io.StringIO()):
+            # A permissive umask must not widen the socket even briefly.
+            previous = os.umask(0o000)
+            try:
+                asyncio.run(scenario(runtime))
+            finally:
+                os.umask(previous)
+        # The mode must come from the bind, not from a later chmod that could
+        # be aimed at a path something else has since swapped in.
+        self.assertNotIn("os.chmod(self.vencord_socket_path", BRIDGE_PATH.read_text())
+
+    def test_wedged_companion_cannot_stall_the_bridge_command_loop(self):
+        class HangingWriter:
+            def __init__(self):
+                self.closed = False
+            def is_closing(self): return self.closed
+            def write(self, data): pass
+            async def drain(self): await asyncio.sleep(3600)
+            def close(self): self.closed = True
+
+        async def scenario():
+            bridge = bridge_module.Bridge()
+            writer = HangingWriter()
+            bridge.vencord_writer = writer
+            bridge_module.COMPANION_WRITE_TIMEOUT = 0.05
+            await asyncio.wait_for(bridge.send_vencord_command(mute=True), 2)
+            # Dropped rather than waited on, so later stdin commands still run.
+            self.assertTrue(writer.closed)
+
+        original = bridge_module.COMPANION_WRITE_TIMEOUT
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                asyncio.run(scenario())
+        finally:
+            bridge_module.COMPANION_WRITE_TIMEOUT = original
+
+    def test_malformed_frame_does_not_end_a_working_companion_session(self):
+        class Reader:
+            def __init__(self, lines): self.lines = list(lines)
+            async def readline(self):
+                return self.lines.pop(0) if self.lines else b""
+
+        class Writer:
+            def __init__(self): self.closed = False
+            def is_closing(self): return self.closed
+            def write(self, data): pass
+            async def drain(self): pass
+            def close(self): self.closed = True
+
+        state = {"version": 1, "backend": "vencord", "user": {"id": "1"},
+                 "channel": None, "users": [], "mute": False, "deaf": False}
+        good = (json.dumps({"type": "state", "state": state}) + "\n").encode()
+
+        async def scenario():
+            bridge = bridge_module.Bridge()
+            # Garbage first: the valid frame behind it must still be applied.
+            await bridge.handle_vencord_client(Reader([b"{not json\n", good]), Writer())
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            asyncio.run(scenario())
+        emitted = [json.loads(line)["type"] for line in output.getvalue().splitlines() if line]
+        # vencord_active is torn down by the end-of-stream path, so the proof
+        # that the good frame survived the bad one is what reached the shell.
+        self.assertIn("voice_channel", emitted)
+        self.assertLess(emitted.index("voice_channel"), emitted.index("disconnected"))
+
+    def test_companion_failure_does_not_masquerade_as_an_auth_prompt(self):
+        bridge = BRIDGE_PATH.read_text()
+        service = (ROOT / "services/DiscordVoice.qml").read_text()
+        self.assertIn('emit("companion_error"', bridge)
+        self.assertNotIn('emit("error", message="Refusing unsafe', bridge)
+        # `error` drives the UI into an Authorize button the user cannot act
+        # on; a companion fault leaves Discord's own RPC backend usable.
+        self.assertIn('case "companion_error": errorMessage', service)
+        self.assertIn('case "error":', service)
+
+    def test_socket_cleanup_cannot_remove_a_successor_bridge_socket(self):
+        bridge = BRIDGE_PATH.read_text()
+        self.assertIn("vencord_socket_inode", bridge)
+        self.assertIn("st_ino == bridge.vencord_socket_inode", bridge)
+
     def test_companion_native_helper_has_no_shared_directory_fallback(self):
         native = (COMPANION / "native.ts").read_text()
         index = (COMPANION / "index.ts").read_text()
@@ -149,6 +244,13 @@ class DiscordVoiceBridgeTests(unittest.TestCase):
         self.assertNotIn("readCommands", index)
         self.assertIn("await Native.nextCommand()", index)
         self.assertIn("setInterval(() => void publish(), 5000)", index)
+        # A partial line left by a dropped connection must not corrupt the
+        # first command of the next one.
+        self.assertIn('input = "";', native)
+        # Coalescing without a trailing re-publish would leave the shell on
+        # stale state until the next heartbeat, five seconds later.
+        self.assertIn("pending = true;", index)
+        self.assertIn("} while (pending);", index)
 
 
 class DiscordVoicePluginSafetyTests(unittest.TestCase):
@@ -266,7 +368,11 @@ class DiscordVoicePluginSafetyTests(unittest.TestCase):
         self.assertIn(': "transparent"', widget)
         overlay = (ROOT / "modules/ii/overlay/discordVoice/DiscordVoiceOverlay.qml").read_text()
         self.assertIn("editorBackgroundOpacity: 0", overlay)
-        self.assertIn("editorBorderVisible: true", overlay)
+        # The resize boundary is the shared frame's default behaviour, gated on
+        # overlayOpen. Re-asserting it here would only restate the default.
+        self.assertNotIn("editorBorderVisible", overlay)
+        frame = (ROOT / "modules/ii/overlay/StyledOverlayWidget.qml").read_text()
+        self.assertIn("property bool editorBorderVisible: true", frame)
         self.assertIn("DiscordPackage.DiscordGlyph", overlay)
         fallback_bar = (PLUGIN / "BarWidget.qml").read_text()
         self.assertIn("DiscordGlyph", fallback_bar)
@@ -274,16 +380,58 @@ class DiscordVoicePluginSafetyTests(unittest.TestCase):
         native_bar = (ROOT / "modules/ii/bar/DiscordVoicePlugin.qml").read_text()
         self.assertIn("DiscordPackage.DiscordGlyph", native_bar)
         self.assertNotIn('text: "voice_chat"', native_bar)
-        overlay_taskbar = (ROOT / "modules/ii/overlay/OverlayTaskbar.qml").read_text()
-        self.assertIn('widgetButton.identifier === "discordVoice"', overlay_taskbar)
-        self.assertIn("DiscordPackage.DiscordGlyph", overlay_taskbar)
         self.assertIn("border.width: 0", widget)
+
+    def test_overlay_taskbar_renders_brand_icons_without_naming_the_plugin(self):
+        taskbar = (ROOT / "modules/ii/overlay/OverlayTaskbar.qml").read_text()
+        context = (ROOT / "modules/ii/overlay/OverlayContext.qml").read_text()
+        # Shared overlay chrome must not special-case an individual widget, or
+        # every future branded plugin needs another branch here.
+        self.assertNotIn("discordVoice", taskbar)
+        self.assertNotIn("DiscordPackage", taskbar)
+        self.assertIn("property Component iconComponent: null", taskbar)
+        self.assertIn("sourceComponent: widgetButton.iconComponent", taskbar)
+        self.assertIn('property: "toggled"', taskbar)
+        # The registry entry is what carries the branding.
+        self.assertIn("iconComponent: root.discordVoiceIcon", context)
+        self.assertIn("DiscordPackage.TaskbarGlyph", context)
+        glyph = (PLUGIN / "TaskbarGlyph.qml").read_text()
+        self.assertIn("property bool toggled", glyph)
+
+    def test_overlay_width_grows_and_wraps_instead_of_clipping_avatars(self):
+        widget = (PLUGIN / "Widget.qml").read_text()
+        manifest = json.loads((PLUGIN / "manifest.json").read_text())
+        options = {option["key"]: option for option in manifest["options"]}
+        # Both inputs to the grid's width are user-configurable, so a fixed
+        # implicitWidth would clip at the top of their ranges.
+        largest_row = options["maxOverlayAvatars"]["to"] * options["overlayAvatarSize"]["to"]
+        self.assertGreater(largest_row, 720)
+        self.assertNotIn("implicitWidth: columnMode ? 256 : 344", widget)
+        self.assertIn("readonly property real maxContentWidth: 720", widget)
+        self.assertIn("columns: root.participantColumns", widget)
+        self.assertIn("participantGridWidth + Appearance.spacing.space150 * 2", widget)
+        # Derived arithmetically: reading the grid's implicitWidth back into
+        # this item's implicitWidth would bind its width to itself.
+        self.assertNotIn("implicitWidth: content.implicitWidth", widget)
+
+    def test_participant_shape_memory_is_bounded(self):
+        state = (PLUGIN / "ParticipantVisualState.js").read_text()
+        self.assertIn("MAX_ENTRIES", state)
+        self.assertIn("delete shapes[keys[index]]", state)
+        # Re-inserting on touch keeps an active speaker from being evicted
+        # ahead of someone who already left the call.
+        self.assertIn("delete shapes[userId]", state)
 
     def test_numeric_plugin_options_reserve_label_space_without_slider_overlap(self):
         options = (ROOT / "modules/common/plugins/PluginOptions.qml").read_text()
         slider = (ROOT / "modules/common/widgets/ConfigSlider.qml").read_text()
         self.assertIn("textWidth: optionLoader.optionData.labelWidth ?? 176", options)
-        self.assertIn("Layout.minimumWidth: root.textWidth", slider)
+        # Elision, not a width floor, is what keeps the label off the slider.
+        # A minimum would apply to every ConfigSlider in the settings window
+        # and push narrow rows wider than their container.
+        self.assertNotIn("Layout.minimumWidth: root.textWidth", slider)
+        self.assertIn("Layout.preferredWidth: root.textWidth", slider)
+        self.assertIn("Layout.maximumWidth: root.textWidth", slider)
         self.assertIn("Layout.minimumWidth: 96", slider)
         self.assertIn("elide: Text.ElideRight", slider)
 
