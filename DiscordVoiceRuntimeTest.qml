@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell
-import "modules/common/plugins/bundled/discord-voice" as DiscordPlugin
+import "modules/common/plugins/bundled/discordVoice" as DiscordPlugin
 import qs.modules.ii.bar as Bar
 
 ShellRoot {

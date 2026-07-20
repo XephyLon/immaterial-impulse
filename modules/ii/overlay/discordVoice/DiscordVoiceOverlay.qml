@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import qs.modules.ii.overlay
-import "../../../common/plugins/bundled/discord-voice" as DiscordPackage
+import "../../../common/plugins/bundled/discordVoice" as DiscordPackage
 
 StyledOverlayWidget {
     id: root

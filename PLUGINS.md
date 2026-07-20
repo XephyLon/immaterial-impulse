@@ -12,6 +12,20 @@ end4-pC supports two complementary plugin formats:
 Installed packages live at `~/.config/illogical-impulse/plugins/<plugin-id>/`. The manager scans
 that directory for `manifest.json`; installed packages override bundled packages with the same id.
 
+## Directory naming
+
+A bundled package directory that any QML file imports *as a directory* -
+`import "../../common/plugins/bundled/discordVoice" as Pkg` - must be named in lowerCamelCase.
+Quickshell's scanner reads that directory name as a QML module name, and anything outside letters,
+digits and underscore makes it log `Module path contains invalid characters for a module name` on
+every scan. The import still resolves, so the only symptom is a log filling up on each reload.
+`tests/lint_qml_module_dirs.py` enforces this.
+
+The manifest `id` is independent and stays `snake_case` (`discord_voice`), as does the
+`~/.config/illogical-impulse/plugins/<plugin-id>/` install path. Packages that are only ever loaded
+dynamically by path, such as the hyphenated `nandoroid-*` ports, are unaffected - keep their
+upstream names.
+
 ## Manifest entry points
 
 An entry point is either a declarative node:

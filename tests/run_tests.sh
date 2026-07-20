@@ -53,6 +53,14 @@ if ! "$SCRIPT_DIR/lint_qml_imports.sh"; then
     exit 1
 fi
 
+# Static lint: a directory reached by a relative QML directory import is read as
+# a module name by Quickshell's scanner, so it cannot contain hyphens.
+echo "Running QML module directory lint..."
+if ! python3 "$SCRIPT_DIR/lint_qml_module_dirs.py"; then
+    echo "QML module directory lint failed."
+    exit 1
+fi
+
 echo "Running system tray icon lint..."
 if ! bash "$SCRIPT_DIR/lint_systray_icon_binding.sh"; then
     echo "System tray icon lint failed."

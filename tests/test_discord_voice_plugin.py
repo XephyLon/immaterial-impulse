@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PLUGIN = ROOT / "modules/common/plugins/bundled/discord-voice"
+PLUGIN = ROOT / "modules/common/plugins/bundled/discordVoice"
 SERVICE = ROOT / "services/DiscordVoice.qml"
 BRIDGE_PATH = ROOT / "scripts/discordVoice/discord_voice_bridge.py"
 
@@ -81,7 +81,7 @@ class DiscordVoicePluginSafetyTests(unittest.TestCase):
     def test_bundled_manifest_is_registered_in_plugin_manager(self):
         manager = (ROOT / "modules/common/plugins/PluginManager.qml").read_text()
         self.assertIn("discordVoiceManifestFile", manager)
-        self.assertIn('bundled/discord-voice', manager)
+        self.assertIn('bundled/discordVoice', manager)
         rebuild_list = manager[manager.index("function rebuildFromLoadedFiles"):
                                manager.index("function scanInstalledPlugins")]
         self.assertIn("discordVoiceManifestFile", rebuild_list)

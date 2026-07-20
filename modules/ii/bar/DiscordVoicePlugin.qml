@@ -7,7 +7,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.plugins
-import "../../common/plugins/bundled/discord-voice" as DiscordPackage
+import "../../common/plugins/bundled/discordVoice" as DiscordPackage
 
 MouseArea {
     id: root

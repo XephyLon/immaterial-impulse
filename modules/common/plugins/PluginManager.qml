@@ -171,7 +171,7 @@ Singleton {
     }
     FileView {
         id: discordVoiceManifestFile
-        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/discord-voice")
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/discordVoice")
         path: pluginBase + "/manifest.json"
         onLoaded: root.scheduleRebuild()
     }
