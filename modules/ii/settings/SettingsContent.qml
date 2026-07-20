@@ -9,6 +9,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.ii.settings.pages
 import qs.modules.common.widgets
+import qs.modules.common.plugins
 import qs.modules.common.functions as CF
 
 Item {
@@ -349,6 +350,39 @@ Item {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // Window-level host for the plugin delete confirmation. It fills the whole
+    // settings window (the pages themselves are clipping flickables and cannot
+    // hold a modal), and is driven purely by PluginManager.pendingUninstallId
+    // so the Plugins page only has to request a removal.
+    Loader {
+        id: uninstallDialogLoader
+        anchors.fill: parent
+        active: false
+        readonly property bool wanted: PluginManager.pendingUninstallId !== ""
+
+        onWantedChanged: if (wanted) active = true
+        onActiveChanged: if (active && item) item.forceActiveFocus()
+        sourceComponent: PluginUninstallDialog {}
+
+        Binding {
+            target: uninstallDialogLoader.item
+            property: "show"
+            value: uninstallDialogLoader.wanted
+            when: uninstallDialogLoader.item !== null
+        }
+
+        Connections {
+            target: uninstallDialogLoader.item
+            function onDismiss() { PluginManager.cancelUninstall(); }
+            // Keep the loader alive through the close animation, then release it.
+            function onVisibleChanged() {
+                if (uninstallDialogLoader.item && !uninstallDialogLoader.item.visible
+                        && !uninstallDialogLoader.wanted)
+                    uninstallDialogLoader.active = false;
             }
         }
     }

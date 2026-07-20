@@ -99,6 +99,12 @@ if ! python3 "$SCRIPT_DIR/test_plugin_installer.py"; then
     exit 1
 fi
 
+echo "Running plugin uninstaller tests..."
+if ! python3 "$SCRIPT_DIR/test_plugin_uninstaller.py"; then
+    echo "Plugin uninstaller tests failed."
+    exit 1
+fi
+
 echo "Running expressive design system tests..."
 if ! python3 "$SCRIPT_DIR/test_expressive_design_system.py"; then
     echo "Expressive design system tests failed."

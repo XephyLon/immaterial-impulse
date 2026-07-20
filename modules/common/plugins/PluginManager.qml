@@ -15,6 +15,12 @@ Singleton {
     readonly property string installedRoot: `${Directories.shellConfig}/plugins`
     property bool installing: false
     property string installMessage: ""
+    property bool uninstalling: false
+    // The plugin id awaiting a delete confirmation, or "" when no dialog is up.
+    // A singleton property so the settings page can request a removal and the
+    // window-level dialog host can show the prompt without them referencing
+    // each other.
+    property string pendingUninstallId: ""
 
     function scheduleRebuild() {
         rebuildTimer.restart();
@@ -117,6 +123,58 @@ Singleton {
             } else {
                 const detail = installerError.text.trim().split("\n").pop();
                 root.installMessage = detail || "Plugin installation failed";
+            }
+        }
+    }
+
+    // Only packages that were installed into the plugins directory can be
+    // removed; bundled plugins ship with the shell and are not on disk here.
+    function isRemovable(id) {
+        for (const plugin of root.availablePlugins)
+            if (plugin.id === id && plugin._origin === "installed")
+                return true;
+        return false;
+    }
+
+    function requestUninstall(id) {
+        if (!root.uninstalling && root.isRemovable(id))
+            root.pendingUninstallId = id;
+    }
+
+    function cancelUninstall() {
+        root.pendingUninstallId = "";
+    }
+
+    function confirmUninstall() {
+        const id = root.pendingUninstallId;
+        root.pendingUninstallId = "";
+        if (root.uninstalling || !root.isRemovable(id))
+            return;
+        root.uninstalling = true;
+        root.installMessage = "Removing plugin…";
+        pluginUninstaller.command = ["python3", `${Directories.scriptPath}/plugins/uninstall_plugin.py`,
+            root.installedRoot, id];
+        pluginUninstaller.running = true;
+    }
+
+    Process {
+        id: pluginUninstaller
+        stdout: StdioCollector { id: uninstallerOutput }
+        stderr: StdioCollector { id: uninstallerError }
+        onExited: (exitCode, exitStatus) => {
+            root.uninstalling = false;
+            if (exitCode === 0) {
+                const removed = uninstallerOutput.text.trim();
+                // The delete affordance is only offered while disabled, but drop
+                // the id from the enabled list regardless so a stale entry can
+                // never re-enable a plugin that no longer exists.
+                Config.setNestedValue("plugins.enabled",
+                    Config.options.plugins.enabled.filter(id => id !== removed));
+                root.installMessage = `Removed ${removed}`;
+                root.scanInstalledPlugins();
+            } else {
+                const detail = uninstallerError.text.trim().split("\n").pop();
+                root.installMessage = detail || "Plugin removal failed";
             }
         }
     }

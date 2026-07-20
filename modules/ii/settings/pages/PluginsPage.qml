@@ -71,38 +71,75 @@ ContentPage {
 
                     Rectangle {
                         Layout.fillWidth: true
-                        implicitHeight: configSwitch.implicitHeight + 16
+                        implicitHeight: pluginRow.implicitHeight + 16
                         color: Appearance.colors.colLayer1
                         radius: Appearance.rounding.normal
 
-                        ConfigSwitch {
-                            id: configSwitch
+                        RowLayout {
+                            id: pluginRow
                             anchors.fill: parent
                             anchors.margins: Appearance.spacing.space100
+                            spacing: Appearance.spacing.space100
 
-                            property var modelData: pluginGroup.modelData
-                            text: modelData.name
-                            description: {
-                                const summary = modelData.description || "";
-                                const creator = modelData.author || Translation.tr("Unknown creator");
-                                return summary.length > 0
-                                    ? `${summary}\n${Translation.tr("By")} ${creator}`
-                                    : `${Translation.tr("By")} ${creator}`;
+                            ConfigSwitch {
+                                id: configSwitch
+                                Layout.fillWidth: true
+
+                                property var modelData: pluginGroup.modelData
+                                text: modelData.name
+                                description: {
+                                    const summary = modelData.description || "";
+                                    const creator = modelData.author || Translation.tr("Unknown creator");
+                                    return summary.length > 0
+                                        ? `${summary}\n${Translation.tr("By")} ${creator}`
+                                        : `${Translation.tr("By")} ${creator}`;
+                                }
+
+                                property bool isEnabled: Config.options.plugins.enabled.includes(modelData.id)
+                                checked: isEnabled
+                                onCheckedChanged: {
+                                    let newList = [];
+                                    for (let i = 0; i < Config.options.plugins.enabled.length; i++) {
+                                        newList.push(Config.options.plugins.enabled[i]);
+                                    }
+                                    if (checked && !isEnabled) {
+                                        newList.push(modelData.id);
+                                    } else if (!checked && isEnabled) {
+                                        newList = newList.filter(id => id !== modelData.id);
+                                    }
+                                    Config.setNestedValue("plugins.enabled", newList);
+                                }
                             }
 
-                            property bool isEnabled: Config.options.plugins.enabled.includes(modelData.id)
-                            checked: isEnabled
-                            onCheckedChanged: {
-                                let newList = [];
-                                for (let i = 0; i < Config.options.plugins.enabled.length; i++) {
-                                    newList.push(Config.options.plugins.enabled[i]);
+                            // Only installed packages live on disk and can be removed;
+                            // bundled plugins ship with the shell. Removal is gated on
+                            // the plugin being disabled so a running plugin is never
+                            // pulled out from under itself.
+                            RippleButton {
+                                id: deleteButton
+                                visible: pluginGroup.modelData._origin === "installed"
+                                enabled: !configSwitch.isEnabled && !PluginManager.uninstalling
+                                Layout.alignment: Qt.AlignVCenter
+                                implicitWidth: 36
+                                implicitHeight: 36
+                                buttonRadius: Appearance.rounding.full
+                                colBackground: "transparent"
+                                colBackgroundHover: Appearance.colors.colLayer2
+                                onClicked: PluginManager.requestUninstall(pluginGroup.modelData.id)
+
+                                contentItem: MaterialSymbol {
+                                    anchors.centerIn: parent
+                                    text: "delete"
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: deleteButton.enabled
+                                        ? Appearance.colors.colError : Appearance.colors.colSubtext
                                 }
-                                if (checked && !isEnabled) {
-                                    newList.push(modelData.id);
-                                } else if (!checked && isEnabled) {
-                                    newList = newList.filter(id => id !== modelData.id);
+
+                                StyledToolTip {
+                                    text: configSwitch.isEnabled
+                                        ? Translation.tr("Disable the plugin before deleting")
+                                        : Translation.tr("Delete plugin")
                                 }
-                                Config.setNestedValue("plugins.enabled", newList);
                             }
                         }
                     }
