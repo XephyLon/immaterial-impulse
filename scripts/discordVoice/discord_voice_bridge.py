@@ -13,6 +13,7 @@ import os
 import struct
 import sys
 import urllib.request
+import time
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +42,16 @@ class Bridge:
         self.authorization_tasks: dict[str, asyncio.Task[None]] = {}
         cache = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
         self.token_path = cache / "end4-pC" / "discord-voice-token.json"
+        # The companion channel is deliberately confined to XDG_RUNTIME_DIR,
+        # which is user-owned and mode 0700. Falling back to a shared directory
+        # would let any local user plant the state file (fabricating
+        # participants, and tearing down a live official-Discord session as a
+        # side effect) or pre-create the command path as a symlink.
+        runtime = os.environ.get("XDG_RUNTIME_DIR", "")
+        self.vencord_state_path = Path(runtime) / "end4-discord-voice-vencord.json" if runtime else None
+        self.vencord_command_path = Path(runtime) / "end4-discord-voice-vencord.commands" if runtime else None
+        self.vencord_active = False
+        self.vencord_signature = ""
 
     def token(self) -> str:
         try:
@@ -95,6 +106,10 @@ class Bridge:
         return [f"{root}/discord-ipc-{index}" for root in roots for index in range(10)]
 
     async def connect(self) -> bool:
+        vencord_state = self.read_vencord_state()
+        if vencord_state:
+            self.apply_vencord_state(vencord_state, force=True)
+            return True
         if self.writer and not self.writer.is_closing():
             return True
         for path in self.candidate_paths():
@@ -107,6 +122,7 @@ class Bridge:
                 opcode, ready = await self.receive(reader)
                 if opcode == OP_CLOSE or ready.get("evt") != "READY":
                     raise ConnectionError("Discord rejected RPC handshake")
+                emit("backend", backend="discord")
                 emit("connected", socket=path)
                 asyncio.create_task(self.read_loop(reader, writer))
                 token = self.token()
@@ -119,6 +135,67 @@ class Bridge:
                 self.close()
         emit("unavailable", message="Discord is not running or RPC is unavailable")
         return False
+
+    def read_vencord_state(self) -> dict[str, Any] | None:
+        if self.vencord_state_path is None:
+            return None
+        try:
+            # O_NOFOLLOW: never traverse a symlink planted at this path.
+            descriptor = os.open(self.vencord_state_path, os.O_RDONLY | os.O_NOFOLLOW)
+            with os.fdopen(descriptor, "r", encoding="utf-8") as handle:
+                data = json.loads(handle.read())
+            if data.get("version") != 1 or data.get("backend") != "vencord":
+                return None
+            timestamp = float(data.get("timestamp", 0)) / 1000
+            # Absolute difference: a clock-skewed or forged future timestamp
+            # must expire too, or it would pin the bridge to a dead companion.
+            if abs(time.time() - timestamp) > 4:
+                return None
+            return data
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            return None
+
+    def apply_vencord_state(self, data: dict[str, Any], force: bool = False) -> None:
+        stable = {key: value for key, value in data.items() if key != "timestamp"}
+        signature = json.dumps(stable, sort_keys=True, separators=(",", ":"))
+        if not force and signature == self.vencord_signature:
+            return
+        if self.writer:
+            self.close()
+        for task in self.authorization_tasks.values():
+            task.cancel()
+        self.authorization_tasks.clear()
+        self.pending.clear()
+        self.vencord_active = True
+        self.vencord_signature = signature
+        emit("backend", backend="vencord")
+        emit("authenticated", user=data.get("user") or {})
+        emit("voice_channel", channel=data.get("channel"), users=data.get("users") or [])
+        emit("voice_settings", mute=bool(data.get("mute")), deaf=bool(data.get("deaf")))
+
+    async def vencord_monitor(self) -> None:
+        while True:
+            state = self.read_vencord_state()
+            if state:
+                self.apply_vencord_state(state)
+            elif self.vencord_active:
+                self.vencord_active = False
+                self.vencord_signature = ""
+                emit("disconnected", reason="Vesktop companion stopped")
+                await self.connect()
+            await asyncio.sleep(0.5)
+
+    def send_vencord_command(self, **command: bool) -> None:
+        if self.vencord_command_path is None:
+            return
+        line = json.dumps(command, separators=(",", ":")) + "\n"
+        # O_NOFOLLOW keeps a symlink planted at this path from redirecting the
+        # write; the creation mode covers permissions, so there is no chmod
+        # afterwards that could be aimed at someone else's file.
+        fd = os.open(self.vencord_command_path,
+                     os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "a", encoding="utf-8") as handle:
+            handle.write(line)
 
     def close(self) -> None:
         if self.writer:
@@ -141,6 +218,10 @@ class Bridge:
         await self.send({"cmd": "AUTHENTICATE", "args": {"access_token": token}, "nonce": nonce})
 
     async def authorize(self) -> None:
+        state = self.read_vencord_state()
+        if state:
+            self.apply_vencord_state(state, force=True)
+            return
         if not await self.connect():
             return
         emit("authorizing")
@@ -175,7 +256,7 @@ class Bridge:
         else:
             emit("error", message=(
                 "The connected Discord client does not support voice authorization. "
-                "Vesktop/arRPC users need a full Discord RPC implementation."))
+                "Vesktop/Vencord users must install and enable the end4 Discord Voice companion."))
 
     @staticmethod
     def exchange(code: str) -> str:
@@ -307,9 +388,12 @@ class Bridge:
                     await self.connect()
                 elif command == "authorize":
                     await self.authorize()
-                elif command == "set_voice_settings" and self.writer:
+                elif command == "set_voice_settings":
                     args = {key: bool(message[key]) for key in ("mute", "deaf") if key in message}
-                    await self.command("SET_VOICE_SETTINGS", args)
+                    if self.vencord_active:
+                        self.send_vencord_command(**args)
+                    elif self.writer:
+                        await self.command("SET_VOICE_SETTINGS", args)
                 elif command == "disconnect":
                     self.close()
             except (json.JSONDecodeError, OSError):
@@ -319,7 +403,9 @@ class Bridge:
 async def main() -> None:
     bridge = Bridge()
     emit("ready")
+    monitor = asyncio.create_task(bridge.vencord_monitor())
     await bridge.input_loop()
+    monitor.cancel()
     bridge.close()
 
 

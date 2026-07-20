@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "modules/common/plugins/bundled/discordVoice"
 SERVICE = ROOT / "services/DiscordVoice.qml"
 BRIDGE_PATH = ROOT / "scripts/discordVoice/discord_voice_bridge.py"
+COMPANION = ROOT / "scripts/discordVoice/vencord-companion"
 
 spec = importlib.util.spec_from_file_location("discord_voice_bridge", BRIDGE_PATH)
 bridge_module = importlib.util.module_from_spec(spec)
@@ -81,6 +82,77 @@ class DiscordVoiceBridgeTests(unittest.TestCase):
         self.assertIn("/runtime/discord-ipc-9", paths)
         self.assertIn("/runtime/app/com.discordapp.Discord/discord-ipc-0", paths)
 
+    def test_fresh_vencord_state_is_accepted_and_stale_state_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": directory}):
+                bridge = bridge_module.Bridge()
+                state = {
+                    "version": 1,
+                    "backend": "vencord",
+                    "timestamp": bridge_module.time.time() * 1000,
+                    "user": {"id": "1", "username": "test"},
+                    "channel": None,
+                    "users": [],
+                    "mute": False,
+                    "deaf": False,
+                }
+                bridge.vencord_state_path.write_text(json.dumps(state))
+                self.assertEqual(bridge.read_vencord_state()["backend"], "vencord")
+                state["timestamp"] -= 5000
+                bridge.vencord_state_path.write_text(json.dumps(state))
+                self.assertIsNone(bridge.read_vencord_state())
+
+    def test_companion_channel_refuses_symlinks_and_shared_directories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            victim = Path(directory) / "victim"
+            victim.write_text("user data")
+            os.chmod(victim, 0o644)
+            runtime = Path(directory) / "runtime"
+            runtime.mkdir()
+            with mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": str(runtime)}):
+                bridge = bridge_module.Bridge()
+                # A symlink planted at either path must not redirect the write
+                # (which also chmodded the target before) or the read.
+                os.symlink(victim, bridge.vencord_command_path)
+                with self.assertRaises(OSError):
+                    bridge.send_vencord_command(mute=True)
+                self.assertEqual(victim.read_text(), "user data")
+                self.assertEqual(stat.S_IMODE(victim.stat().st_mode), 0o644)
+                os.symlink(victim, bridge.vencord_state_path)
+                self.assertIsNone(bridge.read_vencord_state())
+
+        # Without XDG_RUNTIME_DIR there is no user-private directory to use, so
+        # the companion channel is disabled rather than moved to a shared one.
+        with mock.patch.dict(os.environ, {}, clear=True):
+            bridge = bridge_module.Bridge()
+            self.assertIsNone(bridge.vencord_state_path)
+            self.assertIsNone(bridge.vencord_command_path)
+            self.assertIsNone(bridge.read_vencord_state())
+            bridge.send_vencord_command(mute=True)
+
+    def test_future_dated_vencord_state_expires(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": directory}):
+                bridge = bridge_module.Bridge()
+                bridge.vencord_state_path.write_text(json.dumps({
+                    "version": 1, "backend": "vencord",
+                    "timestamp": (bridge_module.time.time() + 9999) * 1000,
+                }))
+                self.assertIsNone(bridge.read_vencord_state())
+
+    def test_companion_native_helper_has_no_shared_directory_fallback(self):
+        native = (COMPANION / "native.ts").read_text()
+        self.assertNotIn("tmpdir", native)
+        self.assertIn("O_NOFOLLOW", native)
+
+    def test_vencord_commands_are_owner_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": directory}):
+                bridge = bridge_module.Bridge()
+                bridge.send_vencord_command(mute=True)
+                self.assertEqual(stat.S_IMODE(bridge.vencord_command_path.stat().st_mode), 0o600)
+                self.assertEqual(json.loads(bridge.vencord_command_path.read_text()), {"mute": True})
+
 
 class DiscordVoicePluginSafetyTests(unittest.TestCase):
     def test_manifest_has_bar_and_native_overlay_capabilities(self):
@@ -142,6 +214,16 @@ class DiscordVoicePluginSafetyTests(unittest.TestCase):
         self.assertIn('text: DiscordVoice.status === "authorizing"', widget)
         service = SERVICE.read_text()
         self.assertIn("id: focusReleaseDelay", service)
+
+    def test_vencord_companion_is_bundled_for_dual_backend_support(self):
+        index = (COMPANION / "index.ts").read_text()
+        native = (COMPANION / "native.ts").read_text()
+        self.assertIn('name: "End4DiscordVoice"', index)
+        self.assertIn("SelectedChannelStore", index)
+        self.assertIn("toggleSelfMute", index)
+        self.assertIn("end4-discord-voice-vencord.json", native)
+        self.assertIn("mode: 0o600", native)
+        self.assertIn('case "backend"', SERVICE.read_text())
 
 
 if __name__ == "__main__":

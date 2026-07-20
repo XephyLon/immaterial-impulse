@@ -62,9 +62,11 @@ Ports should also retain `sourceUrl`, license information, and upstream revision
 The bundled `discord_voice` package provides a Material 3 Expressive widget in
 the shell's `Super+G` overlay canvas and a clickable bar widget. It connects to Discord's local RPC
 socket through the single standard-library Python bridge in
-`scripts/discordVoice/`. Initial use requires explicit authorization in
-Discord; the resulting token is stored below the XDG cache directory with mode
-`0600`.
+`scripts/discordVoice/`. Official Discord uses its native local RPC and requires
+explicit authorization; the resulting token is stored below the XDG cache
+directory with mode `0600`. Vesktop/Vencord uses the bundled
+`vencord-companion` user plugin because arRPC does not implement the voice RPC
+scopes. Its installation instructions are in that companion directory.
 
 The bridge is shared by all views and uses capped exponential restart backoff.
 Do not instantiate it from widget components or replace the native bar route

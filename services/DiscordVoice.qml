@@ -10,6 +10,7 @@ Singleton {
     id: root
 
     property string status: "starting"
+    property string backend: ""
     property string errorMessage: ""
     property var currentUser: ({})
     property var channel: null
@@ -65,6 +66,7 @@ Singleton {
         try { message = JSON.parse(line); } catch (error) { return; }
         switch (message.type) {
         case "ready": connect(); break;
+        case "backend": backend = message.backend || ""; break;
         case "connected": status = "connected"; break;
         case "auth_required": status = "auth_required"; break;
         case "authorizing":
@@ -85,7 +87,7 @@ Singleton {
             deafened = message.deaf === true;
             break;
         case "unavailable": status = "unavailable"; errorMessage = message.message || ""; break;
-        case "disconnected": status = "disconnected"; channel = null; participants = []; break;
+        case "disconnected": status = "disconnected"; backend = ""; channel = null; participants = []; break;
         case "error":
             status = "auth_required";
             errorMessage = message.message || "Discord RPC error";
