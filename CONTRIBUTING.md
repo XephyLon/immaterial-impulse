@@ -280,7 +280,11 @@ concurrently, not as a default for every subagent dispatch.
   has both, and they matter for where a `git pull`/`git push` actually lands.
 - **Hard rule: agents do not add themselves as co-authors** (no `Co-Authored-By: <agent/model>` or
   similar trailer). Commits in this repo are attributed to the human maintainer only, regardless of
-  which agent or model did the work.
+  which agent or model did the work. The same applies to **pull request bodies** - no "Generated
+  with <tool>" footer or equivalent attribution line, even when the agent's own tooling suggests one
+  by default.
+- `gh pr create` defaults its base to the **parent** repo (`pctrade/end4-pC`) because `origin` is a
+  fork. Pass `--repo XephyLon/end4-pC` for a PR that stays in this fork.
 
 ## Style
 
