@@ -2,108 +2,124 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.services
 import QtQuick
-import QtQuick.Layouts
 
 StyledPopup {
     id: root
     property var today: new Date()
+    readonly property var pendingTodos: Todo.list.filter(todo => !todo.done)
 
-    function usageColor(value) {
-        if (value > 0.9) return Appearance.colors.colError
-        if (value > 0.6) return Appearance.m3colors.m3tertiary
-        return Appearance.colors.colPrimary
-    }
+    Item {
+        implicitWidth: 340
+        implicitHeight: 248
 
-    ColumnLayout {
-        spacing: Appearance.spacing.space100
-        width: 340
-
-        Row {
-            width: parent.width
-
-            StyledText {
-                text: Qt.locale().toString(root.today, " MMMM")
-                font.pixelSize: Appearance.font.pixelSize.huge
-                font.weight: Font.Bold
-                color: Appearance.colors.colOnLayer1
+        StyledText {
+            id: monthLabel
+            anchors {
+                left: parent.left
+                top: parent.top
             }
-
-            StyledText {
-                text: " " + Qt.locale().toString(root.today, "yyyy")
-                font.pixelSize: Appearance.font.pixelSize.huge
-                color: Appearance.colors.colOnSurfaceVariant
-            }
+            text: Qt.locale().toString(root.today, "MMMM")
+            font.pixelSize: Appearance.font.pixelSize.huge
+            font.weight: Font.Bold
+            color: Appearance.colors.colOnLayer1
         }
 
-        RowLayout {
-            width: parent.width
+        StyledText {
+            anchors {
+                left: monthLabel.right
+                leftMargin: Appearance.spacing.space100
+                baseline: monthLabel.baseline
+            }
+            text: Qt.locale().toString(root.today, "yyyy")
+            font.pixelSize: Appearance.font.pixelSize.huge
+            color: Appearance.colors.colOnSurfaceVariant
+        }
+
+        Row {
+            id: weekRow
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: monthLabel.bottom
+                topMargin: Appearance.spacing.space100
+            }
             spacing: Appearance.spacing.space50
 
             Repeater {
                 model: 7
+
                 delegate: Rectangle {
                     required property int index
-
                     readonly property var date: {
-                        const today = root.today
-                        const dow = today.getDay()
-                        const d = new Date(today)
-                        d.setDate(today.getDate() - dow + index)
-                        return d
+                        const value = new Date(root.today)
+                        value.setDate(root.today.getDate() - root.today.getDay() + index)
+                        return value
                     }
-                    readonly property bool isToday: {
-                        const t = root.today
-                        return date.getDate()     === t.getDate() &&
-                               date.getMonth()    === t.getMonth() &&
-                               date.getFullYear() === t.getFullYear()
-                    }
-
-                    Layout.fillWidth: true
-                    height: 56
+                    readonly property bool isToday: date.toDateString() === root.today.toDateString()
+                    width: (weekRow.width - weekRow.spacing * 6) / 7
+                    height: 58
                     radius: Appearance.rounding.normal
                     color: isToday
                         ? Appearance.colors.colPrimaryContainer
                         : Appearance.colors.colSurfaceContainerHigh
 
-                    ColumnLayout {
-                        anchors.centerIn: parent
-                        spacing: Appearance.spacing.space25
-
-                        StyledText {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: Qt.locale().toString(date, "ddd").slice(0, 2)
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: isToday
-                                ? Appearance.colors.colPrimary
-                                : Appearance.colors.colOnSurfaceVariant
-                            font.weight: isToday ? Font.Bold : Font.Normal
+                    StyledText {
+                        anchors {
+                            horizontalCenter: parent.horizontalCenter
+                            top: parent.top
+                            topMargin: Appearance.spacing.space75
                         }
+                        text: Qt.locale().toString(parent.date, "ddd").slice(0, 2)
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        font.weight: parent.isToday ? Font.Bold : Font.Normal
+                        color: parent.isToday
+                            ? Appearance.colors.colPrimary
+                            : Appearance.colors.colOnSurfaceVariant
+                    }
 
-                        StyledText {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: date.getDate()
-                            font.pixelSize: isToday
-                                ? Appearance.font.pixelSize.normal
-                                : Appearance.font.pixelSize.small
-                            font.weight: isToday ? Font.Bold : Font.Normal
-                            color: isToday
-                                ? Appearance.colors.colPrimary
-                                : Appearance.colors.colOnLayer1
+                    StyledText {
+                        anchors {
+                            horizontalCenter: parent.horizontalCenter
+                            bottom: parent.bottom
+                            bottomMargin: Appearance.spacing.space75
                         }
+                        text: parent.date.getDate()
+                        font.pixelSize: parent.isToday
+                            ? Appearance.font.pixelSize.normal
+                            : Appearance.font.pixelSize.small
+                        font.weight: parent.isToday ? Font.Bold : Font.Normal
+                        color: parent.isToday
+                            ? Appearance.colors.colPrimary
+                            : Appearance.colors.colOnLayer1
                     }
                 }
             }
         }
 
-        Row {
-            width: parent.width
-            spacing: Appearance.spacing.space100
+        Item {
+            id: taskSection
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: weekRow.bottom
+                topMargin: Appearance.spacing.space100
+            }
+            height: 84
 
-            Column {
-                spacing: Appearance.spacing.space25
-                anchors.verticalCenter: parent.verticalCenter
+            Item {
+                id: taskSummary
+                anchors {
+                    left: parent.left
+                    top: parent.top
+                    bottom: parent.bottom
+                }
+                width: 56
 
                 MaterialShapeWrappedMaterialSymbol {
+                    anchors {
+                        horizontalCenter: parent.horizontalCenter
+                        top: parent.top
+                    }
                     shape: MaterialShape.Shape.Clover4Leaf
                     text: "checklist"
                     iconSize: Appearance.font.pixelSize.large
@@ -113,49 +129,47 @@ StyledPopup {
                 }
 
                 StyledText {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: `${Todo.list.filter(t => !t.done).length}`
+                    anchors {
+                        horizontalCenter: parent.horizontalCenter
+                        bottom: parent.bottom
+                    }
+                    text: root.pendingTodos.length
                     font.pixelSize: Appearance.font.pixelSize.huge
                     font.weight: Font.Bold
                     color: Appearance.colors.colPrimary
                 }
             }
 
-            Column {
-                width: parent.width - 36 - 6
-                spacing: Appearance.spacing.space25
+            Item {
+                id: taskCards
+                anchors {
+                    left: taskSummary.right
+                    leftMargin: Appearance.spacing.space100
+                    right: parent.right
+                    top: parent.top
+                    bottom: parent.bottom
+                }
 
                 Repeater {
-                    id: todoRepeater
-                    model: Math.min(3, Todo.list.filter(t => !t.done).length)
+                    model: Math.min(2, root.pendingTodos.length)
 
                     delegate: Rectangle {
                         required property int index
-                        readonly property var filteredList: Todo.list.filter(t => !t.done)
-                        readonly property var todo: filteredList[filteredList.length - 1 - index]
-                        readonly property int total: todoRepeater.count
-                        readonly property bool isFirst: index === 0
-                        readonly property bool isLast: index === total - 1
-                        readonly property real bigRadius: Appearance.rounding.normal
-                        readonly property real smallRadius: Appearance.rounding.unsharpenmore
-
-                        width: parent.width
-                        height: 32
-                        topLeftRadius:     isFirst ? bigRadius : smallRadius
-                        topRightRadius:    isFirst ? bigRadius : smallRadius
-                        bottomLeftRadius:  isLast  ? bigRadius : smallRadius
-                        bottomRightRadius: isLast  ? bigRadius : smallRadius
+                        width: taskCards.width
+                        height: 38
+                        y: index * (height + Appearance.spacing.space50)
+                        radius: Appearance.rounding.normal
                         color: Appearance.colors.colSurfaceContainerHigh
 
                         StyledText {
                             anchors {
                                 left: parent.left
-                                leftMargin: Appearance.spacing.space150
-                                verticalCenter: parent.verticalCenter
                                 right: parent.right
+                                leftMargin: Appearance.spacing.space150
                                 rightMargin: Appearance.spacing.space150
+                                verticalCenter: parent.verticalCenter
                             }
-                            text: `    ${todo.content} `
+                            text: `    ${root.pendingTodos[root.pendingTodos.length - 1 - index].content} `
                             font.pixelSize: Appearance.font.pixelSize.smaller
                             color: Appearance.colors.colOnLayer1
                             elide: Text.ElideRight
@@ -164,9 +178,8 @@ StyledPopup {
                 }
 
                 Rectangle {
-                    width: parent.width
-                    height: 64
-                    visible: Todo.list.filter(t => !t.done).length === 0
+                    anchors.fill: parent
+                    visible: root.pendingTodos.length === 0
                     radius: Appearance.rounding.normal
                     color: Appearance.colors.colSurfaceContainerHigh
 
@@ -180,39 +193,24 @@ StyledPopup {
             }
         }
 
-        Rectangle {
-            width: parent.width
-            height: 10
-            color: "transparent"
-
-            RowLayout {
-                anchors.centerIn: parent
-                spacing: Appearance.spacing.space100
-
-                MaterialSymbol {
-                    text: "timelapse"
-                    iconSize: Appearance.font.pixelSize.small
-                    color: Appearance.colors.colOnSurfaceVariant
-                }
-
-                StyledText {
-                    text: Translation.tr("System Uptime")
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colOnSurfaceVariant
-                }
-
-                StyledText {
-                    text: "•"
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colOnSurfaceVariant
-                }
-
-                StyledText {
-                    text: DateTime.uptime
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colOnSurfaceVariant
-                }
+        StyledText {
+            anchors {
+                left: parent.left
+                bottom: parent.bottom
             }
+            text: Translation.tr("%1 pending tasks").arg(root.pendingTodos.length)
+            font.pixelSize: Appearance.font.pixelSize.smaller
+            color: Appearance.colors.colOnSurfaceVariant
+        }
+
+        StyledText {
+            anchors {
+                right: parent.right
+                bottom: parent.bottom
+            }
+            text: Translation.tr("Uptime %1").arg(DateTime.uptime)
+            font.pixelSize: Appearance.font.pixelSize.smaller
+            color: Appearance.colors.colOnSurfaceVariant
         }
     }
 }

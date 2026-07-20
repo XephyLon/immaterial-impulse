@@ -50,7 +50,9 @@ def test_plugin_blur_is_bounded_to_widget_geometry():
 
 def test_popups_wait_for_target_window_before_mapping():
     source = Path("modules/common/widgets/StyledPopup.qml").read_text()
-    assert "active: pinnedOpen || pointerOpen" in source
+    assert "active: true" in source
+    assert "visible: root.popupVisible" in source
+    assert "readonly property bool targetHovered: hoverTarget?.containsMouse ?? false" in source
     assert "root.hoverTarget.QsWindow.mapFromItem(" in source
     assert "root.QsWindow?.mapFromItem(" not in source
     assert "readonly property real centerOffsetX" not in source
@@ -58,4 +60,13 @@ def test_popups_wait_for_target_window_before_mapping():
     assert "interval: 180" in source
     assert "onHoveredChanged: root.popupHovered = hovered" in source
     assert "property Timer hoverCloseTimer: Timer" in source
-    assert "root.hoverCloseTimer.restart()" in source
+    assert "onTriggered: root.hoverHeld = false" in source
+
+
+def test_calendar_popup_avoids_layout_and_filter_binding_loops():
+    source = Path("modules/ii/bar/ClockWidgetPopup.qml").read_text()
+    assert "QtQuick.Layouts" not in source
+    assert "ColumnLayout" not in source
+    assert "RowLayout" not in source
+    assert source.count("Todo.list.filter(") == 1
+    assert "readonly property var pendingTodos:" in source
