@@ -29,9 +29,16 @@ Toolbar {
             {"icon": "activity_zone", "name": Translation.tr("Rect")},
             {"icon": "gesture", "name": Translation.tr("Circle")}
         ]
-        currentIndex: root.selectionMode === RegionSelection.SelectionMode.RectCorners ? 0 : 1
+        // currentIndex aliases TabBar's own property, which the TabBar writes to
+        // as well, so binding it here while also writing back from the change
+        // handler is a binding loop. Sync both directions imperatively instead.
+        readonly property int modeIndex: root.selectionMode === RegionSelection.SelectionMode.RectCorners ? 0 : 1
+
+        onModeIndexChanged: if (currentIndex !== modeIndex) currentIndex = modeIndex
+        Component.onCompleted: currentIndex = modeIndex
         onCurrentIndexChanged: {
-            root.selectionMode = currentIndex === 0 ? RegionSelection.SelectionMode.RectCorners : RegionSelection.SelectionMode.Circle;
+            const mode = currentIndex === 0 ? RegionSelection.SelectionMode.RectCorners : RegionSelection.SelectionMode.Circle;
+            if (root.selectionMode !== mode) root.selectionMode = mode;
         }
     }
 }
