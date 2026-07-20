@@ -88,6 +88,18 @@ The Plugins settings page accepts an HTTPS manifest URL. A remotely installable 
 Files are downloaded into a staging directory, checked for path traversal and optional SHA-256
 integrity, then atomically installed. Existing packages are not overwritten implicitly.
 
+An installed package is QML executed inside the shell process, so the transport is enforced:
+
+* the manifest URL, `baseUrl`, and every per-file `url` must use `https://`, and must all resolve
+  to the same host and port — a manifest cannot pull code from a third-party origin;
+* a package may declare at most 64 files, each at most 8 MiB, 32 MiB in total, so a hostile or
+  broken host cannot exhaust memory during install;
+* package paths may not be absolute, contain `..`, begin with `.`, or contain `:`, which also
+  rejects the string form being abused to carry an absolute URL.
+
+Supplying `sha256` per file is still recommended: it is the only check that survives the file host
+and the manifest host being different systems.
+
 ## Process lifecycle safety
 
 Never bind a streaming process such as `docker events`, `nmcli monitor`, or `journalctl -f`

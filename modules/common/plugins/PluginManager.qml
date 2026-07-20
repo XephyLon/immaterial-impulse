@@ -89,8 +89,11 @@ Singleton {
     }
 
     function installFromManifest(url) {
-        if (installing || typeof url !== "string" || !/^https?:\/\//.test(url)) {
-            installMessage = "Enter a valid HTTP(S) manifest URL";
+        // Plain HTTP is rejected here and again in the installer: a package is
+        // QML that runs inside this process, so it may not arrive over a
+        // transport that can be rewritten in flight.
+        if (installing || typeof url !== "string" || !/^https:\/\//.test(url)) {
+            installMessage = "Enter a valid HTTPS manifest URL";
             return false;
         }
         installing = true;

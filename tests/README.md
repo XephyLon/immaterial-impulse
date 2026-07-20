@@ -77,3 +77,40 @@ In addition to the QML unit tests, `run_tests.sh` runs static lint checks first:
 * **Currency service safety tests (`test_currency_service_contract.py`)**: Require one debounced API request per refresh, stale-response invalidation, a bounded timeout, and a non-reentrant completion path without `XMLHttpRequest.abort()`. This prevents DNS outages or startup setting bindings from multiplying pending network callbacks on Quickshell's UI thread.
 * **Ripple lifecycle safety tests (`test_ripple_lifecycle_contract.py`)**: Require ripple handlers to call their owning component explicitly and stop active animations before delegate destruction. This prevents media-player replacement or configuration reloads from repeatedly invoking functions through invalid QML contexts and stalling the event loop.
 * **Event-loop safety tests (`test_event_loop_safety_contract.py`)**: Guard expired notification timers, prevent Loader/item dimension feedback in the bar, and restrict `mirrored` writes to visualizers. These checks cover the binding loops and invalid-object callbacks observed immediately before shell stalls.
+
+### What the Python checks are, and are not
+
+All of the `test_*.py` and `lint_*.py` checks above are **static assertions over
+source text**, not behavioural tests. They pin the shape of a fix so it cannot
+be silently undone, but they cannot observe a running shell, so a passing suite
+never proves the absence of a runtime warning. Always read the live log after a
+change as well.
+
+Because they only match text, they are also sensitive to reformatting: prefer
+asserting a distinctive single-line fragment over a multi-line block with baked
+in indentation.
+
+Modules written in the pytest style (bare `test_*` functions) **must** end with:
+
+```python
+if __name__ == "__main__":
+    import sys
+    from contract_runner import run
+    sys.exit(run(globals()))
+```
+
+`run_tests.sh` invokes them as `python3 <file>`. Without that block the module
+merely defines its functions and exits zero, and the whole file silently passes
+without executing a single assertion. Three modules shipped in that state.
+
+## Runtime harnesses (repository root)
+
+`CurrencyRuntimeTest.qml`, `DesignSystemCompile.qml`, `DockerRuntimeTest.qml`,
+`DockerBarControlRuntimeTest.qml`, and `DockerBarHostRuntimeTest.qml` are
+manually launched harnesses, driven by `run_docker_memory_test.sh` via
+`quickshell -p <file>`.
+
+They live at the repository root on purpose and should not be moved into
+`tests/`: `quickshell -p` roots the `qs` module at the directory of the file it
+is given, so from `tests/` their `import qs.modules.ii.bar` would no longer
+resolve.
