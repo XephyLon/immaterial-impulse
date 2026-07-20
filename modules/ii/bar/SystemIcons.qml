@@ -30,7 +30,7 @@ Item {
         anchors.centerIn: parent
         columns: root.vertical ? 1 : -1
         rows: root.vertical ? -1 : 1
-        columnSpacing: isMaterial ? Appearance.spacing.space25 : Appearance.spacing.space125
+        columnSpacing: isMaterial ? Appearance.spacing.space25 : Appearance.spacing.space150
         rowSpacing: columnSpacing
 
         Revealer {

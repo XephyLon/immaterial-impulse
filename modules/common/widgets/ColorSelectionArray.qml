@@ -15,7 +15,7 @@ RowLayout {
     property string currentValue: ""
     property var options: ["primary", "secondary", "tertiary", "primaryContainer", "secondaryContainer", "tertiaryContainer", "layer1", "layer0"]
     property bool showLabel: true
-    property real itemSpacing: Appearance.spacing.space125
+    property real itemSpacing: Appearance.spacing.space150
     signal selected(string newValue)
 
     MaterialSymbol {

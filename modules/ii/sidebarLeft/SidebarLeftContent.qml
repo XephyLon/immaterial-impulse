@@ -10,7 +10,7 @@ import Qt.labs.synchronizer
 Item {
     id: root
     required property var scopeRoot
-    property int sidebarPadding: Appearance.spacing.space125
+    property int sidebarPadding: Appearance.spacing.space150
     anchors.fill: parent
     property bool aiChatEnabled: Config.options.policies.ai !== 0
     property bool translatorEnabled: Config.options.sidebar.translator.enable

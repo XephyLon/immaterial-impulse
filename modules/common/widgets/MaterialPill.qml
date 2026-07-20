@@ -6,7 +6,7 @@ Rectangle {
     id: root
     property bool vertical: false
     property real crossAxisSize: 32
-    property real mainAxisPadding: Appearance.spacing.space125
+    property real mainAxisPadding: Appearance.spacing.space150
     property real contentSpacing: Appearance.spacing.space50
     property real contentTopMargin: Appearance.spacing.space50
     property color bgColor: Appearance.colors.colPrimaryContainer

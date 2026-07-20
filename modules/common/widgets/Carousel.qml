@@ -14,7 +14,7 @@ Item {
     property real largeItemWidthRatio: 0.52
     property real mediumItemWidthRatio: 0.32
     property real smallItemWidthRatio: 0.12
-    property real itemSpacing: Appearance.spacing.space75
+    property real itemSpacing: Appearance.spacing.space100
     property alias currentIndex: listView.currentIndex
 
     property bool wheelEnabled: true

@@ -222,17 +222,15 @@ Singleton {
     }
 
     spacing: QtObject {
-        // Material 3 system spacing tokens. space100 (8dp) is the base unit;
-        // the primary rhythm uses multiples of 8dp, with recommended nested
-        // values between them. Keep the numbered names aligned with M3.
+        // Material 3 system spacing tokens, restricted to this fork's scale
+        // rule: the two fine values 2 and 4, then multiples of 4 only. The M3
+        // nested values 6, 10 and 14 are deliberately absent - anything that
+        // wants them rounds up to the next token.
         property int space0: 0
         property int space25: 2
         property int space50: 4
-        property int space75: 6
         property int space100: 8
-        property int space125: 10
         property int space150: 12
-        property int space175: 14
         property int space200: 16
         property int space250: 20
         property int space300: 24
@@ -457,7 +455,7 @@ Singleton {
         property real barCenterSideModuleWidthHellaShortened: 190
         property real barShortenScreenWidthThreshold: 1200 // Shorten if screen width is at most this value
         property real barHellaShortenScreenWidthThreshold: 1000 // Shorten even more...
-        property real elevationMargin: root.spacing.space125
+        property real elevationMargin: root.spacing.space150
         property real fabShadowRadius: 5
         property real fabHoveredShadowRadius: 7
         property real hyprlandGapsOut: 5
@@ -475,7 +473,7 @@ Singleton {
         property real wallpaperSelectorWidth: 1200
         property real wallpaperSelectorHeight: 690
         property real wallpaperSelectorItemMargins: root.spacing.space100
-        property real wallpaperSelectorItemPadding: root.spacing.space75
+        property real wallpaperSelectorItemPadding: root.spacing.space100
     }
 
     syntaxHighlightingTheme: root.m3colors.darkmode ? "Monokai" : "ayu Light"

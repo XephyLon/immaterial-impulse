@@ -56,8 +56,8 @@ Rectangle {
     }
 
     // Styles/widgets
-    property real horizontalPadding: Appearance.spacing.space125
-    property real verticalPadding: Appearance.spacing.space125
+    property real horizontalPadding: Appearance.spacing.space150
+    property real verticalPadding: Appearance.spacing.space150
     radius: Appearance.rounding.small - anchors.margins
     color: highlight ? Appearance.colors.colPrimary : Appearance.colors.colLayer2
     implicitHeight: visible ? (contentItem.implicitHeight + verticalPadding * 2) : 0

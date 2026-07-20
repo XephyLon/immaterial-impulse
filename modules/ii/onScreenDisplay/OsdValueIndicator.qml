@@ -13,8 +13,8 @@ Item {
     property bool scaleIcon: false
     property alias from: valueProgressBar.from
     property alias to: valueProgressBar.to
-    property real valueIndicatorVerticalPadding: Appearance.spacing.space125
-    property real valueIndicatorLeftPadding: Appearance.spacing.space125
+    property real valueIndicatorVerticalPadding: Appearance.spacing.space150
+    property real valueIndicatorLeftPadding: Appearance.spacing.space150
     property real valueIndicatorRightPadding: Appearance.spacing.space250 // An icon is circle ish, a column isn't, hence the extra padding
 
     implicitWidth: Appearance.sizes.osdWidth + 4 * Appearance.sizes.elevationMargin

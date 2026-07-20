@@ -24,7 +24,7 @@ import qs.modules.ii.sidebarRight.iconPicker
 Item {
     id: root
     property int sidebarWidth: Appearance.sizes.sidebarWidth
-    property int sidebarPadding: Appearance.spacing.space125
+    property int sidebarPadding: Appearance.spacing.space150
     property string settingsQmlPath: Quickshell.shellPath("settings.qml")
     property bool showAudioOutputDialog: false
     property bool showAudioInputDialog: false

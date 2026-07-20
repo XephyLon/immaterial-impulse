@@ -376,10 +376,12 @@ design tokens - color roles (`Appearance.colors.col*`, `Appearance.m3colors.m3*`
 (`Appearance.spacing.*`), border widths (`Appearance.borderWidth.*`), animation curves/durations
 (`Appearance.animation.*`). New UI should pull from these rather than hardcoding colors/sizes/
 durations, both for dark/light theme correctness and for consistency with the rest of the shell.
-`Appearance.spacing.*` follows Material 3's system scale (`0, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24,
-32, 36, 40, 48, 56, 64, 72`), named `space0` through `space900`; `space100` (8px) is the base unit.
-Prefer multiples of 8 for the main rhythm and the recommended intermediate tokens for nested
-spacing. Use canonical `spaceNNN` names directly; semantic aliases are not supported.
+`Appearance.spacing.*` follows Material 3's system scale restricted to this fork's rule - the two
+fine values, then multiples of 4 (`0, 2, 4, 8, 12, 16, 20, 24, 32, 36, 40, 48, 56, 64, 72`), named
+`space0` through `space900`; `space100` (8px) is the base unit. M3's `space75` (6), `space125` (10),
+and `space175` (14) are intentionally absent - round up to the next token. Prefer multiples of 8 for
+the main rhythm and the multiples of 4 between them for nested spacing. Use canonical `spaceNNN`
+names directly; semantic aliases are not supported.
 `Appearance.borderWidth.*` is `1/2/4`. Snap raw spacing/padding/margin to the nearest spacing token -
 `tests/lint_spacing.py` (run by `tests/run_tests.sh`) enforces declarations and assignments.
 

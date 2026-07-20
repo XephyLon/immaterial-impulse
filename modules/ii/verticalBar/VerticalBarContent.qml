@@ -112,7 +112,7 @@ Item {
         // Top
         Item {
             anchors.top: parent.top
-            anchors.topMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
+            anchors.topMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space150)
             anchors.left: parent.left
             anchors.right: parent.right
             height: root.isMaterial ? topMaterialPill.implicitHeight : topCol.implicitHeight
@@ -265,7 +265,7 @@ Item {
         // Bottom
         Item {
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
+            anchors.bottomMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space150)
             anchors.left: parent.left
             anchors.right: parent.right
             height: root.isMaterial ? bottomMaterialPill.implicitHeight : bottomCol.implicitHeight

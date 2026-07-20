@@ -11,7 +11,7 @@ Item {
     property bool showAddDialog: false
     property int dialogMargins: Appearance.spacing.space250
     property int fabSize: 48
-    property int fabMargins: Appearance.spacing.space175
+    property int fabMargins: Appearance.spacing.space200
 
     Keys.onPressed: (event) => {
         if ((event.key === Qt.Key_PageDown || event.key === Qt.Key_PageUp) && event.modifiers === Qt.NoModifier) {

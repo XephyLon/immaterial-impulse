@@ -37,9 +37,9 @@ RippleButton {
     property bool blurImage: entry?.blurImage ?? false
     
     visible: root.entryShown
-    property int horizontalMargin: Appearance.spacing.space125
-    property int buttonHorizontalPadding: Appearance.spacing.space125
-    property int buttonVerticalPadding: Appearance.spacing.space75
+    property int horizontalMargin: Appearance.spacing.space150
+    property int buttonHorizontalPadding: Appearance.spacing.space150
+    property int buttonVerticalPadding: Appearance.spacing.space100
     property bool keyboardDown: false
     readonly property bool selected: (root.hovered || root.focus)
 
@@ -130,7 +130,7 @@ RippleButton {
 
     RowLayout {
         id: rowLayout
-        spacing: iconLoader.sourceComponent === null ? 0 : Appearance.spacing.space125
+        spacing: iconLoader.sourceComponent === null ? 0 : Appearance.spacing.space150
         anchors.fill: parent
         anchors.leftMargin: root.horizontalMargin + root.buttonHorizontalPadding
         anchors.rightMargin: root.horizontalMargin + root.buttonHorizontalPadding

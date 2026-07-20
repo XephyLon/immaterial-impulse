@@ -21,7 +21,7 @@ Item {
 
     property real thinkBlockBackgroundRounding: Appearance.rounding.small
     property real thinkBlockHeaderPaddingVertical: Appearance.spacing.space50
-    property real thinkBlockHeaderPaddingHorizontal: Appearance.spacing.space125
+    property real thinkBlockHeaderPaddingHorizontal: Appearance.spacing.space150
     property real thinkBlockComponentSpacing: Appearance.spacing.space25
 
     property var collapseAnimation: messageTextBlock.implicitHeight > 40 ? Appearance.animation.elementMoveEnter : Appearance.animation.elementMoveFast

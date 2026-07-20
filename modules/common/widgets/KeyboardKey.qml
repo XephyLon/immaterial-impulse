@@ -5,7 +5,7 @@ Rectangle {
     id: root
     property string key
 
-    property real horizontalPadding: Appearance.spacing.space75
+    property real horizontalPadding: Appearance.spacing.space100
     property real verticalPadding: Appearance.spacing.space25
     property real borderWidth: 1
     property real extraBottomBorderWidth: 2

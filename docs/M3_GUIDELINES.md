@@ -62,11 +62,15 @@ a violation of this rule - keep the computed expression rather than snapping it 
 
 Always use predefined values from `Appearance.spacing` for `spacing`, `padding`, and margin
 properties. Never hardcode pixel gaps (e.g., `spacing: 12`). The canonical Material 3 system scale
-is `0, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, 36, 40, 48, 56, 64, 72`, exposed as `space0`,
-`space25`, `space50`, `space75`, `space100`, `space125`, `space150`, `space175`, `space200`,
-`space250`, `space300`, `space400`, `space450`, `space500`, `space600`, `space700`, `space800`, and
-`space900`. `space100` (8px) is the base unit. Prefer multiples of 8 for the main layout rhythm and
-the intervening tokens for nested spacing. Snap raw spacing/padding/margin values to this scale.
+is `0, 2, 4, 8, 12, 16, 20, 24, 32, 36, 40, 48, 56, 64, 72`, exposed as `space0`, `space25`,
+`space50`, `space100`, `space150`, `space200`, `space250`, `space300`, `space400`, `space450`,
+`space500`, `space600`, `space700`, `space800`, and `space900`. `space100` (8px) is the base unit.
+
+Every step above the two fine values (2 and 4) is a multiple of 4, matching `borderWidth`'s
+`1/2/4`. M3's nested `space75` (6), `space125` (10), and `space175` (14) are deliberately **not**
+offered: a value that wants one of them rounds up to `space100`, `space150`, or `space200`. Prefer
+multiples of 8 for the main layout rhythm and the multiples of 4 between them for nested spacing.
+Snap raw spacing/padding/margin values to this scale.
 
 Use the canonical `spaceNNN` names directly; semantic aliases are intentionally not provided because
 they hide the actual spatial relationship. Only genuine large one-off *dimensions* outside the

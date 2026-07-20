@@ -18,7 +18,7 @@ Rectangle {
     property color borderColor
     property color fillColor: "transparent"
     property string text: ""
-    property real textPadding: Appearance.spacing.space125
+    property real textPadding: Appearance.spacing.space150
     z: 2
     color: fillColor
     border.color: borderColor
@@ -49,7 +49,7 @@ Rectangle {
         active: root.showLabel
         sourceComponent: Rectangle {
             property real verticalPadding: Appearance.spacing.space50
-            property real horizontalPadding: Appearance.spacing.space125
+            property real horizontalPadding: Appearance.spacing.space150
             radius: 10
             color: root.colBackground
             border.width: Appearance.borderWidth.standard
