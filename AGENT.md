@@ -65,6 +65,36 @@ Find the current instance's log with:
 ls -la /proc/$(pgrep -f 'qs -c end4-pC')/fd | grep log.log
 ```
 
+The process is named **`qs`**, not `quickshell` — `pgrep quickshell` returns nothing even while the
+shell is running, which reads as "the shell is down" and leads to launching a second instance on top
+of the user's. Always match on `qs`:
+```bash
+pgrep -af 'qs -c end4-pC'
+```
+
+**Grep `ERROR`, not just `WARN`.** A `WARN scene:` line is a runtime warning in an otherwise
+working shell; `ERROR: Failed to load configuration` means the config did not load *at all* and the
+user has no panels. The error is reported as a cascade from `shell.qml` down to the file that
+actually failed — the **last** `caused by` line is the real culprit:
+```
+ERROR: Failed to load configuration
+ERROR:   caused by @shell.qml[50:20]: Type IllogicalImpulseFamily unavailable
+...
+ERROR:   caused by @modules/ii/sidebarRight/calendar/CalendarHeaderButton.qml[13:5]: Cannot override FINAL property
+```
+Because a single bad widget takes down every panel that transitively reaches it, **confirm
+`Configuration Loaded` appears after the reload** rather than only checking that no warnings did.
+
+**`tests/run_tests.sh` cannot catch this class of bug.** The QML suite instantiates pure-logic
+singletons and never builds these widgets, so a widget that fails to compile leaves the suite fully
+green. Only a live load surfaces it.
+
+**Gotcha — FINAL properties:** anything deriving from `RippleButton` (and so from QQC2 `Control`)
+must not declare `horizontalPadding`, `verticalPadding`, `padding`, `spacing`, `font`, `palette`, or
+`icon` as its own property; those are `FINAL` and overriding one is a hard compile failure. Pick a
+distinct name (`labelInset`, not `horizontalPadding`). A plain `Item`/`Rectangle` has no such
+restriction, which is why `property real padding` is fine in the many non-`Control` widgets here.
+
 **Known quirk:** `console.log` output to `log.log` can appear noticeably delayed (stdio buffering) —
 a print can sit unflushed for several seconds before showing up, sometimes interleaved with later
 events in a way that looks like a stale/wrong value at first glance. If a debug print looks wrong,

@@ -193,6 +193,12 @@ bug in anything that qualifies:
 - **Run `./tests/run_tests.sh` before committing** and confirm it's green. A change that breaks an
   existing test is a regression, full stop - fix the change, don't loosen or delete the test to
   make it pass, unless the test itself was wrong (and if so, say so explicitly in the commit).
+- **A green suite does not mean the shell loads.** The QML tests only instantiate pure-logic
+  singletons, so any widget that fails to *compile* (a `FINAL` property override, a bad type name, a
+  missing `import qs.modules.common`) passes every test while taking down every panel that reaches
+  it. After touching any `.qml` under `modules/`, check the live log for `Configuration Loaded` and
+  for `ERROR:` - not just `WARN` - before calling the change verified. See AGENT.md's "Where to look
+  when something goes wrong" for the cascade format and the `pgrep -af 'qs -c end4-pC'` caveat.
 - **A new Python check must actually run.** `run_tests.sh` invokes each one as `python3 <file>`, so
   a module of bare `test_*` functions exits zero without executing anything. Either subclass
   `unittest.TestCase` with `unittest.main()`, or end the file with the `contract_runner` block
