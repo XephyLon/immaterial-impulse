@@ -11,6 +11,9 @@ LazyLoader {
     property Item hoverTarget
     default property Item contentItem
     property real popupBackgroundMargin: 0
+    // Inset between the popup's surface and its content. Denser popups keep the
+    // default; content-heavy ones raise it.
+    property real contentPadding: Appearance.spacing.space100
     // Interactive popups can remain open after the pointer leaves the bar.
     // Passive users retain the original hover-only behavior.
     property bool pinnedOpen: false
@@ -142,7 +145,7 @@ LazyLoader {
 
         Rectangle {
             id: popupBackground
-            readonly property real margin: Appearance.spacing.space100
+            readonly property real margin: root.contentPadding
 
             anchors {
                 fill: parent
