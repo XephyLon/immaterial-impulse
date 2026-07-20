@@ -61,12 +61,22 @@ apply_anyterm() {
 
   sed -i "s/\$alpha/$term_alpha/g" "$STATE_DIR/user/generated/terminal/sequences.txt"
 
+  # Only interactive shells understand these OSC sequences. Other processes can
+  # hold a pty too - kded6 does - and a daemon that reads its pty as plain text
+  # will happily surface the raw escape codes as a desktop notification.
   for file in /dev/pts/*; do
-    if [[ $file =~ ^/dev/pts/[0-9]+$ ]]; then
-      {
-      cat "$STATE_DIR"/user/generated/terminal/sequences.txt >"$file"
-      } & disown || true
+    [[ $file =~ ^/dev/pts/[0-9]+$ ]] || continue
+    [[ -w $file ]] || continue
+
+    local attached
+    attached=$(ps -o comm= -t "${file#/dev/}" 2>/dev/null)
+    if ! grep -qE '^(sh|bash|zsh|fish|ksh|csh|tcsh|dash|ash|nu|xonsh|elvish|screen|tmux)' <<<"$attached"; then
+      continue
     fi
+
+    {
+      cat "$STATE_DIR"/user/generated/terminal/sequences.txt >"$file"
+    } & disown || true
   done
 }
 
