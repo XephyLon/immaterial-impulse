@@ -8,6 +8,14 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # root, so make the suite independent of the caller's working directory.
 cd "$PROJECT_ROOT" || exit 1
 
+# The QML tests instantiate pure-logic singletons and never render anything, but
+# qmltestrunner still builds a QGuiApplication and aborts with SIGABRT (exit 134)
+# if Qt cannot resolve a platform plugin - which is what happens over SSH, in a
+# container, or in any session without a display. CI already sets this; default
+# it here too so running the suite directly behaves the same everywhere. An
+# explicit value still wins, for anyone who needs a real platform plugin.
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}"
+
 # Find Qt6 qmltestrunner
 QMLTESTRUNNER=""
 POSSIBLE_PATHS=(

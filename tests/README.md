@@ -18,6 +18,11 @@ The root `qs` module is also declared in `tests/imports/qs/qmldir`; its lightwei
 
 This allows us to run tests headlessly, fast, and safely on any system with Qt6 installed.
 
+Nothing here renders, but `qmltestrunner` still constructs a `QGuiApplication`, which aborts with
+SIGABRT (exit 134) when Qt cannot resolve a platform plugin - over SSH, in a container, or in any
+session without a display. `run_tests.sh` therefore defaults `QT_QPA_PLATFORM` to `offscreen`; set
+it explicitly to override.
+
 ---
 
 ## How to Run the Test Suite
