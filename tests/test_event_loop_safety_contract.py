@@ -50,13 +50,20 @@ def test_plugin_blur_is_bounded_to_widget_geometry():
 
 def test_popups_wait_for_target_window_before_mapping():
     source = Path("modules/common/widgets/StyledPopup.qml").read_text()
-    assert "active: true" in source
+    # The window must outlive hover transitions: it is created on first show
+    # and then only its visibility changes, so the pointer crossing the bar-to-
+    # popup gap cannot destroy and recreate a layer-shell surface.
+    assert "active: everShown" in source
+    assert "onPopupVisibleChanged: if (popupVisible) everShown = true" in source
     assert "visible: root.popupVisible" in source
-    assert "readonly property bool targetHovered: hoverTarget?.containsMouse ?? false" in source
+    assert "targetHovered: hoverTarget?.containsMouse" in source
+    # Map through the target's window, never the popup's own, and assign the
+    # result imperatively so margins never feed back into their own input.
     assert "root.hoverTarget.QsWindow.mapFromItem(" in source
     assert "root.QsWindow?.mapFromItem(" not in source
     assert "readonly property real centerOffsetX" not in source
-    assert "Component.onCompleted: initialPositionTimer.start()" in source
+    assert "function schedulePosition() { positionTimer.restart() }" in source
+    assert "onVisibleChanged: if (visible) schedulePosition()" in source
     assert "interval: 180" in source
     assert "onHoveredChanged: root.popupHovered = hovered" in source
     assert "property Timer hoverCloseTimer: Timer" in source
@@ -70,3 +77,9 @@ def test_calendar_popup_avoids_layout_and_filter_binding_loops():
     assert "RowLayout" not in source
     assert source.count("Todo.list.filter(") == 1
     assert "readonly property var pendingTodos:" in source
+
+
+if __name__ == "__main__":
+    import sys
+    from contract_runner import run
+    sys.exit(run(globals()))

@@ -18,7 +18,12 @@ LazyLoader {
     property bool popupHovered: false
     property bool hoverHeld: false
     readonly property bool popupVisible: pinnedOpen || hoverHeld
-    active: true
+    // Stay lazy until the popup is first needed, then keep the window alive so
+    // pointer transitions only flip visibility instead of destroying and
+    // recreating layer-shell surfaces.
+    property bool everShown: false
+    active: everShown
+    onPopupVisibleChanged: if (popupVisible) everShown = true
 
     function updateHoverHold() {
         if (targetHovered || popupHovered) {
@@ -81,13 +86,32 @@ LazyLoader {
             popupWindow.centerOffsetY = Math.max(margin, Math.min(verticalBase, maxTop))
         }
 
+        // Position is resolved imperatively on a zero-interval timer so the
+        // popup's own margins never join the binding graph that produces them.
+        // Recomputing on every show and on content resize keeps it correct
+        // without reintroducing the create-map-destroy loop.
         Timer {
-            id: initialPositionTimer
+            id: positionTimer
             interval: 0
             onTriggered: popupWindow.updatePosition()
         }
 
-        Component.onCompleted: initialPositionTimer.start()
+        function schedulePosition() { positionTimer.restart() }
+
+        Component.onCompleted: schedulePosition()
+        onVisibleChanged: if (visible) schedulePosition()
+        onScreenChanged: schedulePosition()
+
+        Connections {
+            target: root
+            function onBarEdgeChanged() { popupWindow.schedulePosition() }
+        }
+
+        Connections {
+            target: popupBackground
+            function onImplicitWidthChanged() { popupWindow.schedulePosition() }
+            function onImplicitHeightChanged() { popupWindow.schedulePosition() }
+        }
 
         mask: Region {
             item: popupBackground
