@@ -212,9 +212,25 @@ Singleton {
                     property real activeOpacity: 1.0
                     property real inactiveOpacity: 0.9
                     property JsonObject blur: JsonObject {
+                        // Defaults mirror the effective decoration:blur values this
+                        // setup already runs, so exposing them in settings cannot
+                        // change how the compositor looks on first open.
                         property bool enabled: true
                         property int size: 1
                         property int passes: 3
+                        property bool ignoreOpacity: true
+                        property bool newOptimizations: true
+                        property bool xray: false
+                        property real noise: 0.05
+                        property real contrast: 0.89
+                        property real brightness: 1.0
+                        property real vibrancy: 0.0
+                        property real vibrancyDarkness: 0.5
+                        property bool special: true
+                        property bool popups: false
+                        property real popupsIgnorealpha: 0.6
+                        property bool inputMethods: true
+                        property real inputMethodsIgnorealpha: 0.8
                     }
                     property JsonObject shadow: JsonObject {
                         property bool enabled: true

@@ -43,6 +43,19 @@ ContentPage {
             "decoration:blur:enabled":              h.decoration.blur.enabled ? 1 : 0,
             "decoration:blur:size":                 h.decoration.blur.size,
             "decoration:blur:passes":               h.decoration.blur.passes,
+            "decoration:blur:ignore_opacity":       h.decoration.blur.ignoreOpacity ? 1 : 0,
+            "decoration:blur:new_optimizations":    h.decoration.blur.newOptimizations ? 1 : 0,
+            "decoration:blur:xray":                 h.decoration.blur.xray ? 1 : 0,
+            "decoration:blur:noise":                h.decoration.blur.noise,
+            "decoration:blur:contrast":             h.decoration.blur.contrast,
+            "decoration:blur:brightness":           h.decoration.blur.brightness,
+            "decoration:blur:vibrancy":             h.decoration.blur.vibrancy,
+            "decoration:blur:vibrancy_darkness":    h.decoration.blur.vibrancyDarkness,
+            "decoration:blur:special":              h.decoration.blur.special ? 1 : 0,
+            "decoration:blur:popups":               h.decoration.blur.popups ? 1 : 0,
+            "decoration:blur:popups_ignorealpha":   h.decoration.blur.popupsIgnorealpha,
+            "decoration:blur:input_methods":        h.decoration.blur.inputMethods ? 1 : 0,
+            "decoration:blur:input_methods_ignorealpha": h.decoration.blur.inputMethodsIgnorealpha,
             "decoration:active_opacity":            h.decoration.activeOpacity,
             "decoration:inactive_opacity":          h.decoration.inactiveOpacity,
             "general:border_size":                  h.general.borderSize,
@@ -353,41 +366,6 @@ ContentPage {
                     }
                 }
 
-                ConfigSwitch {
-                    buttonIcon: "blur_on"
-                    text: Translation.tr("Blur")
-                    checked: Config.options.hyprland.decoration.blur.enabled
-                    onCheckedChanged: {
-                        if (checked === Config.options.hyprland.decoration.blur.enabled) return
-                        Config.options.hyprland.decoration.blur.enabled = checked
-                        HyprlandConfig.set("decoration:blur:enabled", checked ? 1 : 0)
-                    }
-                }
-
-                ConfigSpinBox {
-                    icon: "blur_circular"
-                    text: Translation.tr("Blur Size")
-                    value: Config.options.hyprland.decoration.blur.size
-                    from: 1; to: 20; stepSize: 1
-                    onValueChanged: {
-                        if (value === Config.options.hyprland.decoration.blur.size) return
-                        Config.options.hyprland.decoration.blur.size = value
-                        HyprlandConfig.set("decoration:blur:size", value)
-                    }
-                }
-
-                ConfigSpinBox {
-                    icon: "layers"
-                    text: Translation.tr("Blur Passes")
-                    value: Config.options.hyprland.decoration.blur.passes
-                    from: 1; to: 6; stepSize: 1
-                    onValueChanged: {
-                        if (value === Config.options.hyprland.decoration.blur.passes) return
-                        Config.options.hyprland.decoration.blur.passes = value
-                        HyprlandConfig.set("decoration:blur:passes", value)
-                    }
-                }
-
                 ConfigSpinBox {
                     icon: "border_outer"
                     text: Translation.tr("Border Size")
@@ -447,6 +425,223 @@ ContentPage {
                         if (newVal === Config.options.hyprland.decoration.inactiveOpacity) return
                         Config.options.hyprland.decoration.inactiveOpacity = newVal
                         HyprlandConfig.set("decoration:inactive_opacity", newVal)
+                    }
+                }
+            }
+        }
+
+        // Blur
+        ContentSection {
+            icon: "blur_on"
+            shape: MaterialShape.Shape.Cookie9Sided
+            title: Translation.tr("Blur")
+
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "blur_on"
+                    text: Translation.tr("Blur")
+                    infoText: Translation.tr("Enable kawase window background blur.")
+                    checked: Config.options.hyprland.decoration.blur.enabled
+                    onCheckedChanged: {
+                        if (checked === Config.options.hyprland.decoration.blur.enabled) return
+                        Config.options.hyprland.decoration.blur.enabled = checked
+                        HyprlandConfig.set("decoration:blur:enabled", checked ? 1 : 0)
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "blur_circular"
+                    text: Translation.tr("Blur Size")
+                    infoText: Translation.tr("Blur radius, in pixels. Larger values blur further but cost more to render.")
+                    value: Config.options.hyprland.decoration.blur.size
+                    from: 0; to: 100; stepSize: 1
+                    onValueChanged: {
+                        if (value === Config.options.hyprland.decoration.blur.size) return
+                        Config.options.hyprland.decoration.blur.size = value
+                        HyprlandConfig.set("decoration:blur:size", value)
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "layers"
+                    text: Translation.tr("Blur Passes")
+                    infoText: Translation.tr("How many blur passes to perform. More passes look smoother and cost more.")
+                    value: Config.options.hyprland.decoration.blur.passes
+                    from: 0; to: 10; stepSize: 1
+                    onValueChanged: {
+                        if (value === Config.options.hyprland.decoration.blur.passes) return
+                        Config.options.hyprland.decoration.blur.passes = value
+                        HyprlandConfig.set("decoration:blur:passes", value)
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "opacity"
+                    text: Translation.tr("Ignore Window Opacity")
+                    infoText: Translation.tr("Blur behind a window even where the window itself is translucent.")
+                    checked: Config.options.hyprland.decoration.blur.ignoreOpacity
+                    onCheckedChanged: {
+                        if (checked === Config.options.hyprland.decoration.blur.ignoreOpacity) return
+                        Config.options.hyprland.decoration.blur.ignoreOpacity = checked
+                        HyprlandConfig.set("decoration:blur:ignore_opacity", checked ? 1 : 0)
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "speed"
+                    text: Translation.tr("Extra Optimizations")
+                    infoText: Translation.tr("Enable further optimizations to the blur. Recommended.")
+                    checked: Config.options.hyprland.decoration.blur.newOptimizations
+                    onCheckedChanged: {
+                        if (checked === Config.options.hyprland.decoration.blur.newOptimizations) return
+                        Config.options.hyprland.decoration.blur.newOptimizations = checked
+                        HyprlandConfig.set("decoration:blur:new_optimizations", checked ? 1 : 0)
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "layers_clear"
+                    text: Translation.tr("X-Ray (Skip Tiled Windows)")
+                    infoText: Translation.tr("Floating windows ignore tiled windows in their blur, so they blur the wallpaper instead.")
+                    checked: Config.options.hyprland.decoration.blur.xray
+                    onCheckedChanged: {
+                        if (checked === Config.options.hyprland.decoration.blur.xray) return
+                        Config.options.hyprland.decoration.blur.xray = checked
+                        HyprlandConfig.set("decoration:blur:xray", checked ? 1 : 0)
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "grain"
+                    text: Translation.tr("Noise")
+                    infoText: Translation.tr("How much noise to mix into the blur, which hides colour banding.")
+                    value: Math.round(Config.options.hyprland.decoration.blur.noise * 100)
+                    from: 0; to: 100; stepSize: 1
+                    onValueChanged: {
+                        const newVal = value / 100.0
+                        if (newVal === Config.options.hyprland.decoration.blur.noise) return
+                        Config.options.hyprland.decoration.blur.noise = newVal
+                        HyprlandConfig.set("decoration:blur:noise", newVal)
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "contrast"
+                    text: Translation.tr("Contrast")
+                    infoText: Translation.tr("Contrast modulation for the blur. 100% leaves it unchanged.")
+                    value: Math.round(Config.options.hyprland.decoration.blur.contrast * 100)
+                    from: 0; to: 200; stepSize: 1
+                    onValueChanged: {
+                        const newVal = value / 100.0
+                        if (newVal === Config.options.hyprland.decoration.blur.contrast) return
+                        Config.options.hyprland.decoration.blur.contrast = newVal
+                        HyprlandConfig.set("decoration:blur:contrast", newVal)
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "brightness_6"
+                    text: Translation.tr("Brightness")
+                    infoText: Translation.tr("Brightness modulation for the blur. 100% leaves it unchanged.")
+                    value: Math.round(Config.options.hyprland.decoration.blur.brightness * 100)
+                    from: 0; to: 200; stepSize: 1
+                    onValueChanged: {
+                        const newVal = value / 100.0
+                        if (newVal === Config.options.hyprland.decoration.blur.brightness) return
+                        Config.options.hyprland.decoration.blur.brightness = newVal
+                        HyprlandConfig.set("decoration:blur:brightness", newVal)
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "palette"
+                    text: Translation.tr("Vibrancy")
+                    infoText: Translation.tr("Increase the saturation of blurred colours.")
+                    value: Math.round(Config.options.hyprland.decoration.blur.vibrancy * 100)
+                    from: 0; to: 100; stepSize: 1
+                    onValueChanged: {
+                        const newVal = value / 100.0
+                        if (newVal === Config.options.hyprland.decoration.blur.vibrancy) return
+                        Config.options.hyprland.decoration.blur.vibrancy = newVal
+                        HyprlandConfig.set("decoration:blur:vibrancy", newVal)
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "dark_mode"
+                    text: Translation.tr("Vibrancy On Dark Areas")
+                    infoText: Translation.tr("How strongly vibrancy applies to dark areas.")
+                    value: Math.round(Config.options.hyprland.decoration.blur.vibrancyDarkness * 100)
+                    from: 0; to: 100; stepSize: 1
+                    onValueChanged: {
+                        const newVal = value / 100.0
+                        if (newVal === Config.options.hyprland.decoration.blur.vibrancyDarkness) return
+                        Config.options.hyprland.decoration.blur.vibrancyDarkness = newVal
+                        HyprlandConfig.set("decoration:blur:vibrancy_darkness", newVal)
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "web_asset"
+                    text: Translation.tr("Blur Special Workspace")
+                    infoText: Translation.tr("Blur behind the special workspace. Expensive.")
+                    checked: Config.options.hyprland.decoration.blur.special
+                    onCheckedChanged: {
+                        if (checked === Config.options.hyprland.decoration.blur.special) return
+                        Config.options.hyprland.decoration.blur.special = checked
+                        HyprlandConfig.set("decoration:blur:special", checked ? 1 : 0)
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "menu"
+                    text: Translation.tr("Blur Popups")
+                    infoText: Translation.tr("Blur popups such as right-click menus.")
+                    checked: Config.options.hyprland.decoration.blur.popups
+                    onCheckedChanged: {
+                        if (checked === Config.options.hyprland.decoration.blur.popups) return
+                        Config.options.hyprland.decoration.blur.popups = checked
+                        HyprlandConfig.set("decoration:blur:popups", checked ? 1 : 0)
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "opacity"
+                    text: Translation.tr("Popup Alpha Threshold")
+                    infoText: Translation.tr("Pixels in a popup more transparent than this are not blurred.")
+                    value: Math.round(Config.options.hyprland.decoration.blur.popupsIgnorealpha * 100)
+                    from: 0; to: 100; stepSize: 1
+                    onValueChanged: {
+                        const newVal = value / 100.0
+                        if (newVal === Config.options.hyprland.decoration.blur.popupsIgnorealpha) return
+                        Config.options.hyprland.decoration.blur.popupsIgnorealpha = newVal
+                        HyprlandConfig.set("decoration:blur:popups_ignorealpha", newVal)
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "keyboard"
+                    text: Translation.tr("Blur Input Methods")
+                    infoText: Translation.tr("Blur input methods, such as fcitx5.")
+                    checked: Config.options.hyprland.decoration.blur.inputMethods
+                    onCheckedChanged: {
+                        if (checked === Config.options.hyprland.decoration.blur.inputMethods) return
+                        Config.options.hyprland.decoration.blur.inputMethods = checked
+                        HyprlandConfig.set("decoration:blur:input_methods", checked ? 1 : 0)
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "opacity"
+                    text: Translation.tr("Input Method Alpha Threshold")
+                    infoText: Translation.tr("Pixels in an input method more transparent than this are not blurred.")
+                    value: Math.round(Config.options.hyprland.decoration.blur.inputMethodsIgnorealpha * 100)
+                    from: 0; to: 100; stepSize: 1
+                    onValueChanged: {
+                        const newVal = value / 100.0
+                        if (newVal === Config.options.hyprland.decoration.blur.inputMethodsIgnorealpha) return
+                        Config.options.hyprland.decoration.blur.inputMethodsIgnorealpha = newVal
+                        HyprlandConfig.set("decoration:blur:input_methods_ignorealpha", newVal)
                     }
                 }
             }
