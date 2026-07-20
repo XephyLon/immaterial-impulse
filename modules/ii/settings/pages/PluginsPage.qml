@@ -24,17 +24,22 @@ ContentPage {
                 Layout.fillWidth: true
                 spacing: Appearance.spacing.space100
 
-                MaterialTextField {
+                ConfigTextArea {
                     id: manifestUrl
                     Layout.fillWidth: true
-                    placeholderText: Translation.tr("Plugin manifest URL")
+                    buttonIcon: "extension"
+                    text: Translation.tr("Plugin manifest URL")
+                    placeholderText: Translation.tr("https://…/manifest.json")
+                    fieldWidth: 300
                 }
                 RippleButton {
                     implicitWidth: installLabel.implicitWidth + Appearance.spacing.space300
                     implicitHeight: 44
                     enabled: !PluginManager.installing
                     buttonRadius: Appearance.rounding.full
-                    releaseAction: () => PluginManager.installFromManifest(manifestUrl.text.trim())
+                    // ConfigTextArea.text is the row label; the field content is
+                    // its `value` alias.
+                    releaseAction: () => PluginManager.installFromManifest(manifestUrl.value.trim())
                     contentItem: StyledText {
                         id: installLabel
                         anchors.centerIn: parent
