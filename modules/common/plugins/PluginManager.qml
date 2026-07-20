@@ -53,7 +53,8 @@ Singleton {
     function rebuildFromLoadedFiles() {
         let loaded = [];
         let map = {};
-        [clockManifestFile, batteryManifestFile, dockerManifestFile, atAGlanceManifestFile,
+        [clockManifestFile, batteryManifestFile, dockerManifestFile, discordVoiceManifestFile,
+                atAGlanceManifestFile,
                 nandoroidClockManifestFile, nandoroidAtAGlanceManifestFile,
                 nandoroidMediaManifestFile, nandoroidSystemMonitorManifestFile,
                 nandoroidWeatherManifestFile, nandoroidCurrencyManifestFile].forEach(fileView => {
@@ -166,6 +167,12 @@ Singleton {
         id: dockerManifestFile
         property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/docker")
         path: Quickshell.shellPath("modules/common/plugins/bundled/docker/manifest.json")
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: discordVoiceManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/discord-voice")
+        path: pluginBase + "/manifest.json"
         onLoaded: root.scheduleRebuild()
     }
     FileView {

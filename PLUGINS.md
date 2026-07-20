@@ -43,6 +43,20 @@ Every plugin should declare an `author` naming its creator or maintainers. The p
 this attribution below the description; legacy manifests without it are labeled “Unknown creator”.
 Ports should also retain `sourceUrl`, license information, and upstream revision where practical.
 
+## Discord Voice
+
+The bundled `discord_voice` package provides a Material 3 Expressive widget in
+the shell's `Super+G` overlay canvas and a clickable bar widget. It connects to Discord's local RPC
+socket through the single standard-library Python bridge in
+`scripts/discordVoice/`. Initial use requires explicit authorization in
+Discord; the resulting token is stored below the XDG cache directory with mode
+`0600`.
+
+The bridge is shared by all views and uses capped exponential restart backoff.
+Do not instantiate it from widget components or replace the native bar route
+with nested loaders. The bar popup is click-only and closes through
+`HyprlandFocusGrab`.
+
 Manifest options support `boolean`, `choice`, `number`, and `text`. Text options use the shell's
 native `ConfigTextArea`; `placeholder`, `maxLength`, and `uppercase` may be supplied for short values
 such as currency codes.

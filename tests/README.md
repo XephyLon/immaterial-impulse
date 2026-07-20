@@ -108,9 +108,13 @@ if __name__ == "__main__":
 merely defines its functions and exits zero, and the whole file silently passes
 without executing a single assertion. Three modules shipped in that state.
 
+`test_discord_voice_plugin.py` verifies private token-cache permissions and RPC
+state minimization, requires one bounded bridge with capped restart backoff, and
+keeps the clickable Discord bar widget on its native single-owner geometry path.
+
 ## Runtime harnesses (repository root)
 
-`CurrencyRuntimeTest.qml`, `DesignSystemCompile.qml`, `DockerRuntimeTest.qml`,
+`CurrencyRuntimeTest.qml`, `DesignSystemCompile.qml`, `DiscordVoiceRuntimeTest.qml`, `DockerRuntimeTest.qml`,
 `DockerBarControlRuntimeTest.qml`, and `DockerBarHostRuntimeTest.qml` are
 manually launched harnesses, driven by `run_docker_memory_test.sh` via
 `quickshell -p <file>`.

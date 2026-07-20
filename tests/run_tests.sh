@@ -103,6 +103,12 @@ if ! python3 "$SCRIPT_DIR/test_docker_memory_safety.py"; then
     exit 1
 fi
 
+echo "Running Discord voice plugin tests..."
+if ! python3 "$SCRIPT_DIR/test_discord_voice_plugin.py"; then
+    echo "Discord voice plugin tests failed."
+    exit 1
+fi
+
 echo "Running MPRIS controller contract tests..."
 if ! python3 "$SCRIPT_DIR/test_mpris_controller_contract.py"; then
     echo "MPRIS controller contract tests failed."

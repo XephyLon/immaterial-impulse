@@ -1,13 +1,14 @@
 pragma Singleton
 pragma ComponentBehavior: Bound
 import Quickshell
+import qs.modules.common
 
 Singleton {
     id: root
     
     signal requestCenter(string identifier)
 
-    readonly property list<var> availableWidgets: [
+    readonly property list<var> builtInWidgets: [
         { identifier: "crosshair", materialSymbol: "point_scan" },
         { identifier: "fpsLimiter", materialSymbol: "animation" },
         { identifier: "floatingImage", materialSymbol: "imagesmode" },
@@ -16,6 +17,10 @@ Singleton {
         { identifier: "notes", materialSymbol: "note_stack" },
         { identifier: "volumeMixer", materialSymbol: "volume_up" },
     ]
+    readonly property list<var> availableWidgets: root.builtInWidgets.concat(
+        Config.options.plugins.enabled.includes("discord_voice")
+            ? [{ identifier: "discordVoice", materialSymbol: "voice_chat" }]
+            : [])
     
     readonly property bool hasPinnedWidgets: root.pinnedWidgetIdentifiers.length > 0
 

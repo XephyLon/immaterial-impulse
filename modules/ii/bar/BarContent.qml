@@ -43,6 +43,7 @@ Item {
         // but must not sit in Docker's bar geometry path: forcing that Loader
         // to fill its implicit-size host caused multi-gigabyte relayout loops.
         if (name === "plugin:docker_plugin") return Qt.resolvedUrl("./DockerPlugin.qml");
+        if (name === "plugin:discord_voice") return Qt.resolvedUrl("./DiscordVoicePlugin.qml");
         if (name.startsWith("plugin:")) return Qt.resolvedUrl("./PluginBarWidget.qml");
         let formattedName = name.charAt(0).toUpperCase() + name.slice(1);
         return Qt.resolvedUrl("./" + formattedName + ".qml");

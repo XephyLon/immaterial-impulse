@@ -1,0 +1,18 @@
+{
+  "id": "discord_voice",
+  "name": "Discord Voice",
+  "description": "Voice-channel overlay and bar controls with speaking, mute, and deafen state",
+  "version": "1.0.0",
+  "author": "xephy; end4-pC contributors",
+  "source": "Discord RPC approach informed by dms-discord-widget",
+  "sourceUrl": "https://github.com/PandorasFox/dms-discord-widget",
+  "apiVersion": 1,
+  "capabilities": ["bar-widget", "overlay-widget", "settings"],
+  "permissions": ["process", "network", "filesystem_read", "filesystem_write", "settings_read", "settings_write"],
+  "options": [
+    { "key": "showBarWidget", "type": "boolean", "label": "Show bar widget", "icon": "view_day", "default": true },
+    { "key": "maxBarAvatars", "type": "number", "label": "Maximum bar avatars", "icon": "group", "default": 4, "from": 1, "to": 8, "step": 1 },
+    { "key": "maxOverlayAvatars", "type": "number", "label": "Maximum overlay avatars", "icon": "groups", "default": 8, "from": 1, "to": 12, "step": 1 }
+  ],
+  "barWidget": { "component": "BarWidget.qml" }
+}
