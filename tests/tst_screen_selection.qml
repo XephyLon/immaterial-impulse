@@ -46,6 +46,15 @@ TestCase {
         compare(off.list, ["DP-1", "DP-2"]);
     }
 
+    function test_selectingAnAlreadyCoveredScreenDoesNotDuplicate() {
+        // WidgetsMonitorSelector expanded the [] sentinel and then appended
+        // without checking, producing ["DP-1","DP-2","HDMI-A-1","DP-1"].
+        const result = ScreenSelection.toggle([], allNames, "DP-1", true);
+        compare(result.accepted, true);
+        // Every screen is still selected, so it collapses back to the sentinel.
+        compare(result.list, []);
+    }
+
     function test_doesNotMutateTheCallersList() {
         const original = ["DP-1", "DP-2"];
         ScreenSelection.toggle(original, allNames, "DP-1", false);
