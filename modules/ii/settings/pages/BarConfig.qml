@@ -6,6 +6,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.plugins
 import Quickshell.Hyprland
+import "../../../common/functions/screenSelection.js" as ScreenSelection
 
 ContentPage {
     id: page
@@ -154,13 +155,18 @@ ContentPage {
                                 text: monitorRow.modelData.name
                                 onCheckedChanged: {
                                     const allNames = Hyprland.monitors.values.map(m => m.name)
-                                    let list = Config.options.bar.screenList.length === 0 ? allNames.slice() : Config.options.bar.screenList.slice()
-                                    if (checked) {
-                                        if (!list.includes(monitorRow.modelData.name)) list.push(monitorRow.modelData.name)
-                                    } else {
-                                        list = list.filter(s => s !== monitorRow.modelData.name)
+                                    const result = ScreenSelection.toggle(
+                                        Config.options.bar.screenList, allNames,
+                                        monitorRow.modelData.name, checked)
+                                    if (!result.accepted) {
+                                        // Unchecking the last screen would empty the
+                                        // list, which means "every screen" - the bar
+                                        // would come back on everywhere. Put the
+                                        // switch back rather than bounce it.
+                                        checked = true
+                                        return
                                     }
-                                    Config.options.bar.screenList = list.length === allNames.length ? [] : list
+                                    Config.options.bar.screenList = result.list
                                 }
 
                                 Binding {
