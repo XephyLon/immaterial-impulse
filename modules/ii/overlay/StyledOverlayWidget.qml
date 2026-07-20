@@ -98,21 +98,23 @@ AbstractOverlayWidget {
     opacity: (GlobalStates.overlayOpen || !clickthrough) ? 1.0 : Config.options.overlay.clickthroughOpacity
 
     // Guarded states & registration funcs
-    property bool open: Persistent.states.overlay.open
+    // Was assigned the whole `open` list, which is a list<string> coerced into
+    // a bool and therefore always true. Harmless so far - the delegate is only
+    // built for identifiers already in that list - but it made `actuallyPinned`
+    // and `actuallyClickable` read as if they were guarded when they were not.
+    property bool open: Persistent.states.overlay.open.includes(identifier)
     property bool actuallyPinned: pinned && open
     property bool actuallyClickable: !clickthrough && actuallyPinned && open
-    onActuallyPinnedChanged: reportPinnedState();
     onActuallyClickableChanged: reportClickableState();
-    function reportPinnedState() {
-        OverlayContext.pin(identifier, actuallyPinned);
-    }
     function reportClickableState() {
         OverlayContext.registerClickableWidget(contentItem, actuallyClickable);
     }
 
-    // Self-registeration with OverlayContext
+    // Self-registeration with OverlayContext. Only clickability is registered
+    // this way: it needs the live contentItem for the input mask. Pinned state
+    // is read from persisted config instead, so it is known before any widget
+    // exists.
     Component.onCompleted: {
-        reportPinnedState();
         reportClickableState();
     }
 

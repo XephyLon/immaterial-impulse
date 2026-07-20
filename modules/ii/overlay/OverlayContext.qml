@@ -34,20 +34,16 @@ Singleton {
             }]
             : [])
     
-    readonly property bool hasPinnedWidgets: root.pinnedWidgetIdentifiers.length > 0
+    // Read from persisted state rather than from a registry the widgets fill
+    // in. Overlay.qml gates its Loader on this, and the widgets that would
+    // register live inside that Loader - so a registry-backed answer is empty
+    // on startup and a pinned widget stays invisible until the overlay is
+    // opened once, which is exactly what it is meant to avoid.
+    readonly property bool hasPinnedWidgets: Persistent.states.overlay.open.some(identifier =>
+        Persistent.states.overlay[identifier]?.pinned === true
+            && root.availableWidgets.some(widget => widget.identifier === identifier))
 
-    property list<string> pinnedWidgetIdentifiers: []
     property list<var> clickableWidgets: []
-
-    function pin(identifier: string, pin = true) {
-        if (pin) {
-            if (!root.pinnedWidgetIdentifiers.includes(identifier)) {
-                root.pinnedWidgetIdentifiers.push(identifier)
-            }
-        } else {
-            root.pinnedWidgetIdentifiers = root.pinnedWidgetIdentifiers.filter(id => id !== identifier)
-        }
-    }
 
     function registerClickableWidget(widget: var, clickable = true) {
         if (clickable) {
