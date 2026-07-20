@@ -10,7 +10,9 @@ ColumnLayout {
     property string title
     property string icon: ""
     property var bgColor: Appearance.colors.colSecondaryContainer
-    default property alias data: sectionContent.data
+    // Named contentData rather than data: aliasing 'data' shadows Item's own
+    // member, which Qt warns about on every instantiation.
+    default property alias contentData: sectionContent.data
 
     Layout.fillWidth: true
     spacing: Appearance.spacing.space100

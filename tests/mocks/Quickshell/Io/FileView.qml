@@ -4,6 +4,7 @@ Item {
     property string path
     property bool watchChanges
     property bool blockWrites
+    property bool printErrors: true
     property var adapter
     
     signal fileChanged()

@@ -17,10 +17,10 @@ Item {
         id: iconImage
         anchors.fill: parent
         source: {
-            const fullPathWhenSourceIsIconName = iconFolder + "/" + root.source;
-            if (iconFolder && fullPathWhenSourceIsIconName) {
-                return fullPathWhenSourceIsIconName
-            }
+            // Without this the empty source resolves to the icon folder itself,
+            // and IconImage logs a failed open for the directory.
+            if (!root.source) return "";
+            if (iconFolder) return iconFolder + "/" + root.source;
             return root.source
         }
         implicitSize: root.height

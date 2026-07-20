@@ -9,7 +9,9 @@ StyledFlickable {
     property bool forceWidth: false
     property real bottomContentPadding: 90
 
-    default property alias data: contentColumn.data
+    // Named contentData rather than data: aliasing 'data' shadows Item's own
+    // member, which Qt warns about on every instantiation.
+    default property alias contentData: contentColumn.data
 
     clip: true
     contentHeight: contentColumn.implicitHeight + root.bottomContentPadding // Add some padding at the bottom

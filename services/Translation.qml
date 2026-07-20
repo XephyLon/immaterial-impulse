@@ -121,6 +121,10 @@ Singleton {
         property string languageCode: root.languageCode
         signal contentLoaded(var data)
 
+        // A missing file is the normal case for any language without an
+        // override, and onLoadFailed already substitutes an empty set.
+        printErrors: false
+
         function reread() { // Proper reload in case the file was incorrect before
             translationReader.path = "";
             translationReader.path = `${translationReader.translationsDir}/${translationReader.languageCode}.json`;
