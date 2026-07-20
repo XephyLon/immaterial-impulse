@@ -93,15 +93,34 @@ AbstractBackgroundWidget {
         }
 
         Image {
+            id: wallpaperMetadata
+            source: rootWidget.wallpaperPath ? ("file://" + rootWidget.wallpaperPath) : ""
+            asynchronous: true
+            cache: true
+            visible: false
+        }
+
+        Image {
             id: wallpaperSample
             source: rootWidget.wallpaperPath ? ("file://" + rootWidget.wallpaperPath) : ""
             asynchronous: true
             cache: true
-            fillMode: Image.PreserveAspectCrop
-            width: rootWidget.scaledScreenWidth
-            height: rootWidget.scaledScreenHeight
-            x: -rootWidget.x
-            y: -rootWidget.y
+            anchors.fill: parent
+            fillMode: Image.Stretch
+            readonly property real cropScale: wallpaperMetadata.sourceSize.width > 0
+                    && wallpaperMetadata.sourceSize.height > 0
+                ? Math.max(rootWidget.scaledScreenWidth / wallpaperMetadata.sourceSize.width,
+                    rootWidget.scaledScreenHeight / wallpaperMetadata.sourceSize.height)
+                : 1
+            readonly property real cropOffsetX: Math.max(0,
+                (wallpaperMetadata.sourceSize.width * cropScale - rootWidget.scaledScreenWidth) / 2)
+            readonly property real cropOffsetY: Math.max(0,
+                (wallpaperMetadata.sourceSize.height * cropScale - rootWidget.scaledScreenHeight) / 2)
+            sourceClipRect: Qt.rect(
+                (rootWidget.x + cropOffsetX) / cropScale,
+                (rootWidget.y + cropOffsetY) / cropScale,
+                Math.max(1, width / cropScale),
+                Math.max(1, height / cropScale))
             layer.enabled: true
             layer.effect: FastBlur { radius: 48 }
         }
