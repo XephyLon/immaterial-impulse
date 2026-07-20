@@ -85,8 +85,8 @@ MouseArea { // Notification group area
         automaticallyReset: false
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
-        onPressed: {
-            if (mouse.button === Qt.RightButton) 
+        onPressed: mouse => {
+            if (mouse.button === Qt.RightButton)
                 root.toggleExpanded();
         }
 

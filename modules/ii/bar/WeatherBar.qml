@@ -18,7 +18,7 @@ MouseArea {
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     hoverEnabled: !Config.options.bar.tooltips.clickToShow
 
-    onPressed: {
+    onPressed: mouse => {
         if (mouse.button === Qt.RightButton) {
             Weather.getData();
             Quickshell.execDetached(["notify-send",
