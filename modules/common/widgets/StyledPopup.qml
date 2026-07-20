@@ -14,32 +14,28 @@ LazyLoader {
     // Interactive popups can remain open after the pointer leaves the bar.
     // Passive users retain the original hover-only behavior.
     property bool pinnedOpen: false
-    property bool pointerOpen: false
+    readonly property bool targetHovered: hoverTarget?.containsMouse ?? false
     property bool popupHovered: false
-    active: pinnedOpen || pointerOpen
+    property bool hoverHeld: false
+    readonly property bool popupVisible: pinnedOpen || hoverHeld
+    active: true
 
-    function updatePointerOpen() {
-        if ((hoverTarget && hoverTarget.containsMouse) || popupHovered) {
-            root.hoverCloseTimer.stop();
-            pointerOpen = true;
-        } else if (pointerOpen) {
-            root.hoverCloseTimer.restart();
+    function updateHoverHold() {
+        if (targetHovered || popupHovered) {
+            hoverCloseTimer.stop();
+            hoverHeld = true;
+        } else if (hoverHeld) {
+            hoverCloseTimer.restart();
         }
     }
 
     property Timer hoverCloseTimer: Timer {
         interval: 180
-        onTriggered: root.pointerOpen = false
+        onTriggered: root.hoverHeld = false
     }
 
-    Connections {
-        target: root.hoverTarget
-        ignoreUnknownSignals: true
-        function onContainsMouseChanged() { root.updatePointerOpen(); }
-    }
-
-    onPopupHoveredChanged: updatePointerOpen()
-    Component.onCompleted: updatePointerOpen()
+    onTargetHoveredChanged: updateHoverHold()
+    onPopupHoveredChanged: updateHoverHold()
 
     readonly property bool barVertical: Config.options.bar.vertical
     readonly property string barEdge: {
@@ -54,6 +50,7 @@ LazyLoader {
         // Bring contentItem reference into this scope
         property Item innerContent: root.contentItem
 
+        visible: root.popupVisible
         color: "transparent"
         anchors.left: root.barEdge !== "right"
         anchors.right: root.barEdge === "right"
