@@ -447,6 +447,10 @@ Singleton {
                     property int gpuWarningThreshold: 90
                     property int vramWarningThreshold: 95
                 }
+                property JsonObject divider: JsonObject {
+                    property string style: "rect" // rect - dot - space
+                    property int spacing: 20
+                }
 
                 property JsonObject layouts: JsonObject {
                     property list<string> leftLayout: ["workspaces"]

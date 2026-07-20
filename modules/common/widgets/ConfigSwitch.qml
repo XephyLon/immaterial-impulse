@@ -15,6 +15,7 @@ RippleButton {
     colBackgroundHover: "transparent"
 
     Layout.fillWidth: true
+    Layout.bottomMargin: Appearance.spacing.space75 //Visually it works and I don't know why this should be handled by the parent.
     implicitHeight: contentItem.implicitHeight + 8 
     font.pixelSize: Appearance.font.pixelSize.small
 
