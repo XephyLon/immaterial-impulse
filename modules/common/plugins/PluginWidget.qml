@@ -92,6 +92,12 @@ AbstractBackgroundWidget {
             }
         }
 
+        // Only exists to report the wallpaper's intrinsic size, which the crop
+        // rectangle below needs. It cannot carry a sourceSize: setting one makes
+        // sourceSize report the requested value instead of the file's own, which
+        // is exactly the number this needs. It therefore decodes the full image,
+        // but cache: true and an identical source across every widget mean the
+        // decoded pixmap is shared rather than duplicated per plugin.
         Image {
             id: wallpaperMetadata
             source: rootWidget.wallpaperPath ? ("file://" + rootWidget.wallpaperPath) : ""
