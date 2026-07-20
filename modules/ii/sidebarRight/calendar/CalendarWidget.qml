@@ -6,7 +6,11 @@ import QtQuick
 import QtQuick.Layouts
 
 Item {
+    id: root
     property int monthShift: 0
+    // One grid column. The header's circular buttons match it so they sit
+    // centred over the last two day columns instead of a few pixels off.
+    readonly property int dayCellSize: 38
     property var viewingDate: CalendarLayout.getDateInXMonthsTime(monthShift)
     property var calendarLayout: CalendarLayout.getCalendarLayout(viewingDate, monthShift === 0)
     width: calendarColumn.width
@@ -44,7 +48,11 @@ Item {
             Layout.fillWidth: true
             spacing: Appearance.spacing.space100
             CalendarHeaderButton {
+                id: monthButton
                 clip: true
+                // Pull the button out by its own inset so the month label starts
+                // on the first day column's left edge instead of 12px right of it.
+                Layout.leftMargin: -horizontalPadding
                 buttonText: `${monthShift != 0 ? "• " : ""}${viewingDate.toLocaleDateString(Qt.locale(), "MMMM yyyy")}`
                 tooltipText: (monthShift === 0) ? "" : Translation.tr("Jump to current month")
                 downAction: () => {
@@ -57,6 +65,7 @@ Item {
             }
             CalendarHeaderButton {
                 forceCircle: true
+                implicitHeight: root.dayCellSize
                 downAction: () => {
                     monthShift--;
                 }
@@ -69,6 +78,7 @@ Item {
             }
             CalendarHeaderButton {
                 forceCircle: true
+                implicitHeight: root.dayCellSize
                 downAction: () => {
                     monthShift++;
                 }
@@ -90,6 +100,8 @@ Item {
             Repeater {
                 model: CalendarLayout.weekDays
                 delegate: CalendarDayButton {
+                    implicitWidth: root.dayCellSize
+                    implicitHeight: root.dayCellSize
                     day: Translation.tr(modelData.day)
                     isToday: modelData.today
                     bold: true
@@ -110,6 +122,8 @@ Item {
                 Repeater {
                     model: Array(7).fill(modelData)
                     delegate: CalendarDayButton {
+                        implicitWidth: root.dayCellSize
+                        implicitHeight: root.dayCellSize
                         day: calendarLayout[modelData][index].day
                         isToday: calendarLayout[modelData][index].today
                     }
