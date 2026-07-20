@@ -105,7 +105,7 @@ ContentPage {
 
                         delegate: ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: Appearance.rounding.small
+                            spacing: Appearance.spacing.space150
 
                             GroupedList {
                                 cohesive: true
@@ -117,8 +117,10 @@ ContentPage {
                                     checked: Config.options.ai.customProviders[index].enabled
                                     onCheckedChanged: {
                                         let providers = [...Config.options.ai.customProviders];
-                                        providers[index].enabled = checked;
-                                        Config.options.ai.customProviders = providers;
+                                        if (providers[index].enabled !== checked) {
+                                            providers[index].enabled = checked;
+                                            Config.options.ai.customProviders = providers;
+                                        }
                                     }
                                 }
 
