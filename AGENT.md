@@ -218,6 +218,21 @@ This is purely a manual-testing/CLI concern - IPC events, layer-shell behavior, 
 QML code touches are unaffected by this; only raw `hyprctl dispatch <dispatcher> <args>` calls typed
 by a human/agent need the Lua-call form on this particular machine.
 
+**Rules registered at runtime through `hyprctl eval` do not survive, so don't build on them.**
+`hyprctl reload` resets the Lua state - every global and every rule registered from it is gone.
+The shell reapplies the Hyprland theme during its own startup, which reloads, so anything a QML
+`Component.onCompleted` registers via `execDetached(["hyprctl", "eval", ...])` is destroyed seconds
+after it is created. This fails silently and in a way that is easy to misread: registering the rule
+by hand from a terminal to "verify" it works leaves a rule that *does* persist until the next
+reload, so the feature looks correct while the shell's own registration has never once been live.
+Verify by clearing the global, restarting the shell, and re-reading it - not by running the chunk
+yourself.
+
+`Settings.qml` used to float/size/center its window this way. It doesn't need to: a `FloatingWindow`
+whose `minimumSize` equals its `maximumSize` is floated, sized and centred by Hyprland on its own,
+purely from the fixed size hints. Prefer that over a runtime rule. It also keeps the window title
+free to stay translated, since nothing is matching on it.
+
 **`hyprctl hyprsunset temperature` (no argument) is not a reliable on/off query.** It always echoes
 back the last explicitly-`temperature`-set numeric value - calling `hyprctl hyprsunset identity`
 (the "off" dispatch) never resets it to any sentinel, so there is no way to distinguish "identity

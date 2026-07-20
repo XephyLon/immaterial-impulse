@@ -92,6 +92,14 @@ Two real examples from this project's history that justify the paranoia:
   per-namespace `ignore_alpha` blur threshold the way `colLayer0` does. "Uses a real design token"
   is not the same as "uses the *right* design token for this position in the surface hierarchy" -
   see AGENT.md's `colLayer0` vs `colLayer1` note.
+- A Hyprland window rule the shell registers at startup via `execDetached(["hyprctl", "eval", ...])`
+  was "verified" by running the same `eval` chunk from a terminal and observing the window behave
+  correctly. It did behave correctly - because of the manually-registered rule, which persists until
+  the next `hyprctl reload`. The shell's own registration had never survived startup for even a
+  second, since the shell reapplies the Hyprland theme (and thus reloads) moments after registering.
+  **Reproducing an effect by hand is not verifying that the code produces it.** Clear the state the
+  code is supposed to create, restart the thing that should create it, and read it back. Here that
+  also revealed the registration was unnecessary: fixed size hints already floated the window.
 - A commit claiming to have "migrated existing plugins to the new format" only moved the files into
   new subdirectories - it never actually renamed the JSON schema key their content used, so both
   bundled example plugins silently stopped rendering. **A commit message describing what a change

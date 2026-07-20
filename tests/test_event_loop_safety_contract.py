@@ -81,14 +81,15 @@ def test_calendar_popup_avoids_layout_and_filter_binding_loops():
     assert "readonly property var pendingTodos:" in source
 
 
-def test_settings_window_rule_is_stable_across_locale_and_reload():
+def test_settings_window_relies_on_fixed_size_instead_of_transient_rules():
     source = Path("modules/ii/settings/Settings.qml").read_text()
-    assert 'readonly property string windowRuleTitle: "end4 Settings"' in source
-    assert "title: root.windowRuleTitle" in source
-    assert 'name = "end4-settings-window"' in source
-    assert "end4_settings_window_rule:set_enabled(false)" in source
-    assert 'title = "^${root.windowRuleTitle}$"' in source
-    assert 'title = "^Settings$"' not in source
+    assert 'title: Translation.tr("Settings")' in source
+    assert "minimumSize.width: root.windowWidth" in source
+    assert "minimumSize.height: root.windowHeight" in source
+    assert "maximumSize.width: root.windowWidth" in source
+    assert "maximumSize.height: root.windowHeight" in source
+    assert 'Quickshell.execDetached(["hyprctl", "eval"' not in source
+    assert "end4_settings_window_rule" not in source
 
 
 def test_tray_grid_uses_spacing_tokens_and_lint_covers_grid_gaps():

@@ -15,23 +15,9 @@ Scope {
 
     readonly property int windowWidth: 980
     readonly property int windowHeight: 665
-    // Stable compositor-facing identity. The settings content remains fully
-    // translated, but window rules must not depend on the current locale.
-    readonly property string windowRuleTitle: "end4 Settings"
 
     Component.onCompleted: {
         GlobalStates.settingsOpen = false;
-        // Hyprland tiles new toplevels, and its Lua config schema dropped the
-        // runtime `keyword` command, so the float rule has to go in through
-        // `eval`. Globals persist between `eval` calls, so a shell reload can
-        // disable the handle it registered last time - the rule objects still
-        // accumulate, since Hyprland exposes no way to remove one, but only
-        // ever one of them is live.
-        Quickshell.execDetached(["hyprctl", "eval",
-            `if end4_settings_window_rule then end4_settings_window_rule:set_enabled(false) end; `
-            + `end4_settings_window_rule = hl.window_rule({ name = "end4-settings-window", `
-            + `match = { class = "^org%.quickshell$", title = "^${root.windowRuleTitle}$" }, `
-            + `float = true, center = true, size = {${root.windowWidth}, ${root.windowHeight}} })`]);
     }
 
     // A real toplevel rather than an overlay layer: Settings is a place you sit
@@ -40,7 +26,7 @@ Scope {
     FloatingWindow {
         id: settingsWindow
         visible: GlobalStates.settingsOpen
-        title: root.windowRuleTitle
+        title: Translation.tr("Settings")
         color: Appearance.colors.colLayer0
 
         // Fixed size: the layout is designed around these dimensions, and a
