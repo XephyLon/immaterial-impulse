@@ -10,10 +10,10 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import stat
 import struct
 import sys
 import urllib.request
-import time
 from pathlib import Path
 from typing import Any
 
@@ -42,14 +42,13 @@ class Bridge:
         self.authorization_tasks: dict[str, asyncio.Task[None]] = {}
         cache = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
         self.token_path = cache / "end4-pC" / "discord-voice-token.json"
-        # The companion channel is deliberately confined to XDG_RUNTIME_DIR,
-        # which is user-owned and mode 0700. Falling back to a shared directory
-        # would let any local user plant the state file (fabricating
-        # participants, and tearing down a live official-Discord session as a
-        # side effect) or pre-create the command path as a symlink.
+        # The companion socket is deliberately confined to XDG_RUNTIME_DIR,
+        # which is user-owned and mode 0700. There is no shared-directory
+        # fallback.
         runtime = os.environ.get("XDG_RUNTIME_DIR", "")
-        self.vencord_state_path = Path(runtime) / "end4-discord-voice-vencord.json" if runtime else None
-        self.vencord_command_path = Path(runtime) / "end4-discord-voice-vencord.commands" if runtime else None
+        self.vencord_socket_path = Path(runtime) / "end4-discord-voice-vencord.sock" if runtime else None
+        self.vencord_server: asyncio.Server | None = None
+        self.vencord_writer: asyncio.StreamWriter | None = None
         self.vencord_active = False
         self.vencord_signature = ""
 
@@ -106,9 +105,7 @@ class Bridge:
         return [f"{root}/discord-ipc-{index}" for root in roots for index in range(10)]
 
     async def connect(self) -> bool:
-        vencord_state = self.read_vencord_state()
-        if vencord_state:
-            self.apply_vencord_state(vencord_state, force=True)
+        if self.vencord_active and self.vencord_writer:
             return True
         if self.writer and not self.writer.is_closing():
             return True
@@ -136,24 +133,47 @@ class Bridge:
         emit("unavailable", message="Discord is not running or RPC is unavailable")
         return False
 
-    def read_vencord_state(self) -> dict[str, Any] | None:
-        if self.vencord_state_path is None:
-            return None
+    async def start_vencord_server(self) -> None:
+        if self.vencord_socket_path is None:
+            return
         try:
-            # O_NOFOLLOW: never traverse a symlink planted at this path.
-            descriptor = os.open(self.vencord_state_path, os.O_RDONLY | os.O_NOFOLLOW)
-            with os.fdopen(descriptor, "r", encoding="utf-8") as handle:
-                data = json.loads(handle.read())
-            if data.get("version") != 1 or data.get("backend") != "vencord":
-                return None
-            timestamp = float(data.get("timestamp", 0)) / 1000
-            # Absolute difference: a clock-skewed or forged future timestamp
-            # must expire too, or it would pin the bridge to a dead companion.
-            if abs(time.time() - timestamp) > 4:
-                return None
-            return data
-        except (OSError, ValueError, TypeError, json.JSONDecodeError):
-            return None
+            existing = self.vencord_socket_path.lstat()
+            if not stat.S_ISSOCK(existing.st_mode) or existing.st_uid != os.getuid():
+                emit("error", message="Refusing unsafe Vesktop companion socket path")
+                return
+            self.vencord_socket_path.unlink()
+        except FileNotFoundError:
+            pass
+        self.vencord_server = await asyncio.start_unix_server(
+            self.handle_vencord_client, path=self.vencord_socket_path)
+        os.chmod(self.vencord_socket_path, 0o600)
+
+    async def handle_vencord_client(self, reader: asyncio.StreamReader,
+                                    writer: asyncio.StreamWriter) -> None:
+        if self.vencord_writer and self.vencord_writer is not writer:
+            self.vencord_writer.close()
+        self.vencord_writer = writer
+        try:
+            while not writer.is_closing():
+                line = await reader.readline()
+                if not line:
+                    break
+                message = json.loads(line)
+                data = message.get("state") if message.get("type") == "state" else None
+                if isinstance(data, dict) and data.get("version") == 1 \
+                        and data.get("backend") == "vencord":
+                    self.apply_vencord_state(data)
+        except (OSError, json.JSONDecodeError, ValueError):
+            pass
+        finally:
+            if self.vencord_writer is writer:
+                self.vencord_writer = None
+                if self.vencord_active:
+                    self.vencord_active = False
+                    self.vencord_signature = ""
+                    emit("disconnected", reason="Vesktop companion stopped")
+                    await self.connect()
+            writer.close()
 
     def apply_vencord_state(self, data: dict[str, Any], force: bool = False) -> None:
         stable = {key: value for key, value in data.items() if key != "timestamp"}
@@ -173,29 +193,12 @@ class Bridge:
         emit("voice_channel", channel=data.get("channel"), users=data.get("users") or [])
         emit("voice_settings", mute=bool(data.get("mute")), deaf=bool(data.get("deaf")))
 
-    async def vencord_monitor(self) -> None:
-        while True:
-            state = self.read_vencord_state()
-            if state:
-                self.apply_vencord_state(state)
-            elif self.vencord_active:
-                self.vencord_active = False
-                self.vencord_signature = ""
-                emit("disconnected", reason="Vesktop companion stopped")
-                await self.connect()
-            await asyncio.sleep(0.5)
-
-    def send_vencord_command(self, **command: bool) -> None:
-        if self.vencord_command_path is None:
+    async def send_vencord_command(self, **command: bool) -> None:
+        if not self.vencord_writer or self.vencord_writer.is_closing():
             return
-        line = json.dumps(command, separators=(",", ":")) + "\n"
-        # O_NOFOLLOW keeps a symlink planted at this path from redirecting the
-        # write; the creation mode covers permissions, so there is no chmod
-        # afterwards that could be aimed at someone else's file.
-        fd = os.open(self.vencord_command_path,
-                     os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o600)
-        with os.fdopen(fd, "a", encoding="utf-8") as handle:
-            handle.write(line)
+        payload = {"type": "command", **command}
+        self.vencord_writer.write((json.dumps(payload, separators=(",", ":")) + "\n").encode())
+        await self.vencord_writer.drain()
 
     def close(self) -> None:
         if self.writer:
@@ -218,9 +221,7 @@ class Bridge:
         await self.send({"cmd": "AUTHENTICATE", "args": {"access_token": token}, "nonce": nonce})
 
     async def authorize(self) -> None:
-        state = self.read_vencord_state()
-        if state:
-            self.apply_vencord_state(state, force=True)
+        if self.vencord_active:
             return
         if not await self.connect():
             return
@@ -391,7 +392,7 @@ class Bridge:
                 elif command == "set_voice_settings":
                     args = {key: bool(message[key]) for key in ("mute", "deaf") if key in message}
                     if self.vencord_active:
-                        self.send_vencord_command(**args)
+                        await self.send_vencord_command(**args)
                     elif self.writer:
                         await self.command("SET_VOICE_SETTINGS", args)
                 elif command == "disconnect":
@@ -402,11 +403,22 @@ class Bridge:
 
 async def main() -> None:
     bridge = Bridge()
+    await bridge.start_vencord_server()
     emit("ready")
-    monitor = asyncio.create_task(bridge.vencord_monitor())
-    await bridge.input_loop()
-    monitor.cancel()
-    bridge.close()
+    try:
+        await bridge.input_loop()
+    finally:
+        bridge.close()
+        if bridge.vencord_writer:
+            bridge.vencord_writer.close()
+        if bridge.vencord_server:
+            bridge.vencord_server.close()
+            await bridge.vencord_server.wait_closed()
+        if bridge.vencord_socket_path:
+            try:
+                bridge.vencord_socket_path.unlink()
+            except FileNotFoundError:
+                pass
 
 
 if __name__ == "__main__":

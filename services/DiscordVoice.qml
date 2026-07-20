@@ -20,6 +20,8 @@ Singleton {
     property var currentUser: ({})
     property var channel: null
     property var participants: []
+    readonly property alias participantModel: participantsModel
+    readonly property int participantCount: participantsModel.count
     property bool muted: false
     property bool deafened: false
     property int restartAttempts: 0
@@ -27,6 +29,42 @@ Singleton {
     readonly property bool authenticated: status === "authenticated" || channel !== null
     readonly property bool inVoice: channel !== null
     readonly property int maxRestartAttempts: 5
+
+    ListModel {
+        id: participantsModel
+        dynamicRoles: true
+    }
+
+    function updateParticipants(users) {
+        const incoming = users || [];
+        const incomingIds = new Set(incoming.map(user => String(user.id || "")));
+
+        // Remove departed users without disturbing the relative position of
+        // everyone who remains in the call.
+        for (let index = participantsModel.count - 1; index >= 0; --index) {
+            const current = participantsModel.get(index).participant;
+            if (!incomingIds.has(String(current?.id || "")))
+                participantsModel.remove(index);
+        }
+
+        // Update existing rows in place and append newcomers. Stable delegates
+        // retain their image textures and can animate voice-state changes.
+        for (const user of incoming) {
+            const id = String(user.id || "");
+            let existingIndex = -1;
+            for (let index = 0; index < participantsModel.count; ++index) {
+                if (String(participantsModel.get(index).participant?.id || "") === id) {
+                    existingIndex = index;
+                    break;
+                }
+            }
+            if (existingIndex >= 0)
+                participantsModel.setProperty(existingIndex, "participant", user);
+            else
+                participantsModel.append({ participant: user });
+        }
+        participants = incoming;
+    }
 
     function avatarUrl(user, size) {
         if (!user?.id || !user?.avatar) return "";
@@ -84,15 +122,15 @@ Singleton {
             break;
         case "voice_channel":
             channel = message.channel || null;
-            participants = message.users || [];
+            updateParticipants(message.users);
             break;
-        case "voice_state": participants = message.users || []; break;
+        case "voice_state": updateParticipants(message.users); break;
         case "voice_settings":
             muted = message.mute === true;
             deafened = message.deaf === true;
             break;
         case "unavailable": status = "unavailable"; errorMessage = message.message || ""; break;
-        case "disconnected": status = "disconnected"; backend = ""; channel = null; participants = []; break;
+        case "disconnected": status = "disconnected"; backend = ""; channel = null; updateParticipants([]); break;
         case "error":
             status = "auth_required";
             errorMessage = message.message || "Discord RPC error";
@@ -123,7 +161,7 @@ Singleton {
         stderr: SplitParser { onRead: data => console.warn("[DiscordVoice]", data) }
         onExited: (code, status) => {
             root.channel = null;
-            root.participants = [];
+            root.updateParticipants([]);
             if (root.restartAttempts >= root.maxRestartAttempts) {
                 root.status = "stopped";
                 root.errorMessage = "Discord bridge stopped after repeated failures";

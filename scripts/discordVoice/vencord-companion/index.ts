@@ -12,6 +12,7 @@ const AudioActions = findByPropsLazy("toggleSelfMute", "toggleSelfDeaf");
 
 let timer: ReturnType<typeof setInterval> | undefined;
 let publishing = false;
+let running = false;
 
 function participant(userId: string, state: any, guildId?: string) {
     const user = UserStore.getUser(userId);
@@ -58,29 +59,30 @@ function snapshot() {
     };
 }
 
-async function applyCommands() {
-    const raw = await Native.readCommands();
-    for (const line of raw.split("\n")) {
-        if (!line.trim()) continue;
-        try {
-            const command = JSON.parse(line);
-            const state = snapshot();
-            if (typeof command.mute === "boolean" && command.mute !== state.mute)
-                AudioActions.toggleSelfMute();
-            if (typeof command.deaf === "boolean" && command.deaf !== state.deaf)
-                AudioActions.toggleSelfDeaf();
-        } catch { /* Ignore partial or obsolete command lines. */ }
+function applyCommand(raw: string) {
+    if (!raw) return;
+    try {
+        const command = JSON.parse(raw);
+        if (command.type !== "command") return;
+        const state = snapshot();
+        if (typeof command.mute === "boolean" && command.mute !== state.mute)
+            AudioActions.toggleSelfMute();
+        if (typeof command.deaf === "boolean" && command.deaf !== state.deaf)
+            AudioActions.toggleSelfDeaf();
+    } catch { /* Ignore malformed or obsolete commands. */ }
+}
+
+async function commandLoop() {
+    while (running) {
+        const command = await Native.nextCommand();
+        if (running) applyCommand(command);
     }
 }
 
-// Always republishes, even when nothing changed: the timestamp is what lets
-// the bridge tell a live companion from a state file left behind by an exited
-// Vesktop, so skipping an unchanged payload would read as the companion dying.
 async function publish() {
     if (publishing) return;
     publishing = true;
     try {
-        await applyCommands();
         await Native.publishState(JSON.stringify(snapshot()));
     } finally {
         publishing = false;
@@ -102,12 +104,18 @@ export default definePlugin({
     },
 
     start() {
+        running = true;
+        void commandLoop();
         void publish();
-        timer = setInterval(() => void publish(), 1000);
+        // Flux handlers carry state immediately. This low-frequency heartbeat
+        // exists only to reconnect after Quickshell restarts and detect hangs.
+        timer = setInterval(() => void publish(), 5000);
     },
 
     stop() {
+        running = false;
         if (timer) clearInterval(timer);
         timer = undefined;
+        void Native.disconnect();
     }
 });

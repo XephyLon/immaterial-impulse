@@ -4,42 +4,78 @@
  */
 
 import type { IpcMainInvokeEvent } from "electron";
-import { constants } from "fs";
-import { readFile, rename, unlink, writeFile } from "fs/promises";
+import { createConnection, Socket } from "net";
 import { join } from "path";
 
-// O_NOFOLLOW refuses a symlink planted at the path; O_TRUNC keeps a stale
-// temporary file left by a crash from wedging every later publish.
-const WRITE_FLAGS = constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW;
-
-// Confined to XDG_RUNTIME_DIR, which is user-owned and mode 0700. There is
-// deliberately no fallback to a shared temporary directory: any local user
-// could otherwise plant the state file or pre-create these paths as symlinks.
 const runtime = process.env.XDG_RUNTIME_DIR || "";
-const statePath = runtime ? join(runtime, "end4-discord-voice-vencord.json") : "";
-const commandPath = runtime ? join(runtime, "end4-discord-voice-vencord.commands") : "";
+const socketPath = runtime ? join(runtime, "end4-discord-voice-vencord.sock") : "";
 
-export async function publishState(_: IpcMainInvokeEvent, json: string) {
-    if (!statePath) return;
-    const temporary = statePath + ".tmp";
-    await writeFile(temporary, json, { encoding: "utf8", mode: 0o600, flag: WRITE_FLAGS });
-    await rename(temporary, statePath);
+let socket: Socket | undefined;
+let connecting = false;
+let latestState = "";
+let input = "";
+const commands: string[] = [];
+let commandWaiter: ((command: string) => void) | undefined;
+
+function deliver(command: string) {
+    if (commandWaiter) {
+        const resolve = commandWaiter;
+        commandWaiter = undefined;
+        resolve(command);
+    } else {
+        commands.push(command);
+    }
 }
 
-export async function readCommands(_: IpcMainInvokeEvent): Promise<string> {
-    if (!commandPath) return "";
-    // Rename before reading so a command written between the read and the
-    // truncate cannot be lost: the bridge recreates the file on its next write.
-    const claimed = commandPath + ".claimed";
-    try {
-        await rename(commandPath, claimed);
-    } catch (error: any) {
-        if (error?.code === "ENOENT") return "";
-        throw error;
-    }
-    try {
-        return await readFile(claimed, "utf8");
-    } finally {
-        await unlink(claimed).catch(() => undefined);
+function connect() {
+    if (!socketPath || connecting || (socket && !socket.destroyed)) return;
+    connecting = true;
+    const candidate = createConnection(socketPath);
+    socket = candidate;
+    candidate.setEncoding("utf8");
+    candidate.on("connect", () => {
+        connecting = false;
+        if (latestState) candidate.write(latestState);
+    });
+    candidate.on("data", chunk => {
+        input += chunk;
+        let newline;
+        while ((newline = input.indexOf("\n")) >= 0) {
+            const line = input.slice(0, newline);
+            input = input.slice(newline + 1);
+            if (line) deliver(line);
+        }
+    });
+    candidate.on("error", () => {
+        connecting = false;
+        candidate.destroy();
+    });
+    candidate.on("close", () => {
+        connecting = false;
+        if (socket === candidate) socket = undefined;
+    });
+}
+
+export function publishState(_: IpcMainInvokeEvent, json: string) {
+    latestState = JSON.stringify({ type: "state", state: JSON.parse(json) }) + "\n";
+    connect();
+    if (socket?.writable && !connecting) socket.write(latestState);
+}
+
+// This promise resolves only when the bridge pushes a command. The renderer
+// immediately awaits another one afterward, giving us reactive bidirectional
+// delivery without a command-file polling timer.
+export function nextCommand(_: IpcMainInvokeEvent): Promise<string> {
+    if (commands.length) return Promise.resolve(commands.shift()!);
+    return new Promise(resolve => { commandWaiter = resolve; });
+}
+
+export function disconnect(_: IpcMainInvokeEvent) {
+    socket?.destroy();
+    socket = undefined;
+    connecting = false;
+    if (commandWaiter) {
+        commandWaiter("");
+        commandWaiter = undefined;
     }
 }

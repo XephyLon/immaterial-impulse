@@ -14,10 +14,12 @@ available in Vencord's Plugins page.
 For the locally validated build, select:
 `~/.local/share/end4-pC/Vencord/dist`.
 
-The companion writes only current voice-channel display state to
-`$XDG_RUNTIME_DIR/end4-discord-voice-vencord.json` with user-only permissions.
-Mute/deafen requests use a separate user-only command file. No Discord token is
-read or exported.
+The companion uses a user-only Unix socket at
+`$XDG_RUNTIME_DIR/end4-discord-voice-vencord.sock`. Vencord Flux events push
+voice state immediately, while mute/deafen commands return over the same
+connection. The five-second heartbeat is only for crash detection and
+reconnection; it does not poll Discord state. No Discord token is read or
+exported.
 
 Official Discord does not need this companion. The Quickshell bridge continues
 to use Discord's native local RPC and authorization flow when it is available.
