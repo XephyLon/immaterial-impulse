@@ -10,7 +10,10 @@ StyledPopup {
 
     Item {
         implicitWidth: 340
-        implicitHeight: 248
+        // Derived from the last row rather than a fixed total, so a font scale
+        // or translation change cannot clip the footer. Every child anchors
+        // downwards from the top, so nothing here feeds back into this height.
+        implicitHeight: pendingLabel.y + pendingLabel.height
 
         StyledText {
             id: monthLabel
@@ -194,9 +197,11 @@ StyledPopup {
         }
 
         StyledText {
+            id: pendingLabel
             anchors {
                 left: parent.left
-                bottom: parent.bottom
+                top: taskSection.bottom
+                topMargin: Appearance.spacing.space100
             }
             text: Translation.tr("%1 pending tasks").arg(root.pendingTodos.length)
             font.pixelSize: Appearance.font.pixelSize.smaller
@@ -206,7 +211,7 @@ StyledPopup {
         StyledText {
             anchors {
                 right: parent.right
-                bottom: parent.bottom
+                baseline: pendingLabel.baseline
             }
             text: Translation.tr("Uptime %1").arg(DateTime.uptime)
             font.pixelSize: Appearance.font.pixelSize.smaller
