@@ -8,6 +8,9 @@ RippleButton {
     id: root
     property string buttonIcon
     property string description: ""
+    // Shown as a hoverable "i" beside the control rather than inline, so a long
+    // explanation doesn't stretch the row.
+    property string infoText: ""
     property alias iconSize: iconWidget.iconSize
     colBackgroundHover: "transparent"
 
@@ -46,6 +49,11 @@ RippleButton {
                 opacity: root.enabled ? 1 : 0.4
             }
         }
+        InfoTooltipIcon {
+            tooltipText: root.infoText
+            opacity: root.enabled ? 1 : 0.4
+        }
+
         StyledSwitch {
             id: switchWidget
             down: root.down
