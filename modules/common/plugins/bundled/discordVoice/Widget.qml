@@ -21,7 +21,31 @@ Rectangle {
     readonly property bool columnMode: layoutMode === "column"
     property bool namesOnLeft: false
 
-    implicitWidth: columnMode ? 256 : 344
+    // Widest the overlay is allowed to grow before the avatar grid wraps onto
+    // another row instead. Both avatar size and count are user-configurable, so
+    // an unbounded single row would reach ~960px at the top of their ranges.
+    readonly property real maxContentWidth: 720
+    readonly property int visibleParticipants: Math.min(avatarLimit, DiscordVoice.participantCount)
+
+    // Derived arithmetically rather than from the grid's implicitWidth: the
+    // grid is anchored to this item's width, so reading its implicit size back
+    // into implicitWidth would bind width to itself.
+    readonly property real participantCellWidth: columnMode
+        ? Math.max(176, participantAvatarSize + 116 + Appearance.spacing.space100)
+        : Math.max(participantAvatarSize,
+            76 + (participantBackground === "name" ? Appearance.spacing.space200 : 0))
+    readonly property real participantStride: participantCellWidth
+        + (columnMode ? Appearance.spacing.space75 : Appearance.spacing.space200)
+    readonly property int participantColumns: columnMode ? 1
+        : Math.max(1, Math.min(visibleParticipants,
+            Math.floor((maxContentWidth + Appearance.spacing.space200) / participantStride)))
+    readonly property real participantGridWidth: participantColumns > 0
+        ? participantColumns * participantStride
+            - (columnMode ? Appearance.spacing.space75 : Appearance.spacing.space200)
+        : 0
+
+    implicitWidth: Math.max(columnMode ? 256 : 344,
+        participantGridWidth + Appearance.spacing.space150 * 2)
     implicitHeight: content.implicitHeight + Appearance.spacing.space300
     width: implicitWidth
     height: implicitHeight
@@ -135,7 +159,7 @@ Rectangle {
             visible: DiscordVoice.participantCount > 0
             Layout.fillWidth: root.columnMode
             Layout.alignment: Qt.AlignHCenter
-            columns: root.columnMode ? 1 : Math.max(1, Math.min(root.avatarLimit, DiscordVoice.participantCount))
+            columns: root.participantColumns
             rowSpacing: Appearance.spacing.space75
             columnSpacing: root.columnMode ? Appearance.spacing.space75 : Appearance.spacing.space200
             Repeater {
