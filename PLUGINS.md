@@ -144,6 +144,16 @@ An installed package is QML executed inside the shell process, so the transport 
 Supplying `sha256` per file is still recommended: it is the only check that survives the file host
 and the manifest host being different systems.
 
+## Removal
+
+Each installed package has a delete button in its Plugins-page row, shown only for installed
+packages (bundled plugins ship with the shell) and enabled only while the plugin is disabled, so a
+running plugin is never pulled out from under itself. Deleting prompts for confirmation, then removes
+`~/.config/illogical-impulse/plugins/<plugin-id>/` through `scripts/plugins/uninstall_plugin.py`. That
+script re-validates the id and refuses to remove anything that resolves outside the install root; a
+symlink planted at the plugin path is unlinked rather than followed. The id is also dropped from
+`plugins.enabled` so a stale entry cannot re-enable a package that no longer exists.
+
 ## Process lifecycle safety
 
 Never bind a streaming process such as `docker events`, `nmcli monitor`, or `journalctl -f`
