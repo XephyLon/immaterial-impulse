@@ -111,6 +111,12 @@ if ! python3 "$SCRIPT_DIR/test_terminal_background.py"; then
     exit 1
 fi
 
+echo "Running Settings navigation tests..."
+if ! python3 "$SCRIPT_DIR/test_settings_navigation.py"; then
+    echo "Settings navigation tests failed."
+    exit 1
+fi
+
 echo "Running expressive design system tests..."
 if ! python3 "$SCRIPT_DIR/test_expressive_design_system.py"; then
     echo "Expressive design system tests failed."
