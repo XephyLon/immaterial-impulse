@@ -16,7 +16,9 @@ MouseArea {
     property real previewCellAspectRatio: 4 / 3
     property bool useDarkMode: Appearance.m3colors.darkmode
     property bool showControls: false
-    property string source: "local"
+    property string source: Config.options.wallpaperSelector.wallpaperEngine.activeProject !== ""
+        ? "wallpaperEngine"
+        : "local"
     property string selectedResolution: "1080p"
     property bool toolbarVisible: showControls || Config.options.wallpaperSelector.showSearchbar
     property bool filterFieldFocused: false
@@ -403,8 +405,13 @@ MouseArea {
                                 { value: "pexels",    displayName: Translation.tr("Pexels") },
                             ]
                             textRole: "displayName"
-                            onCurrentIndexChanged: {
-                                root.source = model[currentIndex].value
+                            currentIndex: root.source === "wallpaperEngine" ? 1
+                                : root.source === "wallhaven" ? 2
+                                : root.source === "unsplash" ? 3
+                                : root.source === "pexels" ? 4
+                                : 0
+                            onActivated: index => {
+                                root.source = model[index].value
                                 root.forceActiveFocus()
                             }
                         }
@@ -580,6 +587,12 @@ MouseArea {
                                     onClicked: WallpaperEngine.refresh()
                                 }
                                 IconToolbarButton {
+                                    text: "cached"
+                                    enabled: Config.options.wallpaperSelector.wallpaperEngine.activeProject !== "" && !WallpaperEngine.stillGenerating
+                                    onClicked: WallpaperEngine.recacheActiveStill()
+                                    StyledToolTip { text: Translation.tr("Re-render transition still") }
+                                }
+                                IconToolbarButton {
                                     text: "stop_circle"
                                     enabled: Config.options.wallpaperSelector.wallpaperEngine.activeProject !== ""
                                     onClicked: WallpaperEngine.stop()
@@ -669,7 +682,10 @@ MouseArea {
         target: GlobalStates
         function onWallpaperSelectorOpenChanged() {
             if (GlobalStates.wallpaperSelectorOpen && monitorIsFocused) {
-                if (root.source === "local")
+                if (root.source === "wallpaperEngine") {
+                    WallpaperEngine.refresh();
+                    root.forceActiveFocus();
+                } else if (root.source === "local")
                     filterField.forceActiveFocus()
                 else
                     root.forceActiveFocus()
@@ -680,6 +696,14 @@ MouseArea {
     Connections {
         target: Wallpapers
         function onChanged() {
+            if (Config.options.wallpaperSelector.closeAfterSelection)
+                GlobalStates.wallpaperSelectorOpen = false;
+        }
+    }
+
+    Connections {
+        target: WallpaperEngine
+        function onApplied() {
             if (Config.options.wallpaperSelector.closeAfterSelection)
                 GlobalStates.wallpaperSelectorOpen = false;
         }
