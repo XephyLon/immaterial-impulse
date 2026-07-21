@@ -17,6 +17,6 @@ Item {
         showLyrics: PluginState.option("nandoroid_media", "showLyrics", false)
         useRomaji: PluginState.option("nandoroid_media", "useRomaji", false)
         useBlurBackground: PluginState.option("nandoroid_media", "blurEnabled", false)
-        backgroundOpacity: PluginState.option("nandoroid_media", "blurTintOpacity", 0.1)
+        backgroundOpacity: Config.options.plugins.blurOpacity
     }
 }

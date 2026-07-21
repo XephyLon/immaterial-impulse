@@ -16,6 +16,7 @@ Item {
         height: implicitHeight
         isVertical: PluginState.option("nandoroid_system_monitor", "vertical", false)
         useBlurBackground: PluginState.option("nandoroid_system_monitor", "blurEnabled", false)
-        backgroundOpacity: PluginState.option("nandoroid_system_monitor", "blurTintOpacity", 0.1)
+        backgroundOpacity: Config.options.plugins.blurOpacity
+        onVerticalRequested: value => PluginState.setOption("nandoroid_system_monitor", "vertical", value)
     }
 }

@@ -12,9 +12,7 @@ AbstractBackgroundWidget {
     readonly property bool blurEnabled: manifest
         ? PluginState.option(manifest.id, "blurEnabled", manifest.desktopWidget?.blur === true)
         : false
-    readonly property real blurTintOpacity: manifest
-        ? PluginState.option(manifest.id, "blurTintOpacity", 0.1)
-        : 0.1
+    readonly property real blurTintOpacity: Config.options.plugins.blurOpacity
     readonly property bool hasBlurSurface: !pluginNode.hasCustomBlurRegions
         || pluginNode.blurRegions.length > 0
 

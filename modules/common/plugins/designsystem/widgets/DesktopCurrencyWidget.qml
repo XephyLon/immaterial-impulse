@@ -552,10 +552,10 @@ Item {
         id: resizeHandle
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: -8 * Appearance.effectiveScale
-        width: 24 * Appearance.effectiveScale
-        height: 24 * Appearance.effectiveScale
-        radius: 8 * Appearance.effectiveScale
+        anchors.margins: 6 * Appearance.effectiveScale
+        width: 28 * Appearance.effectiveScale
+        height: 28 * Appearance.effectiveScale
+        radius: 10 * Appearance.effectiveScale
         color: Appearance.m3colors.darkmode ? Appearance.colors.colOnTertiaryContainer : Appearance.colors.colSecondaryContainer
         z: 100
 

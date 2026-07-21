@@ -115,6 +115,21 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         self.assertNotIn("Weather.todayHigh", weather)
         self.assertNotIn("Weather.todayLow", weather)
 
+    def test_weather_resize_is_visible_and_persisted_by_the_plugin(self):
+        weather = (DESIGN_SYSTEM / "widgets" / "DesktopWeatherWidget.qml").read_text(
+            encoding="utf-8"
+        )
+        wrapper = (PLUGIN_ROOT / "nandoroid-weather" / "Widget.qml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("signal sizeModeRequested(string value)", weather)
+        self.assertIn("root.sizeModeRequested(targetMode)", weather)
+        self.assertNotIn("margins: -8 * Appearance.effectiveScale", weather)
+        self.assertIn(
+            'onSizeModeRequested: value => PluginState.setOption("nandoroid_weather", "sizeMode", value)',
+            wrapper,
+        )
+
     def test_plugin_blur_supports_tint_and_widget_regions(self):
         options = (ROOT / "modules/common/plugins/PluginOptions.qml").read_text(encoding="utf-8")
         host = (ROOT / "modules/common/plugins/PluginWidget.qml").read_text(encoding="utf-8")
@@ -126,9 +141,14 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn('key: "blurTintOpacity"', options)
-        self.assertIn('enabledWhen: "blurEnabled"', options)
-        self.assertIn('PluginState.option(manifest.id, "blurTintOpacity", 0.1)', host)
+        config = (ROOT / "modules/common/Config.qml").read_text(encoding="utf-8")
+        plugins_page = (ROOT / "modules/ii/settings/pages/PluginsPage.qml").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn('key: "blurTintOpacity"', options)
+        self.assertIn("property real blurOpacity: 0.1", config)
+        self.assertIn('Translation.tr("Blurred plugin opacity")', plugins_page)
+        self.assertIn("Config.options.plugins.blurOpacity", host)
         self.assertIn("pluginNode.blurRegions", host)
         self.assertIn("property bool hasCustomBlurRegions", node)
         self.assertIn("property bool managesBlurTint", node)
@@ -140,7 +160,20 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             self.assertIn("readonly property var blurRegions: content.blurRegions", wrapper_text)
             self.assertIn("readonly property bool managesBlurTint: content.managesBlurTint", wrapper_text)
             self.assertIn("useBlurBackground: PluginState.option", wrapper_text)
-            self.assertIn("backgroundOpacity: PluginState.option", wrapper_text)
+            self.assertIn("backgroundOpacity: Config.options.plugins.blurOpacity", wrapper_text)
+
+        currency = (DESIGN_SYSTEM / "widgets" / "DesktopCurrencyWidget.qml").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("anchors.margins: -8 * Appearance.effectiveScale", currency)
+        self.assertIn("anchors.margins: 6 * Appearance.effectiveScale", currency)
+        self.assertIn("signal verticalRequested(bool value)", monitor)
+        self.assertIn("root.verticalRequested(!root.isVertical)", monitor)
+        self.assertNotIn("margins: -8 * Appearance.effectiveScale", monitor)
+        self.assertIn(
+            'onVerticalRequested: value => PluginState.setOption("nandoroid_system_monitor", "vertical", value)',
+            wrapper,
+        )
 
         for directory in ("nandoroid-clock", "nandoroid-at-a-glance"):
             wrapper_text = (PLUGIN_ROOT / directory / "Widget.qml").read_text(encoding="utf-8")

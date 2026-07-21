@@ -82,6 +82,7 @@ Singleton {
 
             property JsonObject plugins: JsonObject {
                 property list<string> enabled: []
+                property real blurOpacity: 0.1
             }
 
             property JsonObject policies: JsonObject {

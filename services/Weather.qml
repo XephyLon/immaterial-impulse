@@ -40,6 +40,8 @@ Singleton {
         press: "",
         temp: "",
         tempFeelsLike: "",
+        tempHigh: "",
+        tempLow: "",
         lastRefresh: ""
     })
 
@@ -75,6 +77,8 @@ Singleton {
             temp.press = (data?.main?.pressure || 0) + " hPa"
             temp.temp = Math.round(data?.main?.temp || 0) + "°F"
             temp.tempFeelsLike = Math.round(data?.main?.feels_like || 0) + "°F"
+            temp.tempHigh = Math.round(data?.main?.temp_max || 0) + "°F"
+            temp.tempLow = Math.round(data?.main?.temp_min || 0) + "°F"
         } else {
             temp.wind = (data?.wind?.speed || 0) + " m/s"
             temp.precip = (rainMm + snowMm).toFixed(1) + " mm"
@@ -85,6 +89,8 @@ Singleton {
 
             temp.temp = roundedTemp + "°C"
             temp.tempFeelsLike = roundedFeels + "°C"
+            temp.tempHigh = Math.round(data?.main?.temp_max || 0) + "°C"
+            temp.tempLow = Math.round(data?.main?.temp_min || 0) + "°C"
         }
 
         temp.lastRefresh = DateTime.time + " • " + DateTime.date

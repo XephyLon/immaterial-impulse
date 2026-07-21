@@ -15,6 +15,7 @@ Item {
     property bool interactive: true
     property bool useBlurBackground: false
     property real backgroundOpacity: 0.1
+    signal sizeModeRequested(string value)
     readonly property bool managesBlurTint: true
     readonly property var blurRegions: [{
         x: card.x, y: card.y, width: card.width, height: card.height, radius: card.radius
@@ -59,6 +60,8 @@ Item {
     readonly property var weatherData: Weather.data || ({})
     readonly property string temperature: (weatherData.temp || "--").replace(/[^0-9+\-.]/g, "")
     readonly property string feelsLike: (weatherData.tempFeelsLike || "--").replace(/[^0-9+\-.]/g, "")
+    readonly property string highTemperature: (weatherData.tempHigh || "--").replace(/[^0-9+\-.]/g, "")
+    readonly property string lowTemperature: (weatherData.tempLow || "--").replace(/[^0-9+\-.]/g, "")
     readonly property string condition: weatherData.description || "Unknown"
     readonly property string humidity: weatherData.humidity || "--"
     readonly property string wind: weatherData.wind || "--"
@@ -278,7 +281,7 @@ Item {
                     }
                     
                     StyledText {
-                        text: `Feels like ${root.feelsLike}°`
+                        text: `High ${root.highTemperature}° · Low ${root.lowTemperature}°`
                         font.pixelSize: Appearance.font.pixelSize.smallest
                         color: root.contentColor
                         opacity: 0.6
@@ -393,9 +396,9 @@ Item {
     Rectangle {
         id: resizeHandle
         z: 10
-        width: 24 * Appearance.effectiveScale
-        height: 24 * Appearance.effectiveScale
-        radius: 8 * Appearance.effectiveScale
+        width: 28 * Appearance.effectiveScale
+        height: 28 * Appearance.effectiveScale
+        radius: 10 * Appearance.effectiveScale
         
         // Restore dynamic colors matching AtAGlance/SystemMonitor
         color: Appearance.m3colors.darkmode ? Appearance.colors.colOnTertiaryContainer : Appearance.colors.colSecondaryContainer
@@ -403,7 +406,7 @@ Item {
         anchors {
             right: root.right
             bottom: root.bottom
-            margins: -8 * Appearance.effectiveScale
+            margins: 6 * Appearance.effectiveScale
         }
         
         opacity: root.interactive && (cfg && !cfg.locked) && (widgetHoverHandler.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.9 : 0
@@ -444,9 +447,7 @@ Item {
                 
                 let targetMode = root.getModeForWidth(targetWidth);
                 if (targetMode !== root.sizeMode) {
-                    if (cfg) {
-                        cfg.sizeMode = targetMode;
-                    }
+                    root.sizeModeRequested(targetMode)
                 }
             }
         }

@@ -20,6 +20,25 @@ ContentPage {
             Layout.fillWidth: true
             spacing: Appearance.spacing.space25
 
+            GroupedList {
+                Layout.fillWidth: true
+
+                ConfigSlider {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Blurred plugin opacity")
+                    buttonIcon: "opacity"
+                    from: 0
+                    to: 1
+                    usePercentTooltip: true
+                    value: Config.options.plugins.blurOpacity
+                    onValueChanged: {
+                        const rounded = Math.round(value * 20) / 20;
+                        if (rounded !== Config.options.plugins.blurOpacity)
+                            Config.options.plugins.blurOpacity = rounded;
+                    }
+                }
+            }
+
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Appearance.spacing.space100

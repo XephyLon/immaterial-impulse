@@ -14,6 +14,8 @@ Item {
     property bool isVertical: Config.ready ? Config.options.appearance.systemMonitor.vertical : false
     property bool useBlurBackground: false
     property real backgroundOpacity: 0.1
+    property bool interactive: true
+    signal verticalRequested(bool value)
     readonly property bool managesBlurTint: true
 
     // Scale dimensions cleanly based on Choice A (Grid: 132x108, Gap: 12)
@@ -331,18 +333,18 @@ Item {
     Rectangle {
         id: toggleHandle
         z: 10 // Lift button above the passthrough widgetMouseArea
-        width: 24 * Appearance.effectiveScale
-        height: 24 * Appearance.effectiveScale
-        radius: 8 * Appearance.effectiveScale
+        width: 28 * Appearance.effectiveScale
+        height: 28 * Appearance.effectiveScale
+        radius: 10 * Appearance.effectiveScale
         color: Appearance.m3colors.darkmode ? Appearance.colors.colOnTertiaryContainer : Appearance.colors.colSecondaryContainer
         
         anchors {
             right: parent.right
             bottom: parent.bottom
-            margins: -8 * Appearance.effectiveScale
+            margins: 6 * Appearance.effectiveScale
         }
         
-        opacity: (widgetMouseArea.containsMouse || toggleArea.containsMouse) && (!Config.ready || !Config.options.appearance.systemMonitor.locked) ? 0.9 : 0
+        opacity: root.interactive && (widgetMouseArea.containsMouse || toggleArea.containsMouse) ? 0.9 : 0
         visible: opacity > 0
 
         Behavior on opacity {
@@ -361,11 +363,9 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
+            preventStealing: true
             onClicked: {
-                if (Config.ready) {
-                    let nextVertical = !Config.options.appearance.systemMonitor.vertical;
-                    Config.options.appearance.systemMonitor.vertical = nextVertical;
-                }
+                root.verticalRequested(!root.isVertical)
             }
         }
     }
@@ -376,6 +376,6 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.NoButton // Passthrough clicks
-        cursorShape: (Config.ready && Config.options.appearance.systemMonitor.locked) ? Qt.ArrowCursor : Qt.SizeAllCursor
+        cursorShape: Qt.ArrowCursor
     }
 }

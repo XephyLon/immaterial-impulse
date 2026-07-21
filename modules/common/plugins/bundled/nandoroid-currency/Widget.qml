@@ -30,7 +30,7 @@ Item {
         height: implicitHeight
         sizeMode: PluginState.option("nandoroid_currency", "sizeMode", "2x1")
         useBlurBackground: PluginState.option("nandoroid_currency", "blurEnabled", false)
-        backgroundOpacity: PluginState.option("nandoroid_currency", "blurTintOpacity", 0.1)
+        backgroundOpacity: Config.options.plugins.blurOpacity
         onBaseCurrencyRequested: value => PluginState.setOption("nandoroid_currency", "baseCurrency", value)
         onQuoteCurrencyRequested: (index, value) => PluginState.setOption("nandoroid_currency", `quote${index}`, value)
         onSizeModeRequested: value => PluginState.setOption("nandoroid_currency", "sizeMode", value)

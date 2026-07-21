@@ -17,17 +17,6 @@ ColumnLayout {
         label: "Blur background",
         icon: "blur_on",
         default: manifest.blur?.default ?? (manifest.desktopWidget?.blur === true)
-    }, {
-        key: "blurTintOpacity",
-        type: "number",
-        label: "Background opacity",
-        icon: "opacity",
-        default: 0.1,
-        from: 0,
-        to: 1,
-        step: 0.05,
-        usePercentTooltip: true,
-        enabledWhen: "blurEnabled"
     }].concat(manifest.options || [])
 
     Repeater {

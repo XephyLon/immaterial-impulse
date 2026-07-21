@@ -16,6 +16,7 @@ Item {
         height: implicitHeight
         sizeMode: PluginState.option("nandoroid_weather", "sizeMode", "3x1")
         useBlurBackground: PluginState.option("nandoroid_weather", "blurEnabled", false)
-        backgroundOpacity: PluginState.option("nandoroid_weather", "blurTintOpacity", 0.1)
+        backgroundOpacity: Config.options.plugins.blurOpacity
+        onSizeModeRequested: value => PluginState.setOption("nandoroid_weather", "sizeMode", value)
     }
 }
