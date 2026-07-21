@@ -1,8 +1,10 @@
 import QtQuick
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import Quickshell.Io
 import qs.services
 import qs.modules.common
+import qs.modules.common.functions
 import qs.modules.common.widgets
 
 ContentPage {
@@ -73,24 +75,18 @@ ContentPage {
         }
     }
 
-    Process {
+    FileDialog {
         id: terminalBackgroundFilePicker
-        command: [
-            "kdialog",
-            "--getopenfilename",
-            Config.options.appearance.terminal.background.imagePath.length > 0
-                ? Config.options.appearance.terminal.background.imagePath
-                : FileUtils.trimFileProtocol(Directories.pictures),
-            "image/png image/jpeg image/jpg image/webp image/svg+xml"
+        title: Translation.tr("Choose a terminal background image")
+        currentFolder: Directories.pictures
+        nameFilters: [
+            Translation.tr("Images (*.png *.jpg *.jpeg *.webp *.svg)"),
+            Translation.tr("All files (*)")
         ]
-        stdout: StdioCollector { id: terminalBackgroundFilePickerOutput }
-        onExited: exitCode => {
-            if (exitCode !== 0)
-                return
-            const selectedPath = terminalBackgroundFilePickerOutput.text.trim()
-            if (selectedPath.length === 0)
-                return
-            terminalBackgroundPathField.value = selectedPath
+        onAccepted: {
+            const selectedPath = FileUtils.trimFileProtocol(selectedFile.toString())
+            if (selectedPath.length > 0)
+                terminalBackgroundPathField.value = selectedPath
         }
     }
 
@@ -918,25 +914,16 @@ ContentPage {
                         }
                     }
 
-                    RippleButton {
+                    FloatingActionButton {
                         Layout.rightMargin: Appearance.spacing.space100
                         Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: 40
-                        implicitHeight: 40
-                        buttonRadius: Appearance.rounding.full
+                        baseSize: 40
+                        iconText: "folder_open"
                         colBackground: Appearance.colors.colSecondaryContainer
                         colBackgroundHover: Appearance.colors.colSecondaryContainerHover
                         colRipple: Appearance.colors.colSecondaryContainerActive
-                        enabled: !terminalBackgroundFilePicker.running
-                        onClicked: terminalBackgroundFilePicker.running = true
-
-                        contentItem: MaterialSymbol {
-                            anchors.centerIn: parent
-                            anchors.horizontalCenterOffset: -1
-                            text: "folder_open"
-                            iconSize: Appearance.font.pixelSize.larger
-                            color: Appearance.colors.colOnSecondaryContainer
-                        }
+                        colOnBackground: Appearance.colors.colOnSecondaryContainer
+                        onClicked: terminalBackgroundFilePicker.open()
                     }
                 }
 
