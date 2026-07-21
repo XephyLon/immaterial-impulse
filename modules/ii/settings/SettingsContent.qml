@@ -479,9 +479,11 @@ Item {
                                         buttonRadius: Appearance.rounding.full
                                         toggled: root.currentPage === pageBranch.index && !root.showingProfile
                                         colBackground: "transparent"
-                                        colBackgroundToggled: "transparent"
+                                        colBackgroundToggled: CF.ColorUtils.transparentize(
+                                            Appearance.colors.colPrimary, 0.88)
                                         colBackgroundHover: Appearance.colors.colLayer1Hover
-                                        colBackgroundToggledHover: Appearance.colors.colLayer1Hover
+                                        colBackgroundToggledHover: CF.ColorUtils.transparentize(
+                                            Appearance.colors.colPrimary, 0.78)
                                         colRipple: Appearance.colors.colLayer1Active
                                         colRippleToggled: Appearance.colors.colLayer1Active
                                         onClicked: {

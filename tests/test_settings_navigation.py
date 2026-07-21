@@ -46,6 +46,18 @@ class SettingsNavigationTests(unittest.TestCase):
         self.assertIn("Appearance.animation.elementMoveEnter.duration", self.source)
         self.assertIn("Behavior on rotation", self.source)
 
+    def test_selected_category_has_a_translucent_theme_highlight(self):
+        self.assertIn(
+            "colBackgroundToggled: CF.ColorUtils.transparentize(\n"
+            "                                            Appearance.colors.colPrimary, 0.88)",
+            self.source,
+        )
+        self.assertIn(
+            "colBackgroundToggledHover: CF.ColorUtils.transparentize(\n"
+            "                                            Appearance.colors.colPrimary, 0.78)",
+            self.source,
+        )
+
     def test_tree_tracks_the_section_visible_in_the_active_page(self):
         content_page = (ROOT / "modules/common/widgets/ContentPage.qml").read_text(encoding="utf-8")
         content_section = (ROOT / "modules/common/widgets/ContentSection.qml").read_text(encoding="utf-8")
