@@ -45,6 +45,30 @@ class WallpaperEngineTests(unittest.TestCase):
             self.assertEqual(projects[0]["title"], "A live wallpaper")
             self.assertEqual(projects[0]["preview"], str(valid / "preview.jpg"))
 
+    def test_scanner_confines_preview_to_the_project_directory(self):
+        scanner = load_scanner()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            secret = root / "secret.jpg"
+            secret.write_bytes(b"not for the picker")
+            project = root / "789"
+            project.mkdir()
+            # An absolute path and a "../" escape must both be rejected: only a
+            # preview inside the project directory is trusted.
+            (project / "project.json").write_text(json.dumps({
+                "title": "Escapes its directory",
+                "preview": "../secret.jpg",
+            }))
+
+            projects = scanner.scan(str(root))
+
+            self.assertEqual(len(projects), 1)
+            self.assertEqual(projects[0]["preview"], "")
+
+    def test_runner_checks_for_its_runtime_dependencies(self):
+        runner = (ROOT / "scripts/wallpapers/wallpaper-engine.sh").read_text()
+        self.assertIn("for tool in linux-wallpaperengine hyprctl jq", runner)
+
     def test_runner_uses_one_bounded_runtime_for_all_monitors(self):
         runner = (ROOT / "scripts/wallpapers/wallpaper-engine.sh").read_text()
         self.assertIn('mapfile -t monitors', runner)

@@ -36,6 +36,21 @@ def project_roots(configured: str) -> list[Path]:
     return roots
 
 
+def confined_preview(directory: Path, preview_name: object) -> Path:
+    """Resolve a project.json "preview" to a real file inside its own project
+    directory. project.json is untrusted Workshop content, so an absolute path
+    or a "../" escape must not point the preview at an arbitrary file on disk."""
+    if not isinstance(preview_name, str) or not preview_name:
+        return Path()
+    try:
+        base = directory.resolve()
+        candidate = (directory / preview_name).resolve()
+        candidate.relative_to(base)
+    except (ValueError, OSError):
+        return Path()
+    return candidate if candidate.is_file() else Path()
+
+
 def scan(configured: str) -> list[dict[str, object]]:
     projects: list[dict[str, object]] = []
     for root in project_roots(configured):
@@ -46,8 +61,8 @@ def scan(configured: str) -> list[dict[str, object]]:
                 continue
             directory = manifest.parent
             preview_name = data.get("preview", "")
-            preview = directory / preview_name if isinstance(preview_name, str) else Path()
-            if not preview.is_file():
+            preview = confined_preview(directory, preview_name)
+            if not preview:
                 preview = next(
                     (path for name in ("preview.jpg", "preview.png", "preview.gif") if (path := directory / name).is_file()),
                     Path(),
@@ -58,7 +73,9 @@ def scan(configured: str) -> list[dict[str, object]]:
                 "type": str(data.get("type") or "unknown"),
                 "tags": data.get("tags") if isinstance(data.get("tags"), list) else [],
                 "path": str(directory),
-                "preview": str(preview) if preview else "",
+                # An empty Path() is "." and truthy, so compare explicitly to
+                # avoid emitting "." when no preview file was found.
+                "preview": str(preview) if preview != Path() else "",
             })
     projects.sort(key=lambda item: str(item["title"]).casefold())
     return projects

@@ -28,10 +28,12 @@ if [[ "$action" != "apply" || ! -d "$project_path" ]]; then
     exit 2
 fi
 
-command -v linux-wallpaperengine >/dev/null 2>&1 || {
-    echo "linux-wallpaperengine is not installed" >&2
-    exit 127
-}
+for tool in linux-wallpaperengine hyprctl jq; do
+    command -v "$tool" >/dev/null 2>&1 || {
+        echo "$tool is not installed" >&2
+        exit 127
+    }
+done
 
 [[ "$fps" =~ ^[0-9]+$ ]] || fps=30
 case "$scaling" in fill|fit|stretch|default) ;; *) scaling=fill ;; esac
