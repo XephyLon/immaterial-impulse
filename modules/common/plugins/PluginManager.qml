@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import qs.modules.common
 import "PluginValidator.js" as PluginValidator
+import "InstalledManifestState.js" as InstalledManifestState
 
 Singleton {
     id: root
@@ -88,8 +89,12 @@ Singleton {
     }
 
     function scanInstalledPlugins() {
-        installedManifests = {};
-        installedManifestPaths = [];
+        // Deliberately does not clear installedManifests here: the results are
+        // reconciled against the scan in onStreamFinished instead. Clearing up
+        // front and waiting for FileView.onLoaded to repopulate loses every
+        // surviving plugin (an already-loaded FileView does not re-fire), and a
+        // scan that finds nothing loads no FileView at all, so the list would
+        // never rebuild and a just-removed plugin would linger.
         manifestScanner.command = ["find", installedRoot, "-mindepth", "2", "-maxdepth", "2",
             "-type", "f", "-name", "manifest.json", "-print"];
         manifestScanner.running = true;
@@ -192,7 +197,17 @@ Singleton {
     Process {
         id: manifestScanner
         stdout: StdioCollector {
-            onStreamFinished: root.installedManifestPaths = text.split("\n").filter(path => path.length > 0)
+            onStreamFinished: {
+                const paths = text.split("\n").filter(path => path.length > 0);
+                // Drop manifests whose files the scan no longer found, keeping the
+                // survivors already in memory. New paths are added when their
+                // FileView loads below; either way a rebuild runs, so a removed
+                // plugin leaves the list even when nothing remains to load.
+                root.installedManifests = InstalledManifestState.reconcile(
+                    paths, root.installedManifests);
+                root.installedManifestPaths = paths;
+                root.scheduleRebuild();
+            }
         }
     }
 
