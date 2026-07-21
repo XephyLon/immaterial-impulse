@@ -53,6 +53,7 @@ Singleton {
     property string userAvatarPathRicersAndWeirdSystems2: FileUtils.trimFileProtocol(`${Directories.home}.face.icon`)
     property string userPresetsPath: FileUtils.trimFileProtocol(`${Directories.shellConfig}/presets`)
     property string presetsScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/presets.sh`)
+    property string generatedLockMaterialThemePath: FileUtils.trimFileProtocol(`${Directories.state}/user/generated/colors-lock.json`)
     // Cleanup on init
     Component.onCompleted: {
         Quickshell.execDetached(["mkdir", "-p", `${userPresetsPath}`])

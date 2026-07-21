@@ -334,6 +334,8 @@ Item {
                                 font.pixelSize: Appearance.font.pixelSize.normal
                                 color: Appearance.colors.colOnLayer1
                                 font.weight: Font.Medium
+                                elide: Text.ElideRight
+                                Layout.maximumWidth: 100
                             }
 
                             StyledText {
