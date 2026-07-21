@@ -291,33 +291,27 @@ MouseArea {
                         Loader {
                             active: root.source !== "local"
                             visible: active
-                            sourceComponent: Toolbar {
-                                ToolbarTextField {
-                                    id: onlineSearchField
-                                    placeholderText: Translation.tr("Search online wallpapers")
-                                    clip: true
-                                    font.pixelSize: Appearance.font.pixelSize.small
-                                    onTextChanged: OnlineWallpapers.query = text
-                                    onAccepted: OnlineWallpapers.fetch()
-                                    onActiveFocusChanged: root.filterFieldFocused = activeFocus
-                                    Connections {
-                                        target: GlobalStates
-                                        function onWallpaperSelectorOpenChanged() {
-                                            if (!GlobalStates.wallpaperSelectorOpen) onlineSearchField.text = ""
+                            sourceComponent: RowLayout {
+                                spacing: 4
+                                Repeater {
+                                    model: ["1080p", "2K", "4K"]
+                                    delegate: RippleButton {
+                                        required property string modelData
+                                        implicitHeight: 38
+                                        buttonRadius: height / 2
+                                        toggled: root.selectedResolution === modelData
+                                        colBackgroundToggled: Appearance.colors.colSecondaryContainer
+                                        colBackgroundToggledHover: Appearance.colors.colSecondaryContainerHover
+                                        colRippleToggled: Appearance.colors.colSecondaryContainerActive
+                                        onClicked: root.selectedResolution = modelData
+                                        contentItem: StyledText {
+                                            anchors.centerIn: parent
+                                            text: modelData
+                                            color: parent.toggled
+                                                ? Appearance.colors.colOnSecondaryContainer
+                                                : Appearance.colors.colOnLayer2
                                         }
                                     }
-                                    Keys.onPressed: event => {
-                                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                                            event.accepted = true;
-                                            return;
-                                        }
-                                        event.accepted = false;
-                                    }
-                                }
-                                IconToolbarButton {
-                                    implicitWidth: height
-                                    text: "refresh"
-                                    onClicked: OnlineWallpapers.fetch()
                                 }
                             }
                         }
@@ -492,12 +486,19 @@ MouseArea {
                             visible: active
                             sourceComponent: Toolbar {
                                 ToolbarTextField {
+                                    id: onlineSearchField
                                     placeholderText: Translation.tr("Search online wallpapers")
                                     clip: true
                                     font.pixelSize: Appearance.font.pixelSize.small
                                     onTextChanged: OnlineWallpapers.query = text
                                     onAccepted: OnlineWallpapers.fetch()
                                     onActiveFocusChanged: root.filterFieldFocused = activeFocus
+                                    Connections {
+                                        target: GlobalStates
+                                        function onWallpaperSelectorOpenChanged() {
+                                            if (!GlobalStates.wallpaperSelectorOpen) onlineSearchField.text = ""
+                                        }
+                                    }
                                     Keys.onPressed: event => {
                                         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                                             event.accepted = true;
