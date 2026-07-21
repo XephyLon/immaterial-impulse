@@ -689,7 +689,7 @@ ContentPage {
                     options: [
                         { displayName: Translation.tr("Elastic"),   icon: "move_selection_right", value: "fast"   },
                         { displayName: Translation.tr("Normal"),    icon: "animation",            value: "normal" },
-                        { displayName: Translation.tr("Niri Like"), icon: "mobiledata_arrows",    value: "niri"   },
+                        { displayName: Translation.tr("Niri Like"), icon: "swap_horiz",          value: "niri"   },
                     ]
                 }
             }

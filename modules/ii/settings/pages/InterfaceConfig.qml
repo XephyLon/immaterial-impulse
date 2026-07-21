@@ -144,7 +144,7 @@ ContentPage {
                         },
                         {
                             displayName: Translation.tr("Niri Like"),
-                            icon: "mobiledata_arrows",
+                            icon: "swap_horiz",
                             value: "niri"
                         }
                     ]
@@ -857,7 +857,7 @@ ContentPage {
                 ConfigTextArea {
                     id: expressiveFontField
                     Layout.fillWidth: true
-                    buttonIcon: "mood_heart"
+                    buttonIcon: "favorite"
                     text: Translation.tr("Expressive font name (e.g., Space Grotesk)")
                     value: Config.options.appearance.fonts.expressive
                     onValueChanged: {
