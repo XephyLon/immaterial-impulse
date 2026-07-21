@@ -317,37 +317,10 @@ ContentPage {
                         }
                     }
                     onValueChanged: presetNameDebounceTimer.restart()
-                }
-            }
 
-            Rectangle {
-                id: savePresetBtn
-                Layout.fillWidth: true
-                Layout.preferredHeight: 40
-                Layout.alignment: Qt.AlignVCenter
-                visible: page.presetNameInput.trim() !== ""
-                radius: Appearance.rounding.small
-                color: savePresetMouseArea.pressed
-                    ? Appearance.colors.colPrimaryContainerActive
-                    : (savePresetMouseArea.containsMouse ? Appearance.colors.colPrimaryContainerHover : Appearance.colors.colPrimaryContainer)
-
-                Behavior on color {
-                    ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
-                }
-
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    text: "save"
-                    iconSize: Appearance.font.pixelSize.large
-                    color: Appearance.colors.colOnPrimaryContainer
-                }
-
-                MouseArea {
-                    id: savePresetMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
+                    confirmButtonVisible: page.presetNameInput.trim() !== ""
+                    confirmButtonIcon: "save"
+                    onConfirmClicked: {
                         page.savePreset()
                         presetNameField.value = ""
                         page.presetNameInput = ""
