@@ -832,6 +832,10 @@ Singleton {
                     property string activeProject: ""
                     property string activePath: ""
                     property string activePreview: ""
+                    // Full-scene still rendered from the active project, used as
+                    // the opaque texture for peel/lock transitions (the live
+                    // wallpaper surface itself can't be sampled).
+                    property string activeStill: ""
                     property int fps: 30
                     property string scaling: "fill"
                     property bool silent: true
