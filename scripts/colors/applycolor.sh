@@ -41,6 +41,11 @@ apply_kitty() {
     sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
   done
 
+  # Re-append the managed Kitty background block after regenerating colors.
+  python3 "$SCRIPT_DIR/../terminal/apply_terminal_background.py" \
+    --config "$XDG_CONFIG_HOME/illogical-impulse/config.json" \
+    --theme "$STATE_DIR/user/generated/terminal/kitty-theme.conf" || true
+
   # Reload
   kill -SIGUSR1 $(pidof kitty)
 }

@@ -105,6 +105,12 @@ if ! python3 "$SCRIPT_DIR/test_plugin_uninstaller.py"; then
     exit 1
 fi
 
+echo "Running terminal background tests..."
+if ! python3 "$SCRIPT_DIR/test_terminal_background.py"; then
+    echo "Terminal background tests failed."
+    exit 1
+fi
+
 echo "Running expressive design system tests..."
 if ! python3 "$SCRIPT_DIR/test_expressive_design_system.py"; then
     echo "Expressive design system tests failed."

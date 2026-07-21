@@ -22,6 +22,10 @@ TestCase {
         compare(config.options.appearance.transparency.enable, false)
         compare(config.options.appearance.transparency.backgroundTransparency, 0.11)
         compare(config.options.appearance.transparency.contentTransparency, 0.57)
+        compare(config.options.appearance.terminal.background.enabled, false)
+        compare(config.options.appearance.terminal.background.imagePath, "")
+        compare(config.options.appearance.terminal.background.layout, "tiled")
+        compare(config.options.appearance.terminal.background.opacity, 0.18)
 
         // Test audio protection
         compare(config.options.audio.protection.enable, false)

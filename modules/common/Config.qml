@@ -133,6 +133,14 @@ Singleton {
                     property real backgroundTransparency: 0.11
                     property real contentTransparency: 0.57
                 }
+                property JsonObject terminal: JsonObject {
+                    property JsonObject background: JsonObject {
+                        property bool enabled: false
+                        property string imagePath: ""
+                        property string layout: "tiled"
+                        property real opacity: 0.18
+                    }
+                }
                 property JsonObject wallpaperTheming: JsonObject {
                     property bool enableAppsAndShell: true
                     property bool enableQtApps: true

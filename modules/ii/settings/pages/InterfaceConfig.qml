@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Io
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -7,6 +8,13 @@ import qs.modules.common.widgets
 ContentPage {
     id: page
     forceWidth: true
+    property string terminalBackgroundMessage: ""
+    property bool terminalBackgroundApplyPending: false
+
+    function scheduleTerminalBackgroundApply() {
+        terminalBackgroundApplyPending = true
+        terminalBackgroundApplyTimer.restart()
+    }
 
     function goTo(term) {
         const t = term.toLowerCase().trim()
@@ -30,6 +38,59 @@ ContentPage {
         if (target) {
             let pos = target.mapToItem(mainLayout, 0, 0)
             page.contentY = Math.max(0, pos.y - 0)
+        }
+    }
+
+    Timer {
+        id: terminalBackgroundApplyTimer
+        interval: 300
+        onTriggered: {
+            if (terminalBackgroundProcess.running) {
+                restart()
+                return
+            }
+            page.terminalBackgroundApplyPending = false
+            terminalBackgroundProcess.command = [
+                "python3",
+                `${Directories.scriptPath}/terminal/apply_terminal_background.py`,
+                "--config", Directories.shellConfigPath,
+                "--reload"
+            ]
+            terminalBackgroundProcess.running = true
+        }
+    }
+
+    Process {
+        id: terminalBackgroundProcess
+        stdout: StdioCollector { id: terminalBackgroundOutput }
+        stderr: StdioCollector { id: terminalBackgroundError }
+        onExited: (exitCode, exitStatus) => {
+            page.terminalBackgroundMessage = exitCode === 0
+                ? terminalBackgroundOutput.text.trim()
+                : terminalBackgroundError.text.trim().split("\n").pop()
+            if (page.terminalBackgroundApplyPending)
+                terminalBackgroundApplyTimer.restart()
+        }
+    }
+
+    Process {
+        id: terminalBackgroundFilePicker
+        command: [
+            "kdialog",
+            "--getopenfilename",
+            Config.options.appearance.terminal.background.imagePath.length > 0
+                ? Config.options.appearance.terminal.background.imagePath
+                : FileUtils.trimFileProtocol(Directories.pictures),
+            "image/png image/jpeg image/jpg image/webp image/svg+xml"
+        ]
+        stdout: StdioCollector { id: terminalBackgroundFilePickerOutput }
+        onExited: exitCode => {
+            if (exitCode !== 0)
+                return
+            const selectedPath = terminalBackgroundFilePickerOutput.text.trim()
+            if (selectedPath.length === 0)
+                return
+            terminalBackgroundPathField.value = selectedPath
         }
     }
 
@@ -816,6 +877,110 @@ ContentPage {
                         }
                     }
                 }
+            }
+        }
+
+        ContentSection {
+            icon: "terminal"
+            title: Translation.tr("Terminal")
+            shape: MaterialShape.Shape.Cookie9Sided
+
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "texture"
+                    text: Translation.tr("Background pattern")
+                    description: Translation.tr("Show an image behind Kitty terminal content")
+                    checked: Config.options.appearance.terminal.background.enabled
+                    onCheckedChanged: {
+                        Config.options.appearance.terminal.background.enabled = checked
+                        page.scheduleTerminalBackgroundApply()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    enabled: Config.options.appearance.terminal.background.enabled
+                    spacing: Appearance.spacing.space100
+
+                    ConfigTextArea {
+                        id: terminalBackgroundPathField
+                        Layout.fillWidth: true
+                        buttonIcon: "image"
+                        text: Translation.tr("Pattern image")
+                        description: Translation.tr("Absolute path to a PNG, JPEG, WebP, or SVG image")
+                        placeholderText: Translation.tr("/home/user/Pictures/pattern.png")
+                        value: Config.options.appearance.terminal.background.imagePath
+                        fieldWidth: 260
+                        singleLine: true
+                        onValueChanged: {
+                            Config.options.appearance.terminal.background.imagePath = value
+                            page.scheduleTerminalBackgroundApply()
+                        }
+                    }
+
+                    RippleButton {
+                        Layout.rightMargin: Appearance.spacing.space100
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: 40
+                        implicitHeight: 40
+                        buttonRadius: Appearance.rounding.full
+                        colBackground: Appearance.colors.colSecondaryContainer
+                        colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+                        colRipple: Appearance.colors.colSecondaryContainerActive
+                        enabled: !terminalBackgroundFilePicker.running
+                        onClicked: terminalBackgroundFilePicker.running = true
+
+                        contentItem: MaterialSymbol {
+                            anchors.centerIn: parent
+                            anchors.horizontalCenterOffset: -1
+                            text: "folder_open"
+                            iconSize: Appearance.font.pixelSize.larger
+                            color: Appearance.colors.colOnSecondaryContainer
+                        }
+                    }
+                }
+
+                ConfigSelectionArray {
+                    enabled: Config.options.appearance.terminal.background.enabled
+                    text: Translation.tr("Pattern layout")
+                    icon: "grid_view"
+                    currentValue: Config.options.appearance.terminal.background.layout
+                    onSelected: newValue => {
+                        Config.options.appearance.terminal.background.layout = newValue
+                        page.scheduleTerminalBackgroundApply()
+                    }
+                    options: [
+                        { displayName: Translation.tr("Tiled"), icon: "grid_on", value: "tiled" },
+                        { displayName: Translation.tr("Mirrored"), icon: "texture", value: "mirror-tiled" },
+                        { displayName: Translation.tr("Scaled"), icon: "fit_screen", value: "scaled" },
+                        { displayName: Translation.tr("Clamped"), icon: "crop_free", value: "clamped" }
+                    ]
+                }
+
+                ConfigSpinBox {
+                    enabled: Config.options.appearance.terminal.background.enabled
+                    icon: "opacity"
+                    text: Translation.tr("Pattern visibility (%)")
+                    value: Config.options.appearance.terminal.background.opacity * 100
+                    from: 0
+                    to: 100
+                    stepSize: 5
+                    onValueChanged: {
+                        Config.options.appearance.terminal.background.opacity = value / 100
+                        page.scheduleTerminalBackgroundApply()
+                    }
+                }
+            }
+
+            StyledText {
+                visible: page.terminalBackgroundMessage.length > 0
+                Layout.fillWidth: true
+                Layout.leftMargin: Appearance.spacing.space100
+                Layout.rightMargin: Appearance.spacing.space100
+                text: page.terminalBackgroundMessage
+                color: Appearance.colors.colSubtext
+                wrapMode: Text.Wrap
+                font.pixelSize: Appearance.font.pixelSize.small
             }
         }
 
