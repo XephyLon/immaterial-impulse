@@ -69,6 +69,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.leftMargin: Appearance.spacing.space50
+        anchors.rightMargin: Appearance.spacing.space100
         spacing: -Appearance.spacing.space50
 
         StyledText {
