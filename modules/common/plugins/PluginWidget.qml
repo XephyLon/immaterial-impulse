@@ -2,6 +2,7 @@ import QtQuick
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import qs
+import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.ii.background.widgets
@@ -14,17 +15,8 @@ AbstractBackgroundWidget {
         ? PluginState.option(manifest.id, "blurEnabled", manifest.desktopWidget?.blur === true)
         : false
     readonly property real blurTintOpacity: Config.options.plugins.blurOpacity
-    readonly property bool liveWallpaperActive: Config.options.wallpaperSelector.wallpaperEngine.activeProject !== ""
+    readonly property bool liveWallpaperActive: WallpaperEngine.stableConfigured
         && !GlobalStates.screenLocked
-    // Hyprland needs a compositor-visible primitive to apply layer blur. An
-    // offscreen OpacityMask is suitable for the static FastBlur path, but it
-    // flattens the live path and can make Hyprland sample an unrelated cached
-    // buffer. Direct rounded rectangles below mirror UserCardWidget's working
-    // compositor structure. This carrier only exposes the blur region; the
-    // plugin component applies the user-selected Material tint separately.
-    // Reusing blurTintOpacity here would apply (for example) 75% twice and
-    // combine into a nearly opaque 94% surface that hides the blur.
-    readonly property real compositorBlurAlpha: 0.1
     readonly property bool hasBlurSurface: !pluginNode.hasCustomBlurRegions
         || pluginNode.blurRegions.length > 0
 
@@ -79,93 +71,8 @@ AbstractBackgroundWidget {
         return Appearance.rounding.large;
     }
 
-    Item {
-        id: blurredBackdrop
-        z: -1
-        anchors.fill: parent
-        clip: true
-        visible: !rootWidget.liveWallpaperActive
-            && rootWidget.blurEnabled && rootWidget.hasBlurSurface
-            && Config.options.appearance.transparency.enable
-        layer.enabled: visible
-        layer.effect: OpacityMask {
-            maskSource: Item {
-                width: blurredBackdrop.width
-                height: blurredBackdrop.height
-
-                Repeater {
-                    model: pluginNode.hasCustomBlurRegions
-                        ? pluginNode.blurRegions
-                        : [{ x: 0, y: 0, width: blurredBackdrop.width,
-                            height: blurredBackdrop.height, radius: rootWidget.widgetRounding }]
-
-                    Rectangle {
-                        required property var modelData
-                        x: Number(modelData.x || 0)
-                        y: Number(modelData.y || 0)
-                        width: Number(modelData.width || 0)
-                        height: Number(modelData.height || 0)
-                        radius: Number(modelData.radius ?? rootWidget.widgetRounding)
-                        color: "white"
-                    }
-                }
-            }
-        }
-
-        // Only exists to report the wallpaper's intrinsic size, which the crop
-        // rectangle below needs. It cannot carry a sourceSize: setting one makes
-        // sourceSize report the requested value instead of the file's own, which
-        // is exactly the number this needs. It therefore decodes the full image,
-        // but cache: true and an identical source across every widget mean the
-        // decoded pixmap is shared rather than duplicated per plugin.
-        Image {
-            id: wallpaperMetadata
-            source: !rootWidget.liveWallpaperActive && rootWidget.wallpaperPath
-                ? ("file://" + rootWidget.wallpaperPath) : ""
-            asynchronous: true
-            cache: true
-            visible: false
-        }
-
-        Image {
-            id: wallpaperSample
-            source: !rootWidget.liveWallpaperActive && rootWidget.wallpaperPath
-                ? ("file://" + rootWidget.wallpaperPath) : ""
-            asynchronous: true
-            cache: true
-            anchors.fill: parent
-            visible: !rootWidget.liveWallpaperActive
-            fillMode: Image.Stretch
-            readonly property real cropScale: wallpaperMetadata.sourceSize.width > 0
-                    && wallpaperMetadata.sourceSize.height > 0
-                ? Math.max(rootWidget.scaledScreenWidth / wallpaperMetadata.sourceSize.width,
-                    rootWidget.scaledScreenHeight / wallpaperMetadata.sourceSize.height)
-                : 1
-            readonly property real cropOffsetX: Math.max(0,
-                (wallpaperMetadata.sourceSize.width * cropScale - rootWidget.scaledScreenWidth) / 2)
-            readonly property real cropOffsetY: Math.max(0,
-                (wallpaperMetadata.sourceSize.height * cropScale - rootWidget.scaledScreenHeight) / 2)
-            sourceClipRect: Qt.rect(
-                (rootWidget.x + cropOffsetX) / cropScale,
-                (rootWidget.y + cropOffsetY) / cropScale,
-                Math.max(1, width / cropScale),
-                Math.max(1, height / cropScale))
-            layer.enabled: true
-            layer.effect: FastBlur { radius: 48 }
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            color: Appearance.colors.colScrim
-            opacity: pluginNode.managesBlurTint ? 0 : rootWidget.blurTintOpacity
-        }
-    }
-
-    // Live Wallpaper Engine blur must remain in the main scene graph. Each
-    // primitive exactly follows the plugin's declared blur region, so separated
-    // cards (such as the resource monitor) do not blur the empty space between.
     Repeater {
-        model: rootWidget.liveWallpaperActive && rootWidget.blurEnabled
+        model: rootWidget.blurEnabled
             && rootWidget.hasBlurSurface && Config.options.appearance.transparency.enable
             ? (pluginNode.hasCustomBlurRegions
                 ? pluginNode.blurRegions
@@ -173,16 +80,16 @@ AbstractBackgroundWidget {
                     height: rootWidget.height, radius: rootWidget.widgetRounding }])
             : []
 
-        Rectangle {
+        WallpaperBlurSurface {
             required property var modelData
-            z: -1
+            z: 0
             x: Number(modelData.x || 0)
             y: Number(modelData.y || 0)
             width: Number(modelData.width || 0)
             height: Number(modelData.height || 0)
-            radius: Number(modelData.radius ?? rootWidget.widgetRounding)
-            color: Appearance.colors.colScrim
-            opacity: rootWidget.compositorBlurAlpha
+            wallpaperSource: rootWidget.wallpaperPath
+            liveWallpaperActive: rootWidget.liveWallpaperActive
+            cornerRadius: Number(modelData.radius ?? rootWidget.widgetRounding)
         }
     }
 

@@ -22,6 +22,69 @@ def load_scanner():
 
 
 class WallpaperEngineTests(unittest.TestCase):
+    def test_config_reload_cannot_flip_plugins_to_static_blur(self):
+        service = (ROOT / "services/WallpaperEngine.qml").read_text()
+        plugin = (ROOT / "modules/common/plugins/PluginWidget.qml").read_text()
+        background = (ROOT / "modules/ii/background/Background.qml").read_text()
+        user_card = (ROOT / "modules/ii/background/widgets/usercard/UserCardWidget.qml").read_text()
+
+        self.assertIn("property bool stableConfigured: false", service)
+        self.assertIn("id: configuredOffTimer", service)
+        self.assertIn("onConfiguredProjectChanged: root.syncConfiguredState()", service)
+        self.assertIn("WallpaperEngine.stableConfigured", plugin)
+        self.assertIn("WallpaperEngine.stableConfigured", background)
+        self.assertIn("WallpaperEngine.stableConfigured", user_card)
+
+    def test_plugins_use_live_compositor_blur_without_loader_transform(self):
+        plugin = (ROOT / "modules/common/plugins/PluginWidget.qml").read_text()
+        background = (ROOT / "modules/ii/background/Background.qml").read_text()
+        carrier = (ROOT / "modules/common/widgets/LiveWallpaperBlur.qml").read_text()
+        surface = (ROOT / "modules/common/widgets/WallpaperBlurSurface.qml").read_text()
+
+        self.assertIn("model: rootWidget.blurEnabled", plugin)
+        self.assertIn("opacity: 0.1", carrier)
+        self.assertIn("layer.effect: OpacityMask", surface)
+        self.assertIn("FastBlur {", surface)
+        self.assertNotIn("sharedWallpaperBlurSource", plugin)
+        plugin_loader = background.split("id: pluginLoader", 1)[1].split(
+            "sourceComponent: PluginWidget", 1
+        )[0]
+        self.assertNotIn("transform: Scale", plugin_loader)
+
+    def test_live_wallpaper_does_not_run_hidden_static_transition(self):
+        background = (ROOT / "modules/ii/background/Background.qml").read_text()
+        handler = background.split("onWallpaperPathChanged:", 1)[1].split(
+            "onWallpaperEngineConfiguredChanged:", 1
+        )[0]
+
+        self.assertIn("if (bgRoot.wallpaperEngineConfigured)", handler)
+        self.assertIn('previousWallpaper.source = ""', handler)
+        self.assertIn('wallpaper.source = ""', handler)
+        self.assertIn("transitionAnim.stop()", handler)
+
+    def test_live_transition_prefers_bounded_project_previews(self):
+        background = (ROOT / "modules/ii/background/Background.qml").read_text()
+        transition = background.split("function startEngineTransition", 1)[1].split(
+            "screen: modelData", 1
+        )[0]
+
+        self.assertIn("const fromSrc = fromPreview || fromStill", transition)
+        self.assertIn("const toSrc = toPreview || toStill", transition)
+        self.assertIn("enginePreviousPreview.fallbackSource = fromStill", transition)
+        self.assertIn("engineNextPreview.fallbackSource = toStill", transition)
+
+    def test_fullscreen_transition_layers_are_allocated_only_while_visible(self):
+        background = (ROOT / "modules/ii/background/Background.qml").read_text()
+
+        self.assertGreaterEqual(
+            background.count("layer.enabled: bgRoot.engineTransitionActive"), 2
+        )
+        self.assertGreaterEqual(
+            background.count("layer.enabled: wallpaperEngineLockOverlay.visible"), 2
+        )
+        self.assertIn("source: wallpaperEngineLockOverlay.visible", background)
+        self.assertIn("&& bgRoot.transitionProgress < 1", background)
+
     def test_desktop_menu_carousel_binds_structured_wallpaper_entries(self):
         menu = (ROOT / "modules/ii/desktopMenu/DesktopMenu.qml").read_text()
 
@@ -267,21 +330,35 @@ class WallpaperEngineTests(unittest.TestCase):
         self.assertIn("function onTransitionRequested(fromStill, fromPreview, toStill, toPreview)", background)
         self.assertIn("bgRoot.startEngineTransition(fromStill, fromPreview, toStill, toPreview)", background)
         # Stills are preferred with a preview fallback for uncached wallpapers.
-        self.assertIn("const fromSrc = fromStill || fromPreview", background)
-        self.assertIn("const toSrc = toStill || toPreview", background)
+        self.assertIn("const fromSrc = fromPreview || fromStill", background)
+        self.assertIn("const toSrc = toPreview || toStill", background)
         self.assertIn("duration: Appearance.wallpaperTransitionDuration", background)
         self.assertIn('Qt.resolvedUrl(`shaders/${bgRoot.currentShader}.frag.qsb`)', background)
 
-    def test_live_wallpaper_blur_uses_the_compositor_surface(self):
+    def test_live_wallpaper_blur_matches_user_card_compositor_carrier(self):
         plugin = (ROOT / "modules/common/plugins/PluginWidget.qml").read_text()
         user_card = (ROOT / "modules/ii/background/widgets/usercard/UserCardWidget.qml").read_text()
-        self.assertIn("import qs\n", plugin)
+        carrier = (ROOT / "modules/common/widgets/LiveWallpaperBlur.qml").read_text()
+        surface = (ROOT / "modules/common/widgets/WallpaperBlurSurface.qml").read_text()
+        self.assertIn("import qs.services", plugin)
         self.assertIn("readonly property bool liveWallpaperActive:", plugin)
-        self.assertIn("id: wallpaperSample", plugin)
-        self.assertIn("source: !rootWidget.liveWallpaperActive", plugin)
-        self.assertIn("model: rootWidget.liveWallpaperActive", plugin)
+        self.assertIn("WallpaperBlurSurface {", plugin)
+        self.assertIn("model: rootWidget.blurEnabled", plugin)
+        self.assertIn("z: 0", plugin)
+        self.assertIn("z: 1", plugin)
         self.assertIn("readonly property bool liveWallpaperActive:", user_card)
+        self.assertIn("visible: !root.liveWallpaperActive", surface)
+        # Keep the known-good User Card path inline and independent. Its direct
+        # translucent rectangle is the reference compositor carrier.
+        self.assertIn("id: bgImage", user_card)
+        self.assertIn("id: blurredBg", user_card)
         self.assertIn("visible: !root.liveWallpaperActive", user_card)
+        self.assertIn("opacity: 0.1", user_card)
+        self.assertIn("LiveWallpaperBlur {", surface)
+        self.assertIn("Rectangle {", carrier)
+        self.assertIn("opacity: 0.1", carrier)
+        self.assertNotIn("layer.enabled", carrier)
+        self.assertNotIn("ShaderEffect", carrier)
 
     def test_lock_transition_promotes_the_surface_immediately_and_peels_a_still(self):
         background = (ROOT / "modules/ii/background/Background.qml").read_text()
@@ -314,18 +391,26 @@ class WallpaperEngineTests(unittest.TestCase):
         still_start = background.index("id: wallpaperEngineLockFrom")
         still_end = background.index("}", still_start)
         self.assertIn(
-            "source: Config.options.wallpaperSelector.wallpaperEngine.activeStill",
+            "? Config.options.wallpaperSelector.wallpaperEngine.activeStill",
             background[still_start:still_end],
         )
         for image_id in (
             "enginePreviousPreview",
             "engineNextPreview",
-            "wallpaperEngineLockFrom",
-            "wallpaperEngineLockImage",
         ):
             image_start = background.index(f"id: {image_id}")
             image_end = background.index("}", image_start)
-            self.assertIn("layer.enabled: true", background[image_start:image_end])
+            self.assertIn(
+                "layer.enabled: bgRoot.engineTransitionActive",
+                background[image_start:image_end],
+            )
+        for image_id in ("wallpaperEngineLockFrom", "wallpaperEngineLockImage"):
+            image_start = background.index(f"id: {image_id}")
+            image_end = background.index("}", image_start)
+            self.assertIn(
+                "layer.enabled: wallpaperEngineLockOverlay.visible",
+                background[image_start:image_end],
+            )
 
     def test_peel_parallax_is_clamped_so_edges_cannot_stretch(self):
         peel = (ROOT / "modules/ii/background/shaders/Peel.frag").read_text()
@@ -372,9 +457,11 @@ class WallpaperEngineTests(unittest.TestCase):
     def test_wallpaper_engine_art_is_used_by_user_surfaces(self):
         background = (ROOT / "modules/ii/background/Background.qml").read_text()
         user_card = (ROOT / "modules/ii/background/widgets/usercard/UserCardWidget.qml").read_text()
+        surface = (ROOT / "modules/common/widgets/WallpaperBlurSurface.qml").read_text()
         sidebar = (ROOT / "modules/ii/sidebarRight/SidebarRightContent.qml").read_text()
         self.assertIn("wallpaperPath: bgRoot.widgetWallpaperPath", background)
         self.assertIn('source: root.wallpaperPath ? ("file://" + root.wallpaperPath) : ""', user_card)
+        self.assertIn('source: root.wallpaperSource ? ("file://" + root.wallpaperSource) : ""', surface)
         self.assertIn("Config.options.wallpaperSelector.wallpaperEngine.activePreview", sidebar)
         self.assertNotIn("liveWallpaperBanner", sidebar)
         self.assertNotIn("CutoutFill", sidebar)

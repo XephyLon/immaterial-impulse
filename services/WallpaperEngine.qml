@@ -9,6 +9,13 @@ pragma Singleton
 Singleton {
     id: root
 
+    // JsonAdapter reloads can briefly expose nested string properties as their
+    // defaults while replacing config.json. Do not let that transient empty
+    // activeProject switch every desktop plugin from compositor blur to its
+    // static-image blur path: each path decodes and renders wallpaper textures,
+    // producing a multi-gigabyte allocation burst during preset changes.
+    readonly property string configuredProject: Config.options.wallpaperSelector.wallpaperEngine.activeProject
+    property bool stableConfigured: false
     property var projects: []
     property var stillQueue: []
     property bool loading: false
@@ -29,6 +36,27 @@ Singleton {
     signal refreshed()
     signal applied(string projectId)
     signal transitionRequested(string fromStill, string fromPreview, string toStill, string toPreview)
+
+    function syncConfiguredState() {
+        if (root.configuredProject !== "") {
+            configuredOffTimer.stop();
+            root.stableConfigured = true;
+        } else {
+            configuredOffTimer.restart();
+        }
+    }
+
+    onConfiguredProjectChanged: root.syncConfiguredState()
+    Component.onCompleted: root.syncConfiguredState()
+
+    Timer {
+        id: configuredOffTimer
+        // Longer than Config's watched-file reload window, while short enough
+        // to hand a real Wallpaper Engine -> static transition over promptly.
+        interval: 500
+        repeat: false
+        onTriggered: root.stableConfigured = root.configuredProject !== ""
+    }
 
     onFullscreenActiveChanged: {
         if (Config.options.wallpaperSelector.wallpaperEngine.activeProject)

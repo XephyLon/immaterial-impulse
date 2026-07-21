@@ -23,7 +23,7 @@ AbstractBackgroundWidget {
     property string username: Config.options.profile.displayName === "" ? SystemInfo.username : Config.options.profile.displayName
     property string userDisplay: username.length > 10 ? username : (username + "@" + hostname)
     property var currentQuip: weatherQuip()
-    readonly property bool liveWallpaperActive: Config.options.wallpaperSelector.wallpaperEngine.activeProject !== ""
+    readonly property bool liveWallpaperActive: WallpaperEngine.stableConfigured
         && !GlobalStates.screenLocked
     
 

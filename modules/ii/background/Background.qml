@@ -94,9 +94,10 @@ Variants {
 
         //centered Wallpaper
         property bool centeredWallpaperEnabled: Config.options.background.centeredWallpaper && (!Config.options.background.centeredWallpaperOnlyWhenLocked || GlobalStates.screenLocked)
-        readonly property bool wallpaperEngineConfigured: Config.options.wallpaperSelector.wallpaperEngine.activeProject !== ""
+        readonly property bool wallpaperEngineConfigured: WallpaperEngine.stableConfigured
         readonly property bool wallpaperEngineActive: wallpaperEngineConfigured && !GlobalStates.screenLocked
-        readonly property string widgetWallpaperPath: wallpaperEngineActive && Config.options.wallpaperSelector.wallpaperEngine.activePreview !== ""
+        readonly property string widgetWallpaperPath: wallpaperEngineActive
+            && Config.options.wallpaperSelector.wallpaperEngine.activePreview !== ""
             ? Config.options.wallpaperSelector.wallpaperEngine.activePreview
             : bgRoot.wallpaperPath
         // The still is already rendered at monitor resolution with the live
@@ -160,18 +161,22 @@ Variants {
             }
         }
 
-        // Peel between full-scene stills when available, falling back to the
-        // low-res previews for a wallpaper whose still has not been cached yet.
+        // Animate lightweight project previews. Full-monitor cached stills are
+        // retained only as fallback: feeding two 5120px stills through layered
+        // ShaderEffect inputs makes Qt/NVIDIA allocate gigabytes of private
+        // render memory for an image visible only during this short hand-off.
+        // The live Wallpaper Engine surface supplies full resolution as soon as
+        // the transition completes.
         function startEngineTransition(fromStill, fromPreview, toStill, toPreview) {
             engineTransitionAnim.stop()
-            const fromSrc = fromStill || fromPreview
-            const toSrc = toStill || toPreview
+            const fromSrc = fromPreview || fromStill
+            const toSrc = toPreview || toStill
             if (bgRoot.wallpaperAnimation === "" || !fromSrc || !toSrc)
                 return
             enginePreviousPreview.usedFallback = false
             engineNextPreview.usedFallback = false
-            enginePreviousPreview.fallbackSource = fromPreview
-            engineNextPreview.fallbackSource = toPreview
+            enginePreviousPreview.fallbackSource = fromStill
+            engineNextPreview.fallbackSource = toStill
             enginePreviousPreview.source = fromSrc
             engineNextPreview.source = toSrc
             bgRoot.currentShader = bgRoot.wallpaperAnimation === "random"
@@ -235,6 +240,17 @@ Variants {
         }
 
         onWallpaperPathChanged: {
+            // Wallpaper Engine owns live-wallpaper changes through
+            // startEngineTransition(). Its preview also feeds wallpaperPath,
+            // but the ordinary transition layer is hidden in this mode. Do not
+            // decode and render a second full-screen from/to pair behind it.
+            if (bgRoot.wallpaperEngineConfigured) {
+                transitionAnim.stop()
+                previousWallpaper.source = ""
+                wallpaper.source = ""
+                bgRoot.transitionProgress = 1.0
+                return
+            }
             // Lock/unlock can request a wallpaper that is still in QML's image
             // cache. In that case status may remain Ready and emit no change,
             // so explicitly start the transition on the next event-loop turn.
@@ -268,6 +284,18 @@ Variants {
                 if (wallpaper.status === Image.Ready && bgRoot.transitionProgress === 0.0)
                     transitionAnim.restart()
             })
+        }
+
+        onWallpaperEngineConfiguredChanged: {
+            if (bgRoot.wallpaperEngineConfigured) {
+                transitionAnim.stop()
+                previousWallpaper.source = ""
+                wallpaper.source = ""
+                bgRoot.transitionProgress = 1.0
+            } else {
+                wallpaper.source = bgRoot.wallpaperPath
+                bgRoot.currentWallpaperSource = bgRoot.wallpaperPath
+            }
         }
 
         NumberAnimation {
@@ -352,7 +380,7 @@ Variants {
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     cache: false
-                    layer.enabled: true
+                    layer.enabled: bgRoot.engineTransitionActive
                     visible: !bgRoot.engineTransitionReady
                     onStatusChanged: {
                         if (status === Image.Error && fallbackSource && !usedFallback) {
@@ -370,7 +398,7 @@ Variants {
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     cache: false
-                    layer.enabled: true
+                    layer.enabled: bgRoot.engineTransitionActive
                     visible: false
                     onStatusChanged: {
                         if (status === Image.Error && fallbackSource && !usedFallback) {
@@ -404,7 +432,9 @@ Variants {
                 cache: true
                 smooth: true
                 asynchronous: true
-                layer.enabled: true
+                layer.enabled: !bgRoot.wallpaperEngineConfigured
+                    && bgRoot.wallpaperAnimation !== ""
+                    && bgRoot.transitionProgress < 1
                 visible: false
             }
 
@@ -415,7 +445,9 @@ Variants {
                 cache: true
                 smooth: true
                 asynchronous: true
-                layer.enabled: true
+                layer.enabled: !bgRoot.wallpaperEngineConfigured
+                    && bgRoot.wallpaperAnimation !== ""
+                    && bgRoot.transitionProgress < 1
                 visible: !bgRoot.wallpaperEngineConfigured
                     && bgRoot.wallpaperAnimation === "" && !blurLoader.active && !bgRoot.centeredWallpaperEnabled
                 onStatusChanged: {
@@ -472,7 +504,7 @@ Variants {
                 id: wallpaperEngineLockOverlay
                 anchors.fill: parent
                 visible: bgRoot.wallpaperEngineConfigured && bgRoot.wallpaperEngineLockProgress > 0
-                layer.enabled: Config.options.lock.blur.enable
+                layer.enabled: visible && Config.options.lock.blur.enable
                 // Ramp the frost with lock progress so the peel itself stays sharp
                 // and the blur only settles in as the lock finishes (and lifts as
                 // it unlocks), instead of blurring the wallpaper mid-transition.
@@ -486,26 +518,32 @@ Variants {
                 Image {
                     id: wallpaperEngineLockFrom
                     anchors.fill: parent
-                    source: Config.options.wallpaperSelector.wallpaperEngine.activeStill
+                    source: wallpaperEngineLockOverlay.visible
+                        ? Config.options.wallpaperSelector.wallpaperEngine.activeStill
+                        : ""
                     fillMode: bgRoot.wallpaperEngineStillFillMode
                     asynchronous: true
                     // Never cache the still: a re-render writes the same path, and
                     // Qt's pixmap cache would otherwise keep serving the old frame.
                     cache: false
-                    layer.enabled: true
+                    layer.enabled: wallpaperEngineLockOverlay.visible
+                        && bgRoot.wallpaperAnimation !== ""
                     visible: false
                 }
 
                 Image {
                     id: wallpaperEngineLockImage
                     anchors.fill: parent
-                    source: Config.options.background.lockWall !== ""
-                        ? Config.options.background.lockWall
-                        : Config.options.wallpaperSelector.wallpaperEngine.activePreview
+                    source: wallpaperEngineLockOverlay.visible
+                        ? (Config.options.background.lockWall !== ""
+                            ? Config.options.background.lockWall
+                            : Config.options.wallpaperSelector.wallpaperEngine.activePreview)
+                        : ""
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     cache: true
-                    layer.enabled: true
+                    layer.enabled: wallpaperEngineLockOverlay.visible
+                        && bgRoot.wallpaperAnimation !== ""
                     visible: bgRoot.wallpaperAnimation === ""
                     // With a shader the reveal drives visibility, so keep the lock
                     // wallpaper fully opaque; only the no-animation fallback fades in.
@@ -767,41 +805,14 @@ Variants {
                         shown: modelData.desktopWidget !== undefined
                             && modelData.startupSafe !== false
                             && Config.options.plugins.enabled.includes(modelData.id)
-                        property real presentationScale: shown ? 1 : 0.92
-
-                        // Opacity and scale are one combined entrance/exit transition, so they
-                        // must share the same duration and easing curve. FadeLoader's default
-                        // opacity Behavior always used elementMoveFast (200ms, expressiveEffects),
-                        // which fell out of sync with the 400ms elementMoveEnter scale below - the
-                        // widget hit full opacity while still visibly growing, reading as a
-                        // hiccup. Mirror the scale Behavior's duration/easing instead.
+                        // Keep the loader untransformed. Hyprland derives live
+                        // background blur from this surface's alpha map; wrapping
+                        // plugin widgets in a Scale transform offsets that map
+                        // from the live Wallpaper Engine layer beneath it.
                         enterDuration: Appearance.animation.elementMoveEnter.duration
                         enterEasingCurve: Appearance.animation.elementMoveEnter.bezierCurve
                         exitDuration: Appearance.animation.elementMoveExit.duration
                         exitEasingCurve: Appearance.animation.elementMoveExit.bezierCurve
-
-                        transform: Scale {
-                            origin.x: pluginLoader.item
-                                ? pluginLoader.item.x + pluginLoader.item.width / 2
-                                : 0
-                            origin.y: pluginLoader.item
-                                ? pluginLoader.item.y + pluginLoader.item.height / 2
-                                : 0
-                            xScale: pluginLoader.presentationScale
-                            yScale: pluginLoader.presentationScale
-                        }
-
-                        Behavior on presentationScale {
-                            NumberAnimation {
-                                duration: pluginLoader.shown
-                                    ? Appearance.animation.elementMoveEnter.duration
-                                    : Appearance.animation.elementMoveExit.duration
-                                easing.type: Easing.BezierSpline
-                                easing.bezierCurve: pluginLoader.shown
-                                    ? Appearance.animation.elementMoveEnter.bezierCurve
-                                    : Appearance.animation.elementMoveExit.bezierCurve
-                            }
-                        }
 
                         sourceComponent: PluginWidget {
                             manifest: pluginLoader.modelData
