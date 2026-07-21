@@ -22,6 +22,24 @@ def load_scanner():
 
 
 class WallpaperEngineTests(unittest.TestCase):
+    def test_desktop_menu_carousel_binds_structured_wallpaper_entries(self):
+        menu = (ROOT / "modules/ii/desktopMenu/DesktopMenu.qml").read_text()
+
+        self.assertIn('kind: "static", artwork: fp, path: fp', menu)
+        self.assertIn('kind: "wallpaperEngine"', menu)
+        self.assertIn("readonly property var entry: parent?.modelData ?? null", menu)
+        self.assertIn("FileUtils.trimFileProtocol(entry.artwork)", menu)
+        self.assertIn("WallpaperEngine.selectEntry(entry, Appearance.m3colors.darkmode)", menu)
+
+        service = (ROOT / "services/WallpaperEngine.qml").read_text()
+        selector = (ROOT / "modules/ii/wallpaperSelector/WallpaperSelectorContent.qml").read_text()
+        self.assertIn("function selectEntry(entry, darkMode", service)
+        self.assertIn('if (entry.kind === "wallpaperEngine")', service)
+        self.assertIn("root.apply(entry.project)", service)
+        self.assertIn("root.requestTransition(fromStill, fromPreview, entry.path, entry.path)", service)
+        self.assertIn("Wallpapers.select(entry.path, darkMode)", service)
+        self.assertIn('WallpaperEngine.selectEntry({ kind: "wallpaperEngine", project: project }', selector)
+
     def test_quick_palette_changes_preserve_the_live_wallpaper(self):
         quick_config = (ROOT / "modules/ii/settings/pages/QuickConfig.qml").read_text()
 
@@ -193,7 +211,7 @@ class WallpaperEngineTests(unittest.TestCase):
         self.assertIn("property var pendingProject: null", service)
         self.assertIn("root.startRuntime(completedProject)", service)
         self.assertIn("signal transitionRequested(string fromStill, string fromPreview, string toStill, string toPreview)", service)
-        self.assertIn("root.transitionRequested(fromStill, project.previousPreview,", service)
+        self.assertIn("root.requestTransition(fromStill, project.previousPreview,", service)
         self.assertIn("Config.options.wallpaperSelector.wallpaperEngine.activeProject", service)
 
     def test_wallpaper_jobs_are_serialized_and_keep_latest_theme(self):

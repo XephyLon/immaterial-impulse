@@ -44,24 +44,69 @@ Scope {
 
     property int carouselExtraCount: 5
     property bool useDarkMode: Appearance.m3colors.darkmode
-    property var randomWallpapers: {
+    property var staticWallpaperEntries: {
         const current = FileUtils.trimFileProtocol(Config.options.background.wallpaperPath)
         let all = []
         for (let i = 0; i < wallpaperFolder.count; i++) {
             const fp = FileUtils.trimFileProtocol(wallpaperFolder.get(i, "filePath").toString())
-            if (fp !== current) all.push(fp)
+            if (fp !== current) all.push({ kind: "static", artwork: fp, path: fp })
         }
-        for (let i = all.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [all[i], all[j]] = [all[j], all[i]]
-        }
-        return all.slice(0, carouselExtraCount)
+        return all
     }
 
+    property var wallpaperEngineEntries: WallpaperEngine.projects.map(project => ({
+        kind: "wallpaperEngine",
+        artwork: project.id === Config.options.wallpaperSelector.wallpaperEngine.activeProject
+            ? WallpaperEngine.activeArtwork
+            : project.preview,
+        project: project
+    })).filter(entry => entry.artwork && entry.artwork.length > 0)
+
     property var carouselModel: {
-        const current = FileUtils.trimFileProtocol(Config.options.background.wallpaperPath)
-        if (!current || current.length === 0) return randomWallpapers
-        return [current, ...randomWallpapers]
+        const engine = Config.options.wallpaperSelector.wallpaperEngine
+        const currentStatic = FileUtils.trimFileProtocol(Config.options.background.wallpaperPath)
+        let currentEntry = null
+        let staticExtras = staticWallpaperEntries.slice()
+        let engineExtras = wallpaperEngineEntries.slice()
+
+        if (engine.activeProject) {
+            currentEntry = wallpaperEngineEntries.find(entry => entry.project.id === engine.activeProject)
+            if (!currentEntry && WallpaperEngine.activeArtwork) {
+                currentEntry = {
+                    kind: "wallpaperEngine",
+                    artwork: WallpaperEngine.activeArtwork,
+                    project: {
+                        id: engine.activeProject,
+                        path: engine.activePath,
+                        preview: engine.activePreview
+                    }
+                }
+            }
+            engineExtras = engineExtras.filter(entry => entry.project.id !== engine.activeProject)
+        } else if (currentStatic) {
+            currentEntry = { kind: "static", artwork: currentStatic, path: currentStatic }
+            staticExtras = staticExtras.filter(entry => entry.path !== currentStatic)
+        }
+
+        for (let i = staticExtras.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [staticExtras[i], staticExtras[j]] = [staticExtras[j], staticExtras[i]]
+        }
+        for (let i = engineExtras.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [engineExtras[i], engineExtras[j]] = [engineExtras[j], engineExtras[i]]
+        }
+
+        // Interleave both sources so installed Wallpaper Engine projects cannot
+        // disappear behind a large static-wallpaper directory.
+        let visibleExtras = []
+        while (visibleExtras.length < carouselExtraCount
+                && (engineExtras.length > 0 || staticExtras.length > 0)) {
+            if (engineExtras.length > 0) visibleExtras.push(engineExtras.shift())
+            if (visibleExtras.length < carouselExtraCount && staticExtras.length > 0)
+                visibleExtras.push(staticExtras.shift())
+        }
+        return currentEntry ? [currentEntry, ...visibleExtras] : visibleExtras
     }
 
     // Menu window
@@ -148,8 +193,23 @@ Scope {
                             anchors.fill: parent
                             anchors.margins: Appearance.spacing.space150
                             model: root.carouselModel
-                            onWallpaperSelected: (path) => {
-                                Wallpapers.select(path, Appearance.m3colors.darkmode)
+                            delegate: Component {
+                                StyledImage {
+                                    readonly property var entry: parent?.modelData ?? null
+                                    property real fixedWidth: parent?.fixedWidth ?? width
+                                    property real fixedHeight: parent?.fixedHeight ?? height
+                                    source: entry?.artwork
+                                        ? "file://" + FileUtils.trimFileProtocol(entry.artwork)
+                                        : ""
+                                    fillMode: Image.PreserveAspectCrop
+                                    cache: true
+                                    asynchronous: true
+                                    sourceSize.width: fixedWidth * 1.5
+                                    sourceSize.height: fixedHeight * 1.5
+                                }
+                            }
+                            clickAction: (index, entry) => {
+                                WallpaperEngine.selectEntry(entry, Appearance.m3colors.darkmode)
                                 GlobalStates.desktopMenuOpen = false
                             }
                         }

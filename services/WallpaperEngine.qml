@@ -28,6 +28,29 @@ Singleton {
     signal applied(string projectId)
     signal transitionRequested(string fromStill, string fromPreview, string toStill, string toPreview)
 
+    function requestTransition(fromStill, fromPreview, toStill, toPreview) {
+        root.transitionRequested(fromStill, fromPreview, toStill, toPreview);
+    }
+
+    // Shared dispatcher for mixed wallpaper models. UI surfaces should not
+    // duplicate source detection or Wallpaper Engine transition setup.
+    function selectEntry(entry, darkMode = Appearance.m3colors.darkmode) {
+        if (!entry) return;
+        if (entry.kind === "wallpaperEngine") {
+            root.apply(entry.project);
+            return;
+        }
+        if (!entry.path) return;
+
+        const engine = Config.options.wallpaperSelector.wallpaperEngine;
+        if (engine.activeProject) {
+            const fromStill = engine.activeStill || root.stillPathFor(engine.activeProject);
+            const fromPreview = engine.activePreview || Config.options.background.wallpaperPath;
+            root.requestTransition(fromStill, fromPreview, entry.path, entry.path);
+        }
+        Wallpapers.select(entry.path, darkMode);
+    }
+
     function stillPathFor(projectId) {
         return projectId ? `${root.stillDir}/${projectId}.png` : "";
     }
@@ -87,7 +110,7 @@ Singleton {
             // Prefer full-scene stills; the background falls back to the previews
             // for any wallpaper whose still is not cached yet.
             const fromStill = project.previousProject ? root.stillPathFor(project.previousProject) : "";
-            root.transitionRequested(fromStill, project.previousPreview,
+            root.requestTransition(fromStill, project.previousPreview,
                 root.stillPathFor(project.id), project.preview);
         }
         Quickshell.execDetached([

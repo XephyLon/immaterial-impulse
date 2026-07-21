@@ -80,7 +80,7 @@ MouseArea {
                 root.selectWallpaperPath(project.preview);
             return;
         }
-        WallpaperEngine.apply(project);
+        WallpaperEngine.selectEntry({ kind: "wallpaperEngine", project: project }, root.useDarkMode);
     }
 
     acceptedButtons: Qt.BackButton | Qt.ForwardButton
