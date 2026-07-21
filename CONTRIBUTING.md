@@ -246,6 +246,13 @@ This repo lives at `~/.config/quickshell/end4-pC` and is loaded by exactly one r
 agent (main session + subagents, or several parallel Claude Code sessions) is touching the repo at
 once:
 
+- **Stop the primary shell before a multi-file edit burst.** Every QML source write hot-reloads the
+  configuration and rebuilds Quickshell's desktop-entry registry. On systems with large Wine/Steam
+  application directories, several rapid reloads can queue millions of desktop-entry parses,
+  consume gigabytes of memory, and make the shell appear frozen. Stop it once with
+  `qs -c end4-pC kill`, finish and test the batch, then launch exactly one clean
+  `qs -c end4-pC -d`. A single small edit may still use hot reload.
+
 - **Only the primary checkout hot-reloads against the live shell.** A `git worktree add
   ../end4-pC-<feature> <branch>` checkout elsewhere is a completely separate directory - editing
   files there does *not* trigger the running instance's hot-reload, and the log-grepping /

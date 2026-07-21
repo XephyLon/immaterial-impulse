@@ -72,6 +72,11 @@ of the user's. Always match on `qs`:
 pgrep -af 'qs -c end4-pC'
 ```
 
+Do not leave the primary shell running through a rapid multi-file patch series. Each source change
+hot-reloads QML and rebuilds the desktop-entry registry; large Wine/Steam application collections
+can turn repeated reloads into millions of parses, multi-gigabyte RSS, and an apparent freeze. Kill
+the one primary instance before the edit batch and start exactly one clean daemon after validation.
+
 **Grep `ERROR`, not just `WARN`.** A `WARN scene:` line is a runtime warning in an otherwise
 working shell; `ERROR: Failed to load configuration` means the config did not load *at all* and the
 user has no panels. The error is reported as a cascade from `shell.qml` down to the file that
