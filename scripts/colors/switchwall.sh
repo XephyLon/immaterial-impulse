@@ -54,6 +54,11 @@ post_process() {
     local screen_width="$1"
     local screen_height="$2"
     local wallpaper_path="$3"
+    local colors_lock_flag="$4"
+
+    if [[ -n "$colors_lock_flag" ]]; then
+        return
+    fi
 
     handle_kde_material_you_colors &
     "$SCRIPT_DIR/code/material-code-set-color.sh" &
@@ -168,6 +173,7 @@ switch() {
     color_flag="$4"
     color="$5"
     colors_only_flag="$6"
+    colors_lock_flag="$7"
 
     # Start Gemini auto-categorization if enabled
     aiStylingEnabled=$(jq -r '.background.widgets.clock.cookie.aiStyling' "$SHELL_CONFIG_FILE")
@@ -317,17 +323,61 @@ switch() {
         [[ "$term_fg_boost" != "null" && -n "$term_fg_boost" ]] && generate_colors_material_args+=(--term_fg_boost "$term_fg_boost")
     fi
 
+    colors_json_path="$STATE_DIR/user/generated/colors.json"
+    colors_lock_json_path="$STATE_DIR/user/generated/colors-lock.json"
+    colors_lock_watch_paths=(
+        "$colors_json_path"
+        "$XDG_CONFIG_HOME/gtk-3.0/gtk.css"
+        "$XDG_CONFIG_HOME/gtk-4.0/gtk.css"
+    )
+    colors_lock_backups=()
+    if [[ -n "$colors_lock_flag" ]]; then
+        for i in "${!colors_lock_watch_paths[@]}"; do
+            watch_path="${colors_lock_watch_paths[$i]}"
+            if [[ -f "$watch_path" ]]; then
+                backup_path="$(mktemp)"
+                cp "$watch_path" "$backup_path"
+                colors_lock_backups[$i]="$backup_path"
+            fi
+        done
+    fi
+
     matugen "${matugen_args[@]}"
+
+    if [[ -n "$colors_lock_flag" ]]; then
+        if [[ -f "$colors_json_path" ]]; then
+            cp "$colors_json_path" "$colors_lock_json_path"
+        fi
+        for i in "${!colors_lock_watch_paths[@]}"; do
+            watch_path="${colors_lock_watch_paths[$i]}"
+            backup_path="${colors_lock_backups[$i]:-}"
+            if [[ -n "$backup_path" ]]; then
+                mv "$backup_path" "$watch_path"
+            fi
+        done
+    fi
+
     source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
+
+    # colors_lock: dump to a separate output file and skip applying it to apps/shell
+    if [[ -n "$colors_lock_flag" ]]; then
+        output_scss="$STATE_DIR/user/generated/material_colors_lock.scss"
+    else
+        output_scss="$STATE_DIR/user/generated/material_colors.scss"
+    fi
+
     python3 "$SCRIPT_DIR/generate_colors_material.py" "${generate_colors_material_args[@]}" \
-        > "$STATE_DIR"/user/generated/material_colors.scss
+        > "$output_scss"
     deactivate
-    "$SCRIPT_DIR"/applycolor.sh
+
+    if [[ -z "$colors_lock_flag" ]]; then
+        "$SCRIPT_DIR"/applycolor.sh
+    fi
 
     # Pass screen width, height, and wallpaper path to post_process
     max_width_desired="$(hyprctl monitors -j | jq '([.[].width] | min)' | xargs)"
     max_height_desired="$(hyprctl monitors -j | jq '([.[].height] | min)' | xargs)"
-    post_process "$max_width_desired" "$max_height_desired" "$imgpath"
+    post_process "$max_width_desired" "$max_height_desired" "$imgpath" "$colors_lock_flag"
 }
 
 main() {
@@ -338,6 +388,7 @@ main() {
     color=""
     noswitch_flag=""
     colors_only_flag=""
+    colors_lock_flag=""
     explicit_image=""
 
     get_type_from_config() {
@@ -386,6 +437,15 @@ main() {
                 shift 2
                 ;;
             --noswitch)
+                noswitch_flag="1"
+                if [[ -z "$imgpath" ]]; then
+                    imgpath=$(jq -r '.background.wallpaperPath' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "")
+                fi
+                shift
+                ;;
+            --colors_lock)
+                colors_lock_flag="1"
+                colors_only_flag="1"
                 noswitch_flag="1"
                 if [[ -z "$imgpath" ]]; then
                     imgpath=$(jq -r '.background.wallpaperPath' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "")
@@ -491,7 +551,7 @@ main() {
         fi
     fi
 
-    switch "$imgpath" "$mode_flag" "$type_flag" "$color_flag" "$color" "$colors_only_flag"
+    switch "$imgpath" "$mode_flag" "$type_flag" "$color_flag" "$color" "$colors_only_flag" "$colors_lock_flag"
 }
 
 main "$@"
