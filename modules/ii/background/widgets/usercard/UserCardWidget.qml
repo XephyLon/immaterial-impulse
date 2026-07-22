@@ -50,37 +50,18 @@ AbstractBackgroundWidget {
         implicitWidth: root.cardWidth 
         implicitHeight: 252
 
-        Image {
-            id: bgImage
+        // Shared blur surface: still-blurs the wallpaper region behind the card
+        // for static images, and hands off to the live compositor blur for
+        // Wallpaper Engine. surfaceX/Y place the still sample under the card.
+        WallpaperBlurSurface {
             anchors.fill: parent
-            source: root.wallpaperPath ? ("file://" + root.wallpaperPath) : ""
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
-            cache: false
-            visible: false
-        }
-
-        FastBlur {
-            id: blurredBg
-            anchors.fill: bgImage
-            source: bgImage
-            visible: !root.liveWallpaperActive
-            radius: 48
-            layer.enabled: true
-            layer.effect: OpacityMask {
-                maskSource: Rectangle {
-                    width: outerRect.width
-                    height: outerRect.height
-                    radius: Appearance.rounding?.verylarge ?? 30
-                }
-            }
-        }
-
-        Rectangle {
-            anchors.fill: blurredBg
-            radius: Appearance.rounding?.verylarge ?? 30
-            color: Appearance.colors.colScrim
-            opacity: 0.1
+            wallpaperSource: root.wallpaperPath
+            liveWallpaperActive: root.liveWallpaperActive
+            cornerRadius: Appearance.rounding?.verylarge ?? 30
+            screenWidth: root.scaledScreenWidth
+            screenHeight: root.scaledScreenHeight
+            surfaceX: root.x
+            surfaceY: root.y
         }
 
         Rectangle {

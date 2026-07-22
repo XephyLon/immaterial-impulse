@@ -90,6 +90,12 @@ AbstractBackgroundWidget {
             wallpaperSource: rootWidget.wallpaperPath
             liveWallpaperActive: rootWidget.liveWallpaperActive
             cornerRadius: Number(modelData.radius ?? rootWidget.widgetRounding)
+            // Absolute position on the monitor so the still path samples the
+            // wallpaper region actually behind this surface.
+            screenWidth: rootWidget.scaledScreenWidth
+            screenHeight: rootWidget.scaledScreenHeight
+            surfaceX: rootWidget.x + x
+            surfaceY: rootWidget.y + y
         }
     }
 

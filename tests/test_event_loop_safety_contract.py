@@ -40,14 +40,17 @@ def test_keyboard_indicator_honors_container_theme_color():
 
 
 def test_plugin_blur_is_bounded_to_widget_geometry():
-    source = Path("modules/common/plugins/PluginWidget.qml").read_text()
-    image = source[source.index("id: wallpaperSample"):source.index("Rectangle {", source.index("id: wallpaperSample"))]
+    # The blur backdrop is shared by every desktop widget (plugins + User Card)
+    # through WallpaperBlurSurface, so the bounded-geometry contract lives there.
+    source = Path("modules/common/widgets/WallpaperBlurSurface.qml").read_text()
+    image = source[source.index("id: wallpaperSample"):source.index("FastBlur {", source.index("id: wallpaperSample"))]
     assert "anchors.fill: parent" in image
-    assert "sourceClipRect: Qt.rect(" in image
+    assert "sourceClipRect:" in image and "Qt.rect(" in image
     assert "wallpaperMetadata.sourceSize.width" in image
-    assert "width: rootWidget.scaledScreenWidth" not in image
-    assert "height: rootWidget.scaledScreenHeight" not in image
-    assert "x: -rootWidget.x" not in image
+    # Bounded to the widget rect: never a full-screen image offset behind it.
+    assert "width: root.screenWidth" not in image
+    assert "height: root.screenHeight" not in image
+    assert "x: -root." not in image
 
 
 def test_popups_wait_for_target_window_before_mapping():

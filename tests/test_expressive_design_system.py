@@ -92,7 +92,7 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         background = (ROOT / "modules/ii/background/Background.qml").read_text(encoding="utf-8")
         self.assertIn("modelData.startupSafe !== false", background)
         host = (ROOT / "modules/common/plugins/PluginWidget.qml").read_text(encoding="utf-8")
-        self.assertRegex(host, r"id:\s*blurredBackdrop\s*z:\s*-1\b")
+        self.assertRegex(host, r"WallpaperBlurSurface\s*{\s*[^}]*?\bz:\s*0\b")
         self.assertRegex(host, r"id:\s*pluginNode\s*z:\s*1\b")
         currency_widget = (
             DESIGN_SYSTEM / "widgets" / "DesktopCurrencyWidget.qml"
