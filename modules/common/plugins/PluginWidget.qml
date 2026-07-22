@@ -76,8 +76,14 @@ AbstractBackgroundWidget {
 
     // In-shell frost: sample + blur the wallpaper region behind each blur region.
     // The sample tracks rootWidget.x/y live so it stays aligned while dragging.
+    //
+    // Skipped while the screen is locked: the lock background (Background.qml's
+    // blurLoader) already shows a blurred + zoomed wallpaper, so a per-widget
+    // blur of the un-zoomed wallpaper would mismatch it. Without our opaque blur
+    // surface the widget's own translucent panel shows the lock background
+    // through it, keeping the frost consistent with the lock screen.
     Repeater {
-        model: rootWidget.frostBlur && rootWidget.blurEnabled
+        model: rootWidget.frostBlur && rootWidget.blurEnabled && !GlobalStates.screenLocked
             && rootWidget.hasBlurSurface && Config.options.appearance.transparency.enable
             ? (pluginNode.hasCustomBlurRegions
                 ? pluginNode.blurRegions
