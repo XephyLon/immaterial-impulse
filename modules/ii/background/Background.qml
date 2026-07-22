@@ -128,6 +128,43 @@ Variants {
         // weShown stays false, so the static wallpaper still shows.
         property bool weShown: weLoader.status === Loader.Ready
 
+        // Lock wallpaper peel (WE desktop + a distinct lock image). Rendered here
+        // on the background - below the desktop widgets, which must stay visible on
+        // the lock screen - rather than on the lock surface (which would cover
+        // them). Peels the live WE into the lock image on lock, and back on unlock.
+        //
+        // progress is advanced by lockPeelTimer against the wall clock rather than a
+        // QML animation: on the freshly-shown lock state the animation clock can
+        // jump and complete the tween in one step, whereas the timer is immune.
+        property bool lockWallShown: GlobalStates.screenLocked
+            && Config.options.background.lockWall !== "" && bgRoot.weActive
+        property bool lockRevealWe: false // true = peeling back to WE (unlock)
+
+        onLockWallShownChanged: {
+            if (!bgRoot.weActive || Config.options.background.lockWall === "") return
+            bgRoot.lockRevealWe = !bgRoot.lockWallShown
+            if (bgRoot.wallpaperAnimation === "") { lockPeel.progress = 1.0; return }
+            bgRoot.currentShader = bgRoot.wallpaperAnimation === "random"
+                ? bgRoot.shaderList[Math.floor(Math.random() * bgRoot.shaderList.length)]
+                : bgRoot.wallpaperAnimation
+            lockPeel.progress = 0.0
+            lockPeelTimer.startTime = Date.now()
+            lockPeelTimer.running = true
+        }
+        Timer {
+            id: lockPeelTimer
+            interval: 16
+            repeat: true
+            running: false
+            property double startTime: 0
+            onTriggered: {
+                const t = Math.min((Date.now() - lockPeelTimer.startTime) / Appearance.wallpaperTransitionDuration, 1.0)
+                // InOutCubic, matching the wallpaper-switch transition.
+                lockPeel.progress = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+                if (t >= 1.0) lockPeelTimer.running = false
+            }
+        }
+
         // WE wallpaper switch transition state.
         property string weLoadedProject: ""     // project currently in the surface
         property real weTransitionProgress: 1.0  // 0 = old still, 1 = new surface
@@ -422,6 +459,36 @@ Variants {
                     : ""
             }
 
+            // Lock wallpaper (static image), sampled by the lock peel shader.
+            Image {
+                id: lockWallImage
+                anchors.fill: parent
+                source: Config.options.background.lockWall
+                fillMode: Image.PreserveAspectCrop
+                cache: false
+                smooth: true
+                asynchronous: true
+                visible: false
+            }
+            // Lock peel: live WE <-> lock image, using the configured shader. Above
+            // the WE/static layers, below the blur and the desktop widgets. Held
+            // visible while locked so the settled state (progress 1 -> toImage) shows
+            // the lock image; hidden once unlocked so the live WE draws directly.
+            ShaderEffect {
+                id: lockPeel
+                anchors.fill: parent
+                blending: true
+                visible: bgRoot.weShown && (bgRoot.lockWallShown || lockPeelTimer.running)
+                property var fromImage: bgRoot.lockRevealWe ? lockWallImage : weLiveSource
+                property var toImage: bgRoot.lockRevealWe ? weLiveSource : lockWallImage
+                property real progress: 1.0
+                property real aspectX: width / height
+                property real aspectY: 1.0
+                property vector2d aspectRatio: Qt.vector2d(aspectX, aspectY)
+                property vector2d origin: Qt.vector2d(0.5, 0.5)
+                fragmentShader: Qt.resolvedUrl(`shaders/${bgRoot.currentShader}.frag.qsb`)
+            }
+
             Loader {
                 id: blurLoader
                 active: Config.options.lock.blur.enable && (GlobalStates.screenLocked || scaleAnim.running)
@@ -436,11 +503,14 @@ Variants {
                     }
                 }
                 sourceComponent: GaussianBlur {
-                    // Blur the live in-shell Wallpaper Engine surface when it is
-                    // the wallpaper; otherwise the static image / transition.
-                    source: bgRoot.weShown
-                        ? weLoader.item
-                        : (bgRoot.wallpaperAnimation === "" ? wallpaper : transitionEffect)
+                    // Blur the lock peel (WE<->lock-image) when a lock wallpaper is
+                    // in play; the live WE surface when it is the wallpaper;
+                    // otherwise the static image / transition.
+                    source: (bgRoot.weShown && (bgRoot.lockWallShown || lockPeelTimer.running))
+                        ? lockPeel
+                        : (bgRoot.weShown
+                            ? weLoader.item
+                            : (bgRoot.wallpaperAnimation === "" ? wallpaper : transitionEffect))
                     radius: GlobalStates.screenLocked ? Config.options.lock.blur.radius : 0
                     samples: Config.options.lock.blur.size 
                     Rectangle {
