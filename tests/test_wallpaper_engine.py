@@ -62,26 +62,57 @@ class WallpaperEngineTests(unittest.TestCase):
         self.assertIn('wallpaper.source = ""', handler)
         self.assertIn("transitionAnim.stop()", handler)
 
-    def test_live_transition_prefers_bounded_project_previews(self):
+    def test_live_transition_prefers_cached_still_with_preview_fallback(self):
         background = (ROOT / "modules/ii/background/Background.qml").read_text()
         transition = background.split("function startEngineTransition", 1)[1].split(
             "screen: modelData", 1
         )[0]
 
-        self.assertIn("const fromSrc = fromPreview || fromStill", transition)
-        self.assertIn("const toSrc = toPreview || toStill", transition)
-        self.assertIn("enginePreviousPreview.fallbackSource = fromStill", transition)
-        self.assertIn("engineNextPreview.fallbackSource = toStill", transition)
+        # Match the lock: peel monitor-shaped stills on both sides, falling back
+        # to the (often square) preview only when a still is not cached, so the
+        # incoming wallpaper is never stretched.
+        self.assertIn("const fromSrc = fromStill || fromPreview", transition)
+        self.assertIn("const toSrc = toStill || toPreview", transition)
+        self.assertIn("engineSwitchTransition.setSources(fromSrc, fromPreview, toSrc, toPreview)", transition)
+
+    def test_live_transition_preloads_previews_before_runtime_swap(self):
+        background = (ROOT / "modules/ii/background/Background.qml").read_text()
+        component = (ROOT / "modules/ii/background/widgets/WallpaperEngineTransition.qml").read_text()
+        transition_layer = background.split("id: engineTransitionLayer", 1)[1].split(
+            "id: previousWallpaper", 1
+        )[0]
+
+        # The switch decodes synchronously (preload) because the runtime is
+        # swapped right after the request returns; the component wires that to
+        # both source Images' asynchronous flag.
+        self.assertIn("preload: true", transition_layer)
+        self.assertEqual(component.count("asynchronous: !transition.preload"), 2)
+
+    def test_wallpaper_engine_search_toolbar_is_visible_on_entry(self):
+        selector = (ROOT / "modules/ii/wallpaperSelector/WallpaperSelectorContent.qml").read_text()
+
+        self.assertIn('if (source === "wallpaperEngine")', selector)
+        self.assertGreaterEqual(selector.count("showControls = true"), 2)
+        self.assertIn("Component.onCompleted:", selector)
+
+    def test_wallpaper_engine_workshop_refreshes_once_per_selector_open(self):
+        selector = (ROOT / "modules/ii/wallpaperSelector/WallpaperSelectorContent.qml").read_text()
+
+        self.assertIn("property bool workshopLoadedThisOpen: false", selector)
+        self.assertIn("function loadWorkshopOnce()", selector)
+        self.assertIn("if (source !== \"wallpaperEngine\" || workshopLoadedThisOpen)", selector)
+        self.assertEqual(selector.count("WallpaperEngine.refresh()"), 2)  # guarded load + manual button
 
     def test_fullscreen_transition_layers_are_allocated_only_while_visible(self):
         background = (ROOT / "modules/ii/background/Background.qml").read_text()
 
-        self.assertGreaterEqual(
-            background.count("layer.enabled: bgRoot.engineTransitionActive"), 2
-        )
-        self.assertGreaterEqual(
-            background.count("layer.enabled: wallpaperEngineLockOverlay.visible"), 2
-        )
+        # The transition layer only draws while the transition is active, and the
+        # lock overlay only while it is on screen, so nothing renders otherwise.
+        transition_layer = background.split("id: engineTransitionLayer", 1)[1].split(
+            "id: previousWallpaper", 1
+        )[0]
+        self.assertIn("visible: bgRoot.engineTransitionActive", transition_layer)
+        self.assertIn("visible: bgRoot.wallpaperEngineConfigured && bgRoot.wallpaperEngineLockProgress > 0", background)
         self.assertIn("source: wallpaperEngineLockOverlay.visible", background)
         self.assertIn("&& bgRoot.transitionProgress < 1", background)
 
@@ -310,7 +341,7 @@ class WallpaperEngineTests(unittest.TestCase):
         )
         self.assertIn('currentIndex: root.source === "wallpaperEngine" ? 1', selector)
         self.assertIn("onActivated: index =>", selector)
-        self.assertIn('if (root.source === "wallpaperEngine") {\n                    WallpaperEngine.refresh();', selector)
+        self.assertGreaterEqual(selector.count("loadWorkshopOnce()"), 3)
         self.assertNotIn("onCurrentIndexChanged: {\n                                root.source", selector)
 
     def test_color_only_theming_does_not_stop_live_wallpapers(self):
@@ -329,11 +360,16 @@ class WallpaperEngineTests(unittest.TestCase):
         background = (ROOT / "modules/ii/background/Background.qml").read_text()
         self.assertIn("function onTransitionRequested(fromStill, fromPreview, toStill, toPreview)", background)
         self.assertIn("bgRoot.startEngineTransition(fromStill, fromPreview, toStill, toPreview)", background)
-        # Stills are preferred with a preview fallback for uncached wallpapers.
-        self.assertIn("const fromSrc = fromPreview || fromStill", background)
-        self.assertIn("const toSrc = toPreview || toStill", background)
+        # Stills are preferred on both sides with a preview fallback for uncached
+        # wallpapers, so neither side is stretched.
+        self.assertIn("const fromSrc = fromStill || fromPreview", background)
+        self.assertIn("const toSrc = toStill || toPreview", background)
         self.assertIn("duration: Appearance.wallpaperTransitionDuration", background)
-        self.assertIn('Qt.resolvedUrl(`shaders/${bgRoot.currentShader}.frag.qsb`)', background)
+        # Both the lock and the switch route the configured shader through the
+        # shared transition component.
+        component = (ROOT / "modules/ii/background/widgets/WallpaperEngineTransition.qml").read_text()
+        self.assertIn('Qt.resolvedUrl(`../shaders/${transition.shader}.frag.qsb`)', component)
+        self.assertIn("shader: bgRoot.currentShader", background)
 
     def test_live_wallpaper_blur_matches_user_card_compositor_carrier(self):
         plugin = (ROOT / "modules/common/plugins/PluginWidget.qml").read_text()
@@ -348,12 +384,16 @@ class WallpaperEngineTests(unittest.TestCase):
         self.assertIn("z: 1", plugin)
         self.assertIn("readonly property bool liveWallpaperActive:", user_card)
         self.assertIn("visible: !root.liveWallpaperActive", surface)
-        # Keep the known-good User Card path inline and independent. Its direct
-        # translucent rectangle is the reference compositor carrier.
-        self.assertIn("id: bgImage", user_card)
-        self.assertIn("id: blurredBg", user_card)
-        self.assertIn("visible: !root.liveWallpaperActive", user_card)
-        self.assertIn("opacity: 0.1", user_card)
+        # The User Card and plugin widgets share the single WallpaperBlurSurface
+        # instead of duplicating the image + FastBlur + carrier structure.
+        self.assertIn("WallpaperBlurSurface {", user_card)
+        self.assertNotIn("id: bgImage", user_card)
+        # The still path samples the wallpaper region behind the surface (via its
+        # absolute monitor position) rather than cropping the whole wallpaper into
+        # the widget rect, matching the live compositor blur's framing.
+        self.assertIn("surfaceX:", user_card)
+        self.assertIn("surfaceX:", plugin)
+        self.assertIn("sourceClipRect:", surface)
         self.assertIn("LiveWallpaperBlur {", surface)
         self.assertIn("Rectangle {", carrier)
         self.assertIn("opacity: 0.1", carrier)
@@ -382,35 +422,27 @@ class WallpaperEngineTests(unittest.TestCase):
         )
         self.assertLess(shader_selection, progress)
         self.assertIn("duration: Appearance.wallpaperTransitionDuration", background)
-        # The from-side is an opaque, full-scene still (so the peel covers the
-        # compositor-blurred live surface and can be parallaxed), peeling to the
-        # lock wallpaper.
-        self.assertIn("property var fromImage: wallpaperEngineLockFrom", background)
-        self.assertIn("property var toImage: wallpaperEngineLockImage", background)
-        self.assertIn("property real progress: bgRoot.wallpaperEngineLockProgress", background)
-        still_start = background.index("id: wallpaperEngineLockFrom")
-        still_end = background.index("}", still_start)
+        # The lock and the switch share one transition component. The lock's
+        # from-side is the opaque full-scene still (so it covers the compositor-
+        # blurred live surface and can be parallaxed), transitioning to the lock
+        # wallpaper; the still falls back to the preview when uncached.
+        component = (ROOT / "modules/ii/background/widgets/WallpaperEngineTransition.qml").read_text()
+        lock_block = background[background.index("id: lockTransition"):background.index("id: wallpaperEngineLockImage")]
         self.assertIn(
             "? Config.options.wallpaperSelector.wallpaperEngine.activeStill",
-            background[still_start:still_end],
+            lock_block,
         )
-        for image_id in (
-            "enginePreviousPreview",
-            "engineNextPreview",
-        ):
-            image_start = background.index(f"id: {image_id}")
-            image_end = background.index("}", image_start)
-            self.assertIn(
-                "layer.enabled: bgRoot.engineTransitionActive",
-                background[image_start:image_end],
-            )
-        for image_id in ("wallpaperEngineLockFrom", "wallpaperEngineLockImage"):
-            image_start = background.index(f"id: {image_id}")
-            image_end = background.index("}", image_start)
-            self.assertIn(
-                "layer.enabled: wallpaperEngineLockOverlay.visible",
-                background[image_start:image_end],
-            )
+        self.assertIn("fromFallback: Config.options.wallpaperSelector.wallpaperEngine.activePreview", lock_block)
+        self.assertIn("progress: bgRoot.wallpaperEngineLockProgress", lock_block)
+        self.assertIn("shader: bgRoot.currentShader", lock_block)
+        # Both sides prefer the monitor-shaped still (preview only as a fallback),
+        # so the shader samples correctly-framed textures and nothing stretches.
+        self.assertIn("property var fromImage: fromView", component)
+        self.assertIn("property var toImage: toView", component)
+        self.assertEqual(component.count("fillMode: Image.PreserveAspectCrop"), 2)
+        # Both call sites instantiate the same component.
+        self.assertIn("WallpaperEngineTransition {", background)
+        self.assertGreaterEqual(background.count("WallpaperEngineTransition {"), 2)
 
     def test_peel_parallax_is_clamped_so_edges_cannot_stretch(self):
         peel = (ROOT / "modules/ii/background/shaders/Peel.frag").read_text()
@@ -460,7 +492,7 @@ class WallpaperEngineTests(unittest.TestCase):
         surface = (ROOT / "modules/common/widgets/WallpaperBlurSurface.qml").read_text()
         sidebar = (ROOT / "modules/ii/sidebarRight/SidebarRightContent.qml").read_text()
         self.assertIn("wallpaperPath: bgRoot.widgetWallpaperPath", background)
-        self.assertIn('source: root.wallpaperPath ? ("file://" + root.wallpaperPath) : ""', user_card)
+        self.assertIn("wallpaperSource: root.wallpaperPath", user_card)
         self.assertIn('source: root.wallpaperSource ? ("file://" + root.wallpaperSource) : ""', surface)
         self.assertIn("Config.options.wallpaperSelector.wallpaperEngine.activePreview", sidebar)
         self.assertNotIn("liveWallpaperBanner", sidebar)

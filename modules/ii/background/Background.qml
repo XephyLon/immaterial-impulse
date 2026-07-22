@@ -100,10 +100,6 @@ Variants {
             && Config.options.wallpaperSelector.wallpaperEngine.activePreview !== ""
             ? Config.options.wallpaperSelector.wallpaperEngine.activePreview
             : bgRoot.wallpaperPath
-        // The still is already rendered at monitor resolution with the live
-        // wallpaper's scaling baked in, so it fills 1:1 on the matching monitor;
-        // crop covers the small residual on differently-shaped monitors.
-        readonly property int wallpaperEngineStillFillMode: Image.PreserveAspectCrop
         property int centeredWallpaperShape: getShapeFromName(Config.options.background.centeredWallpaperShape)
         property int centeredWallpaperSize: Config.options.background.centeredWallpaperSize
         property color centeredWallpaperColor: root.getColorFromName(Config.options.background.centeredWallpaperColor)
@@ -161,24 +157,20 @@ Variants {
             }
         }
 
-        // Animate lightweight project previews. Full-monitor cached stills are
-        // retained only as fallback: feeding two 5120px stills through layered
-        // ShaderEffect inputs makes Qt/NVIDIA allocate gigabytes of private
-        // render memory for an image visible only during this short hand-off.
-        // The live Wallpaper Engine surface supplies full resolution as soon as
-        // the transition completes.
+        // Drive the shared WallpaperEngineTransition the same way the lock does:
+        // both sides prefer the sharp monitor-shaped still and fall back to the
+        // project preview only when no still is cached yet. Previews are the raw
+        // Workshop thumbnails (often square), so using them as the destination is
+        // what stretched the incoming wallpaper - the cached still already has the
+        // monitor's aspect baked in and cannot. The live Wallpaper Engine surface
+        // supplies full resolution as soon as the transition completes.
         function startEngineTransition(fromStill, fromPreview, toStill, toPreview) {
             engineTransitionAnim.stop()
-            const fromSrc = fromPreview || fromStill
-            const toSrc = toPreview || toStill
+            const fromSrc = fromStill || fromPreview
+            const toSrc = toStill || toPreview
             if (bgRoot.wallpaperAnimation === "" || !fromSrc || !toSrc)
                 return
-            enginePreviousPreview.usedFallback = false
-            engineNextPreview.usedFallback = false
-            enginePreviousPreview.fallbackSource = fromStill
-            engineNextPreview.fallbackSource = toStill
-            enginePreviousPreview.source = fromSrc
-            engineNextPreview.source = toSrc
+            engineSwitchTransition.setSources(fromSrc, fromPreview, toSrc, toPreview)
             bgRoot.currentShader = bgRoot.wallpaperAnimation === "random"
                 ? bgRoot.shaderList[Math.floor(Math.random() * bgRoot.shaderList.length)]
                 : bgRoot.wallpaperAnimation
@@ -186,7 +178,7 @@ Variants {
             bgRoot.engineTransitionReady = false
             bgRoot.engineTransitionActive = true
             bgRoot.currentWallpaperSource = toSrc
-            if (engineNextPreview.status === Image.Ready)
+            if (engineSwitchTransition.toStatus === Image.Ready)
                 engineTransitionAnim.restart()
         }
 
@@ -347,8 +339,7 @@ Variants {
             onFinished: {
                 bgRoot.engineTransitionActive = false
                 bgRoot.engineTransitionReady = false
-                enginePreviousPreview.source = ""
-                engineNextPreview.source = ""
+                engineSwitchTransition.setSources("", "", "", "")
             }
         }
 
@@ -372,56 +363,21 @@ Variants {
                 anchors.fill: parent
                 visible: bgRoot.engineTransitionActive
 
-                Image {
-                    id: enginePreviousPreview
-                    property string fallbackSource: ""
-                    property bool usedFallback: false
+                // Same shared transition the lock uses. preload decodes the
+                // previews synchronously because the runtime is swapped right
+                // after the request returns; contentVisible holds the reveal
+                // until the first frame is ready.
+                WallpaperEngineTransition {
+                    id: engineSwitchTransition
                     anchors.fill: parent
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    cache: false
-                    layer.enabled: bgRoot.engineTransitionActive
-                    visible: !bgRoot.engineTransitionReady
-                    onStatusChanged: {
-                        if (status === Image.Error && fallbackSource && !usedFallback) {
-                            usedFallback = true
-                            source = fallbackSource
-                        }
-                    }
-                }
-
-                Image {
-                    id: engineNextPreview
-                    property string fallbackSource: ""
-                    property bool usedFallback: false
-                    anchors.fill: parent
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    cache: false
-                    layer.enabled: bgRoot.engineTransitionActive
-                    visible: false
-                    onStatusChanged: {
-                        if (status === Image.Error && fallbackSource && !usedFallback) {
-                            usedFallback = true
-                            source = fallbackSource
-                            return
-                        }
-                        if (status === Image.Ready && bgRoot.engineTransitionActive && !engineTransitionAnim.running)
+                    progress: bgRoot.engineTransitionProgress
+                    shader: bgRoot.currentShader
+                    contentVisible: bgRoot.engineTransitionReady
+                    preload: true
+                    onToReady: {
+                        if (bgRoot.engineTransitionActive && !engineTransitionAnim.running)
                             engineTransitionAnim.restart()
                     }
-                }
-
-                ShaderEffect {
-                    anchors.fill: parent
-                    visible: bgRoot.engineTransitionReady
-                    property var fromImage: enginePreviousPreview
-                    property var toImage: engineNextPreview
-                    property real progress: bgRoot.engineTransitionProgress
-                    property real aspectX: width / height
-                    property real aspectY: 1.0
-                    property vector2d aspectRatio: Qt.vector2d(aspectX, aspectY)
-                    property vector2d origin: Qt.vector2d(0.5, 0.5)
-                    fragmentShader: Qt.resolvedUrl(`shaders/${bgRoot.currentShader}.frag.qsb`)
                 }
             }
 
@@ -510,27 +466,30 @@ Variants {
                 // it unlocks), instead of blurring the wallpaper mid-transition.
                 layer.effect: FastBlur { radius: Config.options.lock.blur.radius * bgRoot.wallpaperEngineLockProgress }
 
-                // "From" texture: a full-scene still rendered from the live
-                // wallpaper. Opaque, so it fully covers (and thus hides the
-                // compositor-blurred live surface) and can be parallaxed by the
-                // shader. When no still exists yet it loads blank/transparent,
-                // gracefully falling back to showing the live surface.
-                Image {
-                    id: wallpaperEngineLockFrom
+                // Same shared transition the switch uses. from = full-scene still
+                // rendered from the live wallpaper (opaque, so it hides the
+                // compositor-blurred live surface and can be parallaxed); to = the
+                // lock wallpaper (lockWall or the project preview). A missing still
+                // falls back to the preview instead of showing blank.
+                WallpaperEngineTransition {
+                    id: lockTransition
                     anchors.fill: parent
-                    source: wallpaperEngineLockOverlay.visible
+                    visible: bgRoot.wallpaperAnimation !== ""
+                    fromSource: wallpaperEngineLockOverlay.visible
                         ? Config.options.wallpaperSelector.wallpaperEngine.activeStill
                         : ""
-                    fillMode: bgRoot.wallpaperEngineStillFillMode
-                    asynchronous: true
-                    // Never cache the still: a re-render writes the same path, and
-                    // Qt's pixmap cache would otherwise keep serving the old frame.
-                    cache: false
-                    layer.enabled: wallpaperEngineLockOverlay.visible
-                        && bgRoot.wallpaperAnimation !== ""
-                    visible: false
+                    fromFallback: Config.options.wallpaperSelector.wallpaperEngine.activePreview
+                    toSource: wallpaperEngineLockOverlay.visible
+                        ? (Config.options.background.lockWall !== ""
+                            ? Config.options.background.lockWall
+                            : Config.options.wallpaperSelector.wallpaperEngine.activePreview)
+                        : ""
+                    progress: bgRoot.wallpaperEngineLockProgress
+                    shader: bgRoot.currentShader
+                    contentVisible: bgRoot.wallpaperAnimation !== ""
                 }
 
+                // No-animation fallback: cross-fade the lock wallpaper in directly.
                 Image {
                     id: wallpaperEngineLockImage
                     anchors.fill: parent
@@ -542,33 +501,17 @@ Variants {
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     cache: true
-                    layer.enabled: wallpaperEngineLockOverlay.visible
-                        && bgRoot.wallpaperAnimation !== ""
                     visible: bgRoot.wallpaperAnimation === ""
-                    // With a shader the reveal drives visibility, so keep the lock
-                    // wallpaper fully opaque; only the no-animation fallback fades in.
-                    opacity: bgRoot.wallpaperAnimation === "" ? bgRoot.wallpaperEngineLockProgress : 1
+                    opacity: bgRoot.wallpaperEngineLockProgress
                 }
 
-                ShaderEffect {
+                // Dim only ramps in with the lock so the live wallpaper stays at
+                // full brightness until the transition actually covers it.
+                Rectangle {
                     anchors.fill: parent
-                    visible: bgRoot.wallpaperAnimation !== ""
-                    property var fromImage: wallpaperEngineLockFrom
-                    property var toImage: wallpaperEngineLockImage
-                    property real progress: bgRoot.wallpaperEngineLockProgress
-                    property real aspectX: width / height
-                    property real aspectY: 1.0
-                    property vector2d aspectRatio: Qt.vector2d(aspectX, aspectY)
-                    property vector2d origin: Qt.vector2d(0.5, 0.5)
-                    fragmentShader: Qt.resolvedUrl(`shaders/${bgRoot.currentShader}.frag.qsb`)
-
-                    // Dim only ramps in with the lock so the live wallpaper stays at
-                    // full brightness until the peel actually covers it.
-                    Rectangle {
-                        anchors.fill: parent
-                        color: CF.ColorUtils.transparentize(Appearance.colors.colLayer0, 0.7)
-                        opacity: bgRoot.wallpaperEngineLockProgress
-                    }
+                    visible: wallpaperEngineLockOverlay.visible
+                    color: CF.ColorUtils.transparentize(Appearance.colors.colLayer0, 0.7)
+                    opacity: bgRoot.wallpaperEngineLockProgress
                 }
             }
 
