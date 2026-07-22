@@ -23,9 +23,6 @@ AbstractBackgroundWidget {
     property string username: Config.options.profile.displayName === "" ? SystemInfo.username : Config.options.profile.displayName
     property string userDisplay: username.length > 10 ? username : (username + "@" + hostname)
     property var currentQuip: weatherQuip()
-    readonly property bool liveWallpaperActive: WallpaperEngine.stableConfigured
-        && !GlobalStates.screenLocked
-    
 
     function weatherQuip() {
         const desc = (Weather.data?.description ?? "").toLowerCase();
@@ -49,20 +46,6 @@ AbstractBackgroundWidget {
         id: outerRect
         implicitWidth: root.cardWidth 
         implicitHeight: 252
-
-        // Shared blur surface: still-blurs the wallpaper region behind the card
-        // for static images, and hands off to the live compositor blur for
-        // Wallpaper Engine. surfaceX/Y place the still sample under the card.
-        WallpaperBlurSurface {
-            anchors.fill: parent
-            wallpaperSource: root.wallpaperPath
-            liveWallpaperActive: root.liveWallpaperActive
-            cornerRadius: Appearance.rounding?.verylarge ?? 30
-            screenWidth: root.scaledScreenWidth
-            screenHeight: root.scaledScreenHeight
-            surfaceX: root.x
-            surfaceY: root.y
-        }
 
         Rectangle {
             id: contentBox
