@@ -774,9 +774,15 @@ Variants {
                             // Use the exact source resolved by this background,
                             // including lock wallpaper and video thumbnails.
                             wallpaperPath: bgRoot.wallpaperPath
-                            // Live WE surface for in-shell "blur" frost; null when
-                            // the static image path is active.
-                            weSurfaceItem: bgRoot.weShown ? weLoader.item : null
+                            // Live surface for in-shell "blur" frost. During lock
+                            // and the lock<->WE peel, frost against the peel itself
+                            // so it tracks the exact lock background (avoids the WE
+                            // flashing through the frost before the unlock peel
+                            // catches up). Otherwise the live WE, or null (=> static
+                            // image path) when no WE is active.
+                            weSurfaceItem: (bgRoot.lockWallShown || lockPeelTimer.running)
+                                ? lockPeel
+                                : (bgRoot.weShown ? weLoader.item : null)
                         }
                     }
                 }
