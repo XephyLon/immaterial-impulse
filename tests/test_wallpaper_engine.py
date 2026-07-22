@@ -324,9 +324,17 @@ class WallpaperEngineTests(unittest.TestCase):
         self.assertIn("onExited: exitCode =>", service)
         self.assertIn("function enqueueTheme(project)", service)
         self.assertIn("property var pendingProject: null", service)
-        self.assertIn("root.startRuntime(completedProject)", service)
+        # The runtime is started up front in apply(), in parallel with theming,
+        # so it is rendering by the time the peel ends (no black startup gap).
+        apply_body_runtime = service.split("function apply(project)", 1)[1].split("function ", 1)[0]
+        self.assertIn("root.startRuntime(project)", apply_body_runtime)
         self.assertIn("signal transitionRequested(string fromStill, string fromPreview, string toStill, string toPreview)", service)
-        self.assertIn("root.requestTransition(fromStill, project.previousPreview,", service)
+        # The cross-fade is requested up front in apply(), before any config is
+        # flipped, so it covers the outgoing wallpaper (a static image blinks out
+        # the instant wallpaperEngineConfigured turns true otherwise).
+        self.assertIn("root.requestTransition(fromStill, prevPreview,", service)
+        apply_body = service.split("function apply(project)", 1)[1].split("function ", 1)[0]
+        self.assertIn("root.requestTransition(", apply_body)
         self.assertIn("Config.options.wallpaperSelector.wallpaperEngine.activeProject", service)
 
     def test_wallpaper_jobs_are_serialized_and_keep_latest_theme(self):
@@ -338,7 +346,9 @@ class WallpaperEngineTests(unittest.TestCase):
         self.assertIn("Qt.callLater(root.startNextStillJob)", service)
         self.assertIn("if (themeProcess.running)", service)
         self.assertIn("themeProcess.pendingProject = project", service)
-        self.assertIn("completedProject.id === Config.options.wallpaperSelector.wallpaperEngine.activeProject", service)
+        # Theme generation stays latest-wins: a newer request queued while one is
+        # running is re-enqueued when the current one exits.
+        self.assertIn("Qt.callLater(() => root.enqueueTheme(pendingProject))", service)
 
     def test_selector_reopens_on_the_active_wallpaper_source(self):
         selector = (ROOT / "modules/ii/wallpaperSelector/WallpaperSelectorContent.qml").read_text()
@@ -439,10 +449,19 @@ class WallpaperEngineTests(unittest.TestCase):
         self.assertNotIn("wallpaperEngineLockLayerTimer", background)
         lock_handler = background.index("function onScreenLockedChanged()")
         shader_selection = background.index("bgRoot.currentShader =", lock_handler)
-        progress = background.index(
-            "bgRoot.wallpaperEngineLockProgress = GlobalStates.screenLocked ? 1 : 0", lock_handler
+        # Locking holds on the sharp still until the lock wallpaper has decoded,
+        # then peels - revealing the (blurring) lock surface's backdrop before the
+        # to-side loads would flash the compositor-blurred live wallpaper.
+        gate = background.index(
+            "if (lockTransition.toStatus === Image.Ready)", lock_handler
         )
-        self.assertLess(shader_selection, progress)
+        progress = background.index(
+            "bgRoot.wallpaperEngineLockProgress = 1", gate
+        )
+        self.assertLess(shader_selection, gate)
+        self.assertLess(gate, progress)
+        # The peel is (re)started when the lock wallpaper finishes loading.
+        self.assertIn("if (GlobalStates.screenLocked && bgRoot.wallpaperEngineLockProgress === 0)", background)
         self.assertIn("duration: Appearance.wallpaperTransitionDuration", background)
         # The lock and the switch share one transition component. The lock's
         # from-side is the opaque full-scene still (so it covers the compositor-
@@ -518,7 +537,10 @@ class WallpaperEngineTests(unittest.TestCase):
         sidebar = (ROOT / "modules/ii/sidebarRight/SidebarRightContent.qml").read_text()
         self.assertIn("wallpaperPath: bgRoot.widgetWallpaperPath", background)
         self.assertIn("wallpaperSource: root.wallpaperPath", user_card)
-        self.assertIn('source: root.wallpaperSource ? ("file://" + root.wallpaperSource) : ""', surface)
+        # Path segments are percent-encoded so spaces/reserved chars (e.g. a
+        # Steam library under "Program Files (x86)") still form a valid file URL.
+        self.assertIn("root.wallpaperSource.split('/').map(s => encodeURIComponent(s)).join('/')", surface)
+        self.assertIn("source: root.wallpaperUrl", surface)
         self.assertIn("Config.options.wallpaperSelector.wallpaperEngine.activePreview", sidebar)
         self.assertNotIn("liveWallpaperBanner", sidebar)
         self.assertNotIn("CutoutFill", sidebar)

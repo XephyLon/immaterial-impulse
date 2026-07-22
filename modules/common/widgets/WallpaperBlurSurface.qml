@@ -25,12 +25,19 @@ Item {
     property real surfaceX: 0
     property real surfaceY: 0
 
+    // Percent-encode each path segment so wallpapers on paths with spaces or
+    // other reserved characters (e.g. a Steam library under "Program Files
+    // (x86)") produce a valid file URL instead of failing to decode.
+    readonly property string wallpaperUrl: root.wallpaperSource
+        ? "file://" + root.wallpaperSource.split('/').map(s => encodeURIComponent(s)).join('/')
+        : ""
+
     // Natural wallpaper dimensions. Kept separate from the sampled image because
     // setting sourceClipRect makes an Image report the clip size as its source
     // size, which would make the clip math below circular.
     Image {
         id: wallpaperMetadata
-        source: root.wallpaperSource ? ("file://" + root.wallpaperSource) : ""
+        source: root.wallpaperUrl
         asynchronous: true
         cache: false
         visible: false
@@ -39,7 +46,7 @@ Item {
     Image {
         id: wallpaperSample
         anchors.fill: parent
-        source: root.wallpaperSource ? ("file://" + root.wallpaperSource) : ""
+        source: root.wallpaperUrl
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
         cache: false

@@ -51,6 +51,11 @@ Item {
         source: transition.fromSource
         property bool usedFallback: false
         fillMode: Image.PreserveAspectCrop
+        // Cap the decode to the monitor: wallpapers are displayed cropped to the
+        // screen, so decoding a huge (e.g. upscaled) source at full resolution
+        // only wastes seconds of decode time and hundreds of MB of memory.
+        sourceSize.width: transition.width
+        sourceSize.height: transition.height
         asynchronous: !transition.preload
         cache: false
         layer.enabled: true
@@ -69,6 +74,8 @@ Item {
         source: transition.toSource
         property bool usedFallback: false
         fillMode: Image.PreserveAspectCrop
+        sourceSize.width: transition.width
+        sourceSize.height: transition.height
         // Always async: the "to" side is revealed gradually as the transition
         // progresses, so it never needs to block the first frame the way the
         // "from" side (shown immediately at progress 0) does.

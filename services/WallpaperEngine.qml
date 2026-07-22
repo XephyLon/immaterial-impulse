@@ -118,10 +118,29 @@ Singleton {
 
     function apply(project) {
         if (!project || !project.path) return;
-        project.previousProject = Config.options.wallpaperSelector.wallpaperEngine.activeProject;
-        project.previousPreview = Config.options.wallpaperSelector.wallpaperEngine.activePreview !== ""
-            ? Config.options.wallpaperSelector.wallpaperEngine.activePreview
+        const prevProject = Config.options.wallpaperSelector.wallpaperEngine.activeProject;
+        // Only trust activePreview when a project is actually active. Switching
+        // away to a static image clears activeProject but leaves activePreview
+        // holding the old project's preview, which would otherwise make an
+        // image->engine transition peel from a stale previous wallpaper instead
+        // of the image currently on screen.
+        const prevPreview = prevProject !== ""
+            ? (Config.options.wallpaperSelector.wallpaperEngine.activePreview !== ""
+                ? Config.options.wallpaperSelector.wallpaperEngine.activePreview
+                : Config.options.background.wallpaperPath)
             : Config.options.background.wallpaperPath;
+        // Start the cross-fade before flipping any config. When switching from a
+        // static image the outgoing wallpaper is a Quickshell layer that hides
+        // the instant wallpaperEngineConfigured turns true; firing the transition
+        // first means the peel is already covering that hand-off instead of the
+        // image blinking out before the animation begins.
+        if (prevPreview && project.preview) {
+            const fromStill = prevProject ? root.stillPathFor(prevProject) : "";
+            root.requestTransition(fromStill, prevPreview,
+                root.stillPathFor(project.id), project.preview);
+        }
+        project.previousProject = prevProject;
+        project.previousPreview = prevPreview;
         Config.options.wallpaperSelector.wallpaperEngine.activeProject = project.id;
         Config.options.wallpaperSelector.wallpaperEngine.activePath = project.path;
         Config.options.wallpaperSelector.wallpaperEngine.activePreview = project.preview;
@@ -130,10 +149,15 @@ Singleton {
         // already exists because the runner exits successfully in that case.
         Config.options.wallpaperSelector.wallpaperEngine.activeStill = "";
         root.ensureStill(project.id, project.path);
+        // Start the live runtime immediately, in parallel with theme generation,
+        // instead of waiting for the theme process to finish. Otherwise the
+        // runtime only spawned ~2s later - well after the ~1.2s peel had ended -
+        // leaving a black gap while linux-wallpaperengine was still starting up.
+        // Theme colours are independent of the wallpaper surface and catch up on
+        // their own.
+        root.startRuntime(project);
         if (project.preview) {
             root.enqueueTheme(project);
-        } else {
-            root.startRuntime(project);
         }
     }
 
@@ -155,13 +179,9 @@ Singleton {
     }
 
     function startRuntime(project) {
-        if (project.previousPreview && project.preview) {
-            // Prefer full-scene stills; the background falls back to the previews
-            // for any wallpaper whose still is not cached yet.
-            const fromStill = project.previousProject ? root.stillPathFor(project.previousProject) : "";
-            root.requestTransition(fromStill, project.previousPreview,
-                root.stillPathFor(project.id), project.preview);
-        }
+        // The cross-fade is started up front in apply() so it covers the moment
+        // the outgoing wallpaper gives way, rather than here after theme
+        // generation has already run and swapped the config.
         Quickshell.execDetached([
             root.runnerPath, "apply", project.path,
             String(Config.options.wallpaperSelector.wallpaperEngine.fps),
@@ -251,17 +271,15 @@ Singleton {
         property var project: null
         property var pendingProject: null
         onExited: exitCode => {
-            const completedProject = themeProcess.project;
             const pendingProject = themeProcess.pendingProject;
             themeProcess.project = null;
             themeProcess.pendingProject = null;
             if (exitCode !== 0)
                 root.error = "Wallpaper theme generation failed";
+            // The runtime is started up front in apply(); theming only needs to
+            // hand off to the latest pending project's colour generation here.
             if (pendingProject) {
                 Qt.callLater(() => root.enqueueTheme(pendingProject));
-            } else if (completedProject
-                    && completedProject.id === Config.options.wallpaperSelector.wallpaperEngine.activeProject) {
-                root.startRuntime(completedProject);
             }
         }
     }
@@ -284,6 +302,18 @@ Singleton {
             if (exitCode !== 0)
                 root.error = "Wallpaper Engine library scan failed";
             root.refreshed();
+        }
+    }
+
+    // Lets non-QML wallpaper changes (notably preset application via presets.sh)
+    // drive the same still->still cross-fade the in-app selector does. Without
+    // this handler the preset's "ipc call wallpaperEngine transition" hit nothing
+    // and the wallpaper just cut to black while the new runtime spun up.
+    IpcHandler {
+        target: "wallpaperEngine"
+
+        function transition(fromStill: string, fromPreview: string, toStill: string, toPreview: string): void {
+            root.requestTransition(fromStill, fromPreview, toStill, toPreview);
         }
     }
 }

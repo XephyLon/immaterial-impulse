@@ -147,7 +147,6 @@ Variants {
         property int wallpaperTransitionGeneration: 0
         property real engineTransitionProgress: 1.0
         property bool engineTransitionActive: false
-        property bool engineTransitionReady: false
         property real wallpaperEngineLockProgress: 0
 
         Behavior on wallpaperEngineLockProgress {
@@ -175,7 +174,6 @@ Variants {
                 ? bgRoot.shaderList[Math.floor(Math.random() * bgRoot.shaderList.length)]
                 : bgRoot.wallpaperAnimation
             bgRoot.engineTransitionProgress = 0.0
-            bgRoot.engineTransitionReady = false
             bgRoot.engineTransitionActive = true
             bgRoot.currentWallpaperSource = toSrc
             if (engineSwitchTransition.toStatus === Image.Ready)
@@ -323,7 +321,18 @@ Variants {
                 bgRoot.currentShader = bgRoot.wallpaperAnimation === "random"
                     ? bgRoot.shaderList[Math.floor(Math.random() * bgRoot.shaderList.length)]
                     : bgRoot.wallpaperAnimation
-                bgRoot.wallpaperEngineLockProgress = GlobalStates.screenLocked ? 1 : 0
+                if (GlobalStates.screenLocked) {
+                    // Hold on the sharp still until the lock wallpaper has decoded,
+                    // then peel. The lock surface (session*) blurs whatever shows
+                    // through the peel's to-side, so revealing it before it loads
+                    // flashes the blurred live wallpaper. A large lock wallpaper can
+                    // take a second or two to decode; lockTransition.onToReady kicks
+                    // off the peel once it is ready.
+                    if (lockTransition.toStatus === Image.Ready)
+                        bgRoot.wallpaperEngineLockProgress = 1
+                } else {
+                    bgRoot.wallpaperEngineLockProgress = 0
+                }
             }
         }
 
@@ -335,10 +344,8 @@ Variants {
             to: 1.0
             duration: Appearance.wallpaperTransitionDuration
             easing.type: Easing.InOutCubic
-            onStarted: bgRoot.engineTransitionReady = true
             onFinished: {
                 bgRoot.engineTransitionActive = false
-                bgRoot.engineTransitionReady = false
                 engineSwitchTransition.setSources("", "", "", "")
             }
         }
@@ -364,15 +371,17 @@ Variants {
                 visible: bgRoot.engineTransitionActive
 
                 // Same shared transition the lock uses. preload decodes the
-                // previews synchronously because the runtime is swapped right
-                // after the request returns; contentVisible holds the reveal
-                // until the first frame is ready.
+                // from-side synchronously so it is shown the instant the layer
+                // becomes active - at progress 0 the shader draws only the
+                // from-side, covering the outgoing wallpaper immediately while
+                // the to-side loads (the animation itself waits for onToReady, so
+                // nothing black is ever revealed).
                 WallpaperEngineTransition {
                     id: engineSwitchTransition
                     anchors.fill: parent
                     progress: bgRoot.engineTransitionProgress
                     shader: bgRoot.currentShader
-                    contentVisible: bgRoot.engineTransitionReady
+                    contentVisible: bgRoot.engineTransitionActive
                     preload: true
                     onToReady: {
                         if (bgRoot.engineTransitionActive && !engineTransitionAnim.running)
@@ -499,6 +508,12 @@ Variants {
                     // Decode the still synchronously so it covers the live
                     // surface on the first locked frame (no blur flash).
                     preload: true
+                    // If locking began before the lock wallpaper finished
+                    // decoding, start the peel now that it is ready.
+                    onToReady: {
+                        if (GlobalStates.screenLocked && bgRoot.wallpaperEngineLockProgress === 0)
+                            bgRoot.wallpaperEngineLockProgress = 1
+                    }
                 }
 
                 // No-animation fallback: cross-fade the lock wallpaper in directly.
