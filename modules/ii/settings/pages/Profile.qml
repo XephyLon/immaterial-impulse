@@ -7,6 +7,7 @@ import Qt.labs.folderlistmodel
 import qs
 import qs.services
 import qs.modules.common
+import qs.modules.common.plugins
 import qs.modules.common.widgets
 import qs.modules.common.functions
 import qs.modules.common.models
@@ -67,7 +68,11 @@ ContentPage {
         name = name.replace(/\s/g, "_")
         if (name.length === 0) return
 
-        saveProc.command = ["bash", Directories.presetsScriptPath, "--save", name, description]
+        // PluginState writes are debounced. Pass the authoritative in-memory
+        // snapshot so a preset saved immediately after changing an option does
+        // not capture the previous contents of plugin-state.json.
+        saveProc.command = ["bash", Directories.presetsScriptPath, "--save", name,
+            description, PluginState.snapshot()]
         saveProc.running = true
         page.presetNameInput = ""
     }

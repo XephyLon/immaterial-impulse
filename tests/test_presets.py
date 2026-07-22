@@ -61,24 +61,42 @@ class PresetTests(unittest.TestCase):
             subprocess.run(["bash", str(PRESETS), "--apply", "live"], env=env, check=True)
 
             events = event_log.read_text().splitlines()
-            self.assertEqual(events[0], "theme")
-            self.assertTrue(events[1].startswith("transition -p "))
-            self.assertEqual(events[2], "runtime apply")
-            self.assertIn("/tmp/static-before.jpg", events[1])
-            self.assertIn("/tmp/123-preview.jpg", events[1])
+            # The cross-fade is fired first (before the config write), then the
+            # runtime is swapped, and colour theming runs last so it never stalls
+            # the transition behind a multi-second matugen pass.
+            self.assertTrue(events[0].startswith("transition -p "))
+            self.assertEqual(events[1], "runtime apply")
+            self.assertEqual(events[2], "theme")
+            self.assertIn("/tmp/static-before.jpg", events[0])
+            self.assertIn("/tmp/123-preview.jpg", events[0])
+
+    def test_preset_transition_ipc_handler_exists(self):
+        # presets.sh drives the cross-fade over IPC ("qs ipc call wallpaperEngine
+        # transition ..."). Without this handler the call hits nothing and a
+        # preset-applied wallpaper cuts straight to black. Guard both ends.
+        engine = (ROOT / "services/WallpaperEngine.qml").read_text()
+        presets = (ROOT / "scripts/presets.sh").read_text()
+        self.assertIn('target: "wallpaperEngine"', engine)
+        self.assertIn(
+            "function transition(fromStill: string, fromPreview: string, toStill: string, toPreview: string)",
+            engine,
+        )
+        self.assertIn("root.requestTransition(fromStill, fromPreview, toStill, toPreview)", engine)
+        self.assertIn("ipc call wallpaperEngine transition", presets)
 
     def test_wallpaper_transition_paths_share_the_selected_animation(self):
         engine = (ROOT / "services/WallpaperEngine.qml").read_text()
         selector = (ROOT / "modules/ii/wallpaperSelector/WallpaperSelector.qml").read_text()
         background = (ROOT / "modules/ii/background/Background.qml").read_text()
 
-        self.assertIn("root.requestTransition(fromStill, project.previousPreview", engine)
+        self.assertIn("root.requestTransition(fromStill, prevPreview", engine)
         self.assertIn('target: "wallpaperEngine"', selector)
         self.assertIn("WallpaperEngine.requestTransition", selector)
         self.assertIn("onWallpaperPathChanged:", background)
         self.assertIn("transitionAnim.restart()", background)
         self.assertIn("function onScreenLockedChanged()", background)
-        self.assertIn("bgRoot.wallpaperEngineLockProgress = GlobalStates.screenLocked ? 1 : 0", background)
+        self.assertIn("bgRoot.wallpaperEngineLockProgress = 1", background)
+        self.assertIn("bgRoot.wallpaperEngineLockProgress = 0", background)
 
     def test_live_plugin_widgets_resync_when_persisted_state_changes(self):
         widget = (ROOT / "modules/common/plugins/PluginWidget.qml").read_text()
@@ -137,6 +155,49 @@ class PresetTests(unittest.TestCase):
                 "blurEnabled": True,
             })
             self.assertNotIn("_pluginState", json.loads(config_file.read_text()))
+
+    def test_save_prefers_authoritative_in_memory_plugin_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            config_dir = home / ".config/illogical-impulse"
+            (config_dir / "presets").mkdir(parents=True)
+            (config_dir / "config.json").write_text(json.dumps({
+                "background": {"wallpaperPath": "/tmp/wallpaper.jpg"},
+            }))
+            # Simulate PluginState's 100 ms write debounce: disk is stale while
+            # the Settings process already has the new option in memory.
+            (config_dir / "plugin-state.json").write_text(json.dumps({
+                "version": 2,
+                "desktopPositions": {},
+                "pluginOptions": {"weather": {"blurEnabled": False}},
+            }))
+            live_snapshot = json.dumps({
+                "version": 2,
+                "desktopPositions": {"DP-1": {"weather": {"x": 321, "y": 123}}},
+                "pluginOptions": {"weather": {"blurEnabled": True}},
+            })
+
+            subprocess.run([
+                "bash", str(PRESETS), "--save", "fresh", "", live_snapshot,
+            ], env=os.environ | {"HOME": str(home)}, check=True)
+            saved = json.loads((config_dir / "presets/fresh.json").read_text())
+
+            self.assertTrue(saved["_pluginState"]["pluginOptions"]["weather"]["blurEnabled"])
+            self.assertEqual(
+                saved["_pluginState"]["desktopPositions"]["DP-1"]["weather"]["x"],
+                321,
+            )
+
+    def test_plugin_state_exposes_atomic_snapshot_replace_contract(self):
+        state = (ROOT / "modules/common/plugins/PluginState.qml").read_text()
+        profile = (ROOT / "modules/ii/settings/pages/Profile.qml").read_text()
+
+        self.assertIn("function snapshot()", state)
+        self.assertIn("function replaceSnapshot(text)", state)
+        self.assertIn("writeTimer.stop()", state)
+        self.assertIn('target: "pluginState"', state)
+        self.assertIn("PluginState.snapshot()", profile)
+        self.assertIn("ipc call pluginState replace", PRESETS.read_text())
 
     def test_position_only_preset_keeps_current_plugin_options(self):
         with tempfile.TemporaryDirectory() as directory:

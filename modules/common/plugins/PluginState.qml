@@ -85,6 +85,19 @@ Singleton {
         writeTimer.restart();
     }
 
+    function snapshot() {
+        return JSON.stringify(root.state);
+    }
+
+    function replaceSnapshot(text) {
+        // An external preset apply must win over any older debounced local
+        // write. Cancel both timers before replacing memory and disk together.
+        writeTimer.stop();
+        reloadTimer.stop();
+        root.loadText(text);
+        stateFile.setText(JSON.stringify(root.state, null, 2));
+    }
+
     function loadText(text) {
         try {
             const parsed = JSON.parse(text);
@@ -137,6 +150,19 @@ Singleton {
             } else {
                 console.warn("[PluginState] Failed to load state file: " + error);
             }
+        }
+    }
+
+
+    IpcHandler {
+        target: "pluginState"
+
+        function snapshot(): string {
+            return root.snapshot();
+        }
+
+        function replace(serialized: string): void {
+            root.replaceSnapshot(serialized);
         }
     }
 }
