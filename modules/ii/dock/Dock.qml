@@ -166,7 +166,7 @@ Scope {
                             }
 
                             DockSeparator {
-                                visible: Config.options.dock.showPinButton || Config.options.dock.pinnedApps.length > 0
+                                visible: activeAppsArea.activeUnpinned.length > 0 || (Config.options.dock.showMedia && MprisController.activePlayer !== null)
                             }
 
                             Item {
