@@ -23,6 +23,28 @@ MouseArea {
     property bool toolbarVisible: showControls || Config.options.wallpaperSelector.showSearchbar
     property bool filterFieldFocused: false
     property string wallpaperEngineSearch: ""
+    property bool workshopLoadedThisOpen: false
+
+    function loadWorkshopOnce() {
+        if (source !== "wallpaperEngine" || workshopLoadedThisOpen)
+            return
+        workshopLoadedThisOpen = true
+        WallpaperEngine.refresh()
+    }
+
+    onSourceChanged: {
+        if (source === "wallpaperEngine") {
+            showControls = true
+            loadWorkshopOnce()
+        }
+    }
+
+    Component.onCompleted: {
+        if (source === "wallpaperEngine") {
+            showControls = true
+            loadWorkshopOnce()
+        }
+    }
 
     property var quickDirs: [
         { icon: "home",       name: "Home   ",       path: `${Directories.home}`,                alwaysVisible: Config.options.wallpaperSelector.showHomePath },
@@ -69,7 +91,13 @@ MouseArea {
                     GlobalStates.wallpaperSelectorOpen = false;
                 });
             } else {
-                Wallpapers.select(filePath, root.useDarkMode);
+                // Route through selectEntry (not Wallpapers.select directly) so a
+                // switch from a live Wallpaper Engine wallpaper to a static image
+                // still cross-fades from the engine still instead of the runtime
+                // just closing. selectEntry must read the active project before
+                // switchwall.sh clears it, so the transition cannot be recovered
+                // after the fact.
+                WallpaperEngine.selectEntry({ kind: "image", path: filePath }, root.useDarkMode);
             }
         }
     }
@@ -650,7 +678,6 @@ MouseArea {
         function onWallpaperSelectorOpenChanged() {
             if (GlobalStates.wallpaperSelectorOpen && monitorIsFocused) {
                 if (root.source === "wallpaperEngine") {
-                    WallpaperEngine.refresh();
                     root.forceActiveFocus();
                 } else if (root.source === "local")
                     filterField.forceActiveFocus()
