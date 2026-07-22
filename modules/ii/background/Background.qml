@@ -118,10 +118,11 @@ Variants {
         // in-shell (WallpaperEngineLayer) as the wallpaper, replacing the static
         // image path. Suppressed while the work-safety screen is up.
         property string weProjectPath: Config.options.wallpaperSelector.wallpaperEngine.activePath ?? ""
-        // "web" wallpapers can't render in the embed (need CEF); fall back to the
-        // static wallpaper for them instead of a blank surface.
+        // "web" wallpapers can't render in the embed (need CEF, which is disabled
+        // because it corrupts the shared GL context); fall back to the static
+        // wallpaper for them. Case-insensitive: the scanner emits "Web".
         property bool weActive: bgRoot.weProjectPath !== "" && !bgRoot.wallpaperSafetyTriggered
-            && Config.options.wallpaperSelector.wallpaperEngine.activeType !== "web"
+            && (Config.options.wallpaperSelector.wallpaperEngine.activeType ?? "").toLowerCase() !== "web"
         // Only hide the static-image layers once the WE surface has actually
         // loaded. If the module is missing (stock binary) the Loader errors and
         // weShown stays false, so the static wallpaper still shows.
