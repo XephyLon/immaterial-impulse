@@ -612,6 +612,9 @@ Variants {
             WidgetCanvas {
                 id: widgetCanvas
                 anchors.fill: parent
+                // Above the WE wallpaper-switch transition (weTransition, z 1) so the
+                // desktop widgets/plugins stay visible while wallpapers cross-fade.
+                z: 2
 
                 transitions: Transition {
                     PropertyAnimation {
