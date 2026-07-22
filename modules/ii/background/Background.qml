@@ -117,7 +117,15 @@ Variants {
         // Embedded Wallpaper Engine: when a WE project is active it is rendered
         // in-shell (WallpaperEngineLayer) as the wallpaper, replacing the static
         // image path. Suppressed while the work-safety screen is up.
-        property string weProjectPath: Config.options.wallpaperSelector.wallpaperEngine.activePath ?? ""
+        //
+        // A WE lock wallpaper is served by switching this project on lock (and back
+        // on unlock): the WE surface reloads the lock project and the existing
+        // WE<->WE peel plays, so one renderer covers both - no second surface.
+        property string weProjectPath: {
+            if (GlobalStates.screenLocked && Config.options.background.lockWallEngine !== "")
+                return Config.options.background.lockWallEngine
+            return Config.options.wallpaperSelector.wallpaperEngine.activePath ?? ""
+        }
         // "web" wallpapers can't render in the embed (need CEF, which is disabled
         // because it corrupts the shared GL context); fall back to the static
         // wallpaper for them. Case-insensitive: the scanner emits "Web".
@@ -136,8 +144,12 @@ Variants {
         // progress is advanced by lockPeelTimer against the wall clock rather than a
         // QML animation: on the freshly-shown lock state the animation clock can
         // jump and complete the tween in one step, whereas the timer is immune.
+        // Image lock wallpaper only. A WE lock wallpaper (lockWallEngine set) is
+        // served by switching weProjectPath instead, so exclude it here even though
+        // its preview lives in lockWall for palette generation.
         property bool lockWallShown: GlobalStates.screenLocked
-            && Config.options.background.lockWall !== "" && bgRoot.weActive
+            && Config.options.background.lockWall !== ""
+            && Config.options.background.lockWallEngine === "" && bgRoot.weActive
         property bool lockRevealWe: false // true = peeling back to WE (unlock)
 
         onLockWallShownChanged: {
@@ -460,6 +472,9 @@ Variants {
             }
 
             // Lock wallpaper (static image), sampled by the lock peel shader.
+            // layer.enabled so the shader samples the PreserveAspectCrop'd render,
+            // not the raw image texture (which it would stretch to the screen -
+            // badly wrong for a square WE preview).
             Image {
                 id: lockWallImage
                 anchors.fill: parent
@@ -468,6 +483,7 @@ Variants {
                 cache: false
                 smooth: true
                 asynchronous: true
+                layer.enabled: true
                 visible: false
             }
             // Lock peel: live WE <-> lock image, using the configured shader. Above

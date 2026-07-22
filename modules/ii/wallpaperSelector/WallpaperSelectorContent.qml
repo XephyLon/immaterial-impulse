@@ -86,6 +86,8 @@ MouseArea {
         if (filePath && filePath.length > 0) {
             if (GlobalStates.wallpaperSelectorTarget === "lockWall") {
                 Wallpapers.select(filePath, root.useDarkMode, finalPath => {
+                    // Static image lock wallpaper: clear any WE lock project.
+                    Config.options.background.lockWallEngine = "";
                     Config.options.background.lockWall = finalPath;
                     GlobalStates.wallpaperSelectorTarget = "wallpaper";
                     GlobalStates.wallpaperSelectorOpen = false;
@@ -104,8 +106,14 @@ MouseArea {
 
     function selectWallpaperEngineProject(project) {
         if (GlobalStates.wallpaperSelectorTarget === "lockWall") {
-            if (project.preview)
-                root.selectWallpaperPath(project.preview);
+            if (!project || !project.path) return;
+            // Live WE lock wallpaper: the WE surface switches to this project on
+            // lock (see Background.qml weProjectPath). Keep the preview in lockWall
+            // for palette generation; lockWallEngine drives the actual rendering.
+            Config.options.background.lockWallEngine = project.path;
+            Config.options.background.lockWall = project.preview ?? "";
+            GlobalStates.wallpaperSelectorTarget = "wallpaper";
+            GlobalStates.wallpaperSelectorOpen = false;
             return;
         }
         WallpaperEngine.selectEntry({ kind: "wallpaperEngine", project: project }, root.useDarkMode);
