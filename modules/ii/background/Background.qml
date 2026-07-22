@@ -404,7 +404,7 @@ Variants {
                 layer.enabled: !bgRoot.wallpaperEngineConfigured
                     && bgRoot.wallpaperAnimation !== ""
                     && bgRoot.transitionProgress < 1
-                visible: !bgRoot.wallpaperEngineConfigured
+                visible: !bgRoot.wallpaperEngineConfigured && !bgRoot.engineTransitionActive
                     && bgRoot.wallpaperAnimation === "" && !blurLoader.active && !bgRoot.centeredWallpaperEnabled
                 onStatusChanged: {
                     if (status === Image.Ready && bgRoot.transitionProgress === 0.0) {
@@ -416,7 +416,10 @@ Variants {
             ShaderEffect {
                 id: transitionEffect
                 anchors.fill: parent
-                visible: !bgRoot.wallpaperEngineConfigured
+                // Hidden while a Wallpaper Engine transition is playing so the
+                // still->image peel is not covered by the incoming image popping
+                // in the instant Wallpaper Engine deconfigures mid-transition.
+                visible: !bgRoot.wallpaperEngineConfigured && !bgRoot.engineTransitionActive
                     && !blurLoader.active && bgRoot.wallpaperAnimation !== "" && !bgRoot.centeredWallpaperEnabled
                 property var fromImage: previousWallpaper
                 property var toImage: wallpaper
@@ -459,7 +462,13 @@ Variants {
             Item {
                 id: wallpaperEngineLockOverlay
                 anchors.fill: parent
-                visible: bgRoot.wallpaperEngineConfigured && bgRoot.wallpaperEngineLockProgress > 0
+                // Visible from the first locked frame - not only once progress
+                // ramps above 0 - so the opaque still covers the live surface
+                // immediately. Otherwise there is a frame where the promoted
+                // (transparent) background shows Hyprland's blur of the live
+                // wallpaper behind the lock surface before the peel starts.
+                visible: bgRoot.wallpaperEngineConfigured
+                    && (GlobalStates.screenLocked || bgRoot.wallpaperEngineLockProgress > 0)
                 layer.enabled: visible && Config.options.lock.blur.enable
                 // Ramp the frost with lock progress so the peel itself stays sharp
                 // and the blur only settles in as the lock finishes (and lifts as
@@ -487,6 +496,9 @@ Variants {
                     progress: bgRoot.wallpaperEngineLockProgress
                     shader: bgRoot.currentShader
                     contentVisible: bgRoot.wallpaperAnimation !== ""
+                    // Decode the still synchronously so it covers the live
+                    // surface on the first locked frame (no blur flash).
+                    preload: true
                 }
 
                 // No-animation fallback: cross-fade the lock wallpaper in directly.

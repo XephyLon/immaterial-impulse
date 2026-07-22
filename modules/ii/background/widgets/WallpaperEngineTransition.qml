@@ -69,7 +69,10 @@ Item {
         source: transition.toSource
         property bool usedFallback: false
         fillMode: Image.PreserveAspectCrop
-        asynchronous: !transition.preload
+        // Always async: the "to" side is revealed gradually as the transition
+        // progresses, so it never needs to block the first frame the way the
+        // "from" side (shown immediately at progress 0) does.
+        asynchronous: true
         cache: false
         layer.enabled: true
         visible: false

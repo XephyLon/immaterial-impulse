@@ -82,11 +82,12 @@ class WallpaperEngineTests(unittest.TestCase):
             "id: previousWallpaper", 1
         )[0]
 
-        # The switch decodes synchronously (preload) because the runtime is
-        # swapped right after the request returns; the component wires that to
-        # both source Images' asynchronous flag.
+        # preload decodes the "from" side synchronously so it covers the first
+        # frame (the switch swaps the runtime immediately after the request
+        # returns; the lock must hide the live surface before the peel starts).
+        # The "to" side is always async since it is revealed gradually.
         self.assertIn("preload: true", transition_layer)
-        self.assertEqual(component.count("asynchronous: !transition.preload"), 2)
+        self.assertEqual(component.count("asynchronous: !transition.preload"), 1)
 
     def test_wallpaper_engine_search_toolbar_is_visible_on_entry(self):
         selector = (ROOT / "modules/ii/wallpaperSelector/WallpaperSelectorContent.qml").read_text()
@@ -112,7 +113,13 @@ class WallpaperEngineTests(unittest.TestCase):
             "id: previousWallpaper", 1
         )[0]
         self.assertIn("visible: bgRoot.engineTransitionActive", transition_layer)
-        self.assertIn("visible: bgRoot.wallpaperEngineConfigured && bgRoot.wallpaperEngineLockProgress > 0", background)
+        # The lock overlay is shown from the first locked frame (not only once
+        # progress ramps) so the opaque still hides the live surface immediately
+        # instead of flashing Hyprland's blur before the peel starts.
+        self.assertIn(
+            "visible: bgRoot.wallpaperEngineConfigured\n                    && (GlobalStates.screenLocked || bgRoot.wallpaperEngineLockProgress > 0)",
+            background,
+        )
         self.assertIn("source: wallpaperEngineLockOverlay.visible", background)
         self.assertIn("&& bgRoot.transitionProgress < 1", background)
 
@@ -371,6 +378,21 @@ class WallpaperEngineTests(unittest.TestCase):
         self.assertIn('Qt.resolvedUrl(`../shaders/${transition.shader}.frag.qsb`)', component)
         self.assertIn("shader: bgRoot.currentShader", background)
 
+    def test_switching_from_engine_to_image_stays_a_visible_transition(self):
+        background = (ROOT / "modules/ii/background/Background.qml").read_text()
+        service = (ROOT / "services/WallpaperEngine.qml").read_text()
+        selector = (ROOT / "modules/ii/wallpaperSelector/WallpaperSelectorContent.qml").read_text()
+        # Selecting a regular image while a project is active requests a cross-fade
+        # from the engine still to the image (rather than the runtime just closing).
+        self.assertIn("root.requestTransition(fromStill, fromPreview, entry.path, entry.path)", service)
+        # The main selector routes through selectEntry (not Wallpapers.select
+        # directly) so that cross-fade actually fires from its image grid too.
+        self.assertIn('WallpaperEngine.selectEntry({ kind: "image", path: filePath }', selector)
+        # The normal wallpaper and its transition shader are both hidden while an
+        # engine transition plays, so the incoming image cannot pop in over the
+        # peel the instant Wallpaper Engine deconfigures mid-transition.
+        self.assertEqual(background.count("&& !bgRoot.engineTransitionActive"), 2)
+
     def test_live_wallpaper_blur_matches_user_card_compositor_carrier(self):
         plugin = (ROOT / "modules/common/plugins/PluginWidget.qml").read_text()
         user_card = (ROOT / "modules/ii/background/widgets/usercard/UserCardWidget.qml").read_text()
@@ -435,6 +457,9 @@ class WallpaperEngineTests(unittest.TestCase):
         self.assertIn("fromFallback: Config.options.wallpaperSelector.wallpaperEngine.activePreview", lock_block)
         self.assertIn("progress: bgRoot.wallpaperEngineLockProgress", lock_block)
         self.assertIn("shader: bgRoot.currentShader", lock_block)
+        # The lock preloads its still so it covers the live surface on the first
+        # locked frame (no momentary Hyprland blur before the peel starts).
+        self.assertIn("preload: true", lock_block)
         # Both sides prefer the monitor-shaped still (preview only as a fallback),
         # so the shader samples correctly-framed textures and nothing stretches.
         self.assertIn("property var fromImage: fromView", component)
