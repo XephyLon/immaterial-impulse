@@ -6,6 +6,7 @@ import qs.modules.common.functions
 import qs.modules.common.panels.lock
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Hyprland
 
 LockScreen {
@@ -13,6 +14,8 @@ LockScreen {
 
     // Monitor name -> workspace id to restore on unlock (set when locking)
     property var savedWorkspaces: ({})
+    property string lastProcessedLockWall: ""
+    property bool lastProcessedDarkmode: Appearance.m3colors.darkmode
 
     Timer {
         id: restoreTimer
@@ -37,15 +40,29 @@ LockScreen {
         context: root.context
     }
 
+    Process {
+        id: lockThemeProc
+        command: ["bash", "-c",
+            `${Directories.wallpaperSwitchScriptPath} --mode ${Appearance.m3colors.darkmode ? "dark" : "light"} --colors_lock --image '${Config.options.background.lockWall}'`
+        ]
+        onExited: {
+            MaterialThemeLoader.useLockTheme()
+            root.lastProcessedLockWall = Config.options.background.lockWall
+            root.lastProcessedDarkmode = Appearance.m3colors.darkmode
+        }
+    }
+
     // Single batch for lock and unlock so we don't race multiple hyprctl calls
     Connections {
         target: GlobalStates
         function onScreenLockedChanged() {
             if (GlobalStates.screenLocked) {
-                if (Config.options.background.lockWall !== "") {
-                    Quickshell.execDetached(["bash", "-c",
-                        `${Directories.wallpaperSwitchScriptPath} --mode ${Appearance.m3colors.darkmode ? "dark" : "light"} --colors_lock --image '${Config.options.background.lockWall}'`
-                    ]);
+                var wallChanged = Config.options.background.lockWall !== root.lastProcessedLockWall
+                var modeChanged = Appearance.m3colors.darkmode !== root.lastProcessedDarkmode
+
+                if (Config.options.background.lockWall !== "" && (wallChanged || modeChanged)) {
+                    lockThemeProc.running = true
+                } else if (Config.options.background.lockWall !== "") {
                     MaterialThemeLoader.useLockTheme()
                 }
 
