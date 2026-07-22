@@ -288,6 +288,11 @@ Singleton {
 
             property JsonObject background: JsonObject {
                 property string lockWall: ""
+                // Wallpaper Engine project path for the lock wallpaper. When set,
+                // the lock wallpaper is that live WE project (takes precedence over
+                // the static lockWall image); the WE surface switches to it on lock
+                // and back to the desktop project on unlock.
+                property string lockWallEngine: ""
                 property bool widgetsLocked: false
                 property bool showGrid: true
                 property bool showSnapLines: true

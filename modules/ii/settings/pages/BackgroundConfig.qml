@@ -144,9 +144,11 @@ ContentPage {
                     buttonIcon: "sync"
                     text: Translation.tr("Use same wallpaper for both")
                     checked: Config.options.background.lockWall === ""
+                        && Config.options.background.lockWallEngine === ""
                     onCheckedChanged: {
                         if (checked) {
                             Config.options.background.lockWall = "";
+                            Config.options.background.lockWallEngine = "";
                         }
                     }
                 }
@@ -190,7 +192,12 @@ ContentPage {
             Connections {
                 target: Config.options.background
                 function onLockWallChanged() {
-                    syncWallpaperSwitch.checked = Qt.binding(() => Config.options.background.lockWall === "")
+                    syncWallpaperSwitch.checked = Qt.binding(() => Config.options.background.lockWall === ""
+                        && Config.options.background.lockWallEngine === "")
+                }
+                function onLockWallEngineChanged() {
+                    syncWallpaperSwitch.checked = Qt.binding(() => Config.options.background.lockWall === ""
+                        && Config.options.background.lockWallEngine === "")
                 }
             }
         
