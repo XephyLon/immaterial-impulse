@@ -39,20 +39,6 @@ def test_keyboard_indicator_honors_container_theme_color():
     assert "color: Appearance.colors.colOnLayer0" not in source
 
 
-def test_plugin_blur_is_bounded_to_widget_geometry():
-    # The blur backdrop is shared by every desktop widget (plugins + User Card)
-    # through WallpaperBlurSurface, so the bounded-geometry contract lives there.
-    source = Path("modules/common/widgets/WallpaperBlurSurface.qml").read_text()
-    image = source[source.index("id: wallpaperSample"):source.index("FastBlur {", source.index("id: wallpaperSample"))]
-    assert "anchors.fill: parent" in image
-    assert "sourceClipRect:" in image and "Qt.rect(" in image
-    assert "wallpaperMetadata.sourceSize.width" in image
-    # Bounded to the widget rect: never a full-screen image offset behind it.
-    assert "width: root.screenWidth" not in image
-    assert "height: root.screenHeight" not in image
-    assert "x: -root." not in image
-
-
 def test_popups_wait_for_target_window_before_mapping():
     source = Path("modules/common/widgets/StyledPopup.qml").read_text()
     # The window must outlive hover transitions: it is created on first show

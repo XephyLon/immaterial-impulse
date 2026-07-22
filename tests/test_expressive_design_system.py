@@ -92,7 +92,6 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         background = (ROOT / "modules/ii/background/Background.qml").read_text(encoding="utf-8")
         self.assertIn("modelData.startupSafe !== false", background)
         host = (ROOT / "modules/common/plugins/PluginWidget.qml").read_text(encoding="utf-8")
-        self.assertRegex(host, r"WallpaperBlurSurface\s*{\s*[^}]*?\bz:\s*0\b")
         self.assertRegex(host, r"id:\s*pluginNode\s*z:\s*1\b")
         currency_widget = (
             DESIGN_SYSTEM / "widgets" / "DesktopCurrencyWidget.qml"
@@ -148,8 +147,6 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         self.assertNotIn('key: "blurTintOpacity"', options)
         self.assertIn("property real blurOpacity: 0.1", config)
         self.assertIn('Translation.tr("Blurred plugin opacity")', plugins_page)
-        self.assertIn("Config.options.plugins.blurOpacity", host)
-        self.assertIn("pluginNode.blurRegions", host)
         self.assertIn("property bool hasCustomBlurRegions", node)
         self.assertIn("property bool managesBlurTint", node)
         self.assertIn("readonly property var blurRegions", monitor)

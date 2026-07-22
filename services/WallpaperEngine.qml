@@ -34,17 +34,6 @@ Singleton {
 
     readonly property string scannerPath: `${Directories.scriptPath}/wallpapers/wallpaper_engine.py`
 
-    // --- Inert compatibility stubs -------------------------------------------
-    // Kept only so existing consumers keep loading while the old WE rendering
-    // path is torn out of them file by file. Remove once no consumer references
-    // them. None of these do anything now (no live surface, stills, or blur).
-    readonly property bool stableConfigured: false
-    readonly property bool stillGenerating: false
-    signal transitionRequested(string fromStill, string fromPreview, string toStill, string toPreview)
-    function requestTransition(fromStill, fromPreview, toStill, toPreview) {}
-    function recacheActiveStill() {}
-    // -------------------------------------------------------------------------
-
     signal refreshed()
 
     function load() {

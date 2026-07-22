@@ -615,16 +615,10 @@ MouseArea {
                                     onClicked: WallpaperEngine.refresh()
                                 }
                                 IconToolbarButton {
-                                    text: "cached"
-                                    enabled: Config.options.wallpaperSelector.wallpaperEngine.activeProject !== "" && !WallpaperEngine.stillGenerating
-                                    onClicked: WallpaperEngine.recacheActiveStill()
-                                    StyledToolTip { text: Translation.tr("Re-render transition still") }
-                                }
-                                IconToolbarButton {
                                     text: "stop_circle"
                                     enabled: Config.options.wallpaperSelector.wallpaperEngine.activeProject !== ""
                                     onClicked: WallpaperEngine.stop()
-                                    StyledToolTip { text: Translation.tr("Stop live wallpaper") }
+                                    StyledToolTip { text: Translation.tr("Clear Wallpaper Engine selection") }
                                 }
                             }
                         }

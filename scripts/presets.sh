@@ -11,7 +11,6 @@ PLUGIN_STATE_FILE="$CONFIG_DIR/plugin-state.json"
 PRESETS_DIR="$CONFIG_DIR/presets"
 SCRIPT_DIR="$HOME/.config/quickshell/end4-pC/scripts"
 SWITCHWALL="$HOME/.config/quickshell/end4-pC/scripts/colors/switchwall.sh"
-WALLPAPER_ENGINE="$HOME/.config/quickshell/end4-pC/scripts/wallpapers/wallpaper-engine.sh"
 
 mkdir -p "$PRESETS_DIR"
 
@@ -77,28 +76,6 @@ case "$action" in
             echo "Error: preset not found: $name" >&2
             exit 1
         fi
-        previous_engine_project="$(jq -r '.wallpaperSelector.wallpaperEngine.activeProject // empty' "$CONFIG_FILE")"
-        previous_engine_still="$(jq -r '.wallpaperSelector.wallpaperEngine.activeStill // empty' "$CONFIG_FILE")"
-        previous_engine_preview="$(jq -r '.wallpaperSelector.wallpaperEngine.activePreview // empty' "$CONFIG_FILE")"
-        if [ -z "$previous_engine_project" ]; then
-            previous_engine_preview="$(jq -r '.background.wallpaperPath // empty' "$CONFIG_FILE")"
-            # No live wallpaper is active, so there is no still to peel from; the
-            # stale activeStill left in config belongs to an earlier project and
-            # would make the cross-fade start from a previous wallpaper.
-            previous_engine_still=""
-        fi
-        # Read the incoming wallpaper straight from the preset and start the
-        # cross-fade before writing any config. Config reloads asynchronously via
-        # the file watcher, so firing the peel first keeps it covering the
-        # hand-off instead of the outgoing wallpaper blinking out to black first.
-        preset_engine_path="$(jq -r '.wallpaperSelector.wallpaperEngine.activePath // empty' "$preset_file")"
-        if [ -n "$preset_engine_path" ] && [ -d "$preset_engine_path" ]; then
-            preset_engine_still="$(jq -r '.wallpaperSelector.wallpaperEngine.activeStill // empty' "$preset_file")"
-            preset_engine_preview="$(jq -r '.wallpaperSelector.wallpaperEngine.activePreview // empty' "$preset_file")"
-            qs -p "$HOME/.config/quickshell/end4-pC" ipc call wallpaperEngine transition \
-                "$previous_engine_still" "$previous_engine_preview" "$preset_engine_still" "$preset_engine_preview" \
-                >/dev/null 2>&1 || true
-        fi
         preset_plugin_state="$(jq -c '._pluginState // empty' "$preset_file")"
         if [ -n "$preset_plugin_state" ]; then
             current_plugin_state="$(jq -c '{
@@ -134,23 +111,12 @@ case "$action" in
             > "${CONFIG_FILE}.tmp" \
             && replace_if_changed "${CONFIG_FILE}.tmp" "$CONFIG_FILE" || true
         engine_path="$(jq -r '.wallpaperSelector.wallpaperEngine.activePath // empty' "$CONFIG_FILE")"
-        if [ -n "$engine_path" ] && [ -d "$engine_path" ]; then
-            engine_still="$(jq -r '.wallpaperSelector.wallpaperEngine.activeStill // empty' "$CONFIG_FILE")"
-            engine_preview="$(jq -r '.wallpaperSelector.wallpaperEngine.activePreview // empty' "$CONFIG_FILE")"
-            engine_fps="$(jq -r '.wallpaperSelector.wallpaperEngine.fps // 30' "$CONFIG_FILE")"
-            engine_scaling="$(jq -r '.wallpaperSelector.wallpaperEngine.scaling // "fill"' "$CONFIG_FILE")"
-            engine_silent="$(jq -r '.wallpaperSelector.wallpaperEngine.silent // true' "$CONFIG_FILE")"
-            # The cross-fade was already fired above, before the config write, and
-            # the runtime start below is detached. Theme last: colour theming is a
-            # multi-second matugen pass and must not run before the transition, or
-            # the wallpaper sits black until it finishes. Running it after is fine
-            # because the peel and runtime are already in flight.
-            "$WALLPAPER_ENGINE" apply "$engine_path" "$engine_fps" "$engine_scaling" "$engine_silent"
-            if [ -n "$engine_preview" ]; then
-                "$SWITCHWALL" --noswitch --coloronly --image "$engine_preview"
-            fi
+        engine_preview="$(jq -r '.wallpaperSelector.wallpaperEngine.activePreview // empty' "$CONFIG_FILE")"
+        if [ -n "$engine_path" ] && [ -d "$engine_path" ] && [ -n "$engine_preview" ]; then
+            # A Wallpaper Engine project is selected: theme from its preview. The
+            # wallpaper surface renders it off the config on its own.
+            "$SWITCHWALL" --noswitch --coloronly --image "$engine_preview"
         else
-            "$WALLPAPER_ENGINE" stop
             "$SWITCHWALL" --noswitch
         fi
         ;;

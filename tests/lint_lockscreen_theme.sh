@@ -68,12 +68,4 @@ if ! grep -q 'transitionAnim.stop()' "$BACKGROUND" \
     exit 1
 fi
 
-# Plugin/widget blur must sample the same wallpaper the background resolves.
-# widgetWallpaperPath is that shared source: bgRoot.wallpaperPath normally, and
-# the Wallpaper Engine preview when a live wallpaper is active.
-if ! grep -q 'wallpaperPath: bgRoot.widgetWallpaperPath' "$BACKGROUND"; then
-    echo "Lockscreen theme lint FAILED: plugin blur must share the background wallpaper source" >&2
-    exit 1
-fi
-
 echo "Lockscreen theme lint passed: transient colors have one argument-safe owner"
