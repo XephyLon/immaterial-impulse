@@ -1,178 +1,136 @@
 <div align="center">
+    <img src="assets/immaterial-impulse.svg" alt="Immaterial Impulse logo" width="180">
     <h1>【 Immaterial Impulse 】</h1>
-    <h3>A Quickshell/Hyprland desktop shell, forked from end_4's Hyprland dotfiles</h3>
+    <h3>A Material 3 Expressive desktop suite for Hyprland, built on Quickshell.</h3>
+    <p>Shell, Hyprland config, and a guided installer in one repo — install it and go.</p>
 </div>
-
-<div align="center"> 
-
-![](https://img.shields.io/github/last-commit/end-4/dots-hyprland?&style=for-the-badge&color=8ad7eb&logo=git&logoColor=D9E0EE&labelColor=1E202B)
-![](https://img.shields.io/github/stars/end-4/dots-hyprland?style=for-the-badge&logo=andela&color=86dbd7&logoColor=D9E0EE&labelColor=1E202B)
-![](https://img.shields.io/github/repo-size/end-4/dots-hyprland?color=86dbce&label=SIZE&logo=protondrive&style=for-the-badge&logoColor=D9E0EE&labelColor=1E202B)
-<a href="https://discord.gg/GtdRBXgMwq"> <img alt="Dynamic JSON Badge" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscordapp.com%2Fapi%2Finvites%2FGtdRBXgMwq%3Fwith_counts%3Dtrue&query=approximate_member_count&style=for-the-badge&logo=discord&logoColor=D9E0EE&label=discord&labelColor=%231E202B&color=86dbc0&link=https%3A%2F%2Fdiscord.gg%2FGtdRBXgMwq"> </a>
-
-</div>
-
-<div align="center">
-    <h2>• overview •</h2>
-    <h3></h3>
-</div>
-
-> [!WARNING]  
-> Hyprland 0.55 update:
-> If your distro has not shipped Hyprland 0.55 and/or you're not ready for it, you should switch to the Pre-Hyprland Luaification release (or not update yet, if you're going to do that). See the wiki for more info: [Install](https://ii.clsty.link/en/ii-qs/01setup/#automated-installation) | [Update](https://ii.clsty.link/en/ii-qs/01setup/#updating)
-
-<details> 
-  <summary>What this is/isn't</summary>
-
-  - Technically, configuration files
-  - Realistically, mostly the custom graphical shell
-  - NOT a system setup script: no graphic drivers, no zram setup, etc.
-  
-</details>
-
-<details> 
-  <summary>Notable features</summary>
-     
-  - **Overview**: Shows open apps with live previews
-  - **AI**: Gemini, Ollama, and more
-  - **QoL**: screen translation, anti-flashbang, Google Lens
-  - **Material themes**: Choose your wallpaper, done, enjoy
-  - **Transparent installation**: Every command is shown before it's run
-</details>
-
-<details> 
-  <summary>Installation</summary>
-
-   - **IMPORTANT: Hyprland 0.55 Update**: If your distro has not shipped Hyprland 0.55 and/or you're not ready for it, you should switch to the Pre-Hyprland Luaification release. See [the wiki](https://ii.clsty.link/en/ii-qs/01setup/) for more info
-   - Just run `bash <(curl -s https://ii.clsty.link/get)`
-     - Or, clone this repo and run `./setup install`
-     - See [the wiki](https://ii.clsty.link/en/ii-qs/01setup/) for more details
-   - **Keybinds**: Should be somewhat familiar to Windows or GNOME users. Important ones:
-     - `Super`+`/` = keybind list
-     - `Super`+`Enter` = terminal
-
-
-</details>
-
-<details>
-  <summary>Software overview</summary>
-
-  | Software | Purpose |
-  | ------------- | ------------- |
-  | [Hyprland](https://github.com/hyprwm/hyprland) | The compositor (manages and renders windows) |
-  | [Quickshell](https://quickshell.outfoxxed.me/) | A QtQuick-based widget system, used for the status bar, sidebars, etc. |
-  | Others | See [deps-info.md](https://github.com/end-4/dots-hyprland/blob/main/sdata/deps-info.md) |
-
-</details>
-
-<details>
-    <summary>Discord</summary>
-        <a href="https://discord.gg/GtdRBXgMwq"> Server link</a> | I hope this provides a friendlier environment for support without needing me to personally accept every friend request/DM. For real issues, prefer GitHub
-
-</details>
-
-<div align="center">
-    <h2>• screenshots •</h2>
-    <h3></h3>
-</div>
-
-<div align="center">
-    <img src="assets/immaterial-impulse.svg" alt="Immaterial Impulse logo" style="float:left; width:400;">
-</div>
-
-Widget system: Quickshell | Support: Yes
-
-[Showcase video](https://www.youtube.com/watch?v=RPwovTInagE)
-
-| AI, settings app | Some widgets |
-|:---|:---------------|
-| <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/5d4e7d07-d0b4-4406-a4c9-ed7ba90e3fe4" /> | <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/6a32395f-9437-4192-8faf-2951a9e84cbe" /> |
-| Window management | wow look its orange |
-| <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/c51bed8b-3670-4d4c-9074-873be224fb8e" /> | <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/98703a66-0743-439f-a721-cef7afa6ab95" /> |
-
-<div align="center">
-    <h2>• thank you •</h2>
-    <h3></h3>
-</div>
-
- - [@clsty](https://github.com/clsty) for making the dotfiles accessible by taking care of the install script and many other things
- - [@midn8hustlr](https://github.com/midn8hustlr) for greatly improving the color generation system
- - [@outfoxxed](https://github.com/outfoxxed/) for being extremely supportive in my Quickshell journey
- - Quickshell: [Soramane](https://github.com/caelestia-dots/shell/), [FridayFaerie](https://github.com/FridayFaerie/quickshell), [nydragon](https://github.com/nydragon/nysh)
- - AGS: [Aylur](https://github.com/Aylur/dotfiles/tree/ags-pre-ts), [kotontrion](https://github.com/kotontrion/dotfiles)
- - EWW: [fufexan](https://github.com/fufexan/dotfiles)
-
-<div align="center">
-    <h2>• stonks •</h2>
-    <h3></h3>
-</div>
-
-- I promise not to attempt an +ULTRARICOSHOT irl... Coins can go here: https://github.com/sponsors/end-4
-- Tentacle cat hub twinkle internet points
-
-[![Stargazers over time](https://starchart.cc/end-4/dots-hyprland.svg?variant=adaptive)](https://starchart.cc/end-4/dots-hyprland)
-
 
 ---
 
-<div align="center">
-    <h2>• previous styles •</h2>
-    <h3></h3>
-</div>
+## Overview
 
-- **Unsupported!**
-- **Source**: illogical-impulse AGS in `ii-ags` branch, others in `archive` branch.
-- List is in reverse chronological order
+Immaterial Impulse is a complete, plug-and-play Linux desktop suite. It bundles a
+custom [Quickshell](https://quickshell.outfoxxed.me/) graphical shell, a full
+[Hyprland](https://github.com/hyprwm/hyprland) configuration, and a menu-driven
+installer that wires everything up across Arch, Fedora, Gentoo, and Nix.
 
-### illogical-impulse (AGS)
+It is a fork of [illogical-impulse](https://github.com/end-4/dots-hyprland) by
+[@end-4](https://github.com/end-4), rebranded and unified into a single
+self-contained project. It **supersedes** an illogical-impulse install rather
+than sitting beside it — a first run migrates your old config and secrets over,
+losing nothing.
 
-Widget system: AGS | Support: No
+> **What this is:** the graphical shell + Hyprland config + installer.
+> **What this isn't:** a full system bootstrapper — it won't set up graphics
+> drivers, zram, or your bootloader.
 
-| AI | Common widgets |
-|:---|:---------------|
-| ![image](https://github.com/user-attachments/assets/9d7af13f-89ef-470d-ba78-d2288b79cf60) | ![image](https://github.com/end-4/dots-hyprland/assets/97237370/406b72b6-fa38-4f0d-a6c4-4d7d5d5ddcb7) |
-| Window management | Weeb power |
-| ![image](https://github.com/user-attachments/assets/02983b9b-79ba-4c25-8717-90bef2357ae5) | ![image](https://github.com/user-attachments/assets/bbb332ec-962a-4e88-a95b-486d0bd8ce76) |
+---
 
-#### m3ww
+## Features
 
-Widget system: EWW | Support: No
+### The shell — Material 3 Expressive, everywhere
+A cohesive Quickshell interface with a horizontal or vertical **bar**, a
+**dock**, left and right **sidebars**, an **overview** with live window
+previews, **notifications**, **on-screen display** and **on-screen keyboard**,
+**media controls with synced lyrics**, a **session/lock screen**, a **polkit**
+agent, and an in-shell **Settings app** that configures all of it — including
+one-click Hyprland animation presets.
 
-<a href="https://streamable.com/85ch8x">
-<img src="https://github.com/end-4/dots-hyprland/assets/97237370/09533e64-b6d7-47eb-a840-ee90c6776adf" alt="Material Eww!">
-</a>
+### Material You theming from your wallpaper
+Pick a wallpaper and the whole system re-colors. Colors are generated with
+matugen and propagated to GTK, Hyprland, your terminal, **cava**, **tmux**, and
+the shell itself — one palette, everywhere.
 
-#### NovelKnock
+### Wallpapers, including live Wallpaper Engine
+A built-in browser for **local** and **online** wallpapers, plus first-class
+**Wallpaper Engine** support: animated WE scenes render live inside the shell,
+with **shader-based transitions** when you switch between them. Choose how
+widgets sit over the wallpaper with the **frost** control — a true in-shell
+**blur** of the region behind, or a cheap palette **tint**.
 
-Widget system: EWW | Support: No
+### AI, in the sidebar
+Chat with multiple providers — any OpenAI-compatible endpoint, Google Gemini,
+local Ollama, and more — without leaving your desktop.
 
-<a href="https://streamable.com/7vo61k">
-<img src="https://github.com/end-4/dots-hyprland/assets/97237370/42903d03-bf6f-49d4-be7f-dd77e6cb389d" alt="Desktop Preview">
-</a>
+### Quality of life
+On-screen **screen translation**, a **region selector** for screenshots and
+Google Lens lookups, anti-flashbang, and a custom lock screen with consistent
+widget frost (or optional hyprlock).
 
-#### Hybrid
+---
 
-Widget system: EWW | Support: No
+## Installation
 
-<a href="https://streamable.com/4oogot">
-<img src="https://github.com/end-4/dots-hyprland/assets/97237370/190deb1e-f6f5-46ce-8cf0-9b39944c079d" alt="click the circles!">
-</a>
+> Immaterial Impulse installs the shell to `~/.config/quickshell/ii` and its
+> config to `~/.config/immaterial-impulse`. If you're coming from
+> illogical-impulse, the old `~/.config/illogical-impulse` directory and your
+> keyring entries are migrated automatically on first launch.
 
-#### Windoes
+Clone the repo and run the installer:
 
-Widget system: EWW | Support: No
+```bash
+git clone https://github.com/XephyLon/end4-pC.git
+cd end4-pC
+./setup
+```
 
-<a href="https://streamable.com/5qx614">
-<img src="https://github.com/end-4/dots-hyprland/assets/97237370/b15317b1-f295-49f5-b90c-fb6328b8d886" alt="Desktop Preview">
-</a>
+Running `./setup` with no arguments opens a **whiptail menu** where you pick:
 
+- **Components** — core config and dependencies.
+- **Wallpaper Engine** (optional) — builds a custom Quickshell carrying the
+  Wallpaper Engine module and puts it ahead of the stock binary on `PATH`.
+  Off by default; WE wallpapers gracefully fall back to static otherwise.
+- **Extras** — fontset, fcitx5 IME, and other situational overlays.
 
+Every command is printed before it runs. For scripting, `./setup install` runs
+the same pipeline non-interactively.
 
-<div align="center">
-    <h2>• inspirations/copying •</h2>
-    <h3></h3>
-</div>
+**Keybinds** follow Windows/GNOME muscle memory. A few to start with:
 
- - Inspiration: osu!lazer (Hybrid), Windows 11 (Windoes), AvdanOS (NovelKnock), Material Design 3 (m3ww & later)
- - Copying: Absolutely, feel free. Just follow the license and it's all good
- 
+| Keybind | Action |
+| --- | --- |
+| `Super`+`/` | Full keybind list |
+| `Super`+`Enter` | Terminal |
+
+---
+
+## Software overview
+
+| Software | Purpose |
+| --- | --- |
+| [Hyprland](https://github.com/hyprwm/hyprland) | Wayland compositor — manages and renders windows |
+| [Quickshell](https://quickshell.outfoxxed.me/) | QtQuick widget system — bar, sidebars, dock, and the rest of the shell |
+| matugen | Material You color generation from the wallpaper |
+| Others | See [deps-info.md](../sdata/deps-info.md) |
+
+---
+
+## Screenshots
+
+| Lyrics | Online wallpapers |
+|:---:|:---:|
+| ![Lyrics](../dots/.config/quickshell/ii/screenshots/1.png) | ![Online wallpapers](../dots/.config/quickshell/ii/screenshots/2.png) |
+| Desktop widgets | Hyprland config |
+| ![Desktop widgets](../dots/.config/quickshell/ii/screenshots/5.png) | ![Hyprland config](../dots/.config/quickshell/ii/screenshots/6.png) |
+| Configurable bar | And more |
+| ![Configurable bar](../dots/.config/quickshell/ii/screenshots/3.png) | ![And more](../dots/.config/quickshell/ii/screenshots/4.png) |
+
+---
+
+## Credits
+
+Immaterial Impulse stands on the work of the illogical-impulse project and its
+community:
+
+- [@end-4](https://github.com/end-4) — illogical-impulse, the upstream this
+  suite is forked from.
+- [@clsty](https://github.com/clsty) — the original install script and much more.
+- [@midn8hustlr](https://github.com/midn8hustlr) — the color generation system.
+- [@outfoxxed](https://github.com/outfoxxed/) — Quickshell.
+- Quickshell dotfiles: [Soramane](https://github.com/caelestia-dots/shell/),
+  [FridayFaerie](https://github.com/FridayFaerie/quickshell),
+  [nydragon](https://github.com/nydragon/nysh).
+
+## License
+
+See the repository license. Feel free to copy and adapt — just follow the terms.
