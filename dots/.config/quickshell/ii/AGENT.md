@@ -20,8 +20,8 @@ end-4/dots-hyprland  →  pctrade/end4-pC (upstream remote)  →  this fork (ori
 Check `git remote -v` before assuming which remote is "the real one" — `origin` is this fork,
 `upstream` is `pctrade/end4-pC`.
 
-This directory is **not a standalone app repo** — it's dropped into `~/.config/quickshell/end4-pC`
-on a running Hyprland system and loaded by `qs -c end4-pC`. It depends on a companion Hyprland
+This directory is **not a standalone app repo** — it's dropped into `~/.config/quickshell/ii`
+on a running Hyprland system and loaded by `qs -c ii`. It depends on a companion Hyprland
 config (also part of the illogical-impulse project, installed separately to `~/.config/hypr/`) for
 keybinds, IPC event names, and layer-shell behavior assumptions.
 
@@ -62,14 +62,14 @@ The running `qs` process writes two logs per instance, found under
 
 Find the current instance's log with:
 ```bash
-ls -la /proc/$(pgrep -f 'qs -c end4-pC')/fd | grep log.log
+ls -la /proc/$(pgrep -f 'qs -c ii')/fd | grep log.log
 ```
 
 The process is named **`qs`**, not `quickshell` — `pgrep quickshell` returns nothing even while the
 shell is running, which reads as "the shell is down" and leads to launching a second instance on top
 of the user's. Always match on `qs`:
 ```bash
-pgrep -af 'qs -c end4-pC'
+pgrep -af 'qs -c ii'
 ```
 
 Do not leave the primary shell running through a rapid multi-file patch series. Each source change

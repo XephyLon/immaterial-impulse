@@ -110,7 +110,7 @@ Two real examples from this project's history that justify the paranoia:
   not the same as the real data path working.
 - A brand-new feature (the plugin system: a new singleton, a new settings page, a new shared-widget
   property) merged cleanly, tests passed, and a disposable throwaway `qs -p <worktree>` instance
-  even rendered it correctly during review - but the user's actual long-running `qs -c end4-pC`
+  even rendered it correctly during review - but the user's actual long-running `qs -c ii`
   process kept showing an empty page, because that process had been running since *before* the
   merge and a brand-new `pragma Singleton` file needs the process to actually restart to get
   registered, not just a hot-reload of edited files (see the Runtime model section of `AGENT.md`).
@@ -206,7 +206,7 @@ bug in anything that qualifies:
   missing `import qs.modules.common`) passes every test while taking down every panel that reaches
   it. After touching any `.qml` under `modules/`, check the live log for `Configuration Loaded` and
   for `ERROR:` - not just `WARN` - before calling the change verified. See AGENT.md's "Where to look
-  when something goes wrong" for the cascade format and the `pgrep -af 'qs -c end4-pC'` caveat.
+  when something goes wrong" for the cascade format and the `pgrep -af 'qs -c ii'` caveat.
 - **A new Python check must actually run.** `run_tests.sh` invokes each one as `python3 <file>`, so
   a module of bare `test_*` functions exits zero without executing anything. Either subclass
   `unittest.TestCase` with `unittest.main()`, or end the file with the `contract_runner` block
@@ -241,8 +241,8 @@ learned.
 
 ## Multi-agent / parallel workflows (git worktrees)
 
-This repo lives at `~/.config/quickshell/end4-pC` and is loaded by exactly one running process,
-`qs -c end4-pC`, pointed at that exact directory. That has real consequences once more than one
+This repo lives at `~/.config/quickshell/ii` and is loaded by exactly one running process,
+`qs -c ii`, pointed at that exact directory. That has real consequences once more than one
 agent (main session + subagents, or several parallel Claude Code sessions) is touching the repo at
 once:
 
@@ -250,8 +250,8 @@ once:
   configuration and rebuilds Quickshell's desktop-entry registry. On systems with large Wine/Steam
   application directories, several rapid reloads can queue millions of desktop-entry parses,
   consume gigabytes of memory, and make the shell appear frozen. Stop it once with
-  `qs -c end4-pC kill`, finish and test the batch, then launch exactly one clean
-  `qs -c end4-pC -d`. A single small edit may still use hot reload.
+  `qs -c ii kill`, finish and test the batch, then launch exactly one clean
+  `qs -c ii -d`. A single small edit may still use hot reload.
 
 - **Only the primary checkout hot-reloads against the live shell.** A `git worktree add
   ../end4-pC-<feature> <branch>` checkout elsewhere is a completely separate directory - editing

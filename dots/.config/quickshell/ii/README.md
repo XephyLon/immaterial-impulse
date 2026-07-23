@@ -48,7 +48,7 @@ Customized and maintained by **pctrade**
 ```bash
 cd ~/.config/quickshell/
 git clone https://github.com/pctrade/end4-pC.git
-killall qs 2>/dev/null; qs -c end4-pC > /dev/null 2>&1 & disown
+killall qs 2>/dev/null; qs -c ii > /dev/null 2>&1 & disown
 ```
 
 ### 🔧 Set as your default shell (optional)
@@ -68,7 +68,7 @@ hl.env("qsConfig", "ii")
 to:
 
 ```lua
-hl.env("qsConfig", "end4-pC")
+hl.env("qsConfig", "ii")
 ```
 
 > [!TIP]
