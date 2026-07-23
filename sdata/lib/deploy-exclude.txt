@@ -1,0 +1,12 @@
+tests/
+docs/
+screenshots/
+AGENT.md
+CONTRIBUTING.md
+PLUGINS.md
+PLUGIN_DESIGN_SYSTEM.md
+README.md
+.qmlformat.ini
+.gitignore
+*RuntimeTest.qml
+DesignSystemCompile.qml
