@@ -3,7 +3,7 @@
 
 EAPI=8
 
-DESCRIPTION="Material Based Cursor Theme, installed for illogical-impulse dotfiles"
+DESCRIPTION="Material Based Cursor Theme, installed for Immaterial Impulse dotfiles"
 HOMEPAGE=""
 SRC_URI="https://github.com/ful1e5/Bibata_Cursor/releases/download/v${PV}/Bibata-Modern-Classic.tar.xz -> bibata-modern-classic.tar.xz"
 

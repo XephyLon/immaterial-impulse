@@ -149,7 +149,7 @@ packages = [
   "breakpad",
   "kf6-kirigami",
   "libunwind-devel",
-  # NOTE: Below are custom dependencies of illogical-impulse
+  # NOTE: Below are custom dependencies of Immaterial Impulse
   "qt6-qt5compat",
   "qt6-qtimageformats",
   "qt6-qtpositioning",

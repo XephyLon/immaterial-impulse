@@ -1,6 +1,6 @@
 # flake.nix
 {
-  description = "illogical-impulse";
+  description = "Immaterial Impulse";
 
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-25.11";

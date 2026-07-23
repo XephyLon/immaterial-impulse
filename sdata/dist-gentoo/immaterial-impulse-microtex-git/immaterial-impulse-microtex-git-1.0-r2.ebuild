@@ -4,7 +4,7 @@
 EAPI=8
 MICROTEX_VER="0e3707f"
 
-DESCRIPTION="MicroTeX for illogical-impulse dotfiles"
+DESCRIPTION="MicroTeX for Immaterial Impulse dotfiles"
 #HOMEPAGE="https://github.com/end-4/MicroTeX"
 SRC_URI="https://github.com/end-4/MicroTeX/archive/${MICROTEX_VER}.tar.gz -> MicroTeX-${MICROTEX_VER}.tar.gz"
 

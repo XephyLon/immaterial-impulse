@@ -25,7 +25,7 @@ depends=(
   'libpipewire'
   'libxcb'
   'wayland'
-  # NOTE: Below are custom dependencies of illogical-impulse
+  # NOTE: Below are custom dependencies of Immaterial Impulse
   qt6-5compat 
   qt6-avif-image-plugin
   qt6-imageformats

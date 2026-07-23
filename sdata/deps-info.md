@@ -199,7 +199,7 @@ Tips:
 # Actual packages
 ## immaterial-impulse-quickshell-git
 - Pinned commit.
-- Also with extra dependencies (mainly Qt things) needed by the illogical-impulse Quickshell config.
+- Also with extra dependencies (mainly Qt things) needed by the Immaterial Impulse Quickshell config.
 
 Extra dependencies.
 - `qt6-base`
