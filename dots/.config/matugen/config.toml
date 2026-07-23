@@ -32,3 +32,11 @@ output_path = '~/.local/state/quickshell/user/generated/color.txt'
 [templates.wallpaper]
 input_path = '~/.config/matugen/templates/wallpaper.txt'
 output_path = '~/.local/state/quickshell/user/generated/wallpaper/path.txt'
+
+[templates.cava]
+input_path = '~/.config/quickshell/ii/scripts/colors/templates/cava.ini'
+output_path = '~/.local/state/quickshell/user/generated/apps/cava.ini'
+
+[templates.tmux]
+input_path = '~/.config/quickshell/ii/scripts/colors/templates/tmux.conf'
+output_path = '~/.local/state/quickshell/user/generated/apps/tmux.conf'
