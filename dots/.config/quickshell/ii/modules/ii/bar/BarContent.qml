@@ -28,6 +28,12 @@ Item {
             if (name === "sysTray" && !trayHasItems) return false;
             if (root.suppressDockerForMemoryTest
                     && (name === "dockerPlugin" || name === "plugin:docker_plugin")) return false;
+            // A plugin's bar widget tracks its enabled state: disabling (or
+            // uninstalling) a plugin drops its id from plugins.enabled, so its
+            // bar entry disappears with it. The layout token still holds the id
+            // (plugin:<id>), so re-enabling restores the widget in place.
+            if (name.startsWith("plugin:") && !Config.options.plugins.enabled.includes(name.substring(7)))
+                return false;
             return true;
         });
     }
