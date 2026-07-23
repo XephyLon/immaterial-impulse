@@ -7,9 +7,9 @@
 
 printf "${STY_CYAN}[$0]: Hi there! Before we start:${STY_RST}\n"
 printf "\n"
-printf "${STY_PURPLE}${STY_BOLD}[NEW] illogical-impulse is now powered by Quickshell.${STY_RST}\n"
+printf "${STY_PURPLE}${STY_BOLD}[NEW] Immaterial Impulse is now powered by Quickshell.${STY_RST}\n"
 printf "${STY_PURPLE}"
-printf '# NOTE: illogical-impulse on AGS is no longer supported.\n'
+printf '# NOTE: Immaterial Impulse on AGS is no longer supported.\n'
 printf '# If you were using the old version with AGS and would like to keep it, do not run this script.\n'
 printf "\n"
 pause
