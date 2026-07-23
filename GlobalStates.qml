@@ -39,7 +39,10 @@ Singleton {
     property var desktopMenuScreen: null
     property real desktopMenuX: 0
     property real desktopMenuY: 0
-    property string wallpaperSelectorTarget: "wallpaper" 
+    property string wallpaperSelectorTarget: "wallpaper"
+    property bool dropShelfOpen: false
+    property real dropShelfX: 0
+    property real dropShelfY: 0
 
     onSidebarRightOpenChanged: {
         if (GlobalStates.sidebarRightOpen) {
