@@ -175,7 +175,7 @@ the sibling property name to find all of them before considering the wiring comp
 
 Dynamic plugin state is the exception to the fixed `Config.qml` schema. Values keyed by runtime
 plugin ids or monitor names must go through `modules/common/plugins/PluginState.qml`, which stores
-raw JSON in `~/.config/illogical-impulse/plugin-state.json`. Do not add undeclared children or a
+raw JSON in `~/.config/immaterial-impulse/plugin-state.json`. Do not add undeclared children or a
 dynamic `property var` object to a `JsonAdapter`; both forms have caused native crashes during
 deserialization.
 

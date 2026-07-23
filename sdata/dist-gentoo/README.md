@@ -16,7 +16,7 @@ Note:
 3. _keywords-user_ and _useflags_ are copies over into the proper portage directories. Quickshell also uses a live ebuild.
 4. Syncs, updates, and depcleans @world.
 5. Copies over the custom live ebuilds (hyprgraphics, hyprland-qt-support, hyprland-qtutils, hyprlang, hyprwayland-scanner) into localrepo and digests them.
-6. Loops through all illogical-impulse ebuilds to digest and emerge them.
+6. Loops through all immaterial-impulse ebuilds to digest and emerge them.
 
 ## Recommended use flags (useflags)
 - **The recommended useflags are not required, this is a more out of the box experience with these**

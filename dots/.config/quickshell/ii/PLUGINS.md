@@ -9,7 +9,7 @@ end4-pC supports two complementary plugin formats:
 - **Package plugins** point entry points at QML files stored beside the manifest, enabling richer
   bar widgets, desktop widgets, popups, and settings using native shell components and tokens.
 
-Installed packages live at `~/.config/illogical-impulse/plugins/<plugin-id>/`. The manager scans
+Installed packages live at `~/.config/immaterial-impulse/plugins/<plugin-id>/`. The manager scans
 that directory for `manifest.json`; installed packages override bundled packages with the same id.
 
 ## Directory naming
@@ -22,7 +22,7 @@ every scan. The import still resolves, so the only symptom is a log filling up o
 `tests/lint_qml_module_dirs.py` enforces this.
 
 The manifest `id` is independent and stays `snake_case` (`discord_voice`), as does the
-`~/.config/illogical-impulse/plugins/<plugin-id>/` install path. Packages that are only ever loaded
+`~/.config/immaterial-impulse/plugins/<plugin-id>/` install path. Packages that are only ever loaded
 dynamically by path, such as the hyphenated `nandoroid-*` ports, are unaffected - keep their
 upstream names.
 
@@ -149,7 +149,7 @@ and the manifest host being different systems.
 Each installed package has a delete button in its Plugins-page row, shown only for installed
 packages (bundled plugins ship with the shell) and enabled only while the plugin is disabled, so a
 running plugin is never pulled out from under itself. Deleting prompts for confirmation, then removes
-`~/.config/illogical-impulse/plugins/<plugin-id>/` through `scripts/plugins/uninstall_plugin.py`. That
+`~/.config/immaterial-impulse/plugins/<plugin-id>/` through `scripts/plugins/uninstall_plugin.py`. That
 script re-validates the id and refuses to remove anything that resolves outside the install root; a
 symlink planted at the plugin path is unlinked rather than followed. Removal is idempotent - a plugin
 whose files are already gone (a listed-but-dirless entry left by an out-of-band deletion or a stale
