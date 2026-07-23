@@ -1,4 +1,4 @@
-# end4-pC Discord Voice Vencord companion
+# Immaterial Impulse Discord Voice Vencord companion
 
 Vesktop's built-in arRPC socket supports Rich Presence but not Discord's
 authenticated voice RPC commands. This Vencord user plugin publishes the same
@@ -12,7 +12,7 @@ fully restart Vesktop. **End4DiscordVoice** is enabled by default and remains
 available in Vencord's Plugins page.
 
 For the locally validated build, select:
-`~/.local/share/end4-pC/Vencord/dist`.
+`~/.local/share/immaterial-impulse/Vencord/dist`.
 
 The companion uses a user-only Unix socket at
 `$XDG_RUNTIME_DIR/end4-discord-voice-vencord.sock`. Vencord Flux events push

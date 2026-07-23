@@ -47,7 +47,7 @@ class Bridge:
         self.authorization_failed_paths: set[str] = set()
         self.authorization_tasks: dict[str, asyncio.Task[None]] = {}
         cache = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
-        self.token_path = cache / "end4-pC" / "discord-voice-token.json"
+        self.token_path = cache / "immaterial-impulse" / "discord-voice-token.json"
         # The companion socket is deliberately confined to XDG_RUNTIME_DIR,
         # which is user-owned and mode 0700. There is no shared-directory
         # fallback.
@@ -319,7 +319,7 @@ class Bridge:
     def exchange(code: str) -> str:
         request = urllib.request.Request(TOKEN_URL,
             data=json.dumps({"code": code}).encode(),
-            headers={"Content-Type": "application/json", "User-Agent": "end4-pC/DiscordVoice"},
+            headers={"Content-Type": "application/json", "User-Agent": "immaterial-impulse/DiscordVoice"},
             method="POST")
         with urllib.request.urlopen(request, timeout=10) as response:
             return json.loads(response.read().decode())["access_token"]

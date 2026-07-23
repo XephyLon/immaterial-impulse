@@ -6,13 +6,13 @@ xdg_state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 config_file="$xdg_config_home/matugen/config.toml"
 generated_dir="$xdg_state_home/quickshell/user/generated/apps"
-begin_marker="# BEGIN end4-pC application themes"
-end_marker="# END end4-pC application themes"
+begin_marker="# BEGIN immaterial-impulse application themes"
+end_marker="# END immaterial-impulse application themes"
 
 mkdir -p "$(dirname "$config_file")" "$generated_dir"
 touch "$config_file"
 
-tmp="${config_file}.end4-pC.$$"
+tmp="${config_file}.immaterial-impulse.$$"
 awk -v begin="$begin_marker" -v end="$end_marker" '
     $0 == begin { managed = 1; next }
     $0 == end { managed = 0; next }

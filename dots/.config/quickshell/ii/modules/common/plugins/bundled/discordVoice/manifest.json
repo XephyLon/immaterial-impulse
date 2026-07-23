@@ -3,7 +3,7 @@
   "name": "Discord Voice",
   "description": "Voice-channel overlay and bar controls with speaking, mute, and deafen state",
   "version": "1.0.0",
-  "author": "xephy; end4-pC contributors",
+  "author": "xephy; Immaterial Impulse contributors",
   "source": "Discord RPC approach informed by dms-discord-widget",
   "sourceUrl": "https://github.com/PandorasFox/dms-discord-widget",
   "apiVersion": 1,

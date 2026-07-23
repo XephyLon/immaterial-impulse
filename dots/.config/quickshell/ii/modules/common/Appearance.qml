@@ -7,7 +7,7 @@ pragma ComponentBehavior: Bound
 
 Singleton {
     id: root
-    // Compatibility scale used by nandoroid's expressive widget library. end4-pC
+    // Compatibility scale used by nandoroid's expressive widget library. Immaterial Impulse
     // already applies compositor/output scaling, so the logical-pixel multiplier is 1.
     readonly property real effectiveScale: 1.0
     property QtObject m3colors

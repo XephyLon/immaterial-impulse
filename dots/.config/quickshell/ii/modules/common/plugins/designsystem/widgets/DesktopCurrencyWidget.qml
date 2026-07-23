@@ -137,7 +137,7 @@ Item {
                 }
             }
 
-            // ── [RADICAL M3 DESAIN 1x1: Original end4-pC Layout (Top-Right Icon, Left Bottom-Aligned Texts)] ──
+            // ── [RADICAL M3 DESAIN 1x1: Original Immaterial Impulse Layout (Top-Right Icon, Left Bottom-Aligned Texts)] ──
             Item {
                 visible: sizeMode === "1x1"
                 anchors.fill: parent

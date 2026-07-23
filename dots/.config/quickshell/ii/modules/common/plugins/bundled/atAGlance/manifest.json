@@ -1,7 +1,7 @@
 {
     "id": "at_a_glance_plugin",
     "name": "At a Glance",
-    "author": "end-4 / end4-pC contributors",
+    "author": "end-4 / Immaterial Impulse contributors",
     "description": "A time-aware greeting, today's date, and a periodically rotating thought",
     "defaultWidth": 420,
     "defaultHeight": 150,
