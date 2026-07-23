@@ -13,6 +13,66 @@ printf "${STY_RST}"
 pause
 ##############################################################################################################################
 
+# Undo the optional Immaterial Impulse extras (install steps 5 and 4) first,
+# in reverse install order, before reverting the core config/deps below.
+
+# Step 5: the ii-sddm-theme SDDM login theme (if present). Hand off to the
+# theme's own uninstaller, pinned to the same commit our installer used.
+if [[ -d /usr/share/sddm/themes/ii-sddm-theme ]]; then
+  printf "${STY_CYAN}Undo install step 5 (ii-sddm-theme SDDM login theme)...\n${STY_RST}"
+  if command -v curl >/dev/null; then
+    _sddm_ref="${SDDM_REF:-1d4bcb66647f750bcc14d73de025eae8dd1e3db7}"
+    _sddm_un="$(mktemp --suffix=-ii-sddm-uninstall.sh)"
+    if curl -fsSL "https://raw.githubusercontent.com/3d3f/ii-sddm-theme/${_sddm_ref}/uninstall.sh" -o "$_sddm_un"; then
+      bash "$_sddm_un" || printf "${STY_YELLOW}ii-sddm-theme uninstaller exited non-zero; remove it manually if needed.${STY_RST}\n"
+    else
+      printf "${STY_YELLOW}Could not fetch the ii-sddm-theme uninstaller. Remove manually: /usr/share/sddm/themes/ii-sddm-theme, /etc/sddm.conf.d/ii-sddm-theme.conf, ~/.config/ii-sddm-theme, its /etc/sudoers.d rule and its fonts.${STY_RST}\n"
+    fi
+    rm -f "$_sddm_un"
+  else
+    printf "${STY_YELLOW}curl not found; remove the SDDM theme manually.${STY_RST}\n"
+  fi
+fi
+
+# Step 4: the WE-capable custom quickshell wrapper on PATH. Only remove it if it
+# is actually ours (carries the immaterial-impulse marker), never a foreign
+# /usr/local/bin/quickshell.
+if [[ -f /usr/local/bin/quickshell ]] && grep -q "immaterial-impulse" /usr/local/bin/quickshell 2>/dev/null; then
+  printf "${STY_CYAN}Undo install step 4 (Wallpaper Engine custom quickshell wrapper)...\n${STY_RST}"
+  v sudo rm -f /usr/local/bin/quickshell
+  [[ -L /usr/local/bin/qs ]] && v sudo rm -f /usr/local/bin/qs
+fi
+_we_build="${HOME}/.cache/immaterial-impulse/qs-wallpaperengine-build"
+if [[ -d "$_we_build" ]]; then
+  while true; do
+    printf "Also remove the qs-wallpaperengine build cache at \"%s\"? [y/n]\n" "$_we_build"
+    read -n1 -p "> " _ans < /dev/tty; echo
+    case "$_ans" in
+      y|Y) x rm -rf -- "$_we_build"; break ;;
+      n|N) break ;;
+      *) ;;
+    esac
+  done
+fi
+
+# Optional: the runtime data/state dir created by the config-dir migration (M1).
+# This is your settings/state, so it is prompted, not force-removed.
+_imi_data="${XDG_CONFIG_HOME:-$HOME/.config}/immaterial-impulse"
+if [[ -d "$_imi_data" ]]; then
+  while true; do
+    printf "Also remove your Immaterial Impulse data dir \"%s\" (settings/state)? [y/n]\n" "$_imi_data"
+    read -n1 -p "> " _ans < /dev/tty; echo
+    case "$_ans" in
+      y|Y) x rm -rf -- "$_imi_data"; break ;;
+      n|N) break ;;
+      *) ;;
+    esac
+  done
+fi
+printf "${STY_YELLOW}Note: keyring secrets under the 'immaterial-impulse' application are left intact; remove them via your keyring manager if desired.${STY_RST}\n"
+
+##############################################################################################################################
+
 # Undo Step 3
 printf "${STY_CYAN}Undo install step 3...\n${STY_RST}"
 
