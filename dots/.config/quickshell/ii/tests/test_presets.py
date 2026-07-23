@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -23,7 +24,7 @@ class PresetTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             config_dir = home / ".config/illogical-impulse"
-            script_dir = home / ".config/quickshell/end4-pC/scripts"
+            script_dir = home / ".config/quickshell/ii/scripts"
             wallpaper_dir = script_dir / "wallpapers"
             colors_dir = script_dir / "colors"
             config_dir.mkdir(parents=True)
@@ -48,8 +49,14 @@ class PresetTests(unittest.TestCase):
                 helper.write_text("#!/usr/bin/env bash\nexit 0\n")
                 helper.chmod(0o755)
 
+            # presets.sh self-locates from $0, so run a copy placed beside the
+            # stub helpers rather than the real script in the source tree.
+            presets = script_dir / "presets.sh"
+            shutil.copy(PRESETS, presets)
+            presets.chmod(0o755)
+
             env = dict(os.environ, HOME=str(home))
-            subprocess.run(["bash", str(PRESETS), "--save", "layout"], env=env, check=True)
+            subprocess.run(["bash", str(presets), "--save", "layout"], env=env, check=True)
             preset = json.loads((config_dir / "presets/layout.json").read_text())
             self.assertEqual(preset["_pluginState"]["desktopPositions"]["DP-1"]["weather"]["x"], 120)
             self.assertEqual(preset["_pluginState"]["pluginOptions"]["weather"], {
@@ -61,7 +68,7 @@ class PresetTests(unittest.TestCase):
                 "desktopPositions": {"DP-1": {"weather": {"x": 999, "y": 999}}},
                 "pluginOptions": {"weather": {"blurEnabled": False, "fontSize": 24}},
             }))
-            subprocess.run(["bash", str(PRESETS), "--apply", "layout"], env=env, check=True)
+            subprocess.run(["bash", str(presets), "--apply", "layout"], env=env, check=True)
 
             restored = json.loads(state_file.read_text())
             self.assertEqual(restored["desktopPositions"]["DP-1"]["weather"]["x"], 120)
@@ -117,7 +124,7 @@ class PresetTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             config_dir = home / ".config/illogical-impulse"
-            script_dir = home / ".config/quickshell/end4-pC/scripts"
+            script_dir = home / ".config/quickshell/ii/scripts"
             (config_dir / "presets").mkdir(parents=True)
             (script_dir / "wallpapers").mkdir(parents=True)
             (script_dir / "colors").mkdir(parents=True)
@@ -140,7 +147,11 @@ class PresetTests(unittest.TestCase):
                 helper.write_text("#!/usr/bin/env bash\nexit 0\n")
                 helper.chmod(0o755)
 
-            subprocess.run(["bash", str(PRESETS), "--apply", "legacy"],
+            presets = script_dir / "presets.sh"
+            shutil.copy(PRESETS, presets)
+            presets.chmod(0o755)
+
+            subprocess.run(["bash", str(presets), "--apply", "legacy"],
                            env=os.environ | {"HOME": str(home)}, check=True)
             restored = json.loads((config_dir / "plugin-state.json").read_text())
 
