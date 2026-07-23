@@ -113,6 +113,25 @@ commits, with the second run clean. Written up in the spec before Phase 2 starts
 for real. **If neither round-trips, A stops here and the dual-upstream design is
 revisited** — do not proceed to a real merge on an unproven mechanism.
 
+### Result (spike, 2026-07-23, git 2.55.0) — Candidate A adopted
+
+Run in a throwaway clone; nothing real touched. **Candidate A
+(`git merge -X subtree=dots/.config/quickshell/ii upstream/main`) adopted.**
+
+- Our theme is caught up with pctrade (`$FORK_BASE` = upstream tip `8b068181`),
+  so the round-trip was proven with two synthetic future-pctrade commits
+  (theme-file edits at root).
+- Rounds 1 and 2: both `Automatic merge went well`, **zero conflicts**. Root-path
+  edits (`modules/common/Appearance.qml`, `README.md`) shifted into
+  `dots/.config/quickshell/ii/` correctly, **no leak to root**. Round 2 did not
+  re-conflict Round 1.
+- **Candidate B (`git subtree`) not exercised** — the decision rule prefers A
+  when it works, and it does. Real history, no fabricated trailers.
+
+Also validated in the same spike: Phase 2 (only `.gitignore` conflicts; dots
+README is at `.github/README.md`, no root collision; `.github/` merges as a
+union) and Phase 3 (pure renames, `git log --follow` reaches pre-merge history).
+
 ---
 
 ## Phase 2 — Absorb dots-hyprland
