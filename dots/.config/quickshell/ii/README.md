@@ -4,7 +4,7 @@
 
 <div align="center">
 
-# 💠 end4-pC
+# 💠 Immaterial Impulse
 
 **A personal fork of [illogical-impulse](https://github.com/end-4/dots-hyprland) by [@end-4](https://github.com/end-4)**  
 Customized and maintained by **pctrade**
@@ -43,7 +43,7 @@ Customized and maintained by **pctrade**
 ## ⚡ Installation
 
 > [!NOTE]
-> This fork manages its own configuration folder independently — it does **not** overwrite or modify any existing setup. However, it does require [illogical-impulse](https://github.com/end-4/dots-hyprland) to be installed and running.
+> Immaterial Impulse ships the whole suite — Hyprland config, scripts, and shell — so it supersedes a prior [illogical-impulse](https://github.com/end-4/dots-hyprland) install rather than sitting alongside it. It installs to `~/.config/quickshell/ii` (the shell) and `~/.config/immaterial-impulse` (config), replacing the old `~/.config/illogical-impulse` directory.
 
 ```bash
 cd ~/.config/quickshell/

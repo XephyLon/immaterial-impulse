@@ -6,12 +6,14 @@ it day to day.
 
 ## What this is
 
-`end4-pC` is a **Quickshell** shell configuration for **Hyprland** — a full desktop UI (bar, docks,
-sidebars, on-screen displays, notifications, launchers, lock screen, etc.) written entirely in QML
-and run by the [Quickshell](https://quickshell.org) runtime (`qs`), not a compiled application.
+`Immaterial Impulse` (ImI) is a **Quickshell** shell configuration for **Hyprland** — a full desktop
+UI (bar, docks, sidebars, on-screen displays, notifications, launchers, lock screen, etc.) written
+entirely in QML and run by the [Quickshell](https://quickshell.org) runtime (`qs`), not a compiled
+application.
 
 It's a personal fork of [illogical-impulse](https://github.com/end-4/dots-hyprland) (by `end-4`),
-itself forked by `pctrade` as `end4-pC`, and further forked here. The upstream chain is:
+itself forked by `pctrade` as `end4-pC`, and further forked and rebranded here as Immaterial
+Impulse. The upstream chain is:
 
 ```
 end-4/dots-hyprland  →  pctrade/end4-pC (upstream remote)  →  this fork (origin remote)
@@ -21,9 +23,10 @@ Check `git remote -v` before assuming which remote is "the real one" — `origin
 `upstream` is `pctrade/end4-pC`.
 
 This directory is **not a standalone app repo** — it's dropped into `~/.config/quickshell/ii`
-on a running Hyprland system and loaded by `qs -c ii`. It depends on a companion Hyprland
-config (also part of the illogical-impulse project, installed separately to `~/.config/hypr/`) for
-keybinds, IPC event names, and layer-shell behavior assumptions.
+on a running Hyprland system and loaded by `qs -c ii`. ImI ships the whole suite, so it supersedes
+a prior illogical-impulse install rather than coexisting with one: the companion Hyprland config
+lives alongside it in this repo (installed separately to `~/.config/hypr/`) and provides the
+keybinds, IPC event names, and layer-shell behavior assumptions this shell depends on.
 
 ## Runtime model — read this before assuming anything about "building" or "compiling"
 
@@ -170,7 +173,7 @@ assets/                    Static images/fonts bundled with the shell
 `Config.options.bar.resources.alwaysShowCpu`). This is not just an in-memory tree — Quickshell's
 `JsonAdapter`/`JsonObject` machinery automatically:
 
-1. Loads `~/.config/illogical-impulse/config.json` into `Config.options` on startup.
+1. Loads `~/.config/immaterial-impulse/config.json` into `Config.options` on startup.
 2. Persists any property write back to that file (debounced by `Config.readWriteDelay`, 50ms).
 
 Consequences for making changes:
