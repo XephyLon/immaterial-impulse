@@ -61,7 +61,9 @@ Item {
         id: coverArtDownloader
         property string targetFile: root.artUrl
         property string artFilePath: root.artFilePath
-        command: ["bash", "-c", `[ -f ${artFilePath} ] || curl -sSL '${targetFile}' -o '${artFilePath}'`]
+        // Positional args ($1/$2), never spliced into the script body: targetFile
+        // is MPRIS artUrl (attacker-controllable), so interpolation was injectable.
+        command: ["bash", "-c", '[ -f "$1" ] || curl -sSL "$2" -o "$1"', "bash", artFilePath, targetFile]
         onExited: (exitCode, exitStatus) => { root.downloaded = true }
     }
 

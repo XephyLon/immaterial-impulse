@@ -59,8 +59,12 @@ Item {
         const fullPath = `${picturesPath}/Wallpapers/${fileName}`
         downloadProc.filePath = fullPath
         downloadProc.applyAfter = true
+        // Positional args ($1-$3), never spliced into the script body: item.full
+        // is a URL from remote provider JSON (Wallhaven/Unsplash/Pexels), so
+        // interpolating it into the shell string was injectable.
         downloadProc.command = ["bash", "-c",
-            `mkdir -p '${picturesPath}/Wallpapers' && curl -L --silent '${item.full}' -o '${fullPath}'`
+            'mkdir -p "$1/Wallpapers" && curl -L --silent "$2" -o "$3"',
+            "bash", picturesPath, item.full, fullPath
         ]
         downloadProc.running = true
     }
@@ -273,8 +277,11 @@ Item {
                         const fullPath = `${picturesPath}/Wallpapers/${fileName}`
                         downloadProc.filePath = fullPath
                         downloadProc.applyAfter = event.button === Qt.LeftButton
+                        // Positional args ($1-$3): delegateItem.model.full is a
+                        // remote provider URL, unsafe to splice into the shell body.
                         downloadProc.command = ["bash", "-c",
-                            `mkdir -p '${picturesPath}/Wallpapers' && curl -L --silent '${delegateItem.model.full}' -o '${fullPath}'`
+                            'mkdir -p "$1/Wallpapers" && curl -L --silent "$2" -o "$3"',
+                            "bash", picturesPath, delegateItem.model.full, fullPath
                         ]
                         downloadProc.running = true
                     }

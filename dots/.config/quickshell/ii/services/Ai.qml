@@ -363,7 +363,11 @@ Singleton {
             property string providerName
             property int providerIndex
             
-            command: ["bash", "-c", `curl -sL --max-time 10 -H "Authorization: Bearer ${apiKey}" "${baseUrl}/models" 2>/dev/null`]
+            // Positional args ($1/$2), never spliced into the script body: apiKey
+            // is a secret and baseUrl comes from custom-provider config (which flows
+            // through shareable presets), so interpolating them into a double-quoted
+            // bash string - where $()/backticks expand - was a command-injection hole.
+            command: ["bash", "-c", 'curl -sL --max-time 10 -H "Authorization: Bearer $1" "$2/models" 2>/dev/null', "bash", apiKey, baseUrl]
             stdout: StdioCollector {
                 onStreamFinished: {
                     if (text.length === 0) {

@@ -118,9 +118,11 @@ Singleton {
         url += `&units=${units}`
         url += `&appid=${apiKey}`
 
-        let command = `curl -s "${url}"`
-
-        fetcher.command[2] = command
+        // Pass the URL as a curl argv element, not through a shell: city flows
+        // from config (and shareable presets) and was spliced into a double-quoted
+        // `curl -s "${url}"` where $()/backticks still expand - a command-injection
+        // hole. curl receives the URL literally here, no shell parsing.
+        fetcher.command = ["curl", "-s", url]
         fetcher.running = true
     }
 
@@ -136,7 +138,7 @@ Singleton {
 
     Process {
         id: fetcher
-        command: ["bash", "-c", ""]
+        command: ["curl", "-s", ""]
         stdout: StdioCollector {
             onStreamFinished: {
                 if (text.length === 0)
