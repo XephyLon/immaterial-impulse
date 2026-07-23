@@ -90,6 +90,9 @@ cd end4-pC
 - **Wallpaper Engine** (optional) — builds a custom Quickshell carrying the
   Wallpaper Engine module and puts it ahead of the stock binary on `PATH`. Off
   by default; WE wallpapers degrade to static otherwise.
+- **SDDM login theme** (optional, Arch only) — installs
+  [ii-sddm-theme](https://github.com/3d3f/ii-sddm-theme) via its own installer,
+  matching the lock-screen aesthetic on the login screen. Off by default.
 - **Extras** — fontset, fcitx5 IME, and other situational overlays.
 
 Every command prints before it runs. For scripting, `./setup install` runs the
