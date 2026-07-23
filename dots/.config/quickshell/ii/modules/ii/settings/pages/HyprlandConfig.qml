@@ -64,6 +64,7 @@ ContentPage {
             "general:layout":                       h.general.layout,
             "animations:enabled":                   h.animations.enable ? 1 : 0,
             "input:kb_layout":                      h.input.kbLayout,
+            "input:kb_options":                     h.input.kbOptions,
             "input:numlock_by_default":             h.input.numlock ? 1 : 0,
             "input:repeat_delay":                   h.input.repeatDelay,
             "input:repeat_rate":                    h.input.repeatRate,
@@ -242,6 +243,20 @@ ContentPage {
                                 HyprlandConfig.set("input:kb_layout", kbLayoutField.value)
                             }
                         }
+                    }
+                    ConfigSelectionArray {
+                        text: Translation.tr("Layout switch shortcut")
+                        icon: "keyboard_tab"
+                        currentValue: Config.options.hyprland.input.kbOptions
+                        onSelected: newValue => {
+                            Config.options.hyprland.input.kbOptions = newValue
+                            HyprlandConfig.set("input:kb_options", newValue)
+                        }
+                        options: [
+                            { displayName: Translation.tr("None"),        icon: "block",     value: "" },
+                            { displayName: Translation.tr("Alt+Shift"),   icon: "keyboard",  value: "grp:alt_shift_toggle" },
+                            { displayName: Translation.tr("Super+Space"), icon: "space_bar", value: "grp:win_space_toggle" },
+                        ]
                     }
                     ConfigSwitch {
                         buttonIcon: "numbers"

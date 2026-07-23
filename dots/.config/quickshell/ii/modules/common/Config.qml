@@ -262,6 +262,7 @@ Singleton {
                 }
                 property JsonObject input: JsonObject {
                     property string kbLayout: "us"
+                    property string kbOptions: ""   // xkb layout-switch shortcut, e.g. grp:alt_shift_toggle / grp:win_space_toggle
                     property bool numlock: true
                     property int repeatDelay: 250
                     property int repeatRate: 35
