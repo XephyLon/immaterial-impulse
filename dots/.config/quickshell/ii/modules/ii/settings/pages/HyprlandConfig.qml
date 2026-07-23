@@ -687,9 +687,10 @@ ContentPage {
                         saveAnimProc.running = true
                     }
                     options: [
-                        { displayName: Translation.tr("Elastic"),   icon: "move_selection_right", value: "fast"   },
-                        { displayName: Translation.tr("Normal"),    icon: "animation",            value: "normal" },
-                        { displayName: Translation.tr("Niri Like"), icon: "swap_horiz",          value: "niri"   },
+                        { displayName: Translation.tr("Elastic"),   icon: "move_selection_right", value: "fast"      },
+                        { displayName: Translation.tr("Normal"),    icon: "animation",            value: "normal"    },
+                        { displayName: Translation.tr("Niri Like"), icon: "swap_horiz",          value: "niri"      },
+                        { displayName: Translation.tr("Caelestia"), icon: "auto_awesome",         value: "caelestia" },
                     ]
                 }
             }
