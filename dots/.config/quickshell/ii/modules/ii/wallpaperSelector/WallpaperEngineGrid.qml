@@ -15,17 +15,21 @@ Item {
     property real previewCellAspectRatio: 4 / 3
     property string searchQuery: ""
     property string typeFilter: "all"
-    // Distinct wallpaper types present in the library (scene/video/web/...),
-    // sorted, used to build the filter chip row. Blank types are ignored.
+    // "web" wallpapers need CEF/Chromium, which the embedded renderer can't run
+    // (it breaks the shell's GL), so they never render — hide them from the
+    // picker entirely until web support exists. Drop the filter to re-expose.
+    readonly property var visibleProjects: WallpaperEngine.projects.filter(p => (p.type ?? "") !== "web")
+    // Distinct wallpaper types present in the (visible) library, sorted, used to
+    // build the filter chip row. Blank types are ignored.
     readonly property var availableTypes: {
         const seen = ({});
-        for (const p of WallpaperEngine.projects) {
+        for (const p of root.visibleProjects) {
             const t = (p.type ?? "").toString().trim();
             if (t) seen[t] = true;
         }
         return Object.keys(seen).sort();
     }
-    readonly property var filteredProjects: WallpaperEngine.projects.filter(project => {
+    readonly property var filteredProjects: root.visibleProjects.filter(project => {
         if (root.typeFilter !== "all" && (project.type ?? "") !== root.typeFilter) return false;
         const query = root.searchQuery.trim().toLowerCase();
         if (!query) return true;
