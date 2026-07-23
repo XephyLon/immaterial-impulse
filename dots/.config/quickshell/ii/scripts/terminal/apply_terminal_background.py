@@ -13,8 +13,8 @@ import tempfile
 from pathlib import Path
 
 
-START_MARKER = "# BEGIN end4-pC terminal background"
-END_MARKER = "# END end4-pC terminal background"
+START_MARKER = "# BEGIN immaterial-impulse terminal background"
+END_MARKER = "# END immaterial-impulse terminal background"
 VALID_LAYOUTS = {"tiled", "mirror-tiled", "scaled", "clamped"}
 
 

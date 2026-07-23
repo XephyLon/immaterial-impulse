@@ -35,7 +35,7 @@ def require_same_origin(url: str, origin: tuple, description: str) -> str:
 
 
 def download(url: str, limit: int = MAX_FILE_BYTES) -> bytes:
-    request = Request(url, headers={"User-Agent": "end4-pC-plugin-installer/1"})
+    request = Request(url, headers={"User-Agent": "immaterial-impulse-plugin-installer/1"})
     with urlopen(request, timeout=30) as response:
         declared = response.headers.get("Content-Length")
         if declared and declared.isdigit() and int(declared) > limit:

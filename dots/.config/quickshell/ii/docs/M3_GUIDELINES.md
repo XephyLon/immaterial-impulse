@@ -1,6 +1,6 @@
 # Material 3 & M3 Expressive UI Guidelines
 
-This document establishes the strict rules for developing UI components in `end4-pC` to ensure they fully conform to the Material 3 (M3) and M3 Expressive design standards. 
+This document establishes the strict rules for developing UI components in `Immaterial Impulse` to ensure they fully conform to the Material 3 (M3) and M3 Expressive design standards. 
 
 These guidelines are **hard constraints** for all future UI work. Ad hoc values ("whatever looks right") are strictly prohibited.
 

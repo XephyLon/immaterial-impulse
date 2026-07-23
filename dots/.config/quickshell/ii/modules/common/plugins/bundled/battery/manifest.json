@@ -1,7 +1,7 @@
 {
     "id": "battery_plugin",
     "name": "Battery Status Plugin",
-    "author": "end-4 / end4-pC contributors",
+    "author": "end-4 / Immaterial Impulse contributors",
     "description": "A declarative battery status indicator",
     "defaultWidth": 200,
     "defaultHeight": 100,

@@ -1,5 +1,5 @@
 /*
- * end4-pC Discord Voice companion for Vencord
+ * Immaterial Impulse Discord Voice companion for Vencord
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -103,7 +103,7 @@ async function publish() {
 
 export default definePlugin({
     name: "End4DiscordVoice",
-    description: "Shares Vesktop voice state with the end4-pC Quickshell plugin",
+    description: "Shares Vesktop voice state with the Immaterial Impulse Quickshell plugin",
     authors: [{ name: "xephy", id: 0n }],
     enabledByDefault: true,
 

@@ -10,7 +10,7 @@ manifest of its own.
 - Creator: **na-ive / nandoroid-shell**
 - License: **AGPL-3.0** (see `modules/common/plugins/designsystem/LICENSE.nandoroid`)
 - Imported revision: `4994e2d2a264a015d5a6dac4786c60cfe94e5d8a`
-- Port and compatibility adapters: end4-pC contributors
+- Port and compatibility adapters: Immaterial Impulse contributors
 
 The original creator remains recorded in `ComponentRegistry.qml` and in every independently
 packaged widget manifest. New plugins must provide `author`; the settings catalog displays it.
@@ -33,7 +33,7 @@ Rectangle {
 }
 ```
 
-The tokens delegate to the active end4-pC theme: `colors`, `m3colors`, `spacing`, `shape`,
+The tokens delegate to the active Immaterial Impulse theme: `colors`, `m3colors`, `spacing`, `shape`,
 `typography`, `motion`, `motionCurves`, and `scale`. Widgets may still import existing shell
 components, but new plugin APIs should prefer these aliases to reduce coupling.
 
@@ -72,7 +72,7 @@ The port includes all 94 upstream QML widget types, clock/shape/weather/canvas s
 calendar and screenshot helpers, quote data, and 60 Google Weather SVGs. Nandoroid-only background
 services are adapted under `designsystem/services`:
 
-- system metrics reuse end4-pC's `ResourceUsage`;
+- system metrics reuse Immaterial Impulse's `ResourceUsage`;
 - currency data refreshes explicitly rather than through a persistent timer;
 - optional CAVA, schedule, recording, search, and wallpaper-engine hooks have safe defaults.
 

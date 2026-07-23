@@ -3,7 +3,7 @@
 For the shared plugin-author component library and the independently packaged nandoroid widgets,
 see [PLUGIN_DESIGN_SYSTEM.md](PLUGIN_DESIGN_SYSTEM.md).
 
-end4-pC supports two complementary plugin formats:
+Immaterial Impulse supports two complementary plugin formats:
 
 - **Declarative plugins** describe a tree of approved shell components in `manifest.json`.
 - **Package plugins** point entry points at QML files stored beside the manifest, enabling richer

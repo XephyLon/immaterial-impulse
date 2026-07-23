@@ -7,7 +7,7 @@ Item {
     property bool checked: false
     signal toggled()
 
-    // 0.75 scale from end4-pC StyledSwitch
+    // 0.75 scale from Immaterial Impulse StyledSwitch
     property real scaleMultiplier: 0.75 * Appearance.effectiveScale
     implicitHeight: 30 * scaleMultiplier
     implicitWidth: 52 * scaleMultiplier

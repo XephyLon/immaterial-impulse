@@ -17,7 +17,7 @@ GENERATED = STATE / "quickshell/user/generated/apps"
 
 def atomic_write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.end4-pC-{os.getpid()}")
+    temporary = path.with_name(f".{path.name}.immaterial-impulse-{os.getpid()}")
     temporary.write_text(content)
     temporary.replace(path)
 

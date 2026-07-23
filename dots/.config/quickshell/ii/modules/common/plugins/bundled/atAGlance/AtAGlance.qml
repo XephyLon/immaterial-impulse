@@ -1,4 +1,4 @@
-// Behavior adapted for end4-pC's plugin host, inspired by:
+// Behavior adapted for Immaterial Impulse's plugin host, inspired by:
 // https://github.com/na-ive/nandoroid-shell/blob/main/dotfiles/.config/quickshell/nandoroid/widgets/AtAGlance.qml
 
 import QtQuick

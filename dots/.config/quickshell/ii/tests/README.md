@@ -1,6 +1,6 @@
 # Quickshell Configuration Regression Test Suite
 
-This directory contains the regression test suite for the `end4-pC` Quickshell configuration.
+This directory contains the regression test suite for the `Immaterial Impulse` Quickshell configuration.
 
 ## Testing Philosophy & Approach
 

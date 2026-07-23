@@ -1,7 +1,7 @@
 {
     "id": "clock_plugin",
     "name": "Digital Clock Plugin",
-    "author": "end-4 / end4-pC contributors",
+    "author": "end-4 / Immaterial Impulse contributors",
     "description": "A simple declarative digital clock plugin",
     "defaultWidth": 300,
     "defaultHeight": 120,

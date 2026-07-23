@@ -1,5 +1,5 @@
 /*
- * end4-pC Discord Voice companion for Vencord
+ * Immaterial Impulse Discord Voice companion for Vencord
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
