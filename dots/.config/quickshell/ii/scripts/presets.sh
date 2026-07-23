@@ -9,8 +9,11 @@ CONFIG_DIR="$HOME/.config/illogical-impulse"
 CONFIG_FILE="$CONFIG_DIR/config.json"
 PLUGIN_STATE_FILE="$CONFIG_DIR/plugin-state.json"
 PRESETS_DIR="$CONFIG_DIR/presets"
-SCRIPT_DIR="$HOME/.config/quickshell/end4-pC/scripts"
-SWITCHWALL="$HOME/.config/quickshell/end4-pC/scripts/colors/switchwall.sh"
+# Derive locations from the script itself, so this works regardless of where the
+# shell config is installed (no hardcoded config-dir name).
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+SHELL_ROOT="$(dirname "$SCRIPT_DIR")"
+SWITCHWALL="$SCRIPT_DIR/colors/switchwall.sh"
 
 mkdir -p "$PRESETS_DIR"
 
@@ -103,7 +106,7 @@ case "$action" in
             # externally restored file before FileView reloads it.
             restored_plugin_state="$(jq -c '.' "$PLUGIN_STATE_FILE" 2>/dev/null || true)"
             if [ -n "$restored_plugin_state" ]; then
-                qs -p "$HOME/.config/quickshell/end4-pC" ipc call pluginState replace \
+                qs -p "$SHELL_ROOT" ipc call pluginState replace \
                     "$restored_plugin_state" >/dev/null 2>&1 || true
             fi
         fi
