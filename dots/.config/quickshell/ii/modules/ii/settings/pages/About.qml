@@ -23,10 +23,14 @@ ContentPage {
     }
 
     function runUpdateDots() {
+        // TODO(C, ImI installer): re-point this at setup/ once the install TUI
+        // exists. The old self-reinstall cloned pctrade/end4-pC into
+        // ~/.config/quickshell and relaunched `qs -c end4-pC`; that is invalid now
+        // that the repo is a full suite rather than a drop-in config dir — running
+        // it would also clobber the hypr/ and matugen/ configs. Disabled for now.
         Quickshell.execDetached([
-            "kitty", "--hold",
-            "bash", "-c",
-            "killall qs; sleep 0.5; cd ~/.config/quickshell/ && rm -rf end4-pC && git clone https://github.com/pctrade/end4-pC.git && nohup qs -c end4-pC > /tmp/qs.log 2>&1 &"
+            "notify-send", "Immaterial Impulse",
+            "In-app update is disabled pending the installer (setup/)."
         ])
         Qt.callLater(() => GlobalStates.settingsOpen = false)
     }
