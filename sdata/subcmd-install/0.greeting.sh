@@ -6,6 +6,7 @@
 #####################################################################################
 
 printf "${STY_CYAN}[$0]: Hi there! Before we start:${STY_RST}\n"
+printf "${STY_CYAN}[$0]: Installing Immaterial Impulse v%s${STY_RST}\n" "$(cat "${REPO_ROOT}/VERSION" 2>/dev/null | tr -d '[:space:]' || echo '?')"
 printf "\n"
 printf "${STY_PURPLE}${STY_BOLD}[NEW] Immaterial Impulse is now powered by Quickshell.${STY_RST}\n"
 printf "${STY_PURPLE}"

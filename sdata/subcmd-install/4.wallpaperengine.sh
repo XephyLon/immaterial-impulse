@@ -41,7 +41,7 @@ set -euo pipefail
 echo "[ImI] Wallpaper Engine: building qs-wallpaperengine (this can take a while)..."
 
 WE_REPO="${WE_REPO:-https://github.com/XephyLon/qs-wallpaperengine}"
-WE_REF="${WE_REF:-main}"                       # branch/tag; pin to a commit once verified
+WE_REF="${WE_REF:-dc3620f}"                     # pinned qs-wallpaperengine rev; bump to its v0.1.0 tag once released
 BUILD_DIR="${BUILD_DIR:-$HOME/.cache/immaterial-impulse/qs-wallpaperengine-build}"
 JOBS="${WE_BUILD_JOBS:-$(nproc)}"
 

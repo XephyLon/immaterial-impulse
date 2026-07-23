@@ -10,8 +10,21 @@ import qs.modules.common.widgets
 import qs.modules.common.functions
 
 ContentPage {
+    id: root
     forceWidth: true
     bottomContentPadding: 35
+
+    // Suite version, read from the VERSION file shipped in the shell dir (it
+    // deploys with the config and is present in the repo checkout too).
+    property string appVersion: "dev"
+    FileView {
+        id: versionFile
+        path: Qt.resolvedUrl(Quickshell.shellPath("VERSION"))
+        onLoaded: {
+            const v = (versionFile.text() || "").trim();
+            if (v.length > 0) root.appVersion = v;
+        }
+    }
 
     function runSystemUpdate() {
         Quickshell.execDetached([
@@ -84,6 +97,15 @@ ContentPage {
                 StyledText {
                     Layout.fillWidth: true
                     text: "Kernel " + (SystemInfo.kernelVersion || "Loading...")
+                    font.pixelSize: Appearance.font.pixelSize.normal
+                    font.weight: Font.Medium
+                    color: Appearance.colors.colSubtext
+                    elide: Text.ElideRight
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: "Immaterial Impulse v" + root.appVersion
                     font.pixelSize: Appearance.font.pixelSize.normal
                     font.weight: Font.Medium
                     color: Appearance.colors.colSubtext
