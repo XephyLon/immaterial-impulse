@@ -86,11 +86,20 @@ the new depth without modification.
 
 ### Decisions
 
-**D1 — Dev infra travels with the theme.**
-`tests/`, `docs/`, `AGENT.md`, `CONTRIBUTING.md`, `.qmlformat.ini` and
-`.gitignore` all move into `dots/.config/quickshell/ii/`, keeping the pctrade
-subtree self-contained and cleanly `git subtree`-mergeable against theme
-upstream. This also costs zero churn — the suite is already self-locating.
+**D1 — Dev infra travels with the theme, except suite-level docs.**
+`tests/`, `AGENT.md`, `CONTRIBUTING.md`, `.qmlformat.ini` and `.gitignore` move
+into `dots/.config/quickshell/ii/`, keeping the pctrade subtree self-contained
+and cleanly `git subtree`-mergeable against theme upstream. This also costs zero
+churn — the suite is already self-locating.
+
+`docs/` **splits by altitude**, because burying suite-level planning inside the
+theme subtree would be wrong on both counts — it pollutes what we sync with
+pctrade, and it hides ImI-wide specs under one component:
+- `docs/M3_GUIDELINES.md` — theme-level → travels to
+  `dots/.config/quickshell/ii/docs/`.
+- `docs/superpowers/specs/` — suite-level ImI initiative specs → **stays at
+  repo-root `docs/`**. This includes the handoff doc, this design, and every
+  spec for B/C/D. (So this file does not move.)
 
 **Exception: `.github/` stays at repo root.** GitHub only reads workflows from
 `<root>/.github/workflows/`. `tests.yml:22` changes from

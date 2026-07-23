@@ -59,10 +59,23 @@ already `ii` (illogical-impulse); rebranding to **I**mmaterial **I**mpulse keeps
 A part 1 (git strategy) **approved**. A part 2 (path/identity fallout)
 **approved** — decisions D1/D2/D3 below.
 
-Full A design written to
-`docs/superpowers/specs/2026-07-23-repo-unification-design.md`.
-**NEXT: user reviews that spec → invoke `writing-plans`.** Then repeat the
-spec → plan → build cycle for B.
+A design **approved** (reviewed on the other machine).
+A plan written to `docs/superpowers/specs/2026-07-23-repo-unification-plan.md`.
+
+**NEXT: execute A, starting with the Phase 1 dual-upstream spike** — in a
+throwaway clone, auto-accept OFF, supervised. A halts at that gate if neither
+subtree candidate round-trips. Then repeat the spec → plan → build cycle for B.
+
+> `writing-plans` is **not installed on this machine** — no superpowers skills
+> present; `docs/superpowers/` is only a repo convention here. The A plan was
+> written directly in the same style. If the other machine has the skill, the
+> plan can be regenerated through it.
+
+### D1 amendment (approved)
+`docs/` splits by altitude: `docs/M3_GUIDELINES.md` travels with the theme;
+`docs/superpowers/specs/` (handoff, designs, plans for A/B/C/D) **stays at
+repo-root `docs/`** — suite-level planning must not be buried inside the theme
+subtree, and keeping it out keeps the pctrade sync clean.
 
 ### A part 2 decisions (approved)
 - **D1** — dev infra (`tests/`, `docs/`, `AGENT.md`, `CONTRIBUTING.md`) travels
