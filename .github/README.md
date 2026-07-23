@@ -82,10 +82,17 @@ with a periodic table on `Super`+`/`, because why not.
 > keyring entries migrate to the new names on first launch.
 
 ```bash
+# Quick install — fetches the suite, then runs the installer
+bash <(curl -fsSL https://raw.githubusercontent.com/XephyLon/end4-pC/main/get.sh)
+
+# Or clone and run it yourself
 git clone https://github.com/XephyLon/end4-pC.git
 cd end4-pC
 ./setup
 ```
+
+> Use `bash <(curl …)`, not `curl … | bash` — the installer is an interactive
+> menu, and piping into `bash` would occupy stdin and break the prompts.
 
 `./setup` with no arguments opens a **whiptail menu** to pick:
 
