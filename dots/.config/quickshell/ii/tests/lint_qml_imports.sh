@@ -6,7 +6,7 @@
 # qs.modules.common.widgets. Omitting it throws "ReferenceError: Appearance is
 # not defined" on every binding evaluation; when the missing token feeds a
 # positioner's spacing/margin, the resulting undefined -> NaN geometry thrashes
-# relayout and pegs a core at 100% CPU (see AGENT.md). The appearance-token
+# relayout and pegs a core at 100% CPU (see AGENT.md at the repo root). The appearance-token
 # migration introduced exactly this in several files, so this check keeps it
 # from coming back.
 #

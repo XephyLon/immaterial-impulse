@@ -4,6 +4,8 @@ This document establishes the strict rules for developing UI components in `Imma
 
 These guidelines are **hard constraints** for all future UI work. Ad hoc values ("whatever looks right") are strictly prohibited.
 
+> File paths in this document (`modules/...`, `services/...`, `Appearance.qml`, etc.) are relative to the theme root `dots/.config/quickshell/ii/`.
+
 ## 1. Design Tokens and Theming
 
 All UI components must exclusively use design tokens defined in `modules/common/Appearance.qml`. Hardcoding colors, radii, font sizes, or animation parameters is strictly forbidden.

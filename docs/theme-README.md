@@ -30,11 +30,11 @@ Customized and maintained by **pctrade**
 
 | 🎵 Lyrics | 🖼️ Online Wallpapers |
 |:---:|:---:|
-| ![Screenshot 1](screenshots/1.png) | ![Screenshot 2](screenshots/2.png) |
+| ![Screenshot 1](../dots/.config/quickshell/ii/screenshots/1.png) | ![Screenshot 2](../dots/.config/quickshell/ii/screenshots/2.png) |
 | 🪟 Desktop Widgets | 🔧 Hyprland Configs |
-| ![Screenshot 5](screenshots/5.png) | ![Screenshot 6](screenshots/6.png) |
+| ![Screenshot 5](../dots/.config/quickshell/ii/screenshots/5.png) | ![Screenshot 6](../dots/.config/quickshell/ii/screenshots/6.png) |
 | ⚙️ Configurable Bar | ✨ And More |
-| ![Screenshot 3](screenshots/3.png) | ![Screenshot 4](screenshots/4.png) |
+| ![Screenshot 3](../dots/.config/quickshell/ii/screenshots/3.png) | ![Screenshot 4](../dots/.config/quickshell/ii/screenshots/4.png) |
 
 </div>
 

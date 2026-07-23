@@ -4,6 +4,12 @@ Reference for coding agents (and humans) working in this repository. This file e
 project is, how it's put together, and where things live. See `CONTRIBUTING.md` for how to work in
 it day to day.
 
+> **Repository layout.** This repo bundles more than the shell. The Quickshell theme lives under
+> `dots/.config/quickshell/ii/`; the installer is `setup` + `sdata/`; project docs are in `docs/`.
+> **Unless a path is written repo-relative (e.g. `dots/...`, `sdata/...`, `docs/...`), file paths in
+> this document are relative to the theme root `dots/.config/quickshell/ii/`** (so `modules/...`,
+> `services/...`, `shell.qml` mean `dots/.config/quickshell/ii/modules/...`, etc.).
+
 ## What this is
 
 `Immaterial Impulse` (ImI) is a **Quickshell** shell configuration for **Hyprland** — a full desktop

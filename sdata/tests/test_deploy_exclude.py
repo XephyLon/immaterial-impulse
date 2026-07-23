@@ -19,9 +19,10 @@ class DeployExcludeTests(unittest.TestCase):
             self.assertTrue((dest / "shell.qml").is_file())
             self.assertTrue((dest / "modules").is_dir())
             self.assertTrue((dest / "scripts/migrate-config-dir.sh").is_file())
+            # Runtime .md (AI system prompts) must survive the filter
+            self.assertTrue((dest / "defaults/ai/prompts/ii-Default.md").is_file())
             self.assertFalse((dest / "tests").exists())
-            self.assertFalse((dest / "docs").exists())
-            self.assertFalse((dest / "AGENT.md").exists())
+            self.assertFalse((dest / "screenshots").exists())
             self.assertFalse((dest / "DesignSystemCompile.qml").exists())
             self.assertFalse(any(dest.glob("*RuntimeTest.qml")))
 
