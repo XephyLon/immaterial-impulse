@@ -60,9 +60,7 @@ Singleton {
     function rebuildFromLoadedFiles() {
         let loaded = [];
         let map = {};
-        [clockManifestFile, batteryManifestFile, dockerManifestFile, discordVoiceManifestFile,
-                atAGlanceManifestFile,
-                nandoroidClockManifestFile, nandoroidAtAGlanceManifestFile,
+        [clockManifestFile, dockerManifestFile, discordVoiceManifestFile,
                 nandoroidMediaManifestFile, nandoroidSystemMonitorManifestFile,
                 nandoroidWeatherManifestFile, nandoroidCurrencyManifestFile].forEach(fileView => {
             if (!fileView.loaded) return;
@@ -231,12 +229,6 @@ Singleton {
         onLoaded: root.scheduleRebuild()
     }
     FileView {
-        id: batteryManifestFile
-        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/battery")
-        path: Quickshell.shellPath("modules/common/plugins/bundled/battery/manifest.json")
-        onLoaded: root.scheduleRebuild()
-    }
-    FileView {
         id: dockerManifestFile
         property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/docker")
         path: Quickshell.shellPath("modules/common/plugins/bundled/docker/manifest.json")
@@ -245,24 +237,6 @@ Singleton {
     FileView {
         id: discordVoiceManifestFile
         property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/discordVoice")
-        path: pluginBase + "/manifest.json"
-        onLoaded: root.scheduleRebuild()
-    }
-    FileView {
-        id: atAGlanceManifestFile
-        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/atAGlance")
-        path: Quickshell.shellPath("modules/common/plugins/bundled/atAGlance/manifest.json")
-        onLoaded: root.scheduleRebuild()
-    }
-    FileView {
-        id: nandoroidClockManifestFile
-        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/nandoroid-clock")
-        path: pluginBase + "/manifest.json"
-        onLoaded: root.scheduleRebuild()
-    }
-    FileView {
-        id: nandoroidAtAGlanceManifestFile
-        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/nandoroid-at-a-glance")
         path: pluginBase + "/manifest.json"
         onLoaded: root.scheduleRebuild()
     }

@@ -3,7 +3,6 @@ import Quickshell
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.services
-import "bundled/atAGlance" as AtAGlancePlugin
 
 Item {
     id: rootNode
@@ -74,7 +73,6 @@ Item {
         case "ConfigSwitch": return configSwitchComponent;
         case "NoticeBox": return noticeBoxComponent;
         case "StyledPopup": return styledPopupComponent;
-        case "AtAGlance": return atAGlanceComponent;
         default: return null;
         }
     }
@@ -146,7 +144,6 @@ Item {
     Component { id: materialSymbolComponent; MaterialSymbol {} }
     Component { id: resourceCardComponent; ResourceCard {} }
     Component { id: styledImageComponent; StyledImage {} }
-    Component { id: atAGlanceComponent; AtAGlancePlugin.AtAGlance {} }
 
     Component { id: materialShapeComponent; MaterialShape {
         Repeater {
