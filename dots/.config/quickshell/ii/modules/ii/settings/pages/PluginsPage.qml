@@ -23,6 +23,21 @@ ContentPage {
             GroupedList {
                 Layout.fillWidth: true
 
+                ConfigSelectionArray {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Plugin frost")
+                    icon: "blur_on"
+                    currentValue: Config.options.plugins.frostMode
+                    onSelected: newValue => {
+                        if (newValue !== Config.options.plugins.frostMode)
+                            Config.options.plugins.frostMode = newValue;
+                    }
+                    options: [
+                        { displayName: Translation.tr("Tint"), icon: "format_color_fill", value: "tint" },
+                        { displayName: Translation.tr("Blur"), icon: "blur_on", value: "blur" }
+                    ]
+                }
+
                 ConfigSlider {
                     Layout.fillWidth: true
                     text: Translation.tr("Blurred plugin opacity")
