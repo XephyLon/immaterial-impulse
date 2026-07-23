@@ -297,6 +297,15 @@ ContentPage {
         }
 
         ContentSection {
+            title: Translation.tr("Icon pack")
+            icon: "apps"
+
+            IconPackSelector {
+                Layout.fillWidth: true
+            }
+        }
+
+        ContentSection {
             icon: "lock"
             title: Translation.tr("Lock screen")
             shape: MaterialShape.Shape.Pentagon
