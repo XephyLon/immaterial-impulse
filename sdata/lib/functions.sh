@@ -40,6 +40,14 @@ function x(){
     echo "  r = Repeat this command (DEFAULT)"
     echo "  e = Exit now"
     echo "  i = Ignore this error and continue (your setup might not work correctly)"
+    # Non-interactive safety: with no controlling terminal on stdin (the TUI's
+    # quiet mode, CI, `setup install </dev/null`, ...) nobody can answer this
+    # retry prompt. Reading would block forever behind hidden output, or on EOF
+    # spin the default "repeat" branch endlessly. Abort cleanly instead.
+    if [ ! -t 0 ]; then
+      echo -e "${STY_RED}[$0]: no terminal on stdin; aborting instead of prompting.${STY_RST}"
+      cmdstatus=1; break
+    fi
     local p; read -p " [R/e/i]: " p
     case $p in
       [iI]) echo -e "${STY_BLUE}Alright, ignore and continue...${STY_RST}";cmdstatus=2;;
