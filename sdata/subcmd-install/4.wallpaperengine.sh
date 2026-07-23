@@ -84,7 +84,15 @@ cmake --build "$WE_SRC/build" -j"$JOBS"
 # Commands per bootstrap.sh's [3/4] section. Configured into `build2`, not
 # `build`: see the note at the top of this file for why. All the service
 # plugins end4-pC's shell.qml needs are turned on in this one fresh configure.
-cmake -S "$QS_SRC" -B "$QS_SRC/build2" -DCMAKE_BUILD_TYPE=Release \
+#
+# Use the Ninja generator (like the stock immaterial-impulse-quickshell-git
+# PKGBUILD). Under cmake 4.4 the default Unix Makefiles generator mis-handles
+# Quickshell's qt_add_dbus_interface generated sources across subdirs and dies
+# with "No rule to make target src/dbus/dbus_objectmanager.cpp"; Ninja builds
+# them cleanly. rm -rf build2 first so a stale Makefiles-configured dir doesn't
+# block the generator switch.
+rm -rf "$QS_SRC/build2"
+cmake -GNinja -S "$QS_SRC" -B "$QS_SRC/build2" -DCMAKE_BUILD_TYPE=Release \
   -DWALLPAPERENGINE_INCLUDE_DIR="$WALLPAPERENGINE_INCLUDE_DIR" \
   -DSERVICE_MPRIS=ON -DSERVICE_NOTIFICATIONS=ON -DSERVICE_PAM=ON \
   -DSERVICE_PIPEWIRE=ON -DSERVICE_POLKIT=ON -DSERVICE_STATUS_NOTIFIER=ON \
