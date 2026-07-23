@@ -18,19 +18,24 @@ Item {
     // "web" wallpapers need CEF/Chromium, which the embedded renderer can't run
     // (it breaks the shell's GL), so they never render — hide them from the
     // picker entirely until web support exists. Drop the filter to re-expose.
-    readonly property var visibleProjects: WallpaperEngine.projects.filter(p => (p.type ?? "") !== "web")
+    // project.type arrives in mixed case (e.g. "scene"/"Scene", "Web"). Normalize
+    // to lowercase everywhere so the web filter, the distinct-type set, and the
+    // active filter all compare on one canonical form — otherwise "Web" slips
+    // past the filter and "scene"/"Scene" produce duplicate chips.
+    function normType(p) { return (p.type ?? "").toString().trim().toLowerCase(); }
+    readonly property var visibleProjects: WallpaperEngine.projects.filter(p => root.normType(p) !== "web")
     // Distinct wallpaper types present in the (visible) library, sorted, used to
     // build the filter chip row. Blank types are ignored.
     readonly property var availableTypes: {
         const seen = ({});
         for (const p of root.visibleProjects) {
-            const t = (p.type ?? "").toString().trim();
+            const t = root.normType(p);
             if (t) seen[t] = true;
         }
         return Object.keys(seen).sort();
     }
     readonly property var filteredProjects: root.visibleProjects.filter(project => {
-        if (root.typeFilter !== "all" && (project.type ?? "") !== root.typeFilter) return false;
+        if (root.typeFilter !== "all" && root.normType(project) !== root.typeFilter) return false;
         const query = root.searchQuery.trim().toLowerCase();
         if (!query) return true;
         const tags = Array.isArray(project.tags) ? project.tags.join(" ") : "";
@@ -67,6 +72,10 @@ Item {
             delegate: SelectionGroupButton {
                 required property var modelData
                 required property int index
+                // GroupButton fills the selected button's width (segmented-control
+                // behavior); here the chips stay content-sized and the trailing
+                // spacer eats the slack, so the "All" chip doesn't balloon.
+                Layout.fillWidth: false
                 leftmost: index === 0
                 rightmost: index === root.availableTypes.length
                 toggled: root.typeFilter === modelData.value
