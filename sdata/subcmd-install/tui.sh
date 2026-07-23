@@ -119,6 +119,7 @@ FZF_COMMON=(
 # Redraws on every toggle; a "Continue" sentinel breaks the loop. Mutates STATE.
 fzf_toggle(){
   local title="$1"
+  local pos=1                 # cursor row to restore after each toggle redraw
   while true; do
     local lines=() key mark
     for key in "${ORDER[@]}"; do
@@ -129,13 +130,19 @@ fzf_toggle(){
     local header
     header="$(banner)"$'\n'"${C_DIM}  Enter = toggle · ESC = cancel${C_RST}"$'\n'"  ${C_BOLD}${title}${C_RST}"
     local pick
+    # Re-invoking fzf per toggle otherwise snaps the cursor back to the top;
+    # start:pos($pos) restores it to the row that was just acted on.
     pick=$(printf '%s\n' "${lines[@]}" \
       | fzf "${FZF_COMMON[@]}" --with-nth='2..' --delimiter=$'\t' \
+            --bind "start:pos($pos)" \
             --header="$header" --prompt='select ▸ ')
     [[ $? -eq 0 ]] || return 130
     key=${pick%%$'\t'*}
     [[ "$key" == "__DONE__" ]] && return 0
     if [[ "${STATE[$key]}" == on ]]; then STATE[$key]=off; else STATE[$key]=on; fi
+    # Keep the cursor on this row for the next redraw.
+    local i=0 k
+    for k in "${ORDER[@]}"; do i=$((i+1)); [[ "$k" == "$key" ]] && { pos=$i; break; }; done
   done
 }
 
