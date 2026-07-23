@@ -33,9 +33,21 @@ AbstractWidget {
     }
 
     draggable: placementStrategy === "free" && !Config.options.background.widgetsLocked
+    function clampX(v) { return Math.max(0, Math.min(v, scaledScreenWidth - width)); }
+    function clampY(v) { return Math.max(0, Math.min(v, scaledScreenHeight - height)); }
+
     onReleased: {
+        // Pin targetX/targetY to the drop position EXPLICITLY (not by reading
+        // configEntry back - that value can still be stale this instant and would
+        // animate the widget back to where it was), then re-bind x/y to them. The
+        // drag Binding uses restoreMode RestoreNone, so it leaves x/y as frozen
+        // plain values once the drag ends; rebinding is what lets a later external
+        // config change (loading a preset) move the widget again - see the
+        // Connections below that drives targetX/targetY from external edits.
         root.targetX = root.x;
         root.targetY = root.y;
+        root.x = Qt.binding(() => root.targetX);
+        root.y = Qt.binding(() => root.targetY);
         // configEntry is undefined for widgets whose configEntryName isn't a pre-declared
         // key under Config.options.background.widgets (e.g. plugin widgets, whose dynamic
         // per-plugin/per-monitor positions are persisted by PluginState.qml instead).
@@ -43,6 +55,20 @@ AbstractWidget {
             configEntry.x = root.targetX;
             configEntry.y = root.targetY;
         }
+    }
+
+    // Once the widget has been dragged, onReleased pins targetX/targetY (severing
+    // their initial binding to configEntry.x/y), so an EXTERNAL config change -
+    // loading a preset, importing settings - would otherwise never reach the
+    // widget. Re-apply the clamped config position whenever configEntry.x/y change
+    // from the outside. On a self-write from onReleased this just re-sets the same
+    // value (harmless); on a preset load it moves the widget (animated by the
+    // Behavior on x/y).
+    Connections {
+        target: root.configEntry ?? null
+        ignoreUnknownSignals: true
+        function onXChanged() { root.targetX = root.clampX(root.configEntry.x); }
+        function onYChanged() { root.targetY = root.clampY(root.configEntry.y); }
     }
 
     property bool needsColText: false
