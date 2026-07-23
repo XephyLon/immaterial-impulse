@@ -1,6 +1,6 @@
 <div align="center">
-    <h1>【 end_4's Hyprland dotfiles 】</h1>
-    <h3></h3>
+    <h1>【 Immaterial Impulse 】</h1>
+    <h3>A Quickshell/Hyprland desktop shell, forked from end_4's Hyprland dotfiles</h3>
 </div>
 
 <div align="center"> 
@@ -77,7 +77,7 @@
 </div>
 
 <div align="center">
-    <img src="assets/illogical-impulse.svg" alt="illogical-impulse logo" style="float:left; width:400;">
+    <img src="assets/immaterial-impulse.svg" alt="Immaterial Impulse logo" style="float:left; width:400;">
 </div>
 
 Widget system: Quickshell | Support: Yes
