@@ -162,7 +162,7 @@ packages = [
   "kf6-syntax-highlighting"
 ]
 
-[groups.illogical-impulse]
+[groups.immaterial-impulse]
 packages = [
     "quickshell-git",
     "matugen"

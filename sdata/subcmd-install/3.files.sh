@@ -175,7 +175,7 @@ function install_google_sans_flex(){
   local src_name="google-sans-flex"
   local src_url="https://github.com/end-4/google-sans-flex"
   local src_dir="$REPO_ROOT/cache/$src_name"
-  local target_dir="${XDG_DATA_HOME}/fonts/illogical-impulse-$src_name"
+  local target_dir="${XDG_DATA_HOME}/fonts/immaterial-impulse-$src_name"
   if fc-list | grep -qi "$font_name"; then return; fi
   x mkdir -p $src_dir
   x cd $src_dir

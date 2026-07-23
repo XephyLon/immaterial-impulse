@@ -55,7 +55,7 @@ quickshell, home_attrs, ... }:
       
 
       # NOTE: below are migrated from dist-arch. For each package, must know why it's needed and how it's used specifically, cuz things may be need tweak to properly use the package installed by Nix, for example those have hardcoded path /usr/* . See sdata/deps-info.md
-      ### illogical-impulse-audio
+      ### immaterial-impulse-audio
       libcava #cava
       lxqt.pavucontrol-qt #pavucontrol-qt
       wireplumber #wireplumber
@@ -64,13 +64,13 @@ quickshell, home_attrs, ... }:
       playerctl #playerctl
 
 
-      ### illogical-impulse-backlight
+      ### immaterial-impulse-backlight
       (geoclue2.override { withDemoAgent = true; }) #geoclue
       brightnessctl #brightnessctl
       ddcutil #ddcutil
 
 
-      ### illogical-impulse-basic
+      ### immaterial-impulse-basic
       bc #bc
       uutils-coreutils-noprefix #coreutils
       cliphist #cliphist
@@ -84,11 +84,11 @@ quickshell, home_attrs, ... }:
       yq-go #go-yq
 
 
-      ### illogical-impulse-bibata-modern-classic-bin
+      ### immaterial-impulse-bibata-modern-classic-bin
       bibata-cursors
 
 
-      ### illogical-impulse-fonts-themes
+      ### immaterial-impulse-fonts-themes
       adw-gtk3 #adw-gtk-theme-git
       kdePackages.breeze kdePackages.breeze-icons #breeze
       #breeze-plus (TODO: Not available as nixpkg)
@@ -107,13 +107,13 @@ quickshell, home_attrs, ... }:
       twemoji-color-font #ttf-twemoji
 
 
-      ### illogical-impulse-hyprland
+      ### immaterial-impulse-hyprland
       #hyprland
       hyprsunset #hyprsunset
       wl-clipboard #wl-clipboard
 
 
-      ### illogical-impulse-kde
+      ### immaterial-impulse-kde
       kdePackages.bluedevil #bluedevil
       #gnome-keyring #gnome-keyring (TODO: Install via system PM instead; should install via nix in future when authentication problem fixed)
       networkmanager #networkmanager
@@ -123,18 +123,18 @@ quickshell, home_attrs, ... }:
       kdePackages.systemsettings #systemsettings
 
       
-      ### illogical-impulse-microtex-git
+      ### immaterial-impulse-microtex-git
       # TODO: Not available as nixpkg
 
 
-      ### illogical-impulse-portal
+      ### immaterial-impulse-portal
       #xdg-desktop-portal (Included elsewhere)
       #xdg-desktop-portal-kde (Included elsewhere)
       #xdg-desktop-portal-gtk (Included elsewhere)
       #xdg-desktop-portal-hyprland (Included elsewhere)
 
 
-      ### illogical-impulse-python
+      ### immaterial-impulse-python
       #clang (Not needed for Nix. However, when cmake is installed by Nix, then pkg-config, cairo etc will be used but they can only be accessible in Nix development environment for example nix-shell, nix develop, etc. See `sdata/uv/shell.nix`. )
       uv #uv
       gtk4 #gtk4
@@ -144,7 +144,7 @@ quickshell, home_attrs, ... }:
       gobject-introspection #gobject-introspection
 
 
-      ### illogical-impulse-screencapture
+      ### immaterial-impulse-screencapture
       hyprshot #hyprshot
       slurp #slurp
       swappy #swappy
@@ -153,13 +153,13 @@ quickshell, home_attrs, ... }:
       wf-recorder #wf-recorder
 
 
-      ### illogical-impulse-toolkit
+      ### immaterial-impulse-toolkit
       upower #upower
       wtype #wtype
       ydotool #ydotool
 
 
-      ### illogical-impulse-widgets
+      ### immaterial-impulse-widgets
       fuzzel #fuzzel
       glib #glib2
       imagemagick #imagemagick
@@ -175,7 +175,7 @@ quickshell, home_attrs, ... }:
     ++ [
     #(config.lib.nixGL.wrap pkgs.hyprland)
 
-    ### illogical-impulse-quickshell-git
+    ### immaterial-impulse-quickshell-git
     #(config.lib.nixGL.wrap quickshell.packages.x86_64-linux.default)
     (import ./quickshell.nix { inherit pkgs quickshell; 
     #nixGLWrap = config.lib.nixGL.wrap;

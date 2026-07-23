@@ -4,7 +4,7 @@
 function vianix-warning(){
   printf "${STY_YELLOW}"
   printf "Currently \"--via-nix\" will run:\n"
-  printf "  home-manager switch --flake .#illogical_impulse\n"
+  printf "  home-manager switch --flake .#immaterial_impulse\n"
   printf "If you are already using home-manager,\n"
   printf "it may override your current config,\n"
   printf "despite that this should be reversible.\n"
@@ -53,7 +53,7 @@ function hm_deps(){
   echo "\"$(whoami)\"" > "${SETUP_USERNAME_NIXFILE}"
   x git add "${SETUP_USERNAME_NIXFILE}"
   cd $SETUP_HM_DIR
-  x home-manager switch --flake .#illogical_impulse \
+  x home-manager switch --flake .#immaterial_impulse \
     --extra-experimental-features nix-command \
     --extra-experimental-features flakes
   x sudo /nix/store/*-non-nixos-gpu/bin/non-nixos-gpu-setup

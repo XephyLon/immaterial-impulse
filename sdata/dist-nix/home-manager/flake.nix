@@ -35,7 +35,7 @@
       };
     in {
       homeConfigurations = {
-        illogical_impulse = home-manager.lib.homeManagerConfiguration {
+        immaterial_impulse = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
           extraSpecialArgs = { inherit home_attrs 
           #nixgl

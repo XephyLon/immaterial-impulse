@@ -33,7 +33,7 @@ fi
 arch=$(portageq envvar ACCEPT_KEYWORDS)
 
 # Exclude hyprland, will deal with that separately
-metapkgs=(illogical-impulse-{audio,backlight,basic,bibata-modern-classic-bin,fonts-themes,hyprland,kde,microtex-git,portal,python,quickshell-git,screencapture,toolkit,widgets})
+metapkgs=(immaterial-impulse-{audio,backlight,basic,bibata-modern-classic-bin,fonts-themes,hyprland,kde,microtex-git,portal,python,quickshell-git,screencapture,toolkit,widgets})
 
 ebuild_dir="/var/db/repos/ii-dots"
 
@@ -42,11 +42,11 @@ ebuild_dir="/var/db/repos/ii-dots"
 # Illogical-Impulse
 x sudo cp ./sdata/dist-gentoo/keywords ./sdata/dist-gentoo/keywords-user
 x sed -i "s/$/ ~${arch}/" ./sdata/dist-gentoo/keywords-user
-v sudo cp ./sdata/dist-gentoo/keywords-user /etc/portage/package.accept_keywords/illogical-impulse
+v sudo cp ./sdata/dist-gentoo/keywords-user /etc/portage/package.accept_keywords/immaterial-impulse
 
 ########## IMPORT USEFLAGS
-v sudo cp ./sdata/dist-gentoo/useflags /etc/portage/package.use/illogical-impulse
-v sudo sh -c 'cat ./sdata/dist-gentoo/additional-useflags >> /etc/portage/package.use/illogical-impulse'
+v sudo cp ./sdata/dist-gentoo/useflags /etc/portage/package.use/immaterial-impulse
+v sudo sh -c 'cat ./sdata/dist-gentoo/additional-useflags >> /etc/portage/package.use/immaterial-impulse'
 
 ########## UPDATE SYSTEM
 v sudo emerge --sync
@@ -54,7 +54,7 @@ v sudo emerge --quiet --newuse --update --deep @world
 v sudo emerge --quiet @smart-live-rebuild
 
 # Remove old ebuilds (if this isn't done the wildcard will fuck upon a version change)
-x sudo rm -fr ${ebuild_dir}/app-misc/illogical-impulse-*
+x sudo rm -fr ${ebuild_dir}/app-misc/immaterial-impulse-*
 
 source ./sdata/dist-gentoo/import-local-pkgs.sh
 
