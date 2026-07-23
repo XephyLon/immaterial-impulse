@@ -140,6 +140,8 @@ The good twin and the community it came from:
   builds directly on.
 - [na-ive](https://github.com/na-ive/nandoroid-shell) — nandoroid-shell, source
   of the bundled Nandoroid widget plugins and expressive design tokens (AGPL-3.0).
+- [caelestia-dots](https://github.com/caelestia-dots/caelestia) — the "Caelestia"
+  animation preset.
 - [@clsty](https://github.com/clsty) — the original install script and much more.
 - [@midn8hustlr](https://github.com/midn8hustlr) — the color generation system.
 - [@outfoxxed](https://github.com/outfoxxed/) — Quickshell.
