@@ -83,11 +83,11 @@ with a periodic table on `Super`+`/`, because why not.
 
 ```bash
 # Quick install — fetches the suite, then runs the installer
-bash <(curl -fsSL https://raw.githubusercontent.com/XephyLon/end4-pC/main/get.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/XephyLon/immaterial-impulse/main/get.sh)
 
 # Or clone and run it yourself
-git clone https://github.com/XephyLon/end4-pC.git
-cd end4-pC
+git clone https://github.com/XephyLon/immaterial-impulse.git
+cd immaterial-impulse
 ./setup
 ```
 

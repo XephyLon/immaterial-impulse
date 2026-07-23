@@ -30,5 +30,5 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/end4-pC/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/XephyLon/end4-pC/releases/tag/v0.1.0
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/XephyLon/immaterial-impulse/releases/tag/v0.1.0

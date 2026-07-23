@@ -3,7 +3,7 @@
 #
 # Fetch the whole suite and launch its installer with one command:
 #
-#   bash <(curl -fsSL https://raw.githubusercontent.com/XephyLon/end4-pC/main/get.sh)
+#   bash <(curl -fsSL https://raw.githubusercontent.com/XephyLon/immaterial-impulse/main/get.sh)
 #
 # Use the `bash <(curl ...)` form, NOT `curl ... | bash`: the installer is
 # interactive (whiptail menu), and piping the script into bash would occupy
@@ -15,7 +15,7 @@
 # Overridable via env: IMI_REPO, IMI_REF (branch/tag/commit), IMI_DEST.
 set -euo pipefail
 
-REPO="${IMI_REPO:-https://github.com/XephyLon/end4-pC}"
+REPO="${IMI_REPO:-https://github.com/XephyLon/immaterial-impulse}"
 REF="${IMI_REF:-main}"
 DEST="${IMI_DEST:-${XDG_DATA_HOME:-$HOME/.local/share}/immaterial-impulse/src}"
 

@@ -305,7 +305,7 @@ concurrently, not as a default for every subagent dispatch.
   with <tool>" footer or equivalent attribution line, even when the agent's own tooling suggests one
   by default.
 - `gh pr create` defaults its base to the **parent** repo (`pctrade/end4-pC`) because `origin` is a
-  fork. Pass `--repo XephyLon/end4-pC` for a PR that stays in this fork.
+  fork. Pass `--repo XephyLon/immaterial-impulse` for a PR that stays in this fork.
 
 ## Style
 
