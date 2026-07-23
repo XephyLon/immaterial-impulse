@@ -90,6 +90,20 @@ rsync_dir__sync_exclude(){
   x mkdir -p "$(dirname ${INSTALLED_LISTFILE})"
   rsync -a --delete "${excludes[@]}" --out-format='%i %n' "$src"/ "$dest_dir"/ | awk -v d="$dest" '$1 ~ /^>/{ sub(/^[^ ]+ /,""); printf d "/" $0 "\n" }' >> "${INSTALLED_LISTFILE}"
 }
+rsync_dir__sync_exclude_from(){
+  # NOTE: This function is only for using in other functions
+  # Same as rsync_dir__sync but excludes patterns are read from a file
+  # (rsync --exclude-from format), so deploy-time excludes can be
+  # maintained in one shared place (see sdata/lib/deploy-exclude.txt).
+  # Usage: rsync_dir__sync_exclude_from <src> <dest> <exclude_file>
+  local src="$1"
+  local dest_dir="$2"
+  local exclude_file="$3"
+  x mkdir -p "$dest_dir"
+  local dest="$(realpath -se $dest_dir)"
+  x mkdir -p "$(dirname ${INSTALLED_LISTFILE})"
+  rsync -a --delete --exclude-from="$exclude_file" --out-format='%i %n' "$src"/ "$dest_dir"/ | awk -v d="$dest" '$1 ~ /^>/{ sub(/^[^ ]+ /,""); printf d "/" $0 "\n" }' >> "${INSTALLED_LISTFILE}"
+}
 function install_file(){
   # NOTE: Do not add prefix `v` or `x` when using this function
   local s=$1
@@ -169,6 +183,18 @@ function install_dir__sync_exclude(){
     warning_overwrite
   fi
   v rsync_dir__sync_exclude $s $t "$@"
+}
+function install_dir__sync_exclude_from(){
+  # NOTE: Do not add prefix `v` or `x` when using this function
+  # Sync directory, excluding patterns listed in a file (rsync --exclude-from)
+  # Usage: install_dir__sync_exclude_from <src> <dest> <exclude_file>
+  local s=$1
+  local t=$2
+  local exclude_file=$3
+  if [ -d $t ];then
+    warning_overwrite
+  fi
+  v rsync_dir__sync_exclude_from $s $t "$exclude_file"
 }
 function install_google_sans_flex(){
   local font_name="Google Sans Flex"
