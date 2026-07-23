@@ -14,7 +14,19 @@ Item {
     property int columns: Config.options.wallpaperSelector.columns || 4
     property real previewCellAspectRatio: 4 / 3
     property string searchQuery: ""
+    property string typeFilter: "all"
+    // Distinct wallpaper types present in the library (scene/video/web/...),
+    // sorted, used to build the filter chip row. Blank types are ignored.
+    readonly property var availableTypes: {
+        const seen = ({});
+        for (const p of WallpaperEngine.projects) {
+            const t = (p.type ?? "").toString().trim();
+            if (t) seen[t] = true;
+        }
+        return Object.keys(seen).sort();
+    }
     readonly property var filteredProjects: WallpaperEngine.projects.filter(project => {
+        if (root.typeFilter !== "all" && (project.type ?? "") !== root.typeFilter) return false;
         const query = root.searchQuery.trim().toLowerCase();
         if (!query) return true;
         const tags = Array.isArray(project.tags) ? project.tags.join(" ") : "";
@@ -23,12 +35,52 @@ Item {
     property real cellWidth: grid.cellWidth
     property real cellHeight: grid.cellHeight
 
+    function typeIcon(t) {
+        return t === "video" ? "movie" : (t === "web" ? "web" : "animation");
+    }
+
     function moveSelection(delta) { grid.moveSelection(delta); }
     function activateCurrent() { grid.activateCurrent(); }
 
+    // Type filter chips (All / Scene / Video / Web / ...). Only shown when the
+    // library actually spans more than one type. Combined with searchQuery.
+    RowLayout {
+        id: filterRow
+        visible: root.availableTypes.length > 1
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.margins: Appearance.sizes.wallpaperSelectorItemMargins
+        spacing: 0
+
+        Repeater {
+            model: [({ value: "all", text: Translation.tr("All"), icon: "filter_list" })].concat(
+                root.availableTypes.map(t => ({
+                    value: t,
+                    text: t.charAt(0).toUpperCase() + t.slice(1),
+                    icon: root.typeIcon(t)
+                })))
+            delegate: SelectionGroupButton {
+                required property var modelData
+                required property int index
+                leftmost: index === 0
+                rightmost: index === root.availableTypes.length
+                toggled: root.typeFilter === modelData.value
+                buttonIcon: modelData.icon
+                buttonText: modelData.text
+                onClicked: root.typeFilter = modelData.value
+            }
+        }
+        Item { Layout.fillWidth: true }
+    }
+
     GridView {
         id: grid
-        anchors.fill: parent
+        anchors.top: filterRow.visible ? filterRow.bottom : parent.top
+        anchors.topMargin: filterRow.visible ? Appearance.spacing.space100 : 0
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
         model: root.filteredProjects
         cellWidth: width / root.columns
         cellHeight: cellWidth / root.previewCellAspectRatio
