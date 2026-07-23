@@ -64,6 +64,12 @@ sha256sums=('SKIP'
 
 build() {
   cd "$_pkgname"
+  # Start from a clean CMake build dir. makepkg reuses $srcdir across install
+  # re-runs/updates, and a stale build/ leaves generated-code rules (e.g. the
+  # dbus_objectmanager.cpp qt_add_dbus_interface output) that a fresh configure
+  # would regenerate — without this, a second build fails with
+  # "No rule to make target 'src/dbus/dbus_objectmanager.cpp'".
+  rm -rf build
   cmake -GNinja -B build \
     -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
     -DCMAKE_INSTALL_PREFIX=/usr \
