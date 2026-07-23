@@ -48,7 +48,7 @@ ShellRoot {
 
     PanelFamilyLoader {
         identifier: "ii"
-        component: IllogicalImpulseFamily {}
+        component: ImmaterialImpulseFamily {}
     }
 
     component PanelFamilyLoader: LazyLoader {

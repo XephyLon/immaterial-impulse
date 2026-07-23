@@ -42,7 +42,7 @@ inconsistent module move have coincided with shell and whole-session starvation.
 or use a worktree, validate headlessly, then perform one controlled live load.
 
 - Entry point: `shell.qml` → loads a **panel family** (currently only `"ii"`, from
-  `panelFamilies/IllogicalImpulseFamily.qml`) which is a flat list of `PanelLoader { component: X {} }`
+  `panelFamilies/ImmaterialImpulseFamily.qml`) which is a flat list of `PanelLoader { component: X {} }`
   entries, one per top-level feature module.
 - Singletons (declared with `pragma Singleton`) are the shell's shared state and services. They are
   addressed by their QML type name directly (e.g. `Config`, `GlobalStates`, `Audio`) — no explicit
@@ -86,7 +86,7 @@ user has no panels. The error is reported as a cascade from `shell.qml` down to 
 actually failed — the **last** `caused by` line is the real culprit:
 ```
 ERROR: Failed to load configuration
-ERROR:   caused by @shell.qml[50:20]: Type IllogicalImpulseFamily unavailable
+ERROR:   caused by @shell.qml[50:20]: Type ImmaterialImpulseFamily unavailable
 ...
 ERROR:   caused by @modules/ii/sidebarRight/calendar/CalendarHeaderButton.qml[13:5]: Cannot override FINAL property
 ```
@@ -132,7 +132,7 @@ modules/common/             Shared, feature-agnostic building blocks
                               ConfigSelectionArray (settings-page form controls), etc.
   functions/, models/, utils/, panels/   Supporting JS logic, list models, window-panel base classes
 
-modules/ii/                 The "ii" (illogical-impulse) panel family - one directory per feature:
+modules/ii/                 The "ii" (Immaterial Impulse) panel family - one directory per feature:
   bar/                        The top/bottom bar and everything docked in it (Resources, Media,
                               SysTray, Workspaces, clock, quick toggles, ...)
   sidebarLeft/, sidebarRight/ Slide-out panels (AI chat, quick settings, notifications, volume mixer)
@@ -159,7 +159,7 @@ services/                  Singletons wrapping external state/processes - one pe
   Brightness.qml, Battery.qml, Hyprsunset.qml, Network.qml, BluetoothStatus.qml, TrayService.qml,
   MprisController.qml, Weather.qml, Docker.qml, ... (one per integration)
 
-panelFamilies/              PanelLoader.qml (thin LazyLoader) + IllogicalImpulseFamily.qml (the
+panelFamilies/              PanelLoader.qml (thin LazyLoader) + ImmaterialImpulseFamily.qml (the
                             actual list of panels for the "ii" family)
 
 scripts/                   Standalone helper scripts (Python/bash) invoked via Process/Quickshell.execDetached
