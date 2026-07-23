@@ -21,7 +21,7 @@ Singleton {
     property var keyringData: ({})
     
     property var properties: {
-        "application": "illogical-impulse",
+        "application": "immaterial-impulse",
         "explanation": Translation.tr("For storing API keys and other sensitive information"),
     }
     property var propertiesAsArgs: Object.keys(root.properties).reduce(
@@ -29,7 +29,13 @@ Singleton {
             return arr.concat([key, root.properties[key]]);
         }, []
     )
-    property string keyringLabel: Translation.tr("%1 Safe Storage").arg("illogical-impulse")
+    property string keyringLabel: Translation.tr("%1 Safe Storage").arg("Immaterial Impulse")
+
+    // Pre-rebrand secrets were stored under this attribute. Kept only as a
+    // fallback lookup id so existing users aren't forced to re-enter API keys:
+    // see legacyLookup below, which re-keys a hit under the new application
+    // attribute so the fallback is only ever needed once per machine.
+    readonly property string legacyApplication: "illogical-impulse"
 
     function setNestedField(path, value) {
         if (!root.keyringData) root.keyringData = {};
@@ -113,14 +119,72 @@ Singleton {
         onExited: (exitCode, exitStatus) => {
             // console.log("[KeyringStorage] Keyring data fetch process exited with code:", exitCode);
             if (exitCode === 1) {
-                console.error("[KeyringStorage] Entry not found, initializing.");
-                root.keyringData = {};
-                saveKeyringData()
+                // Not found under the current application attribute. Before
+                // giving up, check whether this is a pre-rebrand secret sitting
+                // under the legacy attribute rather than truly missing.
+                console.error("[KeyringStorage] Entry not found under '" + root.properties.application + "', trying legacy attribute.");
+                legacyLookup.running = true;
+                return;
             }
             if (exitCode !== 2) {
                 root.loaded = true;
             }
         }
     }
-    
+
+    // Fallback for secrets stored before the rebrand: looks up the old
+    // "illogical-impulse" application attribute directly via secret-tool. A
+    // hit is lazily re-keyed under the new attribute (via saveKeyringData) so
+    // no user ever has to re-enter their API keys, and this fallback is only
+    // exercised once per machine.
+    //
+    // Only a CONFIRMED miss (secret-tool's own "no matching item" exit code)
+    // is license to fresh-init. Every other outcome - a lookup error, a
+    // locked collection, or output that doesn't parse - is ambiguous, not
+    // proof the secret doesn't exist, so it's left untouched: keyringData and
+    // root.loaded stay as they are and the next launch retries the whole
+    // fallback. This mirrors how getData already treats a locked keyring
+    // (exitCode === 2): don't touch state, don't mark loaded, just try again
+    // later. Blindly fresh-initing here would permanently orphan a real
+    // legacy secret after one transient failure.
+    Process {
+        id: legacyLookup
+        command: ["secret-tool", "lookup", "application", root.legacyApplication]
+        stdout: StdioCollector {
+            id: legacyLookupCollector
+        }
+        onExited: (exitCode, exitStatus) => {
+            const data = legacyLookupCollector.text;
+            if (exitCode === 0 && data.length > 0 && data.startsWith("{")) {
+                try {
+                    root.keyringData = JSON.parse(data);
+                    console.error("[KeyringStorage] Found legacy data under '" + root.legacyApplication + "', re-keying to '" + root.properties.application + "'.");
+                    saveKeyringData(); // Re-key under the new application attribute.
+                    root.loaded = true;
+                } catch (e) {
+                    // A real secret exists but failed to parse - not a
+                    // confirmed absence. Leave it for the next launch rather
+                    // than overwriting it with {}.
+                    console.error("[KeyringStorage] Legacy keyring data failed to parse; leaving untouched for retry.");
+                }
+            } else if (exitCode === 1) {
+                // secret-tool confirms no matching item under the legacy
+                // attribute either. We only reach legacyLookup after
+                // try_lookup.sh's own is_unlocked.sh check passed, so the
+                // collection is known unlocked and this exit code is a real
+                // "not found", not a locked-keyring false negative.
+                console.error("[KeyringStorage] No legacy entry either, initializing.");
+                root.keyringData = {};
+                saveKeyringData();
+                root.loaded = true;
+            } else {
+                // Inconclusive (lookup error, unexpected exit code, or an
+                // empty/malformed result that didn't come with a confirmed
+                // miss). Leave state untouched so the next launch re-attempts
+                // the fallback instead of orphaning a real legacy secret.
+                console.error("[KeyringStorage] Legacy lookup inconclusive (exit " + exitCode + "); leaving untouched for retry.");
+            }
+        }
+    }
+
 }
