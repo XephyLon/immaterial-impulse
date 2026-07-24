@@ -39,7 +39,10 @@ set -euo pipefail
 [[ "${INSTALL_WE:-0}" == "1" ]] || { echo "[ImI] Wallpaper Engine: skipped."; exit 0; }
 
 WE_REPO="${WE_REPO:-https://github.com/XephyLon/qs-wallpaperengine}"
-WE_REF="${WE_REF:-v0.1.0}"                       # release tag; installer prefers the prebuilt for this tag
+WE_REF="${WE_REF:-a721ef1}"                      # working commit pin; NO prebuilt release exists for it, so installs
+                                                 # fall back to a source build (git checkout a721ef1 succeeds). Bump this
+                                                 # to a release tag (vX.Y.Z) once one is cut to activate the prebuilt
+                                                 # fast-path — see qs-wallpaperengine/docs/cutting-a-release.md.
 BUILD_DIR="${BUILD_DIR:-$HOME/.cache/immaterial-impulse/qs-wallpaperengine-build}"
 PREBUILT_ROOT="${PREBUILT_ROOT:-$HOME/.cache/immaterial-impulse/prebuilt}"
 PREFIX="${WE_INSTALL_PREFIX:-/usr/local}"        # install root; binaries land in $PREFIX/bin (prod: /usr/local/bin, shadows distro qs)
