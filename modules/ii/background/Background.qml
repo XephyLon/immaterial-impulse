@@ -226,6 +226,15 @@ Variants {
             }
         }
 
+        Connections {
+            target: GlobalStates
+            function onScreenLockedChanged() {
+                if (!GlobalStates.screenLocked) {
+                    bgRoot.videoRevealed = bgRoot.wallpaperIsVideo
+                }
+            }
+        }
+
         Item {
             anchors.fill: parent
 
