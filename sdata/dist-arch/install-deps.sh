@@ -82,6 +82,11 @@ install-local-pkgbuild() {
 
   x pushd $location
 
+  # Fresh per-package metadata: `source` does not clear arrays a previous
+  # PKGBUILD set, so a package that omits `replaces` would inherit the last
+  # one's. Unset it first so the supersede loop below only ever sees the current
+  # package's own value.
+  unset replaces
   source ./PKGBUILD
 
   # Idempotent local install: if this exact version is already installed and we
@@ -100,6 +105,26 @@ install-local-pkgbuild() {
   fi
 
   x yay -S --sudoloop $installflags --asdeps "${depends[@]}"
+
+  # Honour `replaces` ourselves. makepkg -i runs `pacman -U --noconfirm`, which
+  # does NOT act on replaces/conflicts non-interactively: pacman's "Remove the
+  # conflicting X? [y/N]" prompt defaults to No, so an installed predecessor
+  # (the illogical-impulse-* packages this suite supersedes, which share e.g.
+  # /opt/MicroTeX or the `quickshell` provides) makes the install step abort with
+  # "unresolvable package conflicts". Remove any still-installed predecessor
+  # first so the build's install step is a clean upgrade. -Rdd skips dependency
+  # checks: the new package re-provides whatever the old one did, so a transient
+  # reverse-dep (e.g. illogical-updots -> quickshell) is satisfied again the
+  # moment the new package installs.
+  local _old
+  for _old in "${replaces[@]:-}"; do
+    [[ -n "$_old" ]] || continue
+    if pacman -Qq "$_old" >/dev/null 2>&1; then
+      printf "${STY_CYAN}[$0]: %s supersedes installed %s; removing it first.${STY_RST}\n" "$pkgname" "$_old"
+      x sudo pacman -Rdd --noconfirm "$_old"
+    fi
+  done
+
   # man makepkg:
   # -A, --ignorearch: Ignore a missing or incomplete arch field in the build script.
   # -s, --syncdeps: Install missing dependencies using pacman. When build-time or run-time dependencies are not found, pacman will try to resolve them.

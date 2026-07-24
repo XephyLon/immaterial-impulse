@@ -8,7 +8,7 @@ _prefix='immaterial-impulse'
 _pkgname=quickshell
 pkgname="$_prefix-$_pkgname-git"
 pkgver=0.1.0.r1
-pkgrel=9
+pkgrel=10
 pkgdesc="$_pkgname-git pinned commit and extra deps for $_prefix"
 arch=(x86_64 aarch64)
 url='https://git.outfoxxed.me/quickshell/quickshell'
@@ -55,6 +55,10 @@ makedepends=(
 )
 provides=("$_pkgname" "$_pkgname-git")
 conflicts=("$_pkgname" "$_pkgname-git")
+# Supersede the upstream illogical-impulse build. It provides the same virtual
+# `quickshell`/`quickshell-git`, so on a migration pacman -U would abort on the
+# conflict; install-deps.sh reads this `replaces` and removes it first.
+replaces=("illogical-impulse-quickshell-git")
 
 _pkgsrc="$_pkgname"
 source=("$_pkgsrc::git+$url.git#commit=$_commit"
