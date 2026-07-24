@@ -73,7 +73,15 @@ ART
 
 # --- Live sysinfo panel (rendered into a temp file, shown as fzf --preview) --
 SYSINFO_FILE="$(mktemp -t imi-tui-sysinfo.XXXXXX)"
-cleanup(){ rm -f "$SYSINFO_FILE"; }
+# Process group of the in-flight quiet-mode install (set in run_quiet_install so
+# a cancel can signal the whole build tree). Empty when nothing is building.
+INSTALL_PGID=""
+CANCELLED_INSTALL=0
+cleanup(){
+  rm -f "$SYSINFO_FILE"
+  printf '\033[?25h' 2>/dev/null || true          # ensure the cursor the progress bar hid is restored
+  [[ -n "$INSTALL_PGID" ]] && kill -TERM -"$INSTALL_PGID" 2>/dev/null || true
+}
 trap cleanup EXIT
 
 build_sysinfo(){
@@ -255,7 +263,7 @@ draw_progress(){
   local m=$(( el / 60 )) s=$(( el % 60 ))
   printf '\033[3A'
   printf '\r\033[K   %s  %s%3d%%%s\n'        "$(draw_bar "$pct" 32)" "$C_BOLD" "$pct" "$C_RST"
-  printf '\r\033[K   %s%s%s  %s%s%s  %s·  %dm%02ds%s\n' "$C_TEAL" "$spin" "$C_RST" "$C_BOLD" "$phase" "$C_RST" "$C_DIM" "$m" "$s" "$C_RST"
+  printf '\r\033[K   %s%s%s  %s%s%s  %s·  %dm%02ds  ·  Ctrl-C to cancel%s\n' "$C_TEAL" "$spin" "$C_RST" "$C_BOLD" "$phase" "$C_RST" "$C_DIM" "$m" "$s" "$C_RST"
   printf '\r\033[K   %s› %.60s%s\n'          "$C_DIM" "$last" "$C_RST"
 }
 
@@ -280,6 +288,28 @@ progress_loop(){
   printf '\033[?25h'          # show cursor
 }
 
+# Cancel handler for quiet-mode: SIGINT/SIGTERM here means the user pressed
+# Ctrl-C while the (setsid'd) install group was building. TERM the whole group,
+# grace, then KILL. Also try the kills under `sudo -n` so root-owned children
+# (an in-flight pacman) go down too — the sudo timestamp is warm from the
+# keepalive. Compiler children (make/ninja/cc) run as the user during the long
+# WE build, so those always die; the sudo dep-install steps are brief.
+on_cancel(){
+  CANCELLED_INSTALL=1
+  [[ -n "$INSTALL_PGID" ]] || return
+  printf '\033[?25h'                                          # restore cursor
+  printf '\n  %s✗  Cancelling — stopping the build…%s\n' "${C_RED}" "${C_RST}"
+  kill -TERM -"$INSTALL_PGID" 2>/dev/null || true
+  sudo -n kill -TERM -"$INSTALL_PGID" 2>/dev/null || true
+  local i
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    kill -0 -"$INSTALL_PGID" 2>/dev/null || break
+    sleep 0.3
+  done
+  kill -KILL -"$INSTALL_PGID" 2>/dev/null || true
+  sudo -n kill -KILL -"$INSTALL_PGID" 2>/dev/null || true
+}
+
 run_quiet_install(){
   local log="${XDG_CACHE_HOME:-$HOME/.cache}/immaterial-impulse/install-$(date +%Y%m%d-%H%M%S).log"
   mkdir -p "$(dirname "$log")"
@@ -298,11 +328,30 @@ run_quiet_install(){
   clear; banner; printf '\n'
   # --force -> ask=false (no pauses/confirms); </dev/null -> functions.sh x()
   # aborts on failure instead of prompting; all output goes to the log.
-  "$SETUP_BIN" install "${INSTALL_FLAGS[@]}" --force </dev/null >"$log" 2>&1 &
+  # setsid: run the install as its OWN process-group leader so a cancel can
+  # take down the whole build tree (make/ninja/cc) via `kill -- -PGID`, and so
+  # terminal Ctrl-C reaches only this script's on_cancel handler (which then
+  # forwards a clean TERM to the group) instead of half-killing the build.
+  CANCELLED_INSTALL=0
+  setsid "$SETUP_BIN" install "${INSTALL_FLAGS[@]}" --force </dev/null >"$log" 2>&1 &
   local pid=$!
+  INSTALL_PGID="$pid"                 # setsid makes the child its own group leader (PGID == PID)
+  trap on_cancel INT TERM
   progress_loop "$pid" "$log"
   wait "$pid"; INSTALL_RET=$?
+  trap - INT TERM
+  INSTALL_PGID=""
+  (( CANCELLED_INSTALL )) && INSTALL_RET=130
   kill "$keepalive" 2>/dev/null
+
+  if (( CANCELLED_INSTALL )); then
+    # on_cancel already restored the cursor and printed its own lines; the
+    # progress-area cursor position is no longer reliable, so print plainly
+    # instead of the \033[3A overwrite the success/fail branches use.
+    printf '\n   %s✗  Installation cancelled.%s Nothing further was installed.\n' "$C_RED" "$C_RST"
+    printf '   %spartial log: %s%s\n' "$C_DIM" "$log" "$C_RST"
+    return
+  fi
 
   printf '\033[3A'
   if [[ $INSTALL_RET -eq 0 ]]; then
