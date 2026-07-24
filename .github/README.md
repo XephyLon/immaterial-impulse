@@ -99,9 +99,12 @@ cd immaterial-impulse
 `./setup` with no arguments opens a **whiptail menu** to pick:
 
 - **Components** — core config and dependencies.
-- **Wallpaper Engine** (optional) — builds a custom Quickshell carrying the
-  Wallpaper Engine module and puts it ahead of the stock binary on `PATH`. Off
-  by default; WE wallpapers degrade to static otherwise.
+- **Wallpaper Engine** (optional) — puts a custom Quickshell carrying the
+  Wallpaper Engine module ahead of the stock binary on `PATH`. On x86_64 it
+  installs a **verified prebuilt** (checksum-checked) in seconds; if none matches
+  (other arch, older Qt, checksum/smoke failure) it falls back to compiling from
+  source. The long compile is cancellable (Ctrl-C). Off by default; WE
+  wallpapers degrade to static otherwise.
 - **SDDM login theme** (optional, Arch only) — installs
   [ii-sddm-theme](https://github.com/3d3f/ii-sddm-theme) via its own installer,
   matching the lock-screen aesthetic on the login screen. Off by default.

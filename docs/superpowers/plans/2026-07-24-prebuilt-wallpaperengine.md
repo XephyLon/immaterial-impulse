@@ -8,6 +8,11 @@
 
 **Tech Stack:** bash, GitHub Actions (Arch container), cmake/ninja, `tar --zstd`, `sha256sum`, `curl`, `gh`.
 
+> **Status: implemented 2026-07-24** (local commits, not pushed). Two reconciliations vs. the verbatim code below, made during execution:
+> - `build-we.sh` routes all bootstrap/cmake/ninja output to **stderr** so stdout carries only the `QS_BIN=`/`WE_LIB_DIR=` lines the `eval "$(…)"` consumers capture (otherwise build noise would be eval'd).
+> - `WE_INSTALL_PREFIX` is a **prefix root** (`/usr/local`), binaries land in `$PREFIX/bin` — resolves an inconsistency between this plan's script snippet (bindir) and its test (prefix root). Production path is unchanged: `/usr/local/bin/quickshell` + `qs`.
+> Not yet done: cut an actual `vX.Y.Z` tag/release and bump `WE_REF` off the commit pin (manual, when ready — see `qs-wallpaperengine/docs/cutting-a-release.md`).
+
 ---
 
 ## Repo layout / responsibilities
