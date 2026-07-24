@@ -63,6 +63,15 @@ install_wrapper(){
 # Quickshell build with the linux-wallpaperengine runtime libs on
 # LD_LIBRARY_PATH (bundled build output + the system package's /opt install).
 export LD_LIBRARY_PATH="$lib_dir:$OPT_LIBS\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
+# Force Qt's THREADED render loop. On NVIDIA/Wayland Qt otherwise auto-selects
+# the BASIC loop, which renders QML on the GUI thread; an embedded WE *video*
+# wallpaper (mpv/CUDA) then blocks that thread in glClientWaitSync/endFrame for
+# many seconds on every wallpaper switch (its surface teardown saturates the
+# shared GL context), freezing QML timers so the wallpaper-switch transition
+# animation hangs (~11s per switch, measured). Threaded moves rendering to the
+# QSGRenderThread, keeping animations responsive (teardown hitch drops to
+# <1s). Verified: WE still renders correctly under threaded on NVIDIA here.
+export QSG_RENDER_LOOP=threaded
 exec "$qs_bin" "\$@"
 WRAPPER
   maybe_sudo install -Dm755 "$tmp" "$PREFIX/bin/quickshell"
