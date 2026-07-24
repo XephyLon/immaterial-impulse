@@ -145,16 +145,6 @@ Same shell, three palettes — Material You recolors everything from the wallpap
   <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
 </table>
 
-### The tour
-
-| Lyrics | Online wallpapers |
-|:---:|:---:|
-| ![Lyrics](../dots/.config/quickshell/ii/screenshots/1.png) | ![Online wallpapers](../dots/.config/quickshell/ii/screenshots/2.png) |
-| Desktop widgets | Hyprland config |
-| ![Desktop widgets](../dots/.config/quickshell/ii/screenshots/5.png) | ![Hyprland config](../dots/.config/quickshell/ii/screenshots/6.png) |
-| Configurable bar | And more |
-| ![Configurable bar](../dots/.config/quickshell/ii/screenshots/3.png) | ![And more](../dots/.config/quickshell/ii/screenshots/4.png) |
-
 ---
 
 ## Credits
