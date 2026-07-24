@@ -13,6 +13,9 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- Curated default configuration: fresh installs now seed `config.json` from the
+  maintainer's tuned setup (sanitized of machine-specific state) instead of the
+  bare upstream fallback defaults; existing configs are never touched.
 - Icon pack selector (Settings → Interface): preview-grid cards rendering each
   theme's real icons, system-wide apply (GTK 3/4 `settings.ini`, `kdeglobals`,
   gsettings) with validation, and an automatic shell relaunch to adopt the pack.
