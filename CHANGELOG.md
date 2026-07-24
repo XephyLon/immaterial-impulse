@@ -25,6 +25,8 @@ own repo; the installer pins which revision it builds.
 - Quiet-mode install is now cancellable (Ctrl-C cleanly stops the whole build).
 - Frost mode toggle (tint vs true blur) for plugin backdrops in Settings → Plugins.
 - README: palette showcase screenshots (Green / Study / Red).
+- README translations: Simplified Chinese (`README.zh-CN.md`) and Japanese
+  (`README.ja.md`), with a language switcher linking all three.
 
 ### Fixed
 - Multi-second shell freezes on wallpaper/preset switches, root-caused to three

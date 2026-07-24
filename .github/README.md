@@ -3,6 +3,7 @@
     <h1>【 Immaterial Impulse 】</h1>
     <h3>The evil twin of <a href="https://github.com/end-4/dots-hyprland">illogical-impulse</a>.</h3>
     <p><em>illogical-impulse asks "do you really need this?" — Immaterial Impulse asks "but do you <b>want</b> it?"</em></p>
+    <p>English | <a href="README.zh-CN.md">简体中文</a> | <a href="README.ja.md">日本語</a></p>
 </div>
 
 ---
