@@ -378,6 +378,78 @@ Variants {
                 }
             }
 
+            DropArea {
+                id: wallpaperDropArea
+                anchors.fill: parent
+                keys: ["text/uri-list"]
+
+                property var currentUrls: []
+
+                onEntered: (drag) => {
+                    drag.accepted = drag.hasUrls
+                    wallpaperDropArea.currentUrls = drag.hasUrls ? drag.urls : []
+                }
+
+                onExited: {
+                    wallpaperDropArea.currentUrls = []
+                }
+
+                onDropped: (drop) => {
+                    if (!drop.hasUrls) {
+                        drop.accepted = false
+                        wallpaperDropArea.currentUrls = []
+                        return
+                    }
+
+                    if (drop.urls.length === 1) {
+                        const path = CF.FileUtils.trimFileProtocol(decodeURIComponent(drop.urls[0].toString()))
+                        const validExt = /\.(png|jpe?g|webp|bmp|gif|mp4|webm|mkv|avi|mov)$/i.test(path)
+                        if (validExt) {
+                            Wallpapers.select(path, Appearance.m3colors.darkmode)
+                        } else {
+                            const globalPos = wallpaperDropArea.mapToGlobal(drop.x, drop.y)
+                            DropShelf.show(drop.urls, globalPos.x, globalPos.y)
+                        }
+                    } else {
+                        const globalPos = wallpaperDropArea.mapToGlobal(drop.x, drop.y)
+                        DropShelf.show(drop.urls, globalPos.x, globalPos.y)
+                    }
+                    drop.accept()
+                    wallpaperDropArea.currentUrls = []
+                }
+
+                Rectangle {
+                    id: dropOverlay
+                    anchors.fill: parent
+                    visible: wallpaperDropArea.containsDrag
+                    color: CF.ColorUtils.transparentize(Appearance.colors.colPrimary, 0.6)
+
+                    property bool isSingleImage: wallpaperDropArea.currentUrls.length === 1
+                        && /\.(png|jpe?g|webp|bmp|gif|mp4|webm|mkv|avi|mov)$/i.test(
+                            CF.FileUtils.trimFileProtocol(wallpaperDropArea.currentUrls[0].toString())
+                        )
+
+                    ColumnLayout {
+                        anchors.centerIn: parent
+                        spacing: 8
+                        MaterialSymbol {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: dropOverlay.isSingleImage ? "wallpaper" : "stacks"
+                            iconSize: 64
+                            color: Appearance.colors.colOnPrimary
+                        }
+                        StyledText {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: dropOverlay.isSingleImage
+                                ? Translation.tr("Drop to set as wallpaper")
+                                : Translation.tr("Drop to add to shelf")
+                            font.pixelSize: Appearance.font.pixelSize.large
+                            color: Appearance.colors.colOnPrimary
+                        }
+                    }
+                }
+            }
+
             WidgetCanvas {
                 id: widgetCanvas
                 anchors.fill: parent
@@ -525,79 +597,6 @@ Variants {
                         scaledScreenWidth: bgRoot.screen.width
                         scaledScreenHeight: bgRoot.screen.height
                         wallpaperScale: 1
-                    }
-                }
-            }
-
-            DropArea {
-                id: wallpaperDropArea
-                anchors.fill: parent
-                z: 10
-                keys: ["text/uri-list"]
-
-                property var currentUrls: []
-
-                onEntered: (drag) => {
-                    drag.accepted = drag.hasUrls
-                    wallpaperDropArea.currentUrls = drag.hasUrls ? drag.urls : []
-                }
-
-                onExited: {
-                    wallpaperDropArea.currentUrls = []
-                }
-
-                onDropped: (drop) => {
-                    if (!drop.hasUrls) {
-                        drop.accepted = false
-                        wallpaperDropArea.currentUrls = []
-                        return
-                    }
-
-                    if (drop.urls.length === 1) {
-                        const path = CF.FileUtils.trimFileProtocol(decodeURIComponent(drop.urls[0].toString()))
-                        const validExt = /\.(png|jpe?g|webp|bmp|gif|mp4|webm|mkv|avi|mov)$/i.test(path)
-                        if (validExt) {
-                            Wallpapers.select(path, Appearance.m3colors.darkmode)
-                        } else {
-                            const globalPos = wallpaperDropArea.mapToGlobal(drop.x, drop.y)
-                            DropShelf.show(drop.urls, globalPos.x, globalPos.y)
-                        }
-                    } else {
-                        const globalPos = wallpaperDropArea.mapToGlobal(drop.x, drop.y)
-                        DropShelf.show(drop.urls, globalPos.x, globalPos.y)
-                    }
-                    drop.accept()
-                    wallpaperDropArea.currentUrls = []
-                }
-
-                Rectangle {
-                    id: dropOverlay
-                    anchors.fill: parent
-                    visible: wallpaperDropArea.containsDrag
-                    color: CF.ColorUtils.transparentize(Appearance.colors.colPrimary, 0.6)
-
-                    property bool isSingleImage: wallpaperDropArea.currentUrls.length === 1
-                        && /\.(png|jpe?g|webp|bmp|gif|mp4|webm|mkv|avi|mov)$/i.test(
-                            CF.FileUtils.trimFileProtocol(wallpaperDropArea.currentUrls[0].toString())
-                        )
-
-                    ColumnLayout {
-                        anchors.centerIn: parent
-                        spacing: 8
-                        MaterialSymbol {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: dropOverlay.isSingleImage ? "wallpaper" : "stacks"
-                            iconSize: 64
-                            color: Appearance.colors.colOnPrimary
-                        }
-                        StyledText {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: dropOverlay.isSingleImage
-                                ? Translation.tr("Drop to set as wallpaper")
-                                : Translation.tr("Drop to add to shelf")
-                            font.pixelSize: Appearance.font.pixelSize.large
-                            color: Appearance.colors.colOnPrimary
-                        }
                     }
                 }
             }
