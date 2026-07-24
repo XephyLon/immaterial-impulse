@@ -12,6 +12,32 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- Icon pack selector (Settings → Interface): preview-grid cards rendering each
+  theme's real icons, system-wide apply (GTK 3/4 `settings.ini`, `kdeglobals`,
+  gsettings) with validation, and an automatic shell relaunch to adopt the pack.
+- Verified-prebuilt Wallpaper Engine install path: on x86_64 the installer
+  downloads a checksum-verified release tarball (seconds) and falls back to the
+  source build on any mismatch; companion release CI lives in qs-wallpaperengine.
+- Quiet-mode install is now cancellable (Ctrl-C cleanly stops the whole build).
+- Frost mode toggle (tint vs true blur) for plugin backdrops in Settings → Plugins.
+- README: palette showcase screenshots (Green / Study / Red).
+
+### Fixed
+- Multi-second shell freezes on wallpaper/preset switches, root-caused to three
+  compounding issues: Qt's basic render loop on NVIDIA/Wayland blocking the GUI
+  thread on embedded-WE video GL (fixed via `QSG_RENDER_LOOP=threaded` in the WE
+  wrapper); kde-material-you re-applying the unchanged icon theme every switch
+  (dropped `iconslight`/`iconsdark`); and Quickshell rescanning every `.desktop`
+  file on any parent-directory churn, stalling the UI in multi-second QML GC
+  pauses (patched in qs-wallpaperengine's bundled Quickshell). Cycling all four
+  presets went from 11 UI stalls (up to ~4.8 s) to none.
+- MPRIS artwork, favicon, weather, wallpaper-download and AI-request fetches no
+  longer splice external values into `bash -c` strings (command-injection
+  hardening; values now passed as arguments).
+- Cookie clock (and other draggable desktop widgets) follow preset position
+  changes again instead of ignoring them or snapping back while dragging.
+
 ## [0.1.0] — 2026-07-23
 
 First versioned release of the unified suite (the `Immaterial Impulse` fork of
