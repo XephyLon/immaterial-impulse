@@ -289,7 +289,7 @@ progress_loop(){
 }
 
 # Cancel handler for quiet-mode: SIGINT/SIGTERM here means the user pressed
-# Ctrl-C while the (setsid'd) install group was building. TERM the whole group,
+# Ctrl-C while the (job-controlled) install group was building. TERM the whole group,
 # grace, then KILL. Also try the kills under `sudo -n` so root-owned children
 # (an in-flight pacman) go down too — the sudo timestamp is warm from the
 # keepalive. Compiler children (make/ninja/cc) run as the user during the long
@@ -328,14 +328,27 @@ run_quiet_install(){
   clear; banner; printf '\n'
   # --force -> ask=false (no pauses/confirms); </dev/null -> functions.sh x()
   # aborts on failure instead of prompting; all output goes to the log.
-  # setsid: run the install as its OWN process-group leader so a cancel can
-  # take down the whole build tree (make/ninja/cc) via `kill -- -PGID`, and so
-  # terminal Ctrl-C reaches only this script's on_cancel handler (which then
-  # forwards a clean TERM to the group) instead of half-killing the build.
+  #
+  # Run the install as its OWN process-group leader so a cancel can take down the
+  # whole build tree (make/ninja/cc) via `kill -- -PGID`, and so terminal Ctrl-C
+  # reaches only this script's on_cancel handler (which then forwards a clean
+  # TERM to the group) instead of half-killing the build.
+  #
+  # We isolate the group with job control (set -m), NOT setsid: the child must
+  # stay in THIS session so it keeps the controlling terminal. sudo's default
+  # timestamp_type is `tty`, which ties the credential we warmed above (sudo -v)
+  # to this terminal — a setsid-detached child gets a brand-new, tty-less session
+  # and cannot see that credential, so setup's own sudo keepalive aborts with
+  # "a terminal is required to read the password". Backgrounding under `set -m`
+  # still makes the child a process-group leader (PGID == PID) for the cancel
+  # path, while /dev/tty stays reachable so `sudo` re-authenticates silently.
   CANCELLED_INSTALL=0
-  setsid "$SETUP_BIN" install "${INSTALL_FLAGS[@]}" --force </dev/null >"$log" 2>&1 &
+  local had_monitor=1; case "$-" in *m*) : ;; *) had_monitor=0 ;; esac
+  set -m
+  "$SETUP_BIN" install "${INSTALL_FLAGS[@]}" --force </dev/null >"$log" 2>&1 &
   local pid=$!
-  INSTALL_PGID="$pid"                 # setsid makes the child its own group leader (PGID == PID)
+  (( had_monitor )) || set +m         # restore prior state; the child keeps its own group
+  INSTALL_PGID="$pid"                 # job-control backgrounding makes the child its own group leader (PGID == PID)
   trap on_cancel INT TERM
   progress_loop "$pid" "$log"
   wait "$pid"; INSTALL_RET=$?
