@@ -39,11 +39,13 @@ set -euo pipefail
 [[ "${INSTALL_WE:-0}" == "1" ]] || { echo "[ImI] Wallpaper Engine: skipped."; exit 0; }
 
 WE_REPO="${WE_REPO:-https://github.com/XephyLon/qs-wallpaperengine}"
-WE_REF="${WE_REF:-6e17750}"                      # working commit pin; NO prebuilt release exists for it, so installs
+WE_REF="${WE_REF:-a11e083}"                      # working commit pin; NO prebuilt release exists for it, so installs
                                                  # fall back to a source build. MUST be >= 40427cf, the commit that added
                                                  # scripts/build-we.sh (source_build() runs it, and eval's its stdout —
-                                                 # 71dea54 made that eval-safe); the previous a721ef1 pin predated the
-                                                 # script and failed with "scripts/build-we.sh: No such file or directory".
+                                                 # 71dea54 made that eval-safe); a11e083 additionally carries the
+                                                 # bootstrap patch that stops Quickshell rescanning every .desktop file
+                                                 # on parent-dir churn (multi-second QV4 GC freezes per wallpaper switch
+                                                 # without it — the previous 6e17750 pin predated that fix).
                                                  # Bump to a release tag (vX.Y.Z) once one is cut to activate the prebuilt
                                                  # fast-path — see qs-wallpaperengine/docs/cutting-a-release.md.
 BUILD_DIR="${BUILD_DIR:-$HOME/.cache/immaterial-impulse/qs-wallpaperengine-build}"
