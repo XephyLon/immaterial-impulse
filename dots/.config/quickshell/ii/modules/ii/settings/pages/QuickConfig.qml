@@ -114,7 +114,12 @@ ContentPage {
                         sourceSize.width: 420
                         sourceSize.height: 280
                         fillMode: Image.PreserveAspectCrop
-                        source: WallpaperEngine.activeArtwork
+                        // WE-aware artwork; a video wallpaper falls back to its
+                        // generated thumbnail (a raw video path can't render in
+                        // an Image) - upstream vb.
+                        source: /\.(mp4|webm|mkv|avi|mov)$/i.test(WallpaperEngine.activeArtwork)
+                            ? Config.options.background.thumbnailPath
+                            : WallpaperEngine.activeArtwork
                         cache: false
                         layer.enabled: true
                         layer.effect: OpacityMask {

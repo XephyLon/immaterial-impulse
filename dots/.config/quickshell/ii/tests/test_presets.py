@@ -111,13 +111,16 @@ class PresetTests(unittest.TestCase):
 
     def test_plugin_state_exposes_atomic_snapshot_replace_contract(self):
         state = (ROOT / "modules/common/plugins/PluginState.qml").read_text()
-        profile = (ROOT / "modules/ii/settings/pages/Profile.qml").read_text()
+        # Preset save/apply/remove moved from Profile.qml into the
+        # services/Presets.qml singleton in the upstream "pf" refactor; the
+        # snapshot-passing contract lives there now.
+        presets_service = (ROOT / "services/Presets.qml").read_text()
 
         self.assertIn("function snapshot()", state)
         self.assertIn("function replaceSnapshot(text)", state)
         self.assertIn("writeTimer.stop()", state)
         self.assertIn('target: "pluginState"', state)
-        self.assertIn("PluginState.snapshot()", profile)
+        self.assertIn("PluginState.snapshot()", presets_service)
         self.assertIn("ipc call pluginState replace", PRESETS.read_text())
 
     def test_position_only_preset_keeps_current_plugin_options(self):

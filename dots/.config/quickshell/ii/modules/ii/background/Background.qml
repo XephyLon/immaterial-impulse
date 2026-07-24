@@ -91,6 +91,7 @@ Variants {
         required property var modelData
         property string currentWallpaperSource: Config.options.background.wallpaperPath
         property string previousWallpaperSource: Config.options.background.wallpaperPath
+        property bool videoRevealed: false
 
         //centered Wallpaper
         property bool centeredWallpaperEnabled: Config.options.background.centeredWallpaper && (!Config.options.background.centeredWallpaperOnlyWhenLocked || GlobalStates.screenLocked)
@@ -293,6 +294,7 @@ Variants {
                     ? bgRoot.shaderList[Math.floor(Math.random() * bgRoot.shaderList.length)]
                     : bgRoot.wallpaperAnimation
             }
+            bgRoot.videoRevealed = bgRoot.wallpaperIsVideo
         }
 
         onWallpaperPathChanged: {
@@ -303,6 +305,7 @@ Variants {
             // clear the sources belonging to this newer request.
             transitionAnim.stop()
             const generation = ++bgRoot.wallpaperTransitionGeneration
+            bgRoot.videoRevealed = false
             if (wallpaperSafetyTriggered) {
                 previousWallpaper.source = ""
                 wallpaper.source = ""
@@ -312,6 +315,8 @@ Variants {
             if (bgRoot.wallpaperAnimation === "") {
                 wallpaper.source = wallpaperPath
                 bgRoot.currentWallpaperSource = wallpaperPath
+                if (!bgRoot.wallpaperIsVideo) return
+                bgRoot.videoRevealed = true
                 return
             }
 
@@ -343,6 +348,7 @@ Variants {
                 previousWallpaper.source = ""
                 bgRoot.previousWallpaperSource = ""
                 bgRoot.transitionProgress = 1.0
+                bgRoot.videoRevealed = bgRoot.wallpaperIsVideo
             }
         }
 
@@ -354,6 +360,15 @@ Variants {
             onTriggered: {
                 if (Wallpapers.folderModel.count > 0) {
                     Wallpapers.randomFromCurrentFolder()
+                }
+            }
+        }
+
+        Connections {
+            target: GlobalStates
+            function onScreenLockedChanged() {
+                if (!GlobalStates.screenLocked) {
+                    bgRoot.videoRevealed = bgRoot.wallpaperIsVideo
                 }
             }
         }
@@ -447,7 +462,7 @@ Variants {
                 asynchronous: true
                 layer.enabled: bgRoot.wallpaperAnimation !== ""
                     && bgRoot.transitionProgress < 1
-                visible: !bgRoot.weShown && bgRoot.wallpaperAnimation === "" && !blurLoader.active && !bgRoot.centeredWallpaperEnabled
+                visible: !bgRoot.weShown && bgRoot.wallpaperAnimation === "" && !blurLoader.active && !bgRoot.centeredWallpaperEnabled && !bgRoot.videoRevealed
                 onStatusChanged: {
                     if (status === Image.Ready && bgRoot.transitionProgress === 0.0) {
                         transitionAnim.restart()
@@ -458,7 +473,7 @@ Variants {
             ShaderEffect {
                 id: transitionEffect
                 anchors.fill: parent
-                visible: !bgRoot.weShown && !blurLoader.active && bgRoot.wallpaperAnimation !== "" && !bgRoot.centeredWallpaperEnabled
+                visible: !bgRoot.weShown && !blurLoader.active && bgRoot.wallpaperAnimation !== "" && !bgRoot.centeredWallpaperEnabled && !bgRoot.videoRevealed
                 property var fromImage: previousWallpaper
                 property var toImage: wallpaper
                 property real progress: bgRoot.transitionProgress
@@ -606,6 +621,78 @@ Variants {
                     antialiasing: true
                     sourceSize.width: parent.width
                     sourceSize.height: parent.height
+                }
+            }
+
+            DropArea {
+                id: wallpaperDropArea
+                anchors.fill: parent
+                keys: ["text/uri-list"]
+
+                property var currentUrls: []
+
+                onEntered: (drag) => {
+                    drag.accepted = drag.hasUrls
+                    wallpaperDropArea.currentUrls = drag.hasUrls ? drag.urls : []
+                }
+
+                onExited: {
+                    wallpaperDropArea.currentUrls = []
+                }
+
+                onDropped: (drop) => {
+                    if (!drop.hasUrls) {
+                        drop.accepted = false
+                        wallpaperDropArea.currentUrls = []
+                        return
+                    }
+
+                    if (drop.urls.length === 1) {
+                        const path = CF.FileUtils.trimFileProtocol(decodeURIComponent(drop.urls[0].toString()))
+                        const validExt = /\.(png|jpe?g|webp|bmp|gif|mp4|webm|mkv|avi|mov)$/i.test(path)
+                        if (validExt) {
+                            Wallpapers.select(path, Appearance.m3colors.darkmode)
+                        } else {
+                            const globalPos = wallpaperDropArea.mapToGlobal(drop.x, drop.y)
+                            DropShelf.show(drop.urls, globalPos.x, globalPos.y)
+                        }
+                    } else {
+                        const globalPos = wallpaperDropArea.mapToGlobal(drop.x, drop.y)
+                        DropShelf.show(drop.urls, globalPos.x, globalPos.y)
+                    }
+                    drop.accept()
+                    wallpaperDropArea.currentUrls = []
+                }
+
+                Rectangle {
+                    id: dropOverlay
+                    anchors.fill: parent
+                    visible: wallpaperDropArea.containsDrag
+                    color: CF.ColorUtils.transparentize(Appearance.colors.colPrimary, 0.6)
+
+                    property bool isSingleImage: wallpaperDropArea.currentUrls.length === 1
+                        && /\.(png|jpe?g|webp|bmp|gif|mp4|webm|mkv|avi|mov)$/i.test(
+                            CF.FileUtils.trimFileProtocol(wallpaperDropArea.currentUrls[0].toString())
+                        )
+
+                    ColumnLayout {
+                        anchors.centerIn: parent
+                        spacing: Appearance.spacing.space100
+                        MaterialSymbol {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: dropOverlay.isSingleImage ? "wallpaper" : "stacks"
+                            iconSize: 64
+                            color: Appearance.colors.colOnPrimary
+                        }
+                        StyledText {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: dropOverlay.isSingleImage
+                                ? Translation.tr("Drop to set as wallpaper")
+                                : Translation.tr("Drop to add to shelf")
+                            font.pixelSize: Appearance.font.pixelSize.large
+                            color: Appearance.colors.colOnPrimary
+                        }
+                    }
                 }
             }
 
@@ -806,6 +893,7 @@ Variants {
                     }
                 }
             }
+
             MouseArea {
                 id: desktopRightClickArea
                 anchors.fill: parent

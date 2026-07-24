@@ -182,7 +182,12 @@ class WallpaperEngineSelectionServiceTests(unittest.TestCase):
 
         self.assertIn("readonly property string activeArtwork:", service)
         self.assertIn("we.activePreview || Config.options.background.wallpaperPath", service)
-        self.assertIn("source: WallpaperEngine.activeArtwork", quick)
+        # Since the upstream "vb" merge the preview routes activeArtwork through
+        # a video->thumbnail fallback (a raw video path can't render in an
+        # Image), so assert the WE-artwork source plus the fallback rather than
+        # the old bare binding.
+        self.assertIn("? Config.options.background.thumbnailPath", quick)
+        self.assertIn(": WallpaperEngine.activeArtwork", quick)
         self.assertGreaterEqual(background.count("WallpaperEngine.activeArtwork"), 2)
 
     def test_quick_palette_changes_reuse_active_artwork(self):

@@ -37,6 +37,12 @@ ContentPage {
         }
     }
 
+    function displayPathFor(path) {
+        return /\.(mp4|webm|mkv|avi|mov)$/i.test(path)
+            ? Config.options.background.thumbnailPath
+            : path
+    }
+
     ColumnLayout {
         id: mainLayout 
         Layout.fillWidth: true   
@@ -75,11 +81,17 @@ ContentPage {
                             GlobalStates.wallpaperSelectorTarget = index === 1 ? "lockWall" : "wallpaper"
                             GlobalStates.wallpaperSelectorOpen = true
                         }
+                        // WE-aware artwork (engine preview when a WE project is
+                        // active), routed through displayPathFor so a video
+                        // wallpaper shows its generated thumbnail instead of a
+                        // non-renderable video path (upstream vb).
                         model: [
-                            WallpaperEngine.activeArtwork,
-                            Config.options.background.lockWall !== ""
-                                ? Config.options.background.lockWall
-                                : WallpaperEngine.activeArtwork
+                            page.displayPathFor(WallpaperEngine.activeArtwork),
+                            page.displayPathFor(
+                                Config.options.background.lockWall !== ""
+                                    ? Config.options.background.lockWall
+                                    : WallpaperEngine.activeArtwork
+                            )
                         ]
                     }
 

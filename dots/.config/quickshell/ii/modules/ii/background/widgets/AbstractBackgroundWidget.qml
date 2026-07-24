@@ -37,38 +37,28 @@ AbstractWidget {
     function clampY(v) { return Math.max(0, Math.min(v, scaledScreenHeight - height)); }
 
     onReleased: {
-        // Pin targetX/targetY to the drop position EXPLICITLY (not by reading
-        // configEntry back - that value can still be stale this instant and would
-        // animate the widget back to where it was), then re-bind x/y to them. The
-        // drag Binding uses restoreMode RestoreNone, so it leaves x/y as frozen
-        // plain values once the drag ends; rebinding is what lets a later external
-        // config change (loading a preset) move the widget again - see the
-        // Connections below that drives targetX/targetY from external edits.
-        root.targetX = root.x;
-        root.targetY = root.y;
+        // Write configEntry FIRST, then rebind targetX/targetY THROUGH it (the
+        // binding reads the fresh value, so the widget doesn't snap back to the
+        // pre-drag position). Binding through configEntry means an external
+        // config change - loading a preset, importing settings - moves the
+        // widget with no extra plumbing (upstream's approach, superseding the
+        // earlier explicit-pin + Connections version).
+        //
+        // configEntry is undefined for widgets whose configEntryName isn't a
+        // pre-declared key under Config.options.background.widgets (e.g. plugin
+        // widgets, whose dynamic per-plugin/per-monitor positions are persisted
+        // by PluginState.qml instead) - those keep a plain pinned position.
+        if (configEntry) {
+            configEntry.x = root.x;
+            configEntry.y = root.y;
+            root.targetX = Qt.binding(() => root.clampX(configEntry.x));
+            root.targetY = Qt.binding(() => root.clampY(configEntry.y));
+        } else {
+            root.targetX = root.x;
+            root.targetY = root.y;
+        }
         root.x = Qt.binding(() => root.targetX);
         root.y = Qt.binding(() => root.targetY);
-        // configEntry is undefined for widgets whose configEntryName isn't a pre-declared
-        // key under Config.options.background.widgets (e.g. plugin widgets, whose dynamic
-        // per-plugin/per-monitor positions are persisted by PluginState.qml instead).
-        if (configEntry) {
-            configEntry.x = root.targetX;
-            configEntry.y = root.targetY;
-        }
-    }
-
-    // Once the widget has been dragged, onReleased pins targetX/targetY (severing
-    // their initial binding to configEntry.x/y), so an EXTERNAL config change -
-    // loading a preset, importing settings - would otherwise never reach the
-    // widget. Re-apply the clamped config position whenever configEntry.x/y change
-    // from the outside. On a self-write from onReleased this just re-sets the same
-    // value (harmless); on a preset load it moves the widget (animated by the
-    // Behavior on x/y).
-    Connections {
-        target: root.configEntry ?? null
-        ignoreUnknownSignals: true
-        function onXChanged() { root.targetX = root.clampX(root.configEntry.x); }
-        function onYChanged() { root.targetY = root.clampY(root.configEntry.y); }
     }
 
     property bool needsColText: false
