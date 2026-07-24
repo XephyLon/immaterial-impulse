@@ -38,97 +38,113 @@ set -euo pipefail
 
 [[ "${INSTALL_WE:-0}" == "1" ]] || { echo "[ImI] Wallpaper Engine: skipped."; exit 0; }
 
-echo "[ImI] Wallpaper Engine: building qs-wallpaperengine (this can take a while)..."
-
 WE_REPO="${WE_REPO:-https://github.com/XephyLon/qs-wallpaperengine}"
-WE_REF="${WE_REF:-a721ef1}"                     # pinned qs-wallpaperengine rev (bootstrap QS_COMMIT->e649d247 for cmake 4.4); bump to its v0.1.0 tag once released
+WE_REF="${WE_REF:-v0.1.0}"                       # release tag; installer prefers the prebuilt for this tag
 BUILD_DIR="${BUILD_DIR:-$HOME/.cache/immaterial-impulse/qs-wallpaperengine-build}"
-JOBS="${WE_BUILD_JOBS:-$(nproc)}"
+PREBUILT_ROOT="${PREBUILT_ROOT:-$HOME/.cache/immaterial-impulse/prebuilt}"
+PREFIX="${WE_INSTALL_PREFIX:-/usr/local}"        # install root; binaries land in $PREFIX/bin (prod: /usr/local/bin, shadows distro qs)
+OPT_LIBS="/opt/linux-wallpaperengine/lib:/opt/linux-wallpaperengine"
 
-# --- 1. Fetch/update the qs-wallpaperengine toolchain repo -----------------
-# Reuse an existing clone across re-runs instead of `rm -rf`ing it: the nested
-# build/ dirs it creates below (linux-wallpaperengine + Quickshell) are
-# themselves reused by bootstrap.sh (its clone_at() only clones if missing),
-# so keeping BUILD_DIR around lets ninja/make do incremental rebuilds on
-# repeat installs instead of rebuilding both upstreams from scratch every time.
-if [[ -d "$BUILD_DIR/.git" ]]; then
-  git -C "$BUILD_DIR" fetch --all --tags
-  git -C "$BUILD_DIR" checkout "$WE_REF"
-  git -C "$BUILD_DIR" pull --ff-only origin "$WE_REF" 2>/dev/null || true
-else
-  mkdir -p "$(dirname "$BUILD_DIR")"
-  git clone "$WE_REPO" "$BUILD_DIR"
-  git -C "$BUILD_DIR" checkout "$WE_REF"
-fi
+say(){ echo "[ImI] Wallpaper Engine: $*"; }
+# sudo unless we're installing under a test prefix
+maybe_sudo(){ if [[ "$PREFIX" == "/usr/local" ]]; then sudo "$@"; else "$@"; fi; }
+verlte(){ [[ "$1" == "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" ]]; }
 
-cd "$BUILD_DIR"
-
-# --- 2. Clone+patch both upstreams (per bootstrap.sh) -----------------------
-bash ./bootstrap.sh
-
-WE_SRC="$BUILD_DIR/build/linux-wallpaperengine"
-QS_SRC="$BUILD_DIR/build/quickshell"
-
-# bootstrap.sh exports these for its own (commented-out) cmake invocations;
-# re-export them here since that export dies with bootstrap.sh's subshell.
-export WALLPAPERENGINE_SRC="$WE_SRC/src"
-
-# --- 3. Build linux-wallpaperengine (the FBO-driver lib) --------------------
-# Commands per bootstrap.sh's [1/4] section (commented there pending manual
-# TODO iteration on the FBO driver; run for real here).
-cmake -S "$WE_SRC" -B "$WE_SRC/build" -DCMAKE_BUILD_TYPE=Release
-cmake --build "$WE_SRC/build" -j"$JOBS"
-
-# --- 4. Build the patched Quickshell -----------------------------------
-# Commands per bootstrap.sh's [3/4] section. Configured into `build2`, not
-# `build`: see the note at the top of this file for why. All the service
-# plugins end4-pC's shell.qml needs are turned on in this one fresh configure.
-#
-# Use the Ninja generator (like the stock immaterial-impulse-quickshell-git
-# PKGBUILD). Under cmake 4.4 the default Unix Makefiles generator mis-handles
-# Quickshell's qt_add_dbus_interface generated sources across subdirs and dies
-# with "No rule to make target src/dbus/dbus_objectmanager.cpp"; Ninja builds
-# them cleanly. rm -rf build2 first so a stale Makefiles-configured dir doesn't
-# block the generator switch.
-rm -rf "$QS_SRC/build2"
-# The WE module (src/wallpaperengine/CMakeLists.txt) reads WALLPAPERENGINE_SRC
-# for its include dir (and derives WALLPAPERENGINE_BUILD from it for the lib) —
-# NOT the WALLPAPERENGINE_INCLUDE_DIR name this step used to pass, which the
-# module ignored, so it fell back to a non-existent default and wethread.cpp
-# couldn't find <WallpaperEngine/Application/ApplicationContext.h>. Pass the
-# real names.
-cmake -GNinja -S "$QS_SRC" -B "$QS_SRC/build2" -DCMAKE_BUILD_TYPE=Release \
-  -DWALLPAPERENGINE_SRC="$WE_SRC/src" -DWALLPAPERENGINE_BUILD="$WE_SRC/build" \
-  -DSERVICE_MPRIS=ON -DSERVICE_NOTIFICATIONS=ON -DSERVICE_PAM=ON \
-  -DSERVICE_PIPEWIRE=ON -DSERVICE_POLKIT=ON -DSERVICE_STATUS_NOTIFIER=ON \
-  -DSERVICE_UPOWER=ON -DBLUETOOTH=ON
-cmake --build "$QS_SRC/build2" -j"$JOBS"
-
-QS_BIN="$QS_SRC/build2/src/quickshell"
-WE_LIB_DIR="$WE_SRC/build/output"
-
-if [[ ! -x "$QS_BIN" ]]; then
-  echo "[ImI] Wallpaper Engine: build finished but $QS_BIN is missing/not executable. Aborting install." >&2
-  exit 1
-fi
-
-# --- 5. Install a wrapper that shadows the distro quickshell/qs on PATH -----
-# See the top-of-file note: a bare binary copy would miss the WE runtime libs
-# (own libEGL/libGLESv2/libcef/libvk_swiftshader in build/output, plus the
-# system linux-wallpaperengine-git package's /opt install), so LD_LIBRARY_PATH
-# has to be set at launch time. Matches launch-shell.sh's env exactly.
-WRAPPER_TMP="$(mktemp)"
-cat > "$WRAPPER_TMP" <<WRAPPER
+# Install the LD_LIBRARY_PATH wrapper + `qs` symlink. $1=quickshell binary, $2=lib dir.
+install_wrapper(){
+  local qs_bin="$1" lib_dir="$2"
+  local tmp; tmp="$(mktemp)"
+  cat > "$tmp" <<WRAPPER
 #!/usr/bin/env bash
-# Installed by immaterial-impulse's 4.wallpaperengine.sh. Runs the
-# WE-capable Quickshell build from $BUILD_DIR with the linux-wallpaperengine
-# runtime libs on LD_LIBRARY_PATH (own build output + the system package's
-# /opt install), then execs it with whatever args it was called with.
-export LD_LIBRARY_PATH="$WE_LIB_DIR:/opt/linux-wallpaperengine/lib:/opt/linux-wallpaperengine\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
-exec "$QS_BIN" "\$@"
+# Installed by immaterial-impulse's 4.wallpaperengine.sh. Runs the WE-capable
+# Quickshell build with the linux-wallpaperengine runtime libs on
+# LD_LIBRARY_PATH (bundled build output + the system package's /opt install).
+export LD_LIBRARY_PATH="$lib_dir:$OPT_LIBS\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
+exec "$qs_bin" "\$@"
 WRAPPER
-sudo install -Dm755 "$WRAPPER_TMP" /usr/local/bin/quickshell
-sudo ln -sf /usr/local/bin/quickshell /usr/local/bin/qs
-rm -f "$WRAPPER_TMP"
+  maybe_sudo install -Dm755 "$tmp" "$PREFIX/bin/quickshell"
+  maybe_sudo ln -sf "$PREFIX/bin/quickshell" "$PREFIX/bin/qs"
+  rm -f "$tmp"
+  say "installed a WE-capable quickshell wrapper to $PREFIX/bin (shadows the distro package on PATH)."
+}
 
-echo "[ImI] Wallpaper Engine: installed a WE-capable quickshell wrapper to /usr/local/bin (shadows the distro package on PATH)."
+# Try the prebuilt release for $WE_REF. Return 0 if installed, 1 to fall back.
+try_prebuilt(){
+  [[ "${WE_FORCE_SOURCE:-0}" == "1" ]] && return 1
+  local arch; arch="$(uname -m)"
+  [[ "$arch" == "x86_64" ]] || { say "prebuilt: arch $arch unsupported; building from source."; return 1; }
+  [[ "$WE_REF" =~ ^[A-Za-z0-9._-]+$ ]] || { say "prebuilt: bad ref; building from source."; return 1; }
+
+  local work; work="$(mktemp -d)"
+  local tarball="qs-wallpaperengine-${WE_REF}-x86_64.tar.zst"
+  if [[ -n "${WE_PREBUILT_DIR:-}" ]]; then
+    cp "$WE_PREBUILT_DIR/$tarball" "$WE_PREBUILT_DIR/manifest.json" \
+       "$WE_PREBUILT_DIR/SHA256SUMS" "$work/" 2>/dev/null \
+       || { say "prebuilt: fixture incomplete; building from source."; rm -rf "$work"; return 1; }
+  else
+    local base="${WE_PREBUILT_BASE_URL:-$WE_REPO/releases/download}"
+    curl -fsSL "$base/$WE_REF/manifest.json" -o "$work/manifest.json" 2>/dev/null \
+      && curl -fsSL "$base/$WE_REF/SHA256SUMS" -o "$work/SHA256SUMS" 2>/dev/null \
+      && curl -fsSL "$base/$WE_REF/$tarball"   -o "$work/$tarball"   2>/dev/null \
+      || { say "prebuilt: no release for $WE_REF; building from source."; rm -rf "$work"; return 1; }
+  fi
+
+  if ! ( cd "$work" && sha256sum -c SHA256SUMS >/dev/null 2>&1 ); then
+    say "prebuilt: checksum mismatch; building from source."; rm -rf "$work"; return 1
+  fi
+
+  local qt_min host_qt
+  qt_min="$(sed -n 's/.*"qt_min"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$work/manifest.json")"
+  local man_arch
+  man_arch="$(sed -n 's/.*"arch"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$work/manifest.json")"
+  [[ -z "$man_arch" || "$man_arch" == "$arch" ]] || { say "prebuilt: arch $man_arch != $arch; building from source."; rm -rf "$work"; return 1; }
+  host_qt="$(pacman -Q qt6-base 2>/dev/null | awk '{print $2}')"
+  if [[ -n "$qt_min" && -n "$host_qt" ]] && ! verlte "$qt_min" "$host_qt"; then
+    say "prebuilt: host Qt $host_qt < build Qt $qt_min; building from source."; rm -rf "$work"; return 1
+  fi
+
+  local dest="$PREBUILT_ROOT/$WE_REF"
+  rm -rf "$dest"; mkdir -p "$dest"
+  tar --use-compress-program=unzstd -xf "$work/$tarball" -C "$dest" \
+    || { say "prebuilt: extract failed; building from source."; rm -rf "$work" "$dest"; return 1; }
+  rm -rf "$work"
+
+  local qs_bin="$dest/bin/quickshell" lib="$dest/lib"
+  [[ -x "$qs_bin" ]] || { say "prebuilt: binary missing; building from source."; return 1; }
+  if [[ "${WE_SKIP_OPT_CHECK:-0}" != "1" && ! -d /opt/linux-wallpaperengine ]]; then
+    say "prebuilt: /opt/linux-wallpaperengine runtime not installed; building from source."; return 1
+  fi
+  if ! LD_LIBRARY_PATH="$lib:$OPT_LIBS" "$qs_bin" --version >/dev/null 2>&1; then
+    say "prebuilt: smoke test failed; building from source."; return 1
+  fi
+
+  install_wrapper "$qs_bin" "$lib"
+  say "installed prebuilt $WE_REF (skipped the ~compile)."
+  return 0
+}
+
+# Source build: clone/update the toolchain repo, then delegate the compile to
+# the repo's own build-we.sh (shared with CI).
+source_build(){
+  if [[ "${WE_NO_SOURCE_FALLBACK:-0}" == "1" ]]; then
+    say "prebuilt unavailable and source fallback disabled (test mode)."; exit 1
+  fi
+  say "building qs-wallpaperengine from source (this can take a while)..."
+  if [[ -d "$BUILD_DIR/.git" ]]; then
+    git -C "$BUILD_DIR" fetch --all --tags
+    git -C "$BUILD_DIR" checkout "$WE_REF"
+    git -C "$BUILD_DIR" pull --ff-only origin "$WE_REF" 2>/dev/null || true
+  else
+    mkdir -p "$(dirname "$BUILD_DIR")"
+    git clone "$WE_REPO" "$BUILD_DIR"
+    git -C "$BUILD_DIR" checkout "$WE_REF"
+  fi
+  local paths QS_BIN WE_LIB_DIR
+  paths="$(REPO_ROOT="$BUILD_DIR" bash "$BUILD_DIR/scripts/build-we.sh")"
+  eval "$paths"
+  [[ -x "$QS_BIN" ]] || { say "build finished but $QS_BIN missing. Aborting." >&2; exit 1; }
+  install_wrapper "$QS_BIN" "$WE_LIB_DIR"
+}
+
+if try_prebuilt; then exit 0; fi
+source_build
