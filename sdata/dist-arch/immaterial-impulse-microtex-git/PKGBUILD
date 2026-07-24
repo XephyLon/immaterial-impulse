@@ -2,13 +2,23 @@ groups=(immaterial-impulse)
 pkgname=immaterial-impulse-microtex-git
 _pkgname=MicroTeX
 pkgver=r494.0e3707f
-pkgrel=4
+pkgrel=5
 pkgdesc='MicroTeX for Immaterial Impulse dotfiles.'
 #pkgdesc="A dynamic, cross-platform, and embeddable LaTeX rendering library"
 arch=("x86_64")
 #url="https://github.com/NanoMichael/${_pkgname}"
 url="https://github.com/end-4/${_pkgname}"
 license=('MIT')
+# Supersede the upstream illogical-impulse packages. This builds the same
+# /opt/MicroTeX tree — and, via makepkg's split debug package, the same
+# /usr/lib/debug/opt/MicroTeX files — as illogical-impulse-microtex-git and
+# illogical-impulse-microtex-git-debug. Without conflict metadata pacman aborts
+# with "exists in filesystem (owned by illogical-impulse-microtex-git)". List
+# BOTH packages (the auto-generated -debug split does not inherit the main
+# package's conflicts) so pacman removes them in the same transaction before
+# extracting ours. Mirrors immaterial-impulse-bibata-* (a -bin, hence no -debug).
+conflicts=("illogical-impulse-microtex-git" "illogical-impulse-microtex-git-debug")
+replaces=("illogical-impulse-microtex-git" "illogical-impulse-microtex-git-debug")
 depends=(
   tinyxml2
   gtkmm3
