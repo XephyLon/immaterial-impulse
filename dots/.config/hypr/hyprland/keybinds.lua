@@ -93,13 +93,15 @@ hl.bind("SUPER + SHIFT + ALT + R", hl.dsp.exec_cmd(qsScripts .. "/videos/record.
     { locked = true, description = "Utilities: Record screen (with sound)" })
 --# Fullscreen screenshot
 local grimhyprctl = "grim -o \"$(hyprctl activeworkspace -j | jq -r '.monitor')\""
-hl.bind("Print", hl.dsp.exec_cmd(grimhyprctl .. " - | wl-copy"),
+local shotTmp = "f=\"/tmp/quickshell/media/screenshot/full-$(date '+%s%N').png\"; mkdir -p \"${f%/*}\"; "
+hl.bind("Print", hl.dsp.exec_cmd(
+    shotTmp .. grimhyprctl .. " \"$f\" && wl-copy < \"$f\" && (qs -c ii ipc call screenshot notify \"$f\" || true)"),
     { locked = true, description = "Utilities: Screenshot >> clipboard" })
 hl.bind("CTRL + Print", hl.dsp.exec_cmd(
-    "mkdir -p $(xdg-user-dir PICTURES)/Screenshots && " ..
-    grimhyprctl .. " $(xdg-user-dir PICTURES)/Screenshots/Screenshot_\"$(date '+%Y-%m-%d_%H.%M.%S')\".png"
+    "d=\"$(xdg-user-dir PICTURES)/Screenshots\"; mkdir -p \"$d\"; " ..
+    "f=\"$d/Screenshot_$(date '+%Y-%m-%d_%H.%M.%S').png\"; " ..
+    grimhyprctl .. " \"$f\" && wl-copy < \"$f\" && (qs -c ii ipc call screenshot notify \"$f\" || true)"
 ), { locked = true, non_consuming = true, description = "Utilities: Screenshot >> clipboard & file" })
-hl.bind("CTRL + Print", hl.dsp.exec_cmd(grimhyprctl .. " - | wl-copy"), { locked = true, non_consuming = true })
 --# AI
 hl.bind("SUPER + SHIFT + ALT + mouse:273", hl.dsp.exec_cmd(hyprScripts .. "/ai/primary-buffer-query.sh"),
     { description = "Utilities: Generate AI summary for selected text" })
