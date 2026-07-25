@@ -135,7 +135,8 @@ modules/common/             Shared, feature-agnostic building blocks
   widgets/                   Shared UI components: StyledText, StyledComboBox, StyledSlider,
                               StyledToolTip(+Content), RippleButton, MaterialSymbol, ResourceCard,
                               PopupToolTip, StyledPopup, GroupedList, ConfigSwitch/ConfigSpinBox/
-                              ConfigSelectionArray (settings-page form controls), etc.
+                              ConfigSelectionArray (settings-page form controls), DockIconMotion
+                              (M3E feedback-motion wrapper for dock icons), etc.
   functions/, models/, utils/, panels/   Supporting JS logic, list models, window-panel base classes
 
 modules/ii/                 The "ii" (Immaterial Impulse) panel family - one directory per feature:
@@ -491,7 +492,9 @@ Shared building blocks to reach for before writing something from scratch: `Styl
 `StyledComboBox`/`StyledComboBoxSearch`, `StyledSlider`, `StyledToolTip`/`StyledToolTipContent`,
 `RippleButton`, `MaterialSymbol`, `ResourceCard`, `GroupedList` + `ConfigSwitch`/`ConfigSpinBox`/
 `ConfigSelectionArray`/`ConfigComboBox`/`ConfigTextArea` (settings rows), `StyledPopup`,
-`StyledRectangularShadow`. All in `modules/common/widgets/`.
+`StyledRectangularShadow`, `DockIconMotion` (wraps a dock icon's visuals with hover-lift /
+press-squish / launch-bounce / appear-pop feedback, driven by `services/DockLaunchTracker`).
+All in `modules/common/widgets/`.
 
 `ConfigTextArea` is the text-entry counterpart to `ConfigSwitch` (icon + label/description on the
 left, a bordered `TextArea` field on the right) and is the standard single-line settings field -
