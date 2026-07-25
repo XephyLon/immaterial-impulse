@@ -32,6 +32,14 @@ own repo; the installer pins which revision it builds.
   icons, and springing active-window dots — consistent across pinned and
   running apps, all on Appearance motion tokens.
 
+- Test coverage sweep: 16 new suites covering the installer's destructive
+  paths (rsync --delete sandboxing, legacy package removal, cancel traps),
+  the color pipeline (lock/desktop palette parity, scheme detection,
+  generator goldens), the keybind cheatsheet parser, momentum scrolling,
+  and always-on services (Battery, Bluetooth, Updates, Brightness,
+  SystemInfo, ConflictKiller, Polkit, Ydotool) - plus three previously
+  orphaned suites now actually running in CI.
+
 ### Fixed
 - Lock-screen palette could differ from the desktop's for the same image: lock
   color generation passed `--smart` (silently swapping the configured scheme to
