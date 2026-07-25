@@ -46,23 +46,31 @@ Scope {
 
     function saveCurrent() {
         if (root.currentPath === "") return;
-        // Path rides as $2; the script text is a fixed string.
+        // Path rides as $2, the scratch flag as $3; the script text is a
+        // fixed string. Scratch cleanup runs INSIDE the same script, strictly
+        // after a successful copy - a separately spawned detached rm would
+        // race the cp and could unlink the source before it is even opened.
         Quickshell.execDetached(["bash", "-c",
             'd="$1/Screenshots"; mkdir -p "$d"; ' +
             'n="$d/Screenshot_$(date +%Y-%m-%d_%H.%M.%S).png"; ' +
             'while [ -e "$n" ]; do n="${n%.png}_$RANDOM.png"; done; ' +
-            'cp -n -- "$2" "$n"',
-            "_", FileUtils.trimFileProtocol(Directories.pictures), root.currentPath]);
-        root.releaseCurrent();
+            'cp -n -- "$2" "$n" && [ "$3" = "1" ] && rm -f -- "$2"',
+            "_", FileUtils.trimFileProtocol(Directories.pictures), root.currentPath,
+            root.fileIsScratch ? "1" : "0"]);
+        // Deletion (when due) is the script's job - just close.
+        root.currentPath = "";
     }
 
     function editCurrent() {
-        if (root.currentPath === "" || root.editorBinary === "") return;
-        const args = root.editorBinary.endsWith("satty")
-            ? [root.editorBinary, "--filename", root.currentPath]
-            : [root.editorBinary, "-f", root.currentPath];
         const custom = Config.options.screenshotResult?.editorCommand ?? [];
-        Quickshell.execDetached(custom.length > 0 ? custom.concat([root.currentPath]) : args);
+        if (root.currentPath === "" || (root.editorBinary === "" && custom.length === 0)) return;
+        // A configured custom editor wins and needs no probed binary.
+        const args = custom.length > 0
+            ? custom.concat([root.currentPath])
+            : (root.editorBinary.endsWith("satty")
+                ? [root.editorBinary, "--filename", root.currentPath]
+                : [root.editorBinary, "-f", root.currentPath]);
+        Quickshell.execDetached(args);
         // The editor needs the file - close without deleting.
         root.currentPath = "";
     }
@@ -177,6 +185,7 @@ Scope {
                         }
                         RippleButton {
                             visible: root.editorBinary !== ""
+                                || (Config.options.screenshotResult?.editorCommand ?? []).length > 0
                             buttonRadius: Appearance.rounding.normal
                             implicitWidth: 44; implicitHeight: 44
                             onClicked: root.editCurrent()
