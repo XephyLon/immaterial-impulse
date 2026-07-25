@@ -189,6 +189,84 @@ if ! python3 "$SCRIPT_DIR/test_wallpaperengine_prebuilt.py"; then
     exit 1
 fi
 
+echo "Running keybind cheatsheet parser tests..."
+if ! python3 "$SCRIPT_DIR/test_get_keybinds.py"; then
+    echo "keybind cheatsheet parser tests failed."
+    exit 1
+fi
+
+echo "Running momentum scroll contract tests..."
+if ! python3 "$SCRIPT_DIR/test_momentum_scroll_contract.py"; then
+    echo "momentum scroll contract tests failed."
+    exit 1
+fi
+
+echo "Running lock palette parity tests..."
+if ! python3 "$SCRIPT_DIR/test_lock_palette_parity.py"; then
+    echo "lock palette parity tests failed."
+    exit 1
+fi
+
+echo "Running scheme detection tests..."
+if ! python3 "$SCRIPT_DIR/test_scheme_for_image.py"; then
+    echo "scheme detection tests failed."
+    exit 1
+fi
+
+echo "Running color generator tests..."
+if ! python3 "$SCRIPT_DIR/test_generate_colors_material.py"; then
+    echo "color generator tests failed."
+    exit 1
+fi
+
+echo "Running installer file sync tests..."
+if ! python3 "$SCRIPT_DIR/test_installer_file_sync.py"; then
+    echo "installer file sync tests failed."
+    exit 1
+fi
+
+echo "Running installer legacy migration tests..."
+if ! python3 "$SCRIPT_DIR/test_installer_legacy_migration.py"; then
+    echo "installer legacy migration tests failed."
+    exit 1
+fi
+
+echo "Running installer cancel/trap contract tests..."
+if ! python3 "$SCRIPT_DIR/test_installer_greeting_traps.py"; then
+    echo "installer cancel/trap contract tests failed."
+    exit 1
+fi
+
+echo "Running updates service contract tests..."
+if ! python3 "$SCRIPT_DIR/test_updates_contract.py"; then
+    echo "updates service contract tests failed."
+    exit 1
+fi
+
+echo "Running conflict killer safety tests..."
+if ! python3 "$SCRIPT_DIR/test_conflict_killer_contract.py"; then
+    echo "conflict killer safety tests failed."
+    exit 1
+fi
+
+echo "Running polkit service contract tests..."
+if ! python3 "$SCRIPT_DIR/test_polkit_service_contract.py"; then
+    echo "polkit service contract tests failed."
+    exit 1
+fi
+
+echo "Running ydotool safety contract tests..."
+if ! python3 "$SCRIPT_DIR/test_ydotool_contract.py"; then
+    echo "ydotool safety contract tests failed."
+    exit 1
+fi
+
+echo "Running brightness/system info contract tests..."
+if ! python3 "$SCRIPT_DIR/test_brightness_systeminfo_contract.py"; then
+    echo "brightness/system info contract tests failed."
+    exit 1
+fi
+
 echo "Running shared widget contract tests..."
 if ! python3 "$SCRIPT_DIR/test_shared_widget_contracts.py"; then
     echo "Shared widget contract tests failed."
