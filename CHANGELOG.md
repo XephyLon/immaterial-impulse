@@ -39,6 +39,11 @@ own repo; the installer pins which revision it builds.
   and always-on services (Battery, Bluetooth, Updates, Brightness,
   SystemInfo, ConflictKiller, Polkit, Ydotool) - plus three previously
   orphaned suites now actually running in CI.
+- Screenshot result popup (bundled plugin): every screenshot - region snip or
+  Print keybind - pops a preview with save / annotate / discard actions;
+  auto-dismisses, hover pins it. The plugin platform's `panel` entry point is
+  now actually instantiated (PluginPanelHost), so plugins can ship
+  free-floating surfaces.
 
 ### Fixed
 - Lock-screen palette could differ from the desktop's for the same image: lock
