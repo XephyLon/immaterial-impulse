@@ -24,6 +24,11 @@ Item {
 
     readonly property real targetScale: dragging ? 1.0 : pressed ? pressScale : hovered ? hoverScale : 1.0
 
+    Component.onDestruction: {
+        bounceAnimation.stop();
+        appearAnimation.stop();
+    }
+
     // Hover lift target; springs via its own Behavior.
     property real liftOffset: (!dragging && hovered && !pressed) ? -Appearance.spacing.space50 : 0
     Behavior on liftOffset {
@@ -37,6 +42,7 @@ Item {
     // Launch bounce rides a separate offset so it composes with the lift.
     property real bounceOffset: 0
     SequentialAnimation {
+        id: bounceAnimation
         running: root.launching && !root.dragging
         loops: Animation.Infinite
         alwaysRunToEnd: true
