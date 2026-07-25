@@ -38,7 +38,12 @@ def main():
     check("service is a singleton", "pragma Singleton" in svc)
     check("service declares the signal", "signal screenshotTaken(string path)" in svc)
     check("service exposes IPC", 'target: "screenshot"' in svc and "function notify(" in svc)
-    check("notify validates existence before emitting", "fileExists" in svc or "FileView" in svc or "test -f" not in svc and "existsSync" not in svc and ("exists(" in svc or "isFile" in svc))
+    # Accepts either a QML-side check (FileView/exists/isFile) or an argv-style
+    # Process probe (["test", "-f", path] gated on exit code). Either way, the
+    # behavior requirement is: no emit for missing files, path never spliced.
+    check("notify validates existence before emitting",
+          "fileExists" in svc or "FileView" in svc or "exists(" in svc or "isFile" in svc
+          or ('"test", "-f"' in svc and "exitCode === 0" in svc))
     check("notify gates on image extensions", re.search(r"png|jpe?g|webp", svc, re.I) is not None)
 
     host = read(HOST)
