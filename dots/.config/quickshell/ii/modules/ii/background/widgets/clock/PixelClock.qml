@@ -12,8 +12,10 @@ import qs.modules.ii.background.widgets
 Item {
     id: root
 
-    implicitWidth: 276
-    implicitHeight: 252
+    readonly property bool isVertical: Config.options.background.widgets.clock.pixel.orientation === "vertical"
+
+    implicitWidth: isVertical ? 276 : 420
+    implicitHeight: isVertical ? 252 : 150
 
     readonly property string glyphTopLeft: DateTime.digitH0
     readonly property string glyphTopRight: DateTime.digitH1
@@ -21,14 +23,25 @@ Item {
     readonly property string glyphBottomRight: DateTime.digitM1
     readonly property color tintSoft: Appearance.colors.colPrimaryContainer
     readonly property color tintBold: Appearance.colors.colPrimary
-    readonly property real fringeSize: root.width * 0.026
-    readonly property real tileW: root.width * 0.66
-    readonly property real tileH: root.height * 0.66
-    readonly property real leftAnchor: root.width * 0.00
-    readonly property real rightAnchor: root.width * 0.30
-    readonly property real topAnchor: root.height * -0.04
-    readonly property real bottomAnchor: root.height * 0.42
-    readonly property real glyphSize: root.height * 0.66
+
+    readonly property real fringeSize: isVertical ? root.width * 0.026 : root.height * 0.03
+    readonly property real tileW: isVertical ? root.width * 0.66 : root.width * 0.30
+    readonly property real tileH: isVertical ? root.height * 0.66 : root.height * 0.9
+    readonly property real glyphSize: isVertical ? root.height * 0.66 : root.height * 0.85
+
+    readonly property real pos0X: isVertical ? root.width * 0.00 : root.width * 0.00
+    readonly property real pos1X: isVertical ? root.width * 0.34 : root.width * 0.16
+    readonly property real pos2X: isVertical ? root.width * 0.00 : root.width * 0.46
+    readonly property real pos3X: isVertical ? root.width * 0.34 : root.width * 0.58
+
+    readonly property real pos0Y: isVertical ? root.height * -0.04 : root.height * 0.05
+    readonly property real pos1Y: isVertical ? root.height * -0.04 : root.height * 0.05
+    readonly property real pos2Y: isVertical ? root.height * 0.42  : root.height * 0.05
+    readonly property real pos3Y: isVertical ? root.height * 0.42  : root.height * 0.05
+
+    readonly property real colonX: root.pos1X + root.tileW + (root.pos2X - (root.pos1X + root.tileW)) / 2 - root.width * 0.03
+    readonly property real colonDotSize: root.height * 0.2
+    readonly property real colonGap: root.height * 0.04
 
     function ringSamples(count, radius) {
         let pts = [{ dx: 0, dy: 0 }]
@@ -55,10 +68,10 @@ Item {
             height: root.tileH
             font {
                 family: "Google Sans Flex"
-                weight: 1200
+                weight: 1000
                 bold: true
                 pixelSize: root.glyphSize
-                variableAxes: ({ "wght": 1200 })
+                variableAxes: ({ "wght": 1000 })
             }
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
@@ -69,8 +82,8 @@ Item {
             anchors.fill: parent
             visible: false
             GlyphTile {
-                x: root.leftAnchor
-                y: root.topAnchor
+                x: root.pos0X
+                y: root.pos0Y
                 text: root.glyphTopLeft
                 color: root.tintSoft
             }
@@ -85,9 +98,9 @@ Item {
                     id: punchA
                     required property var modelData
                     anchors.fill: parent
-                    GlyphTile { x: root.rightAnchor + punchA.modelData.dx; y: root.topAnchor + punchA.modelData.dy; text: root.glyphTopRight; color: "black" }
-                    GlyphTile { x: root.leftAnchor + punchA.modelData.dx; y: root.bottomAnchor + punchA.modelData.dy; text: root.glyphBottomLeft; color: "black" }
-                    GlyphTile { x: root.rightAnchor + punchA.modelData.dx; y: root.bottomAnchor + punchA.modelData.dy; text: root.glyphBottomRight; color: "black" }
+                    GlyphTile { x: root.pos1X + punchA.modelData.dx; y: root.pos1Y + punchA.modelData.dy; text: root.glyphTopRight; color: "black" }
+                    GlyphTile { x: root.pos2X + punchA.modelData.dx; y: root.pos2Y + punchA.modelData.dy; text: root.glyphBottomLeft; color: "black" }
+                    GlyphTile { x: root.pos3X + punchA.modelData.dx; y: root.pos3Y + punchA.modelData.dy; text: root.glyphBottomRight; color: "black" }
                 }
             }
         }
@@ -104,8 +117,8 @@ Item {
             anchors.fill: parent
             visible: false
             GlyphTile {
-                x: root.rightAnchor
-                y: root.topAnchor
+                x: root.pos1X
+                y: root.pos1Y
                 text: root.glyphTopRight
                 color: root.tintBold
             }
@@ -120,8 +133,8 @@ Item {
                     id: punchB
                     required property var modelData
                     anchors.fill: parent
-                    GlyphTile { x: root.leftAnchor + punchB.modelData.dx; y: root.bottomAnchor + punchB.modelData.dy; text: root.glyphBottomLeft; color: "black" }
-                    GlyphTile { x: root.rightAnchor + punchB.modelData.dx; y: root.bottomAnchor + punchB.modelData.dy; text: root.glyphBottomRight; color: "black" }
+                    GlyphTile { x: root.pos2X + punchB.modelData.dx; y: root.pos2Y + punchB.modelData.dy; text: root.glyphBottomLeft; color: "black" }
+                    GlyphTile { x: root.pos3X + punchB.modelData.dx; y: root.pos3Y + punchB.modelData.dy; text: root.glyphBottomRight; color: "black" }
                 }
             }
         }
@@ -138,8 +151,8 @@ Item {
             anchors.fill: parent
             visible: false
             GlyphTile {
-                x: root.leftAnchor
-                y: root.bottomAnchor
+                x: root.pos2X
+                y: root.pos2Y
                 text: root.glyphBottomLeft
                 color: root.tintBold
             }
@@ -154,7 +167,7 @@ Item {
                     id: punchC
                     required property var modelData
                     anchors.fill: parent
-                    GlyphTile { x: root.rightAnchor + punchC.modelData.dx; y: root.bottomAnchor + punchC.modelData.dy; text: root.glyphBottomRight; color: "black" }
+                    GlyphTile { x: root.pos3X + punchC.modelData.dx; y: root.pos3Y + punchC.modelData.dy; text: root.glyphBottomRight; color: "black" }
                 }
             }
         }
@@ -167,11 +180,34 @@ Item {
         }
 
         GlyphTile {
-            x: root.rightAnchor
-            y: root.bottomAnchor
+            x: root.pos3X
+            y: root.pos3Y
             text: root.glyphBottomRight
             color: root.tintSoft
             z: 3
+        }
+
+        Column {
+            visible: !root.isVertical
+            x: root.colonX
+            y: root.pos0Y + root.tileH / 2 - height / 2
+            spacing: root.colonGap
+            z: 4
+
+            Rectangle {
+                width: root.colonDotSize
+                height: root.colonDotSize
+                radius: width / 2
+                color: root.tintBold
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+            Rectangle {
+                width: root.colonDotSize
+                height: root.colonDotSize
+                radius: width / 2
+                color: root.tintBold
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
         }
     }
 }

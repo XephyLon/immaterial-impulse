@@ -773,6 +773,35 @@ ContentPage {
                     ]
                 }
             }
+            
+            ContentSubsection {
+                visible: Config.options.background.widgets.clock.style === "pixel"
+                title: Translation.tr("Pixel Clock Settings")
+                GroupedList {
+                    visible: Config.options.background.widgets.clock.style === "pixel"
+                    ConfigSelectionArray {
+                        text: Translation.tr("Pixel clock orientation")
+                        visible: Config.options.background.widgets.clock.style === "pixel"
+                        icon: "screen_rotation"
+                        currentValue: Config.options.background.widgets.clock.pixel.orientation
+                        onSelected: newValue => {
+                            Config.options.background.widgets.clock.pixel.orientation = newValue;
+                        }
+                        options: [
+                            {
+                                displayName: Translation.tr("Horizontal"),
+                                icon: "swap_horiz",
+                                value: "horizontal"
+                            },
+                            {
+                                displayName: Translation.tr("Vertical"),
+                                icon: "swap_vert",
+                                value: "vertical"
+                            }
+                        ]
+                    }
+                }
+            }
 
             ContentSubsection {
                 title: Translation.tr("Quote")

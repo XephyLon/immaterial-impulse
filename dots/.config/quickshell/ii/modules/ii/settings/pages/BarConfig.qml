@@ -52,6 +52,7 @@ ContentPage {
         { id: "media",             name: Translation.tr("Media"),                icon: "music_note" },
         { id: "resources",         name: Translation.tr("Resources"),            icon: "empty_dashboard" },
         { id: "systemIcons",       name: Translation.tr("System Icons"),         icon: "info" },
+        { id: "networkSpeed",      name: Translation.tr("Network Speed"),        icon: "network_check" },
         { id: "clockWidget",       name: Translation.tr("Clock"),                icon: "schedule" },
         { id: "utilButtons",       name: Translation.tr("Util Buttons"),         icon: "toggle_on" },
         { id: "sysTray",           name: Translation.tr("Tray"),                 icon: "inbox" },
@@ -286,6 +287,41 @@ ContentPage {
             title: Translation.tr("Notifications")
             
             GroupedList {
+                ConfigComboBox { // too much items for configselectionarray - I know it's not the best place to put this but I can change it later
+                    text: Translation.tr("Popup position")
+                    buttonIcon: "my_location" 
+                    currentValue: Config.options.notifications.position
+                    fieldWidth: 50
+                    onSelected: newValue => {
+                        Config.options.notifications.position = newValue;
+                    }
+                    model: [
+                        {
+                            displayName: Translation.tr("Top left"),
+                            value: "top_left"
+                        },
+                        {
+                            displayName: Translation.tr("Top center"),
+                            value: "top_center"
+                        },
+                        {
+                            displayName: Translation.tr("Top right"),
+                            value: "top_right"
+                        },
+                        {
+                            displayName: Translation.tr("Bottom left"),
+                            value: "bottom_left"
+                        },
+                        {
+                            displayName: Translation.tr("Bottom center"),
+                            value: "bottom_center"
+                        },
+                        {
+                            displayName: Translation.tr("Bottom right"),
+                            value: "bottom_right"
+                        }
+                    ]
+                }
                 ConfigSwitch {
                     buttonIcon: "counter_2"
                     text: Translation.tr("Unread indicator: show count")
