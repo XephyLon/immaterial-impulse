@@ -897,6 +897,16 @@ ContentPage {
             title: Translation.tr("Terminal")
             shape: MaterialShape.Shape.Cookie9Sided
 
+            StyledText {
+                Layout.fillWidth: true
+                Layout.leftMargin: Appearance.spacing.space100
+                Layout.rightMargin: Appearance.spacing.space100
+                text: Translation.tr("Note: the background pattern works with the Kitty terminal only.")
+                color: Appearance.colors.colSubtext
+                wrapMode: Text.Wrap
+                font.pixelSize: Appearance.font.pixelSize.small
+            }
+
             GroupedList {
                 ConfigSwitch {
                     buttonIcon: "texture"
