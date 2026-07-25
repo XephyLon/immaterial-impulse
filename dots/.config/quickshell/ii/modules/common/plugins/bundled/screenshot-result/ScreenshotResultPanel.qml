@@ -182,42 +182,56 @@ Scope {
                         }
                     }
 
-                    RowLayout {
-                        spacing: Appearance.spacing.space100
+                    // Action bar sits on its own translucent card so the
+                    // compositor's quickshell:.* layer rule can frost it.
+                    Rectangle {
+                        Layout.alignment: Qt.AlignLeft
+                        implicitWidth: actionRow.implicitWidth + Appearance.spacing.space100 * 2
+                        implicitHeight: actionRow.implicitHeight + Appearance.spacing.space100 * 2
+                        radius: Appearance.rounding.large
+                        color: Appearance.colors.colLayer0
+                        border.width: Appearance.borderWidth.standard
+                        border.color: Appearance.colors.colLayer0Border
 
-                        // Filled (secondary-container) primary actions; Discard
-                        // below stays background-less per the design.
-                        RippleButton {
-                            buttonRadius: Appearance.rounding.normal
-                            // 44: square action-button dimension (no Appearance.sizes
-                            // token exists for this; matches DiscordVoicePopup's 44).
-                            implicitWidth: 44; implicitHeight: 44
-                            colBackground: Appearance.colors.colSecondaryContainer
-                            colBackgroundHover: Appearance.colors.colSecondaryContainerHover
-                            colRipple: Appearance.colors.colSecondaryContainerActive
-                            onClicked: root.saveCurrent()
-                            MaterialSymbol { anchors.centerIn: parent; text: "save"; iconSize: 22; color: Appearance.colors.colOnSecondaryContainer }
-                            StyledToolTip { text: Translation.tr("Save to Pictures") }
-                        }
-                        RippleButton {
-                            visible: root.editorBinary !== ""
-                                || (Config.options.screenshotResult?.editorCommand ?? []).length > 0
-                            buttonRadius: Appearance.rounding.normal
-                            implicitWidth: 44; implicitHeight: 44
-                            colBackground: Appearance.colors.colSecondaryContainer
-                            colBackgroundHover: Appearance.colors.colSecondaryContainerHover
-                            colRipple: Appearance.colors.colSecondaryContainerActive
-                            onClicked: root.editCurrent()
-                            MaterialSymbol { anchors.centerIn: parent; text: "edit"; iconSize: 22; color: Appearance.colors.colOnSecondaryContainer }
-                            StyledToolTip { text: Translation.tr("Annotate") }
-                        }
-                        RippleButton {
-                            buttonRadius: Appearance.rounding.normal
-                            implicitWidth: 44; implicitHeight: 44
-                            onClicked: root.releaseCurrent()
-                            MaterialSymbol { anchors.centerIn: parent; text: "delete"; iconSize: 22; color: Appearance.colors.colOnLayer0 }
-                            StyledToolTip { text: Translation.tr("Discard") }
-                        }
+                        RowLayout {
+                            id: actionRow
+                            anchors.centerIn: parent
+                            spacing: Appearance.spacing.space100
+
+                            // Filled (secondary-container) primary actions; Discard
+                            // below stays background-less per the design.
+                            RippleButton {
+                                buttonRadius: Appearance.rounding.normal
+                                // 44: square action-button dimension (no Appearance.sizes
+                                // token exists for this; matches DiscordVoicePopup's 44).
+                                implicitWidth: 44; implicitHeight: 44
+                                colBackground: Appearance.colors.colSecondaryContainer
+                                colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+                                colRipple: Appearance.colors.colSecondaryContainerActive
+                                onClicked: root.saveCurrent()
+                                MaterialSymbol { anchors.centerIn: parent; text: "save"; iconSize: 22; color: Appearance.colors.colOnSecondaryContainer }
+                                StyledToolTip { text: Translation.tr("Save to Pictures") }
+                            }
+                            RippleButton {
+                                visible: root.editorBinary !== ""
+                                    || (Config.options.screenshotResult?.editorCommand ?? []).length > 0
+                                buttonRadius: Appearance.rounding.normal
+                                implicitWidth: 44; implicitHeight: 44
+                                colBackground: Appearance.colors.colSecondaryContainer
+                                colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+                                colRipple: Appearance.colors.colSecondaryContainerActive
+                                onClicked: root.editCurrent()
+                                MaterialSymbol { anchors.centerIn: parent; text: "edit"; iconSize: 22; color: Appearance.colors.colOnSecondaryContainer }
+                                StyledToolTip { text: Translation.tr("Annotate") }
+                            }
+                            RippleButton {
+                                buttonRadius: Appearance.rounding.normal
+                                implicitWidth: 44; implicitHeight: 44
+                                onClicked: root.releaseCurrent()
+                                MaterialSymbol { anchors.centerIn: parent; text: "delete"; iconSize: 22; color: Appearance.colors.colOnLayer0 }
+                                StyledToolTip { text: Translation.tr("Discard") }
+                            }
+                    }
                     }
                 }
             }
