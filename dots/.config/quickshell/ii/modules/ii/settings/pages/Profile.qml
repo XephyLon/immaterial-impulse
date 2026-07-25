@@ -297,9 +297,16 @@ ContentPage {
                                 try {
                                     const data = JSON.parse(text())
                                     const engine = data?.wallpaperSelector?.wallpaperEngine
+                                    const rawWallpaper = data?.background?.wallpaperPath ?? ""
+                                    // Video wallpapers can't render in an Image
+                                    // preview - show the generated thumbnail.
+                                    const isVideo = /\.(mp4|webm|mkv|avi|mov)$/i.test(rawWallpaper)
+                                    const stillWallpaper = isVideo
+                                        ? (data?.background?.thumbnailPath ?? "")
+                                        : rawWallpaper
                                     presetDelegate.presetWallpaper = engine?.activeProject
-                                        ? (engine.activeStill || engine.activePreview || data?.background?.wallpaperPath || "")
-                                        : (data?.background?.wallpaperPath ?? "")
+                                        ? (engine.activeStill || engine.activePreview || stillWallpaper || "")
+                                        : stillWallpaper
                                     presetDelegate.presetDescription = data?._presetMeta?.description ?? ""
                                 } catch (e) {
                                     console.log("Failed to parse preset:", e)

@@ -33,6 +33,13 @@ AbstractWidget {
     }
 
     draggable: placementStrategy === "free" && !Config.options.background.widgetsLocked
+    // Overridable: subclasses with conditional positioning (e.g. the clock's
+    // forceCenter) re-bind x/y with their own expression after a drag ends.
+    function restoreXYBinding() {
+        root.x = Qt.binding(() => root.targetX);
+        root.y = Qt.binding(() => root.targetY);
+    }
+
     function clampX(v) { return Math.max(0, Math.min(v, scaledScreenWidth - width)); }
     function clampY(v) { return Math.max(0, Math.min(v, scaledScreenHeight - height)); }
 
@@ -57,8 +64,7 @@ AbstractWidget {
             root.targetX = root.x;
             root.targetY = root.y;
         }
-        root.x = Qt.binding(() => root.targetX);
-        root.y = Qt.binding(() => root.targetY);
+        root.restoreXYBinding();
     }
 
     property bool needsColText: false

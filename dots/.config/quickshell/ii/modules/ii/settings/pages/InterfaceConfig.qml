@@ -713,7 +713,7 @@ ContentPage {
 
                 ConfigSwitch {
                     buttonIcon: "search"
-                    text: Translation.tr('Show search bar')
+                    text: Translation.tr('Always show search bar')
                     checked: Config.options.wallpaperSelector.showSearchbar
                     onCheckedChanged: {
                         Config.options.wallpaperSelector.showSearchbar = checked;
@@ -723,7 +723,7 @@ ContentPage {
                     id: userPathField
                     Layout.fillWidth: true
                     buttonIcon: "folder"
-                    text: Translation.tr("Wallpaper Folder")
+                    text: Translation.tr("Custom Wallpaper Folder")
                     placeholderText: Translation.tr("e.g., /home/user/Pictures")
                     fieldWidth: 300
                     value: Config.options.wallpaperSelector.userPath ?? ""
@@ -738,6 +738,28 @@ ContentPage {
                         running: false
                         onTriggered: {
                             Config.options.wallpaperSelector.userPath = userPathField.value
+                        }
+                    }
+                }
+                ConfigTextArea {
+                    id: liveWallpapersPathField
+                    Layout.fillWidth: true
+                    buttonIcon: "video_template"
+                    text: Translation.tr("Live Wallpaper Folder")
+                    placeholderText: Translation.tr("e.g., /home/user/Videos/Wallpapers")
+                    fieldWidth: 300
+                    value: Config.options.wallpaperSelector.liveWallpapersPath ?? ""
+
+                    onValueChanged: {
+                        liveWallpapersPathDebounceTimer.restart()
+                    }
+
+                    Timer {
+                        id: liveWallpapersPathDebounceTimer
+                        interval: 1000
+                        running: false
+                        onTriggered: {
+                            Config.options.wallpaperSelector.liveWallpapersPath = liveWallpapersPathField.value
                         }
                     }
                 } 

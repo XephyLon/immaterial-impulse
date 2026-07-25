@@ -649,7 +649,7 @@ Variants {
 
                     if (drop.urls.length === 1) {
                         const path = CF.FileUtils.trimFileProtocol(decodeURIComponent(drop.urls[0].toString()))
-                        const validExt = /\.(png|jpe?g|webp|bmp|gif|mp4|webm|mkv|avi|mov)$/i.test(path)
+                        const validExt = /\.(png|jpe?g|webp|bmp|gif)$/i.test(path)
                         if (validExt) {
                             Wallpapers.select(path, Appearance.m3colors.darkmode)
                         } else {
@@ -671,7 +671,7 @@ Variants {
                     color: CF.ColorUtils.transparentize(Appearance.colors.colPrimary, 0.6)
 
                     property bool isSingleImage: wallpaperDropArea.currentUrls.length === 1
-                        && /\.(png|jpe?g|webp|bmp|gif|mp4|webm|mkv|avi|mov)$/i.test(
+                        && /\.(png|jpe?g|webp|bmp|gif)$/i.test(
                             CF.FileUtils.trimFileProtocol(wallpaperDropArea.currentUrls[0].toString())
                         )
 

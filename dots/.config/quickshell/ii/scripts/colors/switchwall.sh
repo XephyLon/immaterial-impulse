@@ -13,7 +13,6 @@ MATUGEN_DIR="$XDG_CONFIG_HOME/matugen"
 terminalscheme="$SCRIPT_DIR/terminal/scheme-base.json"
 
 handle_kde_material_you_colors() {
-    # Check if Qt app theming is enabled in config
     if [ -f "$SHELL_CONFIG_FILE" ]; then
         enable_qt_apps=$(jq -r '.appearance.wallpaperTheming.enableQtApps' "$SHELL_CONFIG_FILE")
         if [ "$enable_qt_apps" == "false" ]; then
@@ -21,14 +20,13 @@ handle_kde_material_you_colors() {
         fi
     fi
 
-    # Map $type_flag to allowed scheme variants for kde-material-you-colors-wrapper.sh
     local kde_scheme_variant=""
     case "$type_flag" in
         scheme-content|scheme-expressive|scheme-fidelity|scheme-fruit-salad|scheme-monochrome|scheme-neutral|scheme-rainbow|scheme-tonal-spot)
             kde_scheme_variant="$type_flag"
             ;;
         *)
-            kde_scheme_variant="scheme-tonal-spot" # default
+            kde_scheme_variant="scheme-tonal-spot"
             ;;
     esac
     "$XDG_CONFIG_HOME"/matugen/templates/kde/kde-material-you-colors-wrapper.sh --scheme-variant "$kde_scheme_variant"
@@ -36,7 +34,6 @@ handle_kde_material_you_colors() {
 
 pre_process() {
     local mode_flag="$1"
-    # Set GNOME color-scheme if mode_flag is dark or light
     if [[ "$mode_flag" == "dark" ]]; then
         gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
         gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3-dark'
@@ -61,12 +58,12 @@ post_process() {
 
 check_and_prompt_upscale() {
     local img="$1"
-    min_width_desired="$(hyprctl monitors -j | jq '([.[].width] | max)' | xargs)" # max monitor width
-    min_height_desired="$(hyprctl monitors -j | jq '([.[].height] | max)' | xargs)" # max monitor height
+    min_width_desired="$(hyprctl monitors -j | jq '([.[].width] | max)' | xargs)"
+    min_height_desired="$(hyprctl monitors -j | jq '([.[].height] | max)' | xargs)"
 
     if command -v identify &>/dev/null && [ -f "$img" ]; then
         local img_width img_height
-        if is_video "$img"; then # Not check resolution for videos, just let em pass
+        if is_video "$img"; then
             img_width=$min_width_desired
             img_height=$min_height_desired
         else
@@ -158,7 +155,6 @@ set_thumbnail_path() {
 
 categorize_wallpaper() {
     img_cat=$("$SCRIPT_DIR/../ai/gemini-categorize-wallpaper.sh" "$1")
-    # notify-send "Wallpaper category" "$img_cat"
     echo "$img_cat" > "$STATE_DIR/user/generated/wallpaper/category.txt"
 }
 
@@ -174,7 +170,6 @@ switch() {
     # the desktop wallpaper.
     coloronly="$6"
 
-    # Start Gemini auto-categorization if enabled
     aiStylingEnabled=$(jq -r '.background.widgets.clock.cookie.aiStyling' "$SHELL_CONFIG_FILE")
     if [[ "$aiStylingEnabled" == "true" ]]; then
         categorize_wallpaper "$imgpath" &
@@ -253,7 +248,6 @@ switch() {
                 done
             fi
 
-            # Extract first frame for color generation
             thumbnail="$THUMBNAIL_DIR/$(basename "$imgpath").jpg"
             ffmpeg -y -i "$imgpath" -vframes 1 "$thumbnail" 2>/dev/null
 
@@ -278,7 +272,6 @@ switch() {
         fi
     fi
 
-    # Determine mode if not set
     if [[ -z "$mode_flag" ]]; then
         current_mode=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | tr -d "'")
         if [[ "$current_mode" == "prefer-dark" ]]; then
@@ -288,7 +281,6 @@ switch() {
         fi
     fi
 
-    # enforce dark mode for terminal
     if [[ -n "$mode_flag" ]]; then
         matugen_args+=(--mode "$mode_flag")
         if [[ $(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.forceDarkMode' "$SHELL_CONFIG_FILE") == "true" ]]; then
@@ -303,7 +295,6 @@ switch() {
 
     pre_process "$mode_flag"
 
-    # Check if app and shell theming is enabled in config
     if [ -f "$SHELL_CONFIG_FILE" ]; then
         enable_apps_shell=$(jq -r '.appearance.wallpaperTheming.enableAppsAndShell' "$SHELL_CONFIG_FILE")
         if [ "$enable_apps_shell" == "false" ]; then
@@ -312,7 +303,6 @@ switch() {
         fi
     fi
 
-    # Set harmony and related properties
     if [ -f "$SHELL_CONFIG_FILE" ]; then
         harmony=$(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.harmony' "$SHELL_CONFIG_FILE")
         harmonize_threshold=$(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.harmonizeThreshold' "$SHELL_CONFIG_FILE")
@@ -331,7 +321,6 @@ switch() {
     deactivate
     "$SCRIPT_DIR"/applycolor.sh
 
-    # Pass screen width, height, and wallpaper path to post_process
     max_width_desired="$(hyprctl monitors -j | jq '([.[].width] | min)' | xargs)"
     max_height_desired="$(hyprctl monitors -j | jq '([.[].height] | min)' | xargs)"
     post_process "$max_width_desired" "$max_height_desired" "$imgpath"
@@ -345,6 +334,7 @@ main() {
     color=""
     noswitch_flag=""
     coloronly_flag=""
+    start_dir_flag=""
 
     get_type_from_config() {
         jq -r '.appearance.palette.type' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "auto"
@@ -390,6 +380,10 @@ main() {
                 imgpath="$2"
                 shift 2
                 ;;
+            --start-dir)
+                start_dir_flag="$2"
+                shift 2
+                ;;
             --noswitch)
                 noswitch_flag="1"
                 imgpath=$(jq -r '.background.wallpaperPath' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "")
@@ -416,12 +410,10 @@ main() {
         color="$config_color"
     fi
 
-    # If type_flag is not set, get it from config
     if [[ -z "$type_flag" ]]; then
         type_flag="$(get_type_from_config)"
     fi
 
-    # Validate type_flag (allow 'auto' as well)
     allowed_types=(scheme-content scheme-expressive scheme-fidelity scheme-fruit-salad scheme-monochrome scheme-neutral scheme-rainbow scheme-tonal-spot auto)
     valid_type=0
     for t in "${allowed_types[@]}"; do
@@ -437,7 +429,11 @@ main() {
 
     # Only prompt for wallpaper if not using --color and not using --noswitch and no imgpath set
     if [[ -z "$imgpath" && -z "$color_flag" && -z "$noswitch_flag" ]]; then
-        cd "$(xdg-user-dir PICTURES)/Wallpapers/showcase" 2>/dev/null || cd "$(xdg-user-dir PICTURES)/Wallpapers" 2>/dev/null || cd "$(xdg-user-dir PICTURES)" || return 1
+        if [[ -n "$start_dir_flag" && -d "$start_dir_flag" ]]; then
+            cd "$start_dir_flag" || return 1
+        else
+            cd "$(xdg-user-dir PICTURES)/Wallpapers/showcase" 2>/dev/null || cd "$(xdg-user-dir PICTURES)/Wallpapers" 2>/dev/null || cd "$(xdg-user-dir PICTURES)" || return 1
+        fi
         imgpath="$(kdialog --getopenfilename . --title 'Choose wallpaper')"
     fi
 
@@ -450,11 +446,9 @@ main() {
         color=""
     fi
 
-    # If type_flag is 'auto', detect scheme type from image (after imgpath is set)
     if [[ "$type_flag" == "auto" ]]; then
         if [[ -n "$imgpath" && -f "$imgpath" ]]; then
             detected_type="$(detect_scheme_type_from_image "$imgpath")"
-            # Only use detected_type if it's valid
             valid_detected=0
             for t in "${allowed_types[@]}"; do
                 if [[ "$detected_type" == "$t" && "$detected_type" != "auto" ]]; then
@@ -474,23 +468,18 @@ main() {
         fi
     fi
 
-    # If mode_flag is dark or light, try to find a variant with that mode suffix
     if [[ "$mode_flag" == "dark" || "$mode_flag" == "light" ]]; then
-        # Get directory, filename without extension, and extension
         local imgdir="$(dirname "$imgpath")"
         local imgbase="$(basename "$imgpath")"
         local imgname="${imgbase%.*}"
         local imgext="${imgbase##*.}"
 
-        # Strip existing -dark or -light suffix
         local stripped_name="${imgname%-dark}"
         stripped_name="${stripped_name%-light}"
 
-        # Construct the new path with the requested mode suffix
         local new_imgpath="${imgdir}/${stripped_name}-${mode_flag}.${imgext}"
         local new_stripped_imgpath="${imgdir}/${stripped_name}.${imgext}"
 
-        # If the variant exists, use it
         if [[ -f "$new_imgpath" ]]; then
             imgpath="$new_imgpath"
         elif [[ -f "$new_stripped_imgpath" ]]; then

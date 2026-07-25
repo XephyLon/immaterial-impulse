@@ -40,8 +40,12 @@ Singleton {
         id: applyProc
     }
     
-    function openFallbackPicker(darkMode = Appearance.m3colors.darkmode) {
-        Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--mode", darkMode ? "dark" : "light"]);
+    function openFallbackPicker(darkMode = Appearance.m3colors.darkmode, startDir = "") {
+        const args = [Directories.wallpaperSwitchScriptPath, "--mode", darkMode ? "dark" : "light"];
+        if (startDir !== "") {
+            args.push("--start-dir", startDir);
+        }
+        Quickshell.execDetached(args);
     }
 
     function apply(path, darkMode = Appearance.m3colors.darkmode) {

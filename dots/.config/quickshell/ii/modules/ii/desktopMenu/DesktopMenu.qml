@@ -29,6 +29,13 @@ Scope {
         GlobalStates.desktopMenuOpen = true
     }
 
+    function displayPathFor(path) {
+        if (!path) return path
+        return /\.(mp4|webm|mkv|avi|mov)$/i.test(path)
+            ? Config.options.background.thumbnailPath
+            : path
+    }
+
     // Wallpaper folder images
     FolderListModel {
         id: wallpaperFolder
@@ -49,7 +56,7 @@ Scope {
         let all = []
         for (let i = 0; i < wallpaperFolder.count; i++) {
             const fp = FileUtils.trimFileProtocol(wallpaperFolder.get(i, "filePath").toString())
-            if (fp !== current) all.push({ kind: "static", artwork: fp, path: fp })
+            if (fp !== current) all.push({ kind: "static", artwork: root.displayPathFor(fp), path: fp })
         }
         return all
     }
@@ -84,7 +91,7 @@ Scope {
             }
             engineExtras = engineExtras.filter(entry => entry.project.id !== engine.activeProject)
         } else if (currentStatic) {
-            currentEntry = { kind: "static", artwork: currentStatic, path: currentStatic }
+            currentEntry = { kind: "static", artwork: root.displayPathFor(currentStatic), path: currentStatic }
             staticExtras = staticExtras.filter(entry => entry.path !== currentStatic)
         }
 
@@ -217,6 +224,7 @@ Scope {
 
                     GroupedList {
                         Layout.fillWidth: true
+                        itemVerticalPadding: Appearance.spacing.space200
                         bgcolor: Appearance.colors.colLayer0
 
                         // Wallpapers
@@ -311,6 +319,26 @@ Scope {
                                 GlobalStates.dropShelfX = GlobalStates.desktopMenuX
                                 GlobalStates.dropShelfY = GlobalStates.desktopMenuY
                                 GlobalStates.dropShelfOpen = true
+                            }
+                        }
+
+                        RippleButton {
+                            implicitHeight: 40
+                            colBackground: "transparent"
+                            colBackgroundHover: Appearance.colors.colLayer2
+                            contentItem: RowLayout {
+                                anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }
+                                spacing: Appearance.spacing.space150
+                                MaterialSymbol { text: "video_template"; iconSize: Appearance.font.pixelSize.larger; color: Appearance.colors.colOnLayer1 }
+                                StyledText { Layout.fillWidth: true; text: "Live Wallpaper"; font.pixelSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1 }
+                                MaterialSymbol { text: "chevron_right"; iconSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1; opacity: 0.4 }
+                            }
+                            onClicked: {
+                                GlobalStates.desktopMenuOpen = false
+                                Wallpapers.openFallbackPicker(
+                                    Appearance.m3colors.darkmode,
+                                    Config.options.wallpaperSelector.liveWallpapersPath ?? ""
+                                )
                             }
                         }
 

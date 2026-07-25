@@ -364,6 +364,11 @@ ContentPage {
                             displayName: Translation.tr("Cookie"),
                             icon: "cookie",
                             value: "cookie"
+                        },
+                        {
+                            displayName: Translation.tr("Pixel"),
+                            icon: "grid_view",
+                            value: "pixel"
                         }
                     ]
                 }
@@ -384,6 +389,11 @@ ContentPage {
                             displayName: Translation.tr("Cookie"),
                             icon: "cookie",
                             value: "cookie"
+                        },
+                        {
+                            displayName: Translation.tr("Pixel"),
+                            icon: "grid_view",
+                            value: "pixel"
                         }
                     ]
                 }
@@ -778,6 +788,7 @@ ContentPage {
                     ConfigSwitch {
                         buttonIcon: "font_download"
                         text: Translation.tr("Follow Clock Font")
+                        enabled: Config.options.background.widgets.clock.style !== "pixel"
                         checked: Config.options.background.widgets.clock.quote.followClock
                         onCheckedChanged: {
                             Config.options.background.widgets.clock.quote.followClock = checked;

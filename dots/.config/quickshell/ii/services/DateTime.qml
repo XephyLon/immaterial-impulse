@@ -31,6 +31,12 @@ Singleton {
     readonly property int minutes: clock.date.getMinutes()
     readonly property int seconds: clock.date.getSeconds()
     readonly property string time12h: Qt.locale().toString(clock.date, "hh:mm ap")
+    readonly property string hourStr: Qt.locale().toString(clock.date, "HH")
+    readonly property string minuteStr: Qt.locale().toString(clock.date, "mm")
+    readonly property string digitH0: hourStr.charAt(0)
+    readonly property string digitH1: hourStr.charAt(1)
+    readonly property string digitM0: minuteStr.charAt(0)
+    readonly property string digitM1: minuteStr.charAt(1)
     property string uptime: "0h, 0m"
 
     Timer {

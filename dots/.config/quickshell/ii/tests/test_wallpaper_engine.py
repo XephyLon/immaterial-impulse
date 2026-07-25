@@ -169,7 +169,7 @@ class WallpaperEngineSelectionServiceTests(unittest.TestCase):
     def test_desktop_menu_carousel_binds_structured_wallpaper_entries(self):
         menu = (ROOT / "modules/ii/desktopMenu/DesktopMenu.qml").read_text()
 
-        self.assertIn('kind: "static", artwork: fp, path: fp', menu)
+        self.assertIn('kind: "static", artwork: root.displayPathFor(fp), path: fp', menu)
         self.assertIn('kind: "wallpaperEngine"', menu)
         self.assertIn("readonly property var entry: parent?.modelData ?? null", menu)
         self.assertIn("FileUtils.trimFileProtocol(entry.artwork)", menu)
