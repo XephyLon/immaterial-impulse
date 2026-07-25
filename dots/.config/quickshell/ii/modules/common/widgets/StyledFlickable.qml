@@ -18,13 +18,27 @@ Flickable {
     property bool expressiveScroll: false
     property real maxOverscroll: 56
 
+    // Opt-in true-inertia trackpad scrolling. Two-finger pixelDelta moves the
+    // content 1:1 with the fingers; when the fingers lift, libinput's zero-delta
+    // scroll-stop event (px==0 && ang==0) hands the velocity built up during the
+    // stroke to Flickable.flick(), so it glides and decelerates via the native
+    // flickDeceleration. A short idle-gap timer is the fallback for devices that
+    // don't emit that stop event. Classic mouse wheels (angleDelta, no pixelDelta)
+    // fall through to a plain discrete step. Off by default so other scroll
+    // surfaces are unchanged.
+    property bool momentumScroll: false
+    property real momentumFactor: 1.0        // trackpad tracking-speed multiplier
+    property real momentumMinVelocity: 40    // below this (px/s) don't bother flicking
+    property real _lastWheelTime: 0
+    property real _scrollVelocity: 0
+
     boundsBehavior: root.expressiveScroll ? Flickable.OvershootBounds : Flickable.DragOverBounds
 
     ScrollBar.vertical: StyledScrollBar {}
 
     // ── Non-expressive path: accumulating animated-decel wheel (unchanged) ──
     MouseArea {
-        visible: !root.expressiveScroll && Config?.options.interactions.scrolling.fasterTouchpadScroll
+        visible: !root.expressiveScroll && !root.momentumScroll && Config?.options.interactions.scrolling.fasterTouchpadScroll
         enabled: visible
         anchors.fill: parent
         acceptedButtons: Qt.NoButton
@@ -43,7 +57,7 @@ Flickable {
     }
 
     Behavior on contentY {
-        enabled: !root.expressiveScroll
+        enabled: !root.expressiveScroll && !root.momentumScroll
         NumberAnimation {
             id: scrollAnim
             duration: Appearance.animation.scroll.duration
@@ -124,6 +138,78 @@ Flickable {
             duration: Appearance.animationCurves.expressiveDefaultSpatialDuration
             easing.type: Easing.BezierSpline
             easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
+        }
+    }
+
+    // ── Momentum path: 1:1 finger tracking + inertial flick on burst-end ──
+    // WheelHandler (not a child MouseArea): the Flickable grabs the wheel before
+    // a lower-z MouseArea in its contentItem ever sees it, so onWheel never fired.
+    // A pointer handler receives the wheel reliably over the scrolling content.
+    WheelHandler {
+        id: momentumWheel
+        enabled: root.momentumScroll
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: function(wheelEvent) {
+            const maxY = Math.max(0, root.contentHeight - root.height);
+            const px = wheelEvent.pixelDelta.y;
+            const ang = wheelEvent.angleDelta.y;
+
+            // Finger-lift: libinput/Hyprland send a zero-delta scroll-stop event
+            // (px==0 && ang==0) when the fingers leave the trackpad. That's the
+            // moment to launch the inertial flick with the velocity built up
+            // during the stroke — NOT to reset it.
+            if (px === 0 && ang === 0) {
+                var vEnd = root._scrollVelocity;
+                root._scrollVelocity = 0;
+                root._lastWheelTime = 0;
+                if (Math.abs(vEnd) >= root.momentumMinVelocity) {
+                    vEnd = Math.max(-root.maximumFlickVelocity, Math.min(vEnd, root.maximumFlickVelocity));
+                    root.flick(0, vEnd);
+                }
+                wheelEvent.accepted = true;
+                return;
+            }
+
+            // Classic mouse wheel: no pixelDelta but a real angleDelta. Plain
+            // discrete step, no inertia.
+            if (px === 0) {
+                root.cancelFlick();
+                const step = ang / 120 * root.mouseScrollFactor;
+                root.contentY = Math.max(0, Math.min(root.contentY - step, maxY));
+                root._scrollVelocity = 0;
+                wheelEvent.accepted = true;
+                return;
+            }
+
+            // Trackpad move: track content 1:1 with the fingers, measure velocity.
+            const now = Date.now();
+            var dt = (now - root._lastWheelTime) / 1000;
+            root._lastWheelTime = now;
+            // First event of a burst, or a gap: don't derive a bogus huge velocity.
+            if (dt <= 0 || dt > 0.1) dt = 0.016;
+
+            root.cancelFlick();
+            const move = px * root.momentumFactor;
+            root.contentY = Math.max(0, Math.min(root.contentY - move, maxY));
+
+            const instant = move / dt;
+            root._scrollVelocity = 0.6 * root._scrollVelocity + 0.4 * instant;
+            // Fallback for devices that don't emit an explicit scroll-stop event.
+            momentumEndTimer.restart();
+            wheelEvent.accepted = true;
+        }
+    }
+
+    Timer {
+        id: momentumEndTimer
+        interval: 60   // no wheel event for this long ⇒ fingers lifted
+        onTriggered: {
+            var v = root._scrollVelocity;
+            root._scrollVelocity = 0;
+            if (Math.abs(v) < root.momentumMinVelocity)
+                return;
+            v = Math.max(-root.maximumFlickVelocity, Math.min(v, root.maximumFlickVelocity));
+            root.flick(0, v);
         }
     }
 }

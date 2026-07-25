@@ -57,6 +57,7 @@ StyledFlickable {
     default property alias contentData: contentColumn.data
 
     clip: true
+    momentumScroll: true // True inertial trackpad scrolling (fling & glide)
     contentHeight: contentColumn.implicitHeight + root.bottomContentPadding // Add some padding at the bottom
     implicitWidth: contentColumn.implicitWidth
     onContentYChanged: updateCurrentSection()
