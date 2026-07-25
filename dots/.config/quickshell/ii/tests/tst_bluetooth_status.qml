@@ -1,0 +1,97 @@
+import QtQuick
+import QtTest
+import Quickshell.Bluetooth
+import testservices
+
+// Behavioral tests for services/BluetoothStatus.qml, driven through the mock
+// Bluetooth singleton (tests/mocks/Quickshell/Bluetooth). The service is
+// loaded via the `testservices` registration module.
+TestCase {
+    name: "BluetoothStatusTest"
+
+    // firstActiveDevice is a typed property, so adapter-level devices must be
+    // real BluetoothDevice instances (mocked type), not plain JS objects.
+    property BluetoothDevice keyboard: BluetoothDevice { name: "Keyboard"; connected: false; paired: true }
+    property BluetoothDevice earbuds: BluetoothDevice { name: "Earbuds"; connected: true; paired: true }
+
+    function init() {
+        Bluetooth.defaultAdapter = null
+        Bluetooth.adapters.values = []
+        Bluetooth.devices.values = []
+    }
+
+    function test_defaults_without_adapter() {
+        compare(BluetoothStatus.available, false)
+        compare(BluetoothStatus.enabled, false)
+        compare(BluetoothStatus.connected, false)
+        compare(BluetoothStatus.activeDeviceCount, 0)
+        verify(BluetoothStatus.firstActiveDevice === null)
+        compare(BluetoothStatus.friendlyDeviceList.length, 0)
+    }
+
+    function test_available_tracks_adapter_presence() {
+        Bluetooth.adapters.values = [{}]
+        compare(BluetoothStatus.available, true)
+        Bluetooth.adapters.values = []
+        compare(BluetoothStatus.available, false)
+    }
+
+    function test_sort_puts_named_devices_before_mac_addresses() {
+        var mac = { name: "AA-BB-CC-DD-EE-FF" }
+        var named = { name: "Headphones" }
+        verify(BluetoothStatus.sortFunction(mac, named) > 0)
+        verify(BluetoothStatus.sortFunction(named, mac) < 0)
+
+        // Lowercase MACs are recognized too.
+        var lowerMac = { name: "aa-bb-cc-dd-ee-ff" }
+        verify(BluetoothStatus.sortFunction(lowerMac, named) > 0)
+
+        // Pins actual behavior: only the hyphen-separated form is treated as
+        // a MAC; a colon-separated name sorts like a regular name.
+        var colonMac = { name: "AA:BB:CC:DD:EE:FF" }
+        verify(BluetoothStatus.sortFunction(colonMac, named) < 0) // ":" < "H"
+    }
+
+    function test_sort_is_alphabetical_within_each_group() {
+        verify(BluetoothStatus.sortFunction({ name: "Alpha" }, { name: "Beta" }) < 0)
+        verify(BluetoothStatus.sortFunction({ name: "Beta" }, { name: "Alpha" }) > 0)
+        verify(BluetoothStatus.sortFunction(
+            { name: "AA-00-00-00-00-00" }, { name: "BB-00-00-00-00-00" }) < 0)
+    }
+
+    function test_device_lists_partition_and_order() {
+        Bluetooth.devices.values = [
+            { name: "Zeta Speaker", connected: true, paired: true },
+            { name: "Alpha Mouse", connected: false, paired: true },
+            { name: "AA-BB-CC-DD-EE-FF", connected: false, paired: false },
+            { name: "Buds", connected: true, paired: true }
+        ]
+
+        compare(BluetoothStatus.connected, true)
+
+        compare(BluetoothStatus.connectedDevices.length, 2)
+        compare(BluetoothStatus.connectedDevices[0].name, "Buds")
+        compare(BluetoothStatus.connectedDevices[1].name, "Zeta Speaker")
+
+        compare(BluetoothStatus.pairedButNotConnectedDevices.length, 1)
+        compare(BluetoothStatus.pairedButNotConnectedDevices[0].name, "Alpha Mouse")
+
+        compare(BluetoothStatus.unpairedDevices.length, 1)
+        compare(BluetoothStatus.unpairedDevices[0].name, "AA-BB-CC-DD-EE-FF")
+
+        // friendlyDeviceList = connected, then paired, then unpaired.
+        var names = BluetoothStatus.friendlyDeviceList.map(d => d.name)
+        compare(names, ["Buds", "Zeta Speaker", "Alpha Mouse", "AA-BB-CC-DD-EE-FF"])
+    }
+
+    function test_default_adapter_activity() {
+        Bluetooth.defaultAdapter = ({
+            enabled: true,
+            devices: { values: [keyboard, earbuds] }
+        })
+
+        compare(BluetoothStatus.enabled, true)
+        compare(BluetoothStatus.activeDeviceCount, 1)
+        verify(BluetoothStatus.firstActiveDevice === earbuds)
+    }
+}

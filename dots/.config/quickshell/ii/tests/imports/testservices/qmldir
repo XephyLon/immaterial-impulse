@@ -1,0 +1,3 @@
+module testservices
+singleton Battery Battery.qml
+singleton BluetoothStatus BluetoothStatus.qml
