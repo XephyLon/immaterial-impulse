@@ -822,6 +822,13 @@ Singleton {
                 property string savePath: "" // only copy to clipboard when empty
             }
 
+            property JsonObject screenshotResult: JsonObject {
+                property bool enable: true
+                property int timeoutMs: 6000
+                // Annotation tool override; [] = auto-detect (swappy, then satty).
+                property list<string> editorCommand: []
+            }
+
             property JsonObject sounds: JsonObject {
                 property bool battery: false
                 property bool pomodoro: false

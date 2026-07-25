@@ -998,6 +998,32 @@ ContentPage {
         }
 
         ContentSection {
+            icon: "screenshot_monitor"
+            title: Translation.tr("Screenshot popup")
+            shape: MaterialShape.Shape.Clover4Leaf
+
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "preview"
+                    text: Translation.tr("Show result popup")
+                    description: Translation.tr("Preview with save/edit/discard after every screenshot")
+                    checked: Config.options.screenshotResult.enable
+                    onCheckedChanged: Config.options.screenshotResult.enable = checked
+                }
+                ConfigSpinBox {
+                    enabled: Config.options.screenshotResult.enable
+                    icon: "timer"
+                    text: Translation.tr("Auto-dismiss (ms)")
+                    value: Config.options.screenshotResult.timeoutMs
+                    from: 1500
+                    to: 30000
+                    stepSize: 500
+                    onValueChanged: Config.options.screenshotResult.timeoutMs = value
+                }
+            }
+        }
+
+        ContentSection {
             icon: "colors"
             title: Translation.tr("Color generation")
             shape: MaterialShape.Shape.VerySunny
