@@ -227,8 +227,10 @@ Scope {
                             RippleButton {
                                 buttonRadius: Appearance.rounding.normal
                                 implicitWidth: 44; implicitHeight: 44
+                                colBackgroundHover: Appearance.colors.colErrorContainerHover
+                                colRipple: Appearance.colors.colErrorContainerActive
                                 onClicked: root.releaseCurrent()
-                                MaterialSymbol { anchors.centerIn: parent; text: "delete"; iconSize: 22; color: Appearance.colors.colOnLayer0 }
+                                MaterialSymbol { anchors.centerIn: parent; text: "delete"; iconSize: 22; color: Appearance.colors.colError }
                                 StyledToolTip { text: Translation.tr("Discard") }
                             }
                     }
