@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -168,6 +169,16 @@ Scope {
                             sourceSize.width: 340
                             fillMode: Image.PreserveAspectFit
                             asynchronous: true
+                            // Nested corner: container radius minus the inset so the
+                            // image's rounding visually matches the card's.
+                            layer.enabled: true
+                            layer.effect: OpacityMask {
+                                maskSource: Rectangle {
+                                    width: previewImage.paintedWidth
+                                    height: previewImage.paintedHeight
+                                    radius: Appearance.rounding.large - Appearance.spacing.space100
+                                }
+                            }
                         }
                     }
 
