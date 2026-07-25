@@ -6,6 +6,11 @@ hl.window_rule({match = {class = "^()$", title = "^()$" },                   no_
 -- Disable blur for every window
 hl.window_rule({match = {class = ".*" }, no_blur = true })
 
+-- ...except the shell's own translucent toplevels (e.g. the Settings window,
+-- class org.quickshell). The catch-all above would otherwise leave sharp
+-- wallpaper showing through them instead of the frosted look the panels have.
+hl.window_rule({match = {class = "^(org.quickshell)$" },                     no_blur = false })
+
 -- Floating
 hl.window_rule({match = {title = "^(Open File)(.*)$" },                      center = true})
 hl.window_rule({match = {title = "^(Open File)(.*)$" },                      float = true})
