@@ -7,6 +7,7 @@
 import "modules/common"
 import "services"
 import "panelFamilies"
+import qs.modules.common.plugins
 import QtQuick
 import QtQuick.Window
 import Quickshell
@@ -17,6 +18,10 @@ ShellRoot {
     id: root
 
     ReloadPopup {}
+
+    // Always-on host for plugin `panel` entry points; also keeps the
+    // ScreenshotEvents IPC handler alive.
+    PluginPanelHost {}
 
     Process {
         id: autostartProc
