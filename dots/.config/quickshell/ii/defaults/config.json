@@ -722,7 +722,8 @@
       "nandoroid_media",
       "nandoroid_system_monitor",
       "nandoroid_weather",
-      "nandoroid_currency"
+      "nandoroid_currency",
+      "screenshot_result"
     ],
     "frostMode": "blur"
   },

@@ -1,0 +1,11 @@
+{
+  "id": "screenshot_result",
+  "name": "Screenshot Result",
+  "description": "Preview popup with save/edit/discard actions after every screenshot",
+  "version": "1.0.0",
+  "author": "Immaterial Impulse contributors",
+  "apiVersion": 1,
+  "capabilities": ["panel"],
+  "permissions": ["process", "filesystem_read", "filesystem_write", "settings_read"],
+  "panel": { "component": "ScreenshotResultPanel.qml" }
+}
