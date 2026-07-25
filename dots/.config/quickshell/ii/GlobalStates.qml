@@ -22,6 +22,9 @@ Singleton {
     property bool overviewOpen: false
     property bool regionSelectorOpen: false
     property bool settingsHeldForRegionSelector: false
+    // True while a copy snip's crop/clipboard pipeline runs; cancel paths
+    // must not dismiss (and thereby kill) the in-flight process.
+    property bool snipCopyInFlight: false
     property bool searchOpen: false
     property bool screenLocked: false
     property bool screenLockContainsCharacters: false

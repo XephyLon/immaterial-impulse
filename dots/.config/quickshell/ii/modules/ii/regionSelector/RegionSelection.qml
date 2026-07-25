@@ -1,4 +1,5 @@
 pragma ComponentBehavior: Bound
+import qs
 import qs.modules.common
 import qs.modules.common.utils
 import qs.modules.common.functions
@@ -315,6 +316,7 @@ PanelWindow {
             // result file can be announced. Dismissing now would destroy this
             // window (and kill the process with it), so hide the overlay
             // immediately and dismiss once the process exits.
+            GlobalStates.snipCopyInFlight = true;
             copySnipProcess.resultPath = resultPath;
             copySnipProcess.command = command;
             copySnipProcess.running = true;
@@ -334,6 +336,7 @@ PanelWindow {
         id: copySnipProcess
         property string resultPath: ""
         onExited: (exitCode, exitStatus) => {
+            GlobalStates.snipCopyInFlight = false;
             if (exitCode === 0 && copySnipProcess.resultPath !== "")
                 ScreenshotEvents.emitIfValid(copySnipProcess.resultPath);
             root.dismiss();
@@ -372,6 +375,7 @@ PanelWindow {
         focus: root.visible
         Keys.onPressed: (event) => { // Esc to close
             if (event.key === Qt.Key_Escape) {
+                if (GlobalStates.snipCopyInFlight) return; // dismissing would kill the copy pipeline
                 root.dismiss();
             }
         }
@@ -584,12 +588,12 @@ PanelWindow {
                 Synchronizer on selectionMode {
                     property alias source: root.selectionMode
                 }
-                onDismiss: root.dismiss();
+                onDismiss: if (!GlobalStates.snipCopyInFlight) root.dismiss();
             }
             ToolbarPairedFab {
                 anchors.verticalCenter: parent.verticalCenter
                 iconText: "close"
-                onClicked: root.dismiss();
+                onClicked: if (!GlobalStates.snipCopyInFlight) root.dismiss();
                 StyledToolTip {
                     text: Translation.tr("Close")
                 }
