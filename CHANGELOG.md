@@ -44,8 +44,14 @@ own repo; the installer pins which revision it builds.
   auto-dismisses, hover pins it. The plugin platform's `panel` entry point is
   now actually instantiated (PluginPanelHost), so plugins can ship
   free-floating surfaces.
+- Centered Wallpaper now shows live Wallpaper Engine content inside its shape
+  (centre-cropped from the same surface the blur/lock shaders sample, so no
+  second renderer), falling back to the static/thumbnail image when no live WE
+  surface is drawing.
 
 ### Fixed
+- Terminal background settings note that the pattern applies to the Kitty
+  terminal only.
 - Lock-screen palette could differ from the desktop's for the same image: lock
   color generation passed `--smart` (silently swapping the configured scheme to
   neutral on low-chroma images) and hardcoded tonal-spot for `auto` instead of
