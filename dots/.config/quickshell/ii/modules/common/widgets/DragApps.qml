@@ -147,6 +147,7 @@ Item {
                 onClicked: {
                     const entry = slotItem.appEntry
                     if (!entry || entry.toplevels.length === 0) {
+                        DockLaunchTracker.markLaunching(slotItem.appId)
                         slotItem.deskEntry?.execute()
                         return
                     }
@@ -155,58 +156,83 @@ Item {
                     entry.toplevels[next].activate()
                 }
 
-                middleClickAction: () => { slotItem.deskEntry?.execute() }
+                middleClickAction: () => {
+                    DockLaunchTracker.markLaunching(slotItem.appId)
+                    slotItem.deskEntry?.execute()
+                }
                 altAction:         () => { TaskbarApps.togglePin(slotItem.appId) }
 
-                contentItem: Item {
-                    anchors.centerIn: parent
+                contentItem: DockIconMotion {
+                    id: pinnedIconMotion
+                    anchors.fill: parent
+                    hovered: dockBtn.hovered
+                    pressed: dockBtn.down
+                    dragging: root._dragging
+                    launching: DockLaunchTracker.isLaunching(slotItem.appId)
 
-                    IconImage {
-                        id: appIcon
+                    Component.onCompleted: {
+                        if (DockLaunchTracker.firstAppearance(slotItem.appId))
+                            playAppear();
+                    }
+
+                    Item {
                         anchors.centerIn: parent
-                        source: Quickshell.iconPath(
-                            AppSearch.guessIcon(slotItem.appId),
-                            "image-missing")
-                        implicitSize: 33
-                    }
+                        width: 33
+                        height: 33
 
-                    Loader {
-                        active: Config.options.dock.monochromeIcons
-                        anchors.fill: appIcon
-                        sourceComponent: Item {
-                            Desaturate {
-                                id: desaturatedIcon
-                                visible: false
-                                anchors.fill: parent
-                                source: appIcon
-                                desaturation: 0.8
-                            }
-                            ColorOverlay {
-                                anchors.fill: desaturatedIcon
-                                source: desaturatedIcon
-                                color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.9)
+                        IconImage {
+                            id: appIcon
+                            anchors.centerIn: parent
+                            source: Quickshell.iconPath(
+                                AppSearch.guessIcon(slotItem.appId),
+                                "image-missing")
+                            implicitSize: 33
+                        }
+
+                        Loader {
+                            active: Config.options.dock.monochromeIcons
+                            anchors.fill: appIcon
+                            sourceComponent: Item {
+                                Desaturate {
+                                    id: desaturatedIcon
+                                    visible: false
+                                    anchors.fill: parent
+                                    source: appIcon
+                                    desaturation: 0.8
+                                }
+                                ColorOverlay {
+                                    anchors.fill: desaturatedIcon
+                                    source: desaturatedIcon
+                                    color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.9)
+                                }
                             }
                         }
-                    }
 
-                    RowLayout {
-                        spacing: Appearance.spacing.space50
-                        anchors {
-                            top: appIcon.bottom
-                            topMargin: Appearance.spacing.space25
-                            horizontalCenter: parent.horizontalCenter
-                        }
-                        Repeater {
-                            model: Math.min(slotItem.appEntry?.toplevels?.length ?? 0, 3)
-                            delegate: Rectangle {
-                                required property int index
-                                radius:         Appearance.rounding.full
-                                implicitWidth:  (slotItem.appEntry?.toplevels?.length ?? 0) <= 3
-                                                ? 10 : 4
-                                implicitHeight: 4
-                                color: slotItem.appActive
-                                       ? Appearance.colors.colPrimary
-                                       : ColorUtils.transparentize(Appearance.colors.colOnLayer0, 0.4)
+                        RowLayout {
+                            spacing: Appearance.spacing.space50
+                            anchors {
+                                top: appIcon.bottom
+                                topMargin: Appearance.spacing.space25
+                                horizontalCenter: parent.horizontalCenter
+                            }
+                            Repeater {
+                                model: Math.min(slotItem.appEntry?.toplevels?.length ?? 0, 3)
+                                delegate: Rectangle {
+                                    required property int index
+                                    radius:         Appearance.rounding.full
+                                    implicitWidth:  (slotItem.appEntry?.toplevels?.length ?? 0) <= 3
+                                                    ? 10 : 4
+                                    implicitHeight: 4
+                                    color: slotItem.appActive
+                                           ? Appearance.colors.colPrimary
+                                           : ColorUtils.transparentize(Appearance.colors.colOnLayer0, 0.4)
+                                    Behavior on implicitWidth {
+                                        animation: Appearance.animation.elementMoveSmall.numberAnimation.createObject(this)
+                                    }
+                                    Behavior on color {
+                                        animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                                    }
+                                }
                             }
                         }
                     }
