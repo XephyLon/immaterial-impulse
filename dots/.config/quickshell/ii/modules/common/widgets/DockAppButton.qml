@@ -21,6 +21,7 @@ DockButton {
     readonly property bool isSeparator: appToplevel.appId === "SEPARATOR"
     property var desktopEntry: liveDeskEntry.entry
     enabled: !isSeparator
+    hoverEnabled: true
     implicitWidth: isSeparator ? 1 : implicitHeight - topInset - bottomInset
 
     LiveDesktopEntry {
@@ -61,6 +62,7 @@ DockButton {
 
     onClicked: {
         if (appToplevel.toplevels.length === 0) {
+            DockLaunchTracker.markLaunching(appToplevel.appId);
             root.desktopEntry?.execute();
             return;
         }
@@ -69,6 +71,7 @@ DockButton {
     }
 
     middleClickAction: () => {
+        DockLaunchTracker.markLaunching(appToplevel.appId);
         root.desktopEntry?.execute();
     }
 
@@ -78,58 +81,79 @@ DockButton {
 
     contentItem: Loader {
         active: !isSeparator
-        sourceComponent: Item {
-            anchors.centerIn: parent
+        sourceComponent: DockIconMotion {
+            id: iconMotion
+            anchors.fill: parent
+            hovered: root.hovered
+            pressed: root.down
+            launching: DockLaunchTracker.isLaunching(root.appToplevel.appId)
 
-            Loader {
-                id: iconImageLoader
-                anchors {
-                    left: parent.left
-                    right: parent.right
-                    verticalCenter: parent.verticalCenter
-                }
-                active: !root.isSeparator
-                sourceComponent: IconImage {
-                    source: Quickshell.iconPath(AppSearch.guessIcon(appToplevel.appId), "image-missing")
-                    implicitSize: root.iconSize
-                }
+            Component.onCompleted: {
+                if (DockLaunchTracker.firstAppearance(root.appToplevel.appId))
+                    playAppear();
             }
 
-            Loader {
-                active: Config.options.dock.monochromeIcons
-                anchors.fill: iconImageLoader
-                sourceComponent: Item {
-                    Desaturate {
-                        id: desaturatedIcon
-                        visible: false // There's already color overlay
-                        anchors.fill: parent
-                        source: iconImageLoader
-                        desaturation: 0.8
-                    }
-                    ColorOverlay {
-                        anchors.fill: desaturatedIcon
-                        source: desaturatedIcon
-                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.9)
-                    }
-                }
-            }
+            Item {
+                anchors.centerIn: parent
+                width: root.iconSize
+                height: root.iconSize
 
-            RowLayout {
-                spacing: Appearance.spacing.space50
-                anchors {
-                    top: iconImageLoader.bottom
-                    topMargin: Appearance.spacing.space25
-                    horizontalCenter: parent.horizontalCenter
+                Loader {
+                    id: iconImageLoader
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                    }
+                    active: !root.isSeparator
+                    sourceComponent: IconImage {
+                        source: Quickshell.iconPath(AppSearch.guessIcon(appToplevel.appId), "image-missing")
+                        implicitSize: root.iconSize
+                    }
                 }
-                Repeater {
-                    model: Math.min(appToplevel.toplevels.length, 3)
-                    delegate: Rectangle {
-                        required property int index
-                        radius: Appearance.rounding.full
-                        implicitWidth: (appToplevel.toplevels.length <= 3) ? 
-                            root.countDotWidth : root.countDotHeight // Circles when too many
-                        implicitHeight: root.countDotHeight
-                        color: appIsActive ? Appearance.colors.colPrimary : ColorUtils.transparentize(Appearance.colors.colOnLayer0, 0.4)
+
+                Loader {
+                    active: Config.options.dock.monochromeIcons
+                    anchors.fill: iconImageLoader
+                    sourceComponent: Item {
+                        Desaturate {
+                            id: desaturatedIcon
+                            visible: false // There's already color overlay
+                            anchors.fill: parent
+                            source: iconImageLoader
+                            desaturation: 0.8
+                        }
+                        ColorOverlay {
+                            anchors.fill: desaturatedIcon
+                            source: desaturatedIcon
+                            color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.9)
+                        }
+                    }
+                }
+
+                RowLayout {
+                    spacing: Appearance.spacing.space50
+                    anchors {
+                        top: iconImageLoader.bottom
+                        topMargin: Appearance.spacing.space25
+                        horizontalCenter: parent.horizontalCenter
+                    }
+                    Repeater {
+                        model: Math.min(appToplevel.toplevels.length, 3)
+                        delegate: Rectangle {
+                            required property int index
+                            radius: Appearance.rounding.full
+                            implicitWidth: (appToplevel.toplevels.length <= 3) ?
+                                root.countDotWidth : root.countDotHeight // Circles when too many
+                            implicitHeight: root.countDotHeight
+                            color: appIsActive ? Appearance.colors.colPrimary : ColorUtils.transparentize(Appearance.colors.colOnLayer0, 0.4)
+                            Behavior on implicitWidth {
+                                animation: Appearance.animation.elementMoveSmall.numberAnimation.createObject(this)
+                            }
+                            Behavior on color {
+                                animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                            }
+                        }
                     }
                 }
             }
