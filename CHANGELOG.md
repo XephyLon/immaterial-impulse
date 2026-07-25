@@ -33,6 +33,10 @@ own repo; the installer pins which revision it builds.
   running apps, all on Appearance motion tokens.
 
 ### Fixed
+- Wallpaper Engine wallpapers were permanently mute: the embedded renderer
+  hardcoded `--silent` and the selector's volume button toggled a flag nothing
+  read. The button now drives the new `audioEnabled` surface property (toggling
+  reloads the wallpaper - audio is a load-time decision inside WE).
 - Multi-second shell freezes on wallpaper/preset switches, root-caused to three
   compounding issues: Qt's basic render loop on NVIDIA/Wayland blocking the GUI
   thread on embedded-WE video GL (fixed via `QSG_RENDER_LOOP=threaded` in the WE
