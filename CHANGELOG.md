@@ -33,6 +33,10 @@ own repo; the installer pins which revision it builds.
   running apps, all on Appearance motion tokens.
 
 ### Fixed
+- Lock-screen palette could differ from the desktop's for the same image: lock
+  color generation passed `--smart` (silently swapping the configured scheme to
+  neutral on low-chroma images) and hardcoded tonal-spot for `auto` instead of
+  running the same image-based detection as the desktop.
 - Wallpaper Engine wallpapers were permanently mute: the embedded renderer
   hardcoded `--silent` and the selector's volume button toggled a flag nothing
   read. The button now drives the new `audioEnabled` surface property (toggling
