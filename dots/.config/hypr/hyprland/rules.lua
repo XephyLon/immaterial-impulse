@@ -6,6 +6,11 @@ hl.window_rule({match = {class = "^()$", title = "^()$" },                   no_
 -- Disable blur for every window
 hl.window_rule({match = {class = ".*" }, no_blur = true })
 
+-- ...except the shell's own translucent toplevels (e.g. the Settings window,
+-- class org.quickshell). The catch-all above would otherwise leave sharp
+-- wallpaper showing through them instead of the frosted look the panels have.
+hl.window_rule({match = {class = "^(org.quickshell)$" },                     no_blur = false })
+
 -- Floating
 hl.window_rule({match = {title = "^(Open File)(.*)$" },                      center = true})
 hl.window_rule({match = {title = "^(Open File)(.*)$" },                      float = true})
@@ -84,7 +89,7 @@ hl.window_rule({match = {float = 0 }, no_shadow = true})
 hl.workspace_rule({ workspace = "special:special", gaps_out = 30 })
 
 -- ######## Layer rules ########
-hl.layer_rule({ match = { namespace = ".*" }, xray = true})
+hl.layer_rule({ match = { namespace = ".*" }, xray = false})
 hl.layer_rule({ match = { namespace = "walker" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "selection" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "overview" }, no_anim = true})
@@ -131,7 +136,11 @@ hl.layer_rule({ match = { namespace = "osk[0-9]*" }, ignore_alpha = 0.6})
 -- Quickshell: immaterial-impulse
 hl.layer_rule({ match = { namespace = "quickshell:.*" }, blur_popups = true})
 hl.layer_rule({ match = { namespace = "quickshell:.*" }, blur = true})
-hl.layer_rule({ match = { namespace = "quickshell:.*" }, ignore_alpha = 0.79})
+-- Low threshold: pixels below it are left unblurred, so a high value skipped
+-- blur on the shell's own translucent panel backgrounds and let the sharp
+-- wallpaper show straight through the bar/dock/sidebars. Namespace-specific
+-- overrides below (popup/mediaControls/session/...) still set their own.
+hl.layer_rule({ match = { namespace = "quickshell:.*" }, ignore_alpha = 0.05})
 hl.layer_rule({ match = { namespace = "quickshell:bar" }, animation = "slide"})
 hl.layer_rule({ match = { namespace = "quickshell:actionCenter" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:cheatsheet" }, animation = "slide bottom"})
