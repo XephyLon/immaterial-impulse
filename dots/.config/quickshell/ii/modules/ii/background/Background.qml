@@ -613,8 +613,34 @@ Variants {
                     }
                 }
 
+                // Live Wallpaper Engine content, centre-cropped into the shape.
+                // Samples the same surface the blur/lock shaders use, so no
+                // second WE renderer is spawned; only instantiated while the
+                // centred wallpaper is on AND a WE surface is actually drawing.
+                Loader {
+                    anchors.fill: parent
+                    active: bgRoot.centeredWallpaperEnabled && bgRoot.weShown && weLoader.item
+                    sourceComponent: ShaderEffectSource {
+                        sourceItem: weLoader.item
+                        live: true
+                        hideSource: false
+                        // Centre-crop a square out of the full-screen WE surface
+                        // so the aspect matches the (square) shape - the
+                        // ShaderEffectSource equivalent of PreserveAspectCrop.
+                        readonly property real srcW: weLoader.item?.width ?? 0
+                        readonly property real srcH: weLoader.item?.height ?? 0
+                        readonly property real side: Math.min(srcW, srcH)
+                        sourceRect: side > 0
+                            ? Qt.rect((srcW - side) / 2, (srcH - side) / 2, side, side)
+                            : Qt.rect(0, 0, 0, 0)
+                    }
+                }
+
+                // Static / video-thumbnail fallback: shown whenever the live WE
+                // surface isn't (stock build, image wallpaper, WE still loading).
                 StyledImage {
                     anchors.fill: parent
+                    visible: !(bgRoot.weShown && weLoader.item)
                     source: bgRoot.wallpaperPath
                     fillMode: Image.PreserveAspectCrop
                     cache: false
