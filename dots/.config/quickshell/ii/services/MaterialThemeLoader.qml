@@ -121,8 +121,11 @@ Singleton {
     }
 
     function currentScheme() {
-        const configuredScheme = Config.options.appearance.palette.type;
-        return configuredScheme === "auto" ? "scheme-tonal-spot" : configuredScheme;
+        // Pass "auto" through verbatim: generate-colors-venv.sh resolves it via
+        // scheme_for_image.py, exactly like switchwall.sh does for the desktop
+        // palette. Mapping it to a fixed variant here made the lock palette
+        // diverge from the desktop's whenever auto detection picked another one.
+        return Config.options.appearance.palette.type;
     }
 
     function cachedLockThemeMatches(wallpaper, mode, scheme) {
@@ -159,12 +162,15 @@ Singleton {
         requestedLockWallpaper = wallpaper;
         requestedLockMode = mode;
         requestedLockScheme = scheme;
+        // No --smart here: it silently swaps the scheme to "neutral" for
+        // low-chroma images, which the desktop path (switchwall.sh) never
+        // does - the same image must yield the same palette locked and
+        // unlocked.
         lockThemeProc.command = [
             Quickshell.shellPath("scripts/colors/generate-colors-venv.sh"),
             "--path", wallpaper,
             "--mode", mode,
-            "--scheme", scheme,
-            "--smart"
+            "--scheme", scheme
         ];
         lockThemeProc.running = false;
         lockThemeProc.running = true;

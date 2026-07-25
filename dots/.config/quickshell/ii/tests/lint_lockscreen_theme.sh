@@ -51,7 +51,9 @@ if ! grep -q 'colorTransitionDuration: Appearance.animation.elementMoveFast.dura
     exit 1
 fi
 
-if ! grep -q 'exec python3 .*generate_colors_material.py.*"\$@"' "$WRAPPER"; then
+# "$@" or a quoted copy of it ("${args[@]}", used for the --scheme auto
+# rewrite) both preserve argument boundaries; unquoted expansion does not.
+if ! grep -qE 'exec python3 .*generate_colors_material.py.* ("\$@"|"\$\{args\[@\]\}")' "$WRAPPER"; then
     echo "Lockscreen theme lint FAILED: generator wrapper must preserve argument boundaries" >&2
     exit 1
 fi
