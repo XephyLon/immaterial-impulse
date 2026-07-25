@@ -39,7 +39,7 @@ set -euo pipefail
 [[ "${INSTALL_WE:-0}" == "1" ]] || { echo "[ImI] Wallpaper Engine: skipped."; exit 0; }
 
 WE_REPO="${WE_REPO:-https://github.com/XephyLon/qs-wallpaperengine}"
-WE_REF="${WE_REF:-6cb13cd}"                      # working commit pin; NO prebuilt release exists for it, so installs
+WE_REF="${WE_REF:-31b04a1}"                      # working commit pin; NO prebuilt release exists for it, so installs
                                                  # fall back to a source build. MUST be >= 40427cf, the commit that added
                                                  # scripts/build-we.sh (source_build() runs it, and eval's its stdout —
                                                  # 71dea54 made that eval-safe); a11e083 additionally carries the
