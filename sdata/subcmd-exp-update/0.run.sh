@@ -703,13 +703,21 @@ get_changed_files() {
     return
   fi
   
-  # Try git-based detection first
-  if git rev-parse --verify HEAD@{1} &>/dev/null 2>&1; then
+  # Try git-based detection first, diffing against the pre-pull baseline
+  # (PREV_HEAD) rather than the reflog so a stash/checkout between capture and
+  # here cannot skew which files are seen as changed.
+  local base_ref=""
+  if [[ -n "${PREV_HEAD:-}" ]]; then
+    base_ref="$PREV_HEAD"
+  elif git rev-parse --verify HEAD@{1} &>/dev/null 2>&1; then
+    base_ref="HEAD@{1}"
+  fi
+  if [[ -n "$base_ref" ]]; then
     local temp_file
     temp_file=$(mktemp)
-    
+
     # Get changed files with specific filters (Added, Copied, Modified, Renamed)
-    git diff --name-only --diff-filter=ACMR HEAD@{1} HEAD 2>/dev/null | \
+    git diff --name-only --diff-filter=ACMR "$base_ref" HEAD 2>/dev/null | \
       while IFS= read -r file; do
         local full_path="${REPO_ROOT}/${file}"
         if [[ "$full_path" == "$dir_path"/* ]] && [[ -f "$full_path" ]]; then
@@ -730,14 +738,36 @@ get_changed_files() {
   find "$dir_path" -type f -print0 2>/dev/null
 }
 
-# Function to check if we have new commits
+# Function to check if we have new commits. Prefer the baseline captured before
+# the pull (PREV_HEAD); fall back to the reflog only when it is unset (e.g. this
+# function is called from a context that never set it).
 has_new_commits() {
-  if git rev-parse --verify HEAD@{1} &>/dev/null; then
+  if [[ -n "${PREV_HEAD:-}" ]]; then
+    [[ "$(git rev-parse HEAD)" != "$PREV_HEAD" ]]
+  elif git rev-parse --verify HEAD@{1} &>/dev/null; then
     [[ "$(git rev-parse HEAD)" != "$(git rev-parse HEAD@{1})" ]]
   else
     # Fresh clone or no reflog - assume we want to process files
     return 0
   fi
+}
+
+# Print the CHANGELOG lines added between the pre-pull baseline and now, so the
+# user sees what this update actually brought. Best-effort: silently no-ops if
+# there is no baseline, no CHANGELOG, or nothing changed in it.
+show_changelog_delta() {
+  [[ -n "${PREV_HEAD:-}" ]] || return 0
+  local changelog="CHANGELOG.md"
+  # Only diff if the file existed at the baseline (a brand-new CHANGELOG would
+  # otherwise dump the entire file).
+  git cat-file -e "${PREV_HEAD}:${changelog}" 2>/dev/null || return 0
+  local added
+  added="$(git diff "${PREV_HEAD}..HEAD" -- "$changelog" 2>/dev/null \
+    | grep '^+' | grep -v '^+++' | sed 's/^+//')"
+  [[ -n "$added" ]] || return 0
+  log_header "What's New (CHANGELOG)"
+  printf '%s\n' "$added"
+  echo
 }
 
 # Cleanup function for signal handling
@@ -839,6 +869,31 @@ fi
 
 log_info "Current branch: $current_branch"
 
+# Record where this update started. All "did anything change?" logic and the
+# changelog diff use this stable baseline instead of the reflog's HEAD@{1},
+# which a preceding stash or the detached-HEAD checkout above can silently
+# repoint - the root cause of the updater not reporting updates that existed.
+PREV_HEAD="$(git rev-parse HEAD 2>/dev/null || echo "")"
+
+# Show how many commits are waiting before touching anything. `git fetch` only
+# updates remote-tracking refs (safe in dry-run too); the count comes straight
+# from the refs, not the reflog, so it is reliable even when the local tree is
+# dirty or the last operation moved HEAD.
+if git remote get-url origin &>/dev/null; then
+  log_info "Checking origin/$current_branch for updates..."
+  if git fetch --quiet origin "$current_branch" 2>/dev/null; then
+    incoming="$(git rev-list --count "HEAD..origin/${current_branch}" 2>/dev/null || echo 0)"
+    if [[ "${incoming:-0}" -gt 0 ]]; then
+      log_success "$incoming new update(s) available:"
+      git log --oneline --no-decorate "HEAD..origin/${current_branch}" 2>/dev/null | sed 's/^/    /'
+    else
+      log_info "Already up to date with origin/${current_branch}."
+    fi
+  else
+    log_warning "Could not reach origin to check for updates (offline?)."
+  fi
+fi
+
 if ! git diff --quiet || ! git diff --cached --quiet; then
   log_warning "You have uncommitted changes:"
   git status --short
@@ -869,11 +924,11 @@ if git remote get-url origin &>/dev/null; then
     if git pull --ff-only; then
       log_success "Successfully pulled latest changes"
       git submodule update --init --recursive
-      # Verify we actually got new commits
-      if git rev-parse --verify HEAD@{1} &>/dev/null; then
-        if [[ "$(git rev-parse HEAD)" == "$(git rev-parse HEAD@{1})" ]]; then
-          log_info "Already up to date with remote"
-        fi
+      # Compare against the baseline captured before the pull, not the reflog.
+      if [[ -n "${PREV_HEAD:-}" && "$(git rev-parse HEAD)" == "$PREV_HEAD" ]]; then
+        log_info "Already up to date with remote"
+      else
+        show_changelog_delta
       fi
     else
       log_warning "Failed to pull changes from remote."

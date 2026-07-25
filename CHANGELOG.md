@@ -48,8 +48,16 @@ own repo; the installer pins which revision it builds.
   (centre-cropped from the same surface the blur/lock shaders sample, so no
   second renderer), falling back to the static/thumbnail image when no live WE
   surface is drawing.
+- Experimental updater (`./setup exp-update`) now reports how many updates are
+  available before pulling and prints the new CHANGELOG entries under a
+  "What's New" heading after a successful update.
 
 ### Fixed
+- Experimental updater failed to detect/report updates that existed: its change
+  detection keyed off the reflog's `HEAD@{1}`, which a preceding stash or
+  detached-HEAD checkout silently repointed. It now captures a stable pre-pull
+  baseline SHA and counts incoming commits straight from refs (`git fetch` +
+  `git rev-list --count`).
 - Terminal background settings note that the pattern applies to the Kitty
   terminal only.
 - Lock-screen palette could differ from the desktop's for the same image: lock

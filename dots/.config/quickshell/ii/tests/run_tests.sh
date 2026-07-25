@@ -321,6 +321,12 @@ if ! python3 "$SCRIPT_DIR/test_screenshot_result_contract.py"; then
     exit 1
 fi
 
+echo "Running experimental updater contract tests..."
+if ! python3 "$SCRIPT_DIR/test_exp_update_contract.py"; then
+    echo "experimental updater contract tests failed."
+    exit 1
+fi
+
 if [[ "${RUN_DOCKER_RUNTIME_MEMORY_TEST:-0}" == "1" ]]; then
     echo "Running capped Docker runtime memory test..."
     bash "$SCRIPT_DIR/run_docker_memory_test.sh"
