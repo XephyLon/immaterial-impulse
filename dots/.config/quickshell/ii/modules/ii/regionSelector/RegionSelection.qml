@@ -293,20 +293,49 @@ PanelWindow {
         const screenshotDir = Config.options.screenSnip.savePath !== "" ? //
             Config.options.screenSnip.savePath : "";
         var screenshotAction = root.getScreenshotAction();
+        const isCopy = screenshotAction === ScreenshotAction.Action.Copy;
+        let resultPath = "";
+        if (isCopy) {
+            const ts = new Date().toISOString().replace(/[:.]/g, "-");
+            const dir = screenshotDir !== "" ? screenshotDir : root.screenshotDir;
+            resultPath = `${dir}/result-${ts}.png`;
+        }
         const command = ScreenshotAction.getCommand(
             root.regionX * root.monitorScale, //
             root.regionY * root.monitorScale, //
-            root.regionWidth * root.monitorScale,// 
+            root.regionWidth * root.monitorScale,//
             root.regionHeight * root.monitorScale, //
             root.screenshotPath, //
             screenshotAction, //
-            screenshotDir
+            screenshotDir, //
+            resultPath
         )
-        Quickshell.execDetached(command);
-        if (root.action == RegionSelection.SnipAction.Record || root.action == RegionSelection.SnipAction.RecordWithSound) {
-            root.phase = RegionSelection.Phase.Post
-            root.selectionMode = RegionSelection.SelectionMode.RectCorners
+        if (isCopy) {
+            // Copy runs through a Process so completion is observable and the
+            // result file can be announced. Dismissing now would destroy this
+            // window (and kill the process with it), so hide the overlay
+            // immediately and dismiss once the process exits.
+            copySnipProcess.resultPath = resultPath;
+            copySnipProcess.command = command;
+            copySnipProcess.running = true;
+            root.visible = false;
         } else {
+            Quickshell.execDetached(command);
+            if (root.action == RegionSelection.SnipAction.Record || root.action == RegionSelection.SnipAction.RecordWithSound) {
+                root.phase = RegionSelection.Phase.Post
+                root.selectionMode = RegionSelection.SelectionMode.RectCorners
+            } else {
+                root.dismiss();
+            }
+        }
+    }
+
+    Process {
+        id: copySnipProcess
+        property string resultPath: ""
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0 && copySnipProcess.resultPath !== "")
+                ScreenshotEvents.emitIfValid(copySnipProcess.resultPath);
             root.dismiss();
         }
     }

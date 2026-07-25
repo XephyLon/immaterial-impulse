@@ -25,7 +25,7 @@ Singleton {
     property string imageSearchEngineBaseUrl: Config.options.search.imageSearch.imageSearchEngineBaseUrl
     property string fileUploadApiEndpoint: "https://uguu.se/upload"
 
-    function getCommand(x, y, width, height, screenshotPath, action, saveDir = "") {
+    function getCommand(x, y, width, height, screenshotPath, action, saveDir = "", resultPath = "") {
         // Set command for action
         const rx = Math.round(x);
         const ry = Math.round(y);
@@ -45,8 +45,21 @@ Singleton {
             case ScreenshotAction.Action.Copy:
                 if (saveDir === "") {
                     // not saving the screenshot, just copy to clipboard
-                    return ["bash", "-c", `${cropToStdout} | wl-copy && ${cleanup}`]
-                    break;
+                    if (resultPath === "")
+                        return ["bash", "-c", `${cropToStdout} | wl-copy && ${cleanup}`]
+                    // Keep a cropped copy for the result popup; the full-frame
+                    // temp is still cleaned up.
+                    return ["bash", "-c", `${cropToStdout} | tee '${StringUtils.shellSingleQuoteEscape(resultPath)}' | wl-copy && ${cleanup}`]
+                }
+                // Saving to disk: write the file at a QML-chosen path so the
+                // caller knows it (previously the name was minted inside bash).
+                if (resultPath !== "") {
+                    return [
+                        "bash", "-c",
+                        `mkdir -p '${StringUtils.shellSingleQuoteEscape(saveDir)}' && \
+                        ${cropToStdout} | tee >(wl-copy) > '${StringUtils.shellSingleQuoteEscape(resultPath)}' && \
+                        ${cleanup}`
+                    ]
                 }
                 return [
                     "bash", "-c",
