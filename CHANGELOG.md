@@ -27,6 +27,10 @@ own repo; the installer pins which revision it builds.
 - README: palette showcase screenshots (Green / Study / Red).
 - README translations: Simplified Chinese (`README.zh-CN.md`) and Japanese
   (`README.ja.md`), with a language switcher linking all three.
+- Dock feedback motion (M3 Expressive): hover lift, press squish, a launch
+  bounce that runs until the app's window appears, an appear pop for new
+  icons, and springing active-window dots — consistent across pinned and
+  running apps, all on Appearance motion tokens.
 
 ### Fixed
 - Multi-second shell freezes on wallpaper/preset switches, root-caused to three

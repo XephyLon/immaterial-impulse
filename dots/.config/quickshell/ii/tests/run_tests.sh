@@ -165,6 +165,12 @@ if ! python3 "$SCRIPT_DIR/test_default_config.py"; then
     exit 1
 fi
 
+echo "Running dock motion contract tests..."
+if ! python3 "$SCRIPT_DIR/test_dock_motion.py"; then
+    echo "Dock motion contract tests failed."
+    exit 1
+fi
+
 echo "Running shared widget contract tests..."
 if ! python3 "$SCRIPT_DIR/test_shared_widget_contracts.py"; then
     echo "Shared widget contract tests failed."
