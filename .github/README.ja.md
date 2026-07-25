@@ -6,6 +6,20 @@
     <p><a href="README.md">English</a> | <a href="README.zh-CN.md">简体中文</a> | 日本語</p>
 </div>
 
+<div align="center">
+  <table>
+    <tr>
+      <td width="50%"><img src="assets/showcase-mech.png" alt="Immaterial Impulse — モノクロテーマ" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-dark-cosmic-jhin.png" alt="Immaterial Impulse — パープルテーマ" width="100%"></td>
+    </tr>
+    <tr>
+      <td width="50%"><img src="assets/showcase-saber.png" alt="Immaterial Impulse — ウォームテーマ" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-stella.png" alt="Immaterial Impulse — ブルーテーマ" width="100%"></td>
+    </tr>
+  </table>
+  <p><em>同じシェル、4枚の壁紙 ―― Material You がデスクトップ全体をそれぞれに合わせて再配色。</em></p>
+</div>
+
 ---
 
 ## 前提

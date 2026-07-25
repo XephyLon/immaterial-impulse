@@ -6,6 +6,20 @@
     <p>English | <a href="README.zh-CN.md">简体中文</a> | <a href="README.ja.md">日本語</a></p>
 </div>
 
+<div align="center">
+  <table>
+    <tr>
+      <td width="50%"><img src="assets/showcase-mech.png" alt="Immaterial Impulse — monochrome theme" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-dark-cosmic-jhin.png" alt="Immaterial Impulse — purple theme" width="100%"></td>
+    </tr>
+    <tr>
+      <td width="50%"><img src="assets/showcase-saber.png" alt="Immaterial Impulse — warm theme" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-stella.png" alt="Immaterial Impulse — blue theme" width="100%"></td>
+    </tr>
+  </table>
+  <p><em>Same shell, four wallpapers — Material You retints the whole desktop to each.</em></p>
+</div>
+
 ---
 
 ## The premise

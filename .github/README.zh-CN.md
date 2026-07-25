@@ -6,6 +6,20 @@
     <p><a href="README.md">English</a> | 简体中文 | <a href="README.ja.md">日本語</a></p>
 </div>
 
+<div align="center">
+  <table>
+    <tr>
+      <td width="50%"><img src="assets/showcase-mech.png" alt="Immaterial Impulse — 单色主题" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-dark-cosmic-jhin.png" alt="Immaterial Impulse — 紫色主题" width="100%"></td>
+    </tr>
+    <tr>
+      <td width="50%"><img src="assets/showcase-saber.png" alt="Immaterial Impulse — 暖色主题" width="100%"></td>
+      <td width="50%"><img src="assets/showcase-stella.png" alt="Immaterial Impulse — 蓝色主题" width="100%"></td>
+    </tr>
+  </table>
+  <p><em>同一套 Shell，四张壁纸 —— Material You 会根据每张壁纸为整个桌面重新配色。</em></p>
+</div>
+
 ---
 
 ## 缘起
