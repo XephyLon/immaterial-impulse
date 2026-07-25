@@ -8,8 +8,13 @@ MIGRATE = ROOT / "scripts/migrate-config-dir.sh"
 
 class ConfigMigrationTests(unittest.TestCase):
     def _run(self, home):
+        # Override XDG_CONFIG_HOME too: the script prefers it over $HOME/.config,
+        # and CI runners export it (pointing at the runner's real home), which
+        # silently no-ops the migration outside the sandbox.
         subprocess.run(["bash", str(MIGRATE)],
-                       env=dict(os.environ, HOME=str(home)), check=True)
+                       env=dict(os.environ, HOME=str(home),
+                                XDG_CONFIG_HOME=str(home / ".config")),
+                       check=True)
 
     def test_moves_old_dir_when_new_absent(self):
         with tempfile.TemporaryDirectory() as d:
