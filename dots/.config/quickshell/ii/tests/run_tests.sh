@@ -171,6 +171,24 @@ if ! python3 "$SCRIPT_DIR/test_dock_motion.py"; then
     exit 1
 fi
 
+echo "Running config directory migration tests..."
+if ! python3 "$SCRIPT_DIR/test_config_migration.py"; then
+    echo "Config directory migration tests failed."
+    exit 1
+fi
+
+echo "Running keyring migration tests..."
+if ! python3 "$SCRIPT_DIR/test_keyring_migration.py"; then
+    echo "Keyring migration tests failed."
+    exit 1
+fi
+
+echo "Running Wallpaper Engine prebuilt installer tests..."
+if ! python3 "$SCRIPT_DIR/test_wallpaperengine_prebuilt.py"; then
+    echo "Wallpaper Engine prebuilt installer tests failed."
+    exit 1
+fi
+
 echo "Running shared widget contract tests..."
 if ! python3 "$SCRIPT_DIR/test_shared_widget_contracts.py"; then
     echo "Shared widget contract tests failed."
