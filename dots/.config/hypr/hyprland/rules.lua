@@ -131,7 +131,11 @@ hl.layer_rule({ match = { namespace = "osk[0-9]*" }, ignore_alpha = 0.6})
 -- Quickshell: immaterial-impulse
 hl.layer_rule({ match = { namespace = "quickshell:.*" }, blur_popups = true})
 hl.layer_rule({ match = { namespace = "quickshell:.*" }, blur = true})
-hl.layer_rule({ match = { namespace = "quickshell:.*" }, ignore_alpha = 0.79})
+-- Low threshold: pixels below it are left unblurred, so a high value skipped
+-- blur on the shell's own translucent panel backgrounds and let the sharp
+-- wallpaper show straight through the bar/dock/sidebars. Namespace-specific
+-- overrides below (popup/mediaControls/session/...) still set their own.
+hl.layer_rule({ match = { namespace = "quickshell:.*" }, ignore_alpha = 0.05})
 hl.layer_rule({ match = { namespace = "quickshell:bar" }, animation = "slide"})
 hl.layer_rule({ match = { namespace = "quickshell:actionCenter" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:cheatsheet" }, animation = "slide bottom"})
