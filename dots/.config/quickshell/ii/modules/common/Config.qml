@@ -129,6 +129,12 @@ Singleton {
                 property string iconTheme: ""
                 property bool extraBackgroundTint: true
                 property int fakeScreenRounding: 2 // 0: None | 1: Always | 2: When not fullscreen
+                // Automatic dark/light switching. "off" = manual only.
+                property JsonObject autoTheme: JsonObject {
+                    property string mode: "off" // off | sunset | fixed
+                    property string lightTime: "07:00" // HH:MM (fixed mode)
+                    property string darkTime: "19:00" // HH:MM (fixed mode)
+                }
                 property JsonObject fonts: JsonObject {
                     property string main: "Google Sans Flex"
                     property string numbers: "Google Sans Flex"

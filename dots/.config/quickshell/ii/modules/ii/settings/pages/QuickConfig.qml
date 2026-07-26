@@ -238,6 +238,47 @@ ContentPage {
                     onCheckedChanged: { Config.options.appearance.transparency.automatic = checked; }
                 }
             }
+
+            ConfigSelectionArray {
+                icon: "brightness_auto"
+                text: Translation.tr("Auto dark/light")
+                currentValue: Config.options.appearance.autoTheme.mode
+                onSelected: newValue => { Config.options.appearance.autoTheme.mode = newValue; }
+                options: [
+                    { displayName: Translation.tr("Off"),     icon: "close",         value: "off" },
+                    { displayName: Translation.tr("Sunset"),  icon: "wb_twilight",   value: "sunset" },
+                    { displayName: Translation.tr("Fixed"),   icon: "schedule",      value: "fixed" }
+                ]
+            }
+
+            ConfigRow {
+                visible: Config.options.appearance.autoTheme.mode === "fixed"
+
+                ConfigTextArea {
+                    buttonIcon: "light_mode"
+                    text: Translation.tr("Light at")
+                    placeholderText: "07:00"
+                    fieldWidth: 90
+                    singleLine: true
+                    value: Config.options.appearance.autoTheme.lightTime
+                    onValueChanged: {
+                        if (value.trim() !== "")
+                            Config.options.appearance.autoTheme.lightTime = value.trim();
+                    }
+                }
+                ConfigTextArea {
+                    buttonIcon: "dark_mode"
+                    text: Translation.tr("Dark at")
+                    placeholderText: "19:00"
+                    fieldWidth: 90
+                    singleLine: true
+                    value: Config.options.appearance.autoTheme.darkTime
+                    onValueChanged: {
+                        if (value.trim() !== "")
+                            Config.options.appearance.autoTheme.darkTime = value.trim();
+                    }
+                }
+            }
         }
 
         ContentSection {
