@@ -50,6 +50,9 @@ own repo; the installer pins which revision it builds.
   - Settings → Plugins now badges third-party (externally installed) plugins.
   - Presets: an Overwrite action on each preset card saves the current setup
     over that preset (two-tap confirm).
+- Media plugin: the Next/Previous cog buttons now spin like cassette reels
+  while media is playing (both clockwise, icons stay upright), easing back to
+  rest on pause.
 - Curated default configuration: fresh installs now seed `config.json` from the
   maintainer's tuned setup (sanitized of machine-specific state) instead of the
   bare upstream fallback defaults; existing configs are never touched.

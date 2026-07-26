@@ -139,33 +139,53 @@ Item {
                     property bool hovered: false
                     property bool pressed: false
 
+                    // Only the scalloped shape rotates; the icon and hit area are
+                    // siblings so the skip glyph stays upright. Both cogs spin the
+                    // same way (clockwise) like the two reels of a cassette while
+                    // playing, easing back to rest when paused. The 12-fold shape
+                    // makes the loop's 360deg wrap seamless. See issue #60.
                     MaterialShape {
+                        id: prevShape
                         anchors.fill: parent
                         shape: MaterialShape.Shape.Cookie12Sided
                         color: Appearance.m3colors.darkmode ? Appearance.colors.colOnTertiaryContainer : Appearance.colors.colSecondaryContainer
 
-                        MaterialSymbol {
-                            id: prevIcon
-                            anchors.centerIn: parent
-                            text: "skip_previous"
-                            iconSize: 28 * Appearance.effectiveScale
-                            fill: 0
-                            color: prevBtn.hovered
-                                ? (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colPrimary)
-                                : (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colOnSecondaryContainer)
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                        property bool spinning: MprisController.isPlaying
+                        RotationAnimator on rotation {
+                            from: 0
+                            to: 360
+                            duration: 9000
+                            loops: Animation.Infinite
+                            running: prevShape.spinning
                         }
+                        onSpinningChanged: if (!spinning) rotation = 0
+                        Behavior on rotation {
+                            enabled: !prevShape.spinning
+                            RotationAnimation { direction: RotationAnimation.Shortest; duration: 300; easing.type: Easing.OutCubic }
+                        }
+                    }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            hoverEnabled: true
-                            onEntered: prevBtn.hovered = true
-                            onExited: prevBtn.hovered = false
-                            onPressed: prevBtn.pressed = true
-                            onReleased: prevBtn.pressed = false
-                            onClicked: MprisController.previous()
-                        }
+                    MaterialSymbol {
+                        id: prevIcon
+                        anchors.centerIn: parent
+                        text: "skip_previous"
+                        iconSize: 28 * Appearance.effectiveScale
+                        fill: 0
+                        color: prevBtn.hovered
+                            ? (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colPrimary)
+                            : (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colOnSecondaryContainer)
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        hoverEnabled: true
+                        onEntered: prevBtn.hovered = true
+                        onExited: prevBtn.hovered = false
+                        onPressed: prevBtn.pressed = true
+                        onReleased: prevBtn.pressed = false
+                        onClicked: MprisController.previous()
                     }
                 }
 
@@ -222,33 +242,50 @@ Item {
                     property bool hovered: false
                     property bool pressed: false
 
+                    // Second cassette reel: spins clockwise in lockstep with the
+                    // prev cog, icon and hit area stay put. See issue #60.
                     MaterialShape {
+                        id: nextShape
                         anchors.fill: parent
                         shape: MaterialShape.Shape.Cookie12Sided
                         color: Appearance.m3colors.darkmode ? Appearance.colors.colOnTertiaryContainer : Appearance.colors.colSecondaryContainer
 
-                        MaterialSymbol {
-                            id: nextIcon
-                            anchors.centerIn: parent
-                            text: "skip_next"
-                            iconSize: 28 * Appearance.effectiveScale
-                            fill: 0
-                            color: nextBtn.hovered
-                                ? (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colPrimary)
-                                : (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colOnSecondaryContainer)
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                        property bool spinning: MprisController.isPlaying
+                        RotationAnimator on rotation {
+                            from: 0
+                            to: 360
+                            duration: 9000
+                            loops: Animation.Infinite
+                            running: nextShape.spinning
                         }
+                        onSpinningChanged: if (!spinning) rotation = 0
+                        Behavior on rotation {
+                            enabled: !nextShape.spinning
+                            RotationAnimation { direction: RotationAnimation.Shortest; duration: 300; easing.type: Easing.OutCubic }
+                        }
+                    }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            hoverEnabled: true
-                            onEntered: nextBtn.hovered = true
-                            onExited: nextBtn.hovered = false
-                            onPressed: nextBtn.pressed = true
-                            onReleased: nextBtn.pressed = false
-                            onClicked: MprisController.next()
-                        }
+                    MaterialSymbol {
+                        id: nextIcon
+                        anchors.centerIn: parent
+                        text: "skip_next"
+                        iconSize: 28 * Appearance.effectiveScale
+                        fill: 0
+                        color: nextBtn.hovered
+                            ? (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colPrimary)
+                            : (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colOnSecondaryContainer)
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        hoverEnabled: true
+                        onEntered: nextBtn.hovered = true
+                        onExited: nextBtn.hovered = false
+                        onPressed: nextBtn.pressed = true
+                        onReleased: nextBtn.pressed = false
+                        onClicked: MprisController.next()
                     }
                 }
             }
