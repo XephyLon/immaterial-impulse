@@ -97,6 +97,11 @@ own repo; the installer pins which revision it builds.
   heavier so it reads as the card's heading.
 
 ### Fixed
+- Bar and dock media widgets broke on Arabic (RTL) track metadata: the text
+  auto-aligned to the right edge away from the artwork, and Arabic's taller
+  line box overflowed the fixed-height card, clipping the lines top and
+  bottom. Text is now left-anchored with fixed, vertically-centered line
+  slots so every script lays out like Latin.
 - "Keep system awake" sometimes still let the session lock and hibernate: the
   idle inhibitor was bound to a 0×0 surface that maps unreliably, so Hyprland's
   ext-idle-notify (read by hypridle) intermittently ignored it. It now uses a

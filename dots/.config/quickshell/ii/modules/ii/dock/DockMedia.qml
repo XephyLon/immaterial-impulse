@@ -193,6 +193,16 @@ Item {
                     font.pixelSize: Appearance.font.pixelSize.small - 2
                     color: root.blendedColors.colSubtext
                     elide: Text.ElideRight
+                    // Keep RTL scripts (Arabic) left-anchored beside the art like
+                    // the LTR case, instead of auto-aligning to the right edge.
+                    horizontalAlignment: Text.AlignLeft
+                    // Arabic's natural line box is much taller than Latin's, which
+                    // pushed the two lines past the fixed-height card and clipped
+                    // them top and bottom. Fix each slot's height and center the
+                    // line box in it, so tall metrics overflow symmetrically into
+                    // empty space instead of growing the layout.
+                    Layout.preferredHeight: font.pixelSize * 1.3
+                    verticalAlignment: Text.AlignVCenter
                 }
 
                 StyledText {
@@ -201,6 +211,9 @@ Item {
                     font.pixelSize: Appearance.font.pixelSize.normal - 4
                     color: root.blendedColors.colOnLayer0
                     elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignLeft
+                    Layout.preferredHeight: font.pixelSize * 1.3
+                    verticalAlignment: Text.AlignVCenter
                     opacity: 0.7
                 }
 

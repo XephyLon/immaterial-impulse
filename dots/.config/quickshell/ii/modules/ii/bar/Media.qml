@@ -339,6 +339,15 @@ Item {
                             font.pixelSize: Appearance.font.pixelSize.smaller
                             color: Appearance.colors.colOnSecondaryContainer
                             elide: Text.ElideRight
+                            // Anchor to the art side so RTL scripts (Arabic) don't
+                            // auto-align right and detach from the artwork.
+                            horizontalAlignment: Text.AlignLeft
+                            // Fix the slot height and center the natural line box
+                            // in it: Arabic's tall font metrics then overflow
+                            // symmetrically (into empty metric space) instead of
+                            // growing the layout and clipping at the pill edges.
+                            Layout.preferredHeight: font.pixelSize * 1.3
+                            verticalAlignment: Text.AlignVCenter
                             Layout.maximumWidth: 120
                             Behavior on text {
                                 SequentialAnimation {
@@ -355,13 +364,16 @@ Item {
                             font.pixelSize: Appearance.font.pixelSize.smallie
                             color: Appearance.colors.colOnSecondaryContainer
                             elide: Text.ElideRight
+                            horizontalAlignment: Text.AlignLeft
+                            Layout.preferredHeight: font.pixelSize * 1.3
+                            verticalAlignment: Text.AlignVCenter
                             opacity: 0.7
                             Layout.maximumWidth: 120
                             Behavior on text {
                                 SequentialAnimation {
-                                    NumberAnimation { target: titleText; property: "x"; to: -artistText.width; duration: Appearance.animation.elementMoveFaster.duration; easing.type: Easing.InQuad }
+                                    NumberAnimation { target: titleText; property: "x"; to: -titleText.width; duration: Appearance.animation.elementMoveFaster.duration; easing.type: Easing.InQuad }
                                     PropertyAction { target: titleText; property: "text" }
-                                    NumberAnimation { target: titleText; property: "x"; from: artistText.width; to: 0; duration: Appearance.animation.elementMoveFaster.duration; easing.type: Easing.OutQuad }
+                                    NumberAnimation { target: titleText; property: "x"; from: titleText.width; to: 0; duration: Appearance.animation.elementMoveFaster.duration; easing.type: Easing.OutQuad }
                                 }
                             }
                         }
