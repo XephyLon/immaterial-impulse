@@ -494,6 +494,11 @@ ContentPage {
                     checked: Config.options.bar.workspaces.showAppIcons
                     onCheckedChanged: { Config.options.bar.workspaces.showAppIcons = checked; }
                 }
+                ConfigSwitch {
+                    buttonIcon: "monitor"; text: Translation.tr("Show workspaces from all monitors")
+                    checked: Config.options.bar.workspaces.showAllMonitors
+                    onCheckedChanged: { Config.options.bar.workspaces.showAllMonitors = checked; }
+                }
                 ConfigSpinBox {
                     icon: "view_column"; text: Translation.tr("Workspaces shown")
                     value: Config.options.bar.workspaces.shown

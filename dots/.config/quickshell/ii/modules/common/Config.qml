@@ -525,6 +525,7 @@ Singleton {
                     property bool monochromeIcons: true
                     property int shown: 10
                     property bool showAppIcons: true
+                    property bool showAllMonitors: true // false = only show workspaces on the current monitor
                     property string indicatorStyle: "dot" // "dot" or "icon"
                     property bool alwaysShowNumbers: false
                     property int showNumberDelay: 300 // milliseconds
