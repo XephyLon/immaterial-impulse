@@ -155,7 +155,7 @@ cd immaterial-impulse
 
 一个快捷键即可实时切换整个栏布局 —— 无需重启，也无需修改配置。
 
-<video src="https://github.com/XephyLon/immaterial-impulse/raw/main/.github/assets/bar-style-switch.mp4" controls muted loop width="100%"></video>
+<img src="assets/bar-style-switch.gif" alt="实时切换栏样式" width="100%">
 
 ---
 

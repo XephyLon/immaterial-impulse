@@ -164,7 +164,7 @@ Same shell, three palettes — Material You recolors everything from the wallpap
 
 One keybind swaps the whole bar layout live — no restart, no config editing.
 
-<video src="https://github.com/XephyLon/immaterial-impulse/raw/main/.github/assets/bar-style-switch.mp4" controls muted loop width="100%"></video>
+<img src="assets/bar-style-switch.gif" alt="Switching bar styles live" width="100%">
 
 ---
 
