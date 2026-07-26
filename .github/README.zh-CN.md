@@ -151,6 +151,12 @@ cd immaterial-impulse
   <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
 </table>
 
+### 一键切换栏样式
+
+一个快捷键即可实时切换整个栏布局 —— 无需重启，也无需修改配置。
+
+<video src="https://github.com/XephyLon/immaterial-impulse/raw/main/.github/assets/bar-style-switch.mp4" controls muted loop width="100%"></video>
+
 ---
 
 ## 致谢

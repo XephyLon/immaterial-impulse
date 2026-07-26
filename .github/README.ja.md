@@ -169,6 +169,12 @@ cd immaterial-impulse
   <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
 </table>
 
+### バースタイルを瞬時に切り替え
+
+ショートカット一つでバー全体のレイアウトをライブ切り替え ―― 再起動も設定編集も不要。
+
+<video src="https://github.com/XephyLon/immaterial-impulse/raw/main/.github/assets/bar-style-switch.mp4" controls muted loop width="100%"></video>
+
 ---
 
 ## クレジット
