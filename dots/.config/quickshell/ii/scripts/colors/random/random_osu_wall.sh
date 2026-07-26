@@ -29,10 +29,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 mkdir -p "$PICTURES_DIR/Wallpapers"
 
-response=$(curl "https://osu.ppy.sh/api/v2/seasonal-backgrounds")
-images=$(echo "$response" | jq '.backgrounds | length' -r);
+response=$(curl -fsSL "https://osu.ppy.sh/api/v2/seasonal-backgrounds") || {
+    echo "[random_osu_wall] Could not reach osu.ppy.sh (offline?); keeping current wallpaper." >&2
+    exit 1
+}
+images=$(echo "$response" | jq -r '.backgrounds | length')
+if [ -z "$images" ] || ! [ "$images" -gt 0 ] 2>/dev/null; then
+    echo "[random_osu_wall] No backgrounds in response; aborting." >&2
+    exit 1
+fi
 randomIndex=$((RANDOM % images));
-link=$(echo "$response" | jq ".backgrounds[$randomIndex].url" -r)
+link=$(echo "$response" | jq -r ".backgrounds[$randomIndex].url // empty")
+if [ -z "$link" ] || [ "$link" = "null" ]; then
+    echo "[random_osu_wall] No wallpaper URL in response; aborting." >&2
+    exit 1
+fi
 ext=$(echo "$link" | awk -F. '{print $NF}')
 downloadPath="$PICTURES_DIR/Wallpapers/random_wallpaper.$ext"
 shellConfigPath="$HOME/.config/immaterial-impulse/config.json"
@@ -40,5 +51,9 @@ currentWallpaperPath=$(jq -r '.background.wallpaperPath' $shellConfigPath)
 if [ "$downloadPath" == "$currentWallpaperPath" ]; then
     downloadPath="$PICTURES_DIR/Wallpapers/random_wallpaper-1.$ext"
 fi
-curl "$link" -o "$downloadPath"
+if ! curl -fsSL "$link" -o "$downloadPath" || [ ! -s "$downloadPath" ]; then
+    echo "[random_osu_wall] Download failed or empty; aborting." >&2
+    rm -f -- "$downloadPath"
+    exit 1
+fi
 "$SCRIPT_DIR/../switchwall.sh" --image "$downloadPath"

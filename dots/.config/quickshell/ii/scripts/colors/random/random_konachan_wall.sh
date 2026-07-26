@@ -31,13 +31,24 @@ mkdir -p "$PICTURES_DIR/Wallpapers"
 page=$((1 + RANDOM % 1000));
 shellConfigPath="$HOME/.config/immaterial-impulse/config.json"
 userAgent=$(jq -r '.networking.userAgent // empty' "$shellConfigPath" 2>/dev/null)
-response=$(curl -A "$userAgent" "https://konachan.net/post.json?tags=rating%3Asafe&limit=1&page=$page")
-link=$(echo "$response" | jq '.[0].file_url' -r);
+response=$(curl -fsSL -A "$userAgent" "https://konachan.net/post.json?tags=rating%3Asafe&limit=1&page=$page") || {
+    echo "[random_konachan_wall] Could not reach konachan.net (offline?); keeping current wallpaper." >&2
+    exit 1
+}
+link=$(echo "$response" | jq -r '.[0].file_url // empty')
+if [ -z "$link" ] || [ "$link" = "null" ]; then
+    echo "[random_konachan_wall] No wallpaper URL in response; aborting." >&2
+    exit 1
+fi
 ext=$(echo "$link" | awk -F. '{print $NF}')
 downloadPath="$PICTURES_DIR/Wallpapers/random_wallpaper.$ext"
 currentWallpaperPath=$(jq -r '.background.wallpaperPath' "$shellConfigPath")
 if [ "$downloadPath" == "$currentWallpaperPath" ]; then
     downloadPath="$PICTURES_DIR/Wallpapers/random_wallpaper-1.$ext"
 fi
-curl -A "$userAgent" "$link" -o "$downloadPath"
+if ! curl -fsSL -A "$userAgent" "$link" -o "$downloadPath" || [ ! -s "$downloadPath" ]; then
+    echo "[random_konachan_wall] Download failed or empty; aborting." >&2
+    rm -f -- "$downloadPath"
+    exit 1
+fi
 "$SCRIPT_DIR/../switchwall.sh" --image "$downloadPath"

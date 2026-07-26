@@ -141,6 +141,14 @@ EOF
 
 set_wallpaper_path() {
     local path="$1"
+    # Never persist a missing/empty path. An offline random-wallpaper fetch can
+    # produce a truncated path (e.g. ".../random_wallpaper.null") that would
+    # otherwise be written to config, blanking the lock/desktop background and
+    # corrupting the saved wallpaperPath. See issue #32.
+    if [ -z "$path" ] || [ ! -f "$path" ]; then
+        echo "[switchwall] Refusing to set wallpaperPath to a missing file: '$path'" >&2
+        return 1
+    fi
     if [ -f "$SHELL_CONFIG_FILE" ]; then
         jq --arg path "$path" '.background.wallpaperPath = $path' "$SHELL_CONFIG_FILE" > "$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
     fi
