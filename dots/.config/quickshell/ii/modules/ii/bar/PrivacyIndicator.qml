@@ -34,22 +34,6 @@ MouseArea {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
 
-    function tooltipText() {
-        const parts = [];
-        if (root.micOn) {
-            const m = MediaCapture.micApps.join(", ");
-            parts.push(m.length > 0 ? Translation.tr("Microphone: %1").arg(m) : Translation.tr("Microphone in use"));
-        }
-        if (root.cameraOn) {
-            const c = MediaCapture.cameraApps.join(", ");
-            parts.push(c.length > 0 ? Translation.tr("Camera: %1").arg(c) : Translation.tr("Camera in use"));
-        }
-        if (root.screencastOn) {
-            parts.push(Translation.tr("Screen is being shared"));
-        }
-        return parts.join("\n");
-    }
-
     // One icon slot that collapses its width and fades/scales when its signal is
     // off, so icons appear/disappear smoothly instead of popping in and out.
     component IconSlot: Item {
@@ -124,9 +108,8 @@ MouseArea {
         }
     }
 
-    StyledToolTip {
-        // MouseArea exposes containsMouse, not `hovered`, so gate explicitly.
-        extraVisibleCondition: root.shown && root.containsMouse
-        text: root.tooltipText()
+    // Hover popup listing what's in use, instead of a cramped multi-line tooltip.
+    PrivacyIndicatorPopup {
+        hoverTarget: root
     }
 }
