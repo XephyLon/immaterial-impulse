@@ -34,6 +34,8 @@ own repo; the installer pins which revision it builds.
     times (Settings → Wallpaper & Colors); off by default.
   - ICS calendar: load events from local `.ics` files and remote ICS URLs and
     mark days that have events in the sidebar calendar.
+  - Bar "Timer" pill (add via Settings → Bar): a dynamic-island pill showing a
+    running pomodoro/stopwatch, opening the sidebar on click.
 - Curated default configuration: fresh installs now seed `config.json` from the
   maintainer's tuned setup (sanitized of machine-specific state) instead of the
   bare upstream fallback defaults; existing configs are never touched.
