@@ -2,6 +2,7 @@ import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.services
+import Quickshell.Bluetooth
 import QtQuick
 import QtQuick.Layouts
 
@@ -100,7 +101,15 @@ DialogListItem {
                 }
             }
             ActionButton {
-                buttonText: root.device?.connected ? Translation.tr("Disconnect") : Translation.tr("Connect")
+                readonly property int deviceState: root.device?.state ?? BluetoothDeviceState.Disconnected
+                readonly property bool busy: deviceState === BluetoothDeviceState.Connecting || deviceState === BluetoothDeviceState.Disconnecting
+
+                enabled: !busy
+                buttonText: {
+                    if (deviceState === BluetoothDeviceState.Connecting) return Translation.tr("Connecting…");
+                    if (deviceState === BluetoothDeviceState.Disconnecting) return Translation.tr("Disconnecting…");
+                    return root.device?.connected ? Translation.tr("Disconnect") : Translation.tr("Connect");
+                }
 
                 onClicked: {
                     if (root.device?.connected) {
