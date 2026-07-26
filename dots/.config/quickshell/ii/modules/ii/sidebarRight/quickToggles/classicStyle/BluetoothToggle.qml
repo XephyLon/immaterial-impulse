@@ -24,6 +24,7 @@ QuickToggleButton {
     StyledToolTip {
         text: Translation.tr("%1 | Right-click to configure").arg(
             (BluetoothStatus.firstActiveDevice?.name ?? Translation.tr("Bluetooth"))
+            + BluetoothStatus.formatBatterySuffix(BluetoothStatus.firstActiveDevice)
             + (BluetoothStatus.activeDeviceCount > 1 ? ` +${BluetoothStatus.activeDeviceCount - 1}` : "")
             )
     }

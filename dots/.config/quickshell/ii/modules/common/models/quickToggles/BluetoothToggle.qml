@@ -7,9 +7,15 @@ import qs.modules.common.widgets
 
 QuickToggleModel {
     name: Translation.tr("Bluetooth")
-    statusText: BluetoothStatus.firstActiveDevice?.name ?? Translation.tr("Not connected")
+    statusText: {
+        const device = BluetoothStatus.firstActiveDevice;
+        if (!device)
+            return Translation.tr("Not connected");
+        return device.name + BluetoothStatus.formatBatterySuffix(device);
+    }
     tooltipText: Translation.tr("%1 | Right-click to configure").arg(
         (BluetoothStatus.firstActiveDevice?.name ?? Translation.tr("Bluetooth"))
+        + BluetoothStatus.formatBatterySuffix(BluetoothStatus.firstActiveDevice)
         + (BluetoothStatus.activeDeviceCount > 1 ? ` +${BluetoothStatus.activeDeviceCount - 1}` : "")
     )
     icon: BluetoothStatus.connected ? "bluetooth_connected" : BluetoothStatus.enabled ? "bluetooth" : "bluetooth_disabled"

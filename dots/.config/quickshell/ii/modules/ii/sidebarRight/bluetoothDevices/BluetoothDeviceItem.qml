@@ -59,10 +59,8 @@ DialogListItem {
                     elide: Text.ElideRight
                     text: {
                         if (!root.device?.paired) return "";
-                        let statusText = root.device?.connected ? Translation.tr("Connected") : Translation.tr("Paired");
-                        if (!root.device?.batteryAvailable) return statusText;
-                        statusText += ` • ${Math.round(root.device?.battery * 100)}%`;
-                        return statusText;
+                        const statusText = root.device?.connected ? Translation.tr("Connected") : Translation.tr("Paired");
+                        return statusText + BluetoothStatus.formatBatterySuffix(root.device);
                     }
                 }
             }

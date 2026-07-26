@@ -18,6 +18,9 @@ own repo; the installer pins which revision it builds.
     the NVIDIA path is unchanged.
   - Bluetooth connect/disconnect button shows a "Connecting…"/"Disconnecting…"
     pending state while the operation is in flight.
+  - Bluetooth device battery (upstream PR #3538): the quick-toggle tile status
+    and tooltips now show the connected device's battery percentage (when the
+    device reports one), matching the device-list dialog.
   - Calendar: configurable first day of week (Monday/Saturday/Sunday).
   - Bar: option to show only the current monitor's workspaces
     (`bar.workspaces.showAllMonitors`).

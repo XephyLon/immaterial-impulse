@@ -15,6 +15,15 @@ Singleton {
     readonly property int activeDeviceCount: Bluetooth.defaultAdapter?.devices.values.filter(device => device.connected).length ?? 0
     readonly property bool connected: Bluetooth.devices.values.some(d => d.connected)
 
+    // " • NN%" for a device whose battery level is reported, "" otherwise.
+    // Battery comes from Quickshell.Bluetooth's BluetoothDevice (BlueZ Battery1
+    // interface): `batteryAvailable` gates it, `battery` is a 0..1 fraction.
+    function formatBatterySuffix(device) {
+        if (!device?.batteryAvailable)
+            return "";
+        return ` • ${Math.round(device.battery * 100)}%`;
+    }
+
     function sortFunction(a, b) {
         // Ones with meaningful names before MAC addresses
         const macRegex = /^([0-9A-Fa-f]{2}-){5}[0-9A-Fa-f]{2}$/;

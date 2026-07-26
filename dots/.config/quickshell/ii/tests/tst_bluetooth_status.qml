@@ -84,6 +84,25 @@ TestCase {
         compare(names, ["Buds", "Zeta Speaker", "Alpha Mouse", "AA-BB-CC-DD-EE-FF"])
     }
 
+    function test_battery_suffix_requires_available_battery() {
+        // No device / battery not reported -> empty suffix.
+        compare(BluetoothStatus.formatBatterySuffix(null), "")
+        compare(BluetoothStatus.formatBatterySuffix(undefined), "")
+        compare(BluetoothStatus.formatBatterySuffix(keyboard), "")
+
+        // Reported battery -> " • NN%" from the 0..1 fraction, rounded.
+        var buds = { name: "Buds", batteryAvailable: true, battery: 0.85 }
+        compare(BluetoothStatus.formatBatterySuffix(buds), " • 85%")
+        compare(BluetoothStatus.formatBatterySuffix(
+            { batteryAvailable: true, battery: 0.999 }), " • 100%")
+        compare(BluetoothStatus.formatBatterySuffix(
+            { batteryAvailable: true, battery: 0 }), " • 0%")
+
+        // batteryAvailable false wins even if a stale value is present.
+        compare(BluetoothStatus.formatBatterySuffix(
+            { batteryAvailable: false, battery: 0.5 }), "")
+    }
+
     function test_default_adapter_activity() {
         Bluetooth.defaultAdapter = ({
             enabled: true,
