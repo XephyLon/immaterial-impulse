@@ -60,12 +60,28 @@ Singleton {
         );
     }
 
+    // Debounce transient clears. When a sidebar opens, Hyprland sends a
+    // ToplevelHandle activation update ~20ms later for the previously-focused
+    // window; HyprlandFocusGrab reads that as "a non-panel toplevel became
+    // active" and fires onCleared, which used to dismiss() the just-opened panel
+    // (sidebars "blinked" open then shut). The grab re-activates within a frame
+    // or two, so we defer the dismiss briefly and skip it if the grab came back.
+    // A genuine click-outside leaves the grab inactive, so it still dismisses.
+    // See issue #25.
+    Timer {
+        id: dismissDebounce
+        interval: 100
+        onTriggered: {
+            if (!grab.active) root.dismiss();
+        }
+    }
+
     HyprlandFocusGrab {
         id: grab
         windows: root.dismissable.every(w => !w?.focusable) || root.dismissable.some(w => hasActive(w?.contentItem)) ? [...root.dismissable, ...root.persistent] : [...root.dismissable]
         active: root.dismissable.length > 0
         onCleared: () => {
-            root.dismiss();
+            dismissDebounce.restart();
         }
     }
 
