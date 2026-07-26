@@ -37,7 +37,21 @@ Scope {
                     right: true
                 }
 
+                // Mapping a fullscreen overlay under the cursor makes the
+                // compositor send a pointer enter/motion event, which would
+                // instantly self-dismiss the screensaver. Ignore all input until
+                // armed a moment after it appears; real input then wakes it.
+                property bool armed: false
+                Timer {
+                    id: armTimer
+                    interval: 600
+                    running: true
+                    onTriggered: saverWindow.armed = true
+                }
+
                 function dismiss() {
+                    if (!saverWindow.armed)
+                        return;
                     GlobalStates.screensaverActive = false;
                 }
 
@@ -46,7 +60,7 @@ Scope {
                     anchors.fill: parent
                     focus: true
 
-                    // Any input dismisses; unloading the surface also resets the drift.
+                    // Any input (once armed) dismisses; unloading resets the drift.
                     Keys.onPressed: saverWindow.dismiss()
 
                     ScreensaverContent {
