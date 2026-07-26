@@ -25,11 +25,13 @@ Rectangle {
     // assigning the loaded content does not schedule a redundant save.
     property bool ready: false
 
-    // A square 2x2 desktop-grid component.
-    implicitWidth: 228
-    implicitHeight: 228
-    width: implicitWidth
-    height: implicitHeight
+    // A 2x2 component-grid tile (276x228 - cells are wider than tall). The host
+    // (PluginWidget) sizes us from the manifest `grid` span and stretches this
+    // root to fill it; the implicit size is only a fallback for standalone use.
+    // See docs/widget-grid.md.
+    implicitWidth: Appearance.sizes.widgetGridSpanX(2)
+    implicitHeight: Appearance.sizes.widgetGridSpanY(2)
+    anchors.fill: parent
     radius: Appearance.rounding.verylarge
     // Matugen-tinted card (secondary container) instead of a neutral surface.
     color: root.blurEnabled
