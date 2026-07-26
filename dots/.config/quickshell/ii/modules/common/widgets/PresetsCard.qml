@@ -16,6 +16,16 @@ Rectangle {
     property string description: ""
     property var onApply: () => {}
     property var onRemove: () => {}
+    property var onOverwrite: () => {}
+
+    // Two-tap confirm for the destructive overwrite: the first tap arms it, the
+    // second (within the timeout) replaces the preset with the current state.
+    property bool confirmingOverwrite: false
+    Timer {
+        id: overwriteConfirmTimer
+        interval: 3000
+        onTriggered: root.confirmingOverwrite = false
+    }
 
     implicitWidth: 293 
     implicitHeight: contentColumn.implicitHeight + 14
@@ -126,6 +136,41 @@ Rectangle {
             spacing: Appearance.spacing.space100
 
             Item { Layout.fillWidth: true }
+
+            GroupButton {
+                id: overwriteBtn
+                bounce: false
+                toggled: false
+                leftRadius: height / 2
+                rightRadius: height / 2
+                Layout.fillWidth: false
+                Layout.fillHeight: false
+                implicitHeight: 36
+                horizontalPadding: Appearance.spacing.space175
+                verticalPadding: Appearance.spacing.space100
+                colBackground: "transparent"
+                colBackgroundHover: ColorUtils.transparentize(Appearance.colors.colPrimaryContainerHover, 0.8)
+                colBackgroundActive: Appearance.colors.colPrimaryContainerActive
+                contentItem: StyledText {
+                    text: root.confirmingOverwrite ? "Confirm?" : "Overwrite"
+                    color: root.confirmingOverwrite ? Appearance.colors.colError : Appearance.colors.colPrimary
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: {
+                    if (root.confirmingOverwrite) {
+                        root.confirmingOverwrite = false;
+                        overwriteConfirmTimer.stop();
+                        root.onOverwrite();
+                    } else {
+                        root.confirmingOverwrite = true;
+                        overwriteConfirmTimer.restart();
+                    }
+                }
+                StyledToolTip {
+                    text: "Replace this preset with the current setup"
+                }
+            }
 
             GroupButton {
                 id: removeBtn

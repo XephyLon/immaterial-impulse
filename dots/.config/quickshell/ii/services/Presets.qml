@@ -63,6 +63,16 @@ Singleton {
         saveProc.running = true
     }
 
+    // Save the current state over an existing preset. `name` is an existing
+    // preset's exact (already-sanitized) name; --save writes ${name}.json,
+    // replacing it. Keeps the preset's description.
+    function overwrite(name, description) {
+        if (!name || name.length === 0) return
+        saveProc.command = ["bash", Directories.presetsScriptPath, "--save", name,
+            description ?? "", PluginState.snapshot()]
+        saveProc.running = true
+    }
+
     function apply(name) {
         GlobalStates.settingsOpen = false
         Quickshell.execDetached(["bash", Directories.presetsScriptPath, "--apply", name])
