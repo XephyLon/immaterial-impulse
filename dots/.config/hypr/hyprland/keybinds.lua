@@ -41,6 +41,14 @@ hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd(qsIpcCall .. " brightness increme
     { locked = true, repeating = true })
 hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(qsIpcCall .. " brightness decrement || brightnessctl s 5%-"),
     { locked = true, repeating = true })
+hl.bind("XF86KbdBrightnessUp", hl.dsp.exec_cmd("brightnessctl -d \"*::kbd_backlight\" s 10%+"),
+    { locked = true, repeating = true }) -- [hidden]
+hl.bind("XF86KbdBrightnessDown", hl.dsp.exec_cmd("brightnessctl -d \"*::kbd_backlight\" s 10%-"),
+    { locked = true, repeating = true }) -- [hidden]
+hl.bind("ALT + XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl -d \"*::kbd_backlight\" s 10%+"),
+    { locked = true, repeating = true }) -- [hidden]
+hl.bind("ALT + XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -d \"*::kbd_backlight\" s 10%-"),
+    { locked = true, repeating = true }) -- [hidden]
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%+ -l 1.5"),
     { locked = true, repeating = true })
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%-"),
