@@ -62,7 +62,7 @@ Item {
 
     function shouldPaintMaterialPill(name) {
         if (Config.options.bar.cornerStyle !== 3) return false;
-        const blacklist = ["workspaces", "divisor", "powerButton", "docktoPanel", "leftSidebarButton", "activeWindow"];
+        const blacklist = ["workspaces", "divisor", "powerButton", "docktoPanel", "leftSidebarButton", "activeWindow", "timerPill"];
         if (blacklist.includes(name)) {
             return false;
         }
