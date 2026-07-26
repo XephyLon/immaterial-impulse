@@ -38,8 +38,13 @@ own repo; the installer pins which revision it builds.
     running pomodoro/stopwatch, opening the sidebar on click.
   - Privacy indicator (in the default right bar): an alert pill that appears
     only while an app is using the microphone, camera, or sharing/recording the
-    screen, naming the source in its tooltip. Each signal's icon and the pill
+    screen, listing the source in a hover popup. Each signal's icon and the pill
     ease in and out.
+  - Notes plugin (bundled desktop widget): a persistent, autosaving notepad
+    that shares the notes scratchpad with the overlay notes editor.
+  - Settings → Plugins now badges third-party (externally installed) plugins.
+  - Presets: an Overwrite action on each preset card saves the current setup
+    over that preset (two-tap confirm).
 - Curated default configuration: fresh installs now seed `config.json` from the
   maintainer's tuned setup (sanitized of machine-specific state) instead of the
   bare upstream fallback defaults; existing configs are never touched.
