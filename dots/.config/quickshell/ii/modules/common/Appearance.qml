@@ -450,8 +450,16 @@ Singleton {
 
     sizes: QtObject {
         property real baseBarHeight: 40
-        property real barHeight: Config.options.bar.cornerStyle === 1 ? 
+        property real barHeight: Config.options.bar.cornerStyle === 1 ?
             (baseBarHeight + root.sizes.hyprlandGapsOut * 2) : baseBarHeight
+        // M3E bar widget-pill geometry: the pill is inset from the bar by
+        // barPillMargin top and bottom, giving barPillHeight. Shared by BarGroup
+        // and the standalone widget pills (Timer, Privacy) so they line up.
+        property real barPillMargin: root.spacing.space50
+        property real barPillHeight: baseBarHeight - root.sizes.barPillMargin * 2
+        // Standalone widget pills (Timer, Privacy) read as compact dynamic-island
+        // badges: a touch shorter than the full group pill.
+        property real barStandalonePillHeight: root.sizes.barPillHeight - root.sizes.barPillMargin
         property real barCenterSideModuleWidth: Config.options?.bar.verbose ? 360 : 140
         property real barCenterSideModuleWidthShortened: 280
         property real barCenterSideModuleWidthHellaShortened: 190

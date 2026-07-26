@@ -34,10 +34,10 @@ Item {
         id: background
         anchors {
             fill: parent
-            topMargin: root.vertical ? 0 : 4
-            bottomMargin: root.vertical ? 0 : 4
-            leftMargin: root.vertical ? 4 : 0
-            rightMargin: root.vertical ? 4 : 0
+            topMargin: root.vertical ? 0 : Appearance.sizes.barPillMargin
+            bottomMargin: root.vertical ? 0 : Appearance.sizes.barPillMargin
+            leftMargin: root.vertical ? Appearance.sizes.barPillMargin : 0
+            rightMargin: root.vertical ? Appearance.sizes.barPillMargin : 0
         }
         color: (root.isMaterial && !root.paintMaterialPill)
             ? "transparent"

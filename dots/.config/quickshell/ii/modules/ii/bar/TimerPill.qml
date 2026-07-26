@@ -70,7 +70,10 @@ MouseArea {
             animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
         }
         implicitWidth: pillRow.implicitWidth + Appearance.spacing.space150 * 2
-        implicitHeight: (root.vertical ? pillColumn.implicitHeight : pillRow.implicitHeight) + Appearance.spacing.space50 * 2
+        // Match the M3 group pill height (bar height minus BarGroup's 4px insets).
+        implicitHeight: root.vertical
+            ? pillColumn.implicitHeight + Appearance.spacing.space50 * 2
+            : Appearance.sizes.barStandalonePillHeight
 
         RowLayout {
             id: pillRow
