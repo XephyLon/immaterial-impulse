@@ -420,10 +420,10 @@
         "visualizer"
       ],
       "rightLayout": [
+        "submapIndicator",
         "privacyIndicator",
         "sysTray",
         "hyprlandXkbIndicator",
-        "submapIndicator",
         "systemIcons"
       ]
     },
@@ -452,11 +452,11 @@
       "vramWarningThreshold": 95
     },
     "screenList": [],
+    "shadow": false,
     "showBackground": true,
     "tooltips": {
       "clickToShow": false
     },
-    "shadow": false,
     "topLeftIcon": "spark",
     "utilButtons": {
       "isRecording": false,

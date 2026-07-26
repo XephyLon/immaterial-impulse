@@ -282,7 +282,6 @@ ContentPage {
                     }
                 }
                 ConfigSwitch {
-                ConfigSwitch {
                     buttonIcon: "ev_shadow"
                     text: Translation.tr("Bar shadow")
                     enabled: Config.options.bar.showBackground
@@ -290,6 +289,7 @@ ContentPage {
                     checked: Config.options.bar.shadow
                     onCheckedChanged: { Config.options.bar.shadow = checked; }
                 }
+                ConfigSwitch {
                     buttonIcon: "cancel_presentation"
                     text: Translation.tr("Auto-dismiss popups on hide")
                     enabled: Config.options.bar.autoHide.enable

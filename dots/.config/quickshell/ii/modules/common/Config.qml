@@ -690,12 +690,6 @@ Singleton {
                     property bool enable: true
                     property int pollInterval: 5000 // ms
                 }
-            }
-
-            // OLED screensaver. The idle trigger lives in hypridle.conf (keep its
-            // listener timeout in sync); show() no-ops unless enable is true.
-            property JsonObject screensaver: JsonObject {
-                property bool enable: false
                 property JsonObject tailscale: JsonObject {
                     property bool enable: true
                     property int pollInterval: 5000 // ms
@@ -708,6 +702,12 @@ Singleton {
             // (services/Idle.qml).
             property JsonObject idleInhibitor: JsonObject {
                 property bool autoOnExternalMonitor: false
+            }
+
+            // OLED screensaver. The idle trigger lives in hypridle.conf (keep its
+            // listener timeout in sync); show() no-ops unless enable is true.
+            property JsonObject screensaver: JsonObject {
+                property bool enable: false
                 property string mode: "black" // "black" | "clock"
                 property int timeout: 240 // seconds (mirror in hypridle.conf; must be < lock timeout)
             }
