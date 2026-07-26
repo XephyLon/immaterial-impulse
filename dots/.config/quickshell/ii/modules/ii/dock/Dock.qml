@@ -35,6 +35,8 @@ Scope {
             )
 
             property bool reveal: {
+                if (dockContextMenu.isOpen)
+                    return true
                 if (fullscreenOnThisMonitor)
                     return Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse
                 return root.pinned
@@ -59,6 +61,10 @@ Scope {
                 + Appearance.sizes.hyprlandGapsOut
 
             mask: Region { item: dockMouseArea }
+
+            DockContextMenu {
+                id: dockContextMenu
+            }
 
             MouseArea {
                 id: dockMouseArea
@@ -160,6 +166,7 @@ Scope {
                                 Layout.leftMargin: Config.options.dock.showPinButton ? 0 : -Appearance.spacing.space200
 
                                 pinnedApps:    Config.options?.dock.pinnedApps ?? []
+                                contextMenu:   dockContextMenu
                                 buttonPadding: dockRow.padding
                                 btnSize:       46
                                 btnSpacing:    2
@@ -216,6 +223,7 @@ Scope {
                                             Layout.rightMargin: Config.options.dock.showAppsButton ? 0 : Appearance.spacing.space50
                                             Layout.leftMargin: dockMedia.visible ? Appearance.spacing.space50 : 0
                                             appListRoot: appListBridge
+                                            contextMenu: dockContextMenu
                                             topInset:    dockRow.padding
                                             bottomInset: dockRow.padding
                                         }

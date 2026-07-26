@@ -26,6 +26,8 @@ Item {
     property real windowControlsHeight: 30
     property Item lastHoveredButton: null
     property bool buttonHovered: false
+    // Shared DockContextMenu instance (provided by the dock window)
+    property var contextMenu: null
     property bool requestDockShow: previewPopup.show
     signal orderChanged(var newOrder)
     property var  _workOrder: pinnedApps.slice()
@@ -160,7 +162,14 @@ Item {
                     DockLaunchTracker.markLaunching(slotItem.appId)
                     slotItem.deskEntry?.execute()
                 }
-                altAction:         () => { TaskbarApps.togglePin(slotItem.appId) }
+                altAction:         () => {
+                    if (root._dragging) return
+                    if (root.contextMenu) {
+                        root.contextMenu.open(dockBtn, slotItem.appEntry, slotItem.appId)
+                    } else {
+                        TaskbarApps.togglePin(slotItem.appId)
+                    }
+                }
 
                 contentItem: DockIconMotion {
                     id: pinnedIconMotion
@@ -298,6 +307,7 @@ Item {
 
         property bool shouldShow: (popupMouseArea.containsMouse || root.buttonHovered)
                                   && !root._dragging
+                                  && !(root.contextMenu?.isOpen ?? false)
                                   && appTopLevel
                                   && appTopLevel.toplevels
                                   && appTopLevel.toplevels.length > 0
