@@ -83,13 +83,24 @@ Singleton {
         updateAll();
     }
 
+    // Coalesce bursts of Hyprland events into a single refresh. Spawning apps
+    // (e.g. kitty) or fast workspace switches emit many events in a few ms;
+    // running updateAll() (5 hyprctl subprocesses) per event pegs a core and
+    // stutters the UI. A short debounce collapses each burst into one refresh
+    // without any perceptible delay.
+    Timer {
+        id: refreshDebounce
+        interval: 50
+        onTriggered: root.updateAll()
+    }
+
     Connections {
         target: Hyprland
 
         function onRawEvent(event) {
             // console.log("Hyprland raw event:", event.name);
             if (["openlayer", "closelayer", "screencast"].includes(event.name)) return;
-            updateAll()
+            refreshDebounce.restart()
         }
     }
 
