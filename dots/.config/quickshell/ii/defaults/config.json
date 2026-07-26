@@ -420,6 +420,7 @@
         "privacyIndicator",
         "sysTray",
         "hyprlandXkbIndicator",
+        "submapIndicator",
         "systemIcons"
       ]
     },

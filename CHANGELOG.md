@@ -49,6 +49,23 @@ own repo; the installer pins which revision it builds.
     ease in and out.
   - Notes plugin (bundled desktop widget): a persistent, autosaving notepad
     that shares the notes scratchpad with the overlay notes editor.
+  - Hyprland submap indicator (upstream PR #2225, in the default right bar): a
+    pill with a keyboard icon and the submap name that appears while a keybind
+    submap (e.g. resize) is active and eases out when it resets; icon-only in
+    the vertical bar. Tracked by the new `HyprlandSubmap` service.
+  - Dock: right-click context menu on app icons (upstream PR #3045) —
+    desktop-entry actions (e.g. "New Window"), open new instance, move all of
+    an app's windows to a workspace, pin/unpin, and close window(s). Window
+    previews are suppressed and the dock stays revealed while the menu is open.
+    (Drag-to-reorder of pinned apps, the PR's other half, already exists here.)
+  - Tailscale (upstream PR #3501, reworked for the sidebar): a quick toggle
+    next to the VPN toggles (both classic and Android styles) that brings
+    Tailscale up/down, plus an exit-node dialog (right-click / tile menu)
+    listing peers that advertise themselves as exit nodes — online first, with
+    a "None (direct)" row — applied via `tailscale set --exit-node=…` with a
+    one-shot `pkexec` fallback for non-operator users. Backed by the new
+    `Tailscale` service polling `tailscale status --json`; hidden entirely
+    when the CLI isn't installed.
 - Component grid for desktop plugins: formalizes the nandoroid design-system
   grid (a 132×108 cell with a 12px gap) as `Appearance.sizes.widgetGridSpanX/Y`
   with an opt-in manifest `grid: { cols, rows }` that sizes a widget to whole
