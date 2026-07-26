@@ -15,6 +15,8 @@ Item {
     readonly property int firstDayOfWeek: Config.options.calendar.firstDayOfWeek
     property var viewingDate: CalendarLayout.getDateInXMonthsTime(monthShift)
     property var calendarLayout: CalendarLayout.getCalendarLayout(viewingDate, monthShift === 0, firstDayOfWeek)
+    readonly property int viewingYear: viewingDate.getFullYear()
+    readonly property int viewingMonth: viewingDate.getMonth() + 1
     // Matches the navigation rail's top margin in BottomWidgetGroup: the header
     // row and the rail's collapse button are both 30px tall, so an equal inset
     // is what puts them on a shared centre line.
@@ -139,6 +141,11 @@ Item {
                         implicitHeight: root.dayCellSize
                         day: calendarLayout[modelData][index].day
                         isToday: calendarLayout[modelData][index].today
+                        // Only in-viewing-month cells (today !== -1) map cleanly
+                        // to viewingYear/Month; spillover days stay undotted in v1.
+                        hasEvent: calendarLayout[modelData][index].today !== -1
+                            && IcsCalendar.hasEventsOn(root.viewingYear, root.viewingMonth,
+                                calendarLayout[modelData][index].day)
                     }
                 }
             }

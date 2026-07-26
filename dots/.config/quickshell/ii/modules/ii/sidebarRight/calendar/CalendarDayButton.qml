@@ -8,6 +8,7 @@ RippleButton {
     property string day
     property int isToday
     property bool bold
+    property bool hasEvent: false
 
     Layout.fillWidth: false
     Layout.fillHeight: false
@@ -29,6 +30,18 @@ RippleButton {
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
         }
+    }
+
+    // "Has events" indicator: a small dot under the day number.
+    Rectangle {
+        visible: button.hasEvent
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Appearance.spacing.space50
+        implicitWidth: Appearance.spacing.space50
+        implicitHeight: Appearance.spacing.space50
+        radius: Appearance.rounding.full
+        color: (button.isToday == 1) ? Appearance.m3colors.m3onPrimary : Appearance.colors.colPrimary
     }
 }
 

@@ -575,6 +575,11 @@ Singleton {
             property JsonObject calendar: JsonObject {
                 property string locale: "en-GB"
                 property int firstDayOfWeek: 1 // 1 = Monday .. 7 = Sunday
+                property JsonObject ics: JsonObject {
+                    property list<string> files: [] // local .ics paths
+                    property list<string> urls: []  // remote ICS URLs
+                    property int refreshInterval: 30 // minutes
+                }
             }
 
             property JsonObject conflictKiller: JsonObject {
