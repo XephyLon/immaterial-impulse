@@ -565,6 +565,7 @@ Singleton {
 
             property JsonObject calendar: JsonObject {
                 property string locale: "en-GB"
+                property int firstDayOfWeek: 1 // 1 = Monday .. 7 = Sunday
             }
 
             property JsonObject conflictKiller: JsonObject {

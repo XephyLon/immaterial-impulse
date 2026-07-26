@@ -152,6 +152,17 @@ ContentPage {
                         Config.options.time.secondPrecision = checked;
                     }
                 }
+                ConfigSelectionArray {
+                    text: Translation.tr("First day of week")
+                    icon: "calendar_view_week"
+                    currentValue: Config.options.calendar.firstDayOfWeek
+                    onSelected: newValue => { Config.options.calendar.firstDayOfWeek = newValue; }
+                    options: [
+                        { displayName: Translation.tr("Monday"),   value: 1 },
+                        { displayName: Translation.tr("Saturday"), value: 6 },
+                        { displayName: Translation.tr("Sunday"),   value: 7 }
+                    ]
+                }
                 ConfigTextArea {
                     Layout.fillWidth: true
                     buttonIcon: "scoreboard"

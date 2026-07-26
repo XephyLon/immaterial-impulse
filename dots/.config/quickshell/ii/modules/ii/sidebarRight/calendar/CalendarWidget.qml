@@ -12,8 +12,9 @@ Item {
     // the gaps and the padding have to fit BottomWidgetGroup's fixed height, or
     // the group grows and takes it straight out of the notification list below.
     readonly property int dayCellSize: 36
+    readonly property int firstDayOfWeek: Config.options.calendar.firstDayOfWeek
     property var viewingDate: CalendarLayout.getDateInXMonthsTime(monthShift)
-    property var calendarLayout: CalendarLayout.getCalendarLayout(viewingDate, monthShift === 0)
+    property var calendarLayout: CalendarLayout.getCalendarLayout(viewingDate, monthShift === 0, firstDayOfWeek)
     // Matches the navigation rail's top margin in BottomWidgetGroup: the header
     // row and the rail's collapse button are both 30px tall, so an equal inset
     // is what puts them on a shared centre line.
@@ -110,7 +111,7 @@ Item {
             Layout.fillHeight: false
             spacing: Appearance.spacing.space75
             Repeater {
-                model: CalendarLayout.weekDays
+                model: CalendarLayout.getWeekDays(root.firstDayOfWeek)
                 delegate: CalendarDayButton {
                     implicitWidth: root.dayCellSize
                     implicitHeight: root.dayCellSize

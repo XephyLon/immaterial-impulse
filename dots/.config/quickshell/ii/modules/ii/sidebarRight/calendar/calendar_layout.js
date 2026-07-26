@@ -60,13 +60,25 @@ function getDateInXMonthsTime(x) {
     return targetDate;
 }
 
-function getCalendarLayout(dateObject, highlight) {
+// Rotate the Monday-based weekDays header so it starts on firstDayOfWeek
+// (1 = Monday .. 7 = Sunday, matching Config.options.calendar.firstDayOfWeek).
+function getWeekDays(firstDayOfWeek) {
+    const start = (((firstDayOfWeek ?? 1) - 1) % 7 + 7) % 7;
+    return weekDays.slice(start).concat(weekDays.slice(0, start));
+}
+
+function getCalendarLayout(dateObject, highlight, firstDayOfWeek) {
     if (!dateObject) dateObject = new Date();
-    const weekday = (dateObject.getDay() + 6) % 7; // MONDAY IS THE FIRST DAY OF THE WEEK
     const day = dateObject.getDate();
     const month = dateObject.getMonth() + 1;
     const year = dateObject.getFullYear();
-    const weekdayOfMonthFirst = (weekday + 35 - (day - 1)) % 7;
+
+    // JS days run 0 (Sun)..6 (Sat); config runs 1 (Mon)..7 (Sun).
+    const firstDayJs = (firstDayOfWeek ?? 1) === 7 ? 0 : (firstDayOfWeek ?? 1);
+    // Midday avoids DST edge cases shifting the weekday.
+    const firstOfMonthJsDay = new Date(year, month - 1, 1, 12, 0, 0).getDay();
+    const weekdayOfMonthFirst = (firstOfMonthJsDay - firstDayJs + 7) % 7;
+
     const daysInMonth = getMonthDays(month, year);
     const daysInNextMonth = getNextMonthDays(month, year);
     const daysInPrevMonth = getPrevMonthDays(month, year);
