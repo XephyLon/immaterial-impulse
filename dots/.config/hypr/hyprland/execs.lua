@@ -3,7 +3,11 @@ hl.on("hyprland.start", function ()
 
     -- Bar, wallpaper
     hl.exec_cmd("$HOME/.config/hypr/hyprland/scripts/start_geoclue_agent.sh")
-    hl.exec_cmd("qs -c $qsConfig")
+    -- Force Qt's threaded render loop. On NVIDIA/Wayland Qt otherwise auto-picks
+    -- the basic loop (QML on the GUI thread), which lets a GPU-saturating process
+    -- block the shell for seconds (upstream #2567). The WE-capable quickshell
+    -- wrapper already exports this; setting it here covers base installs too.
+    hl.exec_cmd("QSG_RENDER_LOOP=threaded qs -c $qsConfig")
     hl.exec_cmd("$HOME/.config/hypr/custom/scripts/__restore_video_wallpaper.sh")
 
     -- Core components (authentication, lock screen, notification daemon)
