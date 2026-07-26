@@ -79,6 +79,12 @@ Scope {
                     implicitHeight: Config.options.sidebar.cornerOpen.cornerRegionHeight
                     hoverEnabled: true
                     onPositionChanged: {
+                        // "Force hover at absolute corner" is a sub-option of
+                        // "Hover to trigger" (the settings row is disabled when
+                        // clickless is off). Gate on clickless too, otherwise the
+                        // corner-end hover still opens the sidebar after the user
+                        // turns hover-to-trigger off. See issue #50.
+                        if (!Config.options.sidebar.cornerOpen.clickless) return;
                         if (!Config.options.sidebar.cornerOpen.clicklessCornerEnd) return;
                         const verticalOffset = Config.options.sidebar.cornerOpen.clicklessCornerVerticalOffset;
                         const correctX = (cornerWidget.isRight && mouseArea.mouseX >= mouseArea.width - 2) || (cornerWidget.isLeft && mouseArea.mouseX <= 2);
