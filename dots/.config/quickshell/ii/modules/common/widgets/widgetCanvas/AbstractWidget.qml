@@ -14,6 +14,23 @@ MouseArea {
     property bool snapEnabled: true
     readonly property bool dragging: drag.active
 
+    // Background desktop widgets can request keyboard focus for their layer
+    // surface. The request is registered with the enclosing WidgetCanvas, which
+    // ORs every widget's request together so releasing one never cuts off
+    // another that still needs it.
+    property bool keyboardFocusRequested: false
+    onKeyboardFocusRequestedChanged: root.syncKeyboardFocusRequest()
+    function syncKeyboardFocusRequest() {
+        const canvas = findCanvas(root.parent)
+        if (canvas && canvas.setKeyboardFocusRequest)
+            canvas.setKeyboardFocusRequest(root, root.keyboardFocusRequested)
+    }
+    Component.onDestruction: {
+        const canvas = findCanvas(root.parent)
+        if (canvas && canvas.setKeyboardFocusRequest)
+            canvas.setKeyboardFocusRequest(root, false)
+    }
+
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     drag.target: draggable ? dragProxy : undefined
     cursorShape: (draggable && containsPress) ? Qt.ClosedHandCursor : draggable ? Qt.OpenHandCursor : Qt.ArrowCursor

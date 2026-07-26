@@ -1,4 +1,5 @@
 import QtQuick
+import qs
 import qs.modules.common
 
 MouseArea {
@@ -7,6 +8,19 @@ MouseArea {
     property bool showGrid: false
     readonly property bool isWidgetCanvas: true
     readonly property bool gridVisible: showGrid && Config.options.background.showGrid
+
+    // Desktop widgets sit on the background layer surface, which only accepts
+    // keyboard input while GlobalStates.desktopWidgetKeyboardFocus flips it to
+    // OnDemand. Widgets register their need here so several can hold it at once;
+    // the flag stays armed until the last requester releases it, so one widget
+    // releasing focus never cuts off another that still needs it.
+    property var keyboardFocusRequesters: []
+    function setKeyboardFocusRequest(widget, requested) {
+        const idx = root.keyboardFocusRequesters.indexOf(widget)
+        if (requested && idx === -1) root.keyboardFocusRequesters.push(widget)
+        else if (!requested && idx !== -1) root.keyboardFocusRequesters.splice(idx, 1)
+        GlobalStates.desktopWidgetKeyboardFocus = root.keyboardFocusRequesters.length > 0
+    }
 
     property bool centerXActive: false
     property bool centerYActive: false

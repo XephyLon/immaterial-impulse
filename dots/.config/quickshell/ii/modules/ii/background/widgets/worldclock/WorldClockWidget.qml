@@ -29,7 +29,7 @@ AbstractBackgroundWidget {
     property var worldCities: WorldClock.entries
     property bool showingSettings: false
 
-    onShowingSettingsChanged: GlobalStates.desktopWidgetKeyboardFocus = showingSettings
+    keyboardFocusRequested: showingSettings
 
     function toggleFlip() { flipAnim.start() }
 

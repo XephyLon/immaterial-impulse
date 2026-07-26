@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import qs
@@ -41,6 +42,23 @@ AbstractBackgroundWidget {
     }
 
     configEntryName: manifest ? "plugin_" + manifest.id : "plugin_unknown"
+
+    // The background layer surface only accepts keyboard input while it is
+    // OnDemand, and the compositor grants that focus to an already-OnDemand
+    // surface on click. Arm it while any plugin widget is hovered so the click
+    // that lands on an inner input (a TextField, StyledTextArea, ...) grabs
+    // Wayland keyboard focus. Stay armed while a descendant keeps focus so
+    // moving the pointer off the widget mid-edit does not drop keyboard input.
+    hoverEnabled: true
+    keyboardFocusRequested: rootWidget.containsMouse || rootWidget.descendantHasFocus
+    readonly property bool descendantHasFocus: {
+        let focusItem = rootWidget.Window.activeFocusItem;
+        while (focusItem) {
+            if (focusItem === rootWidget) return true;
+            focusItem = focusItem.parent;
+        }
+        return false;
+    }
 
     // Plugin ids and monitor names are dynamic, so their layout cannot safely live in
     // Config's fixed JsonAdapter schema. PluginState persists it as raw JSON instead.
