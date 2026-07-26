@@ -48,6 +48,15 @@ Component paths must be relative, remain inside the package, and must not contai
 entry points are `barWidget`, `desktopWidget`, `controlCenterWidget`, `launcherProvider`, `panel`,
 and `settingsUi`. Bar entries use the stable `plugin:<id>` layout identifier.
 
+## Desktop widget size
+
+Desktop-widget plugins should declare their size on the shared **component grid** with a
+top-level, optional `grid` field — `"grid": { "cols": 2, "rows": 2 }` — instead of hardcoded
+pixels. The host sizes the widget to `spanX(cols) x spanY(rows)` and tiles it on the cell+gap
+rhythm (a 132x108 cell, 12px gap — a 2x2 tile is 276x228); omitting `grid` keeps the legacy
+content-sized behaviour. See [widget-grid.md](widget-grid.md) for the model, the
+`spanX`/`spanY` formulas, the span→pixel table, and authoring guidance.
+
 Package manifests should declare `apiVersion`, `capabilities`, and permissions. Supported
 permissions are `process`, `network`, `filesystem_read`, `filesystem_write`, `settings_read`, and
 `settings_write`. These declarations aid review and future enforcement; QML is code, so only

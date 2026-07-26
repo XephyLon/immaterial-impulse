@@ -42,6 +42,11 @@ own repo; the installer pins which revision it builds.
     ease in and out.
   - Notes plugin (bundled desktop widget): a persistent, autosaving notepad
     that shares the notes scratchpad with the overlay notes editor.
+- Component grid for desktop plugins: formalizes the nandoroid design-system
+  grid (a 132×108 cell with a 12px gap) as `Appearance.sizes.widgetGridSpanX/Y`
+  with an opt-in manifest `grid: { cols, rows }` that sizes a widget to whole
+  cells so it tiles flush with the built-in widgets; the Notes widget is now a
+  true 2×2 tile (276×228). Documented in `docs/widget-grid.md`.
   - Settings → Plugins now badges third-party (externally installed) plugins.
   - Presets: an Overwrite action on each preset card saves the current setup
     over that preset (two-tap confirm).
