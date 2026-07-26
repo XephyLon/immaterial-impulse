@@ -2,4 +2,5 @@ module testservices
 singleton Battery Battery.qml
 singleton BluetoothStatus BluetoothStatus.qml
 singleton MediaCapture MediaCapture.qml
+singleton Tailscale Tailscale.qml
 singleton Vpn Vpn.qml

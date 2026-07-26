@@ -19,6 +19,7 @@ import qs.modules.ii.sidebarRight.bluetoothDevices
 import qs.modules.ii.sidebarRight.nightLight
 import qs.modules.ii.sidebarRight.volumeMixer
 import qs.modules.ii.sidebarRight.wifiNetworks
+import qs.modules.ii.sidebarRight.tailscale
 import qs.modules.ii.sidebarRight.iconPicker
 
 Item {
@@ -31,6 +32,7 @@ Item {
     property bool showBluetoothDialog: false
     property bool showNightLightDialog: false
     property bool showWifiDialog: false
+    property bool showTailscaleDialog: false
     property bool editMode: false
     property bool showIconPickerDialog: false
 
@@ -85,6 +87,7 @@ Item {
         function onSidebarRightOpenChanged() {
             if (!GlobalStates.sidebarRightOpen) {
                 root.showWifiDialog = false;
+                root.showTailscaleDialog = false;
                 root.showBluetoothDialog = false;
                 root.showAudioOutputDialog = false;
                 root.showAudioInputDialog = false;
@@ -418,6 +421,14 @@ Item {
     }
 
     ToggleDialog {
+        shownPropertyString: "showTailscaleDialog"
+        dialog: TailscaleDialog {}
+        onShownChanged: {
+            if (shown) Tailscale.refresh();
+        }
+    }
+
+    ToggleDialog {
         shownPropertyString: "showIconPickerDialog"
         dialog: IconPickerDialog {}
     }
@@ -464,6 +475,7 @@ Item {
             function onOpenBluetoothDialog() { root.showBluetoothDialog = true; }
             function onOpenNightLightDialog() { root.showNightLightDialog = true; }
             function onOpenWifiDialog() { root.showWifiDialog = true; }
+            function onOpenTailscaleDialog() { root.showTailscaleDialog = true; }
         }
     }
 

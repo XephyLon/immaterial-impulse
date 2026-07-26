@@ -35,6 +35,11 @@ AbstractQuickPanel {
         IdleInhibitor {}
         EasyEffectsToggle {}
         CloudflareWarp {}
+        TailscaleToggle {
+            altAction: () => {
+                root.openTailscaleDialog();
+            }
+        }
         Repeater {
             model: Vpn.connections
             delegate: VpnToggle {
