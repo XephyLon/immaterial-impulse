@@ -285,11 +285,31 @@ MouseArea {
                     onTriggered: activePlayer.positionChanged()
                 }
                 
+                // Compact playback controls for the lock-screen media widget.
+                component LockMediaButton: MouseArea {
+                    property string icon
+                    property bool ctlEnabled: true
+                    implicitWidth: 28
+                    implicitHeight: 28
+                    enabled: ctlEnabled
+                    opacity: ctlEnabled ? 1 : 0.4
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    Layout.alignment: Qt.AlignVCenter
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        fill: 1
+                        text: parent.icon
+                        iconSize: Appearance.font.pixelSize.huge
+                        color: Appearance.colors.colOnSurfaceVariant
+                    }
+                }
+
                 RowLayout {
                     id: mediaRow
                     spacing: Appearance.spacing.space100
                     anchors.centerIn: parent
-                    
+
                     Rectangle {
                         id: artRect
                         implicitWidth: 40
@@ -363,6 +383,26 @@ MouseArea {
                         }
                     }
                     
+                    RowLayout {
+                        Layout.alignment: Qt.AlignVCenter
+                        spacing: Appearance.spacing.space25
+
+                        LockMediaButton {
+                            icon: "skip_previous"
+                            ctlEnabled: MprisController.canGoPrevious
+                            onClicked: MprisController.previous()
+                        }
+                        LockMediaButton {
+                            icon: activePlayer?.isPlaying ? "pause" : "play_arrow"
+                            onClicked: MprisController.togglePlaying()
+                        }
+                        LockMediaButton {
+                            icon: "skip_next"
+                            ctlEnabled: MprisController.canGoNext
+                            onClicked: MprisController.next()
+                        }
+                    }
+
                     ClippedFilledCircularProgress {
                         id: mediaCircProg
                         Layout.alignment: Qt.AlignVCenter
