@@ -191,6 +191,7 @@ Singleton {
     function cleanMusicTitle(title) {
         if (!title)
             return "";
+        const original = title.trim();
         // Brackets
         title = title.replace(/^ *\([^)]*\) */g, " "); // Round brackets
         title = title.replace(/^ *\[[^\]]*\] */g, " "); // Square brackets
@@ -201,7 +202,10 @@ Singleton {
         title = title.replace(/^ *「[^」]*」/, ""); // OP/ED thingie
         title = title.replace(/^ *『[^』]*』/, ""); // OP/ED thingie
 
-        return title.trim();
+        // A fully-bracketed title (e.g. "[BLEED BLOOD]") strips to nothing -
+        // keep the original rather than blanking the media widget out.
+        const cleaned = title.trim();
+        return cleaned.length > 0 ? cleaned : original;
     }
 
     /**
