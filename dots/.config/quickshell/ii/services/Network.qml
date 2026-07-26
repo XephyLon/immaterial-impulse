@@ -157,6 +157,12 @@ Singleton {
                 getNetworks.running = true;
             }
         }
+        // A failed rescan (radio off, nmcli error) produces no stdout, which
+        // would leave wifiScanning stuck at true and the rescan button
+        // permanently disabled. Always clear the flag when the process ends.
+        onExited: (exitCode, exitStatus) => {
+            root.wifiScanning = false;
+        }
     }
 
     // Status update

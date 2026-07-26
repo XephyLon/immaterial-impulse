@@ -11,8 +11,43 @@ WindowDialog {
     id: root
     backgroundHeight: 600
 
-    WindowDialogTitle {
-        text: Translation.tr("Connect to Wi-Fi")
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: Appearance.spacing.space100
+
+        WindowDialogTitle {
+            Layout.fillWidth: true
+            text: Translation.tr("Connect to Wi-Fi")
+        }
+
+        DialogButton {
+            id: rescanButton
+            Layout.alignment: Qt.AlignVCenter
+            implicitWidth: implicitHeight
+
+            enabled: !Network.wifiScanning
+            opacity: enabled ? 1 : 0.4
+            Behavior on opacity {
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
+
+            onClicked: Network.rescanWifi()
+
+            contentItem: MaterialSymbol {
+                anchors.centerIn: parent
+                text: "refresh"
+                iconSize: Appearance.font.pixelSize.larger
+                color: rescanButton.enabled ? rescanButton.colEnabled : rescanButton.colDisabled
+
+                Behavior on color {
+                    animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                }
+            }
+
+            StyledToolTip {
+                text: Translation.tr("Rescan networks")
+            }
+        }
     }
     WindowDialogSeparator {
         visible: !Network.wifiScanning
