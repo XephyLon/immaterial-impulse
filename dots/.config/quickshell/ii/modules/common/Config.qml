@@ -511,7 +511,7 @@ Singleton {
                 property JsonObject layouts: JsonObject {
                     property list<string> leftLayout: ["workspaces"]
                     property list<string> middleLayout: ["clockWidget"]
-                    property list<string> rightLayout: ["systemIcons"]
+                    property list<string> rightLayout: ["privacyIndicator", "systemIcons"]
                 }
                 
                 property list<string> screenList: [] // List of names, like "eDP-1", find out with 'hyprctl monitors' command
@@ -546,6 +546,13 @@ Singleton {
                     property int fetchInterval: 10 // minutes
                     property string provider: "owm" // "owm" (OpenWeatherMap) | "wttr" (wttr.in, keyless)
                     property string apiKey: "" // empty = use the built-in OpenWeatherMap key
+                }
+                property JsonObject privacyIndicator: JsonObject {
+                    property bool enable: true
+                    property int pollInterval: 2000 // ms
+                    property bool showMic: true
+                    property bool showCamera: true
+                    property bool showScreencast: true
                 }
                 property JsonObject indicators: JsonObject {
                     property JsonObject notifications: JsonObject {

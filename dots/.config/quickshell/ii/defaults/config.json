@@ -418,6 +418,7 @@
         "visualizer"
       ],
       "rightLayout": [
+        "privacyIndicator",
         "sysTray",
         "hyprlandXkbIndicator",
         "systemIcons"

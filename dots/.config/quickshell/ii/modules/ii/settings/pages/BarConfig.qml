@@ -54,6 +54,7 @@ ContentPage {
         { id: "systemIcons",       name: Translation.tr("System Icons"),         icon: "info" },
         { id: "networkSpeed",      name: Translation.tr("Network Speed"),        icon: "network_check" },
         { id: "timerPill",         name: Translation.tr("Timer"),                icon: "timer" },
+        { id: "privacyIndicator",  name: Translation.tr("Privacy"),              icon: "privacy_tip" },
         { id: "clockWidget",       name: Translation.tr("Clock"),                icon: "schedule" },
         { id: "utilButtons",       name: Translation.tr("Util Buttons"),         icon: "toggle_on" },
         { id: "sysTray",           name: Translation.tr("Tray"),                 icon: "inbox" },
