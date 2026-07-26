@@ -13,6 +13,14 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- Upstream feature sweep (first batch, from the `end-4/dots-hyprland` tracker):
+  - GPU usage/temperature now works on AMD/Intel too (hwmon/sysfs fallback);
+    the NVIDIA path is unchanged.
+  - Bluetooth connect/disconnect button shows a "Connecting…"/"Disconnecting…"
+    pending state while the operation is in flight.
+  - Calendar: configurable first day of week (Monday/Saturday/Sunday).
+  - Bar: option to show only the current monitor's workspaces
+    (`bar.workspaces.showAllMonitors`).
 - Curated default configuration: fresh installs now seed `config.json` from the
   maintainer's tuned setup (sanitized of machine-specific state) instead of the
   bare upstream fallback defaults; existing configs are never touched.
