@@ -28,6 +28,10 @@ own repo; the installer pins which revision it builds.
     user-settable OWM API key (falls back to the built-in key when empty).
   - Caps Lock / Num Lock on-screen display (toggle: `osd.lockKeys`).
   - Clipboard pinning: pin entries so they stay on top and survive "wipe all".
+  - Clipboard clear buttons (upstream PR #3546): the launcher's clipboard view
+    gains a header with "Clear results" (deletes only the entries matching the
+    current filter) and "Clear all" buttons, plus an empty-state hint; both
+    respect pinned entries, and deletions go to `cliphist delete` over stdin.
   - File/folder search in the launcher (`~`-prefixed query, fd/find backed).
   - Lock screen: previous/play-pause/next controls on the media widget.
   - OLED screensaver (Settings → Interface): idle overlay with a full-black or

@@ -21,11 +21,50 @@ Item { // Wrapper
 
     property string searchingText: LauncherSearch.query
     property bool showResults: searchingText != ""
+    // Clipboard view state: prefix typed / actively filtering / one of the clear buttons focused
+    readonly property bool clipboardMode: root.searchingText.startsWith(Config.options.search.prefix.clipboard)
+    readonly property bool clipboardSearching: root.clipboardMode && root.searchingText.length > Config.options.search.prefix.clipboard.length
+    readonly property bool clearBtnHasFocus: clearResultsBtn.activeFocus || clearAllBtn.activeFocus
     implicitWidth: searchWidgetContent.implicitWidth + Appearance.sizes.elevationMargin * 2
     implicitHeight: searchWidgetContent.implicitHeight + searchBar.verticalPadding * 2 + Appearance.sizes.elevationMargin * 2
 
     function focusFirstItem() {
         appResults.currentIndex = 0;
+    }
+
+    // Small text button used by the clipboard header ("Clear results" / "Clear all")
+    component ClipboardClearButton: RippleButton {
+        id: clearButton
+        implicitHeight: 28
+        leftPadding: Appearance.spacing.space125
+        rightPadding: Appearance.spacing.space125
+        buttonRadius: Appearance.rounding.small
+        colBackground: ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 1)
+        colBackgroundHover: Appearance.colors.colPrimaryContainer
+        colRipple: Appearance.colors.colPrimaryContainerActive
+        border: clearButton.activeFocus
+        borderWidth: Appearance.borderWidth.emphasis
+        colBorder: Appearance.colors.colSecondary
+        contentItem: StyledText {
+            text: clearButton.buttonText
+            font.pixelSize: Appearance.font.pixelSize.smaller
+            color: clearButton.activeFocus ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colPrimary
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+        }
+        Keys.onPressed: event => {
+            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                clearButton.clicked();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Down) {
+                appResults.forceActiveFocus();
+                appResults.currentIndex = 0;
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Up) {
+                root.focusSearchInput();
+                event.accepted = true;
+            }
+        }
     }
 
     function focusSearchInput() {
@@ -51,6 +90,19 @@ Item { // Wrapper
         // Prevent Esc and Backspace from registering
         if (event.key === Qt.Key_Escape)
             return;
+
+        // Handle Down arrow in the clipboard view: move focus onto the clear buttons first
+        if (event.key === Qt.Key_Down && root.clipboardMode) {
+            if (root.clipboardSearching && !clearResultsBtn.activeFocus) {
+                clearResultsBtn.forceActiveFocus();
+                event.accepted = true;
+                return;
+            } else if (!clearAllBtn.activeFocus) {
+                clearAllBtn.forceActiveFocus();
+                event.accepted = true;
+                return;
+            }
+        }
 
         // Handle Backspace: focus and delete character if not focused
         if (event.key === Qt.Key_Backspace) {
@@ -158,6 +210,80 @@ Item { // Wrapper
                 color: Appearance.colors.colOutlineVariant
             }
 
+            RowLayout { // Clipboard header: label + clear buttons
+                visible: root.showResults && root.clipboardMode
+                Layout.fillWidth: true
+                Layout.leftMargin: Appearance.spacing.space200
+                Layout.rightMargin: Appearance.spacing.space125
+                Layout.topMargin: Appearance.spacing.space75
+                Layout.bottomMargin: Appearance.spacing.space25
+                spacing: Appearance.spacing.space50
+
+                StyledText {
+                    text: Translation.tr("Clipboard")
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    color: Appearance.colors.colSubtext
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+                ClipboardClearButton {
+                    id: clearResultsBtn
+                    visible: root.clipboardSearching
+                    buttonText: Translation.tr("Clear results")
+                    onClicked: {
+                        Cliphist.deleteSearchResults(StringUtils.cleanPrefix(root.searchingText, Config.options.search.prefix.clipboard));
+                        root.focusSearchInput();
+                    }
+                    KeyNavigation.right: clearAllBtn
+                }
+                ClipboardClearButton {
+                    id: clearAllBtn
+                    buttonText: Translation.tr("Clear all")
+                    onClicked: {
+                        Cliphist.wipe();
+                        root.focusSearchInput();
+                    }
+                    KeyNavigation.left: clearResultsBtn
+                }
+            }
+
+            Item { // Clipboard empty state
+                id: clipboardEmptyState
+                visible: root.showResults && root.clipboardMode && appResults.count === 0
+                Layout.fillWidth: true
+                implicitHeight: 120
+
+                readonly property bool isFilteredSearch: Cliphist.entries.length > 0 && root.clipboardSearching
+
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    spacing: Appearance.spacing.space50
+
+                    MaterialSymbol {
+                        Layout.alignment: Qt.AlignHCenter
+                        iconSize: 48
+                        color: Appearance.m3colors.m3outline
+                        text: clipboardEmptyState.isFilteredSearch ? "search_off" : "content_paste"
+                    }
+                    StyledText {
+                        Layout.alignment: Qt.AlignHCenter
+                        font.pixelSize: Appearance.font.pixelSize.normal
+                        font.weight: Font.DemiBold
+                        color: Appearance.m3colors.m3outline
+                        horizontalAlignment: Text.AlignHCenter
+                        text: clipboardEmptyState.isFilteredSearch ? Translation.tr("No results found") : Translation.tr("Clipboard is empty")
+                    }
+                    StyledText {
+                        Layout.alignment: Qt.AlignHCenter
+                        font.pixelSize: Appearance.font.pixelSize.small
+                        color: Appearance.m3colors.m3outline
+                        horizontalAlignment: Text.AlignHCenter
+                        text: clipboardEmptyState.isFilteredSearch ? Translation.tr("Try a different search") : Translation.tr("Copy something to see it here")
+                    }
+                }
+            }
+
             ListView { // App results
                 id: appResults
                 visible: root.showResults
@@ -209,9 +335,11 @@ Item { // Wrapper
                     id: searchItem
                     // The selectable item for each search result
                     required property var modelData
+                    required property int index
                     anchors.left: parent?.left
                     anchors.right: parent?.right
                     entry: modelData
+                    clearBtnHasFocus: root.clearBtnHasFocus
                     query: StringUtils.cleanOnePrefix(root.searchingText, [Config.options.search.prefix.action, Config.options.search.prefix.app, Config.options.search.prefix.clipboard, Config.options.search.prefix.emojis, Config.options.search.prefix.symbols, Config.options.search.prefix.math, Config.options.search.prefix.shellCommand, Config.options.search.prefix.webSearch])
 
                     Keys.onPressed: event => {
@@ -223,6 +351,17 @@ Item { // Wrapper
                             searchBar.searchInput.text = tabbedText;
                             event.accepted = true;
                             root.focusSearchInput();
+                        } else if (event.key === Qt.Key_Up && searchItem.index === 0 && root.clipboardMode) {
+                            // Up from the first result returns to the clear buttons
+                            if (root.clipboardSearching) {
+                                clearResultsBtn.forceActiveFocus();
+                            } else {
+                                clearAllBtn.forceActiveFocus();
+                            }
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Down && root.clipboardMode && searchItem.index === searchItem.ListView.view.count - 1) {
+                            // Swallow Down at the last result so focus doesn't jump back to the clear buttons
+                            event.accepted = true;
                         }
                     }
                 }

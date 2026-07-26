@@ -41,7 +41,9 @@ RippleButton {
     property int buttonHorizontalPadding: Appearance.spacing.space125
     property int buttonVerticalPadding: Appearance.spacing.space75
     property bool keyboardDown: false
-    readonly property bool selected: (root.hovered || root.focus)
+    // Suppress the selected look while one of the clipboard clear buttons holds focus
+    property bool clearBtnHasFocus: false
+    readonly property bool selected: (root.hovered || root.focus) && !root.clearBtnHasFocus
 
     implicitHeight: rowLayout.implicitHeight + root.buttonVerticalPadding * 2
     implicitWidth: rowLayout.implicitWidth + root.buttonHorizontalPadding * 2

@@ -126,41 +126,52 @@ Singleton {
 
     Process {
         id: deleteProc
-        property string entry: ""
-        command: ["bash", "-c", `echo '${StringUtils.shellSingleQuoteEscape(deleteProc.entry)}' | ${root.cliphistBinary} delete`]
-        function deleteEntry(entry) {
-            deleteProc.entry = entry;
-            deleteProc.running = true;
-            deleteProc.entry = "";
+        property list<string> targets: []
+        command: [root.cliphistBinary, "delete"]
+        onRunningChanged: {
+            if (deleteProc.running) {
+                // `cliphist delete` reads newline-separated entries from stdin.
+                // Feeding stdin directly avoids splicing entry text into a shell string.
+                deleteProc.write(deleteProc.targets.join("\n") + "\n");
+                deleteProc.stdinEnabled = false; // End input stream
+            }
         }
         onExited: (exitCode, exitStatus) => {
+            deleteProc.targets = [];
             root.refresh();
         }
+    }
+
+    // Batch-delete entries via a single `cliphist delete` invocation, entries passed over stdin.
+    function deleteEntries(entries) {
+        if (!entries || entries.length === 0) {
+            return;
+        }
+        deleteProc.targets = entries;
+        deleteProc.stdinEnabled = true;
+        deleteProc.running = true;
     }
 
     function deleteEntry(entry) {
-        deleteProc.deleteEntry(entry);
+        root.deleteEntries([entry]);
     }
 
-    Process {
-        id: wipeProc
-        property list<string> targets: []
-        command: ["bash", "-c", wipeProc.targets
-            .map(entry => `echo '${StringUtils.shellSingleQuoteEscape(entry)}' | ${root.cliphistBinary} delete`)
-            .join("; ")]
-        onExited: (exitCode, exitStatus) => {
-            root.refresh();
-        }
+    // Deletes only the unpinned entries matching the given search string,
+    // so pinned ones survive "clear results" like they survive a wipe.
+    function deleteSearchResults(searchString) {
+        const matches = root.fuzzyQuery(searchString)
+            .filter(entry => !root.pinnedHashes.includes(root.contentHash(entry)));
+        root.deleteEntries(matches);
     }
 
     // Wipe deletes only unpinned entries so pinned ones survive "wipe all".
     function wipe() {
-        wipeProc.targets = root.entries.filter(entry => !root.pinnedHashes.includes(root.contentHash(entry)));
-        if (wipeProc.targets.length === 0) {
+        const targets = root.entries.filter(entry => !root.pinnedHashes.includes(root.contentHash(entry)));
+        if (targets.length === 0) {
             root.refresh();
             return;
         }
-        wipeProc.running = true;
+        root.deleteEntries(targets);
     }
 
     Connections {
