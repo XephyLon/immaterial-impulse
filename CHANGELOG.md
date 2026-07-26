@@ -57,6 +57,29 @@ own repo; the installer pins which revision it builds.
   heavier so it reads as the card's heading.
 
 ### Fixed
+- Upstream bug sweep (audited `end-4/dots-hyprland`'s tracker against our fork,
+  fixed the ones still present):
+  - Sidebars/panels no longer "blink" open then instantly shut — a transient
+    focus-grab clear from a ToplevelHandle activation is now debounced.
+  - Launcher/app search no longer pegs a core: the app list is deduped in O(n)
+    instead of O(n²) on every desktop-entry change.
+  - Hyprland data refresh is debounced, so spawning apps (e.g. kitty) or fast
+    workspace switches no longer stutter the UI by spawning `hyprctl` per event.
+  - The battery widget no longer flaps in/out and no longer fires false
+    low-battery notifications (or auto-suspend) when UPower transiently swaps its
+    display device.
+  - A fully-bracketed song title (e.g. `[BLEED BLOOD]`) shows the real title
+    instead of "No media".
+  - The cheatsheet no longer double-lists a keybind defined in both the default
+    and custom Lua configs; custom now overrides default.
+  - An offline random-wallpaper fetch can no longer corrupt config by persisting
+    a truncated/missing wallpaper path.
+  - Base installs (without Wallpaper Engine) now also launch the shell with the
+    threaded render loop, so a GPU-saturating process can't freeze it.
+  - Notification popups wait a short grace period before hiding on unfocus, so a
+    brief cursor flicker no longer dismisses them.
+  - With bar auto-hide on, the media box and tray-overflow popup are no longer
+    orphaned above a hidden bar (new `bar.autoHide.dismissPopups` option).
 - Experimental updater failed to detect/report updates that existed: its change
   detection keyed off the reflog's `HEAD@{1}`, which a preceding stash or
   detached-HEAD checkout silently repointed. It now captures a stable pre-pull
