@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Services.SystemTray
+import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -43,6 +44,9 @@ Item {
 
     onTrayOverflowOpenChanged: {
         if (root.trayOverflowOpen) root.grabFocus()
+        // Keep the bar from auto-hiding while the overflow popup is open, so it
+        // isn't orphaned above a hidden bar (issue #31).
+        GlobalStates.sysTrayOverflowOpen = root.trayOverflowOpen
     }
 
     HyprlandFocusGrab {

@@ -462,6 +462,11 @@ Singleton {
                     property bool enable: false
                     property int hoverRegionWidth: 2
                     property bool pushWindows: false
+                    // Keep the bar shown while a bar popup (media box, tray
+                    // overflow) is open, and dismiss that popup when the pointer
+                    // leaves it, so the bar can then hide. Prevents popups being
+                    // orphaned above a hidden bar. See issues #30, #31.
+                    property bool dismissPopups: true
                     property JsonObject showWhenPressingSuper: JsonObject {
                         property bool enable: true
                         property int delay: 140

@@ -48,7 +48,9 @@ Scope {
                     }
                 }
                 property bool superShow: false
+                // See Bar.qml / issues #30, #31: stay shown while a bar popup is open.
                 property bool mustShow: hoverRegion.containsMouse || superShow
+                    || ((GlobalStates.mediaControlsOpen || GlobalStates.sysTrayOverflowOpen) && Config?.options.bar.autoHide.dismissPopups)
                 exclusionMode: ExclusionMode.Ignore
                 exclusiveZone: (Config?.options.bar.autoHide.enable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
                     Appearance.sizes.baseVerticalBarWidth + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)

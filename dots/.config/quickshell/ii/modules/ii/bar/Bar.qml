@@ -51,7 +51,11 @@ Scope {
                     }
                 }
                 property bool superShow: false
+                // Stay shown while a bar popup is open so it isn't orphaned above
+                // a hidden bar; the popup closes itself on pointer-leave, then the
+                // bar hides. See issues #30, #31.
                 property bool mustShow: hoverRegion.containsMouse || superShow
+                    || ((GlobalStates.mediaControlsOpen || GlobalStates.sysTrayOverflowOpen) && Config?.options.bar.autoHide.dismissPopups)
                 property var thisMonitorData: HyprlandData.monitors.find(m => m.name === barRoot.screen?.name)
                 property bool monitorHasFullscreen: HyprlandData.workspaceById[thisMonitorData?.activeWorkspace?.id]?.hasfullscreen ?? false
                 property bool monitorHasSpecialOpen: (thisMonitorData?.specialWorkspace?.name ?? "") !== ""

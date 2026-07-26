@@ -161,6 +161,28 @@ Scope {
                 }
             }
 
+            // Auto-hide integration (issue #30): while the box is open the bar
+            // stays shown (see Bar.qml mustShow). When the pointer leaves the box
+            // and the bar auto-hides, close the box so the bar can hide too.
+            property bool mouseInPopup: mediaControlsHoverHandler.hovered
+            HoverHandler {
+                id: mediaControlsHoverHandler
+            }
+            Timer {
+                id: autoHideDismissTimer
+                interval: 100
+                onTriggered: {
+                    if (!panelWindow.mouseInPopup)
+                        GlobalStates.mediaControlsOpen = false;
+                }
+            }
+            onMouseInPopupChanged: {
+                if (Config?.options.bar.autoHide.enable && Config?.options.bar.autoHide.dismissPopups && !mouseInPopup)
+                    autoHideDismissTimer.restart();
+                else
+                    autoHideDismissTimer.stop();
+            }
+
             ColumnLayout {
                 id: playerColumnLayout
                 anchors.fill: parent
