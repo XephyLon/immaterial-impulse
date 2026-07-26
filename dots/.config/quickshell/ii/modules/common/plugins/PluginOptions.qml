@@ -77,7 +77,10 @@ ColumnLayout {
                     text: optionLoader.optionData.label
                     textWidth: optionLoader.optionData.labelWidth ?? 176
                     buttonIcon: optionLoader.optionData.icon || "tune"
+                    // A 0..1 (or smaller) range is a fraction; show it as a
+                    // percent so the tooltip isn't int-rounded to 0/1.
                     usePercentTooltip: optionLoader.optionData.usePercentTooltip === true
+                        || (optionLoader.optionData.to ?? 100) <= 1
                     from: optionLoader.optionData.from ?? 0
                     to: optionLoader.optionData.to ?? 100
                     value: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)

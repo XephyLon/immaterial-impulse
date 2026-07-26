@@ -4,11 +4,15 @@
  */
 
 import definePlugin, { PluginNative } from "@utils/types";
-import { findByPropsLazy } from "@webpack";
+import { findByPropsLazy, findStoreLazy } from "@webpack";
 import { ChannelRTCStore, ChannelStore, GuildMemberStore, SelectedChannelStore, UserStore, VoiceStateStore } from "@webpack/common";
 
 const Native = VencordNative.pluginHelpers.End4DiscordVoice as PluginNative<typeof import("./native")>;
 const AudioActions = findByPropsLazy("toggleSelfMute", "toggleSelfDeaf");
+// getSpeakingParticipants only reports remote peers received over RTC; the
+// local user's own voice-activity is detected client-side and lives here,
+// updated by the SPEAKING / STOP_SPEAKING flux events this plugin subscribes to.
+const SpeakingStore = findStoreLazy("SpeakingStore");
 
 let timer: ReturnType<typeof setInterval> | undefined;
 let publishing = false;
@@ -36,13 +40,17 @@ function snapshot() {
     const speakingIds = new Set(channelId
         ? ChannelRTCStore.getSpeakingParticipants(channelId).map(participant => participant.user.id)
         : []);
+    const currentUser = UserStore.getCurrentUser();
+    // Fold in the local user's own speaking state, which getSpeakingParticipants
+    // never reports, so the self avatar highlights like everyone else.
+    if (currentUser && SpeakingStore?.isSpeaking(currentUser.id))
+        speakingIds.add(currentUser.id);
     const users = Object.entries(states)
         .map(([userId, state]) => {
             const normalized = { ...(state as object), speaking: speakingIds.has(userId) };
             return participant(userId, normalized, channel?.guild_id);
         })
         .filter(Boolean);
-    const currentUser = UserStore.getCurrentUser();
     const ownState = currentUser ? VoiceStateStore.getVoiceStateForUser(currentUser.id) : null;
     return {
         version: 1,

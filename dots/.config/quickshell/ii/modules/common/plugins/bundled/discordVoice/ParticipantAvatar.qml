@@ -6,6 +6,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
+import qs.modules.common.plugins
 import "ParticipantVisualState.js" as ParticipantVisualState
 
 Item {
@@ -19,6 +20,13 @@ Item {
     property string backgroundMode: "none"
     property real backgroundOpacity: 0.72
     property bool speaking: participant?.speaking === true
+
+    // Fades everyone who is not currently speaking, so the active speaker reads
+    // at a glance. Muted and deaf badges keep their own colours underneath.
+    readonly property bool dimNonSpeaking: PluginState.option("discord_voice", "dimNonSpeaking", true)
+    readonly property real nonSpeakingOpacity: PluginState.option("discord_voice", "nonSpeakingOpacity", 0.5)
+    opacity: (root.dimNonSpeaking && !root.speaking) ? root.nonSpeakingOpacity : 1
+    Behavior on opacity { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(root) }
     property real transitionScale: 1
     property real transitionRotation: 0
     property bool componentReady: false
