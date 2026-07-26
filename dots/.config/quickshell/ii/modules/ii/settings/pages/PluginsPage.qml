@@ -96,31 +96,41 @@ ContentPage {
             Repeater {
                 model: PluginManager.availablePlugins
 
-                ColumnLayout {
-                    id: pluginGroup
+                // One plugin = one bordered card: the enable header and its
+                // options live in a single rounded surface with a distinct
+                // accent border, and a clear gap separates each plugin from the
+                // next, so it is unambiguous which options belong to which plugin.
+                Rectangle {
+                    id: pluginCard
                     required property var modelData
 
                     Layout.fillWidth: true
-                    spacing: Appearance.spacing.space25
+                    Layout.topMargin: Appearance.spacing.space100
+                    implicitHeight: cardColumn.implicitHeight
+                    color: Appearance.colors.colLayer1
+                    radius: Appearance.rounding.normal
 
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: pluginRow.implicitHeight + 16
-                        color: Appearance.colors.colLayer1
-                        radius: Appearance.rounding.normal
+                    ColumnLayout {
+                        id: cardColumn
+                        anchors { left: parent.left; right: parent.right; top: parent.top }
+                        spacing: 0
 
                         RowLayout {
                             id: pluginRow
-                            anchors.fill: parent
-                            anchors.margins: Appearance.spacing.space100
+                            Layout.fillWidth: true
+                            Layout.margins: Appearance.spacing.space100
                             spacing: Appearance.spacing.space100
 
                             ConfigSwitch {
                                 id: configSwitch
                                 Layout.fillWidth: true
 
-                                property var modelData: pluginGroup.modelData
+                                property var modelData: pluginCard.modelData
                                 text: modelData.name
+                                // Larger + heavier than the option-row labels so
+                                // the plugin name reads as the card's heading.
+                                font.pixelSize: Appearance.font.pixelSize.large
+                                font.weight: Font.DemiBold
                                 description: {
                                     const summary = modelData.description || "";
                                     const creator = modelData.author || Translation.tr("Unknown creator");
@@ -151,7 +161,7 @@ ContentPage {
                             // pulled out from under itself.
                             RippleButton {
                                 id: deleteButton
-                                visible: pluginGroup.modelData._origin === "installed"
+                                visible: pluginCard.modelData._origin === "installed"
                                 enabled: !configSwitch.isEnabled && !PluginManager.uninstalling
                                 Layout.alignment: Qt.AlignVCenter
                                 implicitWidth: 36
@@ -159,7 +169,7 @@ ContentPage {
                                 buttonRadius: Appearance.rounding.full
                                 colBackground: "transparent"
                                 colBackgroundHover: Appearance.colors.colLayer2
-                                onClicked: PluginManager.requestUninstall(pluginGroup.modelData.id)
+                                onClicked: PluginManager.requestUninstall(pluginCard.modelData.id)
 
                                 contentItem: MaterialSymbol {
                                     anchors.centerIn: parent
@@ -176,44 +186,64 @@ ContentPage {
                                 }
                             }
                         }
-                    }
 
-                    Item {
-                        id: optionsRevealer
-
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Appearance.rounding.verysmall
-                        implicitHeight: expanded ? optionsList.implicitHeight : 0
-                        opacity: expanded ? 1 : 0
-                        visible: expanded || implicitHeight > 0
-                        enabled: expanded
-                        clip: true
-
-                        readonly property bool expanded: configSwitch.checked
-
-                        Behavior on implicitHeight {
-                            NumberAnimation {
-                                duration: optionsRevealer.expanded
-                                    ? Appearance.animation.elementMoveEnter.duration
-                                    : Appearance.animation.elementMoveExit.duration
-                                easing.type: Easing.BezierSpline
-                                easing.bezierCurve: optionsRevealer.expanded
-                                    ? Appearance.animation.elementMoveEnter.bezierCurve
-                                    : Appearance.animation.elementMoveExit.bezierCurve
+                        // Hairline divider separating the header from its options,
+                        // shown only while the plugin is enabled (options visible).
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: Appearance.spacing.space100
+                            Layout.rightMargin: Appearance.spacing.space100
+                            implicitHeight: 1
+                            color: Appearance.colors.colOutlineVariant
+                            opacity: optionsRevealer.expanded ? 1 : 0
+                            visible: opacity > 0
+                            Behavior on opacity {
+                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                             }
                         }
 
-                        Behavior on opacity {
-                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                        }
+                        Item {
+                            id: optionsRevealer
 
-                        GroupedList {
-                            id: optionsList
-                            anchors.left: parent.left
-                            anchors.right: parent.right
+                            Layout.fillWidth: true
+                            Layout.leftMargin: Appearance.spacing.space100
+                            Layout.rightMargin: Appearance.spacing.space100
+                            Layout.bottomMargin: expanded ? Appearance.spacing.space50 : 0
+                            implicitHeight: expanded ? optionsList.implicitHeight : 0
+                            opacity: expanded ? 1 : 0
+                            visible: expanded || implicitHeight > 0
+                            enabled: expanded
+                            clip: true
 
-                            PluginOptions {
-                                manifest: pluginGroup.modelData
+                            readonly property bool expanded: configSwitch.checked
+
+                            Behavior on implicitHeight {
+                                NumberAnimation {
+                                    duration: optionsRevealer.expanded
+                                        ? Appearance.animation.elementMoveEnter.duration
+                                        : Appearance.animation.elementMoveExit.duration
+                                    easing.type: Easing.BezierSpline
+                                    easing.bezierCurve: optionsRevealer.expanded
+                                        ? Appearance.animation.elementMoveEnter.bezierCurve
+                                        : Appearance.animation.elementMoveExit.bezierCurve
+                                }
+                            }
+
+                            Behavior on opacity {
+                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                            }
+
+                            GroupedList {
+                                id: optionsList
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                // Transparent so the option rows read as part of
+                                // the unified card instead of nested sub-cards.
+                                bgcolor: "transparent"
+
+                                PluginOptions {
+                                    manifest: pluginCard.modelData
+                                }
                             }
                         }
                     }

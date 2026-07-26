@@ -51,6 +51,10 @@ own repo; the installer pins which revision it builds.
 - Experimental updater (`./setup exp-update`) now reports how many updates are
   available before pulling and prints the new CHANGELOG entries under a
   "What's New" heading after a successful update.
+- Plugins settings: each plugin and its options are now one unified rounded
+  card (header, hairline divider, then its option toggles as part of the same
+  surface) with clear gaps between plugins, and the plugin name is larger and
+  heavier so it reads as the card's heading.
 
 ### Fixed
 - Experimental updater failed to detect/report updates that existed: its change
