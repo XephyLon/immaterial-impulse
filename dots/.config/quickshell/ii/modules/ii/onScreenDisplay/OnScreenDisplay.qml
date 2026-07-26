@@ -41,6 +41,14 @@ Scope {
             id: "audioInput",
             sourceUrl: "indicators/AudioInputIndicator.qml"
         },
+        {
+            id: "capsLock",
+            sourceUrl: "indicators/CapsLockIndicator.qml"
+        },
+        {
+            id: "numLock",
+            sourceUrl: "indicators/NumLockIndicator.qml"
+        },
     ]
 
     function triggerOsd() {
@@ -112,6 +120,23 @@ Scope {
             if (!Audio.source) return;
             root.protectionMessage = "";
             root.currentIndicator = "audioInput";
+            root.triggerOsd();
+        }
+    }
+
+    Connections {
+        // Listen to lock key toggles (ignore the initial state read on startup)
+        target: KeyboardLocks
+        function onCapsLockOnChanged() {
+            if (!KeyboardLocks.ready) return;
+            root.protectionMessage = "";
+            root.currentIndicator = "capsLock";
+            root.triggerOsd();
+        }
+        function onNumLockOnChanged() {
+            if (!KeyboardLocks.ready) return;
+            root.protectionMessage = "";
+            root.currentIndicator = "numLock";
             root.triggerOsd();
         }
     }

@@ -671,6 +671,7 @@ Singleton {
 
             property JsonObject osd: JsonObject {
                 property int timeout: 1000
+                property bool lockKeys: true // Caps/Num Lock OSD (polls hyprctl; disable to stop polling)
             }
 
             property JsonObject osk: JsonObject {
