@@ -63,7 +63,7 @@ Singleton {
         [clockManifestFile, dockerManifestFile, discordVoiceManifestFile,
                 nandoroidMediaManifestFile, nandoroidSystemMonitorManifestFile,
                 nandoroidWeatherManifestFile, nandoroidCurrencyManifestFile,
-                screenshotResultManifestFile].forEach(fileView => {
+                notesManifestFile, screenshotResultManifestFile].forEach(fileView => {
             if (!fileView.loaded) return;
             try {
                 const text = fileView.text();
@@ -262,6 +262,12 @@ Singleton {
     FileView {
         id: nandoroidCurrencyManifestFile
         property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/nandoroid-currency")
+        path: pluginBase + "/manifest.json"
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: notesManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/notes")
         path: pluginBase + "/manifest.json"
         onLoaded: root.scheduleRebuild()
     }
