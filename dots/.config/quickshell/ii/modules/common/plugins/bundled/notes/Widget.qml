@@ -35,40 +35,61 @@ Rectangle {
         : Appearance.colors.colLayer0
     border.width: 0
 
+    // Keyboard focus for the background layer surface is armed by the host
+    // (PluginWidget hover + descendant focus), so this widget needs no per-field
+    // OnDemand wiring - clicking the editor grabs Wayland keyboard focus.
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Appearance.spacing.space200
-        spacing: Appearance.spacing.space100
+        spacing: Appearance.spacing.space150
 
         RowLayout {
             Layout.fillWidth: true
             spacing: Appearance.spacing.space100
 
-            MaterialSymbol {
+            MaterialShapeWrappedMaterialSymbol {
+                shape: MaterialShape.Shape.Clover
                 text: "sticky_note_2"
-                iconSize: Appearance.font.pixelSize.larger
-                color: Appearance.colors.colOnLayer0
+                iconSize: Appearance.font.pixelSize.large
+                implicitSize: 36
+                color: Appearance.colors.colPrimaryContainer
+                colSymbol: Appearance.colors.colPrimary
             }
 
             StyledText {
                 Layout.fillWidth: true
                 text: Translation.tr("Notes")
-                font.pixelSize: Appearance.font.pixelSize.normal
-                font.weight: Font.Medium
+                font.family: Appearance.font.family.expressive
+                font.pixelSize: Appearance.font.pixelSize.large
+                font.weight: Font.DemiBold
                 color: Appearance.colors.colOnLayer0
             }
         }
 
-        ScrollView {
+        // Distinct rounded editing surface so the note area reads as a card
+        // within the widget, not bare text on the background.
+        Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
+            radius: Appearance.rounding.normal
+            color: root.blurEnabled
+                ? ColorUtils.transparentize(Appearance.colors.colLayer2, 1 - root.backgroundOpacity)
+                : Appearance.colors.colLayer1
 
-            StyledTextArea {
-                id: noteArea
-                wrapMode: TextEdit.Wrap
-                placeholderText: Translation.tr("Notes…")
-                onTextChanged: if (root.ready) saveDebounce.restart()
+            ScrollView {
+                anchors.fill: parent
+                anchors.margins: Appearance.spacing.space100
+                clip: true
+
+                StyledTextArea {
+                    id: noteArea
+                    background: null
+                    wrapMode: TextEdit.Wrap
+                    placeholderText: Translation.tr("Jot a note…")
+                    color: Appearance.colors.colOnLayer1
+                    onTextChanged: if (root.ready) saveDebounce.restart()
+                }
             }
         }
     }
