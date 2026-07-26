@@ -1101,5 +1101,30 @@ ContentPage {
                 }
             }
         }
+
+        ContentSection {
+            icon: "wb_twilight"
+            title: Translation.tr("Screensaver")
+            shape: MaterialShape.Shape.Pentagon
+
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "bedtime"
+                    text: Translation.tr("Enable OLED screensaver")
+                    checked: Config.options.screensaver.enable
+                    onCheckedChanged: { Config.options.screensaver.enable = checked }
+                }
+                ConfigSelectionArray {
+                    text: Translation.tr("Mode")
+                    icon: "wallpaper"
+                    currentValue: Config.options.screensaver.mode
+                    onSelected: newValue => { Config.options.screensaver.mode = newValue; }
+                    options: [
+                        { displayName: Translation.tr("Black"), icon: "dark_mode", value: "black" },
+                        { displayName: Translation.tr("Clock"), icon: "schedule", value: "clock" }
+                    ]
+                }
+            }
+        }
     }
 }

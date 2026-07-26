@@ -15,6 +15,7 @@ Singleton {
     property bool sidebarRightOpen: false
     property bool mediaControlsOpen: false
     property bool sysTrayOverflowOpen: false
+    property bool screensaverActive: false
     property bool osdBrightnessOpen: false
     property bool settingsOpen: false
     property bool osdVolumeOpen: false

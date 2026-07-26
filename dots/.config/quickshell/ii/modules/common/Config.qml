@@ -664,6 +664,14 @@ Singleton {
                 property string userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
             }
 
+            // OLED screensaver. The idle trigger lives in hypridle.conf (keep its
+            // listener timeout in sync); show() no-ops unless enable is true.
+            property JsonObject screensaver: JsonObject {
+                property bool enable: false
+                property string mode: "black" // "black" | "clock"
+                property int timeout: 240 // seconds (mirror in hypridle.conf; must be < lock timeout)
+            }
+
             property JsonObject notifications: JsonObject {
                 property int timeout: 7000
                 property string position: "top_right"
