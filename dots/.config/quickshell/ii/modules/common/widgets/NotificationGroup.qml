@@ -40,14 +40,32 @@ MouseArea { // Notification group area
     }
 
     hoverEnabled: true
+
+    // Grace period before a popup starts hiding after the mouse leaves, so a
+    // brief unfocus (e.g. moving the cursor onto the notification, or a 50ms
+    // flicker) doesn't instantly dismiss it. Re-entering cancels the pending
+    // hide. See issue #28.
+    Timer {
+        id: leaveHideTimer
+        interval: Config.options?.notifications?.hideDelayOnLeave ?? 200
+        onTriggered: {
+            if (root.containsMouse) return;
+            root.notifications.forEach(notif => {
+                Notifications.timeoutNotification(notif.notificationId);
+            });
+        }
+    }
+
     onContainsMouseChanged: {
         if (!root.popup) return;
-        if (root.containsMouse) root.notifications.forEach(notif => {
-            Notifications.cancelTimeout(notif.notificationId);
-        });
-        else root.notifications.forEach(notif => {
-            Notifications.timeoutNotification(notif.notificationId);
-        });
+        if (root.containsMouse) {
+            leaveHideTimer.stop();
+            root.notifications.forEach(notif => {
+                Notifications.cancelTimeout(notif.notificationId);
+            });
+        } else {
+            leaveHideTimer.restart();
+        }
     }
 
     SequentialAnimation { // Drag finish animation
