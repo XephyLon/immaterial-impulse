@@ -27,6 +27,9 @@ own repo; the installer pins which revision it builds.
   - Clipboard pinning: pin entries so they stay on top and survive "wipe all".
   - File/folder search in the launcher (`~`-prefixed query, fd/find backed).
   - Lock screen: previous/play-pause/next controls on the media widget.
+  - OLED screensaver (Settings → Interface): idle overlay with a full-black or
+    a slowly-drifting dim clock mode; off by default.
+  - NetworkManager VPN toggles in the right sidebar plus a bar status icon.
 - Curated default configuration: fresh installs now seed `config.json` from the
   maintainer's tuned setup (sanitized of machine-specific state) instead of the
   bare upstream fallback defaults; existing configs are never touched.
@@ -71,6 +74,10 @@ own repo; the installer pins which revision it builds.
   heavier so it reads as the card's heading.
 
 ### Fixed
+- "Keep system awake" sometimes still let the session lock and hibernate: the
+  idle inhibitor was bound to a 0×0 surface that maps unreliably, so Hyprland's
+  ext-idle-notify (read by hypridle) intermittently ignored it. It now uses a
+  reliably-mapped 1×1 transparent background-layer surface.
 - Upstream bug sweep (audited `end-4/dots-hyprland`'s tracker against our fork,
   fixed the ones still present):
   - Sidebars/panels no longer "blink" open then instantly shut — a transient
