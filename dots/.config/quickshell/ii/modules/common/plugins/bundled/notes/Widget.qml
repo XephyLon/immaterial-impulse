@@ -25,14 +25,16 @@ Rectangle {
     // assigning the loaded content does not schedule a redundant save.
     property bool ready: false
 
-    implicitWidth: 320
-    implicitHeight: 260
+    // A square 2x2 desktop-grid component.
+    implicitWidth: 228
+    implicitHeight: 228
     width: implicitWidth
     height: implicitHeight
     radius: Appearance.rounding.verylarge
+    // Matugen-tinted card (secondary container) instead of a neutral surface.
     color: root.blurEnabled
-        ? ColorUtils.transparentize(Appearance.colors.colLayer1, 1 - root.backgroundOpacity)
-        : Appearance.colors.colLayer0
+        ? ColorUtils.transparentize(Appearance.colors.colSecondaryContainer, 1 - root.backgroundOpacity)
+        : Appearance.colors.colSecondaryContainer
     border.width: 0
 
     // Keyboard focus for the background layer surface is armed by the host
@@ -63,7 +65,7 @@ Rectangle {
                 font.family: Appearance.font.family.expressive
                 font.pixelSize: Appearance.font.pixelSize.large
                 font.weight: Font.DemiBold
-                color: Appearance.colors.colOnLayer0
+                color: Appearance.colors.colOnSecondaryContainer
             }
         }
 
