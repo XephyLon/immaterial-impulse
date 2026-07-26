@@ -279,6 +279,18 @@ ContentPage {
                     }
                 }
             }
+
+            ConfigSwitch {
+                buttonIcon: "lightbulb"
+                text: Translation.tr("Sync RGB devices (OpenRGB)")
+                description: OpenRgb.available
+                    ? Translation.tr("Applies the accent color to your RGB hardware whenever the palette changes")
+                    : Translation.tr("The openrgb command was not found — install OpenRGB to use this")
+                checked: Config.options.appearance.openrgb.enable
+                onCheckedChanged: {
+                    Config.options.appearance.openrgb.enable = checked;
+                }
+            }
         }
 
         ContentSection {

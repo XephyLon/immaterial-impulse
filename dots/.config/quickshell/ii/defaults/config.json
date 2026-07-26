@@ -180,6 +180,9 @@
       "locked": false,
       "showLyrics": false
     },
+    "openrgb": {
+      "enable": false
+    },
     "palette": {
       "accentColor": "",
       "type": "auto"

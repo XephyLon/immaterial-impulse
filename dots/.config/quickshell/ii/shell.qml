@@ -50,6 +50,7 @@ ShellRoot {
         Wallpapers.load()
         WallpaperEngine.load()
         Updates.load()
+        OpenRgb.load()
         LyricsService.restartLyrics()
     }
 

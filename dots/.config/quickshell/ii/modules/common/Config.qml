@@ -169,6 +169,12 @@ Singleton {
                         property bool forceDarkMode: false
                     }
                 }
+                // Sync RGB peripherals to the generated accent color via the
+                // OpenRGB CLI (see services/OpenRgb.qml). Off by default:
+                // not everyone has RGB devices or openrgb installed.
+                property JsonObject openrgb: JsonObject {
+                    property bool enable: false
+                }
                 property JsonObject palette: JsonObject {
                     property string type: "auto" // Allowed: auto, scheme-content, scheme-expressive, scheme-fidelity, scheme-fruit-salad, scheme-monochrome, scheme-neutral, scheme-rainbow, scheme-tonal-spot
                     property string accentColor: ""
