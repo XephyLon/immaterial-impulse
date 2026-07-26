@@ -1,3 +1,4 @@
 module testservices
 singleton Battery Battery.qml
 singleton BluetoothStatus BluetoothStatus.qml
+singleton Vpn Vpn.qml

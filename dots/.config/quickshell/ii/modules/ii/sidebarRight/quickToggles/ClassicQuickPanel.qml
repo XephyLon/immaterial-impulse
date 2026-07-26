@@ -35,5 +35,12 @@ AbstractQuickPanel {
         IdleInhibitor {}
         EasyEffectsToggle {}
         CloudflareWarp {}
+        Repeater {
+            model: Vpn.connections
+            delegate: VpnToggle {
+                required property var modelData
+                connection: modelData
+            }
+        }
     }
 }

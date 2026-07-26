@@ -64,6 +64,12 @@ Item {
             iconSize: Appearance.font.pixelSize.larger
             color: root.isMaterial ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
         }
+        MaterialSymbol {
+            visible: Vpn.anyActive
+            text: Vpn.materialSymbol
+            iconSize: Appearance.font.pixelSize.larger
+            color: root.isMaterial ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+        }
         Loader {
             id: notifLoader
             active: Notifications.silent || Notifications.unread > 0
