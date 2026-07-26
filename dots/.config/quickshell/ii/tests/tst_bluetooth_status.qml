@@ -1,6 +1,7 @@
 import QtQuick
 import QtTest
 import Quickshell.Bluetooth
+import Quickshell.Services.UPower
 import testservices
 
 // Behavioral tests for services/BluetoothStatus.qml, driven through the mock
@@ -101,6 +102,29 @@ TestCase {
         // batteryAvailable false wins even if a stale value is present.
         compare(BluetoothStatus.formatBatterySuffix(
             { batteryAvailable: false, battery: 0.5 }), "")
+    }
+
+    function test_battery_suffix_upower_fallback() {
+        // BlueZ Battery1 absent, but UPower exposes the device as a
+        // power_supply with the MAC in its nativePath (HID controllers).
+        UPower.devices.values = [
+            { isLaptopBattery: true, nativePath: "BAT0", percentage: 0.99 },
+            { isLaptopBattery: false,
+              nativePath: "ps-controller-battery-14:3a:9a:7c:45:47",
+              percentage: 0.45 }
+        ]
+        compare(BluetoothStatus.formatBatterySuffix(
+            { batteryAvailable: false, address: "14:3A:9A:7C:45:47" }), " • 45%")
+
+        // BlueZ battery wins over the fallback when both exist.
+        compare(BluetoothStatus.formatBatterySuffix(
+            { batteryAvailable: true, battery: 0.6,
+              address: "14:3A:9A:7C:45:47" }), " • 60%")
+
+        // No matching UPower device -> still empty.
+        compare(BluetoothStatus.formatBatterySuffix(
+            { batteryAvailable: false, address: "AA:BB:CC:DD:EE:FF" }), "")
+        UPower.devices.values = []
     }
 
     function test_default_adapter_activity() {

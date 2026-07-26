@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Io
+import Quickshell.Services.UPower
 import QtQuick
 
 Singleton {
@@ -16,12 +17,23 @@ Singleton {
     readonly property bool connected: Bluetooth.devices.values.some(d => d.connected)
 
     // " • NN%" for a device whose battery level is reported, "" otherwise.
-    // Battery comes from Quickshell.Bluetooth's BluetoothDevice (BlueZ Battery1
+    // Primary source is Quickshell.Bluetooth's BluetoothDevice (BlueZ Battery1
     // interface): `batteryAvailable` gates it, `battery` is a 0..1 fraction.
+    // Many devices never get Battery1 (HID controllers like the DualSense, or
+    // bluetoothd without Experimental=true), but the kernel exposes them as a
+    // power_supply that UPower picks up with the MAC in its nativePath - fall
+    // back to that, matched by address.
     function formatBatterySuffix(device) {
-        if (!device?.batteryAvailable)
-            return "";
-        return ` • ${Math.round(device.battery * 100)}%`;
+        if (device?.batteryAvailable)
+            return ` • ${Math.round(device.battery * 100)}%`;
+        const addr = device?.address?.toLowerCase() ?? "";
+        if (addr) {
+            const fallback = (UPower.devices?.values ?? []).find(d =>
+                d && !d.isLaptopBattery && (d.nativePath ?? "").toLowerCase().includes(addr));
+            if (fallback)
+                return ` • ${Math.round(fallback.percentage * 100)}%`;
+        }
+        return "";
     }
 
     function sortFunction(a, b) {

@@ -4,6 +4,7 @@ import QtQuick
 // services/BluetoothStatus.qml touches.
 QtObject {
     property string name: ""
+    property string address: ""
     property bool connected: false
     property bool paired: false
     property bool batteryAvailable: false
