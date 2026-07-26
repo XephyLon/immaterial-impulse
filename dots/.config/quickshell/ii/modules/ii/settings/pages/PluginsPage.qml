@@ -155,6 +155,42 @@ ContentPage {
                                 }
                             }
 
+                            // Third-party badge: installed plugins come from an
+                            // external source (not shipped with the shell), so flag
+                            // them so the user knows to trust the source.
+                            Rectangle {
+                                visible: pluginCard.modelData._origin === "installed"
+                                Layout.alignment: Qt.AlignVCenter
+                                implicitWidth: badgeRow.implicitWidth + Appearance.spacing.space150
+                                implicitHeight: badgeRow.implicitHeight + Appearance.spacing.space50
+                                radius: Appearance.rounding.full
+                                color: Appearance.colors.colSecondaryContainer
+
+                                RowLayout {
+                                    id: badgeRow
+                                    anchors.centerIn: parent
+                                    spacing: Appearance.spacing.space25
+                                    MaterialSymbol {
+                                        text: "public"
+                                        iconSize: Appearance.font.pixelSize.small
+                                        color: Appearance.colors.colOnSecondaryContainer
+                                    }
+                                    StyledText {
+                                        text: Translation.tr("Third-party")
+                                        font.pixelSize: Appearance.font.pixelSize.smaller
+                                        color: Appearance.colors.colOnSecondaryContainer
+                                    }
+                                }
+
+                                HoverHandler { id: badgeHover }
+                                StyledToolTip {
+                                    // Rectangle has no `hovered` property, so gate
+                                    // explicitly or the tooltip stays visible.
+                                    extraVisibleCondition: badgeHover.hovered
+                                    text: Translation.tr("Installed from an external source — only enable plugins you trust")
+                                }
+                            }
+
                             // Only installed packages live on disk and can be removed;
                             // bundled plugins ship with the shell. Removal is gated on
                             // the plugin being disabled so a running plugin is never
