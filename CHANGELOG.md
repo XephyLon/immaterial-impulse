@@ -30,6 +30,10 @@ own repo; the installer pins which revision it builds.
   - OLED screensaver (Settings → Interface): idle overlay with a full-black or
     a slowly-drifting dim clock mode; off by default.
   - NetworkManager VPN toggles in the right sidebar plus a bar status icon.
+  - Automatic dark/light theme switching by time — sunrise/sunset or fixed
+    times (Settings → Wallpaper & Colors); off by default.
+  - ICS calendar: load events from local `.ics` files and remote ICS URLs and
+    mark days that have events in the sidebar calendar.
 - Curated default configuration: fresh installs now seed `config.json` from the
   maintainer's tuned setup (sanitized of machine-specific state) instead of the
   bare upstream fallback defaults; existing configs are never touched.
