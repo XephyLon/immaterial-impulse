@@ -279,13 +279,13 @@ ContentPage {
                             { displayName: Translation.tr("Yes"), icon: "check", value: true }
                         ]
                     }
-                    ConfigSwitch {
-                        buttonIcon: "cancel_presentation"
-                        text: Translation.tr("Auto-dismiss popups on hide")
-                        enabled: Config.options.bar.autoHide.enable
-                        checked: Config.options.bar.autoHide.dismissPopups
-                        onCheckedChanged: { Config.options.bar.autoHide.dismissPopups = checked; }
-                    }
+                }
+                ConfigSwitch {
+                    buttonIcon: "cancel_presentation"
+                    text: Translation.tr("Auto-dismiss popups on hide")
+                    enabled: Config.options.bar.autoHide.enable
+                    checked: Config.options.bar.autoHide.dismissPopups
+                    onCheckedChanged: { Config.options.bar.autoHide.dismissPopups = checked; }
                 }
             }
         }
