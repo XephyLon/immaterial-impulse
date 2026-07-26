@@ -394,7 +394,6 @@
       "spacing": 20,
       "style": "dot"
     },
-    "floatStyleShadow": true,
     "indicators": {
       "notifications": {
         "showUnreadCount": true
@@ -453,6 +452,7 @@
     "tooltips": {
       "clickToShow": false
     },
+    "shadow": false,
     "topLeftIcon": "spark",
     "utilButtons": {
       "isRecording": false,

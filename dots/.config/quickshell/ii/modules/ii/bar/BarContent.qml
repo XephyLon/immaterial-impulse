@@ -88,6 +88,17 @@ Item {
     property real useShortenedForm: (Appearance.sizes.barHellaShortenScreenWidthThreshold >= screen?.width) ? 2 : (Appearance.sizes.barShortenScreenWidthThreshold >= screen?.width) ? 1 : 0
 
 
+    // Optional soft drop shadow under the bar background (Config.options.bar.shadow).
+    // Only rendered when the background itself is painted (mirrors barBackground's color condition).
+    Loader {
+        active: Config.options.bar.shadow && !centerOnly && Config.options.bar.showBackground
+            && Config.options.bar.cornerStyle !== 2 && !root.isMaterial
+        anchors.fill: barBackground
+        sourceComponent: StyledRectangularShadow {
+            anchors.fill: undefined // The loader's anchors act on this, and this should not have any anchor
+            target: barBackground
+        }
+    }
     Rectangle {
         id: barBackground
         anchors.fill: parent
@@ -104,6 +115,15 @@ Item {
         && root.effectiveLeftLayout.length === 0
         && root.effectiveRightLayout.length === 0
 
+    // Shadow for the center-only pill (same option, mirrors centerPill's visible condition)
+    Loader {
+        active: Config.options.bar.shadow && centerPill.visible
+        anchors.fill: centerPill
+        sourceComponent: StyledRectangularShadow {
+            anchors.fill: undefined // The loader's anchors act on this, and this should not have any anchor
+            target: centerPill
+        }
+    }
     Rectangle {
         id: centerPill
         visible: centerOnly && Config.options.bar.showBackground && Config.options.bar.cornerStyle !== 2
