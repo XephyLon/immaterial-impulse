@@ -538,6 +538,8 @@ Singleton {
                     property string city: "" // When 'enableGPS' is false
                     property bool useUSCS: false // Instead of metric (SI) units
                     property int fetchInterval: 10 // minutes
+                    property string provider: "owm" // "owm" (OpenWeatherMap) | "wttr" (wttr.in, keyless)
+                    property string apiKey: "" // empty = use the built-in OpenWeatherMap key
                 }
                 property JsonObject indicators: JsonObject {
                     property JsonObject notifications: JsonObject {

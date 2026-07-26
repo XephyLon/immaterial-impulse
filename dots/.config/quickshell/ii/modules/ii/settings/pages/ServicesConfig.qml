@@ -514,6 +514,33 @@ ContentPage {
             shape: MaterialShape.Shape.Pill
             title: Translation.tr("Weather")
             GroupedList {
+                ConfigSelectionArray {
+                    text: Translation.tr("Provider")
+                    icon: "cloud"
+                    currentValue: Config.options.bar.weather.provider
+                    onSelected: newValue => { Config.options.bar.weather.provider = newValue; }
+                    options: [
+                        { displayName: Translation.tr("OpenWeatherMap"), icon: "key",      value: "owm" },
+                        { displayName: Translation.tr("wttr.in"),        icon: "public",   value: "wttr" }
+                    ]
+                }
+                ConfigTextArea {
+                    id: weatherApiKeyField
+                    Layout.fillWidth: true
+                    visible: Config.options.bar.weather.provider === "owm"
+                    fieldWidth: 250
+                    buttonIcon: "vpn_key"
+                    text: Translation.tr("OpenWeatherMap API key (leave empty for the built-in key)")
+                    value: Config.options.bar.weather.apiKey
+                    onValueChanged: weatherApiKeyDebounceTimer.restart()
+
+                    Timer {
+                        id: weatherApiKeyDebounceTimer
+                        interval: 1000
+                        running: false
+                        onTriggered: Config.options.bar.weather.apiKey = weatherApiKeyField.value
+                    }
+                }
                 ConfigSwitch {
                     buttonIcon: "assistant_navigation"
                     text: Translation.tr("Enable GPS based location")
