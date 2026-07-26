@@ -129,4 +129,32 @@ TestCase {
         UPower.devices.values = []
         compare(Battery.chargeCycles, -1)
     }
+
+    function test_transient_device_swap_is_ignored() {
+        // A real battery is present (listed in devices) at a safe charge.
+        UPower.devices.values = [{ isLaptopBattery: true }]
+        UPower.displayDevice.isLaptopBattery = true
+        UPower.displayDevice.state = UPowerDeviceState.Discharging
+        UPower.displayDevice.percentage = 0.5
+        compare(Battery.available, true)
+        compare(Battery.percentage, 0.5)
+        compare(Battery.isLow, false)
+
+        // UPower transiently swaps displayDevice to a placeholder: not a laptop
+        // battery, reporting 0% - but the battery stays in the device list. This
+        // must NOT hide the battery, drop percentage, or trip the
+        // low/critical/suspend flags. See issue #33.
+        UPower.displayDevice.isLaptopBattery = false
+        UPower.displayDevice.percentage = 0.0
+        compare(Battery.available, true)   // held via the device list
+        compare(Battery.percentage, 0.5)   // frozen at last good reading
+        compare(Battery.isLow, false)
+        compare(Battery.isCritical, false)
+        compare(Battery.isSuspending, false)
+
+        // Device returns; readings resume.
+        UPower.displayDevice.isLaptopBattery = true
+        UPower.displayDevice.percentage = 0.45
+        compare(Battery.percentage, 0.45)
+    }
 }
