@@ -80,6 +80,8 @@ own repo; the installer pins which revision it builds.
     brief cursor flicker no longer dismisses them.
   - With bar auto-hide on, the media box and tray-overflow popup are no longer
     orphaned above a hidden bar (new `bar.autoHide.dismissPopups` option).
+  - The screen-corner "absolute corner" hover no longer opens the sidebar when
+    "Hover to trigger" is turned off (it is a sub-option of it).
 - Experimental updater failed to detect/report updates that existed: its change
   detection keyed off the reflog's `HEAD@{1}`, which a preceding stash or
   detached-HEAD checkout silently repointed. It now captures a stable pre-pull
