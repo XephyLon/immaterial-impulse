@@ -49,6 +49,10 @@ Singleton {
     property list<real> vramUsageHistory: []
     property string maxAvailableVramString: kbToGbString(vramTotal)
 
+    // GPU vendor for polling: "nvidia" (nvidia-smi), "amd"/"intel" (hwmon/sysfs),
+    // or "" while detection is pending or no supported GPU was found.
+    property string gpuVendor: ""
+
     Process {
         id: tempProc
         command: ["bash", "-c", "sensors 2>/dev/null | grep -E 'Package id 0|Tctl|Tdie' | grep -oP '\\+\\K[0-9.]+(?=°C)' | head -1"]
@@ -74,12 +78,48 @@ Singleton {
         }
     }
 
+    // Pick a GPU polling backend once: prefer NVIDIA if nvidia-smi is present,
+    // otherwise fall back to amdgpu (gpu_busy_percent) or, failing that, any GPU
+    // exposing an hwmon temperature (e.g. Intel iGPUs).
+    Process {
+        id: gpuDetectProc
+        running: true
+        command: ["bash", "-c", "if command -v nvidia-smi >/dev/null 2>&1; then echo nvidia; elif ls /sys/class/drm/card*/device/gpu_busy_percent >/dev/null 2>&1; then echo amd; elif ls /sys/class/drm/card*/device/hwmon/hwmon*/temp1_input >/dev/null 2>&1; then echo intel; fi"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.gpuVendor = text.trim()
+            }
+        }
+    }
+
     Process {
         id: gpuProc
         command: ["bash", "-c", "nvidia-smi --query-gpu=temperature.gpu,utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null | head -1"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const parsed = root.parseNvidiaSmi(text)
+                if (parsed) {
+                    root.gpuTemp   = parsed.gpuTemp
+                    root.gpuUsage  = parsed.gpuUsage
+                    root.vramUsed  = parsed.vramUsed
+                    root.vramTotal = parsed.vramTotal
+                }
+            }
+        }
+    }
+
+    // AMD/Intel fallback via Linux hwmon/sysfs. Emits a single line:
+    //   "<busy%> <temp_millideg> <vram_used_bytes> <vram_total_bytes>"
+    // busy comes from amdgpu's gpu_busy_percent (absent on Intel iGPUs, where it
+    // reports 0/unavailable); temperature from the GPU hwmon temp1_input; VRAM
+    // from mem_info_vram_* when the driver exposes it (amdgpu). Paths are static
+    // globs, so this stays a fixed command with no untrusted interpolation.
+    Process {
+        id: gpuFallbackProc
+        command: ["bash", "-c", "for d in /sys/class/drm/card*/device; do [ -d \"$d\" ] || continue; busy=$(cat \"$d/gpu_busy_percent\" 2>/dev/null); temp=$(cat \"$d\"/hwmon/hwmon*/temp1_input 2>/dev/null | head -1); vu=$(cat \"$d/mem_info_vram_used\" 2>/dev/null); vt=$(cat \"$d/mem_info_vram_total\" 2>/dev/null); if [ -n \"$busy\" ] || [ -n \"$temp\" ]; then echo \"${busy:-0} ${temp:-0} ${vu:-0} ${vt:-0}\"; break; fi; done"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const parsed = root.parseAmdGpu(text)
                 if (parsed) {
                     root.gpuTemp   = parsed.gpuTemp
                     root.gpuUsage  = parsed.gpuUsage
@@ -99,8 +139,13 @@ Singleton {
             tempProc.running = true
             diskProc.running = false
             diskProc.running = true
-            gpuProc.running = false
-            gpuProc.running = true
+            if (root.gpuVendor === "nvidia") {
+                gpuProc.running = false
+                gpuProc.running = true
+            } else if (root.gpuVendor === "amd" || root.gpuVendor === "intel") {
+                gpuFallbackProc.running = false
+                gpuFallbackProc.running = true
+            }
         }
     }
 
@@ -140,6 +185,26 @@ Singleton {
             };
         }
         return null;
+    }
+
+    // Parses the AMD/Intel sysfs fallback line:
+    //   "<busy%> <temp_millideg> <vram_used_bytes> <vram_total_bytes>"
+    // Temperature is millidegrees -> °C; VRAM is bytes -> KB (to match
+    // /proc/meminfo units). On Intel iGPUs gpu_busy_percent is unavailable and
+    // arrives as 0, so usage stays 0 while temperature still works.
+    function parseAmdGpu(text) {
+        const parts = text.trim().split(/\s+/).map(s => parseFloat(s))
+        if (parts.length < 4 || isNaN(parts[0]) || isNaN(parts[1])) {
+            return null;
+        }
+        const vramUsed  = isNaN(parts[2]) ? 0 : parts[2]
+        const vramTotal = (isNaN(parts[3]) || parts[3] <= 0) ? 1024 : parts[3]
+        return {
+            gpuTemp:   parts[1] / 1000,
+            gpuUsage:  parts[0] / 100,
+            vramUsed:  vramUsed / 1024,
+            vramTotal: vramTotal / 1024
+        };
     }
 
     function updateMemoryUsageHistory() {
