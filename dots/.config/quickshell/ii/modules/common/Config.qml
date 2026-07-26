@@ -756,6 +756,13 @@ Singleton {
                     property string math: "="
                     property string shellCommand: "$"
                     property string webSearch: "?"
+                    property string file: "~" // File/folder search
+                }
+                property JsonObject fileSearch: JsonObject {
+                    property bool enable: true
+                    property string root: "" // empty = $HOME
+                    property int maxResults: 20
+                    property int delay: 150 // ms debounce
                 }
                 property JsonObject imageSearch: JsonObject {
                     property string imageSearchEngineBaseUrl: "https://lens.google.com/uploadbyurl?url="

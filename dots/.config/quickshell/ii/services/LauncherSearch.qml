@@ -177,7 +177,7 @@ Singleton {
         {
             action: "wipeclipboard",
             execute: () => {
-                Quickshell.execDetached(["bash", "-c", "rm -f ~/.cache/cliphist/db"]);
+                Cliphist.wipe();
             }
         },
         {
@@ -269,13 +269,8 @@ Singleton {
         if (root.query.startsWith(Config.options.search.prefix.clipboard)) {
             // Clipboard
             const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.clipboard);
-            return Cliphist.fuzzyQuery(searchString).map((entry, index, array) => {
-                const mightBlurImage = Cliphist.entryIsImage(entry) && root.clipboardWorkSafetyActive;
-                let shouldBlurImage = mightBlurImage;
-                if (mightBlurImage) {
-                    shouldBlurImage = shouldBlurImage && (root.containsUnsafeLink(array[index - 1]) || root.containsUnsafeLink(array[index + 1]));
-                }
-                const type = `#${entry.match(/^\s*(\S+)/)?.[1] || ""}`;
+            const makeClipboardResult = (entry, pinned, shouldBlurImage) => {
+                const type = `${pinned ? Translation.tr("Pinned") + " " : ""}#${entry.match(/^\s*(\S+)/)?.[1] || ""}`;
                 return resultComp.createObject(null, {
                     rawValue: entry,
                     name: StringUtils.cleanCliphistEntry(entry),
@@ -285,6 +280,13 @@ Singleton {
                         Cliphist.copy(entry);
                     },
                     actions: [resultComp.createObject(null, {
+                            name: pinned ? Translation.tr("Unpin") : Translation.tr("Pin"),
+                            iconName: pinned ? "keep_off" : "keep",
+                            iconType: LauncherSearchResult.IconType.Material,
+                            execute: () => {
+                                Cliphist.togglePin(entry);
+                            }
+                        }), resultComp.createObject(null, {
                             name: Translation.tr("Copy"),
                             iconName: "content_copy",
                             iconType: LauncherSearchResult.IconType.Material,
@@ -301,7 +303,24 @@ Singleton {
                         })],
                     blurImage: shouldBlurImage
                 });
-            }).filter(Boolean);
+            };
+            // Pinned entries always shown first, filtered by the search string.
+            const search = searchString.trim().toLowerCase();
+            const pinnedResults = Cliphist.livePinnedEntries
+                .filter(p => search === "" || p.name.toLowerCase().includes(search))
+                .map(p => makeClipboardResult(p.entry, true, p.image && root.clipboardWorkSafetyActive));
+            // Unpinned live entries, skipping any that are already pinned to avoid duplicates.
+            const unpinnedResults = Cliphist.fuzzyQuery(searchString)
+                .filter(entry => !Cliphist.pinnedHashes.includes(Cliphist.contentHash(entry)))
+                .map((entry, index, array) => {
+                    const mightBlurImage = Cliphist.entryIsImage(entry) && root.clipboardWorkSafetyActive;
+                    let shouldBlurImage = mightBlurImage;
+                    if (mightBlurImage) {
+                        shouldBlurImage = shouldBlurImage && (root.containsUnsafeLink(array[index - 1]) || root.containsUnsafeLink(array[index + 1]));
+                    }
+                    return makeClipboardResult(entry, false, shouldBlurImage);
+                });
+            return pinnedResults.concat(unpinnedResults).filter(Boolean);
         } else if (root.query.startsWith(Config.options.search.prefix.emojis)) {
             // Emojis
             const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.emojis);
@@ -348,6 +367,37 @@ Singleton {
                     execute: () => {
                         Quickshell.clipboardText = keyStr;
                     }
+                });
+            }).filter(Boolean);
+        } else if (root.query.startsWith(Config.options.search.prefix.file ?? "~")) {
+            // File / folder search (backend debounced + argv-safe in FileSearch)
+            const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.file ?? "~");
+            FileSearch.search(searchString);
+            return FileSearch.results.map(entry => {
+                const path = FileUtils.trimFileProtocol(entry.path);
+                const isDir = entry.isDir;
+                const displayName = isDir ? FileUtils.folderNameForPath(path) : FileUtils.fileNameForPath(path);
+                const parentDir = FileUtils.parentDirectory(path);
+                return resultComp.createObject(null, {
+                    rawValue: path,
+                    name: displayName || path,
+                    comment: path,
+                    verb: Translation.tr("Open"),
+                    type: isDir ? Translation.tr("Folder") : Translation.tr("File"),
+                    iconName: isDir ? "folder" : "description",
+                    iconType: LauncherSearchResult.IconType.Material,
+                    execute: () => {
+                        Quickshell.execDetached(["xdg-open", path]);
+                    },
+                    actions: [resultComp.createObject(null, {
+                            name: Translation.tr("Open parent folder"),
+                            iconName: "folder_open",
+                            iconType: LauncherSearchResult.IconType.Material,
+                            execute: () => {
+                                if (parentDir)
+                                    Quickshell.execDetached(["xdg-open", parentDir]);
+                            }
+                        })]
                 });
             }).filter(Boolean);
         } else if (root.query.startsWith(Config.options.search.prefix.symbols)) {
