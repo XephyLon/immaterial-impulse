@@ -57,6 +57,22 @@ function validateManifest(manifest) {
         return { valid: false, error: "desktopWidget.blur must be a boolean" };
     }
 
+    // Optional component-grid span: `"grid": { "cols": int>=1, "rows": int>=1 }`.
+    // cols/rows default to 1 when omitted; both must be integers in 1..12.
+    if (manifest.grid !== undefined) {
+        if (!manifest.grid || typeof manifest.grid !== "object" || Array.isArray(manifest.grid)) {
+            return { valid: false, error: "Manifest 'grid' must be an object with integer 'cols'/'rows'" };
+        }
+        const gridAxes = ["cols", "rows"];
+        for (const axis of gridAxes) {
+            const value = manifest.grid[axis];
+            if (value === undefined) continue;
+            if (typeof value !== "number" || value !== Math.floor(value) || value < 1 || value > 12) {
+                return { valid: false, error: "grid." + axis + " must be an integer between 1 and 12" };
+            }
+        }
+    }
+
     if (manifest.options !== undefined) {
         if (!Array.isArray(manifest.options)) {
             return { valid: false, error: "Manifest 'options' must be an array" };

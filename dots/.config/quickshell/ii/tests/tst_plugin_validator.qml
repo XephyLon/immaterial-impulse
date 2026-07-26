@@ -138,6 +138,71 @@ TestCase {
         compare(result.error, "Invalid desktopWidget: Binding target 'Config.options.lock.enable' is not whitelisted");
     }
 
+    function test_validGridSpan() {
+        var manifest = {
+            "id": "grid_notes",
+            "name": "Grid Notes",
+            "grid": { "cols": 2, "rows": 2 },
+            "desktopWidget": { "component": "Widget.qml" }
+        };
+        var result = PluginValidator.validateManifest(manifest);
+        verify(result.valid, "Grid manifest should be valid: " + (result.error ? result.error : ""));
+    }
+
+    function test_gridDefaultsWhenPartial() {
+        var result = PluginValidator.validateManifest({
+            "id": "grid_col_only",
+            "name": "Grid Col Only",
+            "grid": { "cols": 3 },
+            "desktopWidget": { "component": "Widget.qml" }
+        });
+        verify(result.valid, "Partial grid should be valid: " + (result.error ? result.error : ""));
+    }
+
+    function test_rejectsNonIntegerGrid() {
+        var result = PluginValidator.validateManifest({
+            "id": "grid_frac",
+            "name": "Grid Frac",
+            "grid": { "cols": 2.5, "rows": 1 },
+            "desktopWidget": { "component": "Widget.qml" }
+        });
+        verify(!result.valid);
+        compare(result.error, "grid.cols must be an integer between 1 and 12");
+    }
+
+    function test_rejectsNegativeGrid() {
+        var result = PluginValidator.validateManifest({
+            "id": "grid_neg",
+            "name": "Grid Neg",
+            "grid": { "cols": 1, "rows": -1 },
+            "desktopWidget": { "component": "Widget.qml" }
+        });
+        verify(!result.valid);
+        compare(result.error, "grid.rows must be an integer between 1 and 12");
+    }
+
+    function test_rejectsOversizedGrid() {
+        var result = PluginValidator.validateManifest({
+            "id": "grid_big",
+            "name": "Grid Big",
+            "grid": { "cols": 13, "rows": 1 },
+            "desktopWidget": { "component": "Widget.qml" }
+        });
+        verify(!result.valid);
+        compare(result.error, "grid.cols must be an integer between 1 and 12");
+    }
+
+    function test_rejectsNonObjectGrid() {
+        var result = PluginValidator.validateManifest({
+            "id": "grid_arr",
+            "name": "Grid Arr",
+            "grid": [2, 2],
+            "desktopWidget": { "component": "Widget.qml" }
+        });
+        verify(!result.valid);
+        compare(result.error, "Manifest 'grid' must be an object with integer 'cols'/'rows'");
+    }
+
     function test_nestedInvalidChild() {
         var manifest = {
             "id": "nested_invalid",

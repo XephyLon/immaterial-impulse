@@ -41,6 +41,19 @@ AbstractBackgroundWidget {
         return Appearance.rounding.large;
     }
 
+    // Optional component-grid span declared by the manifest (top-level `grid`).
+    // When present, the widget's pixel size is spanX(cols) x spanY(rows); when
+    // absent, the widget stays content-sized (legacy behaviour). Position uses
+    // the shared fine 12px drag snap (AbstractWidget default) - every span is a
+    // whole multiple of 12 (cell 132/108, gap 12), so a grid widget still lands
+    // flush against its neighbours without a coarse snap that makes it jump.
+    // See docs/widget-grid.md.
+    readonly property var gridSpec: (manifest && manifest.grid) ? manifest.grid : null
+    readonly property int gridCols: gridSpec ? (gridSpec.cols || 1) : 0
+    readonly property int gridRows: gridSpec ? (gridSpec.rows || 1) : 0
+    readonly property real gridSpanWidth: gridSpec ? Appearance.sizes.widgetGridSpanX(gridCols) : 0
+    readonly property real gridSpanHeight: gridSpec ? Appearance.sizes.widgetGridSpanY(gridRows) : 0
+
     configEntryName: manifest ? "plugin_" + manifest.id : "plugin_unknown"
 
     // The background layer surface only accepts keyboard input while it is
@@ -91,8 +104,12 @@ AbstractBackgroundWidget {
         });
     }
 
-    width: Math.max(manifest ? (manifest.defaultWidth || 0) : 0, pluginNode.width)
-    height: Math.max(manifest ? (manifest.defaultHeight || 0) : 0, pluginNode.height)
+    // A declared grid span drives the pixel size directly; otherwise the widget
+    // is sized to its content (with any legacy defaultWidth/Height as a floor).
+    width: gridSpec ? gridSpanWidth
+        : Math.max(manifest ? (manifest.defaultWidth || 0) : 0, pluginNode.width)
+    height: gridSpec ? gridSpanHeight
+        : Math.max(manifest ? (manifest.defaultHeight || 0) : 0, pluginNode.height)
 
     // In-shell frost: sample + blur the wallpaper region behind each blur region.
     // The sample tracks rootWidget.x/y live so it stays aligned while dragging.
@@ -144,6 +161,10 @@ AbstractBackgroundWidget {
         pluginId: rootWidget.manifest?.id ?? ""
         optionDefinitions: rootWidget.manifest?.options ?? []
         basePath: rootWidget.manifest?._basePath ?? ""
+        // When the manifest declares a grid span, drive the node (and its loaded
+        // Widget.qml) to the span size instead of the content's implicit size.
+        gridWidth: rootWidget.gridSpanWidth
+        gridHeight: rootWidget.gridSpanHeight
         anchors.centerIn: parent
     }
 

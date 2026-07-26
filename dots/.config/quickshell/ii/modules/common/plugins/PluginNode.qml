@@ -11,6 +11,14 @@ Item {
     property var optionDefinitions: []
     property string basePath: ""
 
+    // When the host declares a component-grid span (docs/widget-grid.md), it sets
+    // these to the span size in px. The node then takes that size instead of the
+    // loaded item's implicit size, and the item is stretched to fill so Widget.qml
+    // can anchor.fill its host. Zero means "no grid" - fall back to content sizing.
+    property real gridWidth: 0
+    property real gridHeight: 0
+    readonly property bool hasGrid: gridWidth > 0 && gridHeight > 0
+
     readonly property string effectiveBasePath: manifestNode?._basePath || basePath
     readonly property string componentPath: manifestNode?.component && effectiveBasePath
         ? (String(manifestNode.component).startsWith("/")
@@ -18,8 +26,10 @@ Item {
             : effectiveBasePath + "/" + String(manifestNode.component).replace(/^\.\//, ""))
         : ""
 
-    implicitWidth: componentLoader.item ? (componentLoader.item.implicitWidth || componentLoader.item.width) : 0
-    implicitHeight: componentLoader.item ? (componentLoader.item.implicitHeight || componentLoader.item.height) : 0
+    implicitWidth: hasGrid ? gridWidth
+        : (componentLoader.item ? (componentLoader.item.implicitWidth || componentLoader.item.width) : 0)
+    implicitHeight: hasGrid ? gridHeight
+        : (componentLoader.item ? (componentLoader.item.implicitHeight || componentLoader.item.height) : 0)
     // Component plugins may expose several local blur surfaces. Coordinates are
     // relative to this node. An empty list means "blur the complete widget".
     readonly property bool hasCustomBlurRegions: componentLoader.item
@@ -79,13 +89,18 @@ Item {
 
     Loader {
         id: componentLoader
-        // No anchors.fill here: rootNode's own size is *derived from* this
-        // loaded item's implicit size (see implicitWidth/implicitHeight above),
-        // so forcing the Loader to fill rootNode would force the item to match
-        // rootNode's size right back - a circular binding ("binding loop
-        // detected for property implicitWidth"). Let the Loader mirror the
-        // item's natural size instead; explicit width/height come from the
-        // manifest's own props (assigned directly onto the item in onLoaded).
+        // No anchors.fill in the content-sized case: rootNode's own size is
+        // *derived from* this loaded item's implicit size (see implicitWidth/
+        // implicitHeight above), so forcing the Loader to fill rootNode would
+        // force the item to match rootNode's size right back - a circular binding
+        // ("binding loop detected for property implicitWidth"). Let the Loader
+        // mirror the item's natural size instead; explicit width/height come from
+        // the manifest's own props (assigned directly onto the item in onLoaded).
+        //
+        // With a declared grid span rootNode's size comes from gridWidth/Height
+        // (constant, not the item), so there is no loop: fill the node so the
+        // Widget.qml root can anchor.fill parent into the full span.
+        anchors.fill: rootNode.hasGrid ? rootNode : undefined
         source: rootNode.componentPath
         sourceComponent: rootNode.componentPath ? null : rootNode.declarativeComponent()
 
