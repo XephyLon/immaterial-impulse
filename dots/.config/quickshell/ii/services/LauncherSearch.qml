@@ -16,6 +16,16 @@ Singleton {
 
     property string query: ""
 
+    // Drive the file-search scan imperatively (never from the results binding,
+    // which would loop). Only scans while a file-prefixed query is active.
+    onQueryChanged: {
+        const filePrefix = Config.options.search.prefix.file ?? "~";
+        if (root.query.startsWith(filePrefix))
+            FileSearch.search(StringUtils.cleanPrefix(root.query, filePrefix));
+        else
+            FileSearch.reset();
+    }
+
     function ensurePrefix(prefix) {
         if ([Config.options.search.prefix.action, Config.options.search.prefix.app, Config.options.search.prefix.clipboard, Config.options.search.prefix.emojis, Config.options.search.prefix.symbols, Config.options.search.prefix.math, Config.options.search.prefix.shellCommand, Config.options.search.prefix.webSearch,].some(i => root.query.startsWith(i))) {
             root.query = prefix + root.query.slice(1);
@@ -370,9 +380,10 @@ Singleton {
                 });
             }).filter(Boolean);
         } else if (root.query.startsWith(Config.options.search.prefix.file ?? "~")) {
-            // File / folder search (backend debounced + argv-safe in FileSearch)
-            const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.file ?? "~");
-            FileSearch.search(searchString);
+            // File / folder search. The scan is kicked imperatively from
+            // onQueryChanged (NOT here) - calling search() inside this binding
+            // would re-trigger it every time FileSearch.results updates, an
+            // infinite scan loop. This binding only maps the latest results.
             return FileSearch.results.map(entry => {
                 const path = FileUtils.trimFileProtocol(entry.path);
                 const isDir = entry.isDir;
