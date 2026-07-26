@@ -34,7 +34,12 @@ WindowDialog {
             onClicked: Network.rescanWifi()
 
             contentItem: MaterialSymbol {
-                anchors.centerIn: parent
+                // Fill + center like DialogButton's own text contentItem;
+                // anchors.centerIn inside the padded contentItem slot sat the
+                // glyph off-center.
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
                 text: "refresh"
                 iconSize: Appearance.font.pixelSize.larger
                 color: rescanButton.enabled ? rescanButton.colEnabled : rescanButton.colDisabled
