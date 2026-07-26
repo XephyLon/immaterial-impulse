@@ -35,18 +35,25 @@ Singleton {
 
     IdleInhibitor {
         id: idleInhibitor
+        // A zwp_idle_inhibitor only takes effect while its surface is actually
+        // mapped. A 0x0 window maps unreliably, so Hyprland's ext-idle-notify
+        // (which hypridle reads) would sometimes ignore the inhibitor and the
+        // session locked/hibernated anyway. Give it a reliably-mapped 1x1
+        // transparent, input-transparent surface on the background layer so it
+        // is present but never seen or interactable.
         window: PanelWindow {
-            // Inhibitor requires a "visible" surface
-            // Actually not lol
-            implicitWidth: 0
-            implicitHeight: 0
+            implicitWidth: 1
+            implicitHeight: 1
+            visible: true
             color: "transparent"
-            // Just in case...
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Background
+            WlrLayershell.namespace: "quickshell:idleInhibitor"
             anchors {
                 right: true
                 bottom: true
             }
-            // Make it not interactable
+            // Input-transparent: clicks pass straight through.
             mask: Region {
                 item: null
             }
