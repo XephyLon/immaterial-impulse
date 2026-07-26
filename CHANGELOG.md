@@ -21,6 +21,12 @@ own repo; the installer pins which revision it builds.
   - Calendar: configurable first day of week (Monday/Saturday/Sunday).
   - Bar: option to show only the current monitor's workspaces
     (`bar.workspaces.showAllMonitors`).
+  - Weather: provider choice (OpenWeatherMap or keyless wttr.in) and a
+    user-settable OWM API key (falls back to the built-in key when empty).
+  - Caps Lock / Num Lock on-screen display (toggle: `osd.lockKeys`).
+  - Clipboard pinning: pin entries so they stay on top and survive "wipe all".
+  - File/folder search in the launcher (`~`-prefixed query, fd/find backed).
+  - Lock screen: previous/play-pause/next controls on the media widget.
 - Curated default configuration: fresh installs now seed `config.json` from the
   maintainer's tuned setup (sanitized of machine-specific state) instead of the
   bare upstream fallback defaults; existing configs are never touched.
