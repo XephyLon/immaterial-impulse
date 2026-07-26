@@ -42,6 +42,7 @@ ShellRoot {
     Component.onCompleted: {
         MaterialThemeLoader.reapplyTheme()
         Hyprsunset.load()
+        Idle.load() // so auto keep-awake on external monitors runs without any UI touching Idle
         AutoTheme.load()
         FirstRunExperience.load()
         ConflictKiller.load()

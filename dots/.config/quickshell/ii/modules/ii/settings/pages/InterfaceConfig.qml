@@ -1103,6 +1103,22 @@ ContentPage {
         }
 
         ContentSection {
+            icon: "coffee"
+            title: Translation.tr("Keep awake")
+            shape: MaterialShape.Shape.Clover8Leaf
+
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "desktop_windows"
+                    text: Translation.tr("Keep awake while an external monitor is connected")
+                    description: Translation.tr("Combines with the \"Keep awake\" quick toggle: the system stays awake while either is active")
+                    checked: Config.options.idleInhibitor.autoOnExternalMonitor
+                    onCheckedChanged: { Config.options.idleInhibitor.autoOnExternalMonitor = checked }
+                }
+            }
+        }
+
+        ContentSection {
             icon: "wb_twilight"
             title: Translation.tr("Screensaver")
             shape: MaterialShape.Shape.Pentagon

@@ -690,6 +690,18 @@ Singleton {
             // listener timeout in sync); show() no-ops unless enable is true.
             property JsonObject screensaver: JsonObject {
                 property bool enable: false
+                property JsonObject tailscale: JsonObject {
+                    property bool enable: true
+                    property int pollInterval: 5000 // ms
+                }
+            }
+
+            // Keep-awake. autoOnExternalMonitor (ported from end-4/dots-hyprland
+            // PR #2109) holds the idle inhibitor while an external monitor is
+            // connected; it ORs with the manual "Keep system awake" toggle
+            // (services/Idle.qml).
+            property JsonObject idleInhibitor: JsonObject {
+                property bool autoOnExternalMonitor: false
                 property string mode: "black" // "black" | "clock"
                 property int timeout: 240 // seconds (mirror in hypridle.conf; must be < lock timeout)
             }
