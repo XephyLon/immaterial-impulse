@@ -34,13 +34,15 @@ MouseArea {
         ? root.formatSeconds(TimerService.pomodoroSecondsLeft)
         : root.formatSeconds(Math.floor(TimerService.stopwatchTime) / 100)
 
-    visible: shown
+    // Stay visible while collapsing so the pill can fade/scale out instead of
+    // vanishing; the width still animates for a smooth bar reflow.
+    visible: implicitWidth > 0
     enabled: shown
     hoverEnabled: true
     implicitWidth: shown ? (vertical ? Appearance.sizes.verticalBarWidth : pill.implicitWidth) : 0
     implicitHeight: vertical ? pill.implicitHeight : Appearance.sizes.barHeight
     Behavior on implicitWidth {
-        animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
 
     onClicked: GlobalStates.sidebarRightOpen = true
@@ -57,7 +59,16 @@ MouseArea {
         anchors.centerIn: parent
         radius: Appearance.rounding.full
         color: root.pillColor
-        opacity: root.containsMouse ? 0.88 : 1
+        // Fade + scale with the show/hide so it eases in and out.
+        opacity: root.shown ? (root.containsMouse ? 0.88 : 1) : 0
+        scale: root.shown ? 1 : 0.7
+        transformOrigin: Item.Center
+        Behavior on opacity {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
+        Behavior on scale {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
         implicitWidth: pillRow.implicitWidth + Appearance.spacing.space150 * 2
         implicitHeight: (root.vertical ? pillColumn.implicitHeight : pillRow.implicitHeight) + Appearance.spacing.space50 * 2
 
