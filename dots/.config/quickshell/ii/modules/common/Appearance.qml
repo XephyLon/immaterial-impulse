@@ -484,6 +484,23 @@ Singleton {
         property real wallpaperSelectorHeight: 690
         property real wallpaperSelectorItemMargins: root.spacing.space100
         property real wallpaperSelectorItemPadding: root.spacing.space75
+
+        // Component grid for desktop-widget plugins. Matches the nandoroid
+        // design-system grid the built-in widgets already use: a 132x108 cell
+        // with a 12px gap, times effectiveScale. Cells are intentionally NOT
+        // square (wider than tall). A widget spanning C cells across and R down
+        // is widgetGridSpanX(C) x widgetGridSpanY(R) px, so tiles line up in the
+        // bento layout with even gutters: media = 3x2 (420x228), a 2x2 tile is
+        // 276x228, currency 2x1 is 276x108. See docs/widget-grid.md.
+        property real widgetGridCellWidth: 132
+        property real widgetGridCellHeight: 108
+        property real widgetGridGap: 12
+        function widgetGridSpanX(cols) {
+            return (cols * root.sizes.widgetGridCellWidth + (cols - 1) * root.sizes.widgetGridGap) * root.effectiveScale;
+        }
+        function widgetGridSpanY(rows) {
+            return (rows * root.sizes.widgetGridCellHeight + (rows - 1) * root.sizes.widgetGridGap) * root.effectiveScale;
+        }
     }
 
     syntaxHighlightingTheme: root.m3colors.darkmode ? "Monokai" : "ayu Light"
