@@ -451,6 +451,64 @@ ContentPage {
                             }
                         }
                     }
+
+                    ConfigRow {
+                        uniform: true
+                        ConfigTextArea {
+                            Layout.fillWidth: true
+                            buttonIcon: "folder"
+                            fieldWidth: 100
+                            text: Translation.tr("Files")
+                            value: Config.options.search.prefix.file
+                            onValueChanged: {
+                                Config.options.search.prefix.file = value;
+                            }
+                        }
+                        ConfigTextArea {
+                            Layout.fillWidth: true
+                            buttonIcon: "calculate"
+                            fieldWidth: 100
+                            text: Translation.tr("Math")
+                            value: Config.options.search.prefix.math
+                            onValueChanged: {
+                                Config.options.search.prefix.math = value;
+                            }
+                        }
+                    }
+                }
+            }
+            ContentSubsection {
+                title: Translation.tr("File search")
+
+                GroupedList {
+                    ConfigSwitch {
+                        buttonIcon: "folder_open"
+                        text: Translation.tr("Enable file/folder search")
+                        checked: Config.options.search.fileSearch.enable
+                        onCheckedChanged: {
+                            Config.options.search.fileSearch.enable = checked;
+                        }
+                    }
+                    ConfigTextArea {
+                        id: fileSearchRootField
+                        Layout.fillWidth: true
+                        fieldWidth: 320
+                        buttonIcon: "home_storage"
+                        text: Translation.tr("Search root (empty = home folder)")
+                        value: Config.options.search.fileSearch.root
+                        onValueChanged: {
+                            fileSearchRootDebounceTimer.restart();
+                        }
+
+                        Timer {
+                            id: fileSearchRootDebounceTimer
+                            interval: 600
+                            repeat: false
+                            onTriggered: {
+                                Config.options.search.fileSearch.root = fileSearchRootField.value;
+                            }
+                        }
+                    }
                 }
             }
             ContentSubsection {
