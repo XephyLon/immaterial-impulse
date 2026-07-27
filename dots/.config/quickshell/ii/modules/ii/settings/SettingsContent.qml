@@ -724,4 +724,37 @@ Item {
             }
         }
     }
+
+    // Window-level host for the plugin store's install/update confirmation,
+    // mirroring the uninstall host above: driven purely by
+    // PluginStore.pendingInstallEntry so the store page only has to request
+    // the install.
+    Loader {
+        id: installDialogLoader
+        anchors.fill: parent
+        active: false
+        readonly property bool wanted: PluginStore.pendingInstallEntry !== null
+
+        onWantedChanged: if (wanted) active = true
+        onActiveChanged: if (active && item) item.forceActiveFocus()
+        sourceComponent: PluginInstallDialog {}
+
+        Binding {
+            target: installDialogLoader.item
+            property: "show"
+            value: installDialogLoader.wanted
+            when: installDialogLoader.item !== null
+        }
+
+        Connections {
+            target: installDialogLoader.item
+            function onDismiss() { PluginStore.cancelInstall(); }
+            // Keep the loader alive through the close animation, then release it.
+            function onVisibleChanged() {
+                if (installDialogLoader.item && !installDialogLoader.item.visible
+                        && !installDialogLoader.wanted)
+                    installDialogLoader.active = false;
+            }
+        }
+    }
 }

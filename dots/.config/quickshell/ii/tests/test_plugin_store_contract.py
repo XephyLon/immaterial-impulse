@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SERVICE = ROOT / "services" / "PluginStore.qml"
 DOUBLE = ROOT / "tests" / "imports" / "testservices" / "PluginStore.qml"
+STORE_PAGE = ROOT / "modules" / "ii" / "settings" / "pages" / "PluginStorePage.qml"
 
 
 def _source() -> str:
@@ -104,6 +105,28 @@ def test_parse_failure_keeps_last_good_entries():
     assert re.search(
         r"if \(result\.error !== null\) \{[^}]*return;", block, re.S
     ), "a malformed index must return early without touching entries"
+
+
+def test_store_page_refreshes_on_show():
+    # The store page must exist and trigger the stale-cache refresh when it
+    # is shown, so the catalog is fresh without hammering the registry.
+    assert STORE_PAGE.exists(), "PluginStorePage.qml is missing"
+    assert "PluginStore.refreshIfStale()" in STORE_PAGE.read_text()
+
+
+def test_store_page_renders_registry_strings_as_plain_text():
+    # Registry content is remote attacker-influenced text; every explicit
+    # textFormat in the store page must be PlainText (never RichText or
+    # AutoText, which would let a malicious index inject markup), and the
+    # page must actually carry the annotation on its registry-fed texts.
+    source = STORE_PAGE.read_text()
+    formats = re.findall(r"textFormat:\s*([A-Za-z.]+)", source)
+    assert len(formats) >= 3, (
+        "store page must annotate its registry-sourced texts with textFormat"
+    )
+    assert all(fmt == "Text.PlainText" for fmt in formats), (
+        f"non-PlainText textFormat in PluginStorePage.qml: {formats}"
+    )
 
 
 def test_shell_version_read_from_version_file():

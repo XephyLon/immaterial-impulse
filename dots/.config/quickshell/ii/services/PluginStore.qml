@@ -155,6 +155,39 @@ Singleton {
         return PluginManager.upgradeFromManifest(entry?.manifestUrl ?? "");
     }
 
+    // The registry entry awaiting an install/update confirmation, or null when
+    // no dialog is up. A singleton property for the same reason as
+    // PluginManager.pendingUninstallId: the store page requests the install
+    // and the window-level dialog host (SettingsContent) shows the prompt
+    // without the two referencing each other.
+    property var pendingInstallEntry: null
+    property bool pendingInstallIsUpgrade: false
+
+    function requestInstall(entry) {
+        root.pendingInstallIsUpgrade = false;
+        root.pendingInstallEntry = entry;
+    }
+
+    function requestUpgrade(entry) {
+        root.pendingInstallIsUpgrade = true;
+        root.pendingInstallEntry = entry;
+    }
+
+    function cancelInstall() {
+        root.pendingInstallEntry = null;
+    }
+
+    function confirmInstall() {
+        const entry = root.pendingInstallEntry;
+        root.pendingInstallEntry = null;
+        if (!entry)
+            return;
+        if (root.pendingInstallIsUpgrade)
+            root.upgrade(entry);
+        else
+            root.install(entry);
+    }
+
     function refresh() {
         if (root.fetching)
             return;
