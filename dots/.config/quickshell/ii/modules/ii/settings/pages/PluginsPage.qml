@@ -50,10 +50,37 @@ Item {
                     Layout.bottomMargin: Appearance.spacing.space100
                     spacing: Appearance.spacing.space100
 
-                    RippleButtonWithIcon {
-                        materialIcon: "storefront"
-                        mainText: Translation.tr("Browse plugins")
+                    // M3 filled button: the store entry point is the page's
+                    // primary action, so it gets full emphasis instead of the
+                    // tonal RippleButtonWithIcon look used for inline actions.
+                    RippleButton {
+                        id: browseButton
+                        implicitHeight: 44
+                        horizontalPadding: Appearance.spacing.space250
+                        buttonRadius: Appearance.rounding.full
+                        colBackground: Appearance.colors.colPrimary
+                        colBackgroundHover: Appearance.colors.colPrimaryHover
+                        colRipple: Appearance.colors.colPrimaryActive
                         onClicked: root.showingStore = true
+
+                        contentItem: RowLayout {
+                            spacing: Appearance.spacing.space100
+
+                            MaterialSymbol {
+                                Layout.alignment: Qt.AlignVCenter
+                                text: "storefront"
+                                iconSize: Appearance.font.pixelSize.huge
+                                fill: 1
+                                color: Appearance.colors.colOnPrimary
+                            }
+                            StyledText {
+                                Layout.alignment: Qt.AlignVCenter
+                                text: Translation.tr("Browse plugins")
+                                font.pixelSize: Appearance.font.pixelSize.normal
+                                font.weight: Font.DemiBold
+                                color: Appearance.colors.colOnPrimary
+                            }
+                        }
                     }
 
                     // Update-count pill: how many installed plugins have a
