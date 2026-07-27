@@ -339,6 +339,12 @@ if ! python3 "$SCRIPT_DIR/test_registry_validate.py"; then
     exit 1
 fi
 
+echo "Running plugin store contract tests..."
+if ! python3 "$SCRIPT_DIR/test_plugin_store_contract.py"; then
+    echo "Plugin store contract tests failed."
+    exit 1
+fi
+
 if [[ "${RUN_DOCKER_RUNTIME_MEMORY_TEST:-0}" == "1" ]]; then
     echo "Running capped Docker runtime memory test..."
     bash "$SCRIPT_DIR/run_docker_memory_test.sh"
