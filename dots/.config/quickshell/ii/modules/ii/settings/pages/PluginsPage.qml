@@ -53,6 +53,40 @@ Item {
                         onClicked: root.showingStore = true
                     }
 
+                    // Update-count pill: how many installed plugins have a
+                    // newer version in the store registry.
+                    Rectangle {
+                        visible: PluginStore.updatesAvailable > 0
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: updateBadgeRow.implicitWidth + Appearance.spacing.space150
+                        implicitHeight: updateBadgeRow.implicitHeight + Appearance.spacing.space50
+                        radius: Appearance.rounding.full
+                        color: Appearance.colors.colPrimary
+
+                        RowLayout {
+                            id: updateBadgeRow
+                            anchors.centerIn: parent
+                            spacing: Appearance.spacing.space25
+
+                            MaterialSymbol {
+                                text: "upgrade"
+                                iconSize: Appearance.font.pixelSize.small
+                                color: Appearance.colors.colOnPrimary
+                            }
+                            StyledText {
+                                text: PluginStore.updatesAvailable
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                color: Appearance.colors.colOnPrimary
+                            }
+                        }
+
+                        HoverHandler { id: updateBadgeHover }
+                        StyledToolTip {
+                            extraVisibleCondition: updateBadgeHover.hovered
+                            text: Translation.tr("Plugin updates available in the store")
+                        }
+                    }
+
                     Item { Layout.fillWidth: true }
                 }
 
@@ -140,6 +174,17 @@ Item {
                         id: pluginCard
                         required property var modelData
 
+                        // The matching registry entry, when this plugin is
+                        // listed in the store: drives the Update button.
+                        readonly property var storeEntry: {
+                            for (const entry of PluginStore.entries)
+                                if (entry.id === pluginCard.modelData.id)
+                                    return entry;
+                            return null;
+                        }
+                        readonly property bool updateAvailable: storeEntry !== null
+                            && PluginStore.statusForEntry(storeEntry) === "update"
+
                         Layout.fillWidth: true
                         Layout.topMargin: Appearance.spacing.space100
                         implicitHeight: cardColumn.implicitHeight
@@ -170,9 +215,11 @@ Item {
                                     description: {
                                         const summary = modelData.description || "";
                                         const creator = modelData.author || Translation.tr("Unknown creator");
-                                        return summary.length > 0
-                                            ? `${summary}\n${Translation.tr("By")} ${creator}`
+                                        // Manifest version, when declared, rides on the creator line.
+                                        const byline = modelData.version
+                                            ? `${Translation.tr("By")} ${creator} · v${modelData.version}`
                                             : `${Translation.tr("By")} ${creator}`;
+                                        return summary.length > 0 ? `${summary}\n${byline}` : byline;
                                     }
 
                                     property bool isEnabled: Config.options.plugins.enabled.includes(modelData.id)
@@ -188,6 +235,21 @@ Item {
                                             newList = newList.filter(id => id !== modelData.id);
                                         }
                                         Config.setNestedValue("plugins.enabled", newList);
+                                    }
+                                }
+
+                                // A newer version exists in the store registry.
+                                RippleButtonWithIcon {
+                                    visible: pluginCard.updateAvailable
+                                    enabled: !PluginManager.installing
+                                    Layout.alignment: Qt.AlignVCenter
+                                    materialIcon: "upgrade"
+                                    mainText: Translation.tr("Update")
+                                    onClicked: PluginStore.upgrade(pluginCard.storeEntry)
+
+                                    StyledToolTip {
+                                        text: Translation.tr("Update to v%1")
+                                            .arg(pluginCard.storeEntry?.version ?? "")
                                     }
                                 }
 
