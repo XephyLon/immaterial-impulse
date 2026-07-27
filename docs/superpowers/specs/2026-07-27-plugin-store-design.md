@@ -120,9 +120,12 @@ On every PR:
    the fetched manifest share one origin (mirrors `install_plugin.py` rules so a
    listed plugin can't fail at install time).
 3. Fetch `manifestUrl`; diff `id/name/version/apiVersion/capabilities/permissions`
-   against the entry; require `package.files` present, each with `sha256`; total
-   declared size within installer caps (64 files / 8 MiB file / 32 MiB total).
-4. Screenshot URL resolves (HEAD request) for visual plugins.
+   against the entry; require `package.files` present, each with `sha256`; at
+   most 64 files. (Byte-size caps — 8 MiB/file, 32 MiB total — are enforced by
+   the installer at download time; manifests declare no sizes, so the validator
+   cannot pre-check them.)
+4. Screenshot URL resolves (HEAD request) for visual plugins — done by the CI
+   workflow itself, not `registry_validate.py`, which is strictly offline.
 5. Filename must be `<author>-<id>.json`, one plugin per PR.
 
 On merge to main: regenerate `index.json`, commit. The validator lives in this
