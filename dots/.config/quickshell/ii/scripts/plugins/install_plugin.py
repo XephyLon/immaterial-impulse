@@ -2,6 +2,7 @@
 """Install a Quickshell plugin package described by a remote manifest."""
 
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -57,11 +58,34 @@ def safe_relative_path(value: str) -> Path:
     return Path(*path.parts)
 
 
-def main() -> int:
+def require_upgradable(destination: Path, plugin_id: str) -> None:
+    """Refuse to upgrade over a directory that isn't the same plugin.
+
+    The installed manifest is the only record of what lives in the target
+    directory, so it must parse and carry the incoming id before anything is
+    touched - an unreadable manifest or a different id means the directory is
+    not a previous version of this plugin, and replacing it would silently
+    destroy something else.
+    """
+    try:
+        installed = json.loads((destination / "manifest.json").read_bytes())
+    except (OSError, ValueError) as error:
+        raise ValueError(
+            f"cannot upgrade {plugin_id}: installed manifest is unreadable ({error})")
+    installed_id = installed.get("id") if isinstance(installed, dict) else None
+    if installed_id != plugin_id:
+        raise ValueError(
+            f"cannot upgrade {plugin_id}: installed plugin id is {installed_id!r}")
+
+
+def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("manifest_url")
     parser.add_argument("install_root", type=Path)
-    args = parser.parse_args()
+    parser.add_argument(
+        "--upgrade", action="store_true",
+        help="replace an existing install of the same plugin id")
+    args = parser.parse_args(argv)
 
     origin = https_origin(args.manifest_url, "manifest URL")
     manifest_bytes = download(args.manifest_url)
@@ -80,8 +104,11 @@ def main() -> int:
 
     args.install_root.mkdir(parents=True, exist_ok=True)
     destination = args.install_root / plugin_id
-    if destination.exists():
-        raise FileExistsError(f"plugin already installed: {plugin_id}")
+    upgrading = destination.exists()
+    if upgrading:
+        if not args.upgrade:
+            raise FileExistsError(f"plugin already installed: {plugin_id}")
+        require_upgradable(destination, plugin_id)
 
     staging = Path(tempfile.mkdtemp(prefix=f".{plugin_id}-", dir=args.install_root))
     try:
@@ -108,7 +135,30 @@ def main() -> int:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(payload)
 
-        os.replace(staging, destination)
+        # Provenance sidecar, written by the installer itself so the shell can
+        # tell store-installed plugins from manually URL-installed ones. The
+        # dot-prefixed name is unreachable by package files (safe_relative_path
+        # rejects it), so a package can never ship or clobber this record.
+        (staging / ".store.json").write_text(json.dumps({
+            "manifestUrl": args.manifest_url,
+            "installedVersion": manifest.get("version"),
+            "installedAt": datetime.now(timezone.utc).isoformat(),
+        }, indent=2) + "\n")
+
+        if upgrading:
+            # Swap the verified staging directory in atomically: park the old
+            # version, move the new one into place, and put the old one back
+            # if that move fails for any reason.
+            backup = destination.with_name(destination.name + f".old-{os.getpid()}")
+            os.rename(destination, backup)
+            try:
+                os.replace(staging, destination)
+            except BaseException:
+                os.rename(backup, destination)
+                raise
+            shutil.rmtree(backup)
+        else:
+            os.replace(staging, destination)
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
         raise
