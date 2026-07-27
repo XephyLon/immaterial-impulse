@@ -9,9 +9,18 @@ import "InstalledManifestState.js" as InstalledManifestState
 Singleton {
     id: root
 
+    // The shell's plugin API level. Store registry entries declare the
+    // apiVersion they were written against; the store compares that value
+    // against this one to mark plugins that need a newer shell.
+    readonly property int apiVersion: 1
+
     property var availablePlugins: []
     property var manifestsMap: ({})
     property var installedManifests: ({})
+    // Parsed .store.json provenance sidecars, keyed by the same manifest path
+    // as installedManifests. Written by the installer on store installs;
+    // manually URL-installed plugins predate it and simply have no entry.
+    property var installedProvenance: ({})
     property list<string> installedManifestPaths: []
     readonly property string installedRoot: `${Directories.shellConfig}/plugins`
     property bool installing: false
@@ -57,6 +66,20 @@ Singleton {
         }
     }
 
+    function registerInstalledProvenance(path, text) {
+        // An unparseable sidecar is treated the same as a missing one: the
+        // plugin stays valid, it just carries no store provenance.
+        const next = Object.assign({}, root.installedProvenance);
+        try {
+            next[path] = JSON.parse(text);
+        } catch (error) {
+            delete next[path];
+            console.warn(`[PluginManager] Ignoring unparseable provenance sidecar for ${path}: ${error}`);
+        }
+        root.installedProvenance = next;
+        root.scheduleRebuild();
+    }
+
     function rebuildFromLoadedFiles() {
         let loaded = [];
         let map = {};
@@ -77,6 +100,12 @@ Singleton {
         });
         for (const path in root.installedManifests) {
             const manifest = root.installedManifests[path];
+            // Store provenance rides on the manifest entry so consumers can
+            // tell store-installed plugins (update-checkable) from manual URL
+            // installs, which carry no _store key at all.
+            const provenance = root.installedProvenance[path];
+            if (provenance === undefined) delete manifest._store;
+            else manifest._store = provenance;
             // Installed packages intentionally override bundled packages with
             // the same id, allowing development and user-managed updates.
             if (map[manifest.id]) loaded = loaded.filter(item => item.id !== manifest.id);
@@ -100,6 +129,16 @@ Singleton {
     }
 
     function installFromManifest(url) {
+        return root.runInstaller(url, false);
+    }
+
+    // Same pipeline as installFromManifest; the --upgrade flag only permits
+    // the installer to replace an existing directory with the same plugin id.
+    function upgradeFromManifest(url) {
+        return root.runInstaller(url, true);
+    }
+
+    function runInstaller(url, upgrade) {
         // Plain HTTP is rejected here and again in the installer: a package is
         // QML that runs inside this process, so it may not arrive over a
         // transport that can be rewritten in flight.
@@ -108,21 +147,29 @@ Singleton {
             return false;
         }
         installing = true;
-        installMessage = "Downloading plugin…";
-        pluginInstaller.command = ["python3", `${Directories.scriptPath}/plugins/install_plugin.py`,
+        installMessage = upgrade ? "Updating plugin…" : "Downloading plugin…";
+        pluginInstaller.upgrading = upgrade;
+        const command = ["python3", `${Directories.scriptPath}/plugins/install_plugin.py`,
             url, installedRoot];
+        if (upgrade) command.push("--upgrade");
+        pluginInstaller.command = command;
         pluginInstaller.running = true;
         return true;
     }
 
     Process {
         id: pluginInstaller
+        // Whether the running invocation was started by upgradeFromManifest,
+        // so the success message can say what actually happened.
+        property bool upgrading: false
         stdout: StdioCollector { id: installerOutput }
         stderr: StdioCollector { id: installerError }
         onExited: (exitCode, exitStatus) => {
             root.installing = false;
             if (exitCode === 0) {
-                root.installMessage = `Installed ${installerOutput.text.trim()}`;
+                const installed = installerOutput.text.trim();
+                root.installMessage = pluginInstaller.upgrading
+                    ? `Updated ${installed}` : `Installed ${installed}`;
                 root.scanInstalledPlugins();
             } else {
                 const detail = installerError.text.trim().split("\n").pop();
@@ -204,6 +251,8 @@ Singleton {
                 // plugin leaves the list even when nothing remains to load.
                 root.installedManifests = InstalledManifestState.reconcile(
                     paths, root.installedManifests);
+                root.installedProvenance = InstalledManifestState.reconcile(
+                    paths, root.installedProvenance);
                 root.installedManifestPaths = paths;
                 root.scheduleRebuild();
             }
@@ -218,7 +267,22 @@ Singleton {
                 path: modelData
                 watchChanges: true
                 onLoaded: root.registerInstalledManifest(modelData, text())
-                onFileChanged: reload()
+                onFileChanged: {
+                    reload();
+                    // An upgrade rewrites both files but only manifest.json is
+                    // watched; refreshing the sidecar here keeps the recorded
+                    // installedVersion in step without a second watcher.
+                    provenanceFile.reload();
+                }
+            }
+            FileView {
+                id: provenanceFile
+                // Provenance sidecar the installer writes next to the
+                // manifest; keyed by the manifest path like installedManifests
+                // so one reconcile pass covers both. Loads land within the
+                // same rebuildTimer debounce as the manifest itself.
+                path: root.manifestDirectory(modelData) + "/.store.json"
+                onLoaded: root.registerInstalledProvenance(modelData, text())
             }
         }
     }
