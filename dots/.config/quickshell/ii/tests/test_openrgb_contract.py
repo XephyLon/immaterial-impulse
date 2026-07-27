@@ -31,11 +31,14 @@ def test_config_schema_defaults_off():
     block = re.search(r"property JsonObject openrgb: JsonObject \{(.*?)\}", config, re.S)
     assert block, "no appearance.openrgb JsonObject in Config.qml"
     assert "property bool enable: false" in block.group(1), "openrgb must default to disabled"
+    assert "property list<string> excludedDevices: []" in block.group(1), (
+        "openrgb must ship with no devices excluded"
+    )
 
 
 def test_default_config_ships_disabled():
     cfg = json.loads(DEFAULT_CONFIG.read_text())
-    assert cfg["appearance"]["openrgb"] == {"enable": False}
+    assert cfg["appearance"]["openrgb"] == {"enable": False, "excludedDevices": []}
 
 
 def test_palette_changes_are_debounced():
@@ -53,11 +56,66 @@ def test_color_is_argv_not_shell_spliced():
         r'applyProc\.command = \["openrgb", "--mode", "static", "--color", hex\]',
         source,
     ), "openrgb must be invoked as an argv array with the color as its own element"
+    # The per-device (exclusion) path builds argv the same way.
+    assert (
+        'cmd.push("--device", String(dev.index), "--mode", "static", "--color", hex)'
+        in source
+    ), "per-device apply must keep color and index as their own argv elements"
     # The only bash -c in the file is the constant availability probe.
     bash_commands = re.findall(r'"bash", "-c", (.+?)\]', source)
     assert bash_commands == ['"command -v openrgb"'], (
         "bash -c must only carry the constant availability probe, never values"
     )
+
+
+def _function_block(source: str, name: str) -> str:
+    """Extracts a brace-balanced `function <name>(...) { ... }` block."""
+    start = source.index(f"function {name}")
+    depth = 0
+    for pos in range(start, len(source)):
+        if source[pos] == "{":
+            depth += 1
+        elif source[pos] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start : pos + 1]
+    raise AssertionError(f"unbalanced braces in function {name}")
+
+
+def test_logic_double_is_in_sync():
+    double = (ROOT / "tests" / "imports" / "testservices" / "OpenRgb.qml").read_text()
+    source = _source()
+    for name in ("parseDeviceList", "buildDeviceCommand"):
+        assert _function_block(source, name) == _function_block(double, name), (
+            f"{name} drifted between services/OpenRgb.qml and its test double"
+        )
+
+
+def test_exclusions_are_name_keyed_and_rescan_before_apply():
+    source = _source()
+    assert (
+        "readonly property list<string> excludedDevices: "
+        "Config.options.appearance.openrgb.excludedDevices ?? []" in source
+    ), "exclusions must come from config with an empty-list fallback"
+    # Indices shift when devices (dis)connect - the exclusion path must
+    # re-enumerate before every apply instead of trusting a cached scan.
+    assert re.search(
+        r"if \(root\.excludedDevices\.length > 0\) \{[\s\S]*?"
+        r"root\.applyAfterScan = true;\s*\n\s*root\.rescanDevices\(\);",
+        source,
+    ), "exclusion apply must scan first (applyAfterScan + rescanDevices)"
+    assert "excluded.includes(dev.name)" in source, "exclusion must match by device name"
+    # Toggling exclusions must force a fresh (debounced) apply.
+    assert "function onExcludedDevicesChanged()" in source
+
+
+def test_settings_ui_replaces_the_list_wholesale():
+    page = QUICK_CONFIG.read_text()
+    # JsonAdapter lists only persist on whole-list assignment.
+    assert "Config.options.appearance.openrgb.excludedDevices = excluded" in page, (
+        "device toggles must write the exclusion list by replacement"
+    )
+    assert "OpenRgb.rescanDevices()" in page, "settings page must be able to trigger a scan"
 
 
 def test_missing_binary_is_a_noop():

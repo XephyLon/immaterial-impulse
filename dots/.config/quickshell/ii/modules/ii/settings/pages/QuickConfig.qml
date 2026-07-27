@@ -291,6 +291,106 @@ ContentPage {
                     Config.options.appearance.openrgb.enable = checked;
                 }
             }
+
+            ColumnLayout {
+                id: openRgbDevices
+                visible: Config.options.appearance.openrgb.enable && OpenRgb.available
+                Layout.fillWidth: true
+                spacing: 0
+
+                // Identical hardware repeats in the raw list (two RAM sticks,
+                // multi-controller GPUs); exclusion is name-keyed, so collapse
+                // duplicates into one row.
+                readonly property var uniqueDevices: {
+                    const seen = {};
+                    const out = [];
+                    for (const dev of OpenRgb.devices) {
+                        if (seen[dev.name]) {
+                            seen[dev.name].count++;
+                            continue;
+                        }
+                        const entry = { name: dev.name, type: dev.type, count: 1 };
+                        seen[dev.name] = entry;
+                        out.push(entry);
+                    }
+                    return out;
+                }
+
+                function iconFor(type) {
+                    switch (type) {
+                    case "DRAM": return "memory";
+                    case "GPU": return "developer_board";
+                    case "Motherboard": return "developer_board";
+                    case "Keyboard": return "keyboard";
+                    case "Mouse": return "mouse";
+                    case "Gamepad": return "sports_esports";
+                    case "Headset": return "headset";
+                    case "Cooler": return "mode_fan";
+                    case "LED Strip": return "fluorescent";
+                    default: return "lightbulb";
+                    }
+                }
+
+                // Enumeration does a full hardware detection pass when no
+                // OpenRGB server runs - scan lazily when the list first shows.
+                onVisibleChanged: {
+                    if (visible && OpenRgb.devices.length === 0)
+                        OpenRgb.rescanDevices();
+                }
+                Component.onCompleted: {
+                    if (visible && OpenRgb.devices.length === 0)
+                        OpenRgb.rescanDevices();
+                }
+
+                Repeater {
+                    model: openRgbDevices.uniqueDevices
+
+                    delegate: ConfigSwitch {
+                        id: deviceSwitch
+                        required property var modelData
+                        readonly property bool syncedNow: !(Config.options.appearance.openrgb.excludedDevices ?? []).includes(modelData.name)
+
+                        buttonIcon: openRgbDevices.iconFor(modelData.type)
+                        text: modelData.name
+                        description: modelData.count > 1
+                            ? Translation.tr("%1 — %2 devices").arg(modelData.type).arg(modelData.count)
+                            : modelData.type
+                        checked: syncedNow
+                        onCheckedChanged: {
+                            if (checked === syncedNow)
+                                return;
+                            // Whole-list assignment: JsonAdapter lists only
+                            // persist when replaced, never when mutated.
+                            let excluded = (Config.options.appearance.openrgb.excludedDevices ?? []).filter(n => n !== modelData.name);
+                            if (!checked)
+                                excluded = excluded.concat([modelData.name]);
+                            Config.options.appearance.openrgb.excludedDevices = excluded;
+                        }
+
+                        // Re-sync the switch with config after external edits
+                        // without losing the binding on manual toggles.
+                        Binding {
+                            target: deviceSwitch
+                            property: "checked"
+                            value: deviceSwitch.syncedNow
+                            restoreMode: Binding.RestoreBinding
+                        }
+                    }
+                }
+
+                RippleButtonWithIcon {
+                    Layout.alignment: Qt.AlignRight
+                    Layout.topMargin: Appearance.spacing.space100
+                    materialIcon: "refresh"
+                    enabled: !OpenRgb.scanning
+                    mainText: OpenRgb.scanning
+                        ? Translation.tr("Scanning devices...")
+                        : (OpenRgb.devices.length === 0
+                            ? Translation.tr("Scan for devices")
+                            : Translation.tr("Rescan devices"))
+                    onClicked: OpenRgb.rescanDevices()
+                }
+            }
         }
 
         ContentSection {

@@ -181,7 +181,8 @@
       "showLyrics": false
     },
     "openrgb": {
-      "enable": false
+      "enable": false,
+      "excludedDevices": []
     },
     "palette": {
       "accentColor": "",

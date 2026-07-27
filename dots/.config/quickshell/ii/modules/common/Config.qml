@@ -174,6 +174,9 @@ Singleton {
                 // not everyone has RGB devices or openrgb installed.
                 property JsonObject openrgb: JsonObject {
                     property bool enable: false
+                    // Device names (as printed by `openrgb --list-devices`)
+                    // to leave out of the color sync.
+                    property list<string> excludedDevices: []
                 }
                 property JsonObject palette: JsonObject {
                     property string type: "auto" // Allowed: auto, scheme-content, scheme-expressive, scheme-fidelity, scheme-fruit-salad, scheme-monochrome, scheme-neutral, scheme-rainbow, scheme-tonal-spot

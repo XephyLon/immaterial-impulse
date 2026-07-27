@@ -26,6 +26,12 @@ import Quickshell.Io
  * No-ops when Config.options.appearance.openrgb.enable is off (the default)
  * or the openrgb binary is missing. Availability is re-checked before every
  * apply, so installing OpenRGB mid-session needs no shell restart.
+ *
+ * Devices can be excluded from the sync via
+ * Config.options.appearance.openrgb.excludedDevices (a list of device names
+ * as reported by `openrgb --list-devices`). With exclusions set, every apply
+ * re-enumerates devices first - names are the stable key, indices shift when
+ * devices (dis)connect - and writes the color per non-excluded device index.
  */
 Singleton {
     id: root
@@ -33,8 +39,15 @@ Singleton {
     property bool available: false
     property string lastAppliedColor: ""
     property string pendingColor: ""
+    // [{ index: int, name: string, type: string }] from the last device scan.
+    // Names repeat for identical hardware (e.g. two RAM sticks); exclusion is
+    // name-keyed, so excluding one excludes all of its kind.
+    property var devices: []
+    property bool applyAfterScan: false
+    readonly property bool scanning: listProc.running
 
     readonly property bool enabled: Config.options.appearance.openrgb.enable ?? false
+    readonly property list<string> excludedDevices: Config.options.appearance.openrgb.excludedDevices ?? []
 
     // Referenced from shell.qml's Component.onCompleted so this lazily-loaded
     // singleton is instantiated at startup and starts tracking palette changes.
@@ -76,6 +89,13 @@ Singleton {
             root.pendingColor = "";
             return;
         }
+        if (root.excludedDevices.length > 0) {
+            // Per-device apply needs fresh indices; the scan's completion
+            // hands off to startExclusionApply().
+            root.applyAfterScan = true;
+            root.rescanDevices();
+            return;
+        }
         const hex = root.pendingColor;
         root.pendingColor = "";
         root.lastAppliedColor = hex;
@@ -84,6 +104,73 @@ Singleton {
         // counterpart of upstream's SDK direct-mode writes).
         applyProc.command = ["openrgb", "--mode", "static", "--color", hex];
         applyProc.running = true;
+    }
+
+    function startExclusionApply() {
+        if (applyProc.running)
+            return;
+        const hex = root.pendingColor;
+        root.pendingColor = "";
+        if (hex === "")
+            return;
+        const cmd = root.buildDeviceCommand(hex, root.devices, root.excludedDevices);
+        if (cmd === null) {
+            // Every device excluded, or the scan came back empty: nothing to
+            // write. Leave the dedup color cleared so re-including a device
+            // (or a later successful scan) triggers a fresh apply.
+            root.lastAppliedColor = "";
+            return;
+        }
+        root.lastAppliedColor = hex;
+        applyProc.command = cmd;
+        applyProc.running = true;
+    }
+
+    // Pure: argv for a per-device apply, or null when no device remains.
+    // Color and indices are separate argv elements - nothing is shell-spliced.
+    function buildDeviceCommand(hex, devices, excluded) {
+        const cmd = ["openrgb"];
+        let any = false;
+        for (const dev of devices) {
+            if (excluded.includes(dev.name))
+                continue;
+            cmd.push("--device", String(dev.index), "--mode", "static", "--color", hex);
+            any = true;
+        }
+        return any ? cmd : null;
+    }
+
+    // Pure: parses `openrgb --list-devices` output. Device headers look like
+    // "0: Corsair Dominator Titanium RGB DDR5"; the indented "Type:" line
+    // that follows is kept for the settings UI.
+    function parseDeviceList(text) {
+        const devices = [];
+        let current = null;
+        for (const line of (text ?? "").split("\n")) {
+            const header = line.match(/^(\d+): (.+)$/);
+            if (header) {
+                current = {
+                    index: parseInt(header[1], 10),
+                    name: header[2].trim(),
+                    type: ""
+                };
+                devices.push(current);
+                continue;
+            }
+            const type = line.match(/^\s+Type:\s+(.+)$/);
+            if (type && current)
+                current.type = type[1].trim();
+        }
+        return devices;
+    }
+
+    // Kicks a device enumeration (also used by the settings page). Without a
+    // running OpenRGB server this does a full hardware detection pass, so it
+    // is only ever triggered on demand, never at startup.
+    function rescanDevices() {
+        if (listProc.running)
+            return;
+        listProc.running = true;
     }
 
     Timer {
@@ -108,6 +195,14 @@ Singleton {
             root.lastAppliedColor = ""; // Force a sync on (re-)enable
             root.scheduleApply();
         }
+        function onExcludedDevicesChanged() {
+            if (!root.enabled)
+                return;
+            // Re-included devices never got the current color - force a
+            // fresh apply (debounced, so rapid toggling coalesces).
+            root.lastAppliedColor = "";
+            root.scheduleApply();
+        }
     }
 
     Process {
@@ -121,6 +216,31 @@ Singleton {
                 root.startPendingApply();
             else
                 root.pendingColor = ""; // Graceful no-op: openrgb not installed
+        }
+    }
+
+    Process {
+        id: listProc
+        environment: ({
+            LANG: "C",
+            LC_ALL: "C"
+        })
+        // Constant argv - nothing is spliced in.
+        command: ["openrgb", "--list-devices"]
+        stdout: StdioCollector {
+            // The stream closes on process exit, so the parse (and the
+            // handed-off apply) always sees the complete listing.
+            onStreamFinished: {
+                root.devices = root.parseDeviceList(text);
+                if (root.applyAfterScan) {
+                    root.applyAfterScan = false;
+                    root.startExclusionApply();
+                }
+            }
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                console.warn("[OpenRgb] openrgb --list-devices exited with code", exitCode);
         }
     }
 
