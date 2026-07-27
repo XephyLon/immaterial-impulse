@@ -126,7 +126,10 @@ Currency, Media, and Weather widgets are reference implementations.
 
 ## Remote installation
 
-The Plugins settings page accepts an HTTPS manifest URL. A remotely installable manifest adds:
+The Plugins settings page accepts an HTTPS manifest URL. This is the power-user path; the curated
+path is the in-shell plugin store (Settings → Plugins → Browse plugins), which feeds
+registry-vetted manifest URLs into this same installer — see
+[PLUGIN_STORE.md](PLUGIN_STORE.md). A remotely installable manifest adds:
 
 ```json
 "package": {
@@ -139,7 +142,17 @@ The Plugins settings page accepts an HTTPS manifest URL. A remotely installable 
 ```
 
 Files are downloaded into a staging directory, checked for path traversal and optional SHA-256
-integrity, then atomically installed. Existing packages are not overwritten implicitly.
+integrity, then atomically installed. Existing packages are not overwritten implicitly: the
+installer refuses when the target directory exists, unless invoked with `--upgrade`, which requires
+the installed `manifest.json` to parse and carry the same plugin id, stages and verifies the new
+version completely, then swaps it over the old one atomically (the old version is restored if the
+swap fails).
+
+After every successful install or upgrade the installer writes a provenance sidecar,
+`<plugin dir>/.store.json`, recording the manifest URL, installed version, and timestamp. Package
+files can never claim that name (dot-prefixed paths are rejected), so a package cannot forge or
+clobber its own provenance. The shell uses it to tell store-installed plugins from manually
+URL-installed ones and to offer updates — see [PLUGIN_STORE.md](PLUGIN_STORE.md).
 
 An installed package is QML executed inside the shell process, so the transport is enforced:
 

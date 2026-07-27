@@ -126,6 +126,17 @@ own repo; the installer pins which revision it builds.
   card (header, hairline divider, then its option toggles as part of the same
   surface) with clear gaps between plugins, and the plugin name is larger and
   heavier so it reads as the card's heading.
+- Plugin store (Settings → Plugins → Browse plugins): browse, search, and
+  filter a curated catalog of community plugins and install or update them in
+  one click through the existing hardened installer. Entries come from a new
+  registry repo (`XephyLon/imi-plugin-registry`) whose CI cross-checks each
+  entry's metadata against the plugin's actual manifest, so the permissions
+  shown in the install confirmation dialog are verified, not self-reported.
+  Update badges (semver against the installed version) appear on the Plugins
+  page and on installed plugins' cards, with an "Update all" queue in the
+  store. The installer gains `--upgrade` (stage, verify, then atomic swap with
+  rollback) and writes a `.store.json` provenance sidecar after every install.
+  Documented in `docs/PLUGIN_STORE.md`.
 
 ### Fixed
 - Bar and dock media widgets broke on Arabic (RTL) track metadata: the text
