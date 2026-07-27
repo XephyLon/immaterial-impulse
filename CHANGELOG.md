@@ -66,6 +66,13 @@ own repo; the installer pins which revision it builds.
     one-shot `pkexec` fallback for non-operator users. Backed by the new
     `Tailscale` service polling `tailscale status --json`; hidden entirely
     when the CLI isn't installed.
+  - OpenRGB accent sync (upstream PR #3415, reworked as a plain CLI call): an
+    opt-in toggle (Settings → Quick) that applies the Material You accent
+    color to RGB hardware whenever the palette changes, debounced, via
+    `openrgb --mode static`; silently inert when the binary is missing.
+    Individual devices can be excluded from the sync with per-device switches
+    under the toggle (`appearance.openrgb.excludedDevices`, keyed by device
+    name so paired hardware like RAM sticks toggles as one).
 - Component grid for desktop plugins: formalizes the nandoroid design-system
   grid (a 132×108 cell with a 12px gap) as `Appearance.sizes.widgetGridSpanX/Y`
   with an opt-in manifest `grid: { cols, rows }` that sizes a widget to whole
