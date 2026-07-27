@@ -107,6 +107,22 @@ def test_parse_failure_keeps_last_good_entries():
     ), "a malformed index must return early without touching entries"
 
 
+def test_store_ui_is_gated_off_by_default():
+    # The store ships dark until the public registry exists: the config flag
+    # defaults to false, and PluginsPage both hides the entry points behind
+    # it and constructs the store page through a gated Loader, so a disabled
+    # store never instantiates the page or wakes the PluginStore singleton.
+    config = (ROOT / "modules" / "common" / "Config.qml").read_text()
+    assert "property bool storeEnabled: false" in config, (
+        "plugins.storeEnabled must exist and default to off"
+    )
+    page = (ROOT / "modules" / "ii" / "settings" / "pages" / "PluginsPage.qml").read_text()
+    assert "Config.options.plugins.storeEnabled" in page
+    assert re.search(r"Loader \{\s*\n\s*active: root\.storeAvailable", page), (
+        "PluginStorePage must sit behind a Loader gated on storeAvailable"
+    )
+
+
 def test_store_page_refreshes_on_show():
     # The store page must exist and trigger the stale-cache refresh when it
     # is shown, so the catalog is fresh without hammering the registry.

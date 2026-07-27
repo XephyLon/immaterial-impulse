@@ -83,6 +83,10 @@ Singleton {
 
             property JsonObject plugins: JsonObject {
                 property list<string> enabled: []
+                // Gates the in-shell plugin store UI (Browse plugins button,
+                // update badges). Off until the public registry goes live;
+                // config-file-only, no settings toggle on purpose.
+                property bool storeEnabled: false
                 property real blurOpacity: 0.1
                 // How desktop widgets frost their background over the wallpaper:
                 //   "tint" - a translucent palette-tinted panel (cheap, no blur)

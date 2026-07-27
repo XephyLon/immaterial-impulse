@@ -136,7 +136,9 @@ own repo; the installer pins which revision it builds.
   page and on installed plugins' cards, with an "Update all" queue in the
   store. The installer gains `--upgrade` (stage, verify, then atomic swap with
   rollback) and writes a `.store.json` provenance sidecar after every install.
-  Documented in `docs/PLUGIN_STORE.md`.
+  The store UI ships gated off behind `plugins.storeEnabled` (config-file-only,
+  default false) until the public registry goes live. Documented in
+  `docs/PLUGIN_STORE.md`.
 
 ### Fixed
 - Bar and dock media widgets broke on Arabic (RTL) track metadata: the text

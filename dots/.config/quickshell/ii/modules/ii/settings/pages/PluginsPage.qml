@@ -14,7 +14,11 @@ import qs.modules.common.plugins
 Item {
     id: root
 
+    // Store UI gate; the whole feature stays dormant while off (the flag is
+    // config-file-only until the public registry exists).
+    readonly property bool storeAvailable: Config.options.plugins.storeEnabled ?? false
     property bool showingStore: false
+    onStoreAvailableChanged: if (!storeAvailable) showingStore = false
 
     // Forwarded so SettingsContent's section rail keeps tracking this page
     // exactly as it did when ContentPage was the root item.
@@ -46,6 +50,9 @@ Item {
                 spacing: Appearance.spacing.space25
 
                 RowLayout {
+                    // Store UI is gated off until the public registry goes
+                    // live (config-file-only flag, no settings toggle).
+                    visible: root.storeAvailable
                     Layout.fillWidth: true
                     Layout.bottomMargin: Appearance.spacing.space100
                     spacing: Appearance.spacing.space100
@@ -86,7 +93,9 @@ Item {
                     // Update-count pill: how many installed plugins have a
                     // newer version in the store registry.
                     Rectangle {
-                        visible: PluginStore.updatesAvailable > 0
+                        // storeAvailable first: && short-circuits, so a
+                        // disabled store never touches the singleton.
+                        visible: root.storeAvailable && PluginStore.updatesAvailable > 0
                         Layout.alignment: Qt.AlignVCenter
                         implicitWidth: updateBadgeRow.implicitWidth + Appearance.spacing.space150
                         implicitHeight: updateBadgeRow.implicitHeight + Appearance.spacing.space50
@@ -104,7 +113,7 @@ Item {
                                 color: Appearance.colors.colOnPrimary
                             }
                             StyledText {
-                                text: PluginStore.updatesAvailable
+                                text: root.storeAvailable ? PluginStore.updatesAvailable : 0
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                                 color: Appearance.colors.colOnPrimary
                             }
@@ -205,8 +214,12 @@ Item {
                         required property var modelData
 
                         // The matching registry entry, when this plugin is
-                        // listed in the store: drives the Update button.
+                        // listed in the store: drives the Update button. The
+                        // store gate short-circuits first so a disabled store
+                        // never instantiates the PluginStore singleton here.
                         readonly property var storeEntry: {
+                            if (!root.storeAvailable)
+                                return null;
                             for (const entry of PluginStore.entries)
                                 if (entry.id === pluginCard.modelData.id)
                                     return entry;
@@ -417,10 +430,14 @@ Item {
         }
     }
 
-    PluginStorePage {
-        id: storePage
+    // Loader (not a bare instance) so a gated-off store never constructs the
+    // page or wakes the PluginStore singleton at all.
+    Loader {
+        active: root.storeAvailable
         anchors.fill: parent
         visible: root.showingStore
-        onCloseRequested: root.showingStore = false
+        sourceComponent: PluginStorePage {
+            onCloseRequested: root.showingStore = false
+        }
     }
 }

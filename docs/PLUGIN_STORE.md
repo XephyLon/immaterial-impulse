@@ -10,6 +10,10 @@ per plugin, and its CI generates the `index.json` the shell consumes. (The repo 
 not yet published on GitHub; until it is, the store fetch fails gracefully and the catalog renders
 empty.)
 
+> **The store UI ships gated off.** Until the public registry goes live, the whole feature is
+> hidden behind `plugins.storeEnabled` (config-file-only, default `false`, no settings toggle).
+> Set it to `true` in `config.json` to reveal the Browse button, update badges, and store page.
+
 ## Using the store
 
 Open **Settings → Plugins → Browse plugins**. The button carries a count badge when updates are
