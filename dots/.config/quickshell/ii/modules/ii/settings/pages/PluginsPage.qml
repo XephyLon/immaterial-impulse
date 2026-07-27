@@ -21,7 +21,10 @@ Item {
     readonly property string currentSection: root.showingStore ? "" : listPage.currentSection
     readonly property var availableSections: listPage.availableSections
 
-    // Section navigation from the rail always targets the list view.
+    // Section navigation from the rail always targets the list view. The
+    // section itself is intentionally unused: ContentPage exposes no goTo,
+    // and this page never scrolled to sections (only pages that implement
+    // their own title-matching goTo, like QuickConfig, do).
     function goTo(section) {
         root.showingStore = false;
     }
