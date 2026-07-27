@@ -9,6 +9,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import sys
 import tempfile
 from urllib.parse import urljoin, urlsplit
 from urllib.request import Request, urlopen
@@ -150,13 +151,24 @@ def main(argv=None) -> int:
             # version, move the new one into place, and put the old one back
             # if that move fails for any reason.
             backup = destination.with_name(destination.name + f".old-{os.getpid()}")
+            if backup.exists():
+                # Stale leftover from an interrupted upgrade with a recycled
+                # pid - would make the rename below fail.
+                shutil.rmtree(backup)
             os.rename(destination, backup)
             try:
                 os.replace(staging, destination)
             except BaseException:
-                os.rename(backup, destination)
+                # Restore failures must not mask the original error.
+                try:
+                    os.rename(backup, destination)
+                except OSError as restore_error:
+                    print(f"restore failed, old version left at {backup}: {restore_error}",
+                          file=sys.stderr)
                 raise
-            shutil.rmtree(backup)
+            # The swap already succeeded; a failed cleanup only leaves a
+            # stale backup behind (removed on the next upgrade above).
+            shutil.rmtree(backup, ignore_errors=True)
         else:
             os.replace(staging, destination)
     except Exception:
