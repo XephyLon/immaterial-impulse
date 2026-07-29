@@ -25,6 +25,7 @@ import qs.modules.ii.background.widgets.visualizer
 import qs.modules.ii.background.widgets.calendar
 import qs.modules.ii.background.widgets.worldclock
 import qs.modules.ii.background.widgets.usercard
+import qs.modules.ii.background.widgets.notes
 
 Variants {
     id: root
@@ -112,7 +113,7 @@ Variants {
         property string effectiveWallpaperPath: {
             if (GlobalStates.screenLocked && Config.options.background.lockWall !== "")
                 return Config.options.background.lockWall
-            return Config.options.background.wallpaperPath
+            return Wallpapers.previewPath || Wallpapers.confirmedPath || Config.options.background.wallpaperPath
         }
 
         // Embedded Wallpaper Engine: when a WE project is active it is rendered
@@ -802,6 +803,18 @@ Variants {
                         scaledScreenHeight: bgRoot.screen.height
                         wallpaperScale: 1
                         wallpaperSafetyTriggered: bgRoot.wallpaperSafetyTriggered
+                    }
+                }
+                FadeLoader {
+                    shown: Config.options.background.widgets.notes.enable
+                        && (Config.options.background.screenList.length === 0
+                            || Config.options.background.screenList.includes(bgRoot.screen.name))
+                    sourceComponent: NotesWidget {
+                        screenWidth: bgRoot.screen.width
+                        screenHeight: bgRoot.screen.height
+                        scaledScreenWidth: bgRoot.screen.width
+                        scaledScreenHeight: bgRoot.screen.height
+                        wallpaperScale: 1
                     }
                 }
                 FadeLoader {

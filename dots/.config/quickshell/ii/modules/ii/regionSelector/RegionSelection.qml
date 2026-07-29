@@ -233,6 +233,15 @@ PanelWindow {
         root.visible = true;
     }
 
+    Connections {
+        target: Persistent.states.record
+        function onEnableChanged() {
+            if (!Persistent.states.record.enable && root.isRecording) {
+                root.dismiss();
+            }
+        }
+    }
+
     Process {
         id: imageDetectionProcess
         command: ["bash", "-c", `${Directories.scriptPath}/images/find-regions-venv.sh ` 

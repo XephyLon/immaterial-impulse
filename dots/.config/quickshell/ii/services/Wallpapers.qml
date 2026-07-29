@@ -28,12 +28,23 @@ Singleton {
     property list<string> wallpapers: [] // List of absolute file paths (without file://)
     readonly property bool thumbnailGenerationRunning: thumbgenProc.running
     property real thumbnailGenerationProgress: 0
+    property string previewPath: ""  // Set during arrow navigation; empty by default
+    property string confirmedPath: ""  // Holds confirmed path until config catches up
 
     signal changed()
     signal thumbnailGenerated(directory: string)
     signal thumbnailGeneratedFile(filePath: string)
 
     function load () {} // For forcing initialization
+
+    function startPreview(path) {
+        if (!path || path.length === 0) return;
+        root.previewPath = path;
+    }
+
+    function stopPreview() {
+        root.previewPath = "";
+    }
 
     // Executions
     Process {
@@ -50,6 +61,7 @@ Singleton {
 
     function apply(path, darkMode = Appearance.m3colors.darkmode) {
         if (!path || path.length === 0) return;
+        root.confirmedPath = path;
         Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--mode", darkMode ? "dark" : "light", "--image", path]);
         root.changed()
     }

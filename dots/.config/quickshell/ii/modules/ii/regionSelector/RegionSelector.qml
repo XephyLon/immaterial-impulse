@@ -38,6 +38,19 @@ Scope {
     }
 
     function screenshot() {
+        // While a recording is running, snip with plain grim+slurp instead of
+        // opening the region-selector UI (which doubles as the recording control).
+        if (Persistent.states.record.enable) {
+            const saveDir = Config.options.screenSnip.savePath !== "" ? Config.options.screenSnip.savePath : "";
+            if (saveDir !== "") {
+                const cmd = `mkdir -p '${saveDir}' && filePath="${saveDir}/screenshot-$(date '+%Y-%m-%d_%H.%M.%S').png" && grim -g "$(slurp)" "$filePath" && cat "$filePath" | wl-copy && notify-send "Screenshot Saved" "Saved to $filePath" -a "Screen Snip" -i "image-x-generic"`;
+                Quickshell.execDetached(["bash", "-c", cmd]);
+            } else {
+                const cmd = `grim -g "$(slurp)" - | wl-copy && notify-send "Screenshot Copied" "Copied to clipboard" -a "Screen Snip" -i "image-x-generic"`;
+                Quickshell.execDetached(["bash", "-c", cmd]);
+            }
+            return;
+        }
         root.holdSettingsIfOpen()
         root.action = RegionSelection.SnipAction.Copy
         root.selectionMode = RegionSelection.SelectionMode.RectCorners
@@ -63,20 +76,26 @@ Scope {
     }
 
     function record() {
+        // Already recording: re-run the record script, which stops the recording.
+        if (Persistent.states.record.enable) {
+            Quickshell.execDetached([Directories.recordScriptPath]);
+            return;
+        }
         root.holdSettingsIfOpen()
         root.action = RegionSelection.SnipAction.Record
         root.selectionMode = RegionSelection.SelectionMode.RectCorners
-        // If already open then re-trigger to stop recording
-        if (GlobalStates.regionSelectorOpen) GlobalStates.regionSelectorOpen = false
         GlobalStates.regionSelectorOpen = true
     }
 
     function recordWithSound() {
+        // Already recording: re-run the record script, which stops the recording.
+        if (Persistent.states.record.enable) {
+            Quickshell.execDetached([Directories.recordScriptPath]);
+            return;
+        }
         root.holdSettingsIfOpen()
         root.action = RegionSelection.SnipAction.RecordWithSound
         root.selectionMode = RegionSelection.SelectionMode.RectCorners
-        // If already open then re-trigger to stop recording
-        if (GlobalStates.regionSelectorOpen) GlobalStates.regionSelectorOpen = false
         GlobalStates.regionSelectorOpen = true
     }
 

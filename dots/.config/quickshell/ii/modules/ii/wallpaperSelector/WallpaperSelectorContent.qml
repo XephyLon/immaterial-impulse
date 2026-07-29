@@ -93,6 +93,11 @@ MouseArea {
                     GlobalStates.wallpaperSelectorOpen = false;
                 });
             } else {
+                // Stop preview FIRST so wallpaperPath reverts to the old wallpaper,
+                // then the select sets confirmedPath to the new one — this causes
+                // onWallpaperPathChanged to fire with the real transition animation.
+                if (Config.options.background.enableWallpaperPreview)
+                    Wallpapers.stopPreview();
                 // Route through selectEntry (not Wallpapers.select directly) so a
                 // switch from a live Wallpaper Engine wallpaper to a static image
                 // still cross-fades from the engine still instead of the runtime
@@ -130,6 +135,7 @@ MouseArea {
 
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
+            Wallpapers.stopPreview();
             GlobalStates.wallpaperSelectorOpen = false;
             event.accepted = true;
         } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_V) {
@@ -667,7 +673,10 @@ MouseArea {
 
                         ToolbarPairedFab {
                             iconText: "close"
-                            onClicked: GlobalStates.wallpaperSelectorOpen = false
+                            onClicked: {
+                                Wallpapers.stopPreview();
+                                GlobalStates.wallpaperSelectorOpen = false;
+                            }
                         }
                     }
                 }
@@ -685,6 +694,8 @@ MouseArea {
                     filterField.forceActiveFocus()
                 else
                     root.forceActiveFocus()
+            } else if (!GlobalStates.wallpaperSelectorOpen) {
+                Wallpapers.stopPreview();
             }
         }
     }

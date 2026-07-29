@@ -406,6 +406,13 @@ Singleton {
                         property string sizeMode: "2x2" 
                     }
 
+                    property JsonObject notes: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 400
+                        property real y: 100
+                    }
+
                     property JsonObject userCard: JsonObject {
                         property bool enable: false
                         property string placementStrategy: "free"
@@ -464,6 +471,7 @@ Singleton {
                 property string centeredWallpaperColor: "primaryContainer"
                 property bool centeredWallpaperOnlyWhenLocked: false
                 property string wallpaperAnimation: "magic"
+                property bool enableWallpaperPreview: false
                 property string thumbnailPath: ""
                 property bool hideWhenFullscreen: true
                 property JsonObject parallax: JsonObject {

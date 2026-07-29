@@ -65,6 +65,7 @@ PanelWindow {
                 id: shelfCarousel
                 Layout.fillWidth: true
                 Layout.preferredHeight: 140
+                showCurrentIndicator: false
                 model: DropShelf.items
                 largeItemWidthRatio: 0.42
                 mediumItemWidthRatio: 0.28

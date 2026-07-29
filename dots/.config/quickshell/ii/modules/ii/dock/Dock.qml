@@ -127,6 +127,7 @@ Scope {
                             anchors.horizontalCenter: parent.horizontalCenter
                             spacing: Appearance.spacing.space50
                             property real padding: Appearance.spacing.space100
+                            property bool hasPinnedApps: (Config.options?.dock.pinnedApps?.length ?? 0) > 0
 
                             VerticalButtonGroup {
                                 Layout.topMargin: Appearance.spacing.space50
@@ -157,30 +158,31 @@ Scope {
 
                             DockSeparator {
                                 visible: Config.options.dock.showPinButton
+                                    && (dockRow.hasPinnedApps
+                                        || !(Config.options.dock.showMedia && dockMedia.hasTrack))
                             }
 
                             DragApps {
                                 id: dragSlots
-                                Layout.fillHeight: true
-                                Layout.topMargin: 0
+                                visible: dockRow.hasPinnedApps
+                                Layout.fillHeight: false
+                                Layout.topMargin: Appearance.spacing.space25
                                 Layout.leftMargin: Config.options.dock.showPinButton ? 0 : -Appearance.spacing.space200
-
                                 pinnedApps:    Config.options?.dock.pinnedApps ?? []
                                 contextMenu:   dockContextMenu
                                 buttonPadding: dockRow.padding
                                 btnSize:       46
-                                btnSpacing:    2
+                                btnSpacing:    1
                             }
 
                             DockSeparator {
-                                visible: activeAppsArea.activeUnpinned.length > 0 || (Config.options.dock.showMedia && MprisController.activePlayer !== null)
+                                visible: dockRow.hasPinnedApps && (activeAppsArea.activeUnpinned.length > 0 || (Config.options.dock.showMedia && MprisController.activePlayer !== null))
                             }
 
                             Item {
                                 id: activeAppsArea
                                 Layout.fillHeight: true
                                 Layout.topMargin: 0
-
                                 property bool requestDockShow: false
 
                                 property var activeUnpinned: {
@@ -219,13 +221,12 @@ Scope {
                                         delegate: DockAppButton {
                                             required property var modelData
                                             appToplevel: modelData
-                                            Layout.topMargin: 0
-                                            Layout.rightMargin: Config.options.dock.showAppsButton ? 0 : Appearance.spacing.space50
-                                            Layout.leftMargin: dockMedia.visible ? Appearance.spacing.space50 : 0
+                                            Layout.fillHeight: true
+                                            Layout.topMargin: Appearance.spacing.space25
                                             appListRoot: appListBridge
                                             contextMenu: dockContextMenu
-                                            topInset:    dockRow.padding
-                                            bottomInset: dockRow.padding
+                                            topInset:    dockRow.padding + Appearance.spacing.space100
+                                            bottomInset: dockRow.padding + Appearance.spacing.space100
                                         }
                                     }
                                 }
@@ -247,8 +248,8 @@ Scope {
                                 Layout.topMargin: 0
                                 visible: Config.options.dock.showAppsButton
                                 onClicked: GlobalStates.overviewOpen = !GlobalStates.overviewOpen
-                                topInset:    dockRow.padding
-                                bottomInset: Appearance.sizes.hyprlandGapsOut + dockRow.padding
+                                topInset:    dockRow.padding + 10
+                                bottomInset: dockRow.padding + 7
                                 contentItem: MaterialSymbol {
                                     anchors.fill: parent
                                     horizontalAlignment: Text.AlignHCenter
