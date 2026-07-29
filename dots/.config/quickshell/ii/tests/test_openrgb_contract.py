@@ -38,7 +38,15 @@ def test_config_schema_defaults_off():
 
 def test_default_config_ships_disabled():
     cfg = json.loads(DEFAULT_CONFIG.read_text())
-    assert cfg["appearance"]["openrgb"] == {"enable": False, "excludedDevices": []}
+    assert cfg["appearance"]["openrgb"] == {
+        "enable": False,
+        "excludedDevices": [],
+        "colorSource": "accent",
+        "monitorFullscreenOnly": True,
+        "monitorPollInterval": 200,
+        "monitorColorDelta": 12,
+        "monitorSmooth": True,
+    }
 
 
 def test_palette_changes_are_debounced():
@@ -61,10 +69,11 @@ def test_color_is_argv_not_shell_spliced():
         'cmd.push("--device", String(dev.index), "--mode", "static", "--color", hex)'
         in source
     ), "per-device apply must keep color and index as their own argv elements"
-    # The only bash -c in the file is the constant availability probe.
+    # The only bash -c uses in the file are the two constant availability
+    # probes (openrgb for the accent path, grim for the ambient sampler).
     bash_commands = re.findall(r'"bash", "-c", (.+?)\]', source)
-    assert bash_commands == ['"command -v openrgb"'], (
-        "bash -c must only carry the constant availability probe, never values"
+    assert bash_commands == ['"command -v openrgb"', '"command -v grim"'], (
+        "bash -c must only carry the constant availability probes, never values"
     )
 
 
@@ -85,7 +94,7 @@ def _function_block(source: str, name: str) -> str:
 def test_logic_double_is_in_sync():
     double = (ROOT / "tests" / "imports" / "testservices" / "OpenRgb.qml").read_text()
     source = _source()
-    for name in ("parseDeviceList", "buildDeviceCommand"):
+    for name in ("parseDeviceList", "buildDeviceCommand", "colorDelta", "mixHex"):
         assert _function_block(source, name) == _function_block(double, name), (
             f"{name} drifted between services/OpenRgb.qml and its test double"
         )
@@ -144,6 +153,77 @@ def test_settings_toggle_binds_the_option():
     page = QUICK_CONFIG.read_text()
     assert "Config.options.appearance.openrgb.enable" in page, (
         "no settings toggle for appearance.openrgb.enable"
+    )
+    assert "Config.options.appearance.openrgb.colorSource" in page, (
+        "no settings selector for appearance.openrgb.colorSource"
+    )
+
+
+def test_ambient_schema_defaults_to_accent():
+    config = CONFIG.read_text()
+    block = re.search(r"property JsonObject openrgb: JsonObject \{(.*?)\}", config, re.S)
+    assert block, "no appearance.openrgb JsonObject in Config.qml"
+    body = block.group(1)
+    assert 'property string colorSource: "accent"' in body, (
+        "ambient sync must default to the accent source"
+    )
+    assert "property bool monitorFullscreenOnly: true" in body, (
+        "monitor sampling must default to fullscreen-only"
+    )
+
+
+def test_ambient_loop_is_gated():
+    source = _source()
+    # The sampling clock only runs while ambient mode is active AND grim is
+    # known to exist - never for accent-only users.
+    assert re.search(
+        r"Timer \{\s*\n\s*id: ambientTimer\s*\n\s*"
+        r"running: root\.ambientActive && root\.grimAvailable",
+        source,
+    ), "the ambient Timer must be gated on ambientActive && grimAvailable"
+    # ambientActive itself derives from monitor mode, the lockscreen, and the
+    # fullscreen-only option against HyprlandData's derived flag.
+    assert "readonly property bool monitorMode: root.enabled && root.colorSource === \"monitor\"" in source
+    assert "HyprlandData.focusedMonitorHasFullscreen" in source
+    assert re.search(
+        r"readonly property bool ambientActive: root\.monitorMode\s*\n\s*"
+        r"&& !GlobalStates\.screenLocked",
+        source,
+    ), "ambientActive must require monitor mode and an unlocked session"
+    # While ambient drives the hardware the accent path must stand down.
+    assert re.search(
+        r"if \(root\.ambientActive\)\s*\n\s*return;", source
+    ), "requestApply must not fight the ambient loop"
+
+
+def test_grim_is_argv_not_shell_spliced():
+    source = _source()
+    assert (
+        'grimProc.command = ["grim", "-o", name, "-s", "0.125", "-t", "jpeg", "-q", "80", root.ambientFramePath]'
+        in source
+    ), "grim must be invoked as an argv array with monitor name and path as own elements"
+    # The monitor name comes from HyprlandData's monitor list, nowhere else.
+    assert "HyprlandData.monitors.find(m => m.focused)?.name" in source
+
+
+def test_ambient_exit_snaps_back_to_accent():
+    source = _source()
+    changed = re.search(r"onAmbientActiveChanged: \{([\s\S]*?)\n    \}", source)
+    assert changed, "no onAmbientActiveChanged handler"
+    body = changed.group(1)
+    assert 'root.lastAppliedColor = ""' in body, (
+        "leaving ambient mode must clear the dedup color"
+    )
+    assert "root.scheduleApply()" in body, (
+        "leaving ambient mode must schedule an accent re-apply"
+    )
+
+
+def test_fullscreen_flag_lives_in_hyprland_data():
+    hypr = (ROOT / "services" / "HyprlandData.qml").read_text()
+    assert "readonly property bool focusedMonitorHasFullscreen" in hypr
+    assert "w.fullscreen >= 2" in hypr, (
+        "fullscreen detection must use Hyprland's int state (>= 2 = real fullscreen)"
     )
 
 

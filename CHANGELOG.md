@@ -90,6 +90,13 @@ own repo; the installer pins which revision it builds.
     Individual devices can be excluded from the sync with per-device switches
     under the toggle (`appearance.openrgb.excludedDevices`, keyed by device
     name so paired hardware like RAM sticks toggles as one).
+    An optional ambient mode (`appearance.openrgb.colorSource: "monitor"`)
+    instead follows the focused monitor's dominant on-screen color — by
+    default only while a fullscreen app runs (games, video), snapping back to
+    the accent on exit. Sampling is a low-rate grim capture reduced by
+    Quickshell's ColorQuantizer, with a deadband and optional smoothing so
+    near-static scenes produce no device writes; needs `grim`, silently inert
+    without it.
 - Component grid for desktop plugins: formalizes the nandoroid design-system
   grid (a 132×108 cell with a 12px gap) as `Appearance.sizes.widgetGridSpanX/Y`
   with an opt-in manifest `grid: { cols, rows }` that sizes a widget to whole

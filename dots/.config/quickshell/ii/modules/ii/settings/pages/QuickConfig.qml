@@ -292,6 +292,59 @@ ContentPage {
                 }
             }
 
+            ConfigSelectionArray {
+                visible: Config.options.appearance.openrgb.enable && OpenRgb.available
+                icon: "palette"
+                text: Translation.tr("Light color source")
+                currentValue: Config.options.appearance.openrgb.colorSource
+                onSelected: newValue => { Config.options.appearance.openrgb.colorSource = newValue; }
+                options: [
+                    { displayName: Translation.tr("Accent"),  icon: "colors",  value: "accent" },
+                    { displayName: Translation.tr("Monitor"), icon: "monitor", value: "monitor" }
+                ]
+            }
+
+            ColumnLayout {
+                visible: Config.options.appearance.openrgb.enable && OpenRgb.available
+                    && Config.options.appearance.openrgb.colorSource === "monitor"
+                Layout.fillWidth: true
+                spacing: 0
+
+                ConfigSwitch {
+                    buttonIcon: "fullscreen"
+                    text: Translation.tr("Only while fullscreen")
+                    description: OpenRgb.grimAvailable || !OpenRgb.monitorMode
+                        ? Translation.tr("Follow the screen only while a fullscreen app runs; otherwise use the accent")
+                        : Translation.tr("The grim command was not found — install grim to sample the monitor")
+                    checked: Config.options.appearance.openrgb.monitorFullscreenOnly
+                    onCheckedChanged: {
+                        Config.options.appearance.openrgb.monitorFullscreenOnly = checked;
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "blur_on"
+                    text: Translation.tr("Smooth transitions")
+                    description: Translation.tr("Blend toward the sampled color instead of snapping on scene cuts")
+                    checked: Config.options.appearance.openrgb.monitorSmooth
+                    onCheckedChanged: {
+                        Config.options.appearance.openrgb.monitorSmooth = checked;
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "timer"
+                    text: Translation.tr("Sample interval (ms)")
+                    value: Config.options.appearance.openrgb.monitorPollInterval
+                    from: 100
+                    to: 2000
+                    stepSize: 50
+                    onValueChanged: {
+                        Config.options.appearance.openrgb.monitorPollInterval = value;
+                    }
+                }
+            }
+
             ColumnLayout {
                 id: openRgbDevices
                 visible: Config.options.appearance.openrgb.enable && OpenRgb.available

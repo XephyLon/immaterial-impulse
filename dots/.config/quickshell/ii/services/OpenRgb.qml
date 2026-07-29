@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import qs
 import qs.modules.common
+import qs.modules.common.functions
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -73,6 +74,10 @@ Singleton {
         // upstream, only sync the real desktop palette. Unlocking animates
         // the desktop palette back, which re-triggers the debounce.
         if (GlobalStates.screenLocked)
+            return;
+        // While the ambient loop drives the hardware, accent changes must not
+        // fight it; the loop's deactivation snaps back to the accent.
+        if (root.ambientActive)
             return;
         const hex = root.hexOf(Appearance.m3colors.m3primary);
         if (hex === root.lastAppliedColor)
@@ -255,6 +260,136 @@ Singleton {
                 root.lastAppliedColor = "";
             }
             root.startPendingApply();
+        }
+    }
+
+    // --- Ambient (monitor color) sync ------------------------------------
+    //
+    // With colorSource "monitor", a low-rate loop samples the focused
+    // monitor's dominant color and feeds it into the same apply machinery as
+    // the accent path: grim captures a downscaled frame to the cache,
+    // Quickshell's ColorQuantizer reduces it to one representative color, a
+    // deadband drops near-identical samples and an optional half-way blend
+    // smooths hard scene cuts. By default the loop only runs while a
+    // fullscreen client is on the focused monitor (HyprlandData's derived
+    // flag); leaving that state snaps the lights back to the accent.
+
+    readonly property string colorSource: Config.options.appearance.openrgb.colorSource ?? "accent"
+    readonly property bool monitorMode: root.enabled && root.colorSource === "monitor"
+    readonly property bool ambientActive: root.monitorMode
+        && !GlobalStates.screenLocked
+        && (!(Config.options.appearance.openrgb.monitorFullscreenOnly ?? true)
+            || HyprlandData.focusedMonitorHasFullscreen)
+    property bool grimAvailable: false
+    readonly property string ambientDir: FileUtils.trimFileProtocol(`${Directories.cache}/openrgb`)
+    readonly property string ambientFramePath: `${root.ambientDir}/ambient-frame.jpg`
+
+    onAmbientActiveChanged: {
+        if (root.ambientActive) {
+            Quickshell.execDetached(["mkdir", "-p", root.ambientDir]);
+            grimProbeProc.running = false;
+            grimProbeProc.running = true;
+        } else {
+            // Snap back to the accent (debounced): clear the dedup color so
+            // the accent re-applies even when it equals the last ambient write.
+            root.lastAppliedColor = "";
+            root.scheduleApply();
+        }
+    }
+
+    function captureAmbientFrame() {
+        if (grimProc.running)
+            return;
+        // The name comes straight from hyprctl's monitor list; no focused
+        // monitor means nothing sensible to sample this tick.
+        const name = HyprlandData.monitors.find(m => m.focused)?.name ?? "";
+        if (name === "")
+            return;
+        // Monitor name and output path are their own argv elements - never
+        // spliced into a shell string. -s 0.125 downscales in-compositor (the
+        // quantizer rescales further), jpeg keeps the per-sample disk write
+        // tiny (~30KB vs ~850KB png), and grim omits the cursor by default.
+        grimProc.command = ["grim", "-o", name, "-s", "0.125", "-t", "jpeg", "-q", "80", root.ambientFramePath];
+        grimProc.running = true;
+    }
+
+    function handleAmbientSample(color) {
+        if (!root.ambientActive)
+            return;
+        let hex = root.hexOf(color);
+        if (root.lastAppliedColor !== "") {
+            const threshold = Config.options.appearance.openrgb.monitorColorDelta ?? 12;
+            if (root.colorDelta(hex, root.lastAppliedColor) < threshold)
+                return; // Deadband: near-static scene, skip the device write
+            if (Config.options.appearance.openrgb.monitorSmooth ?? true)
+                hex = root.mixHex(root.lastAppliedColor, hex, 0.5);
+        }
+        root.pendingColor = hex;
+        availabilityProc.running = false;
+        availabilityProc.running = true;
+    }
+
+    // Pure: summed per-channel absolute difference of two RRGGBB hex strings
+    // (0-765). Malformed input counts as maximally different.
+    function colorDelta(hexA, hexB) {
+        const a = parseInt(hexA, 16), b = parseInt(hexB, 16);
+        if (isNaN(a) || isNaN(b) || hexA.length !== 6 || hexB.length !== 6)
+            return 765;
+        return Math.abs((a >> 16) - (b >> 16))
+            + Math.abs(((a >> 8) & 0xff) - ((b >> 8) & 0xff))
+            + Math.abs((a & 0xff) - (b & 0xff));
+    }
+
+    // Pure: per-channel linear blend of two RRGGBB hex strings; t=0 keeps a,
+    // t=1 lands on b. Malformed endpoints fall back to the other one.
+    function mixHex(hexA, hexB, t) {
+        const a = parseInt(hexA, 16), b = parseInt(hexB, 16);
+        if (isNaN(a) || hexA.length !== 6)
+            return hexB;
+        if (isNaN(b) || hexB.length !== 6)
+            return hexA;
+        const ch = shift => Math.round(((a >> shift) & 0xff) * (1 - t) + ((b >> shift) & 0xff) * t);
+        const hex = n => n.toString(16).padStart(2, "0");
+        return (hex(ch(16)) + hex(ch(8)) + hex(ch(0))).toUpperCase();
+    }
+
+    Timer {
+        id: ambientTimer
+        running: root.ambientActive && root.grimAvailable
+        interval: Config.options.appearance.openrgb.monitorPollInterval ?? 200
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root.captureAmbientFrame()
+    }
+
+    Process {
+        id: grimProbeProc
+        // Constant command string - no values are spliced in.
+        command: ["bash", "-c", "command -v grim"]
+        onExited: (exitCode, exitStatus) => {
+            root.grimAvailable = exitCode === 0; // Graceful no-op without grim
+        }
+    }
+
+    Process {
+        id: grimProc
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                return; // Transient capture failure; the next tick retries
+            // The path never changes, so null the source first - the
+            // quantizer re-reads the file instead of trusting an unchanged URL.
+            ambientQuantizer.source = "";
+            ambientQuantizer.source = "file://" + root.ambientFramePath;
+        }
+    }
+
+    ColorQuantizer {
+        id: ambientQuantizer
+        depth: 0 // 2^0 = 1 color: the representative average
+        rescaleSize: 64
+        onColorsChanged: {
+            if (colors.length > 0)
+                root.handleAmbientSample(colors[0]);
         }
     }
 }

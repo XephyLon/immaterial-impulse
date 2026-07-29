@@ -181,6 +181,21 @@ Singleton {
                     // Device names (as printed by `openrgb --list-devices`)
                     // to leave out of the color sync.
                     property list<string> excludedDevices: []
+                    // "accent" follows the Material You accent (default);
+                    // "monitor" samples the focused monitor's dominant color
+                    // (ambient bias lighting, needs grim).
+                    property string colorSource: "accent"
+                    // With "monitor": only sample while a fullscreen client is
+                    // on the focused monitor, falling back to the accent
+                    // otherwise. false samples continuously.
+                    property bool monitorFullscreenOnly: true
+                    property int monitorPollInterval: 200 // ms between samples
+                    // Minimum summed per-channel difference (0-765) before a
+                    // sampled color is written; below it the sample is dropped.
+                    property int monitorColorDelta: 12
+                    // Blend each sample halfway toward the previous applied
+                    // color instead of snapping on hard scene cuts.
+                    property bool monitorSmooth: true
                 }
                 property JsonObject palette: JsonObject {
                     property string type: "auto" // Allowed: auto, scheme-content, scheme-expressive, scheme-fidelity, scheme-fruit-salad, scheme-monochrome, scheme-neutral, scheme-rainbow, scheme-tonal-spot

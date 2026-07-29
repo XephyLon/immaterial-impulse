@@ -182,7 +182,12 @@
     },
     "openrgb": {
       "enable": false,
-      "excludedDevices": []
+      "excludedDevices": [],
+      "colorSource": "accent",
+      "monitorFullscreenOnly": true,
+      "monitorPollInterval": 200,
+      "monitorColorDelta": 12,
+      "monitorSmooth": true
     },
     "palette": {
       "accentColor": "",

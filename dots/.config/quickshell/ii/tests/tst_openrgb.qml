@@ -93,4 +93,30 @@ TestCase {
         const cmd = OpenRgb.buildDeviceCommand("010203", devices, [])
         compare(cmd.filter(a => a === "--device").length, 4)
     }
+
+    function test_color_delta_is_summed_channel_difference() {
+        compare(OpenRgb.colorDelta("000000", "000000"), 0)
+        compare(OpenRgb.colorDelta("FFFFFF", "000000"), 765)
+        compare(OpenRgb.colorDelta("102030", "102030"), 0)
+        compare(OpenRgb.colorDelta("102030", "112233"), 6)
+        compare(OpenRgb.colorDelta("FF0000", "00FF00"), 510)
+    }
+
+    function test_color_delta_malformed_is_maximal() {
+        compare(OpenRgb.colorDelta("", "000000"), 765)
+        compare(OpenRgb.colorDelta("12345", "000000"), 765)
+        compare(OpenRgb.colorDelta("GGGGGG", "000000"), 765)
+    }
+
+    function test_mix_hex_blends_per_channel() {
+        compare(OpenRgb.mixHex("000000", "FFFFFF", 0.5), "808080")
+        compare(OpenRgb.mixHex("000000", "FFFFFF", 0), "000000")
+        compare(OpenRgb.mixHex("000000", "FFFFFF", 1), "FFFFFF")
+        compare(OpenRgb.mixHex("102030", "304050", 0.5), "203040")
+    }
+
+    function test_mix_hex_malformed_falls_back_to_the_other_endpoint() {
+        compare(OpenRgb.mixHex("nope", "112233", 0.5), "112233")
+        compare(OpenRgb.mixHex("112233", "bad", 0.5), "112233")
+    }
 }
