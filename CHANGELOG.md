@@ -13,6 +13,12 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- Discord voice: one-shot companion installer
+  (`scripts/discordVoice/install_companion.sh`) — clones and builds Vencord
+  with the End4DiscordVoice user plugin and points Vesktop's Vencord Location
+  at the build (backing up `state.json` first). The bridge's "companion
+  needed" error now names the script. Official Discord still needs nothing;
+  Legcord remains unsupported (bundled Vencord, no custom-location picker).
 - Upstream merge (`pctrade/end4-pC`):
   - Desktop Notes widget: a flip-card notes list on the background (add, edit,
     swipe to delete; persisted in the shell state dir), toggle in

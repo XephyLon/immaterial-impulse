@@ -575,5 +575,33 @@ class DiscordVoicePluginSafetyTests(unittest.TestCase):
             self.assertIn("DiscordVoice.participantModel", consumer)
 
 
+class CompanionInstallerTests(unittest.TestCase):
+    INSTALLER = ROOT / "scripts/discordVoice/install_companion.sh"
+
+    def test_installer_exists_and_is_executable(self):
+        self.assertTrue(self.INSTALLER.exists())
+        self.assertTrue(self.INSTALLER.stat().st_mode & 0o111,
+                        "install_companion.sh must be executable")
+
+    def test_installer_is_safe_about_vesktop_state(self):
+        script = self.INSTALLER.read_text()
+        # Editing state.json while Vesktop runs loses the change on exit.
+        self.assertIn("pgrep -x vesktop", script)
+        # The original state file is backed up exactly once, never clobbered.
+        self.assertIn('[[ -f "$VESKTOP_STATE.pre-end4-discord" ]] || cp', script)
+        # The JSON edit goes through python, not sed/string splicing.
+        self.assertIn('python3 - "$VESKTOP_STATE"', script)
+        self.assertIn("set -euo pipefail", script)
+
+    def test_installer_stages_the_companion_from_the_shipped_source(self):
+        script = self.INSTALLER.read_text()
+        self.assertIn("src/userplugins/end4DiscordVoice", script)
+        self.assertIn("cp package.json dist/", script)
+
+    def test_bridge_error_points_at_the_installer(self):
+        bridge = (ROOT / "scripts/discordVoice/discord_voice_bridge.py").read_text()
+        self.assertIn("install_companion.sh", bridge)
+
+
 if __name__ == "__main__":
     unittest.main()

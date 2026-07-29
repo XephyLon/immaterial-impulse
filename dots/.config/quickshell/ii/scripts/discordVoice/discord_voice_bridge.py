@@ -313,7 +313,8 @@ class Bridge:
         else:
             emit("error", message=(
                 "The connected Discord client does not support voice authorization. "
-                "Vesktop/Vencord users must install and enable the end4 Discord Voice companion."))
+                "Vesktop users: run scripts/discordVoice/install_companion.sh from the "
+                "shell config to build and enable the End4DiscordVoice companion."))
 
     @staticmethod
     def exchange(code: str) -> str:
