@@ -190,14 +190,38 @@ def test_ambient_loop_is_gated():
         source,
     ), "the ambient Timer must be gated on ambientActive && grimAvailable && serverReady"
     # The managed server is a constant argv and only spawned once per
-    # activation (no crash-loop respawns from the poll timer).
+    # activation (no crash-loop respawns from the poll timer), and the spawn
+    # goes through the detector sync so an excluded device is never even
+    # claimed by the server.
     assert 'command: ["openrgb", "--server"]' in source
     assert "root.serverSpawnAttempted = false" in source
     assert re.search(
-        r"if \(!root\.serverSpawnAttempted && !serverProc\.running\) \{\s*\n\s*"
-        r"root\.serverSpawnAttempted = true;",
+        r"if \(!root\.serverSpawnAttempted && !serverProc\.running && !detectorSyncProc\.running\) \{\s*\n\s*"
+        r"root\.serverSpawnAttempted = true;[\s\S]*?"
+        r"detectorSyncProc\.thenStartServer = true;",
         source,
-    ), "the server must be spawned at most once per ambient activation"
+    ), "the server spawn must run the detector sync first, at most once per activation"
+
+
+def test_detector_sync_is_argv_and_covers_exclusion_changes():
+    source = _source()
+    # Excluded device names reach the sync script as their own argv elements.
+    assert (
+        'command: ["python3", root.detectorSyncScript, root.detectorStatePath]'
+        ".concat(root.excludedDevices)" in source
+    ), "detector sync must pass excluded names as argv elements, never spliced"
+    # Toggling exclusions in monitor mode re-syncs detectors, and a reported
+    # change restarts our managed server so it takes effect.
+    assert re.search(
+        r"function onExcludedDevicesChanged\(\)[\s\S]*?detectorSyncProc\.running = true;",
+        source,
+    ), "exclusion changes must trigger a detector re-sync"
+    assert re.search(
+        r"else if \(changed && serverProc\.running\) \{\s*\n\s*"
+        r"serverProc\.running = false;\s*\n\s*serverProc\.running = true;",
+        source,
+    ), "a detector change must restart the managed server"
+    assert (ROOT / "scripts" / "rgb" / "sync_openrgb_detectors.py").exists()
     # ambientActive itself derives from monitor mode, the lockscreen, and the
     # fullscreen-only option against HyprlandData's derived flag.
     assert "readonly property bool monitorMode: root.enabled && root.colorSource === \"monitor\"" in source

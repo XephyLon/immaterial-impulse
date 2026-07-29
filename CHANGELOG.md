@@ -96,7 +96,11 @@ own repo; the installer pins which revision it builds.
     the accent on exit. Sampling is a low-rate grim capture reduced by
     Quickshell's ColorQuantizer, with a deadband and optional smoothing so
     near-static scenes produce no device writes; needs `grim`, silently inert
-    without it.
+    without it. The shell manages an `openrgb --server` for the streaming
+    writes (serverless CLI calls re-detect hardware every time, resetting
+    devices to white), and excluded devices are kept out of OpenRGB's own
+    detector list so the server never claims them — a claimed device loses
+    its firmware lighting even without a single color write.
 - Component grid for desktop plugins: formalizes the nandoroid design-system
   grid (a 132×108 cell with a 12px gap) as `Appearance.sizes.widgetGridSpanX/Y`
   with an opt-in manifest `grid: { cols, rows }` that sizes a widget to whole

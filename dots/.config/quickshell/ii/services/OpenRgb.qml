@@ -213,6 +213,13 @@ Singleton {
             // fresh apply (debounced, so rapid toggling coalesces).
             root.lastAppliedColor = "";
             root.scheduleApply();
+            // Keep OpenRGB's detector toggles in step: an excluded device
+            // must not even be *claimed* by our managed server. A change
+            // restarts the server so it takes effect.
+            if (root.monitorMode && !detectorSyncProc.running) {
+                detectorSyncProc.thenStartServer = false;
+                detectorSyncProc.running = true;
+            }
         }
     }
 
@@ -300,6 +307,8 @@ Singleton {
     property bool serverSpawnAttempted: false
     readonly property string ambientDir: FileUtils.trimFileProtocol(`${Directories.cache}/openrgb`)
     readonly property string ambientFramePath: `${root.ambientDir}/ambient-frame.jpg`
+    readonly property string detectorSyncScript: `${Directories.scriptPath}/rgb/sync_openrgb_detectors.py`
+    readonly property string detectorStatePath: FileUtils.trimFileProtocol(`${Directories.state}/user/openrgb-detectors.json`)
 
     onAmbientActiveChanged: {
         if (root.ambientActive) {
@@ -418,10 +427,41 @@ Singleton {
             root.serverReady = exitCode === 0;
             if (root.serverReady || !root.ambientActive)
                 return;
-            if (!root.serverSpawnAttempted && !serverProc.running) {
+            if (!root.serverSpawnAttempted && !serverProc.running && !detectorSyncProc.running) {
                 root.serverSpawnAttempted = true;
-                serverProc.running = true;
+                // Detector sync runs first so the server never claims an
+                // excluded device; its completion starts the server.
+                detectorSyncProc.thenStartServer = true;
+                detectorSyncProc.running = true;
             }
+        }
+    }
+
+    // Flips OpenRGB's own detector toggles off for excluded devices (and
+    // restores the ones we disabled once un-excluded): exclusion must also
+    // keep the server from *claiming* a device, which would override its
+    // firmware lighting even without a single color write. Device names are
+    // passed as their own argv elements - nothing is shell-spliced. Only a
+    // server we manage can be restarted; a user-run server keeps its old
+    // detector set until they restart it themselves.
+    Process {
+        id: detectorSyncProc
+        property bool thenStartServer: false
+        command: ["python3", root.detectorSyncScript, root.detectorStatePath].concat(root.excludedDevices)
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const changed = text.trim() === "changed";
+                if (detectorSyncProc.thenStartServer) {
+                    serverProc.running = true;
+                } else if (changed && serverProc.running) {
+                    serverProc.running = false;
+                    serverProc.running = true;
+                }
+            }
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                console.warn("[OpenRgb] detector sync exited with code", exitCode);
         }
     }
 

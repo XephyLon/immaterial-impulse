@@ -333,6 +333,12 @@ if ! python3 "$SCRIPT_DIR/test_openrgb_contract.py"; then
     exit 1
 fi
 
+echo "Running OpenRGB detector sync tests..."
+if ! python3 "$SCRIPT_DIR/test_openrgb_detector_sync.py"; then
+    echo "OpenRGB detector sync tests failed."
+    exit 1
+fi
+
 echo "Running registry entry validator tests..."
 if ! python3 "$SCRIPT_DIR/test_registry_validate.py"; then
     echo "Registry entry validator tests failed."
