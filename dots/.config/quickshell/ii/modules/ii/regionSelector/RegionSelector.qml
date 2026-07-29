@@ -41,10 +41,12 @@ Scope {
         // While a recording is running, snip with plain grim+slurp instead of
         // opening the region-selector UI (which doubles as the recording control).
         if (Persistent.states.record.enable) {
-            const saveDir = Config.options.screenSnip.savePath !== "" ? Config.options.screenSnip.savePath : "";
+            const saveDir = Config.options.screenSnip.savePath ?? "";
             if (saveDir !== "") {
-                const cmd = `mkdir -p '${saveDir}' && filePath="${saveDir}/screenshot-$(date '+%Y-%m-%d_%H.%M.%S').png" && grim -g "$(slurp)" "$filePath" && cat "$filePath" | wl-copy && notify-send "Screenshot Saved" "Saved to $filePath" -a "Screen Snip" -i "image-x-generic"`;
-                Quickshell.execDetached(["bash", "-c", cmd]);
+                // savePath is config data (reachable by imported presets), so it is
+                // passed as an argv element ($1), never interpolated into the script.
+                const script = `mkdir -p "$1" && filePath="$1/screenshot-$(date '+%Y-%m-%d_%H.%M.%S').png" && grim -g "$(slurp)" "$filePath" && wl-copy < "$filePath" && notify-send "Screenshot Saved" "Saved to $filePath" -a "Screen Snip" -i "image-x-generic"`;
+                Quickshell.execDetached(["bash", "-c", script, "screen-snip", saveDir]);
             } else {
                 const cmd = `grim -g "$(slurp)" - | wl-copy && notify-send "Screenshot Copied" "Copied to clipboard" -a "Screen Snip" -i "image-x-generic"`;
                 Quickshell.execDetached(["bash", "-c", cmd]);
