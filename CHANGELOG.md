@@ -26,7 +26,8 @@ own repo; the installer pins which revision it builds.
     pinned; drag-ghost polish.
   - Screenshot while recording snips via plain grim+slurp instead of the
     region-selector UI (which doubles as the recording control), and the record
-    keybind now stops a running recording.
+    keybind now stops a running recording. (Hardened over upstream: the save
+    directory is passed as an argv element instead of interpolated shell text.)
   - Bar settings: the divider space-width spinbox is only enabled for the
     "space" divider style.
 - Upstream feature sweep (first batch, from the `end-4/dots-hyprland` tracker):
