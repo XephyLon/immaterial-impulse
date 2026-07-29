@@ -94,6 +94,18 @@ TestCase {
         compare(cmd.filter(a => a === "--device").length, 4)
     }
 
+    function test_build_command_excludes_types() {
+        const devices = OpenRgb.parseDeviceList(sampleListing)
+        const cmd = OpenRgb.buildDeviceCommand("010203", devices, [], "direct", ["GPU"])
+        // Devices 0/1 are DRAM, 2 is the GPU, 3 the gamepad.
+        compare(cmd.filter(a => a === "--device").length, 3)
+        verify(!cmd.includes("2"))
+        // Name and type exclusions compose.
+        const both = OpenRgb.buildDeviceCommand("010203", devices,
+            ["Sony DualSense Edge"], "direct", ["GPU", "DRAM"])
+        verify(both === null)
+    }
+
     function test_build_command_mode_defaults_to_static_and_accepts_direct() {
         const devices = OpenRgb.parseDeviceList(sampleListing)
         const staticCmd = OpenRgb.buildDeviceCommand("010203", devices, [])

@@ -101,9 +101,18 @@ Singleton {
             root.pendingColor = "";
             return;
         }
-        if (root.excludedDevices.length > 0) {
-            // Per-device apply needs fresh indices; the scan's completion
-            // hands off to startExclusionApply().
+        const typeFiltered = root.pendingMode === "direct" && root.ambientTypeExclusions.length > 0;
+        if (root.excludedDevices.length > 0 || typeFiltered) {
+            // Per-device apply needs device indices. The ambient loop scans
+            // once per activation and then reuses it (our managed server
+            // keeps indices stable, and a per-write `--list-devices` doubles
+            // the bus traffic that causes game hitches); the accent path
+            // re-enumerates every time, since indices shift when devices
+            // (dis)connect.
+            if (root.pendingMode === "direct" && root.ambientScanDone && root.devices.length > 0) {
+                root.startExclusionApply();
+                return;
+            }
             root.applyAfterScan = true;
             root.rescanDevices();
             return;
@@ -124,7 +133,9 @@ Singleton {
         root.pendingColor = "";
         if (hex === "")
             return;
-        const cmd = root.buildDeviceCommand(hex, root.devices, root.excludedDevices, root.pendingMode);
+        const cmd = root.buildDeviceCommand(hex, root.devices, root.excludedDevices,
+                                            root.pendingMode,
+                                            root.pendingMode === "direct" ? root.ambientTypeExclusions : []);
         if (cmd === null) {
             // Every device excluded, or the scan came back empty: nothing to
             // write. Leave the dedup color cleared so re-including a device
@@ -139,11 +150,13 @@ Singleton {
 
     // Pure: argv for a per-device apply, or null when no device remains.
     // Color and indices are separate argv elements - nothing is shell-spliced.
-    function buildDeviceCommand(hex, devices, excluded, mode = "static") {
+    // excludedTypes drops whole device classes (the ambient loop skips GPUs:
+    // their RGB writes go over i2c and stall the render pipeline mid-game).
+    function buildDeviceCommand(hex, devices, excluded, mode = "static", excludedTypes = []) {
         const cmd = ["openrgb"];
         let any = false;
         for (const dev of devices) {
-            if (excluded.includes(dev.name))
+            if (excluded.includes(dev.name) || excludedTypes.includes(dev.type))
                 continue;
             cmd.push("--device", String(dev.index), "--mode", mode, "--color", hex);
             any = true;
@@ -213,6 +226,8 @@ Singleton {
             // fresh apply (debounced, so rapid toggling coalesces).
             root.lastAppliedColor = "";
             root.scheduleApply();
+            // A detector-sync restart re-enumerates: cached indices go stale.
+            root.ambientScanDone = false;
             // Keep OpenRGB's detector toggles in step: an excluded device
             // must not even be *claimed* by our managed server. A change
             // restarts the server so it takes effect.
@@ -252,6 +267,8 @@ Singleton {
                 root.devices = root.parseDeviceList(text);
                 if (root.applyAfterScan) {
                     root.applyAfterScan = false;
+                    if (root.pendingMode === "direct")
+                        root.ambientScanDone = true;
                     root.startExclusionApply();
                 }
             }
@@ -305,6 +322,14 @@ Singleton {
     property bool grimAvailable: false
     property bool serverReady: false
     property bool serverSpawnAttempted: false
+    // Device types the ambient loop never writes to. GPU RGB goes over the
+    // graphics card's i2c bus; writing it mid-game stalls the render
+    // pipeline (momentary freezes). The accent path is unaffected - a single
+    // write per palette change is harmless.
+    readonly property list<string> ambientTypeExclusions: Config.options.appearance.openrgb.monitorExcludedTypes ?? []
+    // The ambient loop trusts one device scan per activation (see
+    // startPendingApply); reset when indices may have shifted.
+    property bool ambientScanDone: false
     readonly property string ambientDir: FileUtils.trimFileProtocol(`${Directories.cache}/openrgb`)
     readonly property string ambientFramePath: `${root.ambientDir}/ambient-frame.jpg`
     readonly property string detectorSyncScript: `${Directories.scriptPath}/rgb/sync_openrgb_detectors.py`
@@ -312,6 +337,7 @@ Singleton {
 
     onAmbientActiveChanged: {
         if (root.ambientActive) {
+            root.ambientScanDone = false;
             Quickshell.execDetached(["mkdir", "-p", root.ambientDir]);
             grimProbeProc.running = false;
             grimProbeProc.running = true;

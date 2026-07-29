@@ -100,7 +100,11 @@ own repo; the installer pins which revision it builds.
     writes (serverless CLI calls re-detect hardware every time, resetting
     devices to white), and excluded devices are kept out of OpenRGB's own
     detector list so the server never claims them — a claimed device loses
-    its firmware lighting even without a single color write.
+    its firmware lighting even without a single color write. GPU lighting is
+    excluded from ambient writes by default (`monitorExcludedTypes`): GPU RGB
+    rides the graphics i2c bus, and streaming to it mid-game stalls
+    rendering; the ambient loop also scans devices once per activation
+    instead of before every write.
 - Component grid for desktop plugins: formalizes the nandoroid design-system
   grid (a 132×108 cell with a 12px gap) as `Appearance.sizes.widgetGridSpanX/Y`
   with an opt-in manifest `grid: { cols, rows }` that sizes a widget to whole

@@ -332,6 +332,32 @@ ContentPage {
                     }
                 }
 
+                ConfigSwitch {
+                    id: gpuAmbientSwitch
+                    readonly property bool gpuIncluded: !(Config.options.appearance.openrgb.monitorExcludedTypes ?? []).includes("GPU")
+                    buttonIcon: "developer_board"
+                    text: Translation.tr("Include GPU lighting")
+                    description: Translation.tr("GPU RGB writes ride the graphics i2c bus and can stutter games — off is safer")
+                    checked: gpuIncluded
+                    onCheckedChanged: {
+                        if (checked === gpuIncluded)
+                            return;
+                        // Whole-list assignment: JsonAdapter lists only
+                        // persist when replaced, never when mutated.
+                        let types = (Config.options.appearance.openrgb.monitorExcludedTypes ?? []).filter(t => t !== "GPU");
+                        if (!checked)
+                            types = types.concat(["GPU"]);
+                        Config.options.appearance.openrgb.monitorExcludedTypes = types;
+                    }
+
+                    Binding {
+                        target: gpuAmbientSwitch
+                        property: "checked"
+                        value: gpuAmbientSwitch.gpuIncluded
+                        restoreMode: Binding.RestoreBinding
+                    }
+                }
+
                 ConfigSpinBox {
                     icon: "timer"
                     text: Translation.tr("Sample interval (ms)")

@@ -187,7 +187,10 @@
       "monitorFullscreenOnly": true,
       "monitorPollInterval": 200,
       "monitorColorDelta": 12,
-      "monitorSmooth": true
+      "monitorSmooth": true,
+      "monitorExcludedTypes": [
+        "GPU"
+      ]
     },
     "palette": {
       "accentColor": "",

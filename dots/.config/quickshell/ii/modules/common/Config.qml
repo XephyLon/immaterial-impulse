@@ -196,6 +196,11 @@ Singleton {
                     // Blend each sample halfway toward the previous applied
                     // color instead of snapping on hard scene cuts.
                     property bool monitorSmooth: true
+                    // Device types (as printed by `openrgb --list-devices`)
+                    // the ambient loop never writes to. GPU RGB rides the
+                    // graphics card's i2c bus - streaming to it mid-game
+                    // stalls rendering. The accent sync still covers these.
+                    property list<string> monitorExcludedTypes: ["GPU"]
                 }
                 property JsonObject palette: JsonObject {
                     property string type: "auto" // Allowed: auto, scheme-content, scheme-expressive, scheme-fidelity, scheme-fruit-salad, scheme-monochrome, scheme-neutral, scheme-rainbow, scheme-tonal-spot

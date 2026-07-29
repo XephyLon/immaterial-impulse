@@ -46,6 +46,7 @@ def test_default_config_ships_disabled():
         "monitorPollInterval": 200,
         "monitorColorDelta": 12,
         "monitorSmooth": True,
+        "monitorExcludedTypes": ["GPU"],
     }
 
 
@@ -113,9 +114,11 @@ def test_exclusions_are_name_keyed_and_rescan_before_apply():
         "Config.options.appearance.openrgb.excludedDevices ?? []" in source
     ), "exclusions must come from config with an empty-list fallback"
     # Indices shift when devices (dis)connect - the exclusion path must
-    # re-enumerate before every apply instead of trusting a cached scan.
+    # enumerate before applying instead of trusting a stale scan (the
+    # ambient loop's one-scan-per-activation reuse is the sole exception,
+    # pinned separately).
     assert re.search(
-        r"if \(root\.excludedDevices\.length > 0\) \{[\s\S]*?"
+        r"if \(root\.excludedDevices\.length > 0 \|\| typeFiltered\) \{[\s\S]*?"
         r"root\.applyAfterScan = true;\s*\n\s*root\.rescanDevices\(\);",
         source,
     ), "exclusion apply must scan first (applyAfterScan + rescanDevices)"
@@ -201,6 +204,31 @@ def test_ambient_loop_is_gated():
         r"detectorSyncProc\.thenStartServer = true;",
         source,
     ), "the server spawn must run the detector sync first, at most once per activation"
+
+
+def test_ambient_skips_gpu_writes_and_caches_the_scan():
+    source = _source()
+    config = CONFIG.read_text()
+    # GPU RGB rides the graphics i2c bus; streaming to it stalls games. The
+    # ambient loop must exclude it by default, and only the ambient loop -
+    # the accent path passes no type filter.
+    assert 'property list<string> monitorExcludedTypes: ["GPU"]' in config
+    assert re.search(
+        r'root\.pendingMode === "direct" \? root\.ambientTypeExclusions : \[\]',
+        source,
+    ), "type exclusions must only apply to ambient (direct) writes"
+    assert "excludedTypes.includes(dev.type)" in source
+    # One device scan per ambient activation: per-write scans double the bus
+    # traffic. The cache invalidates on activation and on exclusion changes
+    # (a detector-sync restart re-enumerates).
+    assert re.search(
+        r'if \(root\.pendingMode === "direct" && root\.ambientScanDone && root\.devices\.length > 0\) \{\s*\n\s*'
+        r"root\.startExclusionApply\(\);",
+        source,
+    ), "ambient applies must reuse the per-activation scan"
+    assert source.count("root.ambientScanDone = false") >= 2, (
+        "the scan cache must reset on activation and on exclusion changes"
+    )
 
 
 def test_detector_sync_is_argv_and_covers_exclusion_changes():

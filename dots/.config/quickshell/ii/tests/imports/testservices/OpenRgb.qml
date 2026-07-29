@@ -40,11 +40,11 @@ Singleton {
 
     // Pure: argv for a per-device apply, or null when no device remains.
     // Color and indices are separate argv elements - nothing is shell-spliced.
-    function buildDeviceCommand(hex, devices, excluded, mode = "static") {
+    function buildDeviceCommand(hex, devices, excluded, mode = "static", excludedTypes = []) {
         const cmd = ["openrgb"];
         let any = false;
         for (const dev of devices) {
-            if (excluded.includes(dev.name))
+            if (excluded.includes(dev.name) || excludedTypes.includes(dev.type))
                 continue;
             cmd.push("--device", String(dev.index), "--mode", mode, "--color", hex);
             any = true;
