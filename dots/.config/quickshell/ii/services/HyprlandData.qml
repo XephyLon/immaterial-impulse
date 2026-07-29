@@ -22,6 +22,19 @@ Singleton {
     property var monitors: []
     property var layers: ({})
 
+    // True while a fullscreen (not just maximized) client sits on the focused
+    // monitor's active workspace. Hyprland reports fullscreen as an int:
+    // 0 none, 1 maximized, 2 fullscreen, 3 both. Drives OpenRgb's ambient
+    // (monitor color) sync, and is reusable by anything else that cares.
+    readonly property bool focusedMonitorHasFullscreen: {
+        const mon = root.monitors.find(m => m.focused);
+        if (!mon)
+            return false;
+        return root.windowList.some(w => w.monitor === mon.id
+            && w.workspace?.id === mon.activeWorkspace?.id
+            && w.fullscreen >= 2);
+    }
+
     // Convenient stuff
 
     function toplevelsForWorkspace(workspace) {
