@@ -13,6 +13,22 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- Upstream merge (`pctrade/end4-pC`):
+  - Desktop Notes widget: a flip-card notes list on the background (add, edit,
+    swipe to delete; persisted in the shell state dir), toggle in
+    Settings → Background widgets.
+  - Live wallpaper preview (opt-in via `background.enableWallpaperPreview`):
+    single-click or arrow-key navigation previews the wallpaper on the real
+    background, double-click applies; preset apply clears any pending preview.
+  - Dock-to-panel bar widget: drag-to-reorder pinned apps with animated slot
+    translation.
+  - Dock: the pinned-apps section and its separators hide when nothing is
+    pinned; drag-ghost polish.
+  - Screenshot while recording snips via plain grim+slurp instead of the
+    region-selector UI (which doubles as the recording control), and the record
+    keybind now stops a running recording.
+  - Bar settings: the divider space-width spinbox is only enabled for the
+    "space" divider style.
 - Upstream feature sweep (first batch, from the `end-4/dots-hyprland` tracker):
   - GPU usage/temperature now works on AMD/Intel too (hwmon/sysfs fallback);
     the NVIDIA path is unchanged.
