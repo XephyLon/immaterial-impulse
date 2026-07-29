@@ -594,6 +594,11 @@ Singleton {
                     property bool showMic: true
                     property bool showCamera: true
                     property bool showScreencast: true
+                    // The ambient RGB sampler (OpenRGB monitor sync) grabs a
+                    // frame every poll tick, which would blink the screencast
+                    // dot once a second. While it runs, only casts that hold
+                    // their state longer than a capture pulse are shown.
+                    property bool ignoreAmbientCapture: true
                 }
                 property JsonObject indicators: JsonObject {
                     property JsonObject notifications: JsonObject {

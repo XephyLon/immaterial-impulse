@@ -288,6 +288,21 @@ def test_ambient_exit_snaps_back_to_accent():
     )
 
 
+def test_privacy_indicator_filters_ambient_capture_pulses():
+    # The ambient sampler grims a frame per tick; without a filter the bar's
+    # screencast dot blinks once a second for the shell's own capture. The
+    # filter is opt-out (config default true) and only debounces while the
+    # sampler runs, so real casts still show (after the pulse window).
+    config = CONFIG.read_text()
+    assert "property bool ignoreAmbientCapture: true" in config
+    capture = (ROOT / "services" / "MediaCapture.qml").read_text()
+    assert "root.ignoreAmbientCapture && OpenRgb.ambientActive" in capture
+    assert re.search(
+        r"id: ambientPulseFilter[\s\S]*?onTriggered: root\.screencastActive = true",
+        capture,
+    ), "a held cast must still surface through the pulse filter"
+
+
 def test_fullscreen_flag_lives_in_hyprland_data():
     hypr = (ROOT / "services" / "HyprlandData.qml").read_text()
     assert "readonly property bool focusedMonitorHasFullscreen" in hypr

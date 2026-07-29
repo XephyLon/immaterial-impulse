@@ -35,6 +35,7 @@ Singleton {
     readonly property bool showMic: Config.options.bar.privacyIndicator?.showMic ?? true
     readonly property bool showCamera: Config.options.bar.privacyIndicator?.showCamera ?? true
     readonly property bool showScreencast: Config.options.bar.privacyIndicator?.showScreencast ?? true
+    readonly property bool ignoreAmbientCapture: Config.options.bar.privacyIndicator?.ignoreAmbientCapture ?? true
     readonly property int pollInterval: Config.options.bar.privacyIndicator?.pollInterval ?? 2000
 
     property bool micActive: false
@@ -133,8 +134,31 @@ Singleton {
         function onRawEvent(event) {
             if (event.name !== "screencast") return;
             if (!root.showScreencast) { root.screencastActive = false; return; }
-            root.screencastActive = String(event.data ?? "").split(",")[0].trim() === "1";
+            const active = String(event.data ?? "").split(",")[0].trim() === "1";
+            // The ambient RGB sampler (OpenRgb) grims a frame every poll
+            // tick, firing a millisecond on/off screencast pulse each time -
+            // shown raw, the dot blinks once a second for the shell's own
+            // capture. While the sampler runs, only report a cast that still
+            // holds its state after the pulse window; a real share or
+            // recording stays up, a grim pulse is long gone.
+            if (root.ignoreAmbientCapture && OpenRgb.ambientActive) {
+                if (active) {
+                    ambientPulseFilter.restart();
+                } else {
+                    ambientPulseFilter.stop();
+                    root.screencastActive = false;
+                }
+                return;
+            }
+            ambientPulseFilter.stop();
+            root.screencastActive = active;
         }
+    }
+
+    Timer {
+        id: ambientPulseFilter
+        interval: 700
+        onTriggered: root.screencastActive = true
     }
 
     Timer {
