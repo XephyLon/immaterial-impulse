@@ -61,20 +61,26 @@ def test_palette_changes_are_debounced():
 def test_color_is_argv_not_shell_spliced():
     source = _source()
     assert re.search(
-        r'applyProc\.command = \["openrgb", "--mode", "static", "--color", hex\]',
+        r'applyProc\.command = \["openrgb", "--mode", root\.pendingMode, "--color", hex\]',
         source,
     ), "openrgb must be invoked as an argv array with the color as its own element"
+    # The mode is one of two internal constants, never user input.
+    assert re.findall(r'root\.pendingMode = "(\w+)"', source) == ["static", "direct"], (
+        "pendingMode must only ever be the static (accent) or direct (ambient) constant"
+    )
     # The per-device (exclusion) path builds argv the same way.
     assert (
-        'cmd.push("--device", String(dev.index), "--mode", "static", "--color", hex)'
+        'cmd.push("--device", String(dev.index), "--mode", mode, "--color", hex)'
         in source
     ), "per-device apply must keep color and index as their own argv elements"
-    # The only bash -c uses in the file are the two constant availability
-    # probes (openrgb for the accent path, grim for the ambient sampler).
+    # The only bash -c uses in the file are the constant probes: the two
+    # binary availability checks and the SDK-server port check.
     bash_commands = re.findall(r'"bash", "-c", (.+?)\]', source)
-    assert bash_commands == ['"command -v openrgb"', '"command -v grim"'], (
-        "bash -c must only carry the constant availability probes, never values"
-    )
+    assert bash_commands == [
+        '"command -v openrgb"',
+        '"command -v grim"',
+        '"exec 3<>/dev/tcp/127.0.0.1/6742"',
+    ], "bash -c must only carry the constant probes, never values"
 
 
 def _function_block(source: str, name: str) -> str:
@@ -174,13 +180,24 @@ def test_ambient_schema_defaults_to_accent():
 
 def test_ambient_loop_is_gated():
     source = _source()
-    # The sampling clock only runs while ambient mode is active AND grim is
-    # known to exist - never for accent-only users.
+    # The sampling clock only runs while ambient mode is active, grim is
+    # known to exist AND an OpenRGB SDK server answers - serverless CLI
+    # writes do a full detection pass per call, which resets devices to
+    # their default (white) and takes seconds.
     assert re.search(
         r"Timer \{\s*\n\s*id: ambientTimer\s*\n\s*"
-        r"running: root\.ambientActive && root\.grimAvailable",
+        r"running: root\.ambientActive && root\.grimAvailable && root\.serverReady",
         source,
-    ), "the ambient Timer must be gated on ambientActive && grimAvailable"
+    ), "the ambient Timer must be gated on ambientActive && grimAvailable && serverReady"
+    # The managed server is a constant argv and only spawned once per
+    # activation (no crash-loop respawns from the poll timer).
+    assert 'command: ["openrgb", "--server"]' in source
+    assert "root.serverSpawnAttempted = false" in source
+    assert re.search(
+        r"if \(!root\.serverSpawnAttempted && !serverProc\.running\) \{\s*\n\s*"
+        r"root\.serverSpawnAttempted = true;",
+        source,
+    ), "the server must be spawned at most once per ambient activation"
     # ambientActive itself derives from monitor mode, the lockscreen, and the
     # fullscreen-only option against HyprlandData's derived flag.
     assert "readonly property bool monitorMode: root.enabled && root.colorSource === \"monitor\"" in source

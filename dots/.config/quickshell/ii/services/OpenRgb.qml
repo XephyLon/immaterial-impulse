@@ -40,6 +40,10 @@ Singleton {
     property bool available: false
     property string lastAppliedColor: ""
     property string pendingColor: ""
+    // Mode for the next apply: "static" for accent syncs, "direct" for the
+    // ambient loop (transient streaming writes; also supported by devices
+    // that have no static mode, and spares controller flash at Hz rates).
+    property string pendingMode: "static"
     // [{ index: int, name: string, type: string }] from the last device scan.
     // Names repeat for identical hardware (e.g. two RAM sticks); exclusion is
     // name-keyed, so excluding one excludes all of its kind.
@@ -83,6 +87,9 @@ Singleton {
         if (hex === root.lastAppliedColor)
             return;
         root.pendingColor = hex;
+        // "static" persists on-device where supported (the CLI counterpart of
+        // upstream's SDK direct-mode writes); the ambient loop uses "direct".
+        root.pendingMode = "static";
         availabilityProc.running = false;
         availabilityProc.running = true;
     }
@@ -105,9 +112,8 @@ Singleton {
         root.pendingColor = "";
         root.lastAppliedColor = hex;
         // Color is passed as its own argv element - never spliced into a
-        // shell string. "static" persists on-device where supported (the CLI
-        // counterpart of upstream's SDK direct-mode writes).
-        applyProc.command = ["openrgb", "--mode", "static", "--color", hex];
+        // shell string.
+        applyProc.command = ["openrgb", "--mode", root.pendingMode, "--color", hex];
         applyProc.running = true;
     }
 
@@ -118,7 +124,7 @@ Singleton {
         root.pendingColor = "";
         if (hex === "")
             return;
-        const cmd = root.buildDeviceCommand(hex, root.devices, root.excludedDevices);
+        const cmd = root.buildDeviceCommand(hex, root.devices, root.excludedDevices, root.pendingMode);
         if (cmd === null) {
             // Every device excluded, or the scan came back empty: nothing to
             // write. Leave the dedup color cleared so re-including a device
@@ -133,13 +139,13 @@ Singleton {
 
     // Pure: argv for a per-device apply, or null when no device remains.
     // Color and indices are separate argv elements - nothing is shell-spliced.
-    function buildDeviceCommand(hex, devices, excluded) {
+    function buildDeviceCommand(hex, devices, excluded, mode = "static") {
         const cmd = ["openrgb"];
         let any = false;
         for (const dev of devices) {
             if (excluded.includes(dev.name))
                 continue;
-            cmd.push("--device", String(dev.index), "--mode", "static", "--color", hex);
+            cmd.push("--device", String(dev.index), "--mode", mode, "--color", hex);
             any = true;
         }
         return any ? cmd : null;
@@ -273,6 +279,15 @@ Singleton {
     // smooths hard scene cuts. By default the loop only runs while a
     // fullscreen client is on the focused monitor (HyprlandData's derived
     // flag); leaving that state snaps the lights back to the accent.
+    //
+    // Continuous writes are only sane against a running OpenRGB SDK server:
+    // without one every CLI call does a full hardware detection pass
+    // (seconds, and it resets devices to their default color - the lights
+    // just show white). So ambient activation probes the server port and
+    // starts a managed `openrgb --server` when nothing answers; sampling
+    // stays gated until the port accepts. The server is left running (the
+    // accent path benefits from the fast client mode too) and dies with the
+    // shell process.
 
     readonly property string colorSource: Config.options.appearance.openrgb.colorSource ?? "accent"
     readonly property bool monitorMode: root.enabled && root.colorSource === "monitor"
@@ -281,6 +296,8 @@ Singleton {
         && (!(Config.options.appearance.openrgb.monitorFullscreenOnly ?? true)
             || HyprlandData.focusedMonitorHasFullscreen)
     property bool grimAvailable: false
+    property bool serverReady: false
+    property bool serverSpawnAttempted: false
     readonly property string ambientDir: FileUtils.trimFileProtocol(`${Directories.cache}/openrgb`)
     readonly property string ambientFramePath: `${root.ambientDir}/ambient-frame.jpg`
 
@@ -289,6 +306,11 @@ Singleton {
             Quickshell.execDetached(["mkdir", "-p", root.ambientDir]);
             grimProbeProc.running = false;
             grimProbeProc.running = true;
+            // One spawn attempt per activation - a crash-looping server
+            // should not be respawned every poll tick.
+            root.serverSpawnAttempted = false;
+            serverProbeProc.running = false;
+            serverProbeProc.running = true;
         } else {
             // Snap back to the accent (debounced): clear the dedup color so
             // the accent re-applies even when it equals the last ambient write.
@@ -325,6 +347,9 @@ Singleton {
                 hex = root.mixHex(root.lastAppliedColor, hex, 0.5);
         }
         root.pendingColor = hex;
+        // Transient streaming mode: no per-write mode persistence, and it
+        // exists on devices that lack "static" (gamepads, some keyboards).
+        root.pendingMode = "direct";
         availabilityProc.running = false;
         availabilityProc.running = true;
     }
@@ -355,11 +380,24 @@ Singleton {
 
     Timer {
         id: ambientTimer
-        running: root.ambientActive && root.grimAvailable
+        running: root.ambientActive && root.grimAvailable && root.serverReady
         interval: Config.options.appearance.openrgb.monitorPollInterval ?? 200
         repeat: true
         triggeredOnStart: true
         onTriggered: root.captureAmbientFrame()
+    }
+
+    // Re-probes the SDK server port until it answers (covers both our own
+    // server starting up and one the user runs themselves).
+    Timer {
+        id: serverPollTimer
+        running: root.ambientActive && !root.serverReady
+        interval: 1000
+        repeat: true
+        onTriggered: {
+            if (!serverProbeProc.running)
+                serverProbeProc.running = true;
+        }
     }
 
     Process {
@@ -368,6 +406,34 @@ Singleton {
         command: ["bash", "-c", "command -v grim"]
         onExited: (exitCode, exitStatus) => {
             root.grimAvailable = exitCode === 0; // Graceful no-op without grim
+        }
+    }
+
+    Process {
+        id: serverProbeProc
+        // Constant command string - no values are spliced in. Exit 0 iff the
+        // local OpenRGB SDK server port accepts a connection.
+        command: ["bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6742"]
+        onExited: (exitCode, exitStatus) => {
+            root.serverReady = exitCode === 0;
+            if (root.serverReady || !root.ambientActive)
+                return;
+            if (!root.serverSpawnAttempted && !serverProc.running) {
+                root.serverSpawnAttempted = true;
+                serverProc.running = true;
+            }
+        }
+    }
+
+    Process {
+        id: serverProc
+        // Constant argv - nothing is spliced in. One detection pass at
+        // startup, then devices stay open for fast SDK-client writes.
+        command: ["openrgb", "--server"]
+        onExited: (exitCode, exitStatus) => {
+            root.serverReady = false;
+            if (exitCode !== 0)
+                console.warn("[OpenRgb] openrgb --server exited with code", exitCode);
         }
     }
 

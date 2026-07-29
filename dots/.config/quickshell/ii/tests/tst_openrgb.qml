@@ -94,6 +94,16 @@ TestCase {
         compare(cmd.filter(a => a === "--device").length, 4)
     }
 
+    function test_build_command_mode_defaults_to_static_and_accepts_direct() {
+        const devices = OpenRgb.parseDeviceList(sampleListing)
+        const staticCmd = OpenRgb.buildDeviceCommand("010203", devices, [])
+        verify(staticCmd.includes("static"))
+        verify(!staticCmd.includes("direct"))
+        const directCmd = OpenRgb.buildDeviceCommand("010203", devices, [], "direct")
+        verify(directCmd.includes("direct"))
+        verify(!directCmd.includes("static"))
+    }
+
     function test_color_delta_is_summed_channel_difference() {
         compare(OpenRgb.colorDelta("000000", "000000"), 0)
         compare(OpenRgb.colorDelta("FFFFFF", "000000"), 765)
