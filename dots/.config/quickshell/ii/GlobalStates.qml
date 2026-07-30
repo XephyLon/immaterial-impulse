@@ -49,6 +49,7 @@ Singleton {
     property bool dropShelfOpen: false
     property real dropShelfX: 0
     property real dropShelfY: 0
+    property bool dropShelfAnchorBelow: false // Shelf hangs below the anchor point (bar reveal) instead of above it
 
     onSidebarRightOpenChanged: {
         if (GlobalStates.sidebarRightOpen) {
