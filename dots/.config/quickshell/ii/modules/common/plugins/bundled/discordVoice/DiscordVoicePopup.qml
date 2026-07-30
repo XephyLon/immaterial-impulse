@@ -106,6 +106,55 @@ StyledPopup {
             }
         }
 
+        // Companion setup: the bridge says the connected client (Vesktop/
+        // Equibop) can't authorize voice RPC. One click runs the installer
+        // script; the client then needs one full restart.
+        ColumnLayout {
+            visible: DiscordVoice.companionNeeded && !DiscordVoice.inVoice
+            Layout.fillWidth: true
+            spacing: Appearance.spacing.space100
+
+            RippleButton {
+                Layout.fillWidth: true
+                implicitHeight: 44
+                enabled: !DiscordVoice.installerBusy && DiscordVoice.installerState !== "done"
+                buttonRadius: Appearance.rounding.full
+                colBackground: Appearance.colors.colPrimary
+                colBackgroundHover: Appearance.colors.colPrimaryHover
+                onClicked: DiscordVoice.installCompanion()
+                StyledText {
+                    anchors.centerIn: parent
+                    text: {
+                        switch (DiscordVoice.installerState) {
+                        case "running": return "Installing companion…";
+                        case "done": return "Installed — restart your Discord client";
+                        case "failed": return "Install failed — try again";
+                        default: return "Install voice companion";
+                        }
+                    }
+                    color: Appearance.colors.colOnPrimary
+                    font.weight: Font.DemiBold
+                }
+            }
+            StyledText {
+                visible: DiscordVoice.installerState === "running" || DiscordVoice.installerState === "failed"
+                Layout.fillWidth: true
+                text: DiscordVoice.installerLine
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                elide: Text.ElideRight
+                maximumLineCount: 1
+            }
+            StyledText {
+                visible: DiscordVoice.installerState === "done"
+                Layout.fillWidth: true
+                text: "Quit the client fully (tray icon too), start it again, then Reconnect."
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                wrapMode: Text.Wrap
+            }
+        }
+
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: Appearance.spacing.space50

@@ -177,4 +177,48 @@ Singleton {
             restartTimer.restart();
         }
     }
+
+    // --- Companion installer (popup-driven) -------------------------------
+    //
+    // The Vesktop/Equibop companion is a user plugin that only exists in a
+    // source build of the client mod; scripts/discordVoice/
+    // install_companion.sh automates the whole clone/build/rewire flow. The
+    // popup surfaces it as a one-click action when the bridge reports the
+    // companion is missing, streaming the script's progress lines.
+
+    // True when the connected client cannot authorize voice RPC - the exact
+    // situation the companion (and its installer) exists for.
+    readonly property bool companionNeeded: root.errorMessage.toLowerCase().includes("companion")
+    property string installerState: "idle" // idle | running | done | failed
+    property string installerLine: ""      // latest progress line for the UI
+    readonly property bool installerBusy: installerState === "running"
+
+    function installCompanion() {
+        if (installerProc.running)
+            return;
+        root.installerState = "running";
+        root.installerLine = "";
+        installerProc.running = true;
+    }
+
+    Process {
+        id: installerProc
+        // Constant argv - the script auto-detects Vesktop/Equibop itself.
+        command: ["bash", `${Directories.scriptPath}/discordVoice/install_companion.sh`]
+        stdout: SplitParser {
+            onRead: data => {
+                const line = data.trim();
+                if (line) root.installerLine = line;
+            }
+        }
+        stderr: SplitParser {
+            onRead: data => {
+                const line = data.trim();
+                if (line) root.installerLine = line;
+            }
+        }
+        onExited: (code, status) => {
+            root.installerState = code === 0 ? "done" : "failed";
+        }
+    }
 }

@@ -5,19 +5,26 @@ authenticated voice RPC commands. This Vencord user plugin publishes the same
 voice state locally so the Quickshell plugin can support Vesktop without
 removing the regular Discord RPC backend.
 
-## Quick install (Vesktop)
+## Quick install (Vesktop / Equibop)
+
+Easiest: open the Discord Voice popup in the shell — when the companion is
+missing it shows an **Install voice companion** button that runs the
+installer and streams its progress. Or run it yourself:
 
 ```
 ~/.config/quickshell/ii/scripts/discordVoice/install_companion.sh
 ```
 
-The script clones/updates Vencord into
-`~/.local/share/immaterial-impulse/Vencord`, drops the companion into
-`src/userplugins/end4DiscordVoice`, builds with pnpm, and points Vesktop's
-Vencord Location at the built `dist` (backing up `state.json` first — close
-Vesktop fully before running). Then start Vesktop; **End4DiscordVoice** is
-enabled by default and visible in Vencord's Plugins page. Re-run the script
-any time to update. Needs `git`, `node` and `pnpm` (or corepack).
+The script detects installed clients (or takes
+`--client vesktop|equibop`), clones/updates the matching mod source into
+`~/.local/share/immaterial-impulse` (Vencord for Vesktop, Equicord for
+Equibop — same plugin API), drops the companion into
+`src/userplugins/end4DiscordVoice`, builds with pnpm, and points the
+client's custom-mod location (`state.json`: `vencordDir`/`equicordDir`) at
+the built `dist`, backing the original up first — close the client fully
+before running. Then start the client; **End4DiscordVoice** is enabled by
+default and visible in the mod's Plugins page. Re-run any time to update.
+Needs `git`, `node` and `pnpm` (or corepack).
 
 ## Manual install
 
@@ -29,7 +36,8 @@ fully restart Vesktop.
 ## Other clients
 
 Official Discord needs no companion — the shell uses Discord's native local
-RPC. Legcord is not supported: it bundles its own Vencord build with no
+RPC. Equibop works via the Equicord build above. Legcord is not supported:
+it bundles its own Vencord build with no
 custom-location picker, and the companion requires Vencord's native plugin
 helpers (it opens a local Unix socket from the Electron main process).
 

@@ -583,15 +583,39 @@ class CompanionInstallerTests(unittest.TestCase):
         self.assertTrue(self.INSTALLER.stat().st_mode & 0o111,
                         "install_companion.sh must be executable")
 
-    def test_installer_is_safe_about_vesktop_state(self):
+    def test_installer_is_safe_about_client_state(self):
         script = self.INSTALLER.read_text()
-        # Editing state.json while Vesktop runs loses the change on exit.
-        self.assertIn("pgrep -x vesktop", script)
+        # Editing state.json while the client runs loses the change on exit.
+        self.assertIn('pgrep -x "$proc"', script)
         # The original state file is backed up exactly once, never clobbered.
-        self.assertIn('[[ -f "$VESKTOP_STATE.pre-end4-discord" ]] || cp', script)
+        self.assertIn('[[ -f "$state.pre-end4-discord" ]] || cp', script)
         # The JSON edit goes through python, not sed/string splicing.
-        self.assertIn('python3 - "$VESKTOP_STATE"', script)
+        self.assertIn('python3 - "$state" "$key"', script)
         self.assertIn("set -euo pipefail", script)
+
+    def test_installer_supports_vesktop_and_equibop(self):
+        script = self.INSTALLER.read_text()
+        # Vesktop builds Vencord, Equibop builds Equicord (same plugin API),
+        # each pointing its own state key at its own build.
+        self.assertIn("Vendicated/Vencord.git", script)
+        self.assertIn("Equicord/Equicord.git", script)
+        self.assertIn('key="vencordDir"', script)
+        self.assertIn('key="equicordDir"', script)
+        # Auto-detection covers both config dirs.
+        self.assertIn('-d "$CONFIG_HOME/vesktop"', script)
+        self.assertIn('-d "$CONFIG_HOME/equibop"', script)
+
+    def test_popup_offers_one_click_companion_install(self):
+        service = (ROOT / "services/DiscordVoice.qml").read_text()
+        # The service owns the installer process; argv is constant.
+        self.assertIn("function installCompanion()", service)
+        self.assertIn(
+            'command: ["bash", `${Directories.scriptPath}/discordVoice/install_companion.sh`]',
+            service)
+        self.assertIn("readonly property bool companionNeeded", service)
+        popup = (ROOT / "modules/common/plugins/bundled/discordVoice/DiscordVoicePopup.qml").read_text()
+        self.assertIn("DiscordVoice.installCompanion()", popup)
+        self.assertIn("DiscordVoice.companionNeeded", popup)
 
     def test_installer_stages_the_companion_from_the_shipped_source(self):
         script = self.INSTALLER.read_text()
