@@ -1,5 +1,12 @@
 # Research: shake-to-summon DropShelf while dragging files
 
+> **Status: implemented.** All three designs shipped as the bundled
+> `drop_shelf` plugin (`modules/common/plugins/bundled/dropShelf/`):
+> C = `Super+U` / `qs -c ii ipc call dropShelf toggle`, B = drag-to-bar
+> reveal, A = `scripts/dropshelf/shake_detector.py` behind the plugin's
+> "Shake cursor to summon" option. See CHANGELOG and
+> `tests/test_dropshelf_summon.py`.
+
 Feature idea: a user picks up files in a file explorer (Dolphin, Nautilus,
 Thunar), shakes the cursor mid-drag, and the DropShelf appears under the
 cursor to receive the drop — the macOS **Dropover** interaction, on Hyprland.

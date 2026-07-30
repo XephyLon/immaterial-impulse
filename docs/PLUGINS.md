@@ -100,6 +100,22 @@ Manifest options support `boolean`, `choice`, `number`, and `text`. Text options
 native `ConfigTextArea`; `placeholder`, `maxLength`, and `uppercase` may be supplied for short values
 such as currency codes.
 
+## Drop Shelf
+
+The bundled `drop_shelf` package owns the drop-shelf panel (`panel` entry
+point) and its summoning: a mid-drag global shortcut (`Super+U`,
+`quickshell:dropShelfSummon`), an IPC surface (`qs -c ii ipc call dropShelf
+toggle|open|close`), an opt-in cursor-shake watcher
+(`scripts/dropshelf/shake_detector.py` polling the raw Hyprland request
+socket; paused while locked or fullscreen), and a blur-able background (the
+tint's opacity is an option; compositor blur behind `quickshell:*` layers
+does the frosting). The shelf data model (`DropShelf` singleton) stays in the
+core shell because the desktop menu and the bar's drag-reveal feed it; both
+of those surfaces hide when the plugin is disabled. The shake watcher is a
+single long-lived helper started by a `running:` binding — it only exits on
+its own if the compositor goes away, and a toggle restarts it; it is not a
+respawn-on-exit stream.
+
 ## Desktop blur surfaces
 
 Every desktop plugin receives a `Blur background` setting. When enabled, a `Background opacity`

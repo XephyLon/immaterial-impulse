@@ -315,6 +315,12 @@ if ! python3 "$SCRIPT_DIR/test_ripple_lifecycle_contract.py"; then
     exit 1
 fi
 
+echo "Running drop shelf summon tests..."
+if ! python3 "$SCRIPT_DIR/test_dropshelf_summon.py"; then
+    echo "Drop shelf summon tests failed."
+    exit 1
+fi
+
 echo "Running event-loop safety tests..."
 if ! python3 "$SCRIPT_DIR/test_event_loop_safety_contract.py"; then
     echo "Event-loop safety tests failed."

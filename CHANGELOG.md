@@ -23,6 +23,32 @@ own repo; the installer pins which revision it builds.
   of the font so stale-font breakage can't sneak back in.
 
 ### Added
+- Drop Shelf is now a bundled **plugin** (`drop_shelf`, enabled by default)
+  with Dropover-style summoning (see `docs/dropshelf-shake-research.md`):
+  - **Mid-drag summon**: `Super+U` (Hyprland `quickshell:dropShelfSummon`
+    global shortcut) or `qs -c ii ipc call dropShelf toggle` opens the shelf
+    under the cursor — works while dragging files, so the in-flight drag can
+    be dropped straight onto it.
+  - **Drag-to-bar reveal**: dragging files onto the bar pops the shelf out
+    below it (the Wayland-native trigger — a `DropArea` learns of a drag the
+    moment it crosses a shell surface); dropping on the bar itself also
+    stashes the files.
+  - **Shake to summon** (opt-off by default): a helper polls the Hyprland
+    request socket (raw socket, ~0.03 ms/query at 60 Hz) and recognizes
+    ≥3 fast horizontal direction reversals with extrema-based leg tracking
+    (`scripts/dropshelf/shake_detector.py`, pure-logic detector covered by
+    `tests/test_dropshelf_summon.py`). Paused while locked or a fullscreen
+    app is focused. Wayland offers no global "drag in progress" signal, so
+    the gesture is armed whenever enabled — the strict gesture plus
+    auto-dismiss keeps false positives harmless.
+  - A summoned shelf **auto-dismisses** (default 5 s, configurable) unless
+    hovered, dropped on, or holding items.
+  - **Blur-able background**: the shelf tint's opacity is configurable and
+    the compositor blurs behind every `quickshell:*` layer, so lowering it
+    frosts the shelf; both knobs live in the plugin's settings along with
+    bar-reveal, shake, sensitivity and auto-dismiss options.
+  - The desktop-menu "DropShelf" entry and the bar reveal hide when the
+    plugin is disabled; the shelf window is created lazily on open.
 - Discord voice: one-shot companion installer
   (`scripts/discordVoice/install_companion.sh`) — auto-detects Vesktop and
   Equibop (`--client` to pick), clones and builds the matching mod (Vencord /
