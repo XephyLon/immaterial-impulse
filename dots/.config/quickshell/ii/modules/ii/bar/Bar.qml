@@ -8,6 +8,7 @@ import Quickshell.Hyprland
 import qs
 import qs.services
 import qs.modules.common
+import qs.modules.common.plugins
 import qs.modules.common.widgets
 
 Scope {
@@ -112,6 +113,40 @@ Scope {
                 }
                 Component.onDestruction: {
                     GlobalFocusGrab.removePersistent(barRoot);
+                }
+
+                // Drag files over the bar to pop the drop shelf out below it -
+                // the Wayland-native drop shelf summon (a DropArea learns of a
+                // drag the moment it crosses this surface; nothing else can).
+                DropArea {
+                    anchors.fill: parent
+                    keys: ["text/uri-list"]
+                    onEntered: drag => {
+                        const shelfEnabled = Config.options.plugins.enabled.includes("drop_shelf")
+                            && PluginState.option("drop_shelf", "dragToBarReveal", true)
+                        if (!shelfEnabled || !drag.hasUrls) {
+                            drag.accepted = false
+                            return
+                        }
+                        drag.accepted = true
+                        if (!GlobalStates.dropShelfOpen) {
+                            GlobalStates.dropShelfX = drag.x
+                            GlobalStates.dropShelfAnchorBelow = !Config.options.bar.bottom
+                            GlobalStates.dropShelfY = Config.options.bar.bottom
+                                ? barRoot.screen.height - Appearance.sizes.barHeight - 10
+                                : Appearance.sizes.barHeight
+                            GlobalStates.dropShelfOpen = true
+                            DropShelf.armAutoDismiss()
+                        }
+                    }
+                    onDropped: drop => {
+                        if (!drop.hasUrls) {
+                            drop.accepted = false
+                            return
+                        }
+                        DropShelf.addItems(drop.urls)
+                        drop.accept()
+                    }
                 }
 
                 MouseArea  {
