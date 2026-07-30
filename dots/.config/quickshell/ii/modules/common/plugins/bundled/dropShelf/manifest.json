@@ -1,0 +1,66 @@
+{
+  "id": "drop_shelf",
+  "name": "Drop Shelf",
+  "description": "Dropover-style shelf for files: stash drags mid-flight, summon with a shortcut, cursor shake, or by dragging onto the bar",
+  "version": "1.0.0",
+  "author": "Immaterial Impulse contributors",
+  "apiVersion": 1,
+  "capabilities": ["panel", "settings"],
+  "permissions": ["process", "settings_read", "settings_write"],
+  "options": [
+    {
+      "key": "dragToBarReveal",
+      "type": "boolean",
+      "label": "Reveal when dragging files onto the bar",
+      "icon": "swipe_up",
+      "default": true
+    },
+    {
+      "key": "shakeToSummon",
+      "type": "boolean",
+      "label": "Shake cursor to summon",
+      "icon": "gesture",
+      "default": false
+    },
+    {
+      "key": "shakeSensitivity",
+      "type": "number",
+      "label": "Shake sensitivity (%)",
+      "icon": "tune",
+      "from": 50,
+      "to": 300,
+      "step": 25,
+      "default": 100,
+      "enabledWhen": "shakeToSummon"
+    },
+    {
+      "key": "autoDismissSeconds",
+      "type": "number",
+      "label": "Auto-dismiss after (seconds)",
+      "icon": "timer",
+      "from": 0,
+      "to": 60,
+      "step": 1,
+      "default": 5
+    },
+    {
+      "key": "blurBackground",
+      "type": "boolean",
+      "label": "Blur background",
+      "icon": "blur_on",
+      "default": true
+    },
+    {
+      "key": "backgroundOpacity",
+      "type": "number",
+      "label": "Background opacity",
+      "icon": "opacity",
+      "from": 0,
+      "to": 1,
+      "step": 0.05,
+      "default": 0.5,
+      "enabledWhen": "blurBackground"
+    }
+  ],
+  "panel": { "component": "DropShelfPanel.qml" }
+}

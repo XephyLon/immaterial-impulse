@@ -25,7 +25,6 @@ import qs.modules.ii.overlay
 import qs.modules.ii.verticalBar
 import qs.modules.ii.wallpaperSelector
 import qs.modules.ii.desktopMenu
-import qs.modules.ii.dropover
 
 Scope {
     PanelLoader { extraCondition: !Config.options.bar.vertical; component: Bar {} }
@@ -51,5 +50,4 @@ Scope {
     PanelLoader { component: WallpaperSelector {} }
     PanelLoader { component: Settings {} }
     PanelLoader { component: DesktopMenu {} }
-    PanelLoader { component: DropShelfPanel {} }
 }
