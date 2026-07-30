@@ -4,8 +4,11 @@
 > `drop_shelf` plugin (`modules/common/plugins/bundled/dropShelf/`):
 > C = `Super+U` / `qs -c ii ipc call dropShelf toggle`, B = drag-to-bar
 > reveal, A = `scripts/dropshelf/shake_detector.py` behind the plugin's
-> "Shake cursor to summon" option. See CHANGELOG and
-> `tests/test_dropshelf_summon.py`.
+> "Shake cursor to summon" option. The always-armed limitation below was
+> subsequently solved: the detector gates on a held BTN_LEFT (global evdev
+> state via EVIOCGKEY, `input` group required), which is what every pointer
+> drag has in common — shaking a free cursor no longer triggers. See
+> CHANGELOG and `tests/test_dropshelf_summon.py`.
 
 Feature idea: a user picks up files in a file explorer (Dolphin, Nautilus,
 Thunar), shakes the cursor mid-drag, and the DropShelf appears under the

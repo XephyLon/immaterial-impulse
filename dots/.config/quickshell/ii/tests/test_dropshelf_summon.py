@@ -96,6 +96,36 @@ class ScriptContractTests(unittest.TestCase):
     def test_output_line_shape(self):
         self.assertIn('print(f"SHAKE {x:.0f} {y:.0f}", flush=True)', self.script)
 
+    def test_shake_armed_only_while_button_held(self):
+        # A Wayland client cannot see drags globally, but every pointer drag
+        # holds BTN_LEFT - the detector must gate on it (EVIOCGKEY state
+        # poll) and reset the gesture when the button is released.
+        self.assertIn("BTN_LEFT = 0x110", self.script)
+        self.assertIn("buttons.available and not buttons.pressed()", self.script)
+        self.assertIn("detector.reset()", self.script)
+        # Missing 'input'-group access must degrade loudly, not die.
+        self.assertIn("shake armed even outside drags", self.script)
+
+
+class ButtonWatcherTests(unittest.TestCase):
+    def test_no_devices_degrades_to_unavailable(self):
+        real_glob = shake_detector.glob.glob
+        shake_detector.glob.glob = lambda pattern: []
+        try:
+            watcher = shake_detector.ButtonWatcher()
+            self.assertFalse(watcher.available)
+            self.assertFalse(watcher.pressed())
+        finally:
+            shake_detector.glob.glob = real_glob
+
+    def test_released_button_resets_gesture_state(self):
+        d = ShakeDetector()
+        run_zigzag(d, legs=2)  # partial gesture accumulated
+        self.assertTrue(d.legs or d.direction)
+        d.reset()
+        self.assertEqual(d.legs, [])
+        self.assertEqual(d.direction, 0)
+
 
 class QmlWiringTests(unittest.TestCase):
     def setUp(self):

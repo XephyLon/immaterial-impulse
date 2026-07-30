@@ -38,9 +38,11 @@ own repo; the installer pins which revision it builds.
     ≥3 fast horizontal direction reversals with extrema-based leg tracking
     (`scripts/dropshelf/shake_detector.py`, pure-logic detector covered by
     `tests/test_dropshelf_summon.py`). Paused while locked or a fullscreen
-    app is focused. Wayland offers no global "drag in progress" signal, so
-    the gesture is armed whenever enabled — the strict gesture plus
-    auto-dismiss keeps false positives harmless.
+    app is focused. Wayland offers no global "drag in progress" signal, but
+    every pointer drag holds the primary button — the gesture is armed only
+    while BTN_LEFT is down (global state read via the `EVIOCGKEY` evdev
+    ioctl; needs `input`-group membership, degrades to always-armed
+    without it), so shaking a free cursor does nothing.
   - A summoned shelf **auto-dismisses** (default 5 s, configurable) unless
     hovered, dropped on, or holding items.
   - **Blur-able background**: the shelf tint's opacity is configurable and

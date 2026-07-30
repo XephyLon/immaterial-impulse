@@ -6,11 +6,17 @@ per query - never fork hyprctl per poll) and prints "SHAKE <x> <y>" when a
 shake gesture is recognized: several long, fast horizontal direction reversals
 inside a short sliding window.
 
-Wayland offers no global "drag in progress" signal, so the caller decides when
-this runs; the strict gesture keeps accidental triggers rare.
+Wayland offers no global "drag in progress" signal, but every pointer drag
+holds the primary button - so the gesture is armed only while BTN_LEFT is
+down, read via the EVIOCGKEY evdev ioctl (state poll, no event stream, no
+grab). Requires 'input' group membership; without it the detector degrades
+to always-armed and says so on stderr.
 """
 
 import argparse
+import array
+import fcntl
+import glob
 import json
 import os
 import socket
@@ -40,6 +46,10 @@ class ShakeDetector:
         sensitivity = max(0.1, float(sensitivity))
         self.min_leg_px = self.MIN_LEG_PX / sensitivity
         self.quiet_until = 0.0
+        self._reset()
+
+    def reset(self):
+        """Forget the gesture in progress (e.g. the drag button was released)."""
         self._reset()
 
     def _reset(self):
@@ -81,6 +91,64 @@ class ShakeDetector:
         return False
 
 
+class ButtonWatcher:
+    """Global BTN_LEFT state via the EVIOCGKEY evdev ioctl.
+
+    A state poll per tick on each pointer device - no event stream to drain,
+    no exclusive grab, and closing the fd leaves the device untouched.
+    """
+
+    EV_KEY = 0x01
+    BTN_LEFT = 0x110
+    KEY_BITMAP_BYTES = 96  # ceil((KEY_MAX=0x2ff + 1) / 8)
+    RESCAN_S = 3.0
+
+    def __init__(self):
+        self.fds = {}
+        self.last_scan = 0.0
+        self.scan()
+        self.available = bool(self.fds)
+
+    @classmethod
+    def _ioc(cls, nr, length):
+        return (2 << 30) | (0x45 << 8) | nr | (length << 16)
+
+    def scan(self):
+        self.last_scan = time.monotonic()
+        for path in glob.glob("/dev/input/event*"):
+            if path in self.fds:
+                continue
+            try:
+                fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+            except OSError:
+                continue
+            buf = array.array("B", bytes(self.KEY_BITMAP_BYTES))
+            try:
+                fcntl.ioctl(fd, self._ioc(0x20 + self.EV_KEY, len(buf)), buf)
+            except OSError:
+                os.close(fd)
+                continue
+            if buf[self.BTN_LEFT // 8] & (1 << (self.BTN_LEFT % 8)):
+                self.fds[path] = fd
+            else:
+                os.close(fd)
+
+    def pressed(self):
+        buf = array.array("B", bytes(self.KEY_BITMAP_BYTES))
+        for path, fd in list(self.fds.items()):
+            try:
+                fcntl.ioctl(fd, self._ioc(0x18, len(buf)), buf)  # EVIOCGKEY
+            except OSError:  # device unplugged
+                os.close(fd)
+                del self.fds[path]
+                continue
+            if buf[self.BTN_LEFT // 8] & (1 << (self.BTN_LEFT % 8)):
+                return True
+        if not self.fds and time.monotonic() - self.last_scan > self.RESCAN_S:
+            self.scan()
+        return False
+
+
 def hypr_socket_path():
     signature = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")
     if not signature:
@@ -108,10 +176,20 @@ def main():
 
     path = hypr_socket_path()
     detector = ShakeDetector(sensitivity=args.sensitivity)
+    buttons = ButtonWatcher()
+    if not buttons.available:
+        print("no readable BTN_LEFT device (needs 'input' group); "
+              "shake armed even outside drags", file=sys.stderr, flush=True)
     interval = 1.0 / max(1.0, args.hz)
 
     while True:
         started = time.monotonic()
+        # Only a held primary button can be a drag; while it is up the
+        # gesture is disarmed and the compositor socket is left alone.
+        if buttons.available and not buttons.pressed():
+            detector.reset()
+            time.sleep(interval)
+            continue
         try:
             x, y = query_cursorpos(path)
         except (OSError, ValueError, KeyError):

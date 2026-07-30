@@ -107,7 +107,9 @@ point) and its summoning: a mid-drag global shortcut (`Super+U`,
 `quickshell:dropShelfSummon`), an IPC surface (`qs -c ii ipc call dropShelf
 toggle|open|close`), an opt-in cursor-shake watcher
 (`scripts/dropshelf/shake_detector.py` polling the raw Hyprland request
-socket; paused while locked or fullscreen), and a blur-able background (the
+socket; armed only while BTN_LEFT is held, read via the EVIOCGKEY evdev
+ioctl — needs `input` group, degrades to always-armed without it; paused
+while locked or fullscreen), and a blur-able background (the
 tint's opacity is an option; compositor blur behind `quickshell:*` layers
 does the frosting). The shelf data model (`DropShelf` singleton) stays in the
 core shell because the desktop menu and the bar's drag-reveal feed it; both
