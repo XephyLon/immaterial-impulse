@@ -121,5 +121,14 @@ class SettingsNavigationTests(unittest.TestCase):
             )
 
 
+class PageIndexPinTests(unittest.TestCase):
+    def test_no_hardcoded_page_indexes(self):
+        # `currentPage === 7` went stale when the Plugins page shifted About
+        # from 7 to 8 - the About specs then never refreshed on first open.
+        content = (ROOT / "modules/ii/settings/SettingsContent.qml").read_text()
+        self.assertNotRegex(content, r"currentPage ===? \d")
+        self.assertIn("currentPage === pages.length - 1", content)
+
+
 if __name__ == "__main__":
     unittest.main()

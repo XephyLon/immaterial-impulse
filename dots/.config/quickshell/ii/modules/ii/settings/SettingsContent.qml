@@ -124,7 +124,9 @@ Item {
     }
 
     onCurrentPageChanged: {
-        if (currentPage === 7) {
+        // About is the last page; a hardcoded index here went stale once
+        // before when a page was inserted (About 7 -> 8, specs never loaded).
+        if (currentPage === pages.length - 1) {
             if (SystemInfo.cpu === "") SystemInfo.refresh()
             Updates.refresh()
         }

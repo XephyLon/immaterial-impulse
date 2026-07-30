@@ -13,6 +13,11 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- About page PC-spec cards stuck on "Loading..." until visiting another
+  section: the specs refresh fired on a hardcoded page index (7) that went
+  stale when the Plugins page shifted About to 8. The trigger now targets
+  the last page by position, and a test pins SettingsContent against
+  hardcoded `currentPage` indexes.
 - Broken icons (raw "VIDEO_TE□LATE"-style ligature text) in the desktop menu's
   Live Wallpaper entry, the live-wallpaper folder setting and the sidebar
   settings' Media Player card: the SDDM theme ships an older Material Symbols
