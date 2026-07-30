@@ -81,6 +81,12 @@ fi
 
 # Static lint: spacing/padding/margin must use Appearance.spacing tokens, not
 # raw pixel literals in the token range.
+echo "Running Material icon lint..."
+if ! python3 "$SCRIPT_DIR/lint_material_icons.py"; then
+    echo "Material icon lint failed."
+    exit 1
+fi
+
 echo "Running spacing token lint..."
 if ! python3 "$SCRIPT_DIR/lint_spacing.py"; then
     echo "Spacing lint failed."

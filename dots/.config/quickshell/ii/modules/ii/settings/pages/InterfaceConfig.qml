@@ -744,7 +744,7 @@ ContentPage {
                 ConfigTextArea {
                     id: liveWallpapersPathField
                     Layout.fillWidth: true
-                    buttonIcon: "video_template"
+                    buttonIcon: "animated_images"
                     text: Translation.tr("Live Wallpaper Folder")
                     placeholderText: Translation.tr("e.g., /home/user/Videos/Wallpapers")
                     fieldWidth: 300

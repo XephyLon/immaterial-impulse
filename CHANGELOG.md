@@ -12,6 +12,16 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- Broken icons (raw "VIDEO_TE□LATE"-style ligature text) in the desktop menu's
+  Live Wallpaper entry, the live-wallpaper folder setting and the sidebar
+  settings' Media Player card: the SDDM theme ships an older Material Symbols
+  Rounded copy that fontconfig can pick over the system font, and it predates
+  the `video_template`/`music_note_2` names. Renamed to `animated_images` /
+  `music_note`, and a new lint (`tests/lint_material_icons.py`) validates
+  every literal icon name against the GSUB ligatures of EVERY installed copy
+  of the font so stale-font breakage can't sneak back in.
+
 ### Added
 - Discord voice: one-shot companion installer
   (`scripts/discordVoice/install_companion.sh`) — auto-detects Vesktop and
