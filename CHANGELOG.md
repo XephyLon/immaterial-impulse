@@ -28,6 +28,11 @@ own repo; the installer pins which revision it builds.
   of the font so stale-font breakage can't sneak back in.
 
 ### Added
+- About page "What's new" card: renders the changelog of the installed suite
+  checkout (`~/.local/share/immaterial-impulse/src/CHANGELOG.md`, the copy
+  get.sh refreshes on Update Dots) as collapsible Markdown, bounded to the
+  newest two sections, with a Full-changelog link to GitHub. Hidden when the
+  checkout or file is absent.
 - Drop Shelf is now a bundled **plugin** (`drop_shelf`, enabled by default)
   with Dropover-style summoning (see `docs/dropshelf-shake-research.md`):
   - **Mid-drag summon**: `Super+U` (Hyprland `quickshell:dropShelfSummon`

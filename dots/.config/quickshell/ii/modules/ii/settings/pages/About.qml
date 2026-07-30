@@ -26,6 +26,29 @@ ContentPage {
         }
     }
 
+    // "What's new": the changelog from the suite checkout get.sh updates.
+    // Bounded to the newest two sections (Unreleased + latest release).
+    property string changelogText: ""
+    property bool changelogExpanded: false
+    readonly property var changelogParsed: {
+        if (!root.changelogText) return { title: "", body: "" };
+        const lines = root.changelogText.split("\n");
+        const starts = [];
+        for (let i = 0; i < lines.length; i++)
+            if (lines[i].startsWith("## ")) starts.push(i);
+        if (starts.length === 0) return { title: "", body: "" };
+        const end = starts.length > 2 ? starts[2] : lines.length;
+        return {
+            title: lines[starts[0]].replace(/^## /, "").replace(/[\[\]]/g, ""),
+            body: lines.slice(starts[0] + 1, end).join("\n").trim()
+        };
+    }
+    FileView {
+        id: changelogFile
+        path: `${Directories.suiteSrc}/CHANGELOG.md`
+        onLoaded: root.changelogText = changelogFile.text() || ""
+    }
+
     function runSystemUpdate() {
         Quickshell.execDetached([
             "kitty", "--hold",
@@ -244,6 +267,104 @@ ContentPage {
                 iconShape: MaterialShape.Shape.Cookie12Sided
                 value: DateTime.uptime || "Loading..."
                 Layout.fillWidth: true
+            }
+        }
+    }
+
+    Rectangle {
+        visible: root.changelogParsed.body !== ""
+        Layout.fillWidth: true
+        Layout.topMargin: Appearance.spacing.space200
+        Layout.leftMargin: Appearance.spacing.space200
+        Layout.rightMargin: Appearance.spacing.space200
+        Layout.preferredHeight: whatsNewColumn.implicitHeight + Appearance.spacing.space300 * 2
+
+        radius: 24
+        color: Appearance.colors.colLayer1
+
+        ColumnLayout {
+            id: whatsNewColumn
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                margins: Appearance.spacing.space300
+            }
+            spacing: Appearance.spacing.space200
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Appearance.spacing.space200
+
+                MaterialSymbol {
+                    text: "new_releases"
+                    iconSize: Appearance.font.pixelSize.huge
+                    color: Appearance.colors.colPrimary
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 0
+                    StyledText {
+                        text: Translation.tr("What's new")
+                        font.pixelSize: Appearance.font.pixelSize.larger
+                        font.weight: Font.DemiBold
+                        color: Appearance.colors.colOnSurface
+                    }
+                    StyledText {
+                        text: root.changelogParsed.title
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colSubtext
+                    }
+                }
+
+                RippleButton {
+                    implicitHeight: 36
+                    buttonRadius: height / 2
+                    colBackground: Appearance.colors.colLayer2
+                    colBackgroundHover: Appearance.colors.colLayer2Hover
+                    onClicked: Qt.openUrlExternally("https://github.com/XephyLon/immaterial-impulse/blob/main/CHANGELOG.md")
+                    contentItem: StyledText {
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        leftPadding: Appearance.spacing.space200
+                        rightPadding: Appearance.spacing.space200
+                        text: Translation.tr("Full changelog")
+                        color: Appearance.colors.colOnLayer2
+                    }
+                }
+
+                RippleButton {
+                    implicitWidth: 36
+                    implicitHeight: 36
+                    buttonRadius: height / 2
+                    colBackground: Appearance.colors.colLayer2
+                    colBackgroundHover: Appearance.colors.colLayer2Hover
+                    onClicked: root.changelogExpanded = !root.changelogExpanded
+                    contentItem: MaterialSymbol {
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        text: "expand_more"
+                        iconSize: Appearance.font.pixelSize.huge
+                        color: Appearance.colors.colOnLayer2
+                        rotation: root.changelogExpanded ? 180 : 0
+                        Behavior on rotation {
+                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                        }
+                    }
+                }
+            }
+
+            StyledText {
+                visible: root.changelogExpanded
+                Layout.fillWidth: true
+                text: root.changelogParsed.body
+                textFormat: Text.MarkdownText
+                wrapMode: Text.WordWrap
+                font.pixelSize: Appearance.font.pixelSize.small
+                color: Appearance.colors.colOnLayer1
+                onLinkActivated: link => Qt.openUrlExternally(link)
+                PointingHandLinkHover {}
             }
         }
     }
