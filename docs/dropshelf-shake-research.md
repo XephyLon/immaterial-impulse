@@ -10,6 +10,24 @@ own surfaces, so the shake gesture must be armed *all the time* (mitigated by
 a strict gesture heuristic), or the trigger must be a drag-over-shell-surface
 instead of a shake. Both designs are cheap; they compose well.
 
+## How Dropover actually behaves (reference)
+
+Verified against the app's site/FAQ and reviews:
+
+- The shake gesture is **armed by the drag itself** — macOS lets the app
+  observe the global drag pasteboard, so shaking outside a drag does nothing.
+  The shelf materializes **at the cursor** and floats above all windows.
+- Equal-class activations: **hold a modifier key while dragging** (Shift by
+  default, remappable), a menubar item, and a global shortcut. Commentary
+  (Daring Fireball) credits shake specifically for not needing the second
+  hand.
+- Shake **sensitivity is user-tunable**; summoning again mid-collection
+  **appends to the existing shelf**; multiple shelves can coexist and be
+  pinned.
+- Dragging out of the shelf **moves by default, Option copies**, with a
+  preference to flip the default.
+- Accepts any draggable content: files, folders, text snippets, images, URLs.
+
 ## What exists today
 
 - `modules/ii/dropover/DropShelfPanel.qml`: an Overlay-layer PanelWindow at
@@ -78,16 +96,32 @@ UX: "drag files to the bar and the shelf pops out" — discoverable and
 deliberate; the shelf can highlight while the drag hovers it. This is the
 same reachability trick Windows/KDE users know from drag-to-taskbar.
 
+## Design C — global shortcut mid-drag (Dropover's own fallback, free here)
+
+Dropover's documented second activation - a key press while dragging - maps
+onto Hyprland with zero unknowns: a `GlobalShortcut` (the shell already uses
+them) fires fine during a drag, one `cursorpos` query places the shelf under
+the pointer, and the in-flight drag then enters the newly mapped shelf. No
+polling, no heuristics, no false positives; the only cost is Dropover's own
+admission that it needs the second hand.
+
 ## Recommendation
 
-Ship **B first** (small, deterministic, no daemons), then add **A** behind a
-config toggle (`dropShelf.shakeToSummon`) for the true Dropover feel, after
-the mid-drag-mapping test passes. Both funnel into the existing
-`dropShelfOpen/X/Y` plumbing, so neither touches the shelf itself.
+Ladder, cheapest-certain first, all feeding the same `dropShelfOpen/X/Y`
+plumbing:
 
-Rough sizing: B ≈ one DropArea + open/dismiss logic (a day including
-polish); A ≈ a cursor-poll service + gesture detector + tests (2–3 days,
-dominated by threshold tuning).
+1. **C — mid-drag global shortcut** (hours): certain to work, and doubles as
+   the manual test for the one open question (mid-drag DND focus onto a
+   newly mapped layer surface) that gates the shake design.
+2. **B — drag-over-bar reveal** (a day): deterministic, second-hand-free,
+   discoverable.
+3. **A — shake** behind `dropShelf.shakeToSummon` with a sensitivity option
+   (2–3 days, threshold tuning): the full Dropover feel, accepting the
+   always-armed limitation Wayland forces.
+
+Dropover behaviors worth mirroring while at it: summon-again **appends** to
+the open shelf (our `DropShelf.addItems` already appends), and shelf
+position = cursor position at trigger time.
 
 ## Compatibility notes
 
