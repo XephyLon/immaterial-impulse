@@ -212,7 +212,9 @@ PanelWindow {
     Process {
         id: checkRecordingProc
         running: isRecording
-        command: ["pidof", "wf-recorder"]
+        // Exit 0 while record.sh's recording is live (gsr-based; pidfile-scoped
+        // so the instant-replay daemon never counts as "recording").
+        command: ["bash", "-c", `kill -0 "$(cat "\${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/imi-screenrecord.pid" 2>/dev/null)" 2>/dev/null`]
         onExited: (exitCode, exitStatus) => {
             root.recordingShouldStop = (exitCode === 0);
             root.finishPreparationIfReady();

@@ -1,4 +1,5 @@
 import qs
+import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import QtQuick
@@ -155,6 +156,34 @@ Item {
                 iconText: Persistent.states.record.enable ? "stop_circle" : "screen_record"
                 forceHovered: Persistent.states.record.enable
                 onClicked: Quickshell.execDetached([Directories.recordScriptPath])
+            }
+        }
+
+        // Appears only while the instant-replay buffer is armed; click = save
+        // a clip of the last moments (same as the ALT+F10 hotkey).
+        Loader {
+            active: ScreenRecord.replaying
+            visible: active
+            sourceComponent: isMaterial ? replaySaveM3 : legacyReplaySave
+        }
+
+        Component {
+            id: replaySaveM3
+            UtilButton {
+                iconText: "replay"
+                onClicked: ScreenRecord.saveReplay()
+            }
+        }
+        Component {
+            id: legacyReplaySave
+            CircleUtilButton {
+                onClicked: ScreenRecord.saveReplay()
+                MaterialSymbol {
+                    horizontalAlignment: Qt.AlignHCenter
+                    fill: 1; text: "replay"
+                    iconSize: Appearance.font.pixelSize.large
+                    color: Appearance.colors.colPrimary
+                }
             }
         }
 
