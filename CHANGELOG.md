@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-07-31
+
 ### Fixed
 - Privacy pill named Electron apps "Chromium" (Vesktop's mic use showed as
   Chromium): when a stream's `application.name` is a known-generic
@@ -447,7 +449,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.1.0...v0.2.0
