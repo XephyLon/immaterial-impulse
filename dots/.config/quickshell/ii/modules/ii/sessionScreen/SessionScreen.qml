@@ -14,7 +14,7 @@ import Quickshell.Hyprland
 Scope {
     id: root
 
-    property string focusedScreenName: Hyprland.focusedMonitor?.name ?? 
+    property string focusedScreenName: Hyprland.focusedMonitor?.name ?? ""
 
     property var focusedScreen: Quickshell.screens.find(s => s.name === root.focusedScreenName)
         ?? Quickshell.screens[0]
