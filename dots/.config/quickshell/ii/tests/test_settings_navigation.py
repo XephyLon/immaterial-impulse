@@ -29,13 +29,17 @@ class SettingsNavigationTests(unittest.TestCase):
         )
         self.assertEqual(
             [name for name, _ in page_entries],
-            ["Quick", "General", "Bar", "Desktop", "Plugins", "Interface", "Services", "Hyprland", "About"],
+            ["Quick", "Appearance", "Wallpaper & Desktop", "Bar & Dock", "Sidebars & Panels",
+             "Notifications", "Lock & Idle", "Capture", "General", "Services", "Plugins",
+             "Hyprland", "About"],
         )
         self.assertTrue(all(sections.strip() for name, sections in page_entries if name != "About"))
 
     def test_tree_uses_existing_page_scroll_contract(self):
         self.assertIn('typeof loader.item.goTo === "function"', self.source)
-        for page in ("QuickConfig", "GeneralConfig", "BarConfig", "BackgroundConfig", "InterfaceConfig", "ServicesConfig", "HyprlandConfig"):
+        for page in ("QuickConfig", "AppearanceConfig", "BackgroundConfig", "BarConfig",
+                     "SidebarsPanelsConfig", "NotificationsConfig", "LockIdleConfig",
+                     "CaptureConfig", "GeneralConfig", "ServicesConfig", "HyprlandConfig"):
             source = (ROOT / f"modules/ii/settings/pages/{page}.qml").read_text(encoding="utf-8")
             self.assertIn("function goTo(term)", source, page)
 
@@ -81,12 +85,16 @@ class SettingsNavigationTests(unittest.TestCase):
     def test_tree_metadata_matches_real_top_level_sections(self):
         pages = {
             "Quick": "QuickConfig.qml",
+            "Appearance": "AppearanceConfig.qml",
+            "Wallpaper & Desktop": "BackgroundConfig.qml",
+            "Bar & Dock": "BarConfig.qml",
+            "Sidebars & Panels": "SidebarsPanelsConfig.qml",
+            "Notifications": "NotificationsConfig.qml",
+            "Lock & Idle": "LockIdleConfig.qml",
+            "Capture": "CaptureConfig.qml",
             "General": "GeneralConfig.qml",
-            "Bar": "BarConfig.qml",
-            "Desktop": "BackgroundConfig.qml",
-            "Plugins": "PluginsPage.qml",
-            "Interface": "InterfaceConfig.qml",
             "Services": "ServicesConfig.qml",
+            "Plugins": "PluginsPage.qml",
             "Hyprland": "HyprlandConfig.qml",
             "About": "About.qml",
         }

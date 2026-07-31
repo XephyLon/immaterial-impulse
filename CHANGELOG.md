@@ -12,6 +12,29 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- Settings reorganized domain-first (per `docs/settings-ux-research.md`,
+  Option A). The "Interface" junk-drawer page is gone; every section moved
+  to a concrete home, none were altered:
+  - **Appearance**: Icon pack, Fonts, Terminal (incl. background image),
+    Color generation
+  - **Wallpaper & Desktop** (was Desktop): + Wallpaper selector
+  - **Bar & Dock** (was Bar): + Dock; − Notifications
+  - **Sidebars & Panels** (new): both sidebars + quick toggles/sliders/
+    corner-open (from General), Overview, Overlay/Crosshair/Floating
+    image, On-screen display (from Interface)
+  - **Notifications** (new): promoted out of Bar
+  - **Lock & Idle** (new): Lock screen, Screensaver, Keep awake (from
+    Interface), Work safety (from General)
+  - **Capture** (new): Screen recorder + Instant replay, Save paths (from
+    Services), Screenshot popup, Region selector (from Interface)
+  - **Services** keeps only the outward-facing ones: AI, Networking,
+    Music recognition, Search, Updates, Weather
+  - **General** keeps the true globals: Time, Battery, Audio, Sounds,
+    Language. Quick is unchanged.
+  The nav search metadata is now generated from the pages' actual section
+  titles, and the navigation test's page map covers all 13 pages.
+
 ## [0.4.0] — 2026-07-31
 
 ### Fixed
