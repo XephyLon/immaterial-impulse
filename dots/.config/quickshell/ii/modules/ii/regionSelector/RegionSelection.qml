@@ -31,7 +31,7 @@ PanelWindow {
     // TODO: Ask: sidebar AI
     enum SnipAction { Copy, Edit, Search, CharRecognition, Record, RecordWithSound } 
     enum SelectionMode { RectCorners, Circle }
-    enum Phase { Select, Post }
+    enum Phase { Select, Annotate, Post }
     property var action: RegionSelection.SnipAction.Copy
     property var selectionMode: RegionSelection.SelectionMode.RectCorners
     property var phase: RegionSelection.Phase.Select
@@ -283,6 +283,41 @@ PanelWindow {
         }
     }
 
+    function clampRegion() {
+        root.regionX = Math.max(0, Math.min(root.regionX, root.screen.width - root.regionWidth));
+        root.regionY = Math.max(0, Math.min(root.regionY, root.screen.height - root.regionHeight));
+        root.regionWidth = Math.max(0, Math.min(root.regionWidth, root.screen.width - root.regionX));
+        root.regionHeight = Math.max(0, Math.min(root.regionHeight, root.screen.height - root.regionY));
+    }
+
+    // Annotated copy: composite the cropped screenshot + canvas at native
+    // resolution via grabToImage, then reuse the observable copy pipeline.
+    function finishAnnotated() {
+        if (!annotationLoader.item || !annotationLoader.item.hasAnnotations) {
+            // Nothing drawn: the plain pipeline crops losslessly with magick.
+            root.snip();
+            return;
+        }
+        const screenshotDir = Config.options.screenSnip.savePath !== ""
+            ? Config.options.screenSnip.savePath : root.screenshotDir;
+        const ts = new Date().toISOString().replace(/[:.]/g, "-");
+        const resultPath = `${screenshotDir}/result-${ts}.png`;
+        annotateComposite.grabToImage(result => {
+            if (!result.saveToFile(resultPath)) {
+                console.warn("[Region Selector] failed to save annotated grab");
+                root.dismiss();
+                return;
+            }
+            GlobalStates.snipCopyInFlight = true;
+            copySnipProcess.resultPath = resultPath;
+            copySnipProcess.command = ["bash", "-c",
+                `wl-copy --type image/png < '${StringUtils.shellSingleQuoteEscape(resultPath)}' && notify-send 'Screenshot' 'Annotated snip copied' -a 'Quickshell'`];
+            copySnipProcess.running = true;
+            root.visible = false;
+        }, Qt.size(Math.round(root.regionWidth * root.monitorScale),
+                   Math.round(root.regionHeight * root.monitorScale)));
+    }
+
     // Execution after selection
     function snip() {
         // Validity check
@@ -291,11 +326,7 @@ PanelWindow {
             root.dismiss();
         }
 
-        // Clamp region to screen bounds
-        root.regionX = Math.max(0, Math.min(root.regionX, root.screen.width - root.regionWidth));
-        root.regionY = Math.max(0, Math.min(root.regionY, root.screen.height - root.regionHeight));
-        root.regionWidth = Math.max(0, Math.min(root.regionWidth, root.screen.width - root.regionX));
-        root.regionHeight = Math.max(0, Math.min(root.regionHeight, root.screen.height - root.regionY));
+        root.clampRegion();
 
         // Adjust action
         if (root.action === RegionSelection.SnipAction.Copy || root.action === RegionSelection.SnipAction.Edit) {
@@ -358,6 +389,7 @@ PanelWindow {
     mask: Region {
         item: switch(root.phase) {
             case RegionSelection.Phase.Select: return mouseArea;
+            case RegionSelection.Phase.Annotate: return screenshotImage;
             case RegionSelection.Phase.Post: return null;
         }
     }
@@ -369,7 +401,7 @@ PanelWindow {
         cache: false
         asynchronous: false
         fillMode: Image.Stretch
-        visible: root.phase === RegionSelection.Phase.Select
+        visible: root.phase !== RegionSelection.Phase.Post
 
         onStatusChanged: {
             if (status === Image.Ready) {
@@ -384,10 +416,13 @@ PanelWindow {
         }
 
         focus: root.visible
-        Keys.onPressed: (event) => { // Esc to close
-            if (event.key === Qt.Key_Escape) {
+        Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_Escape) { // Esc to close
                 if (GlobalStates.snipCopyInFlight) return; // dismissing would kill the copy pipeline
                 Qt.callLater(root.dismiss);
+            } else if (root.phase === RegionSelection.Phase.Annotate
+                    && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                root.finishAnnotated();
             }
         }
     }
@@ -395,6 +430,7 @@ PanelWindow {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
+        enabled: root.phase === RegionSelection.Phase.Select
         cursorShape: Qt.CrossCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         hoverEnabled: true
@@ -428,7 +464,17 @@ PanelWindow {
                 root.regionWidth = maxX - minX + padding * 2;
                 root.regionHeight = maxY - minY + padding * 2;
             }
-            root.snip();
+            // Left-button Copy snips (rect mode) pause for annotation; the
+            // circle mask and every other action keep the instant pipeline.
+            if (root.action === RegionSelection.SnipAction.Copy
+                    && root.mouseButton === Qt.LeftButton
+                    && root.selectionMode === RegionSelection.SelectionMode.RectCorners
+                    && root.regionWidth > 4 && root.regionHeight > 4) {
+                root.clampRegion();
+                root.phase = RegionSelection.Phase.Annotate;
+            } else {
+                root.snip();
+            }
         }
         onPositionChanged: (mouse) => {
             root.updateTargetedRegion(mouse.x, mouse.y);
@@ -562,6 +608,57 @@ PanelWindow {
                 borderColor: root.imageBorderColor
                 fillColor: targeted ? root.imageFillColor : "transparent"
                 text: Translation.tr("Content region")
+            }
+        }
+
+        // Annotation phase: cropped backdrop + canvas (this exact group is
+        // grabbed for the composite) and the Snagit-style tool bar under it.
+        Item {
+            id: annotateComposite
+            z: 5
+            visible: root.phase === RegionSelection.Phase.Annotate
+            x: root.regionX
+            y: root.regionY
+            width: root.regionWidth
+            height: root.regionHeight
+            clip: true
+
+            Image {
+                x: -root.regionX
+                y: -root.regionY
+                width: root.width
+                height: root.height
+                source: root.screenshotSource
+                cache: false
+                fillMode: Image.Stretch
+            }
+
+            Loader {
+                id: annotationLoader
+                anchors.fill: parent
+                active: root.phase === RegionSelection.Phase.Annotate
+                sourceComponent: AnnotationLayer {}
+            }
+        }
+
+        Loader {
+            z: 10
+            active: root.phase === RegionSelection.Phase.Annotate && annotationLoader.item !== null
+            sourceComponent: AnnotationToolbar {
+                annotationLayer: annotationLoader.item
+                onConfirmed: root.finishAnnotated()
+                onCancelled: if (!GlobalStates.snipCopyInFlight) root.dismiss()
+                x: {
+                    const preferred = root.regionX + root.regionWidth / 2 - implicitWidth / 2;
+                    return Math.max(8, Math.min(preferred, root.width - implicitWidth - 8));
+                }
+                y: {
+                    const below = root.regionY + root.regionHeight + 12;
+                    if (below + implicitHeight + 8 <= root.height) return below;
+                    const above = root.regionY - implicitHeight - 12;
+                    if (above >= 8) return above;
+                    return root.regionY + root.regionHeight - implicitHeight - 12; // inside, bottom
+                }
             }
         }
 

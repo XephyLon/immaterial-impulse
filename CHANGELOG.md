@@ -13,6 +13,17 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- Snagit-style **annotation bar** on region screenshots: releasing a
+  rectangular Copy selection now pauses on an Annotate phase with a
+  toolbar under the region - draw (freehand), arrow, box and ellipse
+  tools, six colors, three stroke widths, undo and clear - then Copy
+  (Enter) or Cancel (Esc). Annotated snips are composited at native
+  resolution via grabToImage and go through the observable copy pipeline
+  (clipboard + screenshot popup); an untouched selection falls back to
+  the original lossless magick crop. Right-click edit, circle mode, OCR/
+  Lens/QR and recordings keep their instant flows.
+
+### Added
 - Per-plugin **"Keep settings across presets"** toggle (pin switch at the
   top of every plugin's options): a flagged plugin's options, desktop
   positions and enabled state survive preset application; the flag itself
