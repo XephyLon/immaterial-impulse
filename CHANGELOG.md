@@ -12,15 +12,19 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-07-31
+
 ### Fixed
 - Session screen: "Reboot into..." was unreachable by keyboard (no
   downward path led to it) and sat orphaned on its own row. The grid is
   now a symmetric 3x3 - session actions on top, power actions
   (Shutdown / Reboot / Reboot into...) on the bottom row - with a full
   arrow-key navigation map. The boot-entry pills themselves are now
-  keyboard-navigable too: Down from "Reboot into..." enters the list,
-  Left/Right move between entries (focused entry ringed and named in the
-  subtitle), Enter reboots into it.
+  keyboard-navigable too, and the picker was restyled twice over: entries
+  now stack under the grid clamped to its width (the pill row overflowed
+  sideways), Down walks the list / Up returns to "Reboot into...", the
+  focused entry fills primary (the current OS stays tonal), Enter reboots
+  into it, and the opener button shows a toggled state while open.
 
 ## [0.3.0] — 2026-07-31
 
@@ -396,7 +400,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/XephyLon/immaterial-impulse/releases/tag/v0.1.0
