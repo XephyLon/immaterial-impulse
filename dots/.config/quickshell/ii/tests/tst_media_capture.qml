@@ -25,6 +25,25 @@ TestCase {
         compare(MediaCapture.parseSourceOutputs(null).active, false);
     }
 
+    function test_electron_stream_uses_process_binary() {
+        // Vesktop reports application.name="Chromium"; the binary is the identity.
+        var json = JSON.stringify([{
+            corked: false, client: 99,
+            properties: { "application.name": "Chromium", "application.process.binary": "vesktop", "application.process.id": "16116", "media.class": "Stream/Input/Audio" }
+        }]);
+        var r = MediaCapture.parseSourceOutputs(json);
+        compare(r.active, true);
+        compare(r.apps[0], "Vesktop");
+    }
+
+    function test_specific_app_name_wins_over_binary() {
+        var json = JSON.stringify([{
+            corked: false, client: 12,
+            properties: { "application.name": "OBS Studio", "application.process.binary": "obs", "application.process.id": "42", "media.class": "Stream/Input/Audio" }
+        }]);
+        compare(MediaCapture.parseSourceOutputs(json).apps[0], "OBS Studio");
+    }
+
     function test_json_running_client_stream_is_recording() {
         var json = JSON.stringify([{
             index: 1, client: "4363", corked: false,

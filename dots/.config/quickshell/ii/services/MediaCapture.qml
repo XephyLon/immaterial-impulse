@@ -62,6 +62,17 @@ Singleton {
         return root._fromTextSourceOutputs(raw);
     }
 
+    // Electron/WebRTC apps all report a generic application.name ("Chromium",
+    // "WEBRTC VoiceEngine"); the process binary carries the real identity
+    // (e.g. Vesktop). Verified live: Vesktop's stream is
+    // application.name="Chromium", application.process.binary="vesktop".
+    readonly property var genericAppNames: ["chromium", "chromium input", "electron", "webrtc voiceengine", "chrome input"]
+    function resolveAppName(name: var, binary: var): var {
+        if (binary && (!name || root.genericAppNames.indexOf(name.toLowerCase()) !== -1))
+            return binary.charAt(0).toUpperCase() + binary.slice(1);
+        return name;
+    }
+
     function _fromJsonSourceOutputs(arr: var): var {
         const apps = [];
         for (const item of arr) {
@@ -71,7 +82,8 @@ Singleton {
             const isClientStream = (item.client !== null && item.client !== undefined)
                 || (props["application.process.id"] !== undefined);
             if (!isClientStream) continue; // filter-chain / virtual node, not an app
-            const name = props["application.name"] ?? props["media.name"] ?? props["node.name"];
+            const rawName = props["application.name"] ?? props["media.name"] ?? props["node.name"];
+            const name = root.resolveAppName(rawName, props["application.process.binary"]);
             if (name && apps.indexOf(name) === -1) apps.push(name);
         }
         return { active: apps.length > 0, apps: apps };
@@ -90,7 +102,9 @@ Singleton {
             const nameMatch = block.match(/application\.name\s*=\s*"([^"]*)"/)
                 || block.match(/media\.name\s*=\s*"([^"]*)"/)
                 || block.match(/node\.name\s*=\s*"([^"]*)"/);
-            const name = nameMatch ? nameMatch[1] : null;
+            const binaryMatch = block.match(/application\.process\.binary\s*=\s*"([^"]*)"/);
+            const name = root.resolveAppName(nameMatch ? nameMatch[1] : null,
+                binaryMatch ? binaryMatch[1] : null);
             if (name && apps.indexOf(name) === -1) apps.push(name);
         }
         return { active: apps.length > 0, apps: apps };

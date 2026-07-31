@@ -12,6 +12,14 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- Privacy pill named Electron apps "Chromium" (Vesktop's mic use showed as
+  Chromium): when a stream's `application.name` is a known-generic
+  Electron/WebRTC alias, the capitalized `application.process.binary`
+  (e.g. "Vesktop") is shown instead - specific names like "OBS Studio"
+  still win. Applied to both the JSON and legacy-text pactl parsers and
+  the byte-synced test double.
+
 ### Removed
 - All Niri compositor support from the upstream merge - this fork targets
   Hyprland exclusively. Deleted: NiriBackend/NiriXkb/NiriConfig services,
