@@ -12,6 +12,30 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- Screen recorder rebuilt on **gpu-screen-recorder** (GPU encode - NVENC/VAAPI,
+  ShadowPlay-style), replacing wf-recorder's CPU x264 path:
+  - Same interfaces as before (bar record button, region-selector record
+    actions, `Super+Shift+R` / `Ctrl+Alt+R` binds, `record.sh --region/
+    --fullscreen/--sound/--path`), now driven by config: quality preset,
+    codec (auto/H.264/HEVC/AV1), FPS, framerate mode, cursor, desktop audio
+    and optional mic merge - all in Settings → Services → Screen recorder.
+  - **Instant replay** (`ScreenRecord` service): a persistent ring-buffer
+    daemon keeps the last N seconds (default 120, RAM or disk); save a clip
+    with `Alt+F10`, the bar button that appears while replay is armed, or
+    `qs -c ii ipc call record replaySave`; toggle with `Shift+Alt+F10`, the
+    settings switch, or IPC. Enablement is persisted config, so replay
+    survives restarts; a failing daemon disables itself instead of
+    respawn-looping.
+  - Recording pause/resume (`Ctrl+Alt+R` family unchanged; pause via
+    `quickshell:screenRecordPause` global or `record pause` IPC, SIGUSR2).
+  - One-shot recordings and the replay daemon are separate gsr processes;
+    the record toggle and pause are pidfile-scoped so they can never kill
+    the replay buffer. Saved-file notifications come from gsr's `-sc` hook
+    with the real path (replay clips included).
+  - Suite dependency lists switched from `wf-recorder` to
+    `gpu-screen-recorder` (arch/fedora/gentoo/nix).
+
 ## [0.2.0] — 2026-07-31
 
 ### Fixed

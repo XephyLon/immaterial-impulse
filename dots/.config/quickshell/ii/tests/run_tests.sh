@@ -315,6 +315,12 @@ if ! python3 "$SCRIPT_DIR/test_ripple_lifecycle_contract.py"; then
     exit 1
 fi
 
+echo "Running screen recorder tests..."
+if ! python3 "$SCRIPT_DIR/test_screen_record.py"; then
+    echo "Screen recorder tests failed."
+    exit 1
+fi
+
 echo "Running drop shelf summon tests..."
 if ! python3 "$SCRIPT_DIR/test_dropshelf_summon.py"; then
     echo "Drop shelf summon tests failed."
