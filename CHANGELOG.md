@@ -17,7 +17,10 @@ own repo; the installer pins which revision it builds.
   downward path led to it) and sat orphaned on its own row. The grid is
   now a symmetric 3x3 - session actions on top, power actions
   (Shutdown / Reboot / Reboot into...) on the bottom row - with a full
-  arrow-key navigation map.
+  arrow-key navigation map. The boot-entry pills themselves are now
+  keyboard-navigable too: Down from "Reboot into..." enters the list,
+  Left/Right move between entries (focused entry ringed and named in the
+  subtitle), Enter reboots into it.
 
 ## [0.3.0] — 2026-07-31
 

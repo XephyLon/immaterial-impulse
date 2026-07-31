@@ -256,6 +256,7 @@ Scope {
                         }
                         KeyNavigation.left: sessionReboot
                         KeyNavigation.up: sessionFirmwareReboot
+                        KeyNavigation.down: sessionRoot.rebootPickerOpen ? efiEntryRepeater.itemAt(0) : null
                     }
                 }
 
@@ -269,19 +270,42 @@ Scope {
                     spacing: Appearance.spacing.space100
 
                     Repeater {
+                        id: efiEntryRepeater
                         model: EfiBoot.entries
                         delegate: RippleButton {
                             id: efiEntryButton
                             required property var modelData
+                            required property int index
                             implicitHeight: 44
                             buttonRadius: height / 2
-                            colBackground: modelData.current
-                                ? Appearance.colors.colSecondaryContainer
-                                : Appearance.colors.colLayer2
+                            colBackground: efiEntryButton.activeFocus
+                                ? Appearance.colors.colLayer2Hover
+                                : modelData.current
+                                    ? Appearance.colors.colSecondaryContainer
+                                    : Appearance.colors.colLayer2
                             colBackgroundHover: Appearance.colors.colLayer2Hover
-                            onClicked: {
+                            border: true
+                            colBorder: efiEntryButton.activeFocus
+                                ? Appearance.colors.colPrimary : "transparent"
+
+                            function activate() {
                                 sessionRoot.hide();
                                 EfiBoot.rebootInto(efiEntryButton.modelData.num, efiEntryButton.modelData.label);
+                            }
+                            onClicked: activate()
+                            Keys.onPressed: event => {
+                                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                    efiEntryButton.activate();
+                                    event.accepted = true;
+                                }
+                            }
+                            KeyNavigation.up: sessionRebootInto
+                            KeyNavigation.left: efiEntryButton.index > 0
+                                ? efiEntryRepeater.itemAt(efiEntryButton.index - 1) : null
+                            KeyNavigation.right: efiEntryRepeater.itemAt(efiEntryButton.index + 1)
+                            onFocusChanged: {
+                                if (focus)
+                                    sessionRoot.subtitle = Translation.tr("Reboot into %1").arg(efiEntryButton.modelData.label);
                             }
                             contentItem: RowLayout {
                                 anchors.fill: parent
