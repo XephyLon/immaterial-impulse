@@ -12,6 +12,13 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- Session screen: "Reboot into..." was unreachable by keyboard (no
+  downward path led to it) and sat orphaned on its own row. The grid is
+  now a symmetric 3x3 - session actions on top, power actions
+  (Shutdown / Reboot / Reboot into...) on the bottom row - with a full
+  arrow-key navigation map.
+
 ## [0.3.0] — 2026-07-31
 
 ### Added

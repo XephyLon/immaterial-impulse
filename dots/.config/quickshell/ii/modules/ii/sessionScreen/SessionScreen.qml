@@ -105,7 +105,10 @@ Scope {
                 }
 
                 GridLayout {
-                    columns: 4
+                    // 3x3: session actions on the top rows, power actions on
+                    // the bottom row, so "Reboot into..." sits beside Reboot
+                    // instead of orphaned on its own row.
+                    columns: 3
                     columnSpacing: Appearance.spacing.space200
                     rowSpacing: Appearance.spacing.space200
 
@@ -139,7 +142,7 @@ Scope {
                         }
                         KeyNavigation.left: sessionLock
                         KeyNavigation.right: sessionLogout
-                        KeyNavigation.down: sessionShutdown
+                        KeyNavigation.down: sessionTaskManager
                     }
                     SessionActionButton {
                         id: sessionLogout
@@ -154,22 +157,6 @@ Scope {
                                 sessionRoot.subtitle = buttonText;
                         }
                         KeyNavigation.left: sessionSleep
-                        KeyNavigation.right: sessionTaskManager
-                        KeyNavigation.down: sessionReboot
-                    }
-                    SessionActionButton {
-                        id: sessionTaskManager
-                        buttonIcon: "browse_activity"
-                        buttonText: Translation.tr("Task Manager")
-                        onClicked: {
-                            Session.launchTaskManager();
-                            sessionRoot.hide();
-                        }
-                        onFocusChanged: {
-                            if (focus)
-                                sessionRoot.subtitle = buttonText;
-                        }
-                        KeyNavigation.left: sessionLogout
                         KeyNavigation.down: sessionFirmwareReboot
                     }
 
@@ -186,8 +173,43 @@ Scope {
                                 sessionRoot.subtitle = buttonText;
                         }
                         KeyNavigation.up: sessionLock
-                        KeyNavigation.right: sessionShutdown
+                        KeyNavigation.right: sessionTaskManager
+                        KeyNavigation.down: sessionShutdown
                     }
+                    SessionActionButton {
+                        id: sessionTaskManager
+                        buttonIcon: "browse_activity"
+                        buttonText: Translation.tr("Task Manager")
+                        onClicked: {
+                            Session.launchTaskManager();
+                            sessionRoot.hide();
+                        }
+                        onFocusChanged: {
+                            if (focus)
+                                sessionRoot.subtitle = buttonText;
+                        }
+                        KeyNavigation.left: sessionHibernate
+                        KeyNavigation.up: sessionSleep
+                        KeyNavigation.right: sessionFirmwareReboot
+                        KeyNavigation.down: sessionReboot
+                    }
+                    SessionActionButton {
+                        id: sessionFirmwareReboot
+                        buttonIcon: "settings_applications"
+                        buttonText: Translation.tr("Reboot to firmware settings")
+                        onClicked: {
+                            Session.rebootToFirmware();
+                            sessionRoot.hide();
+                        }
+                        onFocusChanged: {
+                            if (focus)
+                                sessionRoot.subtitle = buttonText;
+                        }
+                        KeyNavigation.left: sessionTaskManager
+                        KeyNavigation.up: sessionLogout
+                        KeyNavigation.down: sessionRebootInto
+                    }
+
                     SessionActionButton {
                         id: sessionShutdown
                         buttonIcon: "power_settings_new"
@@ -200,9 +222,8 @@ Scope {
                             if (focus)
                                 sessionRoot.subtitle = buttonText;
                         }
-                        KeyNavigation.left: sessionHibernate
+                        KeyNavigation.up: sessionHibernate
                         KeyNavigation.right: sessionReboot
-                        KeyNavigation.up: sessionSleep
                     }
                     SessionActionButton {
                         id: sessionReboot
@@ -217,23 +238,7 @@ Scope {
                                 sessionRoot.subtitle = buttonText;
                         }
                         KeyNavigation.left: sessionShutdown
-                        KeyNavigation.right: sessionFirmwareReboot
-                        KeyNavigation.up: sessionLogout
-                    }
-                    SessionActionButton {
-                        id: sessionFirmwareReboot
-                        buttonIcon: "settings_applications"
-                        buttonText: Translation.tr("Reboot to firmware settings")
-                        onClicked: {
-                            Session.rebootToFirmware();
-                            sessionRoot.hide();
-                        }
-                        onFocusChanged: {
-                            if (focus)
-                                sessionRoot.subtitle = buttonText;
-                        }
                         KeyNavigation.up: sessionTaskManager
-                        KeyNavigation.left: sessionReboot
                         KeyNavigation.right: sessionRebootInto
                     }
                     SessionActionButton {
@@ -249,7 +254,8 @@ Scope {
                             if (focus)
                                 sessionRoot.subtitle = buttonText;
                         }
-                        KeyNavigation.left: sessionFirmwareReboot
+                        KeyNavigation.left: sessionReboot
+                        KeyNavigation.up: sessionFirmwareReboot
                     }
                 }
 
