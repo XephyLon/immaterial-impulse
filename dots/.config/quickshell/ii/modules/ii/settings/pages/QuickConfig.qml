@@ -224,64 +224,103 @@ ContentPage {
                                 id: schemeChip
                                 required property var modelData
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 64
+                                Layout.preferredHeight: 84
 
                                 property bool isSelected: Config.options.appearance.palette.type === modelData.value
                                 property bool hovered: hoverArea.containsMouse
+                                property var swatches: page.schemeSwatches[modelData.value] ?? []
+                                onSwatchesChanged: paletteCircle.requestPaint()
 
-                                // Selected chips relax into a rounder pill - the
-                                // expressive shape-morph cue used across the shell.
-                                radius: isSelected ? height / 2 : Appearance.rounding.normal
-                                color: isSelected ? Appearance.colors.colPrimary
-                                    : hovered ? Appearance.colors.colSecondaryContainerHover
+                                radius: Appearance.rounding.normal
+                                color: hovered ? Appearance.colors.colSecondaryContainerHover
                                     : Appearance.colors.colSecondaryContainer
-                                Behavior on radius {
-                                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                                }
                                 Behavior on color {
                                     ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
                                 }
 
-                                property var swatches: page.schemeSwatches[modelData.value] ?? []
-
                                 ColumnLayout {
                                     anchors.centerIn: parent
-                                    spacing: 0
+                                    spacing: Appearance.spacing.space75
 
-                                    // The colors this scheme would actually produce
-                                    // from the current wallpaper.
-                                    RowLayout {
+                                    // Android 12-style palette circle: top half primary,
+                                    // bottom quarters secondary/tertiary - the palette IS
+                                    // the button. Falls back to the scheme icon when the
+                                    // color venv can't supply swatches.
+                                    Item {
                                         Layout.alignment: Qt.AlignHCenter
-                                        Layout.bottomMargin: Appearance.spacing.space50
-                                        visible: schemeChip.swatches.length > 0
-                                        spacing: Appearance.spacing.space50
-                                        Repeater {
-                                            model: schemeChip.swatches
-                                            delegate: Rectangle {
-                                                required property string modelData
-                                                implicitWidth: 14
-                                                implicitHeight: 14
-                                                radius: 7
-                                                color: modelData
-                                                border.width: 1
-                                                border.color: ColorUtils.transparentize(
-                                                    schemeChip.isSelected ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer, 0.7)
-                                                Behavior on color {
-                                                    ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
-                                                }
+                                        implicitWidth: 44
+                                        implicitHeight: 44
+
+                                        Canvas {
+                                            id: paletteCircle
+                                            anchors.centerIn: parent
+                                            width: 40
+                                            height: 40
+                                            visible: schemeChip.swatches.length >= 3
+                                            onPaint: {
+                                                const ctx = getContext("2d")
+                                                ctx.reset()
+                                                const c = schemeChip.swatches
+                                                if (c.length < 3) return
+                                                const r = width / 2
+                                                ctx.beginPath(); ctx.moveTo(r, r)
+                                                ctx.arc(r, r, r, Math.PI, 2 * Math.PI); ctx.closePath()
+                                                ctx.fillStyle = c[0]; ctx.fill()
+                                                ctx.beginPath(); ctx.moveTo(r, r)
+                                                ctx.arc(r, r, r, Math.PI / 2, Math.PI); ctx.closePath()
+                                                ctx.fillStyle = c[1]; ctx.fill()
+                                                ctx.beginPath(); ctx.moveTo(r, r)
+                                                ctx.arc(r, r, r, 0, Math.PI / 2); ctx.closePath()
+                                                ctx.fillStyle = c[2]; ctx.fill()
                                             }
                                         }
-                                    }
 
-                                    MaterialSymbol {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        visible: schemeChip.swatches.length === 0
-                                        text: schemeChip.modelData.icon
-                                        fill: schemeChip.isSelected ? 1 : 0
-                                        iconSize: Appearance.font.pixelSize.larger
-                                        color: schemeChip.isSelected ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
-                                        Behavior on color {
-                                            ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                                        MaterialSymbol {
+                                            anchors.centerIn: parent
+                                            visible: schemeChip.swatches.length < 3
+                                            text: schemeChip.modelData.icon
+                                            iconSize: Appearance.font.pixelSize.huge
+                                            color: Appearance.colors.colOnSecondaryContainer
+                                        }
+
+                                        // Selection ring + center check badge
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 44
+                                            height: 44
+                                            radius: 22
+                                            color: "transparent"
+                                            border.width: 2
+                                            border.color: Appearance.colors.colPrimary
+                                            opacity: schemeChip.isSelected ? 1 : 0
+                                            scale: schemeChip.isSelected ? 1 : 0.7
+                                            Behavior on opacity {
+                                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                            }
+                                            Behavior on scale {
+                                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                            }
+                                        }
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 18
+                                            height: 18
+                                            radius: 9
+                                            color: Appearance.colors.colPrimary
+                                            opacity: schemeChip.isSelected ? 1 : 0
+                                            scale: schemeChip.isSelected ? 1 : 0.4
+                                            Behavior on opacity {
+                                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                            }
+                                            Behavior on scale {
+                                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                            }
+                                            MaterialSymbol {
+                                                anchors.centerIn: parent
+                                                text: "check"
+                                                iconSize: 14
+                                                color: Appearance.colors.colOnPrimary
+                                            }
                                         }
                                     }
 
@@ -292,10 +331,7 @@ ContentPage {
                                         text: schemeChip.modelData.displayName
                                         font.pixelSize: Appearance.font.pixelSize.smaller
                                         font.weight: schemeChip.isSelected ? Font.DemiBold : Font.Medium
-                                        color: schemeChip.isSelected ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
-                                        Behavior on color {
-                                            ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
-                                        }
+                                        color: Appearance.colors.colOnSecondaryContainer
                                     }
                                 }
 
