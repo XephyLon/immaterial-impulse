@@ -661,6 +661,15 @@ Singleton {
                 property list<string> ignoredAppRegexes: []
             }
 
+            property JsonObject dropShelf: JsonObject {
+                property bool dragToBarReveal: true // Dragging files over the bar pops the shelf out
+                property bool shakeToSummon: false // Shake the cursor while dragging (BTN_LEFT-gated) to summon
+                property real shakeSensitivity: 1.0 // Higher = easier to trigger
+                property int autoDismissSeconds: 5 // Close an untouched summoned shelf (0 = never)
+                property bool blurBackground: true // Translucent tint; the compositor blurs behind it
+                property real backgroundOpacity: 0.5
+            }
+
             property JsonObject interactions: JsonObject {
                 property JsonObject scrolling: JsonObject {
                     property bool fasterTouchpadScroll: false // Enable faster scrolling with touchpad

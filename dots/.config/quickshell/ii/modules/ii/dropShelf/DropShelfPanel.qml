@@ -1,5 +1,4 @@
 import qs.modules.common
-import qs.modules.common.plugins
 import qs.modules.common.widgets
 import qs.modules.common.functions
 import qs.services
@@ -14,11 +13,10 @@ import Quickshell.Wayland
 Scope {
     id: root
 
-    readonly property string pluginId: "drop_shelf"
-    readonly property bool shakeToSummon: PluginState.option(pluginId, "shakeToSummon", false)
-    readonly property real shakeSensitivity: PluginState.option(pluginId, "shakeSensitivity", 100) / 100
-    readonly property bool blurBackground: PluginState.option(pluginId, "blurBackground", true)
-    readonly property real backgroundOpacity: PluginState.option(pluginId, "backgroundOpacity", 0.5)
+    readonly property bool shakeToSummon: Config.options.dropShelf.shakeToSummon
+    readonly property real shakeSensitivity: Config.options.dropShelf.shakeSensitivity
+    readonly property bool blurBackground: Config.options.dropShelf.blurBackground
+    readonly property real backgroundOpacity: Config.options.dropShelf.backgroundOpacity
 
     // Dropover-style mid-drag summon: press the bound key while dragging files
     // and the shelf materializes under the cursor to receive the drop.

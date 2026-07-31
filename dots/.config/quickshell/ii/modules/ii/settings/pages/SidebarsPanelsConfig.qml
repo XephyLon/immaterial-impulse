@@ -657,5 +657,61 @@ ContentPage {
                 }
             }
         }
+
+        ContentSection {
+            icon: "shelves"
+            title: Translation.tr("Drop shelf")
+            shape: MaterialShape.Shape.Cookie4Sided
+
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "swipe_up"
+                    text: Translation.tr("Reveal when dragging files onto the bar")
+                    checked: Config.options.dropShelf.dragToBarReveal
+                    onCheckedChanged: { Config.options.dropShelf.dragToBarReveal = checked }
+                }
+                ConfigSwitch {
+                    buttonIcon: "gesture"
+                    text: Translation.tr("Shake cursor (while dragging) to summon")
+                    checked: Config.options.dropShelf.shakeToSummon
+                    onCheckedChanged: { Config.options.dropShelf.shakeToSummon = checked }
+                }
+                ConfigSpinBox {
+                    enabled: Config.options.dropShelf.shakeToSummon
+                    icon: "tune"
+                    text: Translation.tr("Shake sensitivity (%)")
+                    value: Math.round(Config.options.dropShelf.shakeSensitivity * 100)
+                    from: 50
+                    to: 300
+                    stepSize: 25
+                    onValueChanged: { Config.options.dropShelf.shakeSensitivity = value / 100 }
+                }
+                ConfigSpinBox {
+                    icon: "timer"
+                    text: Translation.tr("Auto-dismiss after (seconds)")
+                    value: Config.options.dropShelf.autoDismissSeconds
+                    from: 0
+                    to: 60
+                    stepSize: 1
+                    onValueChanged: { Config.options.dropShelf.autoDismissSeconds = value }
+                }
+                ConfigSwitch {
+                    buttonIcon: "blur_on"
+                    text: Translation.tr("Blur background")
+                    checked: Config.options.dropShelf.blurBackground
+                    onCheckedChanged: { Config.options.dropShelf.blurBackground = checked }
+                }
+                ConfigSpinBox {
+                    enabled: Config.options.dropShelf.blurBackground
+                    icon: "opacity"
+                    text: Translation.tr("Background opacity (%)")
+                    value: Math.round(Config.options.dropShelf.backgroundOpacity * 100)
+                    from: 0
+                    to: 100
+                    stepSize: 5
+                    onValueChanged: { Config.options.dropShelf.backgroundOpacity = value / 100 }
+                }
+            }
+        }
     }
 }

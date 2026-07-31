@@ -100,23 +100,13 @@ Manifest options support `boolean`, `choice`, `number`, and `text`. Text options
 native `ConfigTextArea`; `placeholder`, `maxLength`, and `uppercase` may be supplied for short values
 such as currency codes.
 
-## Drop Shelf
+## Drop Shelf and Screenshot Result
 
-The bundled `drop_shelf` package owns the drop-shelf panel (`panel` entry
-point) and its summoning: a mid-drag global shortcut (`Super+U`,
-`quickshell:dropShelfSummon`), an IPC surface (`qs -c ii ipc call dropShelf
-toggle|open|close`), an opt-in cursor-shake watcher
-(`scripts/dropshelf/shake_detector.py` polling the raw Hyprland request
-socket; armed only while BTN_LEFT is held, read via the EVIOCGKEY evdev
-ioctl — needs `input` group, degrades to always-armed without it; paused
-while locked or fullscreen), and a blur-able background (the
-tint's opacity is an option; compositor blur behind `quickshell:*` layers
-does the frosting). The shelf data model (`DropShelf` singleton) stays in the
-core shell because the desktop menu and the bar's drag-reveal feed it; both
-of those surfaces hide when the plugin is disabled. The shake watcher is a
-single long-lived helper started by a `running:` binding — it only exits on
-its own if the compositor goes away, and a toggle restarts it; it is not a
-respawn-on-exit stream.
+Both were bundled `panel` plugins and are now core shell modules
+(`modules/ii/dropShelf/`, `modules/ii/screenshotResult/`), loaded by the
+panel family and configured through the shell config (`dropShelf.*`,
+`screenshotResult.*`) rather than plugin options. `PluginPanelHost` remains
+for third-party `panel`-capability packages.
 
 ## Desktop blur surfaces
 

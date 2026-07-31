@@ -570,6 +570,14 @@
     "showMedia": true,
     "showPinButton": true
   },
+  "dropShelf": {
+    "autoDismissSeconds": 5,
+    "backgroundOpacity": 0.5,
+    "blurBackground": true,
+    "dragToBarReveal": true,
+    "shakeSensitivity": 1.0,
+    "shakeToSummon": false
+  },
   "hacks": {
     "arbitraryRaceConditionDelay": 20
   },
@@ -736,9 +744,7 @@
       "nandoroid_media",
       "nandoroid_system_monitor",
       "nandoroid_weather",
-      "nandoroid_currency",
-      "screenshot_result",
-      "drop_shelf"
+      "nandoroid_currency"
     ],
     "frostMode": "blur"
   },

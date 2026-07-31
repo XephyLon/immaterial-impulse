@@ -129,7 +129,7 @@ class ButtonWatcherTests(unittest.TestCase):
 
 class QmlWiringTests(unittest.TestCase):
     def setUp(self):
-        self.panel = (ROOT / "modules/common/plugins/bundled/dropShelf/DropShelfPanel.qml").read_text()
+        self.panel = (ROOT / "modules/ii/dropShelf/DropShelfPanel.qml").read_text()
         self.shelf = (ROOT / "modules/common/widgets/DropShelf.qml").read_text()
         self.bar = (ROOT / "modules/ii/bar/Bar.qml").read_text()
 
@@ -158,9 +158,7 @@ class QmlWiringTests(unittest.TestCase):
         self.assertIn('["hyprctl", "-j", "cursorpos"]', self.shelf)
 
     def test_bar_reveal_gated_and_accepts_uri_list(self):
-        # Bar is core; the reveal must stay behind the plugin being enabled.
-        self.assertIn('Config.options.plugins.enabled.includes("drop_shelf")', self.bar)
-        self.assertIn('PluginState.option("drop_shelf", "dragToBarReveal", true)', self.bar)
+        self.assertIn("Config.options.dropShelf.dragToBarReveal", self.bar)
         self.assertIn('keys: ["text/uri-list"]', self.bar)
         self.assertIn("DropShelf.addItems(drop.urls)", self.bar)
 
@@ -169,59 +167,51 @@ class QmlWiringTests(unittest.TestCase):
         self.assertIn("GlobalStates.dropShelfAnchorBelow", self.panel)
 
 
-class PluginContractTests(unittest.TestCase):
+class CoreIntegrationTests(unittest.TestCase):
+    """The shelf is core shell (de-pluginized): always loaded, config-driven."""
+
     def setUp(self):
-        self.manifest = json.loads(
-            (ROOT / "modules/common/plugins/bundled/dropShelf/manifest.json").read_text())
+        self.panel = (ROOT / "modules/ii/dropShelf/DropShelfPanel.qml").read_text()
 
-    def test_manifest_shape(self):
-        self.assertEqual(self.manifest["id"], "drop_shelf")
-        self.assertIn("panel", self.manifest["capabilities"])
-        self.assertEqual(self.manifest["panel"], {"component": "DropShelfPanel.qml"})
-        self.assertIn("process", self.manifest["permissions"])
+    def test_loaded_by_the_panel_family(self):
+        fam = (ROOT / "panelFamilies/ImmaterialImpulseFamily.qml").read_text()
+        self.assertIn("PanelLoader { component: DropShelfPanel {} }", fam)
+        self.assertIn("import qs.modules.ii.dropShelf", fam)
 
-    def test_manifest_options_cover_all_knobs(self):
-        options = {o["key"]: o for o in self.manifest["options"]}
-        self.assertEqual(set(options), {
-            "dragToBarReveal", "shakeToSummon", "shakeSensitivity",
-            "autoDismissSeconds", "blurBackground", "backgroundOpacity"})
-        self.assertEqual(options["shakeSensitivity"]["default"], 100)
-        self.assertEqual(options["shakeSensitivity"]["enabledWhen"], "shakeToSummon")
-        # Fractional slider needs a fractional step or PluginOptions rounds to 0/1.
-        self.assertEqual(options["backgroundOpacity"]["step"], 0.05)
-
-    def test_bundled_plugin_enabled_by_default(self):
-        defaults = json.loads((ROOT / "defaults/config.json").read_text())
-        self.assertNotIn("dropShelf", defaults)
-        self.assertIn("drop_shelf", defaults["plugins"]["enabled"])
-
-    def test_core_config_has_no_dropshelf_section(self):
-        adapter = (ROOT / "modules/common/Config.qml").read_text()
-        self.assertNotIn("JsonObject dropShelf", adapter)
-
-    def test_panel_reads_plugin_options(self):
-        panel = (ROOT / "modules/common/plugins/bundled/dropShelf/DropShelfPanel.qml").read_text()
-        for pin in ('PluginState.option(pluginId, "shakeToSummon", false)',
-                    'PluginState.option(pluginId, "shakeSensitivity", 100) / 100',
-                    'PluginState.option(pluginId, "blurBackground", true)',
-                    'PluginState.option(pluginId, "backgroundOpacity", 0.5)'):
-            self.assertIn(pin, panel)
-
-    def test_blurable_background(self):
-        panel = (ROOT / "modules/common/plugins/bundled/dropShelf/DropShelfPanel.qml").read_text()
-        self.assertIn("ColorUtils.transparentize(Appearance.colors.colLayer0, 1 - root.backgroundOpacity)", panel)
-
-    def test_registered_with_plugin_manager(self):
-        # Bundled plugins are a hardcoded FileView list - forgetting the
-        # registration silently makes the plugin not exist.
+    def test_no_plugin_remnants(self):
+        self.assertNotIn("PluginState", self.panel)
+        self.assertFalse((ROOT / "modules/common/plugins/bundled/dropShelf").exists())
         manager = (ROOT / "modules/common/plugins/PluginManager.qml").read_text()
-        self.assertIn("dropShelfManifestFile", manager)
-        self.assertIn('bundled/dropShelf', manager)
-        self.assertRegex(manager, r"screenshotResultManifestFile,\s*\n\s*dropShelfManifestFile\]")
+        self.assertNotIn("dropShelf", manager)
 
-    def test_desktop_menu_gated_on_plugin(self):
+    def test_panel_reads_core_config(self):
+        for pin in ("Config.options.dropShelf.shakeToSummon",
+                    "Config.options.dropShelf.shakeSensitivity",
+                    "Config.options.dropShelf.blurBackground",
+                    "Config.options.dropShelf.backgroundOpacity"):
+            self.assertIn(pin, self.panel)
+
+    def test_defaults_and_adapter_agree(self):
+        defaults = json.loads((ROOT / "defaults/config.json").read_text())
+        self.assertEqual(defaults["dropShelf"], {
+            "autoDismissSeconds": 5, "backgroundOpacity": 0.5,
+            "blurBackground": True, "dragToBarReveal": True,
+            "shakeSensitivity": 1.0, "shakeToSummon": False})
+        self.assertNotIn("drop_shelf", defaults["plugins"]["enabled"])
+        adapter = (ROOT / "modules/common/Config.qml").read_text()
+        self.assertIn("property JsonObject dropShelf", adapter)
+
+    def test_settings_section_present(self):
+        page = (ROOT / "modules/ii/settings/pages/SidebarsPanelsConfig.qml").read_text()
+        self.assertIn('Translation.tr("Drop shelf")', page)
+        self.assertIn("Config.options.dropShelf.dragToBarReveal", page)
+
+    def test_bar_and_menu_ungated(self):
+        bar = (ROOT / "modules/ii/bar/Bar.qml").read_text()
+        self.assertIn("Config.options.dropShelf.dragToBarReveal", bar)
+        self.assertNotIn("drop_shelf", bar)
         menu = (ROOT / "modules/ii/desktopMenu/DesktopMenu.qml").read_text()
-        self.assertIn('Config.options.plugins.enabled.includes("drop_shelf")', menu)
+        self.assertNotIn("drop_shelf", menu)
 
 
 if __name__ == "__main__":

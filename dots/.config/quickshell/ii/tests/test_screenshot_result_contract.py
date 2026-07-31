@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contracts for the screenshot result popup (core hook + bundled plugin)."""
+"""Contracts for the screenshot result popup (core shell module)."""
 import json
 import re
 import sys
@@ -9,9 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 REPO = ROOT.parents[3]
 SERVICE = ROOT / "services" / "ScreenshotEvents.qml"
 HOST = ROOT / "modules" / "common" / "plugins" / "PluginPanelHost.qml"
-PLUGIN_DIR = ROOT / "modules" / "common" / "plugins" / "bundled" / "screenshot-result"
-MANIFEST = PLUGIN_DIR / "manifest.json"
-PANEL = PLUGIN_DIR / "ScreenshotResultPanel.qml"
+PANEL = ROOT / "modules" / "ii" / "screenshotResult" / "ScreenshotResultPanel.qml"
 KEYBINDS = REPO / "dots" / ".config" / "hypr" / "hyprland" / "keybinds.lua"
 SHELL_QML = ROOT / "shell.qml"
 PLUGIN_MANAGER = ROOT / "modules" / "common" / "plugins" / "PluginManager.qml"
@@ -49,17 +47,13 @@ def main():
     host = read(HOST)
     check("panel host exists", HOST.exists())
     check("panel host loads manifest.panel components", ".panel" in host and "_basePath" in host)
-    check("panel host keeps ScreenshotEvents alive", "ScreenshotEvents" in host)
+    # ScreenshotEvents is anchored by the always-loaded panel now, not the host.
     check("shell.qml instantiates the panel host", "PluginPanelHost" in read(SHELL_QML))
 
-    mtext = read(MANIFEST)
-    check("plugin manifest exists", MANIFEST.exists())
-    if mtext:
-        m = json.loads(mtext)
-        check("manifest has a panel entry", isinstance(m.get("panel"), dict) and m["panel"].get("component"))
-        check("manifest id", m.get("id") == "screenshot_result")
-        check("panel component file exists", (PLUGIN_DIR / m["panel"]["component"]).exists())
-    check("bundled manifest registered", "screenshot-result/manifest.json" in read(PLUGIN_MANAGER))
+    family = read(ROOT / "panelFamilies" / "ImmaterialImpulseFamily.qml")
+    check("panel loaded by the family", "PanelLoader { component: ScreenshotResultPanel {} }" in family)
+    check("family imports the module", "import qs.modules.ii.screenshotResult" in family)
+    check("no bundled plugin left", not (ROOT / "modules" / "common" / "plugins" / "bundled" / "screenshot-result").exists())
 
     panel = read(PANEL)
     check("panel subscribes to the event", "ScreenshotEvents" in panel and "onScreenshotTaken" in panel)

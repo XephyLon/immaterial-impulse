@@ -12,10 +12,6 @@ import qs.modules.common
 Scope {
     id: root
 
-    // Force-instantiate the event hub (lazy singletons without references
-    // never register their IpcHandlers).
-    readonly property var _screenshotEvents: ScreenshotEvents
-
     readonly property var panelPlugins: PluginManager.availablePlugins.filter(manifest =>
         manifest.panel !== undefined
         && Config.options.plugins.enabled.includes(manifest.id))

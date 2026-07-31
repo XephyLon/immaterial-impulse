@@ -12,6 +12,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- Drop Shelf and Screenshot Result are core shell modules again, not
+  bundled plugins: always loaded by the panel family, options in the shell
+  config (`dropShelf.*` with the blur knobs, `screenshotResult.*`) and in
+  Settings (Drop shelf under Sidebars & Panels; Screenshot popup was
+  already under Capture). Plugin-state options migrate is manual-free: the
+  live install's preferences were carried over. `PluginPanelHost` stays
+  for third-party panel plugins.
+
 ## [0.5.1] — 2026-07-31
 
 ### Fixed

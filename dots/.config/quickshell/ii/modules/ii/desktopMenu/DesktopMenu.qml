@@ -314,7 +314,6 @@ Scope {
                                     opacity: 0.4
                                 }
                             }
-                            visible: Config.options.plugins.enabled.includes("drop_shelf")
                             onClicked: {
                                 GlobalStates.desktopMenuOpen = false
                                 GlobalStates.dropShelfX = GlobalStates.desktopMenuX

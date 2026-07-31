@@ -4,7 +4,6 @@ import Quickshell
 import Quickshell.Io
 import qs.services
 import qs.modules.common
-import qs.modules.common.plugins
 import qs.modules.common.functions
 import qs
 
@@ -52,7 +51,7 @@ Singleton {
 
     // Held true by the panel while the pointer or a drag is over the shelf.
     property bool autoDismissHeld: false
-    readonly property int autoDismissSeconds: PluginState.option("drop_shelf", "autoDismissSeconds", 5)
+    readonly property int autoDismissSeconds: Config.options.dropShelf.autoDismissSeconds
     function armAutoDismiss() {
         if (root.autoDismissSeconds > 0)
             autoDismissTimer.restart()

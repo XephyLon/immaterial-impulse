@@ -8,7 +8,6 @@ import Quickshell.Hyprland
 import qs
 import qs.services
 import qs.modules.common
-import qs.modules.common.plugins
 import qs.modules.common.widgets
 
 Scope {
@@ -122,9 +121,7 @@ Scope {
                     anchors.fill: parent
                     keys: ["text/uri-list"]
                     onEntered: drag => {
-                        const shelfEnabled = Config.options.plugins.enabled.includes("drop_shelf")
-                            && PluginState.option("drop_shelf", "dragToBarReveal", true)
-                        if (!shelfEnabled || !drag.hasUrls) {
+                        if (!Config.options.dropShelf.dragToBarReveal || !drag.hasUrls) {
                             drag.accepted = false
                             return
                         }
