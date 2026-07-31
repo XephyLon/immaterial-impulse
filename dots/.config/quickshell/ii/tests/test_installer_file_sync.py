@@ -381,5 +381,32 @@ class InstallerFileSyncTests(unittest.TestCase):
         self.assertIn("v rsync_dir__sync_exclude_from ", FILES_TEXT)
 
 
+class RestoreIconThemeTests(unittest.TestCase):
+    """The dots sync ships kdeglobals with Theme=breeze-dark; the installer
+    must re-apply the user's stored icon selection after every sync."""
+
+    def setUp(self):
+        self.text = FILES_SH.read_text()
+
+    def test_restore_runs_after_files_dispatch(self):
+        dispatch = self.text.index("3.files-legacy.sh")
+        restore_call = self.text.index("v restore_icon_theme")
+        seed = self.text.index("v seed_default_config")
+        self.assertTrue(dispatch < restore_call < seed,
+                        "restore_icon_theme must run after the sync, before seeding")
+
+    def test_restore_reads_shell_config_and_apply_script(self):
+        self.assertIn('appearance",{}).get("iconTheme', self.text)
+        self.assertIn("scripts/icons/apply-icon-theme.sh", self.text)
+
+    def test_restore_is_best_effort(self):
+        # A missing config/script or an uninstalled theme must not abort the
+        # installer - the function returns 0 and at worst keeps the default.
+        block = self.text[self.text.index("function restore_icon_theme(){"):
+                          self.text.index("function seed_default_config(){")]
+        self.assertIn("return 0", block)
+        self.assertNotIn("exit ", block)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -13,6 +13,12 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- Selected icon pack reset by "Update Dots": the dots sync ships a
+  `kdeglobals` with `[Icons] Theme=breeze-dark`, overwriting the theme the
+  user picked in Settings → Interface → Icon pack (the selection itself
+  survives in the shell config; it just never got re-applied). The installer
+  now re-applies `appearance.iconTheme` via `apply-icon-theme.sh` after
+  every file sync, best-effort.
 - About page PC-spec cards stuck on "Loading..." until visiting another
   section: the specs refresh fired on a hardcoded page index (7) that went
   stale when the Plugins page shifted About to 8. The trigger now targets

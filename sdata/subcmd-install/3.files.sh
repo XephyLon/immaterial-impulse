@@ -43,6 +43,25 @@ function gen_firstrun(){
   x mkdir -p "$(dirname ${INSTALLED_LISTFILE})"
   realpath -se "${FIRSTRUN_FILE}" >> "${INSTALLED_LISTFILE}"
 }
+function restore_icon_theme(){
+  # The dots sync ships a kdeglobals with [Icons] Theme=breeze-dark, which
+  # clobbers the icon pack the user selected in shell settings (persisted as
+  # appearance.iconTheme in the shell config; applied to kdeglobals/GTK inis/
+  # gsettings only at selection time). Re-apply the stored selection after
+  # every sync so an update never resets the icon theme. Best-effort: a theme
+  # that is no longer installed just leaves the shipped default in place.
+  local config="${XDG_CONFIG_HOME}/immaterial-impulse/config.json"
+  local script="${XDG_CONFIG_HOME}/quickshell/ii/scripts/icons/apply-icon-theme.sh"
+  if [[ ! -f "$config" || ! -f "$script" ]]; then return 0; fi
+  local theme
+  theme="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("appearance",{}).get("iconTheme","") or "")' "$config" 2>/dev/null)" || return 0
+  if [[ -z "$theme" ]]; then return 0; fi
+  if bash "$script" "$theme"; then
+    echo -e "${STY_BLUE}[$0]: re-applied icon theme \"$theme\" after dots sync.${STY_RST}"
+  else
+    echo -e "${STY_YELLOW}[$0]: could not re-apply icon theme \"$theme\" (not installed?); shipped default kept.${STY_RST}"
+  fi
+}
 function seed_default_config(){
   # Seed the shell config with the suite's curated defaults on a FRESH install
   # only (never touch an existing config.json - it is the user's live settings,
@@ -270,6 +289,9 @@ case "${EXPERIMENTAL_FILES_SCRIPT}" in
   true)source sdata/subcmd-install/3.files-exp.sh;;
   *)source sdata/subcmd-install/3.files-legacy.sh;;
 esac
+
+showfun restore_icon_theme
+v restore_icon_theme
 
 if [[ ! "$OS_GROUP_ID" == "fedora" ]]; then
   showfun install_google_sans_flex
