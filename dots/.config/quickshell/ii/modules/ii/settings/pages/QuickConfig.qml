@@ -190,11 +190,17 @@ ContentPage {
 
                 ColumnLayout {
                     Layout.fillWidth: true
+                    // Match the wallpaper preview's height exactly so the
+                    // scheme grid can't overshoot it.
+                    Layout.preferredHeight: 280
+                    Layout.maximumHeight: 280
                     spacing: Appearance.spacing.space100
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
+                        // 56 + 3x66 chips + the four gaps = the preview's 280.
+                        Layout.preferredHeight: 56
+                        Layout.maximumHeight: 56
                         spacing: Appearance.spacing.space100
                         uniformCellSizes: true
                         SmallLightDarkPreferenceButton { dark: false }
@@ -223,7 +229,8 @@ ContentPage {
                                 id: schemeChip
                                 required property var modelData
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 84
+                                Layout.preferredHeight: 66
+                                Layout.maximumHeight: 66
 
                                 property bool isSelected: Config.options.appearance.palette.type === modelData.value
                                 property bool hovered: hoverArea.containsMouse
@@ -247,14 +254,14 @@ ContentPage {
                                     // color venv can't supply swatches.
                                     Item {
                                         Layout.alignment: Qt.AlignHCenter
-                                        implicitWidth: 44
-                                        implicitHeight: 44
+                                        implicitWidth: 40
+                                        implicitHeight: 40
 
                                         Canvas {
                                             id: paletteCircle
                                             anchors.centerIn: parent
-                                            width: 40
-                                            height: 40
+                                            width: 36
+                                            height: 36
                                             visible: schemeChip.swatches.length >= 3
                                             onPaint: {
                                                 const ctx = getContext("2d")
@@ -285,9 +292,9 @@ ContentPage {
                                         // Selection ring + center check badge
                                         Rectangle {
                                             anchors.centerIn: parent
-                                            width: 44
-                                            height: 44
-                                            radius: 22
+                                            width: 40
+                                            height: 40
+                                            radius: 20
                                             color: "transparent"
                                             border.width: 2
                                             border.color: Appearance.colors.colPrimary

@@ -12,6 +12,11 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- Quick page: the scheme grid ran a little taller than the wallpaper
+  preview. The right column is now height-locked to the preview
+  (56px light/dark row + three 66px chip rows + gaps = 280).
+
 ## [0.6.0] — 2026-07-31
 
 ### Added
