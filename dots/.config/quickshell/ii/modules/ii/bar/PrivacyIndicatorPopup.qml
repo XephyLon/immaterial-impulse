@@ -98,6 +98,22 @@ StyledPopup {
                 label: Translation.tr("Screen")
                 entries: [Translation.tr("Shared or recorded")]
             }
+
+            DeviceSection {
+                visible: ScreenRecord.recording
+                icon: "screen_record"
+                label: Translation.tr("Recording")
+                entries: [ScreenRecord.recordPaused
+                    ? Translation.tr("Paused")
+                    : Translation.tr("Recording the screen")]
+            }
+
+            DeviceSection {
+                visible: ScreenRecord.replaying
+                icon: "replay"
+                label: Translation.tr("Instant replay")
+                entries: [Translation.tr("Buffering the last moments")]
+            }
         }
     }
 }

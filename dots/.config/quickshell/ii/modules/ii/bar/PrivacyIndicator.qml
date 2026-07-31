@@ -16,7 +16,11 @@ MouseArea {
     readonly property bool micOn: MediaCapture.micActive
     readonly property bool cameraOn: MediaCapture.cameraActive
     readonly property bool screencastOn: MediaCapture.screencastActive
-    readonly property bool shown: micOn || cameraOn || screencastOn
+    // Shell-owned captures: an active recording and the armed instant-replay
+    // buffer are ongoing screen grabs too - they belong in the privacy pill.
+    readonly property bool recordingOn: ScreenRecord.recording
+    readonly property bool replayOn: ScreenRecord.replaying
+    readonly property bool shown: micOn || cameraOn || screencastOn || recordingOn || replayOn
 
     // Vivid error fill with its matching on-color. The BASE error pair is M3's
     // high-contrast pairing; the *container* variants can be low-contrast.
@@ -95,6 +99,8 @@ MouseArea {
             IconSlot { on: root.micOn; sym: "mic" }
             IconSlot { on: root.cameraOn; sym: "videocam" }
             IconSlot { on: root.screencastOn; sym: "screen_share" }
+            IconSlot { on: root.recordingOn; sym: "screen_record" }
+            IconSlot { on: root.replayOn; sym: "replay" }
         }
 
         Column {
@@ -105,6 +111,8 @@ MouseArea {
             IconSlot { on: root.micOn; sym: "mic" }
             IconSlot { on: root.cameraOn; sym: "videocam" }
             IconSlot { on: root.screencastOn; sym: "screen_share" }
+            IconSlot { on: root.recordingOn; sym: "screen_record" }
+            IconSlot { on: root.replayOn; sym: "replay" }
         }
     }
 

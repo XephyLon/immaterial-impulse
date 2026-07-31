@@ -51,6 +51,12 @@ own repo; the installer pins which revision it builds.
     with the real path (replay clips included).
   - Suite dependency lists switched from `wf-recorder` to
     `gpu-screen-recorder` (arch/fedora/gentoo/nix).
+  - The bar's privacy pill now also shows shell-owned captures: a
+    `screen_record` icon while a recording runs (with pause state in the
+    hover popup) and a `replay` icon while the instant-replay buffer is
+    armed. An **Instant replay** quick toggle joins both right-sidebar
+    styles (Android grid: drag it in from the unused set; classic panel:
+    always present) - toggle to arm, long-press to save a clip.
 
 ## [0.2.0] — 2026-07-31
 

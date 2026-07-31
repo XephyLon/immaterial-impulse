@@ -32,6 +32,7 @@ AbstractQuickPanel {
         }
         NightLight {}
         GameMode {}
+        InstantReplay {}
         IdleInhibitor {}
         EasyEffectsToggle {}
         CloudflareWarp {}

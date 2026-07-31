@@ -121,6 +121,27 @@ class WiringTests(unittest.TestCase):
         self.assertIn("ScreenRecord.replaying", bar)
         self.assertIn("ScreenRecord.saveReplay()", bar)
 
+    def test_privacy_indicator_shows_shell_captures(self):
+        ind = (ROOT / "modules/ii/bar/PrivacyIndicator.qml").read_text()
+        self.assertIn("ScreenRecord.recording", ind)
+        self.assertIn("ScreenRecord.replaying", ind)
+        self.assertIn('sym: "screen_record"', ind)
+        self.assertIn('sym: "replay"', ind)
+        popup = (ROOT / "modules/ii/bar/PrivacyIndicatorPopup.qml").read_text()
+        self.assertIn("ScreenRecord.recording", popup)
+        self.assertIn("ScreenRecord.replaying", popup)
+
+    def test_sidebar_quick_toggle_registered_in_both_styles(self):
+        model = (ROOT / "modules/common/models/quickToggles/InstantReplayToggle.qml").read_text()
+        self.assertIn("ScreenRecord.toggleReplay()", model)
+        self.assertIn("ScreenRecord.saveReplay()", model)  # altAction saves a clip
+        panel = (ROOT / "modules/ii/sidebarRight/quickToggles/AndroidQuickPanel.qml").read_text()
+        self.assertIn('"instantReplay"', panel)
+        chooser = (ROOT / "modules/ii/sidebarRight/quickToggles/androidStyle/AndroidToggleDelegateChooser.qml").read_text()
+        self.assertIn('roleValue: "instantReplay"', chooser)
+        classic = (ROOT / "modules/ii/sidebarRight/quickToggles/ClassicQuickPanel.qml").read_text()
+        self.assertIn("InstantReplay {}", classic)
+
     def test_no_wf_recorder_left_in_shell(self):
         hits = []
         for f in ROOT.rglob("*"):
