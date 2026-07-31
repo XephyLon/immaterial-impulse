@@ -23,6 +23,10 @@ ShellRoot {
     // ScreenshotEvents IPC handler alive.
     PluginPanelHost {}
 
+    // Keep the recorder service alive: its replay daemon, IPC handler and
+    // global shortcuts must exist even before any UI references it.
+    readonly property var _screenRecord: ScreenRecord
+
     Process {
         id: autostartProc
         command: ["python3", `${Directories.scriptPath}/hyprland/autostart.py`]

@@ -777,7 +777,24 @@
     "historyLength": 60,
     "updateInterval": 3000
   },
-  "screenRecord": {},
+  "screenRecord": {
+    "audioCodec": "opus",
+    "codec": "auto",
+    "fps": 60,
+    "framerateMode": "vfr",
+    "quality": "very_high",
+    "recordAudio": true,
+    "recordMic": false,
+    "replay": {
+      "duration": 120,
+      "enable": false,
+      "monitor": "",
+      "restartOnSave": false,
+      "savePath": "",
+      "storage": "ram"
+    },
+    "showCursor": true
+  },
   "screenSnip": {
     "savePath": ""
   },

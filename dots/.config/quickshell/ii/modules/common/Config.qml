@@ -925,6 +925,22 @@ Singleton {
 
             property JsonObject screenRecord: JsonObject {
                 property string savePath: Directories.videos.replace("file://","") // strip "file://"
+                property int fps: 60
+                property string quality: "very_high" // medium | high | very_high | ultra
+                property string codec: "auto" // auto | h264 | hevc | av1
+                property string audioCodec: "opus" // opus | aac | flac
+                property bool recordAudio: true // desktop audio on recordings/replays
+                property bool recordMic: false // merge the mic into the audio track
+                property bool showCursor: true
+                property string framerateMode: "vfr" // cfr | vfr | content
+                property JsonObject replay: JsonObject {
+                    property bool enable: false // instant-replay ring buffer daemon
+                    property int duration: 120 // seconds kept in the buffer
+                    property string savePath: "" // "" = screenRecord.savePath
+                    property string monitor: "" // "" = whole screen
+                    property string storage: "ram" // ram | disk
+                    property bool restartOnSave: false // clear the buffer after each save
+                }
             }
 
             property JsonObject screenSnip: JsonObject {
