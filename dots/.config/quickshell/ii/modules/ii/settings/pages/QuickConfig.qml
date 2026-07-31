@@ -246,7 +246,7 @@ ContentPage {
 
                                 ColumnLayout {
                                     anchors.centerIn: parent
-                                    spacing: Appearance.spacing.space75
+                                    spacing: Appearance.spacing.space25
 
                                     // Android 12-style palette circle: top half primary,
                                     // bottom quarters secondary/tertiary - the palette IS
@@ -254,14 +254,14 @@ ContentPage {
                                     // color venv can't supply swatches.
                                     Item {
                                         Layout.alignment: Qt.AlignHCenter
-                                        implicitWidth: 40
-                                        implicitHeight: 40
+                                        implicitWidth: 34
+                                        implicitHeight: 34
 
                                         Canvas {
                                             id: paletteCircle
                                             anchors.centerIn: parent
-                                            width: 36
-                                            height: 36
+                                            width: 30
+                                            height: 30
                                             visible: schemeChip.swatches.length >= 3
                                             onPaint: {
                                                 const ctx = getContext("2d")
@@ -292,9 +292,9 @@ ContentPage {
                                         // Selection ring + center check badge
                                         Rectangle {
                                             anchors.centerIn: parent
-                                            width: 40
-                                            height: 40
-                                            radius: 20
+                                            width: 34
+                                            height: 34
+                                            radius: 17
                                             color: "transparent"
                                             border.width: 2
                                             border.color: Appearance.colors.colPrimary
@@ -309,9 +309,9 @@ ContentPage {
                                         }
                                         Rectangle {
                                             anchors.centerIn: parent
-                                            width: 18
-                                            height: 18
-                                            radius: 9
+                                            width: 16
+                                            height: 16
+                                            radius: 8
                                             color: Appearance.colors.colPrimary
                                             opacity: schemeChip.isSelected ? 1 : 0
                                             scale: schemeChip.isSelected ? 1 : 0.4

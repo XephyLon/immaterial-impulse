@@ -15,7 +15,9 @@ own repo; the installer pins which revision it builds.
 ### Fixed
 - Quick page: the scheme grid ran a little taller than the wallpaper
   preview. The right column is now height-locked to the preview
-  (56px light/dark row + three 66px chip rows + gaps = 280).
+  (56px light/dark row + three 66px chip rows + gaps = 280), and the
+  palette circles were re-proportioned (34px slot, tighter label gap) so
+  the shorter chips keep even outer padding.
 
 ## [0.6.0] — 2026-07-31
 
