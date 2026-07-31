@@ -86,6 +86,14 @@ with a periodic table on `Super`+`/`, because why not.
 
 ---
 
+## Compositor support
+
+**Hyprland only.** There are no plans to support Niri or any other
+compositor — I don't use anything else and have no plans to start.
+Compositor-abstraction code arriving from upstream is reduced to a thin
+Hyprland-only facade; PRs porting the shell to other compositors will not
+be accepted.
+
 ## Installation
 
 > Installs the shell to `~/.config/quickshell/ii` and its config to
