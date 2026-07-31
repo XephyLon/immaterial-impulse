@@ -315,6 +315,12 @@ if ! python3 "$SCRIPT_DIR/test_ripple_lifecycle_contract.py"; then
     exit 1
 fi
 
+echo "Running EFI boot contract tests..."
+if ! python3 "$SCRIPT_DIR/test_efiboot_contract.py"; then
+    echo "EFI boot contract tests failed."
+    exit 1
+fi
+
 echo "Running plymouth theme tests..."
 if ! python3 "$SCRIPT_DIR/test_plymouth_theme.py"; then
     echo "Plymouth theme tests failed."

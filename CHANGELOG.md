@@ -13,6 +13,13 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **Selective EFI reboot** in the session screen: a "Reboot into..." action
+  (shown only when the firmware exposes more than one permanent boot entry)
+  expands a picker of EFI boot entries - transient USB/CD/network entries
+  filtered out, current entry marked - and picking one sets `BootNext` via
+  `pkexec efibootmgr -n` (polkit prompt) before rebooting straight into
+  that OS. Firmware-level, so it works with GRUB, systemd-boot and Windows
+  Boot Manager alike; parser covered by node-executed contract tests.
 - **Plymouth boot splash** (opt-in installer component, Arch/mkinitcpio):
   a minimal Material-style theme (`sdata/plymouth-theme/immaterial-impulse`)
   with the suite wordmark, a rotating arc spinner, and a text-free LUKS

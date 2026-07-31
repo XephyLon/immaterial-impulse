@@ -36,6 +36,11 @@ Scope {
             id: sessionRoot
             visible: sessionLoader.active
             property string subtitle
+            property bool rebootPickerOpen: false
+            onVisibleChanged: {
+                rebootPickerOpen = false;
+                if (visible) EfiBoot.refresh();
+            }
 
             function hide() {
                 GlobalStates.sessionOpen = false;
@@ -229,6 +234,69 @@ Scope {
                         }
                         KeyNavigation.up: sessionTaskManager
                         KeyNavigation.left: sessionReboot
+                        KeyNavigation.right: sessionRebootInto
+                    }
+                    SessionActionButton {
+                        id: sessionRebootInto
+                        // Only meaningful with an actual choice of firmware entries.
+                        visible: EfiBoot.entries.length > 1
+                        buttonIcon: "alt_route"
+                        buttonText: Translation.tr("Reboot into...")
+                        onClicked: {
+                            sessionRoot.rebootPickerOpen = !sessionRoot.rebootPickerOpen;
+                        }
+                        onFocusChanged: {
+                            if (focus)
+                                sessionRoot.subtitle = buttonText;
+                        }
+                        KeyNavigation.left: sessionFirmwareReboot
+                    }
+                }
+
+                // Firmware boot entries (BootNext + reboot). Separate from the
+                // plain Reboot button on purpose: picking an entry authenticates
+                // via polkit first, then reboots straight into that OS.
+                Flow {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.maximumWidth: 720
+                    visible: sessionRoot.rebootPickerOpen
+                    spacing: Appearance.spacing.space100
+
+                    Repeater {
+                        model: EfiBoot.entries
+                        delegate: RippleButton {
+                            id: efiEntryButton
+                            required property var modelData
+                            implicitHeight: 44
+                            buttonRadius: height / 2
+                            colBackground: modelData.current
+                                ? Appearance.colors.colSecondaryContainer
+                                : Appearance.colors.colLayer2
+                            colBackgroundHover: Appearance.colors.colLayer2Hover
+                            onClicked: {
+                                sessionRoot.hide();
+                                EfiBoot.rebootInto(efiEntryButton.modelData.num, efiEntryButton.modelData.label);
+                            }
+                            contentItem: RowLayout {
+                                anchors.fill: parent
+                                spacing: Appearance.spacing.space75
+                                MaterialSymbol {
+                                    Layout.leftMargin: Appearance.spacing.space150
+                                    text: efiEntryButton.modelData.current ? "radio_button_checked" : "restart_alt"
+                                    iconSize: Appearance.font.pixelSize.large
+                                    color: Appearance.colors.colOnLayer2
+                                }
+                                StyledText {
+                                    Layout.rightMargin: Appearance.spacing.space150
+                                    text: efiEntryButton.modelData.label
+                                        + (efiEntryButton.modelData.current ? " " + Translation.tr("(current)") : "")
+                                    color: Appearance.colors.colOnLayer2
+                                }
+                            }
+                            StyledToolTip {
+                                text: Translation.tr("Set BootNext to %1 and reboot").arg(efiEntryButton.modelData.num)
+                            }
+                        }
                     }
                 }
 
