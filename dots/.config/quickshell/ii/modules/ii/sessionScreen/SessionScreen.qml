@@ -105,6 +105,7 @@ Scope {
                 }
 
                 GridLayout {
+                    id: sessionGrid
                     // 3x3: session actions on the top rows, power actions on
                     // the bottom row, so "Reboot into..." sits beside Reboot
                     // instead of orphaned on its own row.
@@ -264,8 +265,12 @@ Scope {
                 // Firmware boot entries (BootNext + reboot). Separate from the
                 // plain Reboot button on purpose: picking an entry authenticates
                 // via polkit first, then reboots straight into that OS.
-                RowLayout {
+                ColumnLayout {
+                    // Stacked and clamped to the grid's width so the picker
+                    // never overflows the button block sideways.
                     Layout.alignment: Qt.AlignHCenter
+                    Layout.preferredWidth: sessionGrid.width
+                    Layout.maximumWidth: sessionGrid.width
                     visible: sessionRoot.rebootPickerOpen
                     spacing: Appearance.spacing.space100
 
@@ -276,6 +281,7 @@ Scope {
                             id: efiEntryButton
                             required property var modelData
                             required property int index
+                            Layout.fillWidth: true
                             implicitHeight: 44
                             buttonRadius: height / 2
                             // Focus wins (filled primary pill, matching the grid
@@ -305,10 +311,9 @@ Scope {
                                     event.accepted = true;
                                 }
                             }
-                            KeyNavigation.up: sessionRebootInto
-                            KeyNavigation.left: efiEntryButton.index > 0
-                                ? efiEntryRepeater.itemAt(efiEntryButton.index - 1) : null
-                            KeyNavigation.right: efiEntryRepeater.itemAt(efiEntryButton.index + 1)
+                            KeyNavigation.up: efiEntryButton.index > 0
+                                ? efiEntryRepeater.itemAt(efiEntryButton.index - 1) : sessionRebootInto
+                            KeyNavigation.down: efiEntryRepeater.itemAt(efiEntryButton.index + 1)
                             onFocusChanged: {
                                 if (focus)
                                     sessionRoot.subtitle = Translation.tr("Reboot into %1").arg(efiEntryButton.modelData.label);
@@ -326,13 +331,21 @@ Scope {
                                     }
                                 }
                                 StyledText {
-                                    Layout.rightMargin: Appearance.spacing.space150
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
                                     text: efiEntryButton.modelData.label
                                         + (efiEntryButton.modelData.current ? " " + Translation.tr("(current)") : "")
                                     color: efiEntryButton.colContent
                                     Behavior on color {
                                         ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
                                     }
+                                }
+                                StyledText {
+                                    Layout.rightMargin: Appearance.spacing.space150
+                                    text: efiEntryButton.modelData.num
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    opacity: 0.6
+                                    color: efiEntryButton.colContent
                                 }
                             }
                             StyledToolTip {
