@@ -12,6 +12,17 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Plymouth boot splash** (opt-in installer component, Arch/mkinitcpio):
+  a minimal Material-style theme (`sdata/plymouth-theme/immaterial-impulse`)
+  with the suite wordmark, a rotating arc spinner, and a text-free LUKS
+  password prompt (lock glyph + bullets - no fragile label-plugin dependency
+  inside the initramfs). `setup` gains a PLYMOUTH component /
+  `INSTALL_PLYMOUTH=1`: installs plymouth, copies the theme, adds the
+  mkinitcpio hook (with backup and self-restore), and rebuilds the
+  initramfs; the kernel-cmdline `quiet splash` change is printed, never
+  auto-applied.
+
 ### Changed
 - Quick settings' Wallpaper & Colors section restyled: scheme chips are
   uniform tonal cards with centered icon+label (no more diagonal

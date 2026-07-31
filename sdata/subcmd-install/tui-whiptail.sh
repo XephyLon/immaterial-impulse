@@ -39,11 +39,12 @@ cancelled(){
 # does with that checkbox, we never pass --skip-allfiles, since a plain
 # install with no config deployed isn't a supported state.
 COMPONENTS=$(whiptail --title "Immaterial Impulse Installer" \
-  --checklist "Select components (space to toggle, enter to confirm):" 17 74 5 \
+  --checklist "Select components (space to toggle, enter to confirm):" 18 74 6 \
   "CORE" "Core config (always installed)" ON \
   "DEPS" "Dependencies" ON \
   "WE" "Wallpaper Engine (builds a custom quickshell)" OFF \
   "SDDM" "SDDM login theme - ii-sddm-theme (Arch only)" OFF \
+  "PLYMOUTH" "Plymouth boot splash (Arch only)" OFF \
   3>&1 1>&2 2>&3)
 ret=$?
 [[ $ret -eq 0 ]] || cancelled
@@ -89,6 +90,10 @@ case "$COMPONENTS" in
 esac
 
 case "$COMPONENTS" in
+  *PLYMOUTH*) export INSTALL_PLYMOUTH=1 ;;
+esac
+
+case "$COMPONENTS" in
   *DEPS*) : ;;
   *) INSTALL_FLAGS+=(--skip-alldeps) ;;
 esac
@@ -102,6 +107,7 @@ SUMMARY="Core config: always installed
 Dependencies: $(case "$COMPONENTS" in *DEPS*) echo "yes";; *) echo "no (--skip-alldeps)";; esac)
 Wallpaper Engine: $(case "$COMPONENTS" in *WE*) echo "yes (INSTALL_WE=1)";; *) echo "no";; esac)
 SDDM login theme: $(case "$COMPONENTS" in *SDDM*) echo "yes (INSTALL_SDDM=1)";; *) echo "no";; esac)
+Plymouth splash: $(case "$COMPONENTS" in *PLYMOUTH*) echo "yes (INSTALL_PLYMOUTH=1)";; *) echo "no";; esac)
 Fontset: ${FONTSET_CHOICE}
 fcitx5 IME: $(case "$EXTRAS" in *FCITX5*) echo "yes";; *) echo "no";; esac)
 

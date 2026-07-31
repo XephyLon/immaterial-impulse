@@ -97,6 +97,9 @@ case ${SUBCMD_NAME} in
     # Optional: install the ii-sddm-theme SDDM login theme via its own upstream
     # installer (no-op unless INSTALL_SDDM=1). Run (not sourced), same as above.
     bash ${SUBCMD_DIR}/5.sddm-theme.sh
+    # Optional: install the Plymouth boot splash (no-op unless
+    # INSTALL_PLYMOUTH=1). Run (not sourced), same as above.
+    bash ${SUBCMD_DIR}/6.plymouth.sh
     ;;
   install-deps)
     for function in ${print_os_group_id_functions[@]}; do
