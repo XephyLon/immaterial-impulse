@@ -12,6 +12,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- Super+Alt+Space (float toggle) also switched the keyboard layout when the
+  Settings' layout-switch shortcut was set to Super+Space: xkb `grp:`
+  toggles fire even with extra modifiers held. The Super+Space layout
+  switch is now a real compositor bind in keybinds.lua (exact modifier
+  matching, no-op with a single layout), and the Settings selector no
+  longer offers the colliding xkb value - it is relabeled "Extra layout
+  switch (xkb)" with only None/Alt+Shift left.
+
 ## [0.5.0] — 2026-07-31
 
 ### Changed

@@ -245,7 +245,11 @@ ContentPage {
                         }
                     }
                     ConfigSelectionArray {
-                        text: Translation.tr("Layout switch shortcut")
+                        text: Translation.tr("Extra layout switch (xkb)")
+                        // Super+Space is a real compositor bind (keybinds.lua) and
+                        // always works; it is not offered here because xkb grp:
+                        // toggles also fire with extra modifiers held (e.g.
+                        // Super+Alt+Space float-toggle would switch layout too).
                         icon: "keyboard_tab"
                         currentValue: Config.options.hyprland.input.kbOptions
                         onSelected: newValue => {
@@ -255,7 +259,6 @@ ContentPage {
                         options: [
                             { displayName: Translation.tr("None"),        icon: "block",     value: "" },
                             { displayName: Translation.tr("Alt+Shift"),   icon: "keyboard",  value: "grp:alt_shift_toggle" },
-                            { displayName: Translation.tr("Super+Space"), icon: "space_bar", value: "grp:win_space_toggle" },
                         ]
                     }
                     ConfigSwitch {

@@ -36,6 +36,11 @@ hl.bind("CTRL + ALT + Delete", hl.dsp.global("quickshell:sessionToggle"), { desc
 hl.bind("SUPER + J", hl.dsp.global("quickshell:barToggle"), { description = "Shell: Toggle bar" })
 hl.bind("SUPER + U", hl.dsp.global("quickshell:dropShelfSummon"),
     { description = "Shell: Summon drop shelf at cursor (works mid-drag)" })
+-- Compositor bind, not an xkb grp: option - xkb toggles fire on Super+Space
+-- even with extra modifiers held, so Super+Alt+Space (float toggle) would
+-- also switch layout. Binds match modifiers exactly. No-op with one layout.
+hl.bind("SUPER + Space", hl.dsp.exec_cmd("hyprctl switchxkblayout all next"),
+    { description = "Input: Next keyboard layout" })
 hl.bind("CTRL + ALT + Delete", hl.dsp.exec_cmd(qsIsAlive .. " || pkill wlogout || wlogout -p layer-shell"))
 hl.bind("SHIFT + SUPER + ALT + Slash", hl.dsp.exec_cmd("qs -p $HOME/.config/quickshell/$qsConfig/welcome.qml"))
 
