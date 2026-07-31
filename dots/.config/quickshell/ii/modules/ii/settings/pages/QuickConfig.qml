@@ -56,30 +56,34 @@ ContentPage {
     component SmallLightDarkPreferenceButton: RippleButton {
         id: smallLightDarkPreferenceButton
         required property bool dark
-        property color colText: toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer2
+        property color colText: toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
         padding: Appearance.spacing.space100
         Layout.fillWidth: true
         Layout.fillHeight: true
         toggled: Appearance.m3colors.darkmode === dark
-        colBackground: Appearance.colors.colLayer2
+        colBackground: Appearance.colors.colSecondaryContainer
+        buttonRadius: toggled ? height / 2 : Appearance.rounding.normal
+        Behavior on buttonRadius {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
         onClicked: {
             page.refreshTheme(["--mode", dark ? "dark" : "light"])
         }
         contentItem: Item {
             anchors.centerIn: parent
-            ColumnLayout {
+            RowLayout {
                 anchors.centerIn: parent
-                spacing: 0
+                spacing: Appearance.spacing.space100
                 MaterialSymbol {
-                    Layout.alignment: Qt.AlignHCenter
-                    iconSize: 30
+                    iconSize: Appearance.font.pixelSize.huge
+                    fill: smallLightDarkPreferenceButton.toggled ? 1 : 0
                     text: dark ? "dark_mode" : "light_mode"
                     color: smallLightDarkPreferenceButton.colText
                 }
                 StyledText {
-                    Layout.alignment: Qt.AlignHCenter
                     text: dark ? Translation.tr("Dark") : Translation.tr("Light")
-                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    font.pixelSize: Appearance.font.pixelSize.normal
+                    font.weight: smallLightDarkPreferenceButton.toggled ? Font.DemiBold : Font.Medium
                     color: smallLightDarkPreferenceButton.colText
                 }
             }
@@ -100,7 +104,7 @@ ContentPage {
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: Appearance.spacing.space50
+                spacing: Appearance.spacing.space150
 
                 Rectangle {
                     Layout.preferredWidth: 420
@@ -146,12 +150,12 @@ ContentPage {
 
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: Appearance.spacing.space50
+                    spacing: Appearance.spacing.space100
 
                     RowLayout {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        spacing: Appearance.spacing.space25
+                        spacing: Appearance.spacing.space100
                         uniformCellSizes: true
                         SmallLightDarkPreferenceButton { dark: false }
                         SmallLightDarkPreferenceButton { dark: true }
@@ -159,8 +163,8 @@ ContentPage {
                     GridLayout {
                         Layout.fillWidth: true
                         columns: 3
-                        rowSpacing: Appearance.spacing.space25
-                        columnSpacing: Appearance.spacing.space25
+                        rowSpacing: Appearance.spacing.space100
+                        columnSpacing: Appearance.spacing.space100
 
                         Repeater {
                             model: [
@@ -176,35 +180,54 @@ ContentPage {
                             ]
 
                             delegate: Rectangle {
+                                id: schemeChip
                                 required property var modelData
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: width * 0.6
-                                radius: Appearance.rounding.normal
+                                Layout.preferredHeight: 64
 
                                 property bool isSelected: Config.options.appearance.palette.type === modelData.value
                                 property bool hovered: hoverArea.containsMouse
 
-                                color: isSelected ? Appearance.colors.colPrimary 
-                                    : hovered ? Appearance.colors.colSecondaryContainerHover 
+                                // Selected chips relax into a rounder pill - the
+                                // expressive shape-morph cue used across the shell.
+                                radius: isSelected ? height / 2 : Appearance.rounding.normal
+                                color: isSelected ? Appearance.colors.colPrimary
+                                    : hovered ? Appearance.colors.colSecondaryContainerHover
                                     : Appearance.colors.colSecondaryContainer
-
-                                MaterialSymbol {
-                                    anchors.top: parent.top
-                                    anchors.left: parent.left
-                                    anchors.margins: Appearance.spacing.space100
-                                    text: modelData.icon
-                                    iconSize: Appearance.font.pixelSize.larger
-                                    color: parent.isSelected ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
+                                Behavior on radius {
+                                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                }
+                                Behavior on color {
+                                    ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
                                 }
 
-                                StyledText {
-                                    anchors.bottom: parent.bottom
-                                    anchors.right: parent.right
-                                    anchors.margins: Appearance.spacing.space100
-                                    text: modelData.displayName
-                                    font.pixelSize: Appearance.font.pixelSize.smaller
-                                    font.weight: Font.Medium
-                                    color: parent.isSelected ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
+                                ColumnLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 0
+
+                                    MaterialSymbol {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        text: schemeChip.modelData.icon
+                                        fill: schemeChip.isSelected ? 1 : 0
+                                        iconSize: Appearance.font.pixelSize.larger
+                                        color: schemeChip.isSelected ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
+                                        Behavior on color {
+                                            ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                                        }
+                                    }
+
+                                    StyledText {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        Layout.maximumWidth: schemeChip.width - Appearance.spacing.space100 * 2
+                                        elide: Text.ElideRight
+                                        text: schemeChip.modelData.displayName
+                                        font.pixelSize: Appearance.font.pixelSize.smaller
+                                        font.weight: schemeChip.isSelected ? Font.DemiBold : Font.Medium
+                                        color: schemeChip.isSelected ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
+                                        Behavior on color {
+                                            ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                                        }
+                                    }
                                 }
 
                                 MouseArea {

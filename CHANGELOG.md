@@ -13,6 +13,11 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Changed
+- Quick settings' Wallpaper & Colors section restyled: scheme chips are
+  uniform tonal cards with centered icon+label (no more diagonal
+  icon/label scatter), selection animates color and relaxes into a pill,
+  the Light/Dark pair matches the same container family with horizontal
+  content, and the cramped 2px gaps grew into the spacing scale.
 - Screen recorder rebuilt on **gpu-screen-recorder** (GPU encode - NVENC/VAAPI,
   ShadowPlay-style), replacing wf-recorder's CPU x264 path:
   - Same interfaces as before (bar record button, region-selector record
