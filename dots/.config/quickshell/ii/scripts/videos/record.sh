@@ -73,20 +73,8 @@ if [[ $SOUND -eq 1 ]]; then
     fi
 fi
 
-detect_compositor() {
-    local combined
-    combined="$(echo "${XDG_CURRENT_DESKTOP:-} ${XDG_SESSION_DESKTOP:-}" | tr '[:upper:]' '[:lower:]')"
-    if [[ "$combined" == *"niri"* ]]; then echo "niri"
-    elif [[ "$combined" == *"hyprland"* ]]; then echo "hyprland"
-    else echo "unknown"; fi
-}
-
 if [[ $FULLSCREEN -eq 1 ]]; then
-    if [[ "$(detect_compositor)" == "niri" ]]; then
-        MONITOR="$(niri msg -j workspaces | jq -r '.[] | select(.is_focused == true) | .output')"
-    else
-        MONITOR="$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | .name')"
-    fi
+    MONITOR="$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | .name')"
     ARGS+=(-w "${MONITOR:-screen}")
 else
     if [[ -z "$REGION" ]]; then

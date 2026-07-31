@@ -56,7 +56,6 @@ ContentPage {
 
             Rectangle {
                 Layout.fillWidth: true
-                visible: WM.compositor !== "niri"
                 implicitHeight: wrapperCol.implicitHeight + Appearance.spacing.space200
                 topLeftRadius: Appearance.rounding.verylarge
                 topRightRadius: Appearance.rounding.verylarge
@@ -149,62 +148,6 @@ ContentPage {
                 }
             }
 
-            Rectangle {
-                Layout.fillWidth: true
-                visible: WM.compositor === "niri"
-                implicitHeight: niriWrapperCol.implicitHeight + 16
-                topLeftRadius: Appearance.rounding.verylarge
-                topRightRadius: Appearance.rounding.verylarge
-                bottomLeftRadius: Appearance.rounding.normal
-                bottomRightRadius: Appearance.rounding.normal
-                color: Appearance.colors.colLayer1
-
-                ColumnLayout {
-                    id: niriWrapperCol
-                    anchors.fill: parent
-                    anchors.margins: Appearance.spacing.space100
-                    spacing: Appearance.spacing.space100
-
-                    Carousel {
-                        Layout.fillWidth: true
-                        implicitHeight: 280
-                        largeItemWidthRatio: 1
-                        mediumItemWidthRatio: 0
-                        itemSpacing: 8
-                        model: [page.displayPathFor(Config.options.background.wallpaperPath)]
-                        wheelEnabled: false
-                        dragEnabled: false
-                        clickAction: (index, modelData) => {
-                            GlobalStates.wallpaperSelectorTarget = "wallpaper"
-                            GlobalStates.wallpaperSelectorOpen = true
-                        }
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: 24
-                        radius: Appearance.rounding.normal
-                        color: "transparent"
-
-                        RowLayout {
-                            anchors.centerIn: parent
-                            spacing: Appearance.spacing.space100
-                            MaterialSymbol {
-                                text: "image"
-                                iconSize: Appearance.font.pixelSize.larger
-                                color: Appearance.colors.colPrimary
-                            }
-                            StyledText {
-                                text: Config.options.background.wallpaperPath.split("/").pop()
-                                font.pixelSize: Appearance.font.pixelSize.normal
-                                font.weight: Font.Medium
-                                color: Appearance.colors.colOnLayer1
-                                elide: Text.ElideMiddle
-                            }
-                        }
-                    }
-                }
-            }
 
             GroupedList {
                 Layout.topMargin: -Appearance.spacing.space25
@@ -302,7 +245,7 @@ ContentPage {
                         onCheckedChanged: {
                             Config.options.background.centeredWallpaperOnlyWhenLocked = checked;
                         }
-                        enabled: Config.options.background.centeredWallpaper && WM.compositor !== "niri"
+                        enabled: Config.options.background.centeredWallpaper
                     }
                 }
 
@@ -383,7 +326,6 @@ ContentPage {
                 ConfigSwitch {
                     buttonIcon: "lock_clock"
                     text: Translation.tr("Show only when locked")
-                    enabled: WM.compositor !== "niri"
                     checked: Config.options.background.widgets.clock.showOnlyWhenLocked
                     onCheckedChanged: {
                         Config.options.background.widgets.clock.showOnlyWhenLocked = checked;

@@ -97,7 +97,6 @@ ContentPage {
         spacing: Appearance.spacing.space250
     
         ContentSection { // I see that for many the overview is important, I put it first why not
-            visible: WM.compositor !== "niri"
             icon: "overview_key"
             shape: MaterialShape.Shape.Gem
             title: Translation.tr("Overview")
@@ -326,7 +325,6 @@ ContentPage {
                 }
                 ConfigSwitch {
                     buttonIcon: "widgets"
-                    enabled: WM.compositor !== "niri"
                     text: Translation.tr("Show Widgets")
                     checked: Config.options.lock.showWidgets
                     onCheckedChanged: { Config.options.lock.showWidgets = checked }

@@ -20,23 +20,16 @@ NestableObject {
     readonly property int shownCount: C.Config.options.bar.workspaces.shown
     readonly property bool showAllMonitors: C.Config.options.bar.workspaces.showAllMonitors
 
-    readonly property int activeNumber: {
-        if (WM.compositor === "hyprland")
-            return hyprMonitor?.activeWorkspace?.id ?? 1
-        const ws = WM.workspaces.find(w => w.output === root.monitorName && w.is_active)
-        return ws?.idx ?? 1
-    }
+    readonly property int activeNumber: hyprMonitor?.activeWorkspace?.id ?? 1
 
-    readonly property bool currentWorkspaceNotFake: WM.compositor === "hyprland"
-        ? (activeWindow?.activated ?? false) // Active empty workspace = fake. At least, that's how I like to call it.
-        : true 
+    readonly property bool currentWorkspaceNotFake: activeWindow?.activated ?? false // Active empty workspace = fake. At least, that's how I like to call it.
     readonly property int fakeWorkspace: currentWorkspaceNotFake ? -9999 : activeNumber
 
     readonly property int group: Math.floor((activeNumber - 1) / shownCount)
 
-    readonly property var specialWorkspace: WM.compositor === "hyprland" ? liveMonitorData?.specialWorkspace : null
+    readonly property var specialWorkspace: liveMonitorData?.specialWorkspace
     readonly property string specialWorkspaceName: specialWorkspace?.name.replace("special:", "") ?? "special"
-    readonly property bool specialWorkspaceActive: WM.compositor === "hyprland" && specialWorkspaceName !== ""
+    readonly property bool specialWorkspaceActive: specialWorkspaceName !== ""
 
     property list<bool> occupied: []
     property list<var> biggestWindow: occupied.map((_, index) => {
@@ -51,37 +44,15 @@ NestableObject {
         return root.getWorkspaceId(root.group, index)
     }
 
-    function _niriRealId(number) {
-        const ws = WM.workspaces.find(w => w.output === root.monitorName && w.idx === number)
-        return ws?.id ?? null
-    }
-
     function biggestWindowForNumber(number) {
-        if (WM.compositor === "hyprland")
-            return HyprlandData.biggestWindowForWorkspace(number)
-
-        const realId = root._niriRealId(number)
-        if (realId === null) return null
-        const winsInWs = WM.windowList.filter(w => w.workspaceId === realId)
-        if (winsInWs.length === 0) return null
-        const win = winsInWs.find(w => w.focused) ?? winsInWs[0]
-        return { class: win.appId, title: win.title, id: win.id }
+        return HyprlandData.biggestWindowForWorkspace(number)
     }
 
     function updateWorkspaceOccupied() {
-        if (WM.compositor === "hyprland") {
-            root.occupied = Array.from({ length: root.shownCount }, (_, i) => {
-                const thisWorkspaceId = getWorkspaceId(root.group, i)
-                return Hyprland.workspaces.values.some(ws => ws.id === thisWorkspaceId)
-            })
-        } else {
-            root.occupied = Array.from({ length: root.shownCount }, (_, i) => {
-                const number = getWorkspaceId(root.group, i)
-                const realId = root._niriRealId(number)
-                if (realId === null) return false
-                return WM.windowList.some(w => w.workspaceId === realId)
-            })
-        }
+        root.occupied = Array.from({ length: root.shownCount }, (_, i) => {
+            const thisWorkspaceId = getWorkspaceId(root.group, i)
+            return Hyprland.workspaces.values.some(ws => ws.id === thisWorkspaceId)
+        })
     }
 
     Component.onCompleted: updateWorkspaceOccupied()
@@ -89,30 +60,17 @@ NestableObject {
     // Hyprland
     Connections {
         target: Hyprland.workspaces
-        enabled: WM.compositor === "hyprland"
         function onValuesChanged() {
             root.updateWorkspaceOccupied()
         }
     }
     Connections {
         target: Hyprland
-        enabled: WM.compositor === "hyprland"
         function onFocusedWorkspaceChanged() {
             root.updateWorkspaceOccupied()
         }
     }
 
-    // Niri
-    Connections {
-        target: WM
-        enabled: WM.compositor !== "hyprland"
-        function onWorkspacesChanged() {
-            root.updateWorkspaceOccupied()
-        }
-        function onWindowListChanged() {
-            root.updateWorkspaceOccupied()
-        }
-    }
 
     onGroupChanged: {
         updateWorkspaceOccupied()

@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell.Hyprland
-import qs.services
 
 Loader {
     id: root
@@ -10,7 +9,7 @@ Loader {
     signal pressed()
     signal released()
 
-    active: WM.compositor === "hyprland"
+    active: true
 
     sourceComponent: GlobalShortcut {
         name: root.name

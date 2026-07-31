@@ -553,17 +553,11 @@ Item {
                 toggled: false
                 buttonIcon: "restart_alt"
                 onClicked: {
-                    if (WM.compositor === "niri") {
-                        Quickshell.execDetached(["niri", "msg", "action", "reload-config"]);
-                    } else {
-                        Quickshell.execDetached(["hyprctl", "reload"]);
-                    }
+                    Quickshell.execDetached(["hyprctl", "reload"]);
                     Quickshell.reload(true);
                 }
                 StyledToolTip {
-                    text: WM.compositor === "niri"
-                        ? Translation.tr("Reload Niri & Quickshell")
-                        : Translation.tr("Reload Hyprland & Quickshell")
+                    text: Translation.tr("Reload Hyprland & Quickshell")
                 }
             }
             QuickToggleButton {

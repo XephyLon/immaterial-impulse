@@ -50,5 +50,4 @@ Scope {
     PanelLoader { component: WallpaperSelector {} }
     PanelLoader { component: Settings {} }
     PanelLoader { component: DesktopMenu {} }
-    PanelLoader { component: NiriBackdrop {} }
 }

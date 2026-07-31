@@ -8,38 +8,19 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    readonly property string compositor: detectCompositor()
+    // Hyprland-only facade. Upstream abstracts compositors behind this
+    // service; this fork supports Hyprland exclusively, so the detection and
+    // alternative backends are removed while the consumer-facing API stays
+    // merge-compatible.
+    readonly property string compositor: "hyprland"
     property QtObject backend: null
 
     function switchWorkspaceRelative(direction) { backend?.switchWorkspaceRelative(direction) }
 
-    function detectCompositor() {
-        const desktop = (Quickshell.env("XDG_CURRENT_DESKTOP") ?? "").toLowerCase();
-        const session = (Quickshell.env("XDG_SESSION_DESKTOP") ?? "").toLowerCase();
-        const combined = desktop + " " + session;
-
-        if (combined.includes("hyprland")) return "hyprland";
-        if (combined.includes("niri")) return "niri";
-        if (combined.includes("sway")) return "sway";
-        if (combined.includes("mango")) return "mango";
-        return "unknown";
-    }
-
     Component { id: hyprlandComp; HyprlandBackend {} }
-    Component { id: niriComp; NiriBackend {} }
-    // Component { id: swayComp; SwayBackend {} }
-    // Component { id: mangoComp; MangoBackend {} }
 
     Component.onCompleted: {
-        switch (root.compositor) {
-        case "hyprland": backend = hyprlandComp.createObject(root); break;
-        case "niri":     backend = niriComp.createObject(root); break;
-        // case "sway":  backend = swayComp.createObject(root); break;
-        // case "mango": backend = mangoComp.createObject(root); break;
-        default:
-            console.log("[WM] Unknown compositor: " + root.compositor + ", falling back to Hyprland backend");
-            backend = hyprlandComp.createObject(root);
-        }
+        backend = hyprlandComp.createObject(root);
     }
 
     // Proxies

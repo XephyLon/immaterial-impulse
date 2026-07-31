@@ -85,11 +85,7 @@ Scope {
 
                 function slideIn() {
                     content.y = -content.height;
-                    if (WM.compositor === "niri") {
-                        Qt.callLater(() => { Qt.callLater(() => { content.y = 0; }); });
-                    } else {
-                        Qt.callLater(() => { content.y = 0; });
-                    }
+                    Qt.callLater(() => { content.y = 0; });
                 }
 
                 Connections {

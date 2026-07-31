@@ -12,6 +12,19 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Removed
+- All Niri compositor support from the upstream merge - this fork targets
+  Hyprland exclusively. Deleted: NiriBackend/NiriXkb/NiriConfig services,
+  the Niri settings page, NiriBackdrop, the niri monitor-config model, and
+  every `WM.compositor === "niri"` branch (session actions, lock, night
+  light's wlsunset path, workspace model, wallpaper selector, sidebar
+  reload, settings gates, record.sh). Upstream's `WM` and
+  `CompositorGlobalShortcut` remain as thin Hyprland-only facades so the
+  30+ consumer files stay merge-compatible with upstream. The "Niri Like"
+  overview *style* (a layout option on Hyprland) is unrelated and kept.
+  SystemTheming (orphaned by the Niri page removal) and FastBlurred
+  (unreferenced) removed too.
+
 ### Added
 - Upstream merge (`pctrade/end4-pC`, decrypted from commits `ns`/`cf`/`nl`/
   `lw`x2 + PR #27):
