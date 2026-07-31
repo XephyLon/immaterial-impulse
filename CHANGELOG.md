@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-07-31
+
 ### Fixed
 - Selected icon pack reset by "Update Dots": the dots sync ships a
   `kdeglobals` with `[Icons] Theme=breeze-dark`, overwriting the theme the
@@ -321,5 +323,6 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/XephyLon/immaterial-impulse/releases/tag/v0.1.0
