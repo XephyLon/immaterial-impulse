@@ -150,7 +150,7 @@ quickshell, home_attrs, ... }:
       swappy #swappy
       tesseract #tesseract
       #tesseract-data-eng (TODO: Seems not available as nixpkg)
-      wf-recorder #wf-recorder
+      gpu-screen-recorder #gpu-screen-recorder
 
 
       ### immaterial-impulse-toolkit

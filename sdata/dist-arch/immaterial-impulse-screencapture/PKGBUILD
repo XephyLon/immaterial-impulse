@@ -11,5 +11,5 @@ depends=(
   swappy
   tesseract
   tesseract-data-eng
-  wf-recorder
+  gpu-screen-recorder
 )
