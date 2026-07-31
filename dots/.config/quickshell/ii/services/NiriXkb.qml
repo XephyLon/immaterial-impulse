@@ -3,28 +3,26 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import Quickshell.Hyprland
 import qs.modules.common
 import qs.services
 
 /**
- * Exposes the active Hyprland Xkb keyboard layout name and code for indicators.
+ * Exposes the active Niri Xkb keyboard layout name and code for indicators.
+ * Mirrors HyprlandXkb.qml's shape so widgets can bind to either transparently.
  */
 Singleton {
     id: root
-    // You can read these
-    property list<string> layoutCodes: []
+    property list<string> layoutNames: []
+    property int currentIdx: 0
     property var cachedLayoutCodes: ({})
     property string currentLayoutName: ""
     property string currentLayoutCode: ""
-    // For the service
     property var baseLayoutFilePath: "/usr/share/X11/xkb/rules/base.lst"
-    property bool needsLayoutRefresh: false
 
-    // Update the layout code according to the layout name (Hyprland gives the name not the code)
     onCurrentLayoutNameChanged: root.updateLayoutCode()
     function updateLayoutCode() {
-        if (WM.compositor !== "hyprland") return;
+        if (WM.compositor !== "niri") return;
+        if (!root.currentLayoutName) return;
         if (cachedLayoutCodes.hasOwnProperty(currentLayoutName)) {
             root.currentLayoutCode = cachedLayoutCodes[currentLayoutName];
         } else {
@@ -32,7 +30,6 @@ Singleton {
         }
     }
 
-    // Get the layout code from the base.lst file by grabbing the line with the current layout name
     Process {
         id: getLayoutProc
         command: ["cat", root.baseLayoutFilePath]
@@ -43,12 +40,10 @@ Singleton {
             onStreamFinished: {
                 const lines = layoutCollector.text.split("\n");
                 const targetDescription = root.currentLayoutName;
-                const foundLine = lines.find(line => {
-                    // Skip comment lines and empty lines
+                lines.find(line => {
                     if (!line.trim() || line.trim().startsWith('!'))
                         return false;
 
-                    // Match layout: (whitespace + ) key + whitespace + description
                     const matchLayout = line.match(/^\s*(\S+)\s+(.+)$/);
                     if (matchLayout && matchLayout[2] === targetDescription) {
                         root.cachedLayoutCodes[matchLayout[2]] = matchLayout[1];
@@ -56,7 +51,6 @@ Singleton {
                         return true;
                     }
 
-                    // Match variant: (whitespace + ) variant + whitespace + key + whitespace + description
                     const matchVariant = line.match(/^\s*(\S+)\s+(\S+)\s+(.+)$/);
                     if (matchVariant && matchVariant[3] === targetDescription) {
                         const complexLayout = matchVariant[2] + matchVariant[1];
@@ -64,50 +58,56 @@ Singleton {
                         root.currentLayoutCode = complexLayout;
                         return true;
                     }
-                    
+
                     return false;
                 });
             }
         }
     }
 
-    // Find out available layouts and current active layout. Should only be necessary on init
+    function refresh() {
+        if (WM.compositor !== "niri") return;
+        fetchLayoutsProc.running = true;
+    }
+
     Process {
         id: fetchLayoutsProc
-        running: WM.compositor === "hyprland"
-        command: ["hyprctl", "-j", "devices"]
+        command: ["niri", "msg", "-j", "keyboard-layouts"]
 
         stdout: StdioCollector {
-            id: devicesCollector
+            id: layoutsCollector
             onStreamFinished: {
-                const parsedOutput = JSON.parse(devicesCollector.text);
-                const hyprlandKeyboard = parsedOutput["keyboards"].find(kb => kb.main === true);
-                root.layoutCodes = hyprlandKeyboard["layout"].split(",");
-                root.currentLayoutName = hyprlandKeyboard["active_keymap"];
-            }
-        }
-    }
-
-    // Update the layout name when it changes
-    Connections {
-        target: Hyprland
-        enabled: WM.compositor === "hyprland"
-        function onRawEvent(event) {
-            if (event.name === "activelayout") {
-                if (root.needsLayoutRefresh) {
-                    root.needsLayoutRefresh = false;
-                    fetchLayoutsProc.running = true;
+                try {
+                    const parsed = JSON.parse(layoutsCollector.text);
+                    root.layoutNames = parsed.names ?? [];
+                    root.currentIdx = parsed.current_idx ?? 0;
+                    root.currentLayoutName = root.layoutNames[root.currentIdx] ?? "";
+                } catch (e) {
+                    console.log("[NiriXkb] keyboard-layouts parse error: " + e);
                 }
-
-                if (root.layoutCodes.length <= 1) return;
-
-                const dataString = event.data;
-                root.currentLayoutName = dataString.substring(dataString.indexOf(",") + 1);
-
-                Config.options.osk.layout = root.currentLayoutName.split(" (")[0];
-            } else if (event.name == "configreloaded") {
-                root.needsLayoutRefresh = true;
             }
         }
     }
+
+    Component.onCompleted: {
+        if (WM.compositor === "niri") {
+            refresh();
+            eventStream.running = true;
+        }
+    }
+
+    Process {
+        id: eventStream
+        running: false
+        command: ["niri", "msg", "-j", "event-stream"]
+        stdout: SplitParser {
+            splitMarker: "\n"
+            onRead: (line) => {
+                if (line.indexOf("KeyboardLayout") !== -1) refreshDebounce.restart();
+            }
+        }
+        onExited: restartTimer.restart()
+    }
+    Timer { id: restartTimer; interval: 1000; onTriggered: { if (WM.compositor === "niri") eventStream.running = true; } }
+    Timer { id: refreshDebounce; interval: 80; onTriggered: root.refresh() }
 }

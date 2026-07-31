@@ -11,7 +11,6 @@ import qs.modules.common.plugins
 import qs.modules.common.widgets
 import qs.modules.common.functions
 import qs.modules.common.models
-import Quickshell.Hyprland
 
 ContentPage {
     id: page

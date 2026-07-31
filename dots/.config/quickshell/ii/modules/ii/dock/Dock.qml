@@ -11,7 +11,6 @@ import Quickshell.Io
 import Quickshell
 import Quickshell.Widgets
 import Quickshell.Wayland
-import Quickshell.Hyprland
 
 Scope {
     id: root
@@ -26,13 +25,8 @@ Scope {
             screen: modelData
             visible: !GlobalStates.screenLocked
 
-            property HyprlandMonitor hyprMonitor: Hyprland.monitorFor(modelData)
-            property list<HyprlandWorkspace> monitorWorkspaces: Hyprland.workspaces.values.filter(
-                ws => ws.monitor && ws.monitor.name === hyprMonitor.name
-            )
-            property bool fullscreenOnThisMonitor: monitorWorkspaces.some(
-                ws => ws.active && ws.toplevels.values.some(w => w.wayland?.fullscreen)
-            )
+            property var monitor: WM.monitorFor(modelData)
+            property bool fullscreenOnThisMonitor: WM.fullscreenOnMonitor(monitor?.name)
 
             property bool reveal: {
                 if (dockContextMenu.isOpen)

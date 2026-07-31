@@ -132,17 +132,23 @@ Item {
         }
     }
     
-    property var pages: [
-        { name: Translation.tr("Quick"), icon: "instant_mix", component: Qt.resolvedUrl("pages/QuickConfig.qml"), sections: [Translation.tr("Wallpaper & Colors"), Translation.tr("Bar & Screen")] },
-        { name: Translation.tr("General"), icon: "browse", component: Qt.resolvedUrl("pages/GeneralConfig.qml"), sections: [Translation.tr("Time"), Translation.tr("Left Sidebar"), Translation.tr("Right Sidebar"), Translation.tr("Battery"), Translation.tr("Audio"), Translation.tr("Sounds"), Translation.tr("Language"), Translation.tr("Work safety")] },
-        { name: Translation.tr("Bar"), icon: "toast", iconRotation: 180, component: Qt.resolvedUrl("pages/BarConfig.qml"), sections: [Translation.tr("Screens"), Translation.tr("Bar layout"), Translation.tr("Positioning & Styles"), Translation.tr("Notifications"), Translation.tr("Tray"), Translation.tr("Divider"), Translation.tr("Utility buttons"), Translation.tr("Workspaces"), Translation.tr("Resources"), Translation.tr("Media"), Translation.tr("Tooltips")] },
-        { name: Translation.tr("Desktop"), icon: "texture", component: Qt.resolvedUrl("pages/BackgroundConfig.qml"), sections: [Translation.tr("Wallpaper"), Translation.tr("Clock"), Translation.tr("Custom Image"), Translation.tr("Widgets")] },
-        { name: Translation.tr("Plugins"), icon: "extension", component: Qt.resolvedUrl("pages/PluginsPage.qml"), sections: [Translation.tr("Available Plugins")] },
-        { name: Translation.tr("Interface"), icon: "bottom_app_bar", component: Qt.resolvedUrl("pages/InterfaceConfig.qml"), sections: [Translation.tr("Overview"), Translation.tr("Dock"), Translation.tr("Icon pack"), Translation.tr("Lock screen"), Translation.tr("Overlay"), Translation.tr("Region selector"), Translation.tr("On-screen display"), Translation.tr("Wallpaper selector"), Translation.tr("Fonts"), Translation.tr("Terminal"), Translation.tr("Screenshot popup"), Translation.tr("Color generation"), Translation.tr("Keep awake"), Translation.tr("Screensaver")] },
-        { name: Translation.tr("Services"), icon: "settings", component: Qt.resolvedUrl("pages/ServicesConfig.qml"), sections: [Translation.tr("AI"), Translation.tr("Networking"), Translation.tr("Music Recognition"), Translation.tr("Screen recorder"), Translation.tr("Save paths"), Translation.tr("Search"), Translation.tr("System updates"), Translation.tr("Weather")] },
-        { name: Translation.tr("Hyprland"), icon: "select_window_2", component: Qt.resolvedUrl("pages/HyprlandConfig.qml"), sections: [Translation.tr("Displays"), Translation.tr("Layout"), Translation.tr("Input"), Translation.tr("Visual & Aesthetics"), Translation.tr("Blur"), Translation.tr("Autostart Apps"), Translation.tr("Animations")] },
-        { name: Translation.tr("About"), icon: "info", component: Qt.resolvedUrl("pages/About.qml"), sections: [] }
-    ]
+    property var pages: {
+        let list = [
+            { name: Translation.tr("Quick"), icon: "instant_mix", component: Qt.resolvedUrl("pages/QuickConfig.qml"), sections: [Translation.tr("Wallpaper & Colors"), Translation.tr("Bar & Screen")] },
+            { name: Translation.tr("General"), icon: "browse", component: Qt.resolvedUrl("pages/GeneralConfig.qml"), sections: [Translation.tr("Time"), Translation.tr("Left Sidebar"), Translation.tr("Right Sidebar"), Translation.tr("Battery"), Translation.tr("Audio"), Translation.tr("Sounds"), Translation.tr("Language"), Translation.tr("Work safety")] },
+            { name: Translation.tr("Bar"), icon: "toast", iconRotation: 180, component: Qt.resolvedUrl("pages/BarConfig.qml"), sections: [Translation.tr("Screens"), Translation.tr("Bar layout"), Translation.tr("Positioning & Styles"), Translation.tr("Notifications"), Translation.tr("Tray"), Translation.tr("Divider"), Translation.tr("Utility buttons"), Translation.tr("Workspaces"), Translation.tr("Resources"), Translation.tr("Media"), Translation.tr("Tooltips")] },
+            { name: Translation.tr("Desktop"), icon: "texture", component: Qt.resolvedUrl("pages/BackgroundConfig.qml"), sections: [Translation.tr("Wallpaper"), Translation.tr("Clock"), Translation.tr("Custom Image"), Translation.tr("Widgets")] },
+            { name: Translation.tr("Plugins"), icon: "extension", component: Qt.resolvedUrl("pages/PluginsPage.qml"), sections: [Translation.tr("Available Plugins")] },
+            { name: Translation.tr("Interface"), icon: "bottom_app_bar", component: Qt.resolvedUrl("pages/InterfaceConfig.qml"), sections: [Translation.tr("Overview"), Translation.tr("Dock"), Translation.tr("Icon pack"), Translation.tr("Lock screen"), Translation.tr("Overlay"), Translation.tr("Region selector"), Translation.tr("On-screen display"), Translation.tr("Wallpaper selector"), Translation.tr("Fonts"), Translation.tr("Terminal"), Translation.tr("Screenshot popup"), Translation.tr("Color generation"), Translation.tr("Keep awake"), Translation.tr("Screensaver")] },
+            { name: Translation.tr("Services"), icon: "settings", component: Qt.resolvedUrl("pages/ServicesConfig.qml"), sections: [Translation.tr("AI"), Translation.tr("Networking"), Translation.tr("Music Recognition"), Translation.tr("Screen recorder"), Translation.tr("Save paths"), Translation.tr("Search"), Translation.tr("System updates"), Translation.tr("Weather")] },
+        ]
+        if (WM.compositor === "hyprland")
+            list.push({ name: Translation.tr("Hyprland"), icon: "select_window_2", component: Qt.resolvedUrl("pages/HyprlandConfig.qml"), sections: [Translation.tr("Displays"), Translation.tr("Layout"), Translation.tr("Input"), Translation.tr("Visual & Aesthetics"), Translation.tr("Blur"), Translation.tr("Autostart Apps"), Translation.tr("Animations")] })
+        if (WM.compositor === "niri")
+            list.push({ name: Translation.tr("Niri"), icon: "select_window_2", component: Qt.resolvedUrl("pages/NiriConfig.qml"), sections: [Translation.tr("Displays"), Translation.tr("Layout"), Translation.tr("Input"), Translation.tr("Visual & Aesthetics"), Translation.tr("Cursor"), Translation.tr("Animations")] })
+        list.push({ name: Translation.tr("About"), icon: "info", component: Qt.resolvedUrl("pages/About.qml"), sections: [] })
+        return list
+    }
 
     Component.onCompleted: {
         Config.readWriteDelay = 0

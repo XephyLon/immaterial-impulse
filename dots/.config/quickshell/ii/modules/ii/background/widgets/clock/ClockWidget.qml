@@ -83,7 +83,7 @@ AbstractBackgroundWidget {
         FadeLoader {
             id: quoteLoader
             anchors.horizontalCenter: parent.horizontalCenter
-            shown: Config.options.background.widgets.clock.quote.enable && Config.options.background.widgets.clock.quote.text !== "" && root.shouldShow
+            shown: Config.options.background.widgets.clock.quote.enable && (root.clockStyle === "pixel" || root.clockStyle === "cookie") && Config.options.background.widgets.clock.quote.text !== "" && root.shouldShow
             sourceComponent: CookieQuote {}
         }
 

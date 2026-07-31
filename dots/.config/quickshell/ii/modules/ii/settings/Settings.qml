@@ -96,7 +96,7 @@ Scope {
         function close(): void  { GlobalStates.settingsOpen = false; }
     }
 
-    GlobalShortcut {
+    CompositorGlobalShortcut {
         name: "settingsToggle"
         description: "Toggles settings panel"
         onPressed: GlobalStates.settingsOpen = !GlobalStates.settingsOpen;

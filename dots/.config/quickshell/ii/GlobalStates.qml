@@ -58,16 +58,11 @@ Singleton {
         }
     }
 
-    GlobalShortcut {
+    CompositorGlobalShortcut {
         name: "workspaceNumber"
         description: "Hold to show workspace numbers, release to show icons"
-
-        onPressed: {
-            root.superDown = true
-        }
-        onReleased: {
-            root.superDown = false
-        }
+        onPressed: { root.superDown = true }
+        onReleased: { root.superDown = false }
     }
 
     IpcHandler {
@@ -77,7 +72,7 @@ Singleton {
         }
     }
 
-    GlobalShortcut {
+     CompositorGlobalShortcut {
         name: "centeredWallpaperToggle"
         description: "Toggles centered wallpaper"
         onPressed: {

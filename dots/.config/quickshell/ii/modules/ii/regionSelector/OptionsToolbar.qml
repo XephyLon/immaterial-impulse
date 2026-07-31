@@ -11,7 +11,6 @@ import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import Quickshell.Hyprland
 
 // Options toolbar
 Toolbar {
@@ -37,8 +36,9 @@ Toolbar {
         onModeIndexChanged: if (currentIndex !== modeIndex) currentIndex = modeIndex
         Component.onCompleted: currentIndex = modeIndex
         onCurrentIndexChanged: {
-            const mode = currentIndex === 0 ? RegionSelection.SelectionMode.RectCorners : RegionSelection.SelectionMode.Circle;
-            if (root.selectionMode !== mode) root.selectionMode = mode;
+            const newMode = currentIndex === 0 ? RegionSelection.SelectionMode.RectCorners : RegionSelection.SelectionMode.Circle;
+            if (root.selectionMode !== newMode)
+                root.selectionMode = newMode;
         }
     }
 }

@@ -29,7 +29,9 @@ class SettingsNavigationTests(unittest.TestCase):
         )
         self.assertEqual(
             [name for name, _ in page_entries],
-            ["Quick", "General", "Bar", "Desktop", "Plugins", "Interface", "Services", "Hyprland", "About"],
+            # Hyprland and Niri are pushed compositor-gated; both still must
+            # declare their search sections.
+            ["Quick", "General", "Bar", "Desktop", "Plugins", "Interface", "Services", "Hyprland", "Niri", "About"],
         )
         self.assertTrue(all(sections.strip() for name, sections in page_entries if name != "About"))
 

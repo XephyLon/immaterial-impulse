@@ -12,6 +12,32 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- Upstream merge (`pctrade/end4-pC`, decrypted from commits `ns`/`cf`/`nl`/
+  `lw`x2 + PR #27):
+  - **Niri compositor support**: a `WM` abstraction service (compositor
+    detection, workspaces, windows, shortcuts) with `HyprlandBackend`/
+    `NiriBackend`, `CompositorGlobalShortcut` wrapper, `NiriXkb`, a Niri
+    settings page (config editing via `niri msg`), `NiriBackdrop`, and
+    niri-gated behaviors (lock wallpaper/overview disabled, wlsunset night
+    light, workspace model branching, logout via `niri msg action quit`).
+    The Hyprland/Niri settings pages are now pushed compositor-gated into
+    the (still section-annotated) pages list.
+  - Bar M3 clock pill: robust against locales/formats with seconds
+    (splits on am/pm markers instead of fixed part positions) - PR #27 by
+    Reazndev.
+  - Night light rework adopted: on startup the service syncs with what is
+    actually running instead of force-enabling inside the night window;
+    our cold-start launch-flags fix is re-grafted on top.
+  - Background clock quote now only shows for pixel/cookie clock styles.
+  - Discarded: upstream's full clipboard wipe (would destroy our pinned
+    entries - our pins-aware wipe stays), upstream's lock workspace-move
+    niri gating (our lock pushes content visually and never touches
+    compositor workspaces), upstream's removal of the VPN/Tailscale quick
+    toggles. Upstream literals tokenized onto the spacing scale per merge
+    policy; record.sh's monitor detection gained the niri branch inside
+    our gpu-screen-recorder implementation.
+
 ## [0.3.1] — 2026-07-31
 
 ### Fixed
