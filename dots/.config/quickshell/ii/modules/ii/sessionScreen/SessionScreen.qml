@@ -247,6 +247,7 @@ Scope {
                         visible: EfiBoot.entries.length > 1
                         buttonIcon: "alt_route"
                         buttonText: Translation.tr("Reboot into...")
+                        toggled: sessionRoot.rebootPickerOpen
                         onClicked: {
                             sessionRoot.rebootPickerOpen = !sessionRoot.rebootPickerOpen;
                         }
@@ -263,9 +264,8 @@ Scope {
                 // Firmware boot entries (BootNext + reboot). Separate from the
                 // plain Reboot button on purpose: picking an entry authenticates
                 // via polkit first, then reboots straight into that OS.
-                Flow {
+                RowLayout {
                     Layout.alignment: Qt.AlignHCenter
-                    Layout.maximumWidth: 720
                     visible: sessionRoot.rebootPickerOpen
                     spacing: Appearance.spacing.space100
 
@@ -278,15 +278,21 @@ Scope {
                             required property int index
                             implicitHeight: 44
                             buttonRadius: height / 2
+                            // Focus wins (filled primary pill, matching the grid
+                            // buttons' focus style); the current OS is tonal.
+                            readonly property color colContent: efiEntryButton.activeFocus
+                                ? Appearance.colors.colOnPrimary
+                                : modelData.current
+                                    ? Appearance.colors.colOnSecondaryContainer
+                                    : Appearance.colors.colOnLayer2
                             colBackground: efiEntryButton.activeFocus
-                                ? Appearance.colors.colLayer2Hover
+                                ? Appearance.colors.colPrimary
                                 : modelData.current
                                     ? Appearance.colors.colSecondaryContainer
                                     : Appearance.colors.colLayer2
-                            colBackgroundHover: Appearance.colors.colLayer2Hover
-                            border: true
-                            colBorder: efiEntryButton.activeFocus
-                                ? Appearance.colors.colPrimary : "transparent"
+                            colBackgroundHover: efiEntryButton.activeFocus
+                                ? Appearance.colors.colPrimaryHover
+                                : Appearance.colors.colLayer2Hover
 
                             function activate() {
                                 sessionRoot.hide();
@@ -314,13 +320,19 @@ Scope {
                                     Layout.leftMargin: Appearance.spacing.space150
                                     text: efiEntryButton.modelData.current ? "radio_button_checked" : "restart_alt"
                                     iconSize: Appearance.font.pixelSize.large
-                                    color: Appearance.colors.colOnLayer2
+                                    color: efiEntryButton.colContent
+                                    Behavior on color {
+                                        ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                                    }
                                 }
                                 StyledText {
                                     Layout.rightMargin: Appearance.spacing.space150
                                     text: efiEntryButton.modelData.label
                                         + (efiEntryButton.modelData.current ? " " + Translation.tr("(current)") : "")
-                                    color: Appearance.colors.colOnLayer2
+                                    color: efiEntryButton.colContent
+                                    Behavior on color {
+                                        ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                                    }
                                 }
                             }
                             StyledToolTip {
