@@ -98,9 +98,15 @@ hl.bind("SUPER + SHIFT + R", hl.dsp.global("quickshell:regionRecord"),
 hl.bind("SUPER + SHIFT + R", hl.dsp.exec_cmd(qsIsAlive .. " || " .. qsScripts .. "/videos/record.sh"), { locked = true })
 hl.bind("SUPER + ALT + R", hl.dsp.global("quickshell:regionRecord"), { locked = true })
 hl.bind("SUPER + ALT + R", hl.dsp.exec_cmd(qsIsAlive .. " || " .. qsScripts .. "/videos/record.sh"), { locked = true })
-hl.bind("CTRL + ALT + R", hl.dsp.exec_cmd(qsScripts .. "/videos/record.sh --fullscreen"), { locked = true })
+hl.bind("CTRL + ALT + R", hl.dsp.global("quickshell:screenRecordToggle"), { locked = true })
+hl.bind("CTRL + ALT + R", hl.dsp.exec_cmd(qsIsAlive .. " || " .. qsScripts .. "/videos/record.sh --fullscreen"),
+    { locked = true })
 hl.bind("SUPER + SHIFT + ALT + R", hl.dsp.exec_cmd(qsScripts .. "/videos/record.sh --fullscreen --sound"),
     { locked = true, description = "Utilities: Record screen (with sound)" })
+hl.bind("ALT + F10", hl.dsp.global("quickshell:replaySave"),
+    { locked = true, description = "Utilities: Save instant-replay clip" })
+hl.bind("SHIFT + ALT + F10", hl.dsp.global("quickshell:replayToggle"),
+    { locked = true, description = "Utilities: Toggle instant replay" })
 --# Fullscreen screenshot
 local grimhyprctl = "grim -o \"$(hyprctl activeworkspace -j | jq -r '.monitor')\""
 local shotTmp = "f=\"/tmp/quickshell/media/screenshot/full-$(date '+%s%N').png\"; mkdir -p \"${f%/*}\"; "
