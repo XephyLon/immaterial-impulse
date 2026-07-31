@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-07-31
+
 ### Fixed
 - Super+Alt+Space (float toggle) also switched the keyboard layout when the
   Settings' layout-switch shortcut was set to Super+Space: xkb `grp:`
@@ -483,7 +485,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.3.0...v0.3.1
