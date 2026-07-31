@@ -18,7 +18,10 @@ Singleton {
         return {
             version: root.schemaVersion,
             desktopPositions: {},
-            pluginOptions: {}
+            pluginOptions: {},
+            // Plugin ids whose options/positions/enabled state survive preset
+            // application (never captured INTO presets - see presets.sh).
+            presetPersist: {}
         };
     }
 
@@ -71,6 +74,22 @@ Singleton {
         return value === undefined ? fallback : value;
     }
 
+    function presetPersisted(pluginId) {
+        return root.state?.presetPersist?.[pluginId] === true;
+    }
+
+    function setPresetPersist(pluginId, persisted) {
+        if (!pluginId) return;
+        const nextState = Object.assign({}, root.state);
+        const nextPersist = Object.assign({}, nextState.presetPersist || {});
+        if (persisted) nextPersist[pluginId] = true;
+        else delete nextPersist[pluginId];
+        nextState.version = root.schemaVersion;
+        nextState.presetPersist = nextPersist;
+        root.state = nextState;
+        writeTimer.restart();
+    }
+
     function setOption(pluginId, key, value) {
         if (!pluginId || !key) return;
 
@@ -115,6 +134,11 @@ Singleton {
                     && typeof parsed.pluginOptions === "object"
                     && !Array.isArray(parsed.pluginOptions)
                     ? parsed.pluginOptions
+                    : {},
+                presetPersist: parsed.presetPersist
+                    && typeof parsed.presetPersist === "object"
+                    && !Array.isArray(parsed.presetPersist)
+                    ? parsed.presetPersist
                     : {}
             };
         } catch (error) {

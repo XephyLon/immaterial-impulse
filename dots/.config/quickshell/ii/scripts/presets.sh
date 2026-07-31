@@ -80,16 +80,24 @@ case "$action" in
             exit 1
         fi
         preset_plugin_state="$(jq -c '._pluginState // empty' "$preset_file")"
+        # Plugins flagged presetPersist keep their CURRENT options, desktop
+        # positions and enabled state through preset application. The flag map
+        # itself lives only in the live plugin-state (never captured into a
+        # preset's _pluginState snapshot).
+        persist_ids="$(jq -c '[(.presetPersist // {}) | to_entries[] | select(.value == true) | .key]' \
+            "$PLUGIN_STATE_FILE" 2>/dev/null || printf '[]')"
         if [ -n "$preset_plugin_state" ]; then
             current_plugin_state="$(jq -c '{
                 version: (.version // 2),
                 desktopPositions: (.desktopPositions // {}),
-                pluginOptions: (.pluginOptions // {})
+                pluginOptions: (.pluginOptions // {}),
+                presetPersist: (.presetPersist // {})
             }' "$PLUGIN_STATE_FILE" 2>/dev/null \
-                || printf '{"version":2,"desktopPositions":{},"pluginOptions":{}}')"
+                || printf '{"version":2,"desktopPositions":{},"pluginOptions":{},"presetPersist":{}}')"
             # Top-level merging keeps fields omitted by older position-only
             # presets, while a new preset's complete maps replace current state.
             jq -n --argjson current "$current_plugin_state" --argjson preset "$preset_plugin_state" \
+                --argjson persistIds "$persist_ids" \
                 '$current * $preset
                     | .version = 2
                     | .desktopPositions = (if ($preset | has("desktopPositions"))
@@ -97,7 +105,18 @@ case "$action" in
                         else ($current.desktopPositions // {}) end)
                     | .pluginOptions = (if ($preset | has("pluginOptions"))
                         then ($preset.pluginOptions // {})
-                        else ($current.pluginOptions // {}) end)' \
+                        else ($current.pluginOptions // {}) end)
+                    | .presetPersist = ($current.presetPersist // {})
+                    | reduce $persistIds[] as $id (.;
+                        (if ($current.pluginOptions // {}) | has($id)
+                         then .pluginOptions[$id] = $current.pluginOptions[$id]
+                         else .pluginOptions |= del(.[$id]) end)
+                        | ($current.desktopPositions // {}) as $cpos
+                        | .desktopPositions = (reduce (((.desktopPositions // {}) + $cpos) | keys_unsorted[]) as $screen (.desktopPositions // {};
+                            if ($cpos[$screen] // {}) | has($id)
+                            then .[$screen] = ((.[$screen] // {}) + {($id): $cpos[$screen][$id]})
+                            else .[$screen] = ((.[$screen] // {}) | del(.[$id]))
+                            end)))' \
                 > "${PLUGIN_STATE_FILE}.tmp" \
                 && replace_if_changed "${PLUGIN_STATE_FILE}.tmp" "$PLUGIN_STATE_FILE" || true
 
@@ -110,7 +129,15 @@ case "$action" in
                     "$restored_plugin_state" >/dev/null 2>&1 || true
             fi
         fi
-        jq -s '.[0] * .[1] | del(._presetMeta, ._pluginState)' "$CONFIG_FILE" "$preset_file" \
+        current_enabled="$(jq -c '.plugins.enabled // []' "$CONFIG_FILE" 2>/dev/null || printf '[]')"
+        jq -s --argjson persistIds "$persist_ids" --argjson curEnabled "$current_enabled" \
+            '.[0] * .[1] | del(._presetMeta, ._pluginState)
+                | if (.plugins.enabled? != null) and ($persistIds | length > 0) then
+                    .plugins.enabled = (
+                        (.plugins.enabled | map(select(. as $x | ($persistIds | index($x)) | not)))
+                        + ($persistIds | map(select(. as $x | ($curEnabled | index($x)) != null))))
+                  else . end' \
+            "$CONFIG_FILE" "$preset_file" \
             > "${CONFIG_FILE}.tmp" \
             && replace_if_changed "${CONFIG_FILE}.tmp" "$CONFIG_FILE" || true
         engine_path="$(jq -r '.wallpaperSelector.wallpaperEngine.activePath // empty' "$CONFIG_FILE")"

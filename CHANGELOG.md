@@ -12,6 +12,19 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- Per-plugin **"Keep settings across presets"** toggle (pin switch at the
+  top of every plugin's options): a flagged plugin's options, desktop
+  positions and enabled state survive preset application; the flag itself
+  is never captured into presets. Covered by an end-to-end presets.sh
+  behavior test.
+
+### Fixed
+- Bar/overlay-only plugins (Discord Voice, Docker) no longer show a dead
+  "Blur background" toggle - host blur is a desktop-widget mechanism, so
+  the injected row now appears only for plugins with a `desktopWidget`
+  entry point.
+
 ### Changed
 - Drop Shelf and Screenshot Result are core shell modules again, not
   bundled plugins: always loaded by the panel family, options in the shell

@@ -77,6 +77,69 @@ class PresetTests(unittest.TestCase):
             })
             self.assertNotIn("_pluginState", json.loads(config_file.read_text()))
 
+    def test_preset_persist_flag_shields_a_plugin_through_apply(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            config_dir = home / ".config/immaterial-impulse"
+            script_dir = home / ".config/quickshell/ii/scripts"
+            (script_dir / "wallpapers").mkdir(parents=True)
+            (script_dir / "colors").mkdir(parents=True)
+            (config_dir / "presets").mkdir(parents=True)
+            for helper in (script_dir / "wallpapers/wallpaper-engine.sh",
+                           script_dir / "colors/switchwall.sh"):
+                helper.write_text("#!/usr/bin/env bash\nexit 0\n")
+                helper.chmod(0o755)
+            presets = script_dir / "presets.sh"
+            shutil.copy(PRESETS, presets)
+            presets.chmod(0o755)
+            env = dict(os.environ, HOME=str(home))
+
+            config_file = config_dir / "config.json"
+            state_file = config_dir / "plugin-state.json"
+            config_file.write_text(json.dumps({
+                "background": {"wallpaperPath": "/tmp/w.jpg"},
+                "plugins": {"enabled": ["kept_plugin", "other_plugin"]},
+            }))
+            state_file.write_text(json.dumps({
+                "version": 2,
+                "desktopPositions": {"DP-1": {
+                    "kept_plugin": {"x": 1, "y": 1, "placementStrategy": "free"},
+                    "other_plugin": {"x": 2, "y": 2, "placementStrategy": "free"}}},
+                "pluginOptions": {"kept_plugin": {"a": 1}, "other_plugin": {"b": 1}},
+            }))
+            subprocess.run(["bash", str(presets), "--save", "snap"], env=env, check=True)
+
+            # The persist flag never enters the snapshot.
+            preset = json.loads((config_dir / "presets/snap.json").read_text())
+            self.assertNotIn("presetPersist", preset["_pluginState"])
+
+            # Diverge live state: flag kept_plugin, change both plugins, disable it.
+            config_file.write_text(json.dumps({
+                "background": {"wallpaperPath": "/tmp/w.jpg"},
+                "plugins": {"enabled": ["other_plugin"]},
+            }))
+            state_file.write_text(json.dumps({
+                "version": 2,
+                "desktopPositions": {"DP-1": {
+                    "kept_plugin": {"x": 50, "y": 60, "placementStrategy": "free"},
+                    "other_plugin": {"x": 70, "y": 80, "placementStrategy": "free"}}},
+                "pluginOptions": {"kept_plugin": {"a": 9}, "other_plugin": {"b": 9}},
+                "presetPersist": {"kept_plugin": True},
+            }))
+            subprocess.run(["bash", str(presets), "--apply", "snap"], env=env, check=True)
+
+            state = json.loads(state_file.read_text())
+            # Persisted plugin keeps live values; the other follows the preset.
+            self.assertEqual(state["pluginOptions"]["kept_plugin"], {"a": 9})
+            self.assertEqual(state["pluginOptions"]["other_plugin"], {"b": 1})
+            self.assertEqual(state["desktopPositions"]["DP-1"]["kept_plugin"]["x"], 50)
+            self.assertEqual(state["desktopPositions"]["DP-1"]["other_plugin"]["x"], 2)
+            self.assertEqual(state["presetPersist"], {"kept_plugin": True})
+            # Enabled membership follows live for the persisted plugin only.
+            cfg = json.loads(config_file.read_text())
+            self.assertNotIn("kept_plugin", cfg["plugins"]["enabled"])
+            self.assertIn("other_plugin", cfg["plugins"]["enabled"])
+
     def test_save_prefers_authoritative_in_memory_plugin_snapshot(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)

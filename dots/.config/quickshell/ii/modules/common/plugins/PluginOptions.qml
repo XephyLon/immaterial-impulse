@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import qs.services
 import QtQuick.Layouts
 import qs.modules.common
 import qs.modules.common.widgets
@@ -11,13 +12,31 @@ ColumnLayout {
     required property var manifest
     spacing: Appearance.spacing.space25
 
-    readonly property var optionRows: [{
+    // Host blur is a desktop-widget mechanism (PluginWidget frost); bar/
+    // overlay-only plugins were getting a dead "Blur background" toggle.
+    readonly property bool hasBlurSurface: manifest.desktopWidget !== undefined
+    readonly property var optionRows: (hasBlurSurface ? [{
         key: "blurEnabled",
         type: "boolean",
         label: "Blur background",
         icon: "blur_on",
         default: manifest.blur?.default ?? (manifest.desktopWidget?.blur === true)
-    }].concat(manifest.options || [])
+    }] : []).concat(manifest.options || [])
+
+    // Not a pluginOption on purpose: preset application replaces those, and
+    // this flag decides whether they get replaced (see presets.sh --apply).
+    ConfigSwitch {
+        Layout.fillWidth: true
+        leftPadding: 0
+        rightPadding: 0
+        buttonIcon: "push_pin"
+        text: Translation.tr("Keep settings across presets")
+        checked: PluginState.presetPersisted(root.manifest.id)
+        onCheckedChanged: {
+            if (checked !== PluginState.presetPersisted(root.manifest.id))
+                PluginState.setPresetPersist(root.manifest.id, checked);
+        }
+    }
 
     Repeater {
         model: root.optionRows
