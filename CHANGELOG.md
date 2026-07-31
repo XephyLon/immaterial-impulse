@@ -31,6 +31,12 @@ own repo; the installer pins which revision it builds.
   auto-applied.
 
 ### Changed
+- Scheme picker chips preview the colors they would apply: a new
+  `scheme_preview.py` quantizes the current wallpaper once and derives
+  primary/secondary/tertiary swatches for every Material scheme variant
+  (~0.2 s in the color venv); the chips show the three dots instead of a
+  generic icon, refreshed on wallpaper and dark/light changes, with the
+  icon as fallback when the venv is unavailable.
 - Quick settings' Wallpaper & Colors section restyled: scheme chips are
   uniform tonal cards with centered icon+label (no more diagonal
   icon/label scatter), selection animates color and relaxes into a pill,

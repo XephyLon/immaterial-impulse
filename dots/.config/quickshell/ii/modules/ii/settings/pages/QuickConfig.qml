@@ -33,6 +33,47 @@ ContentPage {
         Quickshell.execDetached(themeArguments(extraArguments))
     }
 
+    // Per-scheme swatches for the picker chips, computed from the current
+    // wallpaper (one quantize, every variant) in the color venv.
+    property var schemeSwatches: ({})
+    readonly property string swatchSource: /\.(mp4|webm|mkv|avi|mov)$/i.test(WallpaperEngine.activeArtwork)
+        ? Config.options.background.thumbnailPath
+        : WallpaperEngine.activeArtwork
+    onSwatchSourceChanged: schemePreviewRestart.restart()
+    Connections {
+        target: Appearance.m3colors
+        function onDarkmodeChanged() { schemePreviewRestart.restart() }
+    }
+    Component.onCompleted: schemePreviewRestart.restart()
+    Timer {
+        // Debounce: wallpaper switches change source and darkmode together.
+        id: schemePreviewRestart
+        interval: 200
+        onTriggered: {
+            schemePreviewProc.running = false
+            schemePreviewProc.running = page.swatchSource.length > 0
+        }
+    }
+    Process {
+        id: schemePreviewProc
+        command: ["bash", "-c",
+            `source "$ILLOGICAL_IMPULSE_VIRTUAL_ENV/bin/activate" && ` +
+            `python3 '${Directories.scriptPath}/colors/scheme_preview.py' ` +
+            `--path '${StringUtils.shellSingleQuoteEscape(page.swatchSource)}' ` +
+            `--mode ${Appearance.m3colors.darkmode ? "dark" : "light"}`]
+        stdout: StdioCollector {
+            id: schemePreviewCollector
+            onStreamFinished: {
+                try {
+                    const parsed = JSON.parse(schemePreviewCollector.text)
+                    page.schemeSwatches = parsed.error ? {} : parsed
+                } catch (e) {
+                    page.schemeSwatches = {}
+                }
+            }
+        }
+    }
+
     function goTo(term) {
         const t = term.toLowerCase().trim()
         function findTarget(rootItem) {
@@ -201,12 +242,40 @@ ContentPage {
                                     ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
                                 }
 
+                                property var swatches: page.schemeSwatches[modelData.value] ?? []
+
                                 ColumnLayout {
                                     anchors.centerIn: parent
                                     spacing: 0
 
+                                    // The colors this scheme would actually produce
+                                    // from the current wallpaper.
+                                    RowLayout {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        Layout.bottomMargin: Appearance.spacing.space50
+                                        visible: schemeChip.swatches.length > 0
+                                        spacing: Appearance.spacing.space50
+                                        Repeater {
+                                            model: schemeChip.swatches
+                                            delegate: Rectangle {
+                                                required property string modelData
+                                                implicitWidth: 14
+                                                implicitHeight: 14
+                                                radius: 7
+                                                color: modelData
+                                                border.width: 1
+                                                border.color: ColorUtils.transparentize(
+                                                    schemeChip.isSelected ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer, 0.7)
+                                                Behavior on color {
+                                                    ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                                                }
+                                            }
+                                        }
+                                    }
+
                                     MaterialSymbol {
                                         Layout.alignment: Qt.AlignHCenter
+                                        visible: schemeChip.swatches.length === 0
                                         text: schemeChip.modelData.icon
                                         fill: schemeChip.isSelected ? 1 : 0
                                         iconSize: Appearance.font.pixelSize.larger
