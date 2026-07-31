@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.6.1] — 2026-07-31
+
 ### Fixed
 - Quick page: the scheme grid ran a little taller than the wallpaper
   preview. The right column is now height-locked to the preview
@@ -527,7 +529,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.4.0...v0.5.0
