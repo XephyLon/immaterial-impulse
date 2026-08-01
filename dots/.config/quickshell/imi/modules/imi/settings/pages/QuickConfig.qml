@@ -713,7 +713,8 @@ ContentPage {
 
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: screenRoundCol.implicitHeight + 24
+                    // Its own column, plus the insets that column anchors with.
+                    Layout.preferredHeight: groupStyleCol.implicitHeight + Appearance.spacing.space150 * 2
                     radius: Appearance.rounding.normal
                     color: Appearance.colors.colLayer1
                     ColumnLayout {
@@ -754,7 +755,7 @@ ContentPage {
 
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: groupStyleCol.implicitHeight + 24
+                    Layout.preferredHeight: screenRoundCol.implicitHeight + Appearance.spacing.space150 * 2
                     radius: Appearance.rounding.normal
                     color: Appearance.colors.colLayer1
 
