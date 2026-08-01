@@ -12,6 +12,50 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-08-01
+
+Immaterial Impulse is an independent project now, not a fork that tracks
+its ancestors. Nothing is pulled from `pctrade/end4-pC` or
+`end-4/dots-hyprland` any more, and the code and naming that existed to
+keep those merges tractable is gone.
+
+### Changed
+- **The shell is `imi`, not `ii`.** It installs to
+  `~/.config/quickshell/imi` and runs as `qs -c imi`; the QML module
+  namespace is `qs.modules.imi.*` and the panel family identifier is
+  `"imi"`. `ii` was illogical-impulse's abbreviation. Existing installs
+  are handled: a `panelFamily` of `"ii"` in an already-written config
+  still resolves (without that, the shell would start with no panels at
+  all), and the installer clears a leftover `~/.config/quickshell/ii`
+  once the new directory is in place.
+- The Python virtualenv variable is `IMMATERIAL_IMPULSE_VIRTUAL_ENV`.
+  Every consumer falls back to `ILLOGICAL_IMPULSE_VIRTUAL_ENV` and
+  `env.lua` exports both, so a Hyprland session started before the update
+  keeps generating colors and thumbnails until the next login.
+- The welcome screen's Usage, Configuration and GitHub buttons open this
+  project's own docs instead of end-4's wiki, which describes a shell
+  this one has diverged from. The sponsor button now says whose page it
+  opens, and the repository's GitHub Sponsor button no longer routes to
+  end-4.
+- README and AGENT.md describe the fork relationship in the past tense.
+  Attribution to end-4 and pctrade stays in `LICENSE`, `licenses/` and
+  the credits — the project is GPL-3.0 and the ancestry is real.
+
+### Removed
+- The compositor abstraction. `WM` absorbed `HyprlandBackend` (its API is
+  unchanged, so no call site moved), `CompositorGlobalShortcut` gave way
+  to `GlobalShortcut` directly, and the 25 `WM.compositor === "hyprland"`
+  branches are gone.
+- With them, an entire unreachable sidebar entrance implementation: both
+  sidebars defined `animatedEntrance` as permanently false and carried a
+  slide-in animation, a delayed-close timer, a full-window mask and a
+  click-outside-to-dismiss area behind it. Open/close behavior is
+  unchanged — that path never ran.
+
+### Fixed
+- The repo-root `VERSION` symlink, which the directory rename left
+  dangling.
+
 ## [0.6.1] — 2026-07-31
 
 ### Fixed
@@ -529,7 +573,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.5.0...v0.5.1
