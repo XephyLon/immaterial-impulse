@@ -148,8 +148,20 @@ mechanism stays "plugins"; the user-facing noun becomes "widgets".
 renders with `textFormat: Text.PlainText`, so a malicious index cannot inject
 rich text (pinned by `tests/test_plugin_store_contract.py`). The Widgets page
 renders **locally installed** manifest strings, which are attacker-controlled in
-the same way a malicious shared preset is. Plugin name and description on the
-Widgets page must render as `Text.PlainText` for the same reason.
+the same way a malicious shared preset is.
+
+The page does not render them directly. `PluginsPage.qml:244` and `:249-257`
+feed `modelData.name`, `.description`, `.author` and `.version` into a
+`ConfigSwitch`, and `ConfigSwitch.qml:34-47` renders both through `StyledText`.
+`StyledText` sets no `textFormat`, so it inherits Qt's default `Text.AutoText`,
+which auto-detects and renders rich text — a manifest named `<img src=…>`
+renders as markup today.
+
+The fix therefore belongs in `ConfigSwitch`, which closes the hole for every
+settings surface rather than this page alone. It is safe: all 168 `ConfigSwitch`
+call sites pass plain strings, and this codebase opts *into* rich text
+explicitly where it wants it (`modules/common/widgets/NotificationItem.qml:174`
+sets `textFormat: Text.StyledText`).
 
 ## Testing
 
@@ -202,5 +214,6 @@ is the Cycle 2 proposal. It is docs-only and remains open.
 - `modules/imi/settings/pages/PluginsPage.qml` — search + chips + filtering
 - `modules/imi/settings/pages/PluginStorePage.qml` — drop local `FilterChip`,
   read shared vocabulary, string rename
+- `modules/common/widgets/ConfigSwitch.qml:34-47` — plain-text hardening
 - `modules/imi/settings/SettingsContent.qml:147` — nav entry rename
 - `tests/test_widgets_page_filters.py` — new contract test
