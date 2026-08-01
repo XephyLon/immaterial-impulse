@@ -126,5 +126,31 @@ class WidgetsPageFiltering(unittest.TestCase):
         self.assertIn('_origin === "installed"', self.src)
 
 
+class WidgetsPageFilterUi(unittest.TestCase):
+    def setUp(self):
+        self.src = PAGE.read_text(encoding="utf-8")
+
+    def test_search_field_is_bound_to_the_query(self):
+        """ConfigTextArea.text is the *label*; the typed value is `.value`.
+        Binding the wrong one silently produces a search box that never
+        filters anything.
+
+        Anchored on `searchQuery` itself: a bare `onValueChanged` also matches
+        the blur-opacity ConfigSlider on this page, so it would never fail.
+        """
+        self.assertRegex(self.src, r"searchQuery:\s*Qt\.binding|searchQuery\s*=\s*\w+\.value")
+
+    def test_chips_come_from_the_shared_vocabulary(self):
+        self.assertRegex(self.src, r"model:\s*PluginManager\.surfaceCapabilities")
+
+    def test_chip_click_clears_when_already_active(self):
+        self.assertIn('capabilityFilter === modelData.value ? "" : modelData.value',
+                      self.src)
+
+    def test_empty_state_exists(self):
+        """A filter that matches nothing must say so, not render a blank gap."""
+        self.assertRegex(self.src, r"filteredPlugins\.length === 0")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -228,6 +228,55 @@ Item {
                     wrapMode: Text.Wrap
                 }
 
+                ConfigTextArea {
+                    id: searchField
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: Appearance.spacing.space100
+                    buttonIcon: "search"
+                    text: Translation.tr("Search widgets")
+                    placeholderText: Translation.tr("Name or description")
+                    fieldWidth: 300
+                    singleLine: true
+                    // `text` is this control's label; `value` is what the user
+                    // typed.
+                    onValueChanged: root.searchQuery = searchField.value
+                }
+
+                Flow {
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: Appearance.spacing.space100
+                    spacing: Appearance.spacing.space50
+
+                    Repeater {
+                        model: PluginManager.surfaceCapabilities
+
+                        FilterChip {
+                            required property var modelData
+                            label: modelData.label
+                            chipIcon: modelData.icon
+                            toggled: root.capabilityFilter === modelData.value
+                            onClicked: root.capabilityFilter =
+                                root.capabilityFilter === modelData.value ? "" : modelData.value
+                        }
+                    }
+
+                    FilterChip {
+                        label: Translation.tr("Third-party")
+                        chipIcon: "extension"
+                        toggled: root.thirdPartyOnly
+                        onClicked: root.thirdPartyOnly = !root.thirdPartyOnly
+                    }
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    visible: root.filteredPlugins.length === 0
+                    text: Translation.tr("No widgets match these filters.")
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    color: Appearance.colors.colSubtext
+                    wrapMode: Text.Wrap
+                }
+
                 Repeater {
                     model: root.filteredPlugins
 
