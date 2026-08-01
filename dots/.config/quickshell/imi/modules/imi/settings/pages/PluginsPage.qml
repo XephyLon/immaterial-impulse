@@ -65,6 +65,98 @@ Item {
         visible: !root.showingStore
         forceWidth: true
 
+        // Settings that apply to widgets as a class, kept apart from the
+        // browse controls below: frost, opacity and install-from-URL describe
+        // how widgets behave, not which ones the list is showing, and mixing
+        // the two under one header put three unrelated rows between the
+        // section title and the list it names.
+        ContentSection {
+            title: Translation.tr("Widget settings")
+            Layout.fillWidth: true
+            icon: "tune"
+            shape: MaterialShape.Shape.Diamond
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: Appearance.spacing.space25
+
+                GroupedList {
+                    Layout.fillWidth: true
+
+                    ConfigSelectionArray {
+                        Layout.fillWidth: true
+                        text: Translation.tr("Widget frost")
+                        icon: "blur_on"
+                        currentValue: Config.options.plugins.frostMode
+                        onSelected: newValue => {
+                            if (newValue !== Config.options.plugins.frostMode)
+                                Config.options.plugins.frostMode = newValue;
+                        }
+                        options: [
+                            { displayName: Translation.tr("Tint"), icon: "format_color_fill", value: "tint" },
+                            { displayName: Translation.tr("Blur"), icon: "blur_on", value: "blur" }
+                        ]
+                    }
+
+                    ConfigSlider {
+                        Layout.fillWidth: true
+                        text: Translation.tr("Blurred widget opacity")
+                        buttonIcon: "opacity"
+                        from: 0
+                        to: 1
+                        usePercentTooltip: true
+                        value: Config.options.plugins.blurOpacity
+                        onValueChanged: {
+                            const rounded = Math.round(value * 20) / 20;
+                            if (rounded !== Config.options.plugins.blurOpacity)
+                                Config.options.plugins.blurOpacity = rounded;
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Appearance.spacing.space100
+
+                    ConfigTextArea {
+                        id: manifestUrl
+                        Layout.fillWidth: true
+                        buttonIcon: "extension"
+                        text: Translation.tr("Widget manifest URL")
+                        placeholderText: Translation.tr("https://…/manifest.json")
+                        fieldWidth: 300
+                        singleLine: true
+                    }
+                    RippleButton {
+                        implicitWidth: installLabel.implicitWidth + Appearance.spacing.space300
+                        implicitHeight: 44
+                        enabled: !PluginManager.installing
+                        buttonRadius: Appearance.rounding.full
+                        // ConfigTextArea.text is the row label; the field content is
+                        // its `value` alias.
+                        releaseAction: () => PluginManager.installFromManifest(manifestUrl.value.trim())
+                        contentItem: StyledText {
+                            id: installLabel
+                            anchors.centerIn: parent
+                            text: PluginManager.installing ? Translation.tr("Installing…") : Translation.tr("Install")
+                            color: Appearance.colors.colOnLayer1
+                        }
+                    }
+                }
+
+                // Install feedback belongs with the install control, not with
+                // the list.
+                StyledText {
+                    Layout.fillWidth: true
+                    visible: PluginManager.installMessage.length > 0
+                    text: PluginManager.installMessage
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    color: Appearance.colors.colSubtext
+                    wrapMode: Text.Wrap
+                }
+            }
+        }
+
         ContentSection {
             title: Translation.tr("Available Widgets")
             Layout.fillWidth: true
@@ -153,79 +245,6 @@ Item {
                     }
 
                     Item { Layout.fillWidth: true }
-                }
-
-                GroupedList {
-                    Layout.fillWidth: true
-
-                    ConfigSelectionArray {
-                        Layout.fillWidth: true
-                        text: Translation.tr("Widget frost")
-                        icon: "blur_on"
-                        currentValue: Config.options.plugins.frostMode
-                        onSelected: newValue => {
-                            if (newValue !== Config.options.plugins.frostMode)
-                                Config.options.plugins.frostMode = newValue;
-                        }
-                        options: [
-                            { displayName: Translation.tr("Tint"), icon: "format_color_fill", value: "tint" },
-                            { displayName: Translation.tr("Blur"), icon: "blur_on", value: "blur" }
-                        ]
-                    }
-
-                    ConfigSlider {
-                        Layout.fillWidth: true
-                        text: Translation.tr("Blurred widget opacity")
-                        buttonIcon: "opacity"
-                        from: 0
-                        to: 1
-                        usePercentTooltip: true
-                        value: Config.options.plugins.blurOpacity
-                        onValueChanged: {
-                            const rounded = Math.round(value * 20) / 20;
-                            if (rounded !== Config.options.plugins.blurOpacity)
-                                Config.options.plugins.blurOpacity = rounded;
-                        }
-                    }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space100
-
-                    ConfigTextArea {
-                        id: manifestUrl
-                        Layout.fillWidth: true
-                        buttonIcon: "extension"
-                        text: Translation.tr("Widget manifest URL")
-                        placeholderText: Translation.tr("https://…/manifest.json")
-                        fieldWidth: 300
-                        singleLine: true
-                    }
-                    RippleButton {
-                        implicitWidth: installLabel.implicitWidth + Appearance.spacing.space300
-                        implicitHeight: 44
-                        enabled: !PluginManager.installing
-                        buttonRadius: Appearance.rounding.full
-                        // ConfigTextArea.text is the row label; the field content is
-                        // its `value` alias.
-                        releaseAction: () => PluginManager.installFromManifest(manifestUrl.value.trim())
-                        contentItem: StyledText {
-                            id: installLabel
-                            anchors.centerIn: parent
-                            text: PluginManager.installing ? Translation.tr("Installing…") : Translation.tr("Install")
-                            color: Appearance.colors.colOnLayer1
-                        }
-                    }
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    visible: PluginManager.installMessage.length > 0
-                    text: PluginManager.installMessage
-                    font.pixelSize: Appearance.font.pixelSize.small
-                    color: Appearance.colors.colSubtext
-                    wrapMode: Text.Wrap
                 }
 
                 ConfigTextArea {
