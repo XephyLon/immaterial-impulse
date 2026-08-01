@@ -271,7 +271,14 @@ Item {
                 StyledText {
                     Layout.fillWidth: true
                     visible: root.filteredPlugins.length === 0
-                    text: Translation.tr("No widgets match these filters.")
+                    // Distinguish "nothing installed" from "the filters
+                    // excluded everything". availablePlugins starts empty and
+                    // fills in asynchronously as the manifest FileViews load,
+                    // so a page opened during the scan would otherwise blame a
+                    // filter the user never set.
+                    text: PluginManager.availablePlugins.length === 0
+                        ? Translation.tr("No widgets installed.")
+                        : Translation.tr("No widgets match these filters.")
                     font.pixelSize: Appearance.font.pixelSize.small
                     color: Appearance.colors.colSubtext
                     wrapMode: Text.Wrap

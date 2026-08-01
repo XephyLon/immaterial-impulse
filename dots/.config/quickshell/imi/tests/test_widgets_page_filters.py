@@ -173,9 +173,40 @@ class WidgetsPageFilterUi(unittest.TestCase):
         self.assertIn('capabilityFilter === modelData.value ? "" : modelData.value',
                       self.src)
 
-    def test_empty_state_exists(self):
-        """A filter that matches nothing must say so, not render a blank gap."""
+    def test_search_handler_is_wired_to_the_right_field(self):
+        """`onValueChanged` -> `onTextChanged` is the exact "search box never
+        filters" bug, and wiring it to `manifestUrl.value` would search the
+        install-from-URL field instead. Both mutations survive a regex that
+        only anchors on the assignment.
+        """
+        self.assertRegex(
+            self.src,
+            r"onValueChanged:\s*root\.searchQuery\s*=\s*searchField\.value")
+
+    def test_capability_chips_reflect_the_active_filter(self):
+        """`toggled: false` renders every chip permanently inactive while
+        filtering still works - the user sees no selection and cannot tell
+        which filter is on.
+        """
+        self.assertIn("toggled: root.capabilityFilter === modelData.value",
+                      self.src)
+        self.assertIn("label: modelData.label", self.src)
+        self.assertIn("chipIcon: modelData.icon", self.src)
+
+    def test_third_party_chip_is_present_and_wired(self):
+        """Deleting this chip leaves thirdPartyOnly unreachable from the UI
+        with the rest of the suite green.
+        """
+        self.assertIn("toggled: root.thirdPartyOnly", self.src)
+        self.assertIn('chipIcon: "extension"', self.src)
+
+    def test_empty_state_distinguishes_no_widgets_from_no_matches(self):
+        """An empty list is not proof a filter excluded something.
+        availablePlugins starts empty and fills in asynchronously, so a single
+        message would blame a filter the user never set.
+        """
         self.assertRegex(self.src, r"filteredPlugins\.length === 0")
+        self.assertIn("PluginManager.availablePlugins.length === 0", self.src)
 
 
 class SettingsLabelsArePlainText(unittest.TestCase):
