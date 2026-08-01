@@ -99,6 +99,12 @@ if ! python3 "$SCRIPT_DIR/lint_plugin_processes.py"; then
     exit 1
 fi
 
+echo "Running expandable panel contract tests..."
+if ! python3 "$SCRIPT_DIR/test_expandable_panel.py"; then
+    echo "Expandable panel contract tests failed."
+    exit 1
+fi
+
 echo "Running plugin installer tests..."
 if ! python3 "$SCRIPT_DIR/test_plugin_installer.py"; then
     echo "Plugin installer tests failed."
