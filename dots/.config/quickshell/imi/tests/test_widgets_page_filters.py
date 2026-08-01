@@ -103,7 +103,18 @@ class WidgetsPageFiltering(unittest.TestCase):
     def setUp(self):
         self.src = PAGE.read_text(encoding="utf-8")
 
+    def _binding_body(self):
+        """Just the filteredPlugins binding.
+
+        Slicing to end-of-file instead swallows the ConfigSwitch delegate,
+        which already renders modelData.name and modelData.description - so
+        assertions about the search reading name/description could never fail.
+        """
+        start = self.src.index("readonly property var filteredPlugins")
+        return self.src[start:self.src.index("\n    }", start)]
+
     def test_filter_state_exists(self):
+        self.assertIn("property string searchQuery", self.src)
         self.assertIn("property string capabilityFilter", self.src)
         self.assertIn("property bool thirdPartyOnly", self.src)
 
@@ -117,13 +128,27 @@ class WidgetsPageFiltering(unittest.TestCase):
         self.assertIn("PluginManager.pluginSurfaces", self.src)
 
     def test_search_is_case_insensitive_over_name_and_description(self):
-        block = self.src[self.src.index("filteredPlugins"):]
-        self.assertIn("toLowerCase", block)
-        self.assertIn("name", block)
-        self.assertIn("description", block)
+        """Both sides must be lowercased, and both fields must be searched.
 
-    def test_third_party_uses_the_same_origin_test_as_the_badge(self):
-        self.assertIn('_origin === "installed"', self.src)
+        Mutation-checked: dropping either toLowerCase, searching only the id,
+        or deleting the search clause outright must each fail this test.
+        """
+        body = self._binding_body()
+        self.assertEqual(body.count(".toLowerCase()"), 2,
+                         "lowercase both the query and the haystack")
+        self.assertIn("plugin.name", body)
+        self.assertIn("plugin.description", body)
+        self.assertIn("haystack.includes(query)", body)
+
+    def test_third_party_filter_excludes_bundled_plugins(self):
+        """Pin the filter clause, not just the string.
+
+        Asserting that '_origin === "installed"' appears somewhere in the file
+        is vacuous: the third-party badge and the delete button both already
+        contain it, so the assertion passed before this filter existed and
+        survived inverting the comparison.
+        """
+        self.assertIn('plugin._origin !== "installed"', self._binding_body())
 
 
 class WidgetsPageFilterUi(unittest.TestCase):
