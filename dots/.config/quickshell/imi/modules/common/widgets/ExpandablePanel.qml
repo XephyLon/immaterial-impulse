@@ -260,6 +260,18 @@ StyledRectangle {
                 easing.bezierCurve: Appearance.animation.elementMoveExit.bezierCurve
             }
 
+            // A panel created in the already-expanded state never emits
+            // expandedChanged, so animateTo() never runs and the panel would
+            // sit at zero height with its content clipped away. Reachable
+            // whenever a view rebuilds its delegates: filtering the Widgets
+            // page recreates every card, and the enabled ones come back open.
+            // Assigned rather than animated - a card that appears already open
+            // should not play an entrance it never closed from.
+            Component.onCompleted: {
+                if (root.expanded)
+                    panel.implicitHeight = panel.targetHeight;
+            }
+
             // Content that grows while already open (a status line arriving,
             // say) follows without re-running the entrance.
             onTargetHeightChanged: {

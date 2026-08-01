@@ -369,37 +369,39 @@ Item {
                                     }
                                 },
 
+                                // Surface tags, drawn from the same vocabulary as the
+                                // filter chips so a card visibly explains why a filter
+                                // matched it. Values outside the vocabulary (`settings`,
+                                // or a capability from a newer shell) resolve to null
+                                // and are dropped rather than shown raw.
+                                Repeater {
+                                    model: PluginManager.pluginSurfaces(pluginCard.modelData)
+                                        .map(value => PluginManager.surfaceInfo(value))
+                                        .filter(info => info !== null)
+
+                                    Badge {
+                                        required property var modelData
+                                        Layout.alignment: Qt.AlignVCenter
+                                        label: modelData.label
+                                        badgeIcon: modelData.icon
+                                    }
+                                },
+
                                 // Third-party badge: installed plugins come from an
                                 // external source (not shipped with the shell), so flag
                                 // them so the user knows to trust the source.
-                                Rectangle {
+                                Badge {
+                                    id: thirdPartyBadge
                                     visible: pluginCard.modelData._origin === "installed"
                                     Layout.alignment: Qt.AlignVCenter
-                                    implicitWidth: badgeRow.implicitWidth + Appearance.spacing.space150
-                                    implicitHeight: badgeRow.implicitHeight + Appearance.spacing.space50
-                                    radius: Appearance.rounding.full
-                                    color: Appearance.colors.colSecondaryContainer
-
-                                    RowLayout {
-                                        id: badgeRow
-                                        anchors.centerIn: parent
-                                        spacing: Appearance.spacing.space25
-                                        MaterialSymbol {
-                                            text: "public"
-                                            iconSize: Appearance.font.pixelSize.small
-                                            color: Appearance.colors.colOnSecondaryContainer
-                                        }
-                                        StyledText {
-                                            text: Translation.tr("Third-party")
-                                            font.pixelSize: Appearance.font.pixelSize.smaller
-                                            color: Appearance.colors.colOnSecondaryContainer
-                                        }
-                                    }
+                                    label: Translation.tr("Third-party")
+                                    badgeIcon: "public"
 
                                     HoverHandler { id: badgeHover }
                                     StyledToolTip {
-                                        // Rectangle has no `hovered` property, so gate
-                                        // explicitly or the tooltip stays visible.
+                                        // Badge is a Rectangle and has no `hovered`
+                                        // property, so gate explicitly or the tooltip
+                                        // stays visible.
                                         extraVisibleCondition: badgeHover.hovered
                                         text: Translation.tr("Installed from an external source — only enable widgets you trust")
                                     }

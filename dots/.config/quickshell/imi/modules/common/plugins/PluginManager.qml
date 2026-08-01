@@ -33,6 +33,14 @@ Singleton {
     // Manifests of the older declarative-JSON generation (clock) carry a
     // `desktopWidget` block and no `capabilities` array at all. Without the
     // fallback they match no chip and disappear from every filtered view.
+    // The display entry for one surface value, or null when a manifest
+    // declares something outside the vocabulary - `settings`, or a capability
+    // from a newer shell. Callers drop the nulls rather than rendering a raw
+    // value at the user.
+    function surfaceInfo(value) {
+        return root.surfaceCapabilities.find(surface => surface.value === value) ?? null;
+    }
+
     function pluginSurfaces(manifest) {
         const declared = manifest?.capabilities ?? [];
         if (declared.length > 0) return declared;
