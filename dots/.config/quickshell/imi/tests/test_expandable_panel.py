@@ -46,14 +46,38 @@ class ExpandablePanelContract(unittest.TestCase):
         self.assertIn("elementMoveEnter.bezierCurve", self.src)
         self.assertIn("elementMoveExit.bezierCurve", self.src)
 
+    def test_enter_and_exit_are_separate_animations(self):
+        """One Behavior with ternary duration/easing re-used the collapse
+        parameters on the next expand, so the first open decelerated and every
+        one after it accelerated. Two explicit animations, chosen imperatively,
+        have no such ordering ambiguity.
+        """
+        self.assertNotRegex(
+            self.src, r"Behavior\s+on\s+implicitHeight",
+            "the panel height must not animate through a ternary Behavior")
+        self.assertIn("id: expandAnim", self.src)
+        self.assertIn("id: collapseAnim", self.src)
+        self.assertIn("animateTo", self.src)
+
     def test_rule3_opacity_paired_on_fast(self):
         self.assertIn("elementMoveFast", self.src)
 
     def test_rule4_clipped(self):
         self.assertIn("clip: true", self.src)
 
-    def test_rule5_alive_until_zero_height(self):
-        self.assertRegex(self.src, r"visible:\s*root\.expanded\s*\|\|\s*implicitHeight\s*>\s*0")
+    def test_rule5_content_stays_measured_and_instantiated(self):
+        """Rule 5, but the panel must never be hidden via `visible`.
+
+        Qt propagates visibility to descendants and a ColumnLayout drops
+        invisible children, so `visible: false` collapses the content's
+        implicit height while closed. The next expand then animates toward a
+        stale target and corrects mid-flight - a jolt on every open after the
+        first. Zero height plus clip hides it without un-measuring it.
+        """
+        panel = self.src[self.src.index("id: panel"):]
+        self.assertNotRegex(panel, r"(?m)^\s*visible:",
+                            "the animated panel must not bind `visible`")
+        self.assertIn("clip: true", panel)
 
     def test_rule6_indent_is_leading_only(self):
         # Symmetric insets are what PluginsPage did wrong: the trailing edge

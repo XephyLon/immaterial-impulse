@@ -70,6 +70,7 @@ StyledRectangle {
     }
 
     onExpandedChanged: {
+        panel.animateTo(root.expanded);
         if (root.staggerStep > 0)
             root.runStagger();
     }
@@ -171,22 +172,62 @@ StyledRectangle {
             // so the card jumped ~21px and then glided the rest - which reads
             // as a bounce. Folding them in means the whole thing animates.
             readonly property int verticalInset: Appearance.spacing.space100 + Appearance.spacing.space150
-            implicitHeight: root.expanded ? contentColumn.implicitHeight + verticalInset : 0
+            readonly property real targetHeight: contentColumn.implicitHeight + verticalInset
+            // Driven by the explicit animations below, not a binding. A single
+            // `Behavior` whose duration and easing were ternaries on
+            // `expanded` re-used the collapse parameters on the next expand -
+            // the ternaries had not re-evaluated by the time the animation
+            // started - so the first open decelerated correctly and every one
+            // after it accelerated instead. Two animations, no ordering
+            // ambiguity.
+            implicitHeight: 0
             opacity: root.expanded ? 1 : 0
-            visible: root.expanded || implicitHeight > 0
             enabled: root.expanded
             clip: true
 
-            Behavior on implicitHeight {
-                NumberAnimation {
-                    duration: root.expanded
-                        ? Appearance.animation.elementMoveEnter.duration
-                        : Appearance.animation.elementMoveExit.duration
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: root.expanded
-                        ? Appearance.animation.elementMoveEnter.bezierCurve
-                        : Appearance.animation.elementMoveExit.bezierCurve
+            function animateTo(open) {
+                expandAnim.stop();
+                collapseAnim.stop();
+                if (open) {
+                    expandAnim.to = panel.targetHeight;
+                    expandAnim.start();
+                } else {
+                    collapseAnim.start();
                 }
+            }
+
+            // Deliberately NOT `visible: expanded || implicitHeight > 0`.
+            // Qt propagates visibility to descendants, and a ColumnLayout
+            // excludes invisible children - so hiding this item collapsed
+            // contentColumn's implicit height to 0 while closed. The next
+            // expand then animated toward a stale target and corrected
+            // mid-flight, which is why the first open looked right and every
+            // one after it jolted. Zero height plus clip already hides it, and
+            // the content stays measured and instantiated throughout.
+
+            NumberAnimation {
+                id: expandAnim
+                target: panel
+                property: "implicitHeight"
+                duration: Appearance.animation.elementMoveEnter.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
+            }
+            NumberAnimation {
+                id: collapseAnim
+                target: panel
+                property: "implicitHeight"
+                to: 0
+                duration: Appearance.animation.elementMoveExit.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animation.elementMoveExit.bezierCurve
+            }
+
+            // Content that grows while already open (a status line arriving,
+            // say) follows without re-running the entrance.
+            onTargetHeightChanged: {
+                if (root.expanded && !expandAnim.running)
+                    panel.implicitHeight = panel.targetHeight;
             }
             Behavior on opacity {
                 animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
