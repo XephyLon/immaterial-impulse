@@ -56,7 +56,9 @@ ContentPage {
     Process {
         id: schemePreviewProc
         command: ["bash", "-c",
-            `source "${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV}/bin/activate" && ` +
+            // The \${...} escape stops QML's own template substitution from
+            // eating bash's parameter expansion.
+            `source "\${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV}/bin/activate" && ` +
             `python3 '${Directories.scriptPath}/colors/scheme_preview.py' ` +
             `--path '${StringUtils.shellSingleQuoteEscape(page.swatchSource)}' ` +
             `--mode ${Appearance.m3colors.darkmode ? "dark" : "light"}`]
