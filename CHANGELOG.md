@@ -12,6 +12,21 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-08-01
+
+### Fixed
+- **Re-running the installer now actually repairs the Wallpaper Engine
+  wrapper.** 0.9.0 fixed the library-path leak that crashed apps launched
+  from the shell, but no existing install could receive the fix: the
+  installer skips its work when the build stamp matches and the wrapper
+  file exists, and it exited before rewriting the wrapper. Updating,
+  re-running the installer and restarting all looked like no-ops while the
+  old wrapper stayed on disk. The stamp guards the expensive fetch and
+  build, never the wrapper, which is now always rewritten.
+
+  If you followed 0.9.0's "re-run the installer" note and Firefox kept
+  crashing, this is why. Re-run it once more on this version.
+
 ## [0.9.0] — 2026-08-01
 
 > **Wallpaper Engine users: re-run the installer.** This release fixes a bug
@@ -654,7 +669,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.6.1...v0.7.0
