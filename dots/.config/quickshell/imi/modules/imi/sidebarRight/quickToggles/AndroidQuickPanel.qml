@@ -37,6 +37,25 @@ AbstractQuickPanel {
 
     property alias dropIndicator: dropIndicator
 
+    // Config and unusedToggles hand out freshly allocated entry objects on every
+    // re-evaluation. ScriptModel only reaches for objectProp once two entries are
+    // already known to differ by strict equality, so brand new objects make it
+    // report "rows 0..n changed" instead of an insert/remove/move -- and
+    // DelegateChooser never re-picks a delegate for a row that merely changed
+    // data, so every toggle after the edit point keeps the previous toggle's
+    // icon, name and action. Handing out one canonical object per (type, size)
+    // keeps identities stable so the diff, and the delegates, stay honest.
+    property var toggleEntryCache: ({})
+    function canonicalToggleEntry(entry) {
+        if (!entry) return entry;
+        const key = entry.type + " " + entry.size;
+        const cached = root.toggleEntryCache[key];
+        if (cached) return cached;
+        const fresh = { type: entry.type, size: entry.size };
+        root.toggleEntryCache[key] = fresh;
+        return fresh;
+    }
+
     function toggleRowsForList(togglesList) {
         var rows = [];
         var row = [];
@@ -48,7 +67,7 @@ AbstractQuickPanel {
                 row = [];
                 totalSize = 0;
             }
-            row.push(togglesList[i]);
+            row.push(root.canonicalToggleEntry(togglesList[i]));
             totalSize += togglesList[i].size;
         }
         if (row.length > 0) rows.push(row);
