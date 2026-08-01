@@ -189,7 +189,8 @@ StyledRectangle {
             // Stays in the layout so its 1px never pops in or out; only its
             // opacity animates.
             visible: root.divider
-            opacity: root.expanded ? 1 : 0
+            // Nothing to divide when the panel opens onto empty content.
+            opacity: (root.expanded && panel.targetHeight > 0) ? 1 : 0
             Behavior on opacity {
                 animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
             }
@@ -209,7 +210,12 @@ StyledRectangle {
             // so the card jumped ~21px and then glided the rest - which reads
             // as a bounce. Folding them in means the whole thing animates.
             readonly property int verticalInset: Appearance.spacing.space100 + Appearance.spacing.space150
-            readonly property real targetHeight: contentColumn.implicitHeight + verticalInset
+            // Empty content opens onto nothing, so it gets no inset either.
+            // Otherwise a panel with no content still claimed its 20px of
+            // padding once expanded - which is what put a band of dead space
+            // under every enabled widget that happens to expose no options.
+            readonly property real targetHeight: contentColumn.implicitHeight > 0
+                ? contentColumn.implicitHeight + verticalInset : 0
             // Driven by the explicit animations below, not a binding. A single
             // `Behavior` whose duration and easing were ternaries on
             // `expanded` re-used the collapse parameters on the next expand -
@@ -258,6 +264,18 @@ StyledRectangle {
                 duration: Appearance.animation.elementMoveExit.duration
                 easing.type: Easing.BezierSpline
                 easing.bezierCurve: Appearance.animation.elementMoveExit.bezierCurve
+            }
+
+            // A panel created in the already-expanded state never emits
+            // expandedChanged, so animateTo() never runs and the panel would
+            // sit at zero height with its content clipped away. Reachable
+            // whenever a view rebuilds its delegates: filtering the Widgets
+            // page recreates every card, and the enabled ones come back open.
+            // Assigned rather than animated - a card that appears already open
+            // should not play an entrance it never closed from.
+            Component.onCompleted: {
+                if (root.expanded)
+                    panel.implicitHeight = panel.targetHeight;
             }
 
             // Content that grows while already open (a status line arriving,

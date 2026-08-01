@@ -21,7 +21,7 @@ WindowDialog {
     }
 
     WindowDialogTitle {
-        text: Translation.tr("Delete plugin?")
+        text: Translation.tr("Delete widget?")
     }
 
     WindowDialogParagraph {

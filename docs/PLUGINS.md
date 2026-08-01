@@ -134,8 +134,8 @@ Currency, Media, and Weather widgets are reference implementations.
 
 ## Remote installation
 
-The Plugins settings page accepts an HTTPS manifest URL. This is the power-user path; the curated
-path is the in-shell plugin store (Settings → Plugins → Browse plugins), which feeds
+The Widgets settings page accepts an HTTPS manifest URL. This is the power-user path; the curated
+path is the in-shell plugin store (Settings → Widgets → Browse widgets), which feeds
 registry-vetted manifest URLs into this same installer — see
 [PLUGIN_STORE.md](PLUGIN_STORE.md). A remotely installable manifest adds:
 

@@ -63,6 +63,16 @@ Item {
     function navigateFirstMatch() {
         const query = normalized(navigationQuery)
         if (query.length === 0) return
+        // An exact page-name hit wins over any section match, whatever their
+        // order. Otherwise a page whose name duplicates an earlier page's
+        // section becomes unreachable by search: "Widgets" is both this page
+        // and a section of Wallpaper & Desktop, which is declared first.
+        for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+            if (normalized(pages[pageIndex].name) === query) {
+                navigateTo(pageIndex, "")
+                return
+            }
+        }
         for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
             const page = pages[pageIndex]
             const matchingSection = page.sections.find(section =>
@@ -144,7 +154,7 @@ Item {
             { name: Translation.tr("Capture"), icon: "screen_record", component: Qt.resolvedUrl("pages/CaptureConfig.qml"), sections: [Translation.tr("Screen recorder"), Translation.tr("Screenshot popup"), Translation.tr("Region selector (screen snipping/Google Lens)"), Translation.tr("Save paths")] },
             { name: Translation.tr("General"), icon: "browse", component: Qt.resolvedUrl("pages/GeneralConfig.qml"), sections: [Translation.tr("Time"), Translation.tr("Battery"), Translation.tr("Audio"), Translation.tr("Sounds"), Translation.tr("Language")] },
             { name: Translation.tr("Services"), icon: "cloud", component: Qt.resolvedUrl("pages/ServicesConfig.qml"), sections: [Translation.tr("AI"), Translation.tr("Networking"), Translation.tr("Music Recognition"), Translation.tr("Search"), Translation.tr("System updates (Arch only)"), Translation.tr("Weather")] },
-            { name: Translation.tr("Plugins"), icon: "extension", component: Qt.resolvedUrl("pages/PluginsPage.qml"), sections: [Translation.tr("Available Plugins")] },
+            { name: Translation.tr("Widgets"), icon: "widgets", component: Qt.resolvedUrl("pages/PluginsPage.qml"), sections: [Translation.tr("Widget settings"), Translation.tr("Available Widgets")] },
             { name: Translation.tr("Hyprland"), icon: "select_window_2", component: Qt.resolvedUrl("pages/HyprlandConfig.qml"), sections: [Translation.tr("Displays"), Translation.tr("Layout"), Translation.tr("Input"), Translation.tr("Visual & Aesthetics"), Translation.tr("Blur"), Translation.tr("Autostart Apps"), Translation.tr("Animations")] },
             { name: Translation.tr("About"), icon: "info", component: Qt.resolvedUrl("pages/About.qml"), sections: [] }
         ]

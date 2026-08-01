@@ -49,7 +49,7 @@ WindowDialog {
     }
 
     WindowDialogTitle {
-        text: root.upgrading ? Translation.tr("Update plugin?") : Translation.tr("Install plugin?")
+        text: root.upgrading ? Translation.tr("Update widget?") : Translation.tr("Install widget?")
     }
 
     WindowDialogParagraph {
@@ -120,7 +120,7 @@ WindowDialog {
         }
         StyledText {
             Layout.fillWidth: true
-            text: Translation.tr("Plugins run with the same access as the shell itself. Only install plugins from authors you trust.")
+            text: Translation.tr("Widgets run with the same access as the shell itself. Only install widgets from authors you trust.")
             font.pixelSize: Appearance.font.pixelSize.small
             color: Appearance.colors.colOnSurfaceVariant
             wrapMode: Text.Wrap

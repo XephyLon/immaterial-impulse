@@ -12,6 +12,65 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-08-02
+
+### Changed
+- The **Plugins** settings page is now **Widgets**, with a search field and
+  capability filter chips (Desktop, Bar, Overlay, Panel). Type names, file
+  names and the `plugins.*` config keys are unchanged, so existing installs
+  are unaffected.
+- `FilterChip` moved from a page-local component inside the gated-off plugin
+  store to `modules/common/widgets/`, so both filter surfaces share one
+  implementation. The capability vocabulary moved to
+  `PluginManager.surfaceCapabilities` for the same reason.
+- Widget cards are restacked: the name shares its line with a byline, the
+  description gets the second, and **surface tags** run along the third, drawn
+  from the same vocabulary as the filter chips so a card explains why a filter
+  matched it. The byline is trimmed to creator and version — manifest authors
+  routinely append the repo or a contributors note. Row actions sit before the
+  switch, and the third-party badge is error-coloured: not because such a
+  widget is broken, but because it runs with the shell's own access and came
+  from outside it.
+- `ConfigSwitch` gains `titleContent`, `detailContent` and `trailingContent`
+  slots. Its label is one text item and its switch is the last thing it draws,
+  so a caller previously could not put anything beside either. The third-party
+  pill and the surface tags share a new `Badge` widget rather than
+  open-coding the same pill twice.
+- Widget settings (frost, blurred opacity, install-from-URL) moved into their
+  own section. They describe how widgets behave, not which ones the list is
+  showing, and they had been standing between the "Available Widgets" header
+  and the list it names.
+
+### Fixed
+- **A band of dead space sat under every enabled widget.** An expanded panel
+  computed its height as content plus a 20px inset unconditionally, so one
+  that opened onto nothing still claimed the inset — visible under widgets
+  exposing no options, and under every enabled widget until its options
+  finished loading.
+- Row actions were pushed past the card's right edge. A wrapping description
+  reports its full unwrapped width as its implicit width, and the row honoured
+  that as a minimum, so the card could not shrink to fit its own buttons.
+- **A widget's options disappeared when a filter was selected.**
+  `ExpandablePanel` only ever received a height from `animateTo()`, which runs
+  solely from `onExpandedChanged` — so a panel *created* already expanded never
+  emitted the signal, never got a height, and rendered its content clipped to
+  nothing. Selecting a filter rebuilds the list's delegates, so every enabled
+  widget came back open-but-empty until its switch was toggled off and on.
+  Affects any call site that creates a panel in the expanded state.
+- Plugins declaring `overlay-widget` (Discord Voice) were missing from the
+  capability vocabulary entirely and matched no filter.
+- Widgets whose manifest predates the `capabilities` key (the bundled clock)
+  matched no filter chip and vanished from every filtered view.
+- Settings labels rendered through `ConfigSwitch`, and icon names rendered
+  through `MaterialSymbol`, inherited Qt's `Text.AutoText`, so an installed
+  plugin manifest could inject rich text into the settings UI through its
+  name, description or option icons. Both now render as plain text.
+- An empty widget list claimed the filters were responsible even when none
+  was set — reachable on first paint, since the manifest scan is async.
+- Searching settings for "widgets" could not reach the Widgets page: the name
+  collided with a section of Wallpaper & Desktop, which is matched first. An
+  exact page-name match now wins over any section match.
+
 ## [0.10.0] — 2026-08-01
 
 ### Added

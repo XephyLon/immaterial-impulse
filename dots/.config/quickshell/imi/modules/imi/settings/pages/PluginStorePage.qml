@@ -36,12 +36,6 @@ ContentPage {
     // are chained on onInstallingChanged instead of iterated in a loop.
     property var upgradeQueue: []
 
-    readonly property var capabilityOptions: [
-        { value: "desktop-widget", label: Translation.tr("Desktop widget"), icon: "widgets" },
-        { value: "bar-widget", label: Translation.tr("Bar widget"), icon: "toast" },
-        { value: "panel", label: Translation.tr("Panel"), icon: "side_navigation" }
-    ]
-
     readonly property var filteredEntries: {
         const query = (searchField.value ?? "").trim().toLowerCase();
         const filtered = PluginStore.entries.filter(entry => {
@@ -96,41 +90,8 @@ ContentPage {
         }
     }
 
-    component FilterChip: RippleButton {
-        id: chip
-        property string label
-        property string chipIcon: ""
-        implicitHeight: 32
-        implicitWidth: chipRow.implicitWidth + Appearance.spacing.space200
-        buttonRadius: Appearance.rounding.small
-        colBackground: Appearance.colors.colLayer2
-        colBackgroundToggled: Appearance.colors.colSecondaryContainer
-
-        contentItem: RowLayout {
-            id: chipRow
-            anchors.centerIn: parent
-            spacing: Appearance.spacing.space50
-
-            MaterialSymbol {
-                visible: chip.chipIcon.length > 0
-                text: chip.chipIcon
-                iconSize: Appearance.font.pixelSize.normal
-                color: chip.toggled
-                    ? Appearance.colors.colOnSecondaryContainer
-                    : Appearance.colors.colOnLayer2
-            }
-            StyledText {
-                text: chip.label
-                font.pixelSize: Appearance.font.pixelSize.smaller
-                color: chip.toggled
-                    ? Appearance.colors.colOnSecondaryContainer
-                    : Appearance.colors.colOnLayer2
-            }
-        }
-    }
-
     ContentSection {
-        title: Translation.tr("Plugin store")
+        title: Translation.tr("Widget store")
         Layout.fillWidth: true
         icon: "storefront"
         shape: MaterialShape.Shape.Diamond
@@ -145,7 +106,7 @@ ContentPage {
 
                 RippleButtonWithIcon {
                     materialIcon: "arrow_back"
-                    mainText: Translation.tr("Back to plugins")
+                    mainText: Translation.tr("Back to widgets")
                     onClicked: root.closeRequested()
                 }
 
@@ -172,7 +133,7 @@ ContentPage {
                 id: searchField
                 Layout.fillWidth: true
                 buttonIcon: "search"
-                text: Translation.tr("Search plugins")
+                text: Translation.tr("Search widgets")
                 placeholderText: Translation.tr("Name, description or tag")
                 fieldWidth: 300
                 singleLine: true
@@ -183,7 +144,7 @@ ContentPage {
                 spacing: Appearance.spacing.space50
 
                 Repeater {
-                    model: root.capabilityOptions
+                    model: PluginManager.surfaceCapabilities
 
                     FilterChip {
                         required property var modelData
@@ -231,10 +192,10 @@ ContentPage {
                 Layout.fillWidth: true
                 visible: root.filteredEntries.length === 0
                 text: PluginStore.fetching
-                    ? Translation.tr("Fetching plugin catalog…")
+                    ? Translation.tr("Fetching widget catalog…")
                     : (PluginStore.entries.length === 0
-                        ? Translation.tr("No plugins in the catalog yet.")
-                        : Translation.tr("No plugins match the current filters."))
+                        ? Translation.tr("No widgets in the catalog yet.")
+                        : Translation.tr("No widgets match the current filters."))
                 font.pixelSize: Appearance.font.pixelSize.small
                 color: Appearance.colors.colSubtext
                 wrapMode: Text.Wrap
