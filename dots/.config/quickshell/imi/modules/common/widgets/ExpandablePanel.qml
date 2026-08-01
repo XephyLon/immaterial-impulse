@@ -148,7 +148,9 @@ StyledRectangle {
             Layout.rightMargin: Appearance.spacing.space100
             implicitHeight: 1
             color: Appearance.colors.colOutlineVariant
-            visible: root.divider && opacity > 0
+            // Stays in the layout so its 1px never pops in or out; only its
+            // opacity animates.
+            visible: root.divider
             opacity: root.expanded ? 1 : 0
             Behavior on opacity {
                 animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
@@ -162,10 +164,14 @@ StyledRectangle {
             // header so nested content keeps its usable width.
             Layout.leftMargin: Appearance.spacing.space300
             Layout.rightMargin: Appearance.spacing.space100
-            Layout.topMargin: root.expanded ? Appearance.spacing.space100 : 0
-            Layout.bottomMargin: root.expanded ? Appearance.spacing.space150 : 0
 
-            implicitHeight: root.expanded ? contentColumn.implicitHeight : 0
+            // The vertical insets are part of the ANIMATED height, not Layout
+            // margins toggled on `expanded`. As margins they snapped in whole
+            // the instant the panel opened while only the content height eased,
+            // so the card jumped ~21px and then glided the rest - which reads
+            // as a bounce. Folding them in means the whole thing animates.
+            readonly property int verticalInset: Appearance.spacing.space100 + Appearance.spacing.space150
+            implicitHeight: root.expanded ? contentColumn.implicitHeight + verticalInset : 0
             opacity: root.expanded ? 1 : 0
             visible: root.expanded || implicitHeight > 0
             enabled: root.expanded
@@ -188,7 +194,12 @@ StyledRectangle {
 
             ColumnLayout {
                 id: contentColumn
-                anchors { left: parent.left; right: parent.right; top: parent.top }
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    top: parent.top
+                    topMargin: Appearance.spacing.space100
+                }
                 spacing: Appearance.spacing.space100
             }
         }
