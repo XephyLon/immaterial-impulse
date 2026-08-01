@@ -105,6 +105,12 @@ if ! python3 "$SCRIPT_DIR/test_expandable_panel.py"; then
     exit 1
 fi
 
+echo "Running widgets page filter contract tests..."
+if ! python3 "$SCRIPT_DIR/test_widgets_page_filters.py"; then
+    echo "Widgets page filter contract tests failed."
+    exit 1
+fi
+
 echo "Running plugin installer tests..."
 if ! python3 "$SCRIPT_DIR/test_plugin_installer.py"; then
     echo "Plugin installer tests failed."
