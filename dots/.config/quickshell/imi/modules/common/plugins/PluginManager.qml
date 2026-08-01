@@ -14,6 +14,30 @@ Singleton {
     // against this one to mark plugins that need a newer shell.
     readonly property int apiVersion: 1
 
+    // The filterable surfaces a plugin can draw on, in display order. Both
+    // filter surfaces (the Widgets page and the plugin store) read this list,
+    // so a new surface is added in exactly one place.
+    //
+    // `settings` is deliberately absent: manifests declare it to mean "this
+    // plugin has options", which is not a surface and must not become a chip.
+    readonly property var surfaceCapabilities: [
+        { value: "desktop-widget", label: Translation.tr("Desktop"), icon: "widgets" },
+        { value: "bar-widget", label: Translation.tr("Bar"), icon: "toast" },
+        { value: "overlay-widget", label: Translation.tr("Overlay"), icon: "layers" },
+        { value: "panel", label: Translation.tr("Panel"), icon: "side_navigation" }
+    ]
+
+    // The surfaces a single manifest occupies.
+    //
+    // Manifests of the older declarative-JSON generation (clock) carry a
+    // `desktopWidget` block and no `capabilities` array at all. Without the
+    // fallback they match no chip and disappear from every filtered view.
+    function pluginSurfaces(manifest) {
+        const declared = manifest?.capabilities ?? [];
+        if (declared.length > 0) return declared;
+        return manifest?.desktopWidget ? ["desktop-widget"] : [];
+    }
+
     property var availablePlugins: []
     property var manifestsMap: ({})
     property var installedManifests: ({})

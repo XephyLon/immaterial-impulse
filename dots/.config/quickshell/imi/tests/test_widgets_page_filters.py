@@ -12,6 +12,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 CHIP = ROOT / "modules/common/widgets/FilterChip.qml"
 STORE = ROOT / "modules/imi/settings/pages/PluginStorePage.qml"
+MANAGER = ROOT / "modules/common/plugins/PluginManager.qml"
 
 
 class FilterChipIsShared(unittest.TestCase):
@@ -36,6 +37,56 @@ class FilterChipIsShared(unittest.TestCase):
         src = STORE.read_text(encoding="utf-8")
         self.assertNotRegex(src, r"component\s+FilterChip\s*:",
                             "PluginStorePage must use the shared FilterChip")
+
+
+class CapabilityVocabulary(unittest.TestCase):
+    def setUp(self):
+        self.src = MANAGER.read_text(encoding="utf-8")
+
+    def test_manager_owns_the_vocabulary(self):
+        self.assertIn("readonly property var surfaceCapabilities", self.src)
+
+    def test_vocabulary_covers_every_surface_in_use(self):
+        """overlay-widget is declared by discordVoice but was missing from the
+        store's hardcoded list, so that plugin matched no filter at all.
+        """
+        for value in ("desktop-widget", "bar-widget", "overlay-widget", "panel"):
+            self.assertIn(f'"{value}"', self.src,
+                          f"surfaceCapabilities is missing {value}")
+
+    def test_settings_is_not_a_surface(self):
+        """`settings` means "this plugin has options", not "this plugin draws
+        on surface X". It must never become a filter chip.
+        """
+        block = re.search(r"surfaceCapabilities:\s*\[.*?\]", self.src, re.S)
+        self.assertIsNotNone(block, "surfaceCapabilities must be a list literal")
+        self.assertNotIn('"settings"', block.group(0))
+
+    def test_manifests_without_capabilities_fall_back_to_desktop_widget(self):
+        """clock/manifest.json is the older declarative-JSON generation: it has
+        a desktopWidget block and no capabilities array. Without this fallback
+        it matches no chip and vanishes from every filtered view.
+        """
+        self.assertIn("function pluginSurfaces", self.src)
+        surfaces = self.src[self.src.index("function pluginSurfaces"):]
+        self.assertIn("desktopWidget", surfaces)
+        self.assertIn("desktop-widget", surfaces)
+
+    def test_store_reads_the_shared_vocabulary(self):
+        store = STORE.read_text(encoding="utf-8")
+        self.assertIn("PluginManager.surfaceCapabilities", store)
+        self.assertNotRegex(
+            store, r"readonly property var capabilityOptions",
+            "the store must not keep a second copy of the vocabulary")
+
+    def test_store_still_consumes_the_shared_chip(self):
+        """Guards the consumer side of Task 1: deleting the store's FilterChip
+        usages or its widgets import would leave the chip tests green while the
+        page breaks at runtime, which the QML suite cannot catch.
+        """
+        store = STORE.read_text(encoding="utf-8")
+        self.assertIn("FilterChip {", store)
+        self.assertIn("import qs.modules.common.widgets", store)
 
 
 if __name__ == "__main__":

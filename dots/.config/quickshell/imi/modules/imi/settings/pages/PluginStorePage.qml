@@ -36,12 +36,6 @@ ContentPage {
     // are chained on onInstallingChanged instead of iterated in a loop.
     property var upgradeQueue: []
 
-    readonly property var capabilityOptions: [
-        { value: "desktop-widget", label: Translation.tr("Desktop widget"), icon: "widgets" },
-        { value: "bar-widget", label: Translation.tr("Bar widget"), icon: "toast" },
-        { value: "panel", label: Translation.tr("Panel"), icon: "side_navigation" }
-    ]
-
     readonly property var filteredEntries: {
         const query = (searchField.value ?? "").trim().toLowerCase();
         const filtered = PluginStore.entries.filter(entry => {
@@ -150,7 +144,7 @@ ContentPage {
                 spacing: Appearance.spacing.space50
 
                 Repeater {
-                    model: root.capabilityOptions
+                    model: PluginManager.surfaceCapabilities
 
                     FilterChip {
                         required property var modelData
