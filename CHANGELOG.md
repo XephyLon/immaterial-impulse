@@ -12,6 +12,31 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- The **Plugins** settings page is now **Widgets**, with a search field and
+  capability filter chips (Desktop, Bar, Overlay, Panel). Type names, file
+  names and the `plugins.*` config keys are unchanged, so existing installs
+  are unaffected.
+- `FilterChip` moved from a page-local component inside the gated-off plugin
+  store to `modules/common/widgets/`, so both filter surfaces share one
+  implementation. The capability vocabulary moved to
+  `PluginManager.surfaceCapabilities` for the same reason.
+
+### Fixed
+- Plugins declaring `overlay-widget` (Discord Voice) were missing from the
+  capability vocabulary entirely and matched no filter.
+- Widgets whose manifest predates the `capabilities` key (the bundled clock)
+  matched no filter chip and vanished from every filtered view.
+- Settings labels rendered through `ConfigSwitch`, and icon names rendered
+  through `MaterialSymbol`, inherited Qt's `Text.AutoText`, so an installed
+  plugin manifest could inject rich text into the settings UI through its
+  name, description or option icons. Both now render as plain text.
+- An empty widget list claimed the filters were responsible even when none
+  was set — reachable on first paint, since the manifest scan is async.
+- Searching settings for "widgets" could not reach the Widgets page: the name
+  collided with a section of Wallpaper & Desktop, which is matched first. An
+  exact page-name match now wins over any section match.
+
 ## [0.10.0] — 2026-08-01
 
 ### Added
