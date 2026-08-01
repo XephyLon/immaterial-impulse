@@ -99,6 +99,10 @@ RippleButton {
         RowLayout {
             id: detailRow
             Layout.fillWidth: true
+            // Only when the slot is actually filled, so the 164 callers that
+            // leave it empty keep their current row height exactly.
+            Layout.topMargin: detailRow.children.length > 0
+                ? Appearance.spacing.space100 : 0
             spacing: Appearance.spacing.space50
             opacity: root.enabled ? 1 : 0.4
         }

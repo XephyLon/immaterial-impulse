@@ -393,8 +393,17 @@ Item {
                                     titleContent: [
                                         StyledText {
                                             text: {
-                                                const creator = pluginCard.modelData.author
+                                                const author = pluginCard.modelData.author
                                                     || Translation.tr("Unknown creator");
+                                                // Manifest authors routinely append the
+                                                // repo or a contributors note - "end-4 /
+                                                // Immaterial Impulse contributors",
+                                                // "LuckShiba; ported for Immaterial
+                                                // Impulse". Only the creator belongs on
+                                                // the byline, so cut at the first
+                                                // separator and keep the whole string if
+                                                // that leaves nothing.
+                                                const creator = author.split(/[/;]/)[0].trim() || author;
                                                 // Manifest version, when declared, rides
                                                 // on the creator line.
                                                 return pluginCard.modelData.version
