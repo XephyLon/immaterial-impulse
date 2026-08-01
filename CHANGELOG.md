@@ -12,6 +12,24 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- The **Docker plugin popup** is built from the shell's own M3 Expressive
+  components instead of widgets it defined for itself: `SecondaryTabBar`
+  over a `SwipeView` for the Containers/Compose switch, `StyledRectangle`
+  cards, `FlowButtonGroup` + `RippleButtonWithIcon` action rows,
+  `StyledFlickable` scrolling, `IconToolbarButton` header actions,
+  `MaterialLoadingIndicator` for refresh, and `PagePlaceholder` empty
+  states. Card expansion animates through a `Revealer` rather than
+  toggling visibility, so neighbouring cards no longer jump.
+
+### Fixed
+- Quick page: the scheme-preview command lost its virtualenv fallback to
+  QML's template substitution (`${...}` is QML syntax too), which broke
+  the whole binding and left the palette swatches without a command.
+- The Docker popup is the 480px wide it always declared. The width sat on
+  a `ColumnLayout`, which overwrites its own `implicitWidth` from its
+  children, so the popup had been silently content-sized.
+
 ## [0.7.0] — 2026-08-01
 
 Immaterial Impulse is an independent project now, not a fork that tracks
