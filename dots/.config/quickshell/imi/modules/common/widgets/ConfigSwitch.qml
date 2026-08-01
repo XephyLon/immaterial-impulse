@@ -12,11 +12,12 @@ RippleButton {
     // explanation doesn't stretch the row.
     property string infoText: ""
     property alias iconSize: iconWidget.iconSize
-    // Content sitting immediately before the switch - tags, badges, anything
-    // stating a fact about the row. It has to live in here because the switch
-    // does: a call site appending to its own row can only land to the *right*
-    // of the switch, which reads as belonging to whatever follows.
-    property alias trailingContent: trailingRow.data
+    // A row beneath the description, inside the label block. For detail that
+    // belongs with the text rather than with the control - a byline, tags
+    // stating a fact about the row. It has to live in here: a call site can
+    // only append to the outer row, which puts things beside the switch
+    // instead of beside the words they describe.
+    property alias detailContent: detailRow.data
     colBackgroundHover: "transparent"
 
     Layout.fillWidth: true
@@ -55,16 +56,15 @@ RippleButton {
                 wrapMode: Text.Wrap
                 opacity: root.enabled ? 1 : 0.4
             }
+            RowLayout {
+                id: detailRow
+                spacing: Appearance.spacing.space50
+                opacity: root.enabled ? 1 : 0.4
+            }
         }
         InfoTooltipIcon {
             tooltipText: root.infoText
             opacity: root.enabled ? 1 : 0.4
-        }
-
-        RowLayout {
-            id: trailingRow
-            Layout.alignment: Qt.AlignVCenter
-            spacing: Appearance.spacing.space50
         }
 
         StyledSwitch {

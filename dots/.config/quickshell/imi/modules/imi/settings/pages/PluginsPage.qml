@@ -347,21 +347,28 @@ Item {
                                     // the plugin name reads as the card's heading.
                                     font.pixelSize: Appearance.font.pixelSize.large
                                     font.weight: Font.DemiBold
-                                    description: {
-                                        const summary = modelData.description || "";
-                                        const creator = modelData.author || Translation.tr("Unknown creator");
-                                        // Manifest version, when declared, rides on the creator line.
-                                        const byline = modelData.version
-                                            ? `${Translation.tr("By")} ${creator} · v${modelData.version}`
-                                            : `${Translation.tr("By")} ${creator}`;
-                                        return summary.length > 0 ? `${summary}\n${byline}` : byline;
-                                    }
+                                    // Summary only. The byline moved to detailContent
+                                    // so the tags can share its line - keeping it in
+                                    // here would put them a whole row below.
+                                    description: modelData.description || ""
 
-                                    // Sits before the switch rather than after it.
-                                    // Appended to the card's own header row these
-                                    // landed to the right of the toggle, where they
-                                    // read as belonging to the buttons that follow.
-                                    trailingContent: [
+                                    detailContent: [
+                                        StyledText {
+                                            text: {
+                                                const creator = pluginCard.modelData.author
+                                                    || Translation.tr("Unknown creator");
+                                                // Manifest version, when declared, rides
+                                                // on the creator line.
+                                                return pluginCard.modelData.version
+                                                    ? `${Translation.tr("By")} ${creator} · v${pluginCard.modelData.version}`
+                                                    : `${Translation.tr("By")} ${creator}`;
+                                            }
+                                            textFormat: Text.PlainText
+                                            font.pixelSize: Appearance.font.pixelSize.smaller
+                                            color: Appearance.colors.colSubtext
+                                            Layout.alignment: Qt.AlignVCenter
+                                        },
+
                                         // Surface tags, from the same vocabulary as the
                                         // filter chips, so a card visibly explains why a
                                         // filter matched it. Values outside the
