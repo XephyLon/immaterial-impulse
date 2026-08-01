@@ -33,7 +33,12 @@ Button {
     property color colRipple: Appearance?.colors.colLayer1Active ?? "#D6CEE2"
     property color colRippleToggled: Appearance?.colors.colPrimaryActive ?? "#D6CEE2"
 
-    opacity: root.enabled ? 1 : 0.4
+    // Reveal factor for staggered entrances (see ExpandablePanel). Animating
+    // this instead of `opacity` directly keeps the disabled-state binding
+    // below alive - an imperative write to `opacity` destroys it, and every
+    // disabled button then renders as if it were enabled.
+    property real appear: 1
+    opacity: (root.enabled ? 1 : 0.4) * root.appear
     property color buttonColor: ColorUtils.transparentize(root.toggled ? 
         (root.hovered ? colBackgroundToggledHover : 
             colBackgroundToggled) :

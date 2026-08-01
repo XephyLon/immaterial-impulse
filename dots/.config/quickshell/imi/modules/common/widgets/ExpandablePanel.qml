@@ -75,20 +75,30 @@ StyledRectangle {
             root.runStagger();
     }
 
+    // Children opt in by declaring `property real appear: 1` and folding it
+    // into their own opacity. The stagger animates THAT, never `opacity`
+    // itself: an imperative write to `opacity` destroys whatever binding the
+    // child had, and RippleButton expresses its disabled state through
+    // exactly that binding - so staggering used to leave every disabled
+    // button looking enabled, permanently.
     function runStagger() {
         const kids = (root.staggerTarget ?? contentColumn).children;
+        let index = 0;
         for (let i = 0; i < kids.length; i++) {
+            if (kids[i].appear === undefined)
+                continue;
             if (!root.expanded) {
                 // Collapsing runs everything out together - the panel's own
                 // fade carries them - so reset for the next open.
-                kids[i].opacity = 1;
+                kids[i].appear = 1;
                 continue;
             }
-            kids[i].opacity = 0;
+            kids[i].appear = 0;
             staggerFade.createObject(root, {
                 item: kids[i],
-                delay: root.staggerLeadIn + i * root.staggerStep
+                delay: root.staggerLeadIn + index * root.staggerStep
             }).start();
+            index++;
         }
     }
 
@@ -101,7 +111,7 @@ StyledRectangle {
             PauseAnimation { duration: seq.delay }
             NumberAnimation {
                 target: seq.item
-                property: "opacity"
+                property: "appear"
                 to: 1
                 duration: Appearance.animation.elementMoveFast.duration
                 easing.type: Easing.BezierSpline
