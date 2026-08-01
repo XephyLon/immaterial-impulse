@@ -23,6 +23,16 @@ own repo; the installer pins which revision it builds.
   toggling visibility, so neighbouring cards no longer jump.
 
 ### Fixed
+- **Android quick toggles no longer scramble.** Editing the layout left
+  every tile after the edit point showing the previous tile's icon and
+  firing its action, while the delete and resize badges acted on the tile
+  you could see — so you toggled one thing and deleted another. Changing
+  the column count or importing a preset triggered it too, and it
+  persisted after closing the sidebar. The Classic panel was unaffected.
+- The Quick settings page no longer disappears on Qt older than 6.8.
+  `StyledImage` assigned a 6.8-only property declaratively, which made it
+  fail to compile and took down every page that used it — which among the
+  settings pages was Quick alone.
 - A settings page whose QML fails to build now says so instead of showing
   an empty pane beside a fully populated navigation rail.
 - An unreadable `config.json` — wrong permissions, a bad mount — no longer
