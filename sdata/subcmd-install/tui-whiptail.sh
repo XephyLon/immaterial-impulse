@@ -38,13 +38,27 @@ cancelled(){
 # "Core config" is intentionally always-on/informational: whatever the user
 # does with that checkbox, we never pass --skip-allfiles, since a plain
 # install with no config deployed isn't a supported state.
+#
+# Optional components already present are pre-checked. This installer is also
+# the updater - "Update Dots" in Settings runs it - so an unchecked box is not
+# a neutral default, it silently skips that component's update. A fix that
+# lives in the Wallpaper Engine step (the wrapper at /usr/local/bin/quickshell,
+# for instance) could not reach anyone who did not know to re-tick a box they
+# had already ticked at install time.
+we_state=OFF
+[[ -f "$HOME/.cache/immaterial-impulse/we-installed-ref" || -x /usr/local/bin/quickshell ]] && we_state=ON
+sddm_state=OFF
+[[ -d /usr/share/sddm/themes/ii-sddm-theme ]] && sddm_state=ON
+plymouth_state=OFF
+[[ -d /usr/share/plymouth/themes/immaterial-impulse ]] && plymouth_state=ON
+
 COMPONENTS=$(whiptail --title "Immaterial Impulse Installer" \
-  --checklist "Select components (space to toggle, enter to confirm):" 18 74 6 \
+  --checklist "Select components (space to toggle, enter to confirm).\nAlready-installed components are pre-selected so updates reach them:" 18 74 6 \
   "CORE" "Core config (always installed)" ON \
   "DEPS" "Dependencies" ON \
-  "WE" "Wallpaper Engine (builds a custom quickshell)" OFF \
-  "SDDM" "SDDM login theme - ii-sddm-theme (Arch only)" OFF \
-  "PLYMOUTH" "Plymouth boot splash (Arch only)" OFF \
+  "WE" "Wallpaper Engine (builds a custom quickshell)" "$we_state" \
+  "SDDM" "SDDM login theme - ii-sddm-theme (Arch only)" "$sddm_state" \
+  "PLYMOUTH" "Plymouth boot splash (Arch only)" "$plymouth_state" \
   3>&1 1>&2 2>&3)
 ret=$?
 [[ $ret -eq 0 ]] || cancelled

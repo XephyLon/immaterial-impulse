@@ -18,6 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]          # sdata/
 SCRIPT = ROOT / "subcmd-install/4.wallpaperengine.sh"
+TUI = ROOT / "subcmd-install/tui-whiptail.sh"
 
 
 class WallpaperEngineWrapperEnv(unittest.TestCase):
@@ -57,6 +58,21 @@ class WallpaperEngineWrapperEnv(unittest.TestCase):
                       "the up-to-date path must still reinstall the wrapper")
         self.assertLess(tail.index("install_wrapper"), tail.index("exit 0"),
                         "the wrapper must be reinstalled before exiting")
+
+    def test_installed_components_are_preselected(self):
+        """The installer doubles as the updater, via Settings > Update Dots.
+
+        An optional component defaulting to OFF means an update silently skips
+        it, so a fix living in that step never reaches anyone who does not know
+        to re-tick a box they already ticked once.
+        """
+        tui = TUI.read_text(encoding="utf-8")
+        self.assertIn("we-installed-ref", tui,
+                      "the checklist must detect an existing WE install")
+        self.assertRegex(tui, r'"WE".*\$we_state',
+                         "the WE row must use the detected state, not a literal OFF")
+        for var in ("we_state", "sddm_state", "plymouth_state"):
+            self.assertIn(var, tui)
 
     def test_reason_is_recorded_for_the_next_reader(self):
         """The wrapper explains itself; this bug cost a long hunt."""
