@@ -22,7 +22,7 @@ esac
 case "${SKIP_QUICKSHELL}" in
   true) true;;
   *)
-     # Should overwriting the whole directory not only ~/.config/quickshell/ii/ cuz https://github.com/end-4/dots-hyprland/issues/2294#issuecomment-3448671064
+     # Should overwriting the whole directory not only ~/.config/quickshell/imi/ cuz https://github.com/end-4/dots-hyprland/issues/2294#issuecomment-3448671064
     # Deploy runtime files only: dev/test/doc files stay in the repo but are
     # excluded from the deployed config dir (see sdata/lib/deploy-exclude.txt).
     install_dir__sync_exclude_from dots/.config/quickshell "$XDG_CONFIG_HOME"/quickshell "${REPO_ROOT}/sdata/lib/deploy-exclude.txt"

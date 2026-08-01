@@ -143,5 +143,5 @@ manually launched harnesses, driven by `run_docker_memory_test.sh` via
 
 They live at the repository root on purpose and should not be moved into
 `tests/`: `quickshell -p` roots the `qs` module at the directory of the file it
-is given, so from `tests/` their `import qs.modules.ii.bar` would no longer
+is given, so from `tests/` their `import qs.modules.imi.bar` would no longer
 resolve.

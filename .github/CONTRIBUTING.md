@@ -6,7 +6,7 @@
 
 # Translations
 
-See `dots/.config/quickshell/ii/translations/tools`
+See `dots/.config/quickshell/imi/translations/tools`
 
 # Code
 
@@ -49,7 +49,7 @@ _Most stuff in the shell will work but not everything._
 - Copy `dots/.config/quickshell` folder to your home directory.
 
 ## Extra setup for Quickshell
-- Quickshell-specific LSP setup: Run `touch ~/.config/quickshell/ii/.qmlls.ini` for proper LSP support.
+- Quickshell-specific LSP setup: Run `touch ~/.config/quickshell/imi/.qmlls.ini` for proper LSP support.
 - Hint for VSCode: Get the official "Qt Qml" extension, go to its settings and change custom exe path to `/usr/bin/qmlls6`.
 
 ## Python
@@ -59,6 +59,6 @@ If your changes involves using python package or script, please use the virtual 
 
 - Launch Hyprland (not the "uwsm-managed" one)
 - For the shell:
-  - Open `~/.config/quickshell/ii` in your code editor.
-  - In a terminal run `pkill qs; qs -c ii` to start the shell in the terminal (for logs).
+  - Open `~/.config/quickshell/imi` in your code editor.
+  - In a terminal run `pkill qs; qs -c imi` to start the shell in the terminal (for logs).
   - Make edits in the opened folder. Changes are reloaded live.

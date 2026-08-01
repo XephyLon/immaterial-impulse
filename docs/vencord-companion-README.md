@@ -12,7 +12,7 @@ missing it shows an **Install voice companion** button that runs the
 installer and streams its progress. Or run it yourself:
 
 ```
-~/.config/quickshell/ii/scripts/discordVoice/install_companion.sh
+~/.config/quickshell/imi/scripts/discordVoice/install_companion.sh
 ```
 
 The script detects installed clients (or takes

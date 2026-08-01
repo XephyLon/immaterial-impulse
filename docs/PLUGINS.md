@@ -103,7 +103,7 @@ such as currency codes.
 ## Drop Shelf and Screenshot Result
 
 Both were bundled `panel` plugins and are now core shell modules
-(`modules/ii/dropShelf/`, `modules/ii/screenshotResult/`), loaded by the
+(`modules/imi/dropShelf/`, `modules/imi/screenshotResult/`), loaded by the
 panel family and configured through the shell config (`dropShelf.*`,
 `screenshotResult.*`) rather than plugin options. `PluginPanelHost` remains
 for third-party `panel`-capability packages.

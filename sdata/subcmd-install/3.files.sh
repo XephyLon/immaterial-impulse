@@ -51,7 +51,7 @@ function restore_icon_theme(){
   # every sync so an update never resets the icon theme. Best-effort: a theme
   # that is no longer installed just leaves the shipped default in place.
   local config="${XDG_CONFIG_HOME}/immaterial-impulse/config.json"
-  local script="${XDG_CONFIG_HOME}/quickshell/ii/scripts/icons/apply-icon-theme.sh"
+  local script="${XDG_CONFIG_HOME}/quickshell/imi/scripts/icons/apply-icon-theme.sh"
   if [[ ! -f "$config" || ! -f "$script" ]]; then return 0; fi
   local theme
   theme="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("appearance",{}).get("iconTheme","") or "")' "$config" 2>/dev/null)" || return 0
@@ -70,7 +70,7 @@ function seed_default_config(){
   # machine-specific paths) because the QML fallback defaults inherited from
   # upstream are a poor out-of-the-box experience.
   local target="${XDG_CONFIG_HOME}/immaterial-impulse/config.json"
-  local source="${XDG_CONFIG_HOME}/quickshell/ii/defaults/config.json"
+  local source="${XDG_CONFIG_HOME}/quickshell/imi/defaults/config.json"
   if [[ -f "$target" ]]; then
     echo -e "${STY_BLUE}[$0]: \"$target\" already exists, keeping the user's config.${STY_RST}"
     return 0
@@ -237,6 +237,20 @@ function install_dir__sync_exclude_from(){
   fi
   v rsync_dir__sync_exclude_from $s $t "$exclude_file"
 }
+function drop_legacy_shell_dir(){
+  # The shell moved from ~/.config/quickshell/ii to .../imi. The deploy rsync
+  # removes most of the old tree on its own, but paths in deploy-exclude.txt
+  # (tests/, screenshots/, ...) are exempt from --delete and would leave a
+  # half-populated "ii" behind - enough for `qs -c ii` to start and fail
+  # confusingly. Remove whatever is left, but only once the new location is
+  # actually in place.
+  local legacy="${XDG_CONFIG_HOME}/quickshell/ii"
+  local current="${XDG_CONFIG_HOME}/quickshell/imi"
+  if [[ -d "$legacy" && -f "$current/shell.qml" ]]; then
+    echo -e "${STY_BLUE}[$0]: removing the pre-rename shell directory \"$legacy\"${STY_RST}"
+    x rm -rf "$legacy"
+  fi
+}
 function install_google_sans_flex(){
   local font_name="Google Sans Flex"
   local src_name="google-sans-flex"
@@ -289,6 +303,9 @@ case "${EXPERIMENTAL_FILES_SCRIPT}" in
   true)source sdata/subcmd-install/3.files-exp.sh;;
   *)source sdata/subcmd-install/3.files-legacy.sh;;
 esac
+
+showfun drop_legacy_shell_dir
+v drop_legacy_shell_dir
 
 showfun restore_icon_theme
 v restore_icon_theme

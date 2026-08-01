@@ -3,7 +3,7 @@
 > Date: 2026-07-26. Source: 442 open issues + 169 open PRs on `end-4/dots-hyprland`
 > (our fork's illogical-impulse shell ancestor — same QML lineage, so its shell
 > bugs largely apply). Each candidate was verified against our actual code.
-> `file:line` refers to our fork under `dots/.config/quickshell/ii/`.
+> `file:line` refers to our fork under `dots/.config/quickshell/imi/`.
 > "Fix PR" = an open upstream PR that already implements the fix (logic to port —
 > we can't cherry-pick directly, our git upstream is `pctrade/end4-pC`).
 
@@ -17,9 +17,9 @@ Priority order — top ones are small, local, high-impact.
 | 3508 | **AppSearch CPU storm**: O(n²) `findIndex` dedup + eager `Fuzzy.prepare` over all entries, recomputed on every `DesktopEntries` change | `services/AppSearch.qml:44-59` | Dedup via Map keyed on `id`; lazy/memoized prepare | #3539, #3447 |
 | 3512 / 3240 | **Lag on kitty open/close & workspace switch**: `HyprlandData.updateAll()` fires on *every* Hyprland event, spawning 5 `hyprctl -j` procs, no debounce | `services/HyprlandData.qml:86-94` | Debounce/coalesce events; skip more noise event types | #3539 (related) |
 | 2885 | **Notification vanishes on 50ms unfocus**: mouse-leave calls `timeoutNotification()` → `popup=false` with zero delay | `modules/common/widgets/NotificationGroup.qml:43-51`; `services/Notifications.qml:230` | Configurable cooldown Timer on the leave branch | #3251 (related) |
-| 1595 | **Media title disappears for fully-bracketed songs**: anchored bracket-strip reduces e.g. `[BLEED BLOOD]` to `""` → shows "No media" | `modules/common/functions/StringUtils.qml:191-205`; `modules/ii/bar/Media.qml:354` | If cleaned string empty, return original title | #3529 |
-| 3399 | **Media box stays visible when bar auto-hides** | `modules/ii/mediaControls/MediaControls.qml:103-105`; `modules/ii/bar/Bar.qml:54` | Clear `mediaControlsOpen` on bar hide | #3395 |
-| 1862 | **SysTray overflow popup stays open when bar auto-hides** | `modules/ii/bar/SysTray.qml:44-59` | Close overflow / release focusGrab on `!mustShow` | — |
+| 1595 | **Media title disappears for fully-bracketed songs**: anchored bracket-strip reduces e.g. `[BLEED BLOOD]` to `""` → shows "No media" | `modules/common/functions/StringUtils.qml:191-205`; `modules/imi/bar/Media.qml:354` | If cleaned string empty, return original title | #3529 |
+| 3399 | **Media box stays visible when bar auto-hides** | `modules/imi/mediaControls/MediaControls.qml:103-105`; `modules/imi/bar/Bar.qml:54` | Clear `mediaControlsOpen` on bar hide | #3395 |
+| 1862 | **SysTray overflow popup stays open when bar auto-hides** | `modules/imi/bar/SysTray.qml:44-59` | Close overflow / release focusGrab on `!mustShow` | — |
 | 2883 | **Offline random-wallpaper persists a truncated `wallpaperPath`** (`…random_wallpaper.`) → blank/black lock bg + corrupt config | `scripts/colors/switchwall.sh:270`; `scripts/colors/random/random_konachan_wall.sh:34-43` | `[ -f ]` / valid-image guard before `set_wallpaper_path`; curl sanity check, keep previous wall on failure | #3494 (related) |
 | 1493 | **Battery flaps + low-battery notify spam** on transient UPower `displayDevice` swaps; no debounce | `services/Battery.qml:12,63-89` | Debounce device/percentage before deriving `available`/`isLow` and notifying | — |
 | 2976 | **Cheatsheet double-lists keybinds** defined in both default + custom Lua (concat, no dedup) — milder than upstream (our Lua has no `unbind`) | `services/HyprlandKeybinds.qml:22-27` | Dedup on mods+key, custom wins | #2815 (related) |

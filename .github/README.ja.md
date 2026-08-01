@@ -100,7 +100,7 @@ Hyprland アニメーションプリセット付き。
 
 ## インストール
 
-> シェルは `~/.config/quickshell/ii` に、その設定は
+> シェルは `~/.config/quickshell/imi` に、その設定は
 > `~/.config/immaterial-impulse` にインストールされます。
 > **illogical-impulse から乗り換えますか？** インストーラーは既存環境を検出し
 > ―― `illogical-impulse-*` パッケージ、または（手動インストールの場合）残された
@@ -170,9 +170,9 @@ cd immaterial-impulse
 同じシェル、三つのパレット ―― Material You が壁紙からすべてを塗り替えます。
 
 <table>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/green.png" alt="Green"><br><em>Green</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/study.png" alt="Study"><br><em>Study</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/green.png" alt="Green"><br><em>Green</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/study.png" alt="Study"><br><em>Study</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
 </table>
 
 ### バースタイルを瞬時に切り替え

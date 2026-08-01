@@ -50,7 +50,7 @@ deactivate
 - run a python script,
 - or run a command provided by python package.
 
-Example: In `~/‎.config/quickshell/ii/screenshot.qml`:
+Example: In `~/‎.config/quickshell/imi/screenshot.qml`:
 ```qml
 Process {
 id: imageDetectionProcess
@@ -94,7 +94,7 @@ source $(eval echo $IMMATERIAL_IMPULSE_VIRTUAL_ENV)/bin/activate
 deactivate
 ```
 **Not done yet!** Do not forget to update the code calling the original python script.
-In this example, in `~/‎.config/quickshell/ii/screenshot.qml` we should modify `find_regions.py` to the wrapper script `find-regions-venv.sh`:
+In this example, in `~/‎.config/quickshell/imi/screenshot.qml` we should modify `find_regions.py` to the wrapper script `find-regions-venv.sh`:
 ```qml
 Process {
 id: imageDetectionProcess

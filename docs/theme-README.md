@@ -30,11 +30,11 @@ Customized and maintained by **pctrade**
 
 | 🎵 Lyrics | 🖼️ Online Wallpapers |
 |:---:|:---:|
-| ![Screenshot 1](../dots/.config/quickshell/ii/screenshots/1.png) | ![Screenshot 2](../dots/.config/quickshell/ii/screenshots/2.png) |
+| ![Screenshot 1](../dots/.config/quickshell/imi/screenshots/1.png) | ![Screenshot 2](../dots/.config/quickshell/imi/screenshots/2.png) |
 | 🪟 Desktop Widgets | 🔧 Hyprland Configs |
-| ![Screenshot 5](../dots/.config/quickshell/ii/screenshots/5.png) | ![Screenshot 6](../dots/.config/quickshell/ii/screenshots/6.png) |
+| ![Screenshot 5](../dots/.config/quickshell/imi/screenshots/5.png) | ![Screenshot 6](../dots/.config/quickshell/imi/screenshots/6.png) |
 | ⚙️ Configurable Bar | ✨ And More |
-| ![Screenshot 3](../dots/.config/quickshell/ii/screenshots/3.png) | ![Screenshot 4](../dots/.config/quickshell/ii/screenshots/4.png) |
+| ![Screenshot 3](../dots/.config/quickshell/imi/screenshots/3.png) | ![Screenshot 4](../dots/.config/quickshell/imi/screenshots/4.png) |
 
 </div>
 
@@ -43,12 +43,12 @@ Customized and maintained by **pctrade**
 ## ⚡ Installation
 
 > [!NOTE]
-> Immaterial Impulse ships the whole suite — Hyprland config, scripts, and shell — so it supersedes a prior [illogical-impulse](https://github.com/end-4/dots-hyprland) install rather than sitting alongside it. It installs to `~/.config/quickshell/ii` (the shell) and `~/.config/immaterial-impulse` (config), replacing the old `~/.config/illogical-impulse` directory.
+> Immaterial Impulse ships the whole suite — Hyprland config, scripts, and shell — so it supersedes a prior [illogical-impulse](https://github.com/end-4/dots-hyprland) install rather than sitting alongside it. It installs to `~/.config/quickshell/imi` (the shell) and `~/.config/immaterial-impulse` (config), replacing the old `~/.config/illogical-impulse` directory.
 
 ```bash
 cd ~/.config/quickshell/
 git clone https://github.com/pctrade/end4-pC.git
-killall qs 2>/dev/null; qs -c ii > /dev/null 2>&1 & disown
+killall qs 2>/dev/null; qs -c imi > /dev/null 2>&1 & disown
 ```
 
 ### 🔧 Set as your default shell (optional)

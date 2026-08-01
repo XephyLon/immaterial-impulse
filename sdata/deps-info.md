@@ -33,7 +33,7 @@ Tips:
 
 ## immaterial-impulse-basic
 - `bc`
-  - Used in `quickshell/ii/scripts/colors/switchwall.sh` for example.
+  - Used in `quickshell/imi/scripts/colors/switchwall.sh` for example.
 - `coreutils`
   - Too many executables involved, not sure where been used.
 - `cliphist`

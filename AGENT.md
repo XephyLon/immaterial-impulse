@@ -5,10 +5,10 @@ project is, how it's put together, and where things live. See `CONTRIBUTING.md` 
 it day to day.
 
 > **Repository layout.** This repo bundles more than the shell. The Quickshell theme lives under
-> `dots/.config/quickshell/ii/`; the installer is `setup` + `sdata/`; project docs are in `docs/`.
+> `dots/.config/quickshell/imi/`; the installer is `setup` + `sdata/`; project docs are in `docs/`.
 > **Unless a path is written repo-relative (e.g. `dots/...`, `sdata/...`, `docs/...`), file paths in
-> this document are relative to the theme root `dots/.config/quickshell/ii/`** (so `modules/...`,
-> `services/...`, `shell.qml` mean `dots/.config/quickshell/ii/modules/...`, etc.).
+> this document are relative to the theme root `dots/.config/quickshell/imi/`** (so `modules/...`,
+> `services/...`, `shell.qml` mean `dots/.config/quickshell/imi/modules/...`, etc.).
 
 ## What this is
 
@@ -34,8 +34,8 @@ future merge tractable — that constraint no longer exists. `gh` is the publish
 Attribution to `end-4` and `pctrade` stays in `LICENSE`, `licenses/`, and the README credits — the
 project is GPL-3.0 and the ancestry is real. Independence is about direction, not erasure.
 
-This directory is **not a standalone app repo** — it's dropped into `~/.config/quickshell/ii`
-on a running Hyprland system and loaded by `qs -c ii`. ImI ships the whole suite, so it supersedes
+This directory is **not a standalone app repo** — it's dropped into `~/.config/quickshell/imi`
+on a running Hyprland system and loaded by `qs -c imi`. ImI ships the whole suite, so it supersedes
 a prior illogical-impulse install rather than coexisting with one: the companion Hyprland config
 lives alongside it in this repo (installed separately to `~/.config/hypr/`) and provides the
 keybinds, IPC event names, and layer-shell behavior assumptions this shell depends on.
@@ -77,14 +77,14 @@ The running `qs` process writes two logs per instance, found under
 
 Find the current instance's log with:
 ```bash
-ls -la /proc/$(pgrep -f 'qs -c ii')/fd | grep log.log
+ls -la /proc/$(pgrep -f 'qs -c imi')/fd | grep log.log
 ```
 
 The process is named **`qs`**, not `quickshell` — `pgrep quickshell` returns nothing even while the
 shell is running, which reads as "the shell is down" and leads to launching a second instance on top
 of the user's. Always match on `qs`:
 ```bash
-pgrep -af 'qs -c ii'
+pgrep -af 'qs -c imi'
 ```
 
 Do not leave the primary shell running through a rapid multi-file patch series. Each source change
@@ -100,7 +100,7 @@ actually failed — the **last** `caused by` line is the real culprit:
 ERROR: Failed to load configuration
 ERROR:   caused by @shell.qml[50:20]: Type ImmaterialImpulseFamily unavailable
 ...
-ERROR:   caused by @modules/ii/sidebarRight/calendar/CalendarHeaderButton.qml[13:5]: Cannot override FINAL property
+ERROR:   caused by @modules/imi/sidebarRight/calendar/CalendarHeaderButton.qml[13:5]: Cannot override FINAL property
 ```
 Because a single bad widget takes down every panel that transitively reaches it, **confirm
 `Configuration Loaded` appears after the reload** rather than only checking that no warnings did.
@@ -145,7 +145,7 @@ modules/common/             Shared, feature-agnostic building blocks
                               (M3E feedback-motion wrapper for dock icons), etc.
   functions/, models/, utils/, panels/   Supporting JS logic, list models, window-panel base classes
 
-modules/ii/                 The "ii" (Immaterial Impulse) panel family - one directory per feature:
+modules/imi/                 The "ii" (Immaterial Impulse) panel family - one directory per feature:
   bar/                        The top/bottom bar and everything docked in it (Resources, Media,
                               SysTray, Workspaces, clock, quick toggles, ...)
   sidebarLeft/, sidebarRight/ Slide-out panels (AI chat, quick settings, notifications, volume mixer)
@@ -194,7 +194,7 @@ Consequences for making changes:
 - Adding a new setting = add a `property <type> name: <default>` inside the right nested
   `JsonObject` in `Config.qml`. No migration code needed; missing keys just fall back to the QML
   default until the user's `config.json` gets the key written the first time it changes.
-- The settings UI (`modules/ii/settings/pages/*.qml`) is hand-written QML, not generated from the
+- The settings UI (`modules/imi/settings/pages/*.qml`) is hand-written QML, not generated from the
   schema — every setting needs a corresponding `ConfigSwitch`/`ConfigSpinBox`/`ConfigSelectionArray`/
   etc. row added manually in the relevant page, bound with `checked: Config.options.x.y` /
   `onCheckedChanged: Config.options.x.y = checked`.
@@ -284,8 +284,8 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   under a fullscreen app by default), but **below `Overlay`**. A special workspace opened on top of a
   fullscreen window compounds this. Fixing "X becomes unclickable/invisible under fullscreen +
   special workspace" generally means conditionally promoting that surface to `Overlay` only in that
-  specific combination (see `modules/ii/bar/Bar.qml`'s `WlrLayershell.layer` binding and
-  `modules/ii/screenCorners/ScreenCorners.qml`'s `fullscreen` property for the reference
+  specific combination (see `modules/imi/bar/Bar.qml`'s `WlrLayershell.layer` binding and
+  `modules/imi/screenCorners/ScreenCorners.qml`'s `fullscreen` property for the reference
   implementation).
 - **Same-layer surfaces resolve overlap by stacking order, not layer priority.** If two `PanelWindow`s
   end up on the same layer and physically overlap, whichever the compositor considers "on top" wins
@@ -429,7 +429,7 @@ imported singleton/module.
 **Do not bind an image source directly to `SystemTrayItem.icon`.** Tray properties are backed by a
 third-party StatusNotifierItem over D-Bus. A broken Electron tray provider repeatedly failed its
 `IconName` getter; the direct `IconImage.source: item.icon` binding then drove the GUI thread to
-100% CPU while anonymous memory grew by gigabytes. `modules/ii/bar/SysTrayItem.qml` deliberately
+100% CPU while anonymous memory grew by gigabytes. `modules/imi/bar/SysTrayItem.qml` deliberately
 debounces icon change signals into `stableIconSource`, retains the last non-empty URL, and uses a
 fallback glyph for missing/error states. Keep that mediation in place; `tests/lint_systray_icon_binding.sh`
 guards the critical source binding.

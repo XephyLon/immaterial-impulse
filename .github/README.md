@@ -98,7 +98,7 @@ be accepted.
 
 ## Installation
 
-> Installs the shell to `~/.config/quickshell/ii` and its config to
+> Installs the shell to `~/.config/quickshell/imi` and its config to
 > `~/.config/immaterial-impulse`. **Coming from illogical-impulse?** The installer
 > detects a prior install — either by its `illogical-impulse-*` packages or a
 > leftover `~/.config/illogical-impulse` config (manual installs) — and transitions
@@ -165,9 +165,9 @@ same pipeline non-interactively.
 Same shell, three palettes — Material You recolors everything from the wallpaper.
 
 <table>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/green.png" alt="Green"><br><em>Green</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/study.png" alt="Study"><br><em>Study</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/green.png" alt="Green"><br><em>Green</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/study.png" alt="Study"><br><em>Study</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
 </table>
 
 ### Switch bar styles on the fly

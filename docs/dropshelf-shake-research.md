@@ -2,7 +2,7 @@
 
 > **Status: implemented.** All three designs shipped as the bundled
 > `drop_shelf` plugin (`modules/common/plugins/bundled/dropShelf/`):
-> C = `Super+U` / `qs -c ii ipc call dropShelf toggle`, B = drag-to-bar
+> C = `Super+U` / `qs -c imi ipc call dropShelf toggle`, B = drag-to-bar
 > reveal, A = `scripts/dropshelf/shake_detector.py` behind the plugin's
 > "Shake cursor to summon" option. The always-armed limitation below was
 > subsequently solved: the detector gates on a held BTN_LEFT (global evdev
@@ -40,7 +40,7 @@ Verified against the app's site/FAQ and reviews:
 
 ## What exists today
 
-- `modules/ii/dropover/DropShelfPanel.qml`: an Overlay-layer PanelWindow at
+- `modules/imi/dropover/DropShelfPanel.qml`: an Overlay-layer PanelWindow at
   `GlobalStates.dropShelfX/Y`, holding a `DropArea { keys: ["text/uri-list"] }`
   that accepts `drop.urls` into the `DropShelf` service. Items on the shelf are
   re-draggable out (`Drag.mimeData` with `text/uri-list`).

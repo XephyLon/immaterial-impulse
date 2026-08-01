@@ -16,7 +16,7 @@ desktop WE managers.
 - `services/WallpaperEngine.qml` runs `scripts/wallpapers/wallpaper_engine.py`
   over the local WE `libraryPath` (the Steam Workshop content dir for app
   `431960`) and produces `projects` = `{id, path, preview, type, tags, title}`.
-- `modules/ii/wallpaperSelector/WallpaperEngineGrid.qml` renders those local
+- `modules/imi/wallpaperSelector/WallpaperEngineGrid.qml` renders those local
   projects, with free-text **search** and (now) **type filter chips**.
 - `OnlineWallpaperGrid.qml` is the existing pattern for a *remote* thumbnail
   grid (fetch previews from a provider, then download a chosen item) — the store
@@ -73,7 +73,7 @@ We cannot bypass the ownership requirement from the shell.
 
 ## Integration points
 
-- New `modules/ii/wallpaperSelector/WorkshopGrid.qml` (mirror `OnlineWallpaperGrid`).
+- New `modules/imi/wallpaperSelector/WorkshopGrid.qml` (mirror `OnlineWallpaperGrid`).
 - New `scripts/wallpapers/we_workshop.py` (browse via Web API/scrape → JSON;
   optional download subcommand for P2).
 - `Config.options.wallpaperSelector.wallpaperEngine.*` additions: steam auth /

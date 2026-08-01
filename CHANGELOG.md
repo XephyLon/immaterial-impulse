@@ -6,7 +6,7 @@ based on [Keep a Changelog](https://keepachangelog.com/), and the project follow
 breaking changes on a minor bump).
 
 The version is stored in `VERSION` (a symlink to the shell's
-`dots/.config/quickshell/ii/VERSION`, so it deploys with the config and the
+`dots/.config/quickshell/imi/VERSION`, so it deploys with the config and the
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
@@ -199,7 +199,7 @@ own repo; the installer pins which revision it builds.
   - **Instant replay** (`ScreenRecord` service): a persistent ring-buffer
     daemon keeps the last N seconds (default 120, RAM or disk); save a clip
     with `Alt+F10`, the bar button that appears while replay is armed, or
-    `qs -c ii ipc call record replaySave`; toggle with `Shift+Alt+F10`, the
+    `qs -c imi ipc call record replaySave`; toggle with `Shift+Alt+F10`, the
     settings switch, or IPC. Enablement is persisted config, so replay
     survives restarts; a failing daemon disables itself instead of
     respawn-looping.
@@ -250,7 +250,7 @@ own repo; the installer pins which revision it builds.
 - Drop Shelf is now a bundled **plugin** (`drop_shelf`, enabled by default)
   with Dropover-style summoning (see `docs/dropshelf-shake-research.md`):
   - **Mid-drag summon**: `Super+U` (Hyprland `quickshell:dropShelfSummon`
-    global shortcut) or `qs -c ii ipc call dropShelf toggle` opens the shelf
+    global shortcut) or `qs -c imi ipc call dropShelf toggle` opens the shelf
     under the cursor — works while dragging files, so the in-flight drag can
     be dropped straight onto it.
   - **Drag-to-bar reveal**: dragging files onto the bar pops the shelf out

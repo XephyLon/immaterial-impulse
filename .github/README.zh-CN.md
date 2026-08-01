@@ -87,7 +87,7 @@ shell 内**设置应用**——还附带一键 Hyprland 动画预设。
 
 ## 安装
 
-> 将 shell 安装到 `~/.config/quickshell/ii`，其配置安装到
+> 将 shell 安装到 `~/.config/quickshell/imi`，其配置安装到
 > `~/.config/immaterial-impulse`。**从 illogical-impulse 迁移？** 安装器会检测
 > 先前的安装——通过其 `illogical-impulse-*` 软件包或残留的
 > `~/.config/illogical-impulse` 配置（手动安装的情况）——并完成过渡：
@@ -151,9 +151,9 @@ cd immaterial-impulse
 同一个 shell，三套调色板——Material You 从壁纸出发为一切重新上色。
 
 <table>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/green.png" alt="Green"><br><em>Green</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/study.png" alt="Study"><br><em>Study</em></td></tr>
-  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/ii/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/green.png" alt="Green"><br><em>Green</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/study.png" alt="Study"><br><em>Study</em></td></tr>
+  <tr><td colspan="2" align="center"><img src="../dots/.config/quickshell/imi/screenshots/red.png" alt="Red"><br><em>Red</em></td></tr>
 </table>
 
 ### 一键切换栏样式

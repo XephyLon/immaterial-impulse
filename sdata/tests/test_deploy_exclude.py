@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]          # sdata/
 REPO = ROOT.parent                                   # repo root
 EXCLUDE = ROOT / "lib/deploy-exclude.txt"
-SRC = REPO / "dots/.config/quickshell/ii"
+SRC = REPO / "dots/.config/quickshell/imi"
 
 
 class DeployExcludeTests(unittest.TestCase):
