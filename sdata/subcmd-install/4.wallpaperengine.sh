@@ -68,9 +68,9 @@ verlte(){ [[ "$1" == "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" ]]; }
 # 5-40 min for a no-op. WE_FORCE_REBUILD=1 overrides the skip.
 STAMP_FILE="${WE_STAMP_FILE:-$HOME/.cache/immaterial-impulse/we-installed-ref}"
 
-write_stamp(){ # $1 = installed ref, $2 = qs binary path
+write_stamp(){ # $1 = installed ref, $2 = qs binary path, $3 = WE lib dir
   mkdir -p "$(dirname "$STAMP_FILE")"
-  printf '%s %s\n' "$1" "$2" > "$STAMP_FILE"
+  printf '%s %s %s\n' "$1" "$2" "${3:-}" > "$STAMP_FILE"
 }
 
 up_to_date(){
@@ -204,7 +204,7 @@ try_prebuilt(){
   fi
 
   install_wrapper "$qs_bin" "$lib"
-  write_stamp "$WE_REF" "$qs_bin"
+  write_stamp "$WE_REF" "$qs_bin" "$lib_dir"
   say "installed prebuilt $WE_REF (skipped the ~compile)."
   return 0
 }
@@ -230,11 +230,22 @@ source_build(){
   eval "$paths"
   [[ -x "$QS_BIN" ]] || { say "build finished but $QS_BIN missing. Aborting." >&2; exit 1; }
   install_wrapper "$QS_BIN" "$WE_LIB_DIR"
-  write_stamp "$WE_REF" "$QS_BIN"
+  write_stamp "$WE_REF" "$QS_BIN" "$WE_LIB_DIR"
 }
 
 if up_to_date; then
-  say "already installed at $WE_REF and the wrapper is in place; skipping (WE_FORCE_REBUILD=1 to rebuild)."
+  # The build is current, but ALWAYS rewrite the wrapper before exiting.
+  # Skipping it meant a wrapper-only fix could never reach an existing
+  # install: the stamp matched, the script exited, and the old wrapper stayed
+  # on disk. That is exactly how the LD_LIBRARY_PATH leak survived an update
+  # and a restart - re-running the installer looked like a no-op. Rewriting a
+  # small file is cheap; the expensive fetch/build is what the stamp guards.
+  read -r _stamp_ref _stamp_bin _stamp_lib < "$STAMP_FILE"
+  # Stamps written before the lib dir was recorded have no third field.
+  : "${_stamp_lib:=$BUILD_DIR/build/linux-wallpaperengine/build/output}"
+  say "already installed at $WE_REF; refreshing the wrapper and skipping the rebuild."
+  install_wrapper "$_stamp_bin" "$_stamp_lib"
+  write_stamp "$WE_REF" "$_stamp_bin" "$_stamp_lib"
   exit 0
 fi
 if try_prebuilt; then exit 0; fi

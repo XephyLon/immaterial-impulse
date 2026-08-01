@@ -45,6 +45,19 @@ class WallpaperEngineWrapperEnv(unittest.TestCase):
         # A missing patchelf must degrade, not abort.
         self.assertIn("patchelf not present", self.src)
 
+    def test_rerunning_the_installer_refreshes_the_wrapper(self):
+        """The stamp guards the expensive rebuild, never the wrapper.
+
+        Skipping the wrapper on an up-to-date install meant a wrapper-only fix
+        could not reach anyone: the stamp matched, the script exited, and the
+        leaky wrapper stayed on disk through an update and a restart.
+        """
+        tail = self.src[self.src.index("if up_to_date; then"):]
+        self.assertIn("install_wrapper", tail,
+                      "the up-to-date path must still reinstall the wrapper")
+        self.assertLess(tail.index("install_wrapper"), tail.index("exit 0"),
+                        "the wrapper must be reinstalled before exiting")
+
     def test_reason_is_recorded_for_the_next_reader(self):
         """The wrapper explains itself; this bug cost a long hunt."""
         self.assertIn("libEGL", self.src)
