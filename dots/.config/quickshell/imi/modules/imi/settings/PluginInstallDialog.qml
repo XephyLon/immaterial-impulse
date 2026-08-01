@@ -49,7 +49,7 @@ WindowDialog {
     }
 
     WindowDialogTitle {
-        text: root.upgrading ? Translation.tr("Update plugin?") : Translation.tr("Install plugin?")
+        text: root.upgrading ? Translation.tr("Update widget?") : Translation.tr("Install widget?")
     }
 
     WindowDialogParagraph {

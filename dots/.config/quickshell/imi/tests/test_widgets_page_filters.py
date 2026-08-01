@@ -265,6 +265,22 @@ class UserFacingRename(unittest.TestCase):
         src = NAV.read_text(encoding="utf-8")
         self.assertIn('Translation.tr("Widgets")', src)
         self.assertIn('Translation.tr("Available Widgets")', src)
+        # Negative pins carry this test. `Translation.tr("Widgets")` already
+        # matched before the rename - "Widgets" is also a section of Wallpaper
+        # & Desktop - so the positive assertion alone was vacuous and would
+        # not notice a partial revert.
+        self.assertNotIn('Translation.tr("Plugins")', src)
+        self.assertNotIn('Translation.tr("Available Plugins")', src)
+
+    def test_exact_page_name_beats_a_section_match_in_search(self):
+        """"Widgets" is both this page's name and a section of Wallpaper &
+        Desktop, which is declared first. navigateFirstMatch checks sections
+        before names per page, so without an exact-name pre-pass, searching
+        "widgets" and pressing Enter can never reach the Widgets page.
+        """
+        src = NAV.read_text(encoding="utf-8")
+        body = src[src.index("function navigateFirstMatch"):]
+        self.assertIn("normalized(pages[pageIndex].name) === query", body)
 
     def test_nav_entry_still_points_at_the_unrenamed_page_file(self):
         """Types, files and config keys deliberately keep their Plugin* names;

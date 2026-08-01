@@ -63,6 +63,16 @@ Item {
     function navigateFirstMatch() {
         const query = normalized(navigationQuery)
         if (query.length === 0) return
+        // An exact page-name hit wins over any section match, whatever their
+        // order. Otherwise a page whose name duplicates an earlier page's
+        // section becomes unreachable by search: "Widgets" is both this page
+        // and a section of Wallpaper & Desktop, which is declared first.
+        for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+            if (normalized(pages[pageIndex].name) === query) {
+                navigateTo(pageIndex, "")
+                return
+            }
+        }
         for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
             const page = pages[pageIndex]
             const matchingSection = page.sections.find(section =>
