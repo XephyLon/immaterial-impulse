@@ -341,6 +341,63 @@ Item {
                                 ConfigSwitch {
                                     id: configSwitch
                                     Layout.fillWidth: true
+                                    // The wrapping description reports its full
+                                    // unwrapped width as its implicit width, which the
+                                    // row would otherwise honour - pushing the row
+                                    // actions past the card's right edge.
+                                    Layout.minimumWidth: 0
+
+                                    // Row actions sit before the switch, so the control
+                                    // people reach for constantly stays at the edge and
+                                    // deleting is never the thing nearest it.
+                                    trailingContent: [
+                                        // A newer version exists in the store registry.
+                                        RippleButtonWithIcon {
+                                            visible: pluginCard.updateAvailable
+                                            enabled: !PluginManager.installing
+                                            Layout.alignment: Qt.AlignVCenter
+                                            materialIcon: "upgrade"
+                                            mainText: Translation.tr("Update")
+                                            onClicked: PluginStore.upgrade(pluginCard.storeEntry)
+
+                                            StyledToolTip {
+                                                text: Translation.tr("Update to v%1")
+                                                    .arg(pluginCard.storeEntry?.version ?? "")
+                                            }
+                                        },
+
+                                        // Only installed packages live on disk and can
+                                        // be removed; bundled plugins ship with the
+                                        // shell. Removal is gated on the plugin being
+                                        // disabled so a running plugin is never pulled
+                                        // out from under itself.
+                                        RippleButton {
+                                            id: deleteButton
+                                            visible: pluginCard.modelData._origin === "installed"
+                                            enabled: !configSwitch.isEnabled && !PluginManager.uninstalling
+                                            Layout.alignment: Qt.AlignVCenter
+                                            implicitWidth: 36
+                                            implicitHeight: 36
+                                            buttonRadius: Appearance.rounding.full
+                                            colBackground: "transparent"
+                                            colBackgroundHover: Appearance.colors.colLayer2
+                                            onClicked: PluginManager.requestUninstall(pluginCard.modelData.id)
+
+                                            contentItem: MaterialSymbol {
+                                                anchors.centerIn: parent
+                                                text: "delete"
+                                                iconSize: Appearance.font.pixelSize.larger
+                                                color: deleteButton.enabled
+                                                    ? Appearance.colors.colError : Appearance.colors.colSubtext
+                                            }
+
+                                            StyledToolTip {
+                                                text: configSwitch.isEnabled
+                                                    ? Translation.tr("Disable the widget before deleting")
+                                                    : Translation.tr("Delete widget")
+                                            }
+                                        }
+                                    ]
 
                                     property var modelData: pluginCard.modelData
                                     text: modelData.name
@@ -442,52 +499,6 @@ Item {
                                             newList = newList.filter(id => id !== modelData.id);
                                         }
                                         Config.setNestedValue("plugins.enabled", newList);
-                                    }
-                                },
-
-                                // A newer version exists in the store registry.
-                                RippleButtonWithIcon {
-                                    visible: pluginCard.updateAvailable
-                                    enabled: !PluginManager.installing
-                                    Layout.alignment: Qt.AlignVCenter
-                                    materialIcon: "upgrade"
-                                    mainText: Translation.tr("Update")
-                                    onClicked: PluginStore.upgrade(pluginCard.storeEntry)
-
-                                    StyledToolTip {
-                                        text: Translation.tr("Update to v%1")
-                                            .arg(pluginCard.storeEntry?.version ?? "")
-                                    }
-                                },
-
-                                // Only installed packages live on disk and can be
-                                // removed; bundled plugins ship with the shell. Removal
-                                // is gated on the plugin being disabled so a running
-                                // plugin is never pulled out from under itself.
-                                RippleButton {
-                                    id: deleteButton
-                                    visible: pluginCard.modelData._origin === "installed"
-                                    enabled: !configSwitch.isEnabled && !PluginManager.uninstalling
-                                    Layout.alignment: Qt.AlignVCenter
-                                    implicitWidth: 36
-                                    implicitHeight: 36
-                                    buttonRadius: Appearance.rounding.full
-                                    colBackground: "transparent"
-                                    colBackgroundHover: Appearance.colors.colLayer2
-                                    onClicked: PluginManager.requestUninstall(pluginCard.modelData.id)
-
-                                    contentItem: MaterialSymbol {
-                                        anchors.centerIn: parent
-                                        text: "delete"
-                                        iconSize: Appearance.font.pixelSize.larger
-                                        color: deleteButton.enabled
-                                            ? Appearance.colors.colError : Appearance.colors.colSubtext
-                                    }
-
-                                    StyledToolTip {
-                                        text: configSwitch.isEnabled
-                                            ? Translation.tr("Disable the widget before deleting")
-                                            : Translation.tr("Delete widget")
                                     }
                                 }
                         ]

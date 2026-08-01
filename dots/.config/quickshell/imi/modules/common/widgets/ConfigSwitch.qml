@@ -26,6 +26,10 @@ RippleButton {
     // version. The label is one StyledText, so a caller cannot mix type sizes
     // into it directly.
     property alias titleContent: titleRow.data
+    // Sits immediately before the switch. Row actions have to go in here: the
+    // switch is the last thing in this component, so anything a call site
+    // appends to its own row can only land beyond it.
+    property alias trailingContent: trailingRow.data
     colBackgroundHover: "transparent"
 
     Layout.fillWidth: true
@@ -85,6 +89,12 @@ RippleButton {
             InfoTooltipIcon {
                 tooltipText: root.infoText
                 opacity: root.enabled ? 1 : 0.4
+            }
+
+            RowLayout {
+                id: trailingRow
+                Layout.alignment: Qt.AlignVCenter
+                spacing: Appearance.spacing.space50
             }
 
             StyledSwitch {
