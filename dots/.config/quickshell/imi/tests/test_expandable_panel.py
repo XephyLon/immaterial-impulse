@@ -30,7 +30,8 @@ class ExpandablePanelContract(unittest.TestCase):
                      "property bool divider",
                      "property bool shapeMorph",
                      "property bool tonalLift",
-                     "property int staggerStep"):
+                     "property int staggerStep",
+                     "property Item staggerTarget"):
             self.assertIn(decl, self.src, f"missing public property: {decl}")
 
     def test_component_never_drives_its_own_expanded(self):

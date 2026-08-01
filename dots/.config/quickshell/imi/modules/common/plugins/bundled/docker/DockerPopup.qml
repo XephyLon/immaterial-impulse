@@ -223,6 +223,9 @@ StyledPopup {
         outline: true
         surfaceLayer: StyledRectangle.ContentLayer.Subgroup
         staggerStep: 40
+        // The outline already separates header from detail on these cards; a
+        // rule as well reads as clutter on something this small.
+        divider: false
     }
 
     // The chevron that expands a card. `expand_more`/`expand_less` swap through
@@ -237,12 +240,17 @@ StyledPopup {
     component ActionButton: RippleButtonWithIcon {
         materialIconFill: false
         colBackground: Appearance.colors.colLayer2
+        // The inherited ripple is tuned for colLayer1; on a colLayer2 button it
+        // is nearly invisible, which reads as the button having no ripple.
+        colBackgroundHover: Appearance.colors.colLayer2Hover
+        colRipple: Appearance.colors.colLayer2Active
     }
 
     property Component containerCard: Component {
         Card {
             id: container
             readonly property var containerData: container.itemData
+            staggerTarget: containerActionFlow
 
             header: [
                 MaterialSymbol {
@@ -284,6 +292,7 @@ StyledPopup {
                 color: Appearance.colors.colSubtext
             }
             FlowButtonGroup {
+                id: containerActionFlow
                 Layout.fillWidth: true
                 spacing: Appearance.spacing.space50
                 Repeater {
@@ -304,6 +313,7 @@ StyledPopup {
         Card {
             id: project
             readonly property var projectData: project.itemData
+            staggerTarget: projectActionFlow
 
             header: [
                 MaterialSymbol { text: "account_tree"; color: Appearance.colors.colPrimary },
@@ -325,6 +335,7 @@ StyledPopup {
             ]
 
             FlowButtonGroup {
+                id: projectActionFlow
                 Layout.fillWidth: true
                 spacing: Appearance.spacing.space50
                 ActionButton { materialIcon: "play_arrow"; mainText: "Up"; onClicked: DockerService.executeComposeAction(project.projectData, "up") }

@@ -30,6 +30,11 @@ StyledRectangle {
     property bool shapeMorph: false
     property bool tonalLift: false
     property int staggerStep: 0
+    // What the stagger walks. Defaults to the revealed content, but a call
+    // site whose chips live inside a Flow or a layout points at that instead -
+    // otherwise the stagger runs over two coarse containers and reads as
+    // nothing happening.
+    property Item staggerTarget: contentColumn
 
     // Fixed: the container needs a visible head start, otherwise staggered
     // children race the reveal instead of landing in space that exists.
@@ -59,7 +64,7 @@ StyledRectangle {
     }
 
     function runStagger() {
-        const kids = contentColumn.children;
+        const kids = (root.staggerTarget ?? contentColumn).children;
         for (let i = 0; i < kids.length; i++) {
             if (!root.expanded) {
                 // Collapsing runs everything out together - the panel's own
@@ -126,7 +131,8 @@ StyledRectangle {
             // header so nested content keeps its usable width.
             Layout.leftMargin: Appearance.spacing.space300
             Layout.rightMargin: Appearance.spacing.space100
-            Layout.bottomMargin: root.expanded ? Appearance.spacing.space50 : 0
+            Layout.topMargin: root.expanded ? Appearance.spacing.space100 : 0
+            Layout.bottomMargin: root.expanded ? Appearance.spacing.space150 : 0
 
             implicitHeight: root.expanded ? contentColumn.implicitHeight : 0
             opacity: root.expanded ? 1 : 0
