@@ -23,6 +23,15 @@ own repo; the installer pins which revision it builds.
   toggling visibility, so neighbouring cards no longer jump.
 
 ### Fixed
+- A settings page whose QML fails to build now says so instead of showing
+  an empty pane beside a fully populated navigation rail.
+- An unreadable `config.json` — wrong permissions, a bad mount — no longer
+  leaves every settings page permanently blank. Only a missing file was
+  handled before; any other read error left the config never marked ready.
+- Quick page: the "Group style" and "Screen round corner" cards each took
+  their height from the *other* card's column. It only looked right while
+  the two happened to match, so a longer translation, a different font or
+  a scaled display would size one card to the wrong content.
 - Quick page: the scheme-preview command lost its virtualenv fallback to
   QML's template substitution (`${...}` is QML syntax too), which broke
   the whole binding and left the palette swatches without a command.
