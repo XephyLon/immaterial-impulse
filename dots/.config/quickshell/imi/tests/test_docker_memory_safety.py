@@ -60,16 +60,20 @@ class DockerMemorySafetyTests(unittest.TestCase):
         popup = self.text("modules/common/plugins/bundled/docker/DockerPopup.qml")
         for widget in ("SecondaryTabBar", "SecondaryTabButton", "StyledFlickable",
                        "StyledRectangle", "RippleButtonWithIcon", "IconToolbarButton",
-                       "PagePlaceholder", "Revealer", "FlowButtonGroup",
+                       "PagePlaceholder", "ExpandablePanel", "FlowButtonGroup",
                        "MaterialLoadingIndicator"):
             self.assertIn(widget, popup, f"{widget} should render part of the popup")
         # Bespoke re-implementations that these replaced.
         self.assertNotIn("ScrollBar.vertical: ScrollBar {}", popup)
         self.assertNotRegex(popup, r"component\s+ActionButton\s*:\s*RippleButton\b")
         self.assertNotRegex(popup, r"RotationAnimation\s+on\s+rotation")
-        # Expansion animates through Revealer instead of toggling visibility,
-        # which would make neighbouring cards jump (docs/M3_GUIDELINES.md).
+        # Expansion animates through ExpandablePanel instead of toggling
+        # visibility, which would make neighbouring cards jump
+        # (docs/M3_GUIDELINES.md).
         self.assertNotRegex(popup, r"visible\s*:\s*\w+\.expanded")
+        # The panel owns the motion contract; the popup must not re-declare it.
+        self.assertNotIn("Behavior on implicitHeight", popup)
+        self.assertIn("staggerStep", popup)
 
     def test_persistent_bar_uses_native_docker_adapter(self):
         bar = self.text("modules/imi/bar/BarContent.qml")
