@@ -33,11 +33,13 @@ Wallpaper Engine backgrounds, a full plugin platform, docker controls, Discord
 voice, a periodic-table cheatsheet — and ships it as a single, plug-and-play
 suite. Same DNA. Zero restraint. On purpose.
 
-It's a fork of illogical-impulse by [@end-4](https://github.com/end-4),
+It **began** as a fork of illogical-impulse by [@end-4](https://github.com/end-4),
 rebranded and unified into one repo: the [Quickshell](https://quickshell.outfoxxed.me/)
 shell, the full [Hyprland](https://github.com/hyprwm/hyprland) config, and a
-guided installer, together. It **supersedes** an illogical-impulse install —
-first launch migrates your old config and secrets over, losing nothing.
+guided installer, together. It no longer tracks its ancestors — this is an
+independent project, and "fork" now describes only where it started. It
+**supersedes** an illogical-impulse install — first launch migrates your old
+config and secrets over, losing nothing.
 
 > **What it is:** the graphical shell + Hyprland config + installer.
 > **What it isn't:** a full system bootstrapper — no drivers, no zram, no bootloader.
@@ -180,10 +182,10 @@ One keybind swaps the whole bar layout live — no restart, no config editing.
 
 The good twin and the community it came from:
 
-- [@end-4](https://github.com/end-4) — illogical-impulse, the root this is
-  forked from.
+- [@end-4](https://github.com/end-4) — illogical-impulse, the root this grew
+  out of.
 - [pctrade](https://github.com/pctrade/end4-pC) — the `end4-pC` fork this suite
-  builds directly on.
+  branched from.
 - [na-ive](https://github.com/na-ive/nandoroid-shell) — nandoroid-shell, source
   of the bundled Nandoroid widget plugins and expressive design tokens (AGPL-3.0).
 - [caelestia-dots](https://github.com/caelestia-dots/caelestia) — the "Caelestia"

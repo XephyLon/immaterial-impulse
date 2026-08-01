@@ -32,11 +32,12 @@ shell 眼中的「臃肿」全盘拥抱——Wallpaper Engine 动态壁纸、完
 Docker 控制、Discord 语音、元素周期表速查表——并打包成一个即插即用的完整套件。
 同样的基因，零克制，全是故意的。
 
-它是 [@end-4](https://github.com/end-4) 的 illogical-impulse 的分支，
+它**起初**是 [@end-4](https://github.com/end-4) 的 illogical-impulse 的分支，
 重新命名并统一进一个仓库：[Quickshell](https://quickshell.outfoxxed.me/)
 shell、完整的 [Hyprland](https://github.com/hyprwm/hyprland) 配置，以及一个
-向导式安装器，三合一。它会**取代**已有的 illogical-impulse 安装——首次启动
-时迁移你的旧配置和密钥，什么都不会丢。
+向导式安装器，三合一。它已不再跟随上游——这是一个独立项目，「分支」如今
+只描述它的起点。它会**取代**已有的 illogical-impulse 安装——首次启动时迁移
+你的旧配置和密钥，什么都不会丢。
 
 > **它是什么：** 图形 shell + Hyprland 配置 + 安装器。
 > **它不是什么：** 完整的系统引导器——不装驱动、不配 zram、不碰引导加载器。
@@ -167,8 +168,8 @@ cd immaterial-impulse
 
 善良的那位双子，以及它所来自的社区：
 
-- [@end-4](https://github.com/end-4) —— illogical-impulse，本项目分支的根。
-- [pctrade](https://github.com/pctrade/end4-pC) —— 本套件直接构建于其上的
+- [@end-4](https://github.com/end-4) —— illogical-impulse，本项目生长的根。
+- [pctrade](https://github.com/pctrade/end4-pC) —— 本套件当初分出来的
   `end4-pC` 分支。
 - [na-ive](https://github.com/na-ive/nandoroid-shell) —— nandoroid-shell，
   内置 Nandoroid 部件插件与 expressive 设计令牌的来源（AGPL-3.0）。

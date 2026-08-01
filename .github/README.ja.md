@@ -34,11 +34,13 @@
 周期表チートシート ―― に全力で振り切り、それをプラグアンドプレイの
 単一スイートとして届けます。同じ DNA。自制心ゼロ。すべて確信犯です。
 
-これは [@end-4](https://github.com/end-4) の illogical-impulse のフォークで、
-リブランドして一つのリポジトリに統合したものです：[Quickshell](https://quickshell.outfoxxed.me/)
+これは [@end-4](https://github.com/end-4) の illogical-impulse のフォークとして
+**始まり**、リブランドして一つのリポジトリに統合したものです：[Quickshell](https://quickshell.outfoxxed.me/)
 シェル、[Hyprland](https://github.com/hyprwm/hyprland) の完全な設定、そして
-ガイド付きインストーラーを丸ごと。既存の illogical-impulse 環境を**置き換え**、
-初回起動時に旧設定とシークレットを移行します ―― 何も失われません。
+ガイド付きインストーラーを丸ごと。もう上流を追従していません ―― 独立した
+プロジェクトであり、「フォーク」は出発点を指すだけの言葉になりました。既存の
+illogical-impulse 環境を**置き換え**、初回起動時に旧設定とシークレットを
+移行します ―― 何も失われません。
 
 > **これは：** グラフィカルシェル + Hyprland 設定 + インストーラー。
 > **これではない：** フルシステムのブートストラッパー ―― ドライバも zram も
@@ -185,8 +187,9 @@ cd immaterial-impulse
 
 善良な方の双子と、その源となったコミュニティ：
 
-- [@end-4](https://github.com/end-4) ―― illogical-impulse。このフォークの根。
-- [pctrade](https://github.com/pctrade/end4-pC) ―― 本スイートが直接基盤とする
+- [@end-4](https://github.com/end-4) ―― illogical-impulse。本プロジェクトが
+  育った根。
+- [pctrade](https://github.com/pctrade/end4-pC) ―― 本スイートが当初分岐した
   `end4-pC` フォーク。
 - [na-ive](https://github.com/na-ive/nandoroid-shell) ―― nandoroid-shell。
   同梱の Nandoroid ウィジェットプラグインと expressive デザイントークンの
