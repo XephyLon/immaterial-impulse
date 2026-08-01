@@ -12,6 +12,21 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.9.2] — 2026-08-01
+
+### Fixed
+- **"Update Dots" now updates the components you actually have.** Every
+  optional component defaulted to unchecked in the installer's checklist,
+  and that installer is also the updater — so someone who installed
+  Wallpaper Engine and later clicked Update Dots got the menu with it
+  unticked, the step exited immediately, and the component was never
+  updated. Wallpaper Engine, the SDDM theme and the Plymouth splash are
+  now pre-selected when they are already installed.
+
+  This is what kept the 0.9.0 and 0.9.1 crash fixes from reaching anyone
+  who updated through the button rather than a terminal. An unchecked box
+  in an updater is a silent skip, not a neutral default.
+
 ## [0.9.1] — 2026-08-01
 
 ### Fixed
@@ -669,7 +684,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.7.0...v0.8.0
