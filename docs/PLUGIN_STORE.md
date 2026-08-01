@@ -16,7 +16,7 @@ empty.)
 
 ## Using the store
 
-Open **Settings → Plugins → Browse plugins**. The button carries a count badge when updates are
+Open **Settings → Widgets → Browse widgets**. The button carries a count badge when updates are
 available for installed plugins.
 
 The catalog is fetched from the registry index and cached at
@@ -64,8 +64,8 @@ enabling it stays an explicit toggle there, exactly as with a manual install.
 Update detection compares the registry version against the installed manifest's version (plain
 dotted-numeric compare — the registry only accepts `X.Y.Z`). When a newer version is listed:
 
-* the **Browse plugins** button on the Plugins page shows the update count;
-* the installed plugin's card on the Plugins page gains an **Update** button that upgrades
+* the **Browse widgets** button on the Widgets page shows the update count;
+* the installed plugin's card on the Widgets page gains an **Update** button that upgrades
   directly (the permissions were already accepted at install time);
 * the store card shows **Update**, which goes through the confirm dialog again;
 * **Update all (n)** appears on the store page when two or more updates are pending and runs them
