@@ -175,7 +175,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "searchToggle"
         description: "Toggles search on press"
 
@@ -183,7 +183,7 @@ Scope {
             GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "overviewWorkspacesClose"
         description: "Closes overview on press"
 
@@ -191,7 +191,7 @@ Scope {
             GlobalStates.overviewOpen = false;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "overviewWorkspacesToggle"
         description: "Toggles overview on press"
 
@@ -199,7 +199,7 @@ Scope {
             GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "searchToggleRelease"
         description: "Toggles search on release"
 
@@ -215,7 +215,7 @@ Scope {
             GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "searchToggleReleaseInterrupt"
         description: "Interrupts possibility of search being toggled on release. " + "This is necessary because GlobalShortcut.onReleased in quickshell triggers whether or not you press something else while holding the key. " + "To make sure this works consistently, use binditn = MODKEYS, catchall in an automatically triggered submap that includes everything."
 
@@ -223,7 +223,7 @@ Scope {
             GlobalStates.superReleaseMightTrigger = false;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "overviewClipboardToggle"
         description: "Toggle clipboard query on overview widget"
 
@@ -232,7 +232,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "overviewEmojiToggle"
         description: "Toggle emoji query on overview widget"
 
@@ -241,7 +241,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "overviewSymbolsToggle"
         description: "Toggle material symbols search on overview widget"
 

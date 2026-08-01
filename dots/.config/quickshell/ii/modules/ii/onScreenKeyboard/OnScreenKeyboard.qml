@@ -143,7 +143,7 @@ Scope { // Scope
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "oskToggle"
         description: "Toggles on screen keyboard on press"
 
@@ -152,7 +152,7 @@ Scope { // Scope
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "oskOpen"
         description: "Opens on screen keyboard on press"
 
@@ -161,7 +161,7 @@ Scope { // Scope
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "oskClose"
         description: "Closes on screen keyboard on press"
 

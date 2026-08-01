@@ -350,7 +350,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "barToggle"
         description: "Toggles bar on press"
 
@@ -359,7 +359,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "barOpen"
         description: "Opens bar on press"
 
@@ -368,7 +368,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "barClose"
         description: "Closes bar on press"
 

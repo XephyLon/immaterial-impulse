@@ -279,7 +279,7 @@ Scope {
             GlobalStates.osdVolumeOpen = !GlobalStates.osdVolumeOpen;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "osdVolumeTrigger"
         description: "Triggers volume OSD on press"
 
@@ -287,7 +287,7 @@ Scope {
             root.triggerOsd();
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "osdVolumeHide"
         description: "Hides volume OSD on press"
 

@@ -437,7 +437,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "sessionToggle"
         description: "Toggles session screen on press"
 
@@ -446,7 +446,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "sessionOpen"
         description: "Opens session screen on press"
 
@@ -455,7 +455,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "sessionClose"
         description: "Closes session screen on press"
 

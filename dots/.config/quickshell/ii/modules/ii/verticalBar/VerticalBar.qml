@@ -251,17 +251,17 @@ Scope {
         function open(): void { GlobalStates.barOpen = true }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "barToggle"
         description: "Toggles bar on press"
         onPressed: { GlobalStates.barOpen = !GlobalStates.barOpen; }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "barOpen"
         description: "Opens bar on press"
         onPressed: { GlobalStates.barOpen = true; }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "barClose"
         description: "Closes bar on press"
         onPressed: { GlobalStates.barOpen = false; }

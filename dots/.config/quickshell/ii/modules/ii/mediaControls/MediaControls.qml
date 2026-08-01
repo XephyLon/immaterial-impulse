@@ -269,7 +269,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "mediaControlsToggle"
         description: "Toggles media controls on press"
 
@@ -277,7 +277,7 @@ Scope {
             GlobalStates.mediaControlsOpen = !GlobalStates.mediaControlsOpen;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "mediaControlsOpen"
         description: "Opens media controls on press"
 
@@ -285,7 +285,7 @@ Scope {
             GlobalStates.mediaControlsOpen = true;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "mediaControlsClose"
         description: "Closes media controls on press"
 

@@ -138,7 +138,7 @@ Scope {
             }
         }
 
-        CompositorGlobalShortcut {
+        GlobalShortcut {
             name: "sidebarRightToggle"
             description: "Toggles right sidebar on press"
 
@@ -146,7 +146,7 @@ Scope {
                 GlobalStates.sidebarRightOpen = !GlobalStates.sidebarRightOpen;
             }
         }
-        CompositorGlobalShortcut {
+        GlobalShortcut {
             name: "sidebarRightOpen"
             description: "Opens right sidebar on press"
 
@@ -154,7 +154,7 @@ Scope {
                 GlobalStates.sidebarRightOpen = true;
             }
         }
-        CompositorGlobalShortcut {
+        GlobalShortcut {
             name: "sidebarRightClose"
             description: "Closes right sidebar on press"
 

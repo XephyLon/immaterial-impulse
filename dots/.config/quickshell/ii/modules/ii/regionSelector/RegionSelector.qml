@@ -122,27 +122,27 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "regionScreenshot"
         description: "Takes a screenshot of the selected region"
         onPressed: root.screenshot()
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "regionSearch"
         description: "Searches the selected region"
         onPressed: root.search()
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "regionOcr"
         description: "Recognizes text in the selected region"
         onPressed: root.ocr()
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "regionRecord"
         description: "Records the selected region"
         onPressed: root.record()
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "regionRecordWithSound"
         description: "Records the selected region with sound"
         onPressed: root.recordWithSound()

@@ -246,7 +246,7 @@ Scope { // Scope
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "sidebarLeftToggle"
         description: "Toggles left sidebar on press"
 
@@ -255,7 +255,7 @@ Scope { // Scope
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "sidebarLeftOpen"
         description: "Opens left sidebar on press"
 
@@ -264,7 +264,7 @@ Scope { // Scope
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "sidebarLeftClose"
         description: "Closes left sidebar on press"
 
@@ -273,7 +273,7 @@ Scope { // Scope
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "sidebarLeftToggleDetach"
         description: "Detach left sidebar into a window/Attach it back"
 

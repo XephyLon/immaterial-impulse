@@ -49,7 +49,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "screenTranslate"
         description: "Translates screen content"
         onPressed: root.translate()
