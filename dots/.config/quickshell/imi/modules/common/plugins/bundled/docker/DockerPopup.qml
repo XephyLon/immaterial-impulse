@@ -11,15 +11,7 @@ import "."
 StyledPopup {
     id: root
 
-    property bool composeView: false
-    property bool pendingComposeView: false
     readonly property bool showPorts: PluginState.option("docker_plugin", "showPorts", true)
-
-    function selectView(nextComposeView) {
-        if (nextComposeView === root.composeView || viewTransition.running) return;
-        root.pendingComposeView = nextComposeView;
-        viewTransition.restart();
-    }
 
     onActiveChanged: {
         if (!active) return;
@@ -46,7 +38,6 @@ StyledPopup {
 
     ColumnLayout {
         id: panelContent
-        implicitWidth: 480
         spacing: Appearance.spacing.space150
         transformOrigin: Item.Top
 
@@ -69,39 +60,6 @@ StyledPopup {
             }
         }
 
-        SequentialAnimation {
-            id: viewTransition
-            ParallelAnimation {
-                NumberAnimation {
-                    target: viewSurface; property: "opacity"; to: 0
-                    duration: Appearance.animation.elementMoveFast.duration
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: Appearance.animationCurves.expressiveEffects
-                }
-                NumberAnimation {
-                    target: viewSurface; property: "scale"; to: 0.96
-                    duration: Appearance.animation.elementMoveFast.duration
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
-                }
-            }
-            ScriptAction { script: root.composeView = root.pendingComposeView }
-            ParallelAnimation {
-                NumberAnimation {
-                    target: viewSurface; property: "opacity"; to: 1
-                    duration: Appearance.animation.elementMoveEnter.duration
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: Appearance.animationCurves.expressiveEffects
-                }
-                NumberAnimation {
-                    target: viewSurface; property: "scale"; to: 1
-                    duration: Appearance.animation.elementMoveEnter.duration
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
-                }
-            }
-        }
-
         RowLayout {
             Layout.fillWidth: true
             spacing: Appearance.spacing.space100
@@ -109,7 +67,7 @@ StyledPopup {
             MaterialShapeWrappedMaterialSymbol {
                 text: "deployed_code"
                 shape: MaterialShape.Shape.Cookie7Sided
-                implicitSize: 42
+                padding: Appearance.spacing.space125
                 iconSize: Appearance.font.pixelSize.large
                 color: DockerService.dockerAvailable
                     ? Appearance.colors.colPrimaryContainer : Appearance.colors.colErrorContainer
@@ -137,288 +95,281 @@ StyledPopup {
 
             Item { Layout.fillWidth: true }
 
-            ActionButton {
-                iconText: DockerService.refreshing ? "progress_activity" : "refresh"
-                label: "Refresh"
-                animateIcon: DockerService.refreshing
+            MaterialLoadingIndicator {
+                Layout.alignment: Qt.AlignVCenter
+                implicitSize: 24
+                loading: DockerService.refreshing
+                visible: DockerService.refreshing
+            }
+
+            IconToolbarButton {
+                Layout.fillHeight: false
+                implicitHeight: 36
+                text: "refresh"
                 enabled: !DockerService.refreshing
-                onTriggered: DockerService.refresh()
+                onClicked: DockerService.refresh()
+                StyledToolTip { text: "Refresh" }
             }
-            ActionButton {
-                iconText: "close"
-                label: "Close"
-                onTriggered: root.pinnedOpen = false
+            IconToolbarButton {
+                Layout.fillHeight: false
+                implicitHeight: 36
+                text: "close"
+                onClicked: root.pinnedOpen = false
+                StyledToolTip { text: "Close" }
             }
         }
 
-        RowLayout {
+        SecondaryTabBar {
+            id: tabBar
             Layout.fillWidth: true
-            spacing: Appearance.spacing.space100
+            currentIndex: swipeView.currentIndex
+            onCurrentIndexChanged: swipeView.currentIndex = currentIndex
 
-            ViewButton {
-                label: "Containers"
-                iconText: "deployed_code"
-                selected: !root.composeView
-                onTriggered: root.selectView(false)
+            SecondaryTabButton {
+                buttonIcon: "deployed_code"
+                buttonText: "Containers"
             }
-            ViewButton {
-                label: "Compose"
-                iconText: "account_tree"
-                selected: root.composeView
+            SecondaryTabButton {
+                buttonIcon: "account_tree"
+                buttonText: "Compose"
                 enabled: DockerService.composeProjects.length > 0
-                onTriggered: root.selectView(true)
             }
-            Item { Layout.fillWidth: true }
         }
 
-        Rectangle {
-            id: viewSurface
+        StyledRectangle {
+            // The popup sizes itself to its content, and a ColumnLayout
+            // recomputes its own implicitWidth from its children - so the
+            // intended popup width has to be declared on a child, not on
+            // panelContent, to survive.
             Layout.fillWidth: true
+            Layout.preferredWidth: 480
             Layout.preferredHeight: 440
+            contentLayer: StyledRectangle.ContentLayer.Group
             radius: Appearance.rounding.normal
-            color: Appearance.colors.colLayer2
             clip: true
 
-            StyledText {
-                anchors.centerIn: parent
-                visible: DockerService.dockerAvailable
-                    && ((!root.composeView && DockerService.containers.length === 0)
-                        || (root.composeView && DockerService.composeProjects.length === 0))
-                text: root.composeView ? "No Compose projects" : "No containers"
-                color: Appearance.colors.colSubtext
-            }
-
-            Flickable {
-                id: flickable
+            SwipeView {
+                id: swipeView
                 anchors.fill: parent
                 anchors.margins: Appearance.spacing.space100
-                contentWidth: width
-                contentHeight: listColumn.implicitHeight
-                boundsBehavior: Flickable.StopAtBounds
                 clip: true
-                ScrollBar.vertical: ScrollBar {}
 
-                Column {
-                    id: listColumn
-                    width: flickable.width
-                    spacing: Appearance.spacing.space100
+                CardList {
+                    model: DockerService.containers
+                    placeholderIcon: "deployed_code"
+                    placeholderTitle: "No containers"
+                    cardDelegate: root.containerCard
+                }
+                CardList {
+                    model: DockerService.composeProjects
+                    placeholderIcon: "account_tree"
+                    placeholderTitle: "No Compose projects"
+                    cardDelegate: root.projectCard
+                }
+            }
+        }
+    }
 
-                    Repeater {
-                        model: root.composeView ? DockerService.composeProjects : DockerService.containers
-                        delegate: Loader {
-                            required property var modelData
-                            width: listColumn.width
-                            sourceComponent: root.composeView ? projectCard : containerCard
-                            onLoaded: {
-                                if (root.composeView) item.projectData = modelData;
-                                else item.containerData = modelData;
-                            }
-                        }
+    // One scrolling column of cards, with the shell's empty-state placeholder
+    // when the model is empty. Both tabs are the same shape, so the page is a
+    // component rather than two near-identical Flickables.
+    component CardList: Item {
+        id: cardList
+        required property var model
+        required property Component cardDelegate
+        required property string placeholderIcon
+        required property string placeholderTitle
+
+        // The placeholder anchors to this Item, not to the Flickable's content
+        // item - an empty list has zero content height, so a placeholder inside
+        // the Flickable would collapse to nothing.
+        PagePlaceholder {
+            shown: DockerService.dockerAvailable && cardList.model.length === 0
+            icon: cardList.placeholderIcon
+            title: cardList.placeholderTitle
+        }
+
+        StyledFlickable {
+            id: flickable
+            anchors.fill: parent
+            contentWidth: width
+            contentHeight: cardColumn.implicitHeight
+            boundsBehavior: Flickable.StopAtBounds
+            clip: true
+
+            Column {
+                id: cardColumn
+                width: flickable.width
+                spacing: Appearance.spacing.space100
+
+                Repeater {
+                    model: cardList.model
+                    delegate: Loader {
+                        required property var modelData
+                        width: cardColumn.width
+                        sourceComponent: cardList.cardDelegate
+                        onLoaded: item.itemData = modelData
                     }
                 }
             }
         }
     }
 
-    component ActionButton: RippleButton {
-        id: actionButton
-        property string iconText
-        property string label
-        property bool animateIcon: false
-        readonly property color contentColor: toggled
-            ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
-        signal triggered
-        implicitWidth: contentRow.implicitWidth + Appearance.spacing.space200
-        implicitHeight: 34
-        buttonRadius: Appearance.rounding.full
-        buttonRadiusPressed: Appearance.rounding.small
-        scale: down ? 0.94 : (hovered ? 1.04 : 1)
-        Behavior on scale {
-            NumberAnimation {
-                duration: Appearance.animation.elementResize.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
-            }
+    // Shared card chrome: a subgroup surface that outlines itself while
+    // expanded, holding a header row and a revealed detail section.
+    component Card: StyledRectangle {
+        id: card
+        property var itemData: ({})
+        property bool expanded: false
+        default property alias headerContent: headerRow.data
+        property alias detailContent: detailColumn.data
+
+        implicitHeight: cardContent.implicitHeight + Appearance.spacing.space200
+        contentLayer: StyledRectangle.ContentLayer.Subgroup
+        radius: Appearance.rounding.normal
+        border.width: Appearance.borderWidth.standard
+        border.color: expanded ? Appearance.colors.colPrimary : Appearance.colors.colOutlineVariant
+        Behavior on border.color {
+            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
         }
-        releaseAction: () => actionButton.triggered()
-        contentItem: Row {
-            id: contentRow
-            anchors.centerIn: parent
-            spacing: Appearance.spacing.space50
-            MaterialSymbol {
-                anchors.verticalCenter: parent.verticalCenter
-                text: actionButton.iconText
-                iconSize: Appearance.font.pixelSize.normal
-                color: actionButton.contentColor
-                rotation: 0
-                RotationAnimation on rotation {
-                    from: 0; to: 360
-                    duration: Appearance.animationCurves.expressiveSlowSpatialDuration * 2
-                    loops: Animation.Infinite
-                    running: actionButton.animateIcon
-                }
+
+        ColumnLayout {
+            id: cardContent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.margins: Appearance.spacing.space100
+            spacing: Appearance.spacing.space100
+
+            RowLayout {
+                id: headerRow
+                Layout.fillWidth: true
+                spacing: Appearance.spacing.space100
             }
-            StyledText {
-                anchors.verticalCenter: parent.verticalCenter
-                text: actionButton.label
-                font.pixelSize: Appearance.font.pixelSize.small
-                color: actionButton.contentColor
+
+            Revealer {
+                Layout.fillWidth: true
+                vertical: true
+                reveal: card.expanded
+
+                ColumnLayout {
+                    id: detailColumn
+                    width: parent.width
+                    spacing: Appearance.spacing.space100
+                }
             }
         }
     }
 
-    component ViewButton: ActionButton {
-        property bool selected: false
-        toggled: selected
+    // The chevron that expands a card. `expand_more`/`expand_less` swap through
+    // MaterialSymbol's own icon-change animation.
+    component ExpandButton: IconToolbarButton {
+        property bool expanded: false
+        Layout.fillHeight: false
+        implicitHeight: 36
+        text: expanded ? "expand_less" : "expand_more"
+    }
+
+    component ActionButton: RippleButtonWithIcon {
+        materialIconFill: false
+        colBackground: Appearance.colors.colLayer2
     }
 
     property Component containerCard: Component {
-        Rectangle {
-            id: card
-            property var containerData: ({})
-            property bool expanded: false
-            width: parent?.width ?? 0
-            implicitHeight: cardContent.implicitHeight + Appearance.spacing.space200
-            radius: Appearance.rounding.normal
-            color: Appearance.colors.colLayer3
-            border.width: Appearance.borderWidth.standard
-            border.color: expanded ? Appearance.colors.colPrimary : Appearance.colors.colOutlineVariant
-            Behavior on border.color {
-                ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
-            }
+        Card {
+            id: container
+            readonly property var containerData: container.itemData
 
+            MaterialSymbol {
+                text: container.containerData.isPaused ? "pause_circle"
+                    : container.containerData.isRunning ? "check_circle" : "cancel"
+                color: container.containerData.isPaused ? Appearance.colors.colTertiary
+                    : container.containerData.isRunning ? Appearance.colors.colPrimary
+                    : Appearance.colors.colSubtext
+            }
             ColumnLayout {
-                id: cardContent
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: Appearance.spacing.space100
-                spacing: Appearance.spacing.space100
-
-                RowLayout {
+                Layout.fillWidth: true
+                spacing: 0
+                StyledText {
                     Layout.fillWidth: true
-                    spacing: Appearance.spacing.space100
-                    MaterialSymbol {
-                        text: card.containerData.isPaused ? "pause_circle"
-                            : card.containerData.isRunning ? "check_circle" : "cancel"
-                        color: card.containerData.isPaused ? Appearance.colors.colTertiary
-                            : card.containerData.isRunning ? Appearance.colors.colPrimary
-                            : Appearance.colors.colSubtext
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 0
-                        StyledText {
-                            text: card.containerData.name
-                            font.weight: Font.DemiBold
-                            color: Appearance.colors.colOnLayer2
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                        }
-                        StyledText {
-                            text: `${card.containerData.status} · ${card.containerData.image}`
-                            font.pixelSize: Appearance.font.pixelSize.smallest
-                            color: Appearance.colors.colSubtext
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                        }
-                    }
-                    ActionButton {
-                        iconText: card.expanded ? "expand_less" : "expand_more"
-                        label: ""
-                        implicitWidth: 34
-                        onTriggered: card.expanded = !card.expanded
-                    }
+                    text: container.containerData.name
+                    font.weight: Font.DemiBold
+                    color: Appearance.colors.colOnLayer2
+                    elide: Text.ElideRight
                 }
-
-                ColumnLayout {
-                    visible: card.expanded
+                StyledText {
                     Layout.fillWidth: true
-                    spacing: Appearance.spacing.space100
-
-                    StyledText {
-                        visible: root.showPorts && card.containerData.ports.length > 0
-                        text: Array.isArray(card.containerData.ports)
-                            ? card.containerData.ports.join("\n") : card.containerData.ports
-                        font.pixelSize: Appearance.font.pixelSize.smallest
-                        color: Appearance.colors.colSubtext
-                    }
-
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: Appearance.spacing.space50
-                        Repeater {
-                            model: root.containerActions(card.containerData)
-                            delegate: ActionButton {
-                                required property var modelData
-                                iconText: modelData.icon
-                                label: modelData.label
-                                enabled: modelData?.enabled === true
-                                onTriggered: root.runContainerAction(card.containerData, modelData.action)
-                            }
-                        }
-                    }
+                    text: `${container.containerData.status} · ${container.containerData.image}`
+                    font.pixelSize: Appearance.font.pixelSize.smallest
+                    color: Appearance.colors.colSubtext
+                    elide: Text.ElideRight
                 }
             }
+            ExpandButton {
+                expanded: container.expanded
+                onClicked: container.expanded = !container.expanded
+            }
+
+            detailContent: [
+                StyledText {
+                    visible: root.showPorts && container.containerData.ports.length > 0
+                    text: Array.isArray(container.containerData.ports)
+                        ? container.containerData.ports.join("\n") : container.containerData.ports
+                    font.pixelSize: Appearance.font.pixelSize.smallest
+                    color: Appearance.colors.colSubtext
+                },
+                FlowButtonGroup {
+                    Layout.fillWidth: true
+                    spacing: Appearance.spacing.space50
+                    Repeater {
+                        model: root.containerActions(container.containerData)
+                        delegate: ActionButton {
+                            required property var modelData
+                            materialIcon: modelData.icon
+                            mainText: modelData.label
+                            enabled: modelData?.enabled === true
+                            onClicked: root.runContainerAction(container.containerData, modelData.action)
+                        }
+                    }
+                }
+            ]
         }
     }
 
     property Component projectCard: Component {
-        Rectangle {
+        Card {
             id: project
-            property var projectData: ({})
-            property bool expanded: false
-            width: parent?.width ?? 0
-            implicitHeight: projectContent.implicitHeight + Appearance.spacing.space200
-            radius: Appearance.rounding.normal
-            color: Appearance.colors.colLayer3
-            border.width: Appearance.borderWidth.standard
-            border.color: expanded ? Appearance.colors.colPrimary : Appearance.colors.colOutlineVariant
-            Behavior on border.color {
-                ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+            readonly property var projectData: project.itemData
+
+            MaterialSymbol { text: "account_tree"; color: Appearance.colors.colPrimary }
+            StyledText {
+                Layout.fillWidth: true
+                text: project.projectData.name
+                font.weight: Font.DemiBold
+                color: Appearance.colors.colOnLayer2
+                elide: Text.ElideRight
+            }
+            StyledText {
+                text: `${project.projectData.runningCount}/${project.projectData.totalCount}`
+                color: Appearance.colors.colSubtext
+            }
+            ExpandButton {
+                expanded: project.expanded
+                onClicked: project.expanded = !project.expanded
             }
 
-            ColumnLayout {
-                id: projectContent
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: Appearance.spacing.space100
-                spacing: Appearance.spacing.space100
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    MaterialSymbol { text: "account_tree"; color: Appearance.colors.colPrimary }
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: project.projectData.name
-                        font.weight: Font.DemiBold
-                        color: Appearance.colors.colOnLayer2
-                    }
-                    StyledText {
-                        text: `${project.projectData.runningCount}/${project.projectData.totalCount}`
-                        color: Appearance.colors.colSubtext
-                    }
-                    ActionButton {
-                        iconText: project.expanded ? "expand_less" : "expand_more"
-                        label: ""
-                        implicitWidth: 34
-                        onTriggered: project.expanded = !project.expanded
-                    }
-                }
-
-                Flow {
-                    visible: project.expanded
+            detailContent: [
+                FlowButtonGroup {
                     Layout.fillWidth: true
                     spacing: Appearance.spacing.space50
-                    ActionButton { iconText: "play_arrow"; label: "Up"; onTriggered: DockerService.executeComposeAction(project.projectData, "up") }
-                    ActionButton { iconText: "stop"; label: "Stop"; onTriggered: DockerService.executeComposeAction(project.projectData, "stop") }
-                    ActionButton { iconText: "restart_alt"; label: "Restart"; onTriggered: DockerService.executeComposeAction(project.projectData, "restart") }
-                    ActionButton { iconText: "download"; label: "Pull"; onTriggered: DockerService.executeComposeAction(project.projectData, "pull") }
-                    ActionButton { iconText: "description"; label: "Logs"; onTriggered: DockerService.openComposeLogs(project.projectData) }
-                    ActionButton { iconText: "delete"; label: "Down"; onTriggered: DockerService.executeComposeAction(project.projectData, "down") }
+                    ActionButton { materialIcon: "play_arrow"; mainText: "Up"; onClicked: DockerService.executeComposeAction(project.projectData, "up") }
+                    ActionButton { materialIcon: "stop"; mainText: "Stop"; onClicked: DockerService.executeComposeAction(project.projectData, "stop") }
+                    ActionButton { materialIcon: "restart_alt"; mainText: "Restart"; onClicked: DockerService.executeComposeAction(project.projectData, "restart") }
+                    ActionButton { materialIcon: "download"; mainText: "Pull"; onClicked: DockerService.executeComposeAction(project.projectData, "pull") }
+                    ActionButton { materialIcon: "description"; mainText: "Logs"; onClicked: DockerService.openComposeLogs(project.projectData) }
+                    ActionButton { materialIcon: "delete"; mainText: "Down"; onClicked: DockerService.executeComposeAction(project.projectData, "down") }
                 }
-            }
+            ]
         }
     }
 }

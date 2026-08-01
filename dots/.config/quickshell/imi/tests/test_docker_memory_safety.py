@@ -48,10 +48,28 @@ class DockerMemorySafetyTests(unittest.TestCase):
         popup = self.text("modules/common/plugins/bundled/docker/DockerPopup.qml")
         self.assertNotRegex(popup, r"Behavior\s+on\s+implicit(?:Width|Height)")
         self.assertNotRegex(popup, r'property\s*:\s*["\'](?:width|height|implicitWidth|implicitHeight)["\']')
+        # Non-Item objects declared at the popup root would be assigned to
+        # StyledPopup's Item-only default property and invalidate the type, so
+        # every animation has to sit inside the content tree.
         content_index = popup.index("id: panelContent")
         self.assertGreater(popup.index("id: popupEnter"), content_index)
-        self.assertGreater(popup.index("id: viewTransition"), content_index)
-        self.assertIn("Appearance.colors.colOnPrimary", popup)
+
+    def test_popup_uses_shared_components_not_its_own(self):
+        """The plugin renders with the shell's M3E widgets rather than
+        re-implementing buttons, tabs, cards and scrolling locally."""
+        popup = self.text("modules/common/plugins/bundled/docker/DockerPopup.qml")
+        for widget in ("SecondaryTabBar", "SecondaryTabButton", "StyledFlickable",
+                       "StyledRectangle", "RippleButtonWithIcon", "IconToolbarButton",
+                       "PagePlaceholder", "Revealer", "FlowButtonGroup",
+                       "MaterialLoadingIndicator"):
+            self.assertIn(widget, popup, f"{widget} should render part of the popup")
+        # Bespoke re-implementations that these replaced.
+        self.assertNotIn("ScrollBar.vertical: ScrollBar {}", popup)
+        self.assertNotRegex(popup, r"component\s+ActionButton\s*:\s*RippleButton\b")
+        self.assertNotRegex(popup, r"RotationAnimation\s+on\s+rotation")
+        # Expansion animates through Revealer instead of toggling visibility,
+        # which would make neighbouring cards jump (docs/M3_GUIDELINES.md).
+        self.assertNotRegex(popup, r"visible\s*:\s*\w+\.expanded")
 
     def test_persistent_bar_uses_native_docker_adapter(self):
         bar = self.text("modules/imi/bar/BarContent.qml")
