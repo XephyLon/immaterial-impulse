@@ -20,6 +20,32 @@ Item {
     property bool showingStore: false
     onStoreAvailableChanged: if (!storeAvailable) showingStore = false
 
+    // Filter state. Capability is single-select: clicking the active chip
+    // clears it, matching the store's behaviour exactly.
+    property string searchQuery: ""
+    property string capabilityFilter: "" // "" = all surfaces
+    property bool thirdPartyOnly: false
+
+    // Filters combine with AND. Capability matching goes through
+    // PluginManager.pluginSurfaces() rather than reading `capabilities`
+    // directly, so manifests of the older declarative-JSON generation (clock)
+    // still match the Desktop chip.
+    readonly property var filteredPlugins: {
+        const query = root.searchQuery.trim().toLowerCase();
+        return PluginManager.availablePlugins.filter(plugin => {
+            if (root.thirdPartyOnly && plugin._origin !== "installed")
+                return false;
+            if (root.capabilityFilter.length > 0
+                    && !PluginManager.pluginSurfaces(plugin).includes(root.capabilityFilter))
+                return false;
+            if (query.length > 0) {
+                const haystack = `${plugin.name ?? ""} ${plugin.description ?? ""}`.toLowerCase();
+                if (!haystack.includes(query)) return false;
+            }
+            return true;
+        });
+    }
+
     // Forwarded so SettingsContent's section rail keeps tracking this page
     // exactly as it did when ContentPage was the root item.
     readonly property string currentSection: root.showingStore ? "" : listPage.currentSection
@@ -203,7 +229,7 @@ Item {
                 }
 
                 Repeater {
-                    model: PluginManager.availablePlugins
+                    model: root.filteredPlugins
 
                     // One plugin = one bordered card: the enable header and its
                     // options live in a single rounded surface with a distinct

@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CHIP = ROOT / "modules/common/widgets/FilterChip.qml"
 STORE = ROOT / "modules/imi/settings/pages/PluginStorePage.qml"
 MANAGER = ROOT / "modules/common/plugins/PluginManager.qml"
+PAGE = ROOT / "modules/imi/settings/pages/PluginsPage.qml"
 
 
 class FilterChipIsShared(unittest.TestCase):
@@ -87,6 +88,33 @@ class CapabilityVocabulary(unittest.TestCase):
         store = STORE.read_text(encoding="utf-8")
         self.assertIn("FilterChip {", store)
         self.assertIn("import qs.modules.common.widgets", store)
+
+
+class WidgetsPageFiltering(unittest.TestCase):
+    def setUp(self):
+        self.src = PAGE.read_text(encoding="utf-8")
+
+    def test_filter_state_exists(self):
+        self.assertIn("property string capabilityFilter", self.src)
+        self.assertIn("property bool thirdPartyOnly", self.src)
+
+    def test_filtered_model_is_used_by_the_list(self):
+        """The Repeater must render the filtered list, not the raw one."""
+        self.assertIn("readonly property var filteredPlugins", self.src)
+        self.assertRegex(self.src, r"model:\s*root\.filteredPlugins")
+
+    def test_capability_match_uses_the_shared_helper(self):
+        """Re-deriving the surface list here would reintroduce the clock bug."""
+        self.assertIn("PluginManager.pluginSurfaces", self.src)
+
+    def test_search_is_case_insensitive_over_name_and_description(self):
+        block = self.src[self.src.index("filteredPlugins"):]
+        self.assertIn("toLowerCase", block)
+        self.assertIn("name", block)
+        self.assertIn("description", block)
+
+    def test_third_party_uses_the_same_origin_test_as_the_badge(self):
+        self.assertIn('_origin === "installed"', self.src)
 
 
 if __name__ == "__main__":
