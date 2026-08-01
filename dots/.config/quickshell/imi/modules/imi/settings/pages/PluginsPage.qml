@@ -357,6 +357,50 @@ Item {
                                         return summary.length > 0 ? `${summary}\n${byline}` : byline;
                                     }
 
+                                    // Sits before the switch rather than after it.
+                                    // Appended to the card's own header row these
+                                    // landed to the right of the toggle, where they
+                                    // read as belonging to the buttons that follow.
+                                    trailingContent: [
+                                        // Surface tags, from the same vocabulary as the
+                                        // filter chips, so a card visibly explains why a
+                                        // filter matched it. Values outside the
+                                        // vocabulary (`settings`, or a capability from a
+                                        // newer shell) resolve to null and are dropped
+                                        // rather than shown raw.
+                                        Repeater {
+                                            model: PluginManager.pluginSurfaces(pluginCard.modelData)
+                                                .map(value => PluginManager.surfaceInfo(value))
+                                                .filter(info => info !== null)
+
+                                            Badge {
+                                                required property var modelData
+                                                Layout.alignment: Qt.AlignVCenter
+                                                label: modelData.label
+                                                badgeIcon: modelData.icon
+                                            }
+                                        },
+
+                                        // Installed plugins come from an external source
+                                        // rather than shipping with the shell, so flag
+                                        // them - the user is trusting that source.
+                                        Badge {
+                                            visible: pluginCard.modelData._origin === "installed"
+                                            Layout.alignment: Qt.AlignVCenter
+                                            label: Translation.tr("Third-party")
+                                            badgeIcon: "public"
+
+                                            HoverHandler { id: badgeHover }
+                                            StyledToolTip {
+                                                // Badge is a Rectangle and has no
+                                                // `hovered`, so gate explicitly or the
+                                                // tooltip never hides.
+                                                extraVisibleCondition: badgeHover.hovered
+                                                text: Translation.tr("Installed from an external source — only enable widgets you trust")
+                                            }
+                                        }
+                                    ]
+
                                     property bool isEnabled: Config.options.plugins.enabled.includes(modelData.id)
                                     checked: isEnabled
                                     onCheckedChanged: {
@@ -385,44 +429,6 @@ Item {
                                     StyledToolTip {
                                         text: Translation.tr("Update to v%1")
                                             .arg(pluginCard.storeEntry?.version ?? "")
-                                    }
-                                },
-
-                                // Surface tags, drawn from the same vocabulary as the
-                                // filter chips so a card visibly explains why a filter
-                                // matched it. Values outside the vocabulary (`settings`,
-                                // or a capability from a newer shell) resolve to null
-                                // and are dropped rather than shown raw.
-                                Repeater {
-                                    model: PluginManager.pluginSurfaces(pluginCard.modelData)
-                                        .map(value => PluginManager.surfaceInfo(value))
-                                        .filter(info => info !== null)
-
-                                    Badge {
-                                        required property var modelData
-                                        Layout.alignment: Qt.AlignVCenter
-                                        label: modelData.label
-                                        badgeIcon: modelData.icon
-                                    }
-                                },
-
-                                // Third-party badge: installed plugins come from an
-                                // external source (not shipped with the shell), so flag
-                                // them so the user knows to trust the source.
-                                Badge {
-                                    id: thirdPartyBadge
-                                    visible: pluginCard.modelData._origin === "installed"
-                                    Layout.alignment: Qt.AlignVCenter
-                                    label: Translation.tr("Third-party")
-                                    badgeIcon: "public"
-
-                                    HoverHandler { id: badgeHover }
-                                    StyledToolTip {
-                                        // Badge is a Rectangle and has no `hovered`
-                                        // property, so gate explicitly or the tooltip
-                                        // stays visible.
-                                        extraVisibleCondition: badgeHover.hovered
-                                        text: Translation.tr("Installed from an external source — only enable widgets you trust")
                                     }
                                 },
 
