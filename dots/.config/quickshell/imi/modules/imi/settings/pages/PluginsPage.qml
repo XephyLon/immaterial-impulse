@@ -209,7 +209,7 @@ Item {
                     // options live in a single rounded surface with a distinct
                     // accent border, and a clear gap separates each plugin from the
                     // next, so it is unambiguous which options belong to which plugin.
-                    Rectangle {
+                    ExpandablePanel {
                         id: pluginCard
                         required property var modelData
 
@@ -230,21 +230,12 @@ Item {
 
                         Layout.fillWidth: true
                         Layout.topMargin: Appearance.spacing.space100
-                        implicitHeight: cardColumn.implicitHeight
-                        color: Appearance.colors.colLayer1
-                        radius: Appearance.rounding.normal
+                        // The switch that enables the plugin is also what reveals
+                        // its options; ExpandablePanel takes the state, not the
+                        // control, so the trigger stays where it belongs.
+                        expanded: configSwitch.checked
 
-                        ColumnLayout {
-                            id: cardColumn
-                            anchors { left: parent.left; right: parent.right; top: parent.top }
-                            spacing: 0
-
-                            RowLayout {
-                                id: pluginRow
-                                Layout.fillWidth: true
-                                Layout.margins: Appearance.spacing.space100
-                                spacing: Appearance.spacing.space100
-
+                        header: [
                                 ConfigSwitch {
                                     id: configSwitch
                                     Layout.fillWidth: true
@@ -279,7 +270,7 @@ Item {
                                         }
                                         Config.setNestedValue("plugins.enabled", newList);
                                     }
-                                }
+                                },
 
                                 // A newer version exists in the store registry.
                                 RippleButtonWithIcon {
@@ -294,7 +285,7 @@ Item {
                                         text: Translation.tr("Update to v%1")
                                             .arg(pluginCard.storeEntry?.version ?? "")
                                     }
-                                }
+                                },
 
                                 // Third-party badge: installed plugins come from an
                                 // external source (not shipped with the shell), so flag
@@ -330,7 +321,7 @@ Item {
                                         extraVisibleCondition: badgeHover.hovered
                                         text: Translation.tr("Installed from an external source — only enable plugins you trust")
                                     }
-                                }
+                                },
 
                                 // Only installed packages live on disk and can be removed;
                                 // bundled plugins ship with the shell. Removal is gated on
@@ -362,66 +353,17 @@ Item {
                                             : Translation.tr("Delete plugin")
                                     }
                                 }
-                            }
+                        ]
 
-                            // Hairline divider separating the header from its options,
-                            // shown only while the plugin is enabled (options visible).
-                            Rectangle {
-                                Layout.fillWidth: true
-                                Layout.leftMargin: Appearance.spacing.space100
-                                Layout.rightMargin: Appearance.spacing.space100
-                                implicitHeight: 1
-                                color: Appearance.colors.colOutlineVariant
-                                opacity: optionsRevealer.expanded ? 1 : 0
-                                visible: opacity > 0
-                                Behavior on opacity {
-                                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                                }
-                            }
+                        GroupedList {
+                            id: optionsList
+                            Layout.fillWidth: true
+                            // Transparent so the option rows read as part of
+                            // the unified card instead of nested sub-cards.
+                            bgcolor: "transparent"
 
-                            Item {
-                                id: optionsRevealer
-
-                                Layout.fillWidth: true
-                                Layout.leftMargin: Appearance.spacing.space100
-                                Layout.rightMargin: Appearance.spacing.space100
-                                Layout.bottomMargin: expanded ? Appearance.spacing.space50 : 0
-                                implicitHeight: expanded ? optionsList.implicitHeight : 0
-                                opacity: expanded ? 1 : 0
-                                visible: expanded || implicitHeight > 0
-                                enabled: expanded
-                                clip: true
-
-                                readonly property bool expanded: configSwitch.checked
-
-                                Behavior on implicitHeight {
-                                    NumberAnimation {
-                                        duration: optionsRevealer.expanded
-                                            ? Appearance.animation.elementMoveEnter.duration
-                                            : Appearance.animation.elementMoveExit.duration
-                                        easing.type: Easing.BezierSpline
-                                        easing.bezierCurve: optionsRevealer.expanded
-                                            ? Appearance.animation.elementMoveEnter.bezierCurve
-                                            : Appearance.animation.elementMoveExit.bezierCurve
-                                    }
-                                }
-
-                                Behavior on opacity {
-                                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                                }
-
-                                GroupedList {
-                                    id: optionsList
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    // Transparent so the option rows read as part of
-                                    // the unified card instead of nested sub-cards.
-                                    bgcolor: "transparent"
-
-                                    PluginOptions {
-                                        manifest: pluginCard.modelData
-                                    }
-                                }
+                            PluginOptions {
+                                manifest: pluginCard.modelData
                             }
                         }
                     }
