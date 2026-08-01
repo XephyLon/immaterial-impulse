@@ -281,7 +281,8 @@ Item {
 
                     FilterChip {
                         label: Translation.tr("Third-party")
-                        chipIcon: "extension"
+                        // Same glyph as the badge this chip selects for.
+                        chipIcon: "public"
                         toggled: root.thirdPartyOnly
                         onClicked: root.thirdPartyOnly = !root.thirdPartyOnly
                     }
@@ -337,6 +338,41 @@ Item {
                         expanded: configSwitch.checked
 
                         header: [
+                                // Leading edge, away from the enable switch: a
+                                // destructive action should not sit against the control
+                                // people reach for constantly.
+                                //
+                                // Only installed packages live on disk and can be
+                                // removed; bundled plugins ship with the shell. Removal
+                                // is gated on the plugin being disabled so a running
+                                // plugin is never pulled out from under itself.
+                                RippleButton {
+                                    id: deleteButton
+                                    visible: pluginCard.modelData._origin === "installed"
+                                    enabled: !configSwitch.isEnabled && !PluginManager.uninstalling
+                                    Layout.alignment: Qt.AlignVCenter
+                                    implicitWidth: 36
+                                    implicitHeight: 36
+                                    buttonRadius: Appearance.rounding.full
+                                    colBackground: "transparent"
+                                    colBackgroundHover: Appearance.colors.colLayer2
+                                    onClicked: PluginManager.requestUninstall(pluginCard.modelData.id)
+
+                                    contentItem: MaterialSymbol {
+                                        anchors.centerIn: parent
+                                        text: "delete"
+                                        iconSize: Appearance.font.pixelSize.larger
+                                        color: deleteButton.enabled
+                                            ? Appearance.colors.colError : Appearance.colors.colSubtext
+                                    }
+
+                                    StyledToolTip {
+                                        text: configSwitch.isEnabled
+                                            ? Translation.tr("Disable the widget before deleting")
+                                            : Translation.tr("Delete widget")
+                                    }
+                                },
+
                                 ConfigSwitch {
                                     id: configSwitch
                                     Layout.fillWidth: true
@@ -400,6 +436,13 @@ Item {
                                             Layout.alignment: Qt.AlignVCenter
                                             label: Translation.tr("Third-party")
                                             badgeIcon: "public"
+                                            // Error colours, not because it is broken,
+                                            // but because it runs with the shell's own
+                                            // access and came from outside it. The
+                                            // surface tags stay neutral so this one is
+                                            // the thing that stands out.
+                                            colBackground: Appearance.colors.colErrorContainer
+                                            colText: Appearance.colors.colOnErrorContainer
 
                                             HoverHandler { id: badgeHover }
                                             StyledToolTip {
@@ -440,37 +483,6 @@ Item {
                                     StyledToolTip {
                                         text: Translation.tr("Update to v%1")
                                             .arg(pluginCard.storeEntry?.version ?? "")
-                                    }
-                                },
-
-                                // Only installed packages live on disk and can be removed;
-                                // bundled plugins ship with the shell. Removal is gated on
-                                // the plugin being disabled so a running plugin is never
-                                // pulled out from under itself.
-                                RippleButton {
-                                    id: deleteButton
-                                    visible: pluginCard.modelData._origin === "installed"
-                                    enabled: !configSwitch.isEnabled && !PluginManager.uninstalling
-                                    Layout.alignment: Qt.AlignVCenter
-                                    implicitWidth: 36
-                                    implicitHeight: 36
-                                    buttonRadius: Appearance.rounding.full
-                                    colBackground: "transparent"
-                                    colBackgroundHover: Appearance.colors.colLayer2
-                                    onClicked: PluginManager.requestUninstall(pluginCard.modelData.id)
-
-                                    contentItem: MaterialSymbol {
-                                        anchors.centerIn: parent
-                                        text: "delete"
-                                        iconSize: Appearance.font.pixelSize.larger
-                                        color: deleteButton.enabled
-                                            ? Appearance.colors.colError : Appearance.colors.colSubtext
-                                    }
-
-                                    StyledToolTip {
-                                        text: configSwitch.isEnabled
-                                            ? Translation.tr("Disable the widget before deleting")
-                                            : Translation.tr("Delete widget")
                                     }
                                 }
                         ]

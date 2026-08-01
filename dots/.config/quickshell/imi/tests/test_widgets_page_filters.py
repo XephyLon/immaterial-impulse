@@ -199,7 +199,20 @@ class WidgetsPageFilterUi(unittest.TestCase):
         with the rest of the suite green.
         """
         self.assertIn("toggled: root.thirdPartyOnly", self.src)
-        self.assertIn('chipIcon: "extension"', self.src)
+        self.assertIn('chipIcon: "public"', self.src)
+
+    def test_third_party_chip_and_badge_share_a_glyph(self):
+        """The chip selects for exactly the cards carrying the badge, so a
+        different icon on each reads as two unrelated things. Only the literal
+        icons are compared - the surface chips and tags both bind
+        `modelData.icon` and so match by construction.
+        """
+        chip = re.search(r'chipIcon:\s*"(\w+)"', self.src)
+        badge = re.search(r'badgeIcon:\s*"(\w+)"', self.src)
+        self.assertIsNotNone(chip, "no literal chip icon found")
+        self.assertIsNotNone(badge, "no literal badge icon found")
+        self.assertEqual(chip.group(1), badge.group(1),
+                         "the third-party chip and badge must use one glyph")
 
     def test_empty_state_distinguishes_no_widgets_from_no_matches(self):
         """An empty list is not proof a filter excluded something.
