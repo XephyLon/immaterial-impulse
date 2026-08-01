@@ -26,11 +26,13 @@
 #     on LD_LIBRARY_PATH to run: `build/linux-wallpaperengine/build/output`,
 #     plus `/opt/linux-wallpaperengine/lib` and `/opt/linux-wallpaperengine`
 #     (the system linux-wallpaperengine-git package's install dirs).
-#   - Because of that runtime lib dependency, we do NOT just copy the raw
-#     `quickshell` binary to /usr/local/bin (it would fail to start without
-#     LD_LIBRARY_PATH). We install a small wrapper at /usr/local/bin/quickshell
-#     that sets LD_LIBRARY_PATH and execs the real binary in the cache build
-#     dir, plus a `qs` symlink to it. /usr/local/bin is first on PATH ahead of
+#   - The built binary carries a RUNPATH to that output dir, so it resolves
+#     those libs unaided. We still install a small wrapper at
+#     /usr/local/bin/quickshell (it execs the real binary in the cache build
+#     dir and sets the Qt render loop), plus a `qs` symlink to it. The wrapper
+#     deliberately does NOT export LD_LIBRARY_PATH: it is inherited by every
+#     app the shell launches, and those dirs carry CEF's own libEGL/libGLESv2,
+#     which shadowed the system ones and crashed Firefox at startup. /usr/local/bin is first on PATH ahead of
 #     /usr/bin on virtually every distro, so this shadows the distro package's
 #     `qs`/`quickshell` (e.g. immaterial-impulse-quickshell-git) without ever
 #     touching a package-manager-owned file.
@@ -82,16 +84,58 @@ up_to_date(){
   return 0
 }
 
-# Install the LD_LIBRARY_PATH wrapper + `qs` symlink. $1=quickshell binary, $2=lib dir.
+# Make the binary resolve its WE libs on its own, so the wrapper does not have
+# to export LD_LIBRARY_PATH. Exporting it was a real bug: the variable is
+# inherited by every process the shell spawns, so CEF's bundled libEGL.so /
+# libGLESv2.so in the WE lib dirs shadowed the system ones for every app
+# launched from the launcher. Firefox picked them up and died during GPU init
+# ~0.5s in, reporting StartupCrash with no useful message.
+#
+# The build already bakes a RUNPATH pointing at build/output, so in practice
+# nothing is needed. Repair it with patchelf only if something is genuinely
+# unresolved, and fall back to the old export as a last resort rather than
+# shipping a shell that will not start. Returns 0 when the binary is
+# self-sufficient.
+libs_resolve_standalone(){
+  local qs_bin="$1"
+  ! env -u LD_LIBRARY_PATH ldd "$qs_bin" 2>/dev/null | grep -q "not found"
+}
+
+ensure_standalone_libs(){
+  local qs_bin="$1" lib_dir="$2"
+  libs_resolve_standalone "$qs_bin" && return 0
+  if command -v patchelf >/dev/null 2>&1; then
+    local rp; rp="$(patchelf --print-rpath "$qs_bin" 2>/dev/null || true)"
+    if patchelf --set-rpath "$lib_dir:$OPT_LIBS${rp:+:$rp}" "$qs_bin" 2>/dev/null; then
+      say "baked the WE runtime lib dirs into the binary's RUNPATH."
+    fi
+  else
+    say "patchelf not present; cannot repair the binary's RUNPATH."
+  fi
+  libs_resolve_standalone "$qs_bin"
+}
+
+# Install the wrapper + `qs` symlink. $1=quickshell binary, $2=lib dir.
 install_wrapper(){
   local qs_bin="$1" lib_dir="$2"
+  local ld_line=""
+  if ensure_standalone_libs "$qs_bin" "$lib_dir"; then
+    say "binary resolves its WE libs unaided; not exporting LD_LIBRARY_PATH."
+  else
+    say "WARNING: binary still needs LD_LIBRARY_PATH. Exporting it as a fallback -"
+    say "         apps launched from the shell may load CEF's libEGL/libGLESv2"
+    say "         instead of the system ones. Install patchelf and re-run to fix."
+    ld_line="export LD_LIBRARY_PATH=\"$lib_dir:$OPT_LIBS\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}\""
+  fi
   local tmp; tmp="$(mktemp)"
   cat > "$tmp" <<WRAPPER
 #!/usr/bin/env bash
 # Installed by immaterial-impulse's 4.wallpaperengine.sh. Runs the WE-capable
-# Quickshell build with the linux-wallpaperengine runtime libs on
-# LD_LIBRARY_PATH (bundled build output + the system package's /opt install).
-export LD_LIBRARY_PATH="$lib_dir:$OPT_LIBS\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
+# Quickshell build. The binary carries its own RUNPATH for the
+# linux-wallpaperengine runtime libs, so nothing is put on LD_LIBRARY_PATH:
+# that variable is inherited by every app the shell launches, and the WE lib
+# dirs contain CEF's own libEGL/libGLESv2, which crashed Firefox on startup.
+$ld_line
 # Force Qt's THREADED render loop. On NVIDIA/Wayland Qt otherwise auto-selects
 # the BASIC loop, which renders QML on the GUI thread; an embedded WE *video*
 # wallpaper (mpv/CUDA) then blocks that thread in glClientWaitSync/endFrame for
