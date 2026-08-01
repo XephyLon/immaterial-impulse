@@ -14,6 +14,44 @@ Singleton {
     property int readWriteDelay: 50 // milliseconds
     property bool blockWrites: false
 
+    // Built-in desktop widgets became bundled plugins. Existing installs carry
+    // their state in `background.widgets.<key>.enable`, while ported widgets
+    // read `plugins.enabled`, which defaults to []. Translate once, then never
+    // again.
+    //
+    // The old keys are deliberately left on disk: the JsonAdapter does not
+    // expose keys it has no property for, so they are inert, and leaving them
+    // means a user who downgrades still has their settings.
+    readonly property var desktopWidgetPluginIds: ({
+            "clock": "clock",
+            "weather": "weather",
+            "calendar": "calendar",
+            "worldClock": "world-clock",
+            "notes": "notes",
+            "userCard": "user-card",
+            "images": "image-converter",
+            "visualizer": "visualizer",
+            "customImage": "custom-image",
+            "media": "media",
+            "resources": "resources"
+        })
+
+    function migrateDesktopWidgetsToPlugins() {
+        if (root.options.plugins.migratedDesktopWidgets)
+            return;
+        const widgets = root.options.background.widgets;
+        const enabled = [];
+        for (let i = 0; i < root.options.plugins.enabled.length; i++)
+            enabled.push(root.options.plugins.enabled[i]);
+        for (const key in root.desktopWidgetPluginIds) {
+            const id = root.desktopWidgetPluginIds[key];
+            if (widgets[key]?.enable && !enabled.includes(id))
+                enabled.push(id);
+        }
+        root.setNestedValue("plugins.enabled", enabled);
+        root.setNestedValue("plugins.migratedDesktopWidgets", true);
+    }
+
     function setNestedValue(nestedKey, value) {
         let keys = nestedKey.split(".");
         let obj = root.options;
@@ -69,7 +107,10 @@ Singleton {
         blockWrites: root.blockWrites
         onFileChanged: fileReloadTimer.restart()
         onAdapterUpdated: fileWriteTimer.restart()
-        onLoaded: root.ready = true
+        onLoaded: {
+            root.ready = true;
+            root.migrateDesktopWidgetsToPlugins();
+        }
         onLoadFailed: error => {
             if (error == FileViewError.FileNotFound) {
                 writeAdapter();
@@ -104,6 +145,11 @@ Singleton {
                 //            the widget (samples the live Wallpaper Engine surface
                 //            or the static image)
                 property string frostMode: "blur"
+                // Set once the built-in desktop widgets have been
+                // translated into `enabled`. Without it the migration
+                // re-adds a widget on every launch and the user can never
+                // turn one off.
+                property bool migratedDesktopWidgets: false
             }
 
             property JsonObject policies: JsonObject {

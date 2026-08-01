@@ -111,6 +111,12 @@ if ! python3 "$SCRIPT_DIR/test_widgets_page_filters.py"; then
     exit 1
 fi
 
+echo "Running widget plugin migration tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_plugin_migration.py"; then
+    echo "Widget plugin migration tests failed."
+    exit 1
+fi
+
 echo "Running plugin installer tests..."
 if ! python3 "$SCRIPT_DIR/test_plugin_installer.py"; then
     echo "Plugin installer tests failed."
