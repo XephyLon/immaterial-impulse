@@ -445,14 +445,14 @@ ApplicationWindow {
                             materialIcon: "help"
                             mainText: Translation.tr("Usage")
                             onClicked: {
-                                Qt.openUrlExternally("https://end-4.github.io/dots-hyprland-wiki/en/ii-qs/02usage/");
+                                Qt.openUrlExternally("https://github.com/XephyLon/immaterial-impulse#the-bloat-lovingly-curated");
                             }
                         }
                         RippleButtonWithIcon {
                             materialIcon: "construction"
                             mainText: Translation.tr("Configuration")
                             onClicked: {
-                                Qt.openUrlExternally("https://end-4.github.io/dots-hyprland-wiki/en/ii-qs/03config/");
+                                Qt.openUrlExternally("https://github.com/XephyLon/immaterial-impulse/blob/main/docs/PLUGINS.md");
                             }
                         }
                     }
@@ -470,12 +470,12 @@ ApplicationWindow {
                             nerdIcon: "󰊤"
                             mainText: Translation.tr("GitHub")
                             onClicked: {
-                                Qt.openUrlExternally("https://github.com/end-4/dots-hyprland");
+                                Qt.openUrlExternally("https://github.com/XephyLon/immaterial-impulse");
                             }
                         }
                         RippleButtonWithIcon {
                             materialIcon: "favorite"
-                            mainText: "Funny number"
+                            mainText: Translation.tr("Sponsor end-4")
                             onClicked: {
                                 Qt.openUrlExternally("https://github.com/sponsors/end-4");
                             }

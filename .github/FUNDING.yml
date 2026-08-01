@@ -1,6 +1,10 @@
 # These are supported funding model platforms
 
-github: end-4 # Replace with up to 4 GitHub Sponsors-enabled usernames e.g., [user1, user2]
+# Inherited from the project this forked from. Pointing this repo's Sponsor
+# button at end-4 misattributes who is being funded for work done here, so it
+# is left empty until there's a handle of our own to put in it. end-4 is still
+# linked - explicitly labelled - from the welcome screen's credits.
+github: # Replace with up to 4 GitHub Sponsors-enabled usernames e.g., [user1, user2]
 patreon: # Replace with a single Patreon username
 open_collective: # Replace with a single Open Collective username
 ko_fi: # Replace with a single Ko-fi username
