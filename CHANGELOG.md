@@ -21,8 +21,22 @@ own repo; the installer pins which revision it builds.
   store to `modules/common/widgets/`, so both filter surfaces share one
   implementation. The capability vocabulary moved to
   `PluginManager.surfaceCapabilities` for the same reason.
+- Each widget card now carries **surface tags** from that same vocabulary, so
+  a card explains why a filter matched it. The third-party pill and the new
+  tags share a `Badge` widget rather than open-coding the same pill twice.
+- Widget settings (frost, blurred opacity, install-from-URL) moved into their
+  own section. They describe how widgets behave, not which ones the list is
+  showing, and they had been standing between the "Available Widgets" header
+  and the list it names.
 
 ### Fixed
+- **A widget's options disappeared when a filter was selected.**
+  `ExpandablePanel` only ever received a height from `animateTo()`, which runs
+  solely from `onExpandedChanged` — so a panel *created* already expanded never
+  emitted the signal, never got a height, and rendered its content clipped to
+  nothing. Selecting a filter rebuilds the list's delegates, so every enabled
+  widget came back open-but-empty until its switch was toggled off and on.
+  Affects any call site that creates a panel in the expanded state.
 - Plugins declaring `overlay-widget` (Discord Voice) were missing from the
   capability vocabulary entirely and matched no filter.
 - Widgets whose manifest predates the `capabilities` key (the bundled clock)
