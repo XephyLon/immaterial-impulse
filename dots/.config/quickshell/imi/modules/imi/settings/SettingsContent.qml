@@ -669,6 +669,19 @@ Item {
                         }
                     }
 
+                    // A page whose QML fails to resolve emits a `WARN scene:`
+                    // line and nothing else - the pane simply goes blank,
+                    // which is indistinguishable from a page with no content
+                    // and reads as a broken app. Name the failure instead.
+                    PagePlaceholder {
+                        readonly property var currentLoader: pagesRepeater.itemAt(root.currentPage) ?? null
+                        shown: !root.showingProfile && currentLoader?.status === Loader.Error
+                        icon: "error"
+                        title: Translation.tr("This page failed to load")
+                        description: Translation.tr("Its QML could not be built. The shell log has a 'WARN scene' line naming the file and the line that failed.")
+                        descriptionHorizontalAlignment: Text.AlignHCenter
+                    }
+
                     Loader {
                         id: profileLoader
                         active: false
