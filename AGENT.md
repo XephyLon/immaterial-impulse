@@ -53,7 +53,7 @@ Quickshell instance is running. Each write can trigger a full reload; repeated r
 inconsistent module move have coincided with shell and whole-session starvation. Stop Quickshell
 or use a worktree, validate headlessly, then perform one controlled live load.
 
-- Entry point: `shell.qml` → loads a **panel family** (currently only `"ii"`, from
+- Entry point: `shell.qml` → loads a **panel family** (currently only `"imi"`, from
   `panelFamilies/ImmaterialImpulseFamily.qml`) which is a flat list of `PanelLoader { component: X {} }`
   entries, one per top-level feature module.
 - Singletons (declared with `pragma Singleton`) are the shell's shared state and services. They are
@@ -145,7 +145,7 @@ modules/common/             Shared, feature-agnostic building blocks
                               (M3E feedback-motion wrapper for dock icons), etc.
   functions/, models/, utils/, panels/   Supporting JS logic, list models, window-panel base classes
 
-modules/imi/                 The "ii" (Immaterial Impulse) panel family - one directory per feature:
+modules/imi/                 The "imi" (Immaterial Impulse) panel family - one directory per feature:
   bar/                        The top/bottom bar and everything docked in it (Resources, Media,
                               SysTray, Workspaces, clock, quick toggles, ...)
   sidebarLeft/, sidebarRight/ Slide-out panels (AI chat, quick settings, notifications, volume mixer)
@@ -173,7 +173,7 @@ services/                  Singletons wrapping external state/processes - one pe
   MprisController.qml, Weather.qml, Docker.qml, ... (one per integration)
 
 panelFamilies/              PanelLoader.qml (thin LazyLoader) + ImmaterialImpulseFamily.qml (the
-                            actual list of panels for the "ii" family)
+                            actual list of panels for the "imi" family)
 
 scripts/                   Standalone helper scripts (Python/bash) invoked via Process/Quickshell.execDetached
 translations/              i18n string tables (Translation.tr(...) singleton)

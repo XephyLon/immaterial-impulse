@@ -62,13 +62,13 @@ If you like it and want it to load by default instead of `ii`, edit:
 And change this line:
 
 ```lua
-hl.env("qsConfig", "ii")
+hl.env("qsConfig", "imi")
 ```
 
 to:
 
 ```lua
-hl.env("qsConfig", "ii")
+hl.env("qsConfig", "imi")
 ```
 
 > [!TIP]
