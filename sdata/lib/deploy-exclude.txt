@@ -4,3 +4,4 @@ screenshots/
 .gitignore
 *RuntimeTest.qml
 DesignSystemCompile.qml
+ExpandablePanelGallery.qml
