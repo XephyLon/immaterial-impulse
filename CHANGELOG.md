@@ -12,6 +12,42 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-08-01
+
+> **Wallpaper Engine users: re-run the installer.** This release fixes a bug
+> where apps launched from the shell inherited the wrapper's library path and
+> could crash on startup. The fix lives in the wrapper at
+> `/usr/local/bin/quickshell`, so it only takes effect once the Wallpaper
+> Engine install step runs again.
+
+### Added
+- **`ExpandablePanel`** — a shared, plugin-facing component for rows that
+  expand, implementing every Expandable Content rule in the M3 guidelines:
+  asymmetric enter/exit motion, opacity paired with the height, clipping,
+  content that stays alive until its exit reaches zero, a leading-edge
+  indent, and collapsed content that takes no keyboard focus. The outline,
+  hairline rule, shape morph, tonal lift and staggered reveal are all
+  optional properties, so plugin authors get correct behaviour by default
+  and can dress it to match their widget.
+
+### Changed
+- Docker container and Compose cards are built on `ExpandablePanel`. They
+  gain the correct collapse curve, a paired fade, input gating and a
+  staggered reveal of their action buttons.
+- **A fresh install now enables no plugins.** Seven were on by default,
+  several of which paint on the desktop immediately, and their off switch
+  lives under Plugins rather than Widgets — so people were finding widgets
+  they could not work out how to remove. Existing installs are untouched.
+
+### Fixed
+- **Apps launched from the shell could crash on startup** on Wallpaper
+  Engine installs. The wrapper exported `LD_LIBRARY_PATH` with the
+  linux-wallpaperengine lib directories on it; that is inherited by every
+  process the shell spawns, and those directories ship CEF's own
+  `libEGL.so` and `libGLESv2.so`. Firefox resolved those instead of the
+  system libraries and died during GPU init. The export was never needed —
+  the binary already carries a `RUNPATH` — and is gone.
+
 ## [0.8.0] — 2026-08-01
 
 Mostly a correctness release. Two of the fixes below were reported by
@@ -618,7 +654,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.6.0...v0.6.1
