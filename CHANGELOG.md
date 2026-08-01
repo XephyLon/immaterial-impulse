@@ -12,6 +12,44 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-08-01
+
+### Added
+- `ExpandablePanel` gains a **clickable header**: the whole row becomes a
+  ripple surface, so a panel whose header holds only a small chevron no
+  longer feels dead next to one filled by a switch. It reports the click
+  rather than toggling itself, so a call site that binds `expanded` to its
+  own state keeps that binding.
+- `RippleButton` gains **per-corner radii** and an **`appear`** reveal
+  factor, so the fourteen shared buttons derived from it can sit in a
+  panel header or cascade in without either capability being re-derived at
+  each call site.
+- A developer gallery for judging the panel's optional traits side by side
+  against the defaults (`qs -p ExpandablePanelGallery.qml`, not shipped).
+
+### Changed
+- The settings page's plugin cards are now built on `ExpandablePanel` too,
+  so they and the Docker popup's container cards share one implementation
+  rather than resembling each other. Both toggle from anywhere on the
+  header, with a ripple across the row.
+- Staggered content rises into place as it appears, and animates out
+  instead of snapping.
+
+### Fixed
+- Expanding a panel jolted instead of gliding. The vertical insets were
+  applied in a single frame while only the content height eased, so the
+  card jumped ~21px and then animated the rest.
+- Every expansion after the first ran the *collapse* curve — accelerating
+  instead of decelerating — because one animation chose its duration and
+  easing from a ternary that had not re-evaluated by the time it started.
+- Collapsed content was excluded from layout while hidden, so re-opening
+  animated toward a stale height and corrected mid-flight.
+- Disabled buttons inside an expanded panel rendered as if enabled. The
+  staggered reveal wrote `opacity` directly, destroying the binding that
+  expresses the disabled state.
+- A panel header's hover and ripple kept rounded bottom corners while
+  open, leaving notches against the content below.
+
 ## [0.9.2] — 2026-08-01
 
 ### Fixed
@@ -684,7 +722,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.8.0...v0.9.0
