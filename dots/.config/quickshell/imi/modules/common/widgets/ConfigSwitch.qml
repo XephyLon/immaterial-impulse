@@ -12,11 +12,14 @@ RippleButton {
     // explanation doesn't stretch the row.
     property string infoText: ""
     property alias iconSize: iconWidget.iconSize
-    // A row beneath the description, inside the label block. For detail that
-    // belongs with the text rather than with the control - a byline, tags
-    // stating a fact about the row. It has to live in here: a call site can
-    // only append to the outer row, which puts things beside the switch
-    // instead of beside the words they describe.
+    // A full-width row beneath everything else, for detail about the row - a
+    // byline, tags stating a fact about it. It spans the whole control rather
+    // than just the label block, so a call site can push trailing items to the
+    // same right edge the switch sits on; inside the label block they would
+    // stop short of the switch and hang diagonally beneath it.
+    //
+    // Empty for every caller that does not set it, and an empty RowLayout has
+    // no height, so this costs nothing elsewhere.
     property alias detailContent: detailRow.data
     colBackgroundHover: "transparent"
 
@@ -26,56 +29,60 @@ RippleButton {
 
     onClicked: checked = !checked
 
-    contentItem: RowLayout {
-        spacing: Appearance.spacing.space150
-        OptionalMaterialSymbol {
-            id: iconWidget
-            icon: root.buttonIcon
-            opacity: root.enabled ? 1 : 0.4
-            iconSize: Appearance.font.pixelSize.larger
-        }
-        ColumnLayout {
+    contentItem: ColumnLayout {
+        spacing: 0
+
+        RowLayout {
             Layout.fillWidth: true
-            spacing: 0
-            StyledText {
-                id: labelWidget
+            spacing: Appearance.spacing.space150
+            OptionalMaterialSymbol {
+                id: iconWidget
+                icon: root.buttonIcon
+                opacity: root.enabled ? 1 : 0.4
+                iconSize: Appearance.font.pixelSize.larger
+            }
+            ColumnLayout {
                 Layout.fillWidth: true
-                text: root.text
-                textFormat: Text.PlainText
-                font: root.font
-                color: Appearance.colors.colOnSecondaryContainer
+                spacing: 0
+                StyledText {
+                    id: labelWidget
+                    Layout.fillWidth: true
+                    text: root.text
+                    textFormat: Text.PlainText
+                    font: root.font
+                    color: Appearance.colors.colOnSecondaryContainer
+                    opacity: root.enabled ? 1 : 0.4
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    visible: root.description.length > 0
+                    text: root.description
+                    textFormat: Text.PlainText
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colSubtext
+                    wrapMode: Text.Wrap
+                    opacity: root.enabled ? 1 : 0.4
+                }
+            }
+            InfoTooltipIcon {
+                tooltipText: root.infoText
                 opacity: root.enabled ? 1 : 0.4
             }
-            StyledText {
-                Layout.fillWidth: true
-                visible: root.description.length > 0
-                text: root.description
-                textFormat: Text.PlainText
-                font.pixelSize: Appearance.font.pixelSize.smaller
-                color: Appearance.colors.colSubtext
-                wrapMode: Text.Wrap
-                opacity: root.enabled ? 1 : 0.4
+
+            StyledSwitch {
+                id: switchWidget
+                down: root.down
+                Layout.fillWidth: false
+                checked: root.checked
+                onClicked: root.clicked()
             }
-            RowLayout {
-                id: detailRow
-                // Fills the label block so a call site can push trailing items
-                // to the far edge with a spacer.
-                Layout.fillWidth: true
-                spacing: Appearance.spacing.space50
-                opacity: root.enabled ? 1 : 0.4
-            }
-        }
-        InfoTooltipIcon {
-            tooltipText: root.infoText
-            opacity: root.enabled ? 1 : 0.4
         }
 
-        StyledSwitch {
-            id: switchWidget
-            down: root.down
-            Layout.fillWidth: false
-            checked: root.checked
-            onClicked: root.clicked()
+        RowLayout {
+            id: detailRow
+            Layout.fillWidth: true
+            spacing: Appearance.spacing.space50
+            opacity: root.enabled ? 1 : 0.4
         }
     }
 }
