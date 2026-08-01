@@ -10,6 +10,11 @@ StyledText {
     property real resolvedFill: fill >= 0.5 ? 1.0 : 0.0
 
     renderType: Text.NativeRendering
+    // Icon ligature names are never rich text, and some reach here from
+    // attacker-controlled plugin manifests (PluginOptions feeds
+    // `optionData.icon` through ConfigSwitch.buttonIcon). StyledText inherits
+    // Text.AutoText, which would render "<img src=...>" as markup.
+    textFormat: Text.PlainText
 
     font {
         hintingPreference: Font.PreferNoHinting

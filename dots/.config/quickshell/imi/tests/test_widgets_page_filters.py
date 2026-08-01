@@ -218,9 +218,16 @@ class SettingsLabelsArePlainText(unittest.TestCase):
         manifest name of "<img src=...>" would render as markup.
         """
         src = SWITCH.read_text(encoding="utf-8")
-        self.assertEqual(
-            src.count("textFormat: Text.PlainText"), 2,
-            "both the label and the description StyledText need PlainText")
+        # Asserted per-block rather than as an exact count of 2: counting
+        # fails when a *third* element in this file is legitimately hardened,
+        # which would penalise the more secure change and pressure someone
+        # into weakening the assertion.
+        for binding in ("text: root.text", "text: root.description"):
+            start = src.index(binding)
+            end = src.find("StyledText {", start)
+            block = src[start:end if end != -1 else len(src)]
+            self.assertIn("textFormat: Text.PlainText", block,
+                          f"`{binding}` renders without PlainText")
 
     def test_page_still_feeds_manifest_strings_through_config_switch(self):
         """Pins why the fix lives in ConfigSwitch rather than on the page: if
@@ -229,9 +236,28 @@ class SettingsLabelsArePlainText(unittest.TestCase):
         """
         page = PAGE.read_text(encoding="utf-8")
         self.assertIn("text: modelData.name", page)
+        # An optional id prefix matters: this page's delegate writes
+        # `pluginCard.modelData.name`, so a pattern requiring `modelData`
+        # immediately after `text:` would miss the single most likely form of
+        # the regression it exists to catch.
         self.assertNotRegex(
-            page, r"StyledText\s*\{[^}]*text:\s*modelData\.(name|description)",
+            page,
+            r"StyledText\s*\{[^}]*text:\s*[\w.]*modelData\.(name|description)",
             "the page renders a manifest string directly - harden it too")
+
+    def test_material_symbol_renders_icon_names_as_plain_text(self):
+        """ConfigSwitch's own buttonIcon is an injection path.
+
+        buttonIcon -> OptionalMaterialSymbol -> MaterialSymbol, and
+        MaterialSymbol is itself a StyledText. PluginOptions feeds it
+        `optionData.icon` straight from the manifest, so an option icon of
+        "<img src=...>" rendered as markup inside the very widget the
+        PlainText fix was meant to close. Icon ligature names are never rich
+        text, so pinning this globally is safe.
+        """
+        symbol = (ROOT / "modules/common/widgets/MaterialSymbol.qml").read_text(
+            encoding="utf-8")
+        self.assertIn("textFormat: Text.PlainText", symbol)
 
 
 class UserFacingRename(unittest.TestCase):
