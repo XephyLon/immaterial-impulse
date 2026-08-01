@@ -338,41 +338,6 @@ Item {
                         expanded: configSwitch.checked
 
                         header: [
-                                // Leading edge, away from the enable switch: a
-                                // destructive action should not sit against the control
-                                // people reach for constantly.
-                                //
-                                // Only installed packages live on disk and can be
-                                // removed; bundled plugins ship with the shell. Removal
-                                // is gated on the plugin being disabled so a running
-                                // plugin is never pulled out from under itself.
-                                RippleButton {
-                                    id: deleteButton
-                                    visible: pluginCard.modelData._origin === "installed"
-                                    enabled: !configSwitch.isEnabled && !PluginManager.uninstalling
-                                    Layout.alignment: Qt.AlignVCenter
-                                    implicitWidth: 36
-                                    implicitHeight: 36
-                                    buttonRadius: Appearance.rounding.full
-                                    colBackground: "transparent"
-                                    colBackgroundHover: Appearance.colors.colLayer2
-                                    onClicked: PluginManager.requestUninstall(pluginCard.modelData.id)
-
-                                    contentItem: MaterialSymbol {
-                                        anchors.centerIn: parent
-                                        text: "delete"
-                                        iconSize: Appearance.font.pixelSize.larger
-                                        color: deleteButton.enabled
-                                            ? Appearance.colors.colError : Appearance.colors.colSubtext
-                                    }
-
-                                    StyledToolTip {
-                                        text: configSwitch.isEnabled
-                                            ? Translation.tr("Disable the widget before deleting")
-                                            : Translation.tr("Delete widget")
-                                    }
-                                },
-
                                 ConfigSwitch {
                                     id: configSwitch
                                     Layout.fillWidth: true
@@ -492,6 +457,37 @@ Item {
                                     StyledToolTip {
                                         text: Translation.tr("Update to v%1")
                                             .arg(pluginCard.storeEntry?.version ?? "")
+                                    }
+                                },
+
+                                // Only installed packages live on disk and can be
+                                // removed; bundled plugins ship with the shell. Removal
+                                // is gated on the plugin being disabled so a running
+                                // plugin is never pulled out from under itself.
+                                RippleButton {
+                                    id: deleteButton
+                                    visible: pluginCard.modelData._origin === "installed"
+                                    enabled: !configSwitch.isEnabled && !PluginManager.uninstalling
+                                    Layout.alignment: Qt.AlignVCenter
+                                    implicitWidth: 36
+                                    implicitHeight: 36
+                                    buttonRadius: Appearance.rounding.full
+                                    colBackground: "transparent"
+                                    colBackgroundHover: Appearance.colors.colLayer2
+                                    onClicked: PluginManager.requestUninstall(pluginCard.modelData.id)
+
+                                    contentItem: MaterialSymbol {
+                                        anchors.centerIn: parent
+                                        text: "delete"
+                                        iconSize: Appearance.font.pixelSize.larger
+                                        color: deleteButton.enabled
+                                            ? Appearance.colors.colError : Appearance.colors.colSubtext
+                                    }
+
+                                    StyledToolTip {
+                                        text: configSwitch.isEnabled
+                                            ? Translation.tr("Disable the widget before deleting")
+                                            : Translation.tr("Delete widget")
                                     }
                                 }
                         ]
