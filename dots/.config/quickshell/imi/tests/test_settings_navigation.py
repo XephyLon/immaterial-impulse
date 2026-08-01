@@ -30,7 +30,7 @@ class SettingsNavigationTests(unittest.TestCase):
         self.assertEqual(
             [name for name, _ in page_entries],
             ["Quick", "Appearance", "Wallpaper & Desktop", "Bar & Dock", "Sidebars & Panels",
-             "Notifications", "Lock & Idle", "Capture", "General", "Services", "Plugins",
+             "Notifications", "Lock & Idle", "Capture", "General", "Services", "Widgets",
              "Hyprland", "About"],
         )
         self.assertTrue(all(sections.strip() for name, sections in page_entries if name != "About"))
@@ -94,7 +94,9 @@ class SettingsNavigationTests(unittest.TestCase):
             "Capture": "CaptureConfig.qml",
             "General": "GeneralConfig.qml",
             "Services": "ServicesConfig.qml",
-            "Plugins": "PluginsPage.qml",
+            # The page file deliberately keeps its Plugin* name; only the
+            # user-facing noun became "Widgets".
+            "Widgets": "PluginsPage.qml",
             "Hyprland": "HyprlandConfig.qml",
             "About": "About.qml",
         }

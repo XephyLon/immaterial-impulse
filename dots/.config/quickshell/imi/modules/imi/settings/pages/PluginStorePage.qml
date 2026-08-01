@@ -91,7 +91,7 @@ ContentPage {
     }
 
     ContentSection {
-        title: Translation.tr("Plugin store")
+        title: Translation.tr("Widget store")
         Layout.fillWidth: true
         icon: "storefront"
         shape: MaterialShape.Shape.Diamond
@@ -106,7 +106,7 @@ ContentPage {
 
                 RippleButtonWithIcon {
                     materialIcon: "arrow_back"
-                    mainText: Translation.tr("Back to plugins")
+                    mainText: Translation.tr("Back to widgets")
                     onClicked: root.closeRequested()
                 }
 
@@ -133,7 +133,7 @@ ContentPage {
                 id: searchField
                 Layout.fillWidth: true
                 buttonIcon: "search"
-                text: Translation.tr("Search plugins")
+                text: Translation.tr("Search widgets")
                 placeholderText: Translation.tr("Name, description or tag")
                 fieldWidth: 300
                 singleLine: true
@@ -192,10 +192,10 @@ ContentPage {
                 Layout.fillWidth: true
                 visible: root.filteredEntries.length === 0
                 text: PluginStore.fetching
-                    ? Translation.tr("Fetching plugin catalog…")
+                    ? Translation.tr("Fetching widget catalog…")
                     : (PluginStore.entries.length === 0
-                        ? Translation.tr("No plugins in the catalog yet.")
-                        : Translation.tr("No plugins match the current filters."))
+                        ? Translation.tr("No widgets in the catalog yet.")
+                        : Translation.tr("No widgets match the current filters."))
                 font.pixelSize: Appearance.font.pixelSize.small
                 color: Appearance.colors.colSubtext
                 wrapMode: Text.Wrap

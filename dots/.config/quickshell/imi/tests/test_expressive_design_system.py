@@ -138,7 +138,7 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         )
         self.assertNotIn('key: "blurTintOpacity"', options)
         self.assertIn("property real blurOpacity: 0.1", config)
-        self.assertIn('Translation.tr("Blurred plugin opacity")', plugins_page)
+        self.assertIn('Translation.tr("Blurred widget opacity")', plugins_page)
         self.assertIn("property bool hasCustomBlurRegions", node)
         self.assertIn("property bool managesBlurTint", node)
         self.assertIn("readonly property var blurRegions", monitor)

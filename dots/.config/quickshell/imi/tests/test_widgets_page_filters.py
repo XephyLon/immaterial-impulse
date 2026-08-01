@@ -15,6 +15,7 @@ STORE = ROOT / "modules/imi/settings/pages/PluginStorePage.qml"
 MANAGER = ROOT / "modules/common/plugins/PluginManager.qml"
 PAGE = ROOT / "modules/imi/settings/pages/PluginsPage.qml"
 SWITCH = ROOT / "modules/common/widgets/ConfigSwitch.qml"
+NAV = ROOT / "modules/imi/settings/SettingsContent.qml"
 
 
 class FilterChipIsShared(unittest.TestCase):
@@ -231,6 +232,24 @@ class SettingsLabelsArePlainText(unittest.TestCase):
         self.assertNotRegex(
             page, r"StyledText\s*\{[^}]*text:\s*modelData\.(name|description)",
             "the page renders a manifest string directly - harden it too")
+
+
+class UserFacingRename(unittest.TestCase):
+    def test_nav_entry_says_widgets(self):
+        src = NAV.read_text(encoding="utf-8")
+        self.assertIn('Translation.tr("Widgets")', src)
+        self.assertIn('Translation.tr("Available Widgets")', src)
+
+    def test_nav_entry_still_points_at_the_unrenamed_page_file(self):
+        """Types, files and config keys deliberately keep their Plugin* names;
+        renaming them would break every existing install for no user benefit.
+        """
+        src = NAV.read_text(encoding="utf-8")
+        self.assertIn("pages/PluginsPage.qml", src)
+
+    def test_config_key_is_untouched(self):
+        page = PAGE.read_text(encoding="utf-8")
+        self.assertIn("Config.options.plugins", page)
 
 
 if __name__ == "__main__":

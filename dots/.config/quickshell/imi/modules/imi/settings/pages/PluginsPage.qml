@@ -66,9 +66,9 @@ Item {
         forceWidth: true
 
         ContentSection {
-            title: Translation.tr("Available Plugins")
+            title: Translation.tr("Available Widgets")
             Layout.fillWidth: true
-            icon: "extension"
+            icon: "widgets"
             shape: MaterialShape.Shape.Diamond
 
             ColumnLayout {
@@ -108,7 +108,7 @@ Item {
                             }
                             StyledText {
                                 Layout.alignment: Qt.AlignVCenter
-                                text: Translation.tr("Browse plugins")
+                                text: Translation.tr("Browse widgets")
                                 font.pixelSize: Appearance.font.pixelSize.normal
                                 font.weight: Font.DemiBold
                                 color: Appearance.colors.colOnPrimary
@@ -148,7 +148,7 @@ Item {
                         HoverHandler { id: updateBadgeHover }
                         StyledToolTip {
                             extraVisibleCondition: updateBadgeHover.hovered
-                            text: Translation.tr("Plugin updates available in the store")
+                            text: Translation.tr("Widget updates available in the store")
                         }
                     }
 
@@ -160,7 +160,7 @@ Item {
 
                     ConfigSelectionArray {
                         Layout.fillWidth: true
-                        text: Translation.tr("Plugin frost")
+                        text: Translation.tr("Widget frost")
                         icon: "blur_on"
                         currentValue: Config.options.plugins.frostMode
                         onSelected: newValue => {
@@ -175,7 +175,7 @@ Item {
 
                     ConfigSlider {
                         Layout.fillWidth: true
-                        text: Translation.tr("Blurred plugin opacity")
+                        text: Translation.tr("Blurred widget opacity")
                         buttonIcon: "opacity"
                         from: 0
                         to: 1
@@ -197,7 +197,7 @@ Item {
                         id: manifestUrl
                         Layout.fillWidth: true
                         buttonIcon: "extension"
-                        text: Translation.tr("Plugin manifest URL")
+                        text: Translation.tr("Widget manifest URL")
                         placeholderText: Translation.tr("https://…/manifest.json")
                         fieldWidth: 300
                         singleLine: true
@@ -401,7 +401,7 @@ Item {
                                         // Rectangle has no `hovered` property, so gate
                                         // explicitly or the tooltip stays visible.
                                         extraVisibleCondition: badgeHover.hovered
-                                        text: Translation.tr("Installed from an external source — only enable plugins you trust")
+                                        text: Translation.tr("Installed from an external source — only enable widgets you trust")
                                     }
                                 },
 
@@ -431,8 +431,8 @@ Item {
 
                                     StyledToolTip {
                                         text: configSwitch.isEnabled
-                                            ? Translation.tr("Disable the plugin before deleting")
-                                            : Translation.tr("Delete plugin")
+                                            ? Translation.tr("Disable the widget before deleting")
+                                            : Translation.tr("Delete widget")
                                     }
                                 }
                         ]
