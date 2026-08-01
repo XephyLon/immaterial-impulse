@@ -88,8 +88,6 @@ Scope { // Scope
         sourceComponent: PanelWindow { // Window
             id: panelWindow
 
-            readonly property bool animatedEntrance: WM.compositor !== "hyprland"
-
             property bool reallyVisible: false
             visible: reallyVisible
 
@@ -98,21 +96,8 @@ Scope { // Scope
             Connections {
                 target: GlobalStates
                 function onSidebarLeftOpenChanged() {
-                    if (GlobalStates.sidebarLeftOpen) {
-                        closeAnimTimer.stop();
-                        panelWindow.reallyVisible = true;
-                    } else if (panelWindow.animatedEntrance) {
-                        closeAnimTimer.restart();
-                    } else {
-                        panelWindow.reallyVisible = false;
-                    }
+                    panelWindow.reallyVisible = GlobalStates.sidebarLeftOpen;
                 }
-            }
-
-            Timer {
-                id: closeAnimTimer
-                interval: Appearance.animation.elementMoveExit.duration
-                onTriggered: panelWindow.reallyVisible = false
             }
 
             property bool extend: false
@@ -151,7 +136,7 @@ Scope { // Scope
             }
 
             mask: Region {
-                item: panelWindow.animatedEntrance ? fullMaskArea : sidebarLeftBackground
+                item: sidebarLeftBackground
             }
 
             onVisibleChanged: {
@@ -169,19 +154,6 @@ Scope { // Scope
             }
 
             // Content
-            Item {
-                id: fullMaskArea
-                anchors.fill: parent
-            }
-
-            MouseArea {
-                id: outsideClickArea
-                anchors.fill: parent
-                enabled: panelWindow.animatedEntrance
-                visible: panelWindow.animatedEntrance
-                onClicked: panelWindow.hide()
-            }
-
             StyledRectangularShadow {
                 target: sidebarLeftBackground
                 radius: sidebarLeftBackground.radius
@@ -197,24 +169,7 @@ Scope { // Scope
                 border.color: Appearance.colors.colLayer0Border
                 radius: Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut + 1
 
-                readonly property bool animatedEntrance: panelWindow.animatedEntrance
-                readonly property bool sidebarOpen: GlobalStates.sidebarLeftOpen
-                x: Appearance.sizes.hyprlandGapsOut - (animatedEntrance && !sidebarOpen ? width : 0)
-
-                Behavior on x {
-                    enabled: sidebarLeftBackground.animatedEntrance
-                    NumberAnimation {
-                        duration: sidebarLeftBackground.sidebarOpen
-                            ? Appearance.animation.elementMoveEnter.duration
-                            : Appearance.animation.elementMoveExit.duration
-                        easing.type: sidebarLeftBackground.sidebarOpen
-                            ? Appearance.animation.elementMoveEnter.type
-                            : Appearance.animation.elementMoveExit.type
-                        easing.bezierCurve: sidebarLeftBackground.sidebarOpen
-                            ? Appearance.animation.elementMoveEnter.bezierCurve
-                            : Appearance.animation.elementMoveExit.bezierCurve
-                    }
-                }
+                x: Appearance.sizes.hyprlandGapsOut
 
                 Behavior on width {
                     animation: Appearance.animation.elementMove.numberAnimation.createObject(this)

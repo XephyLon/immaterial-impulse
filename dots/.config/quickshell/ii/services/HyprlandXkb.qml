@@ -24,7 +24,6 @@ Singleton {
     // Update the layout code according to the layout name (Hyprland gives the name not the code)
     onCurrentLayoutNameChanged: root.updateLayoutCode()
     function updateLayoutCode() {
-        if (WM.compositor !== "hyprland") return;
         if (cachedLayoutCodes.hasOwnProperty(currentLayoutName)) {
             root.currentLayoutCode = cachedLayoutCodes[currentLayoutName];
         } else {
@@ -74,7 +73,7 @@ Singleton {
     // Find out available layouts and current active layout. Should only be necessary on init
     Process {
         id: fetchLayoutsProc
-        running: WM.compositor === "hyprland"
+        running: true
         command: ["hyprctl", "-j", "devices"]
 
         stdout: StdioCollector {
@@ -91,7 +90,6 @@ Singleton {
     // Update the layout name when it changes
     Connections {
         target: Hyprland
-        enabled: WM.compositor === "hyprland"
         function onRawEvent(event) {
             if (event.name === "activelayout") {
                 if (root.needsLayoutRefresh) {

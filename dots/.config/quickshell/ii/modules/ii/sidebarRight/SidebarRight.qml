@@ -15,7 +15,6 @@ Scope {
     PanelWindow {
         id: panelWindow
 
-        readonly property bool animatedEntrance: WM.compositor !== "hyprland"
         property bool reallyVisible: false
         visible: reallyVisible
 
@@ -24,21 +23,8 @@ Scope {
         Connections {
             target: GlobalStates
             function onSidebarRightOpenChanged() {
-                if (GlobalStates.sidebarRightOpen) {
-                    closeAnimTimer.stop();
-                    panelWindow.reallyVisible = true;
-                } else if (panelWindow.animatedEntrance) {
-                    closeAnimTimer.restart();
-                } else {
-                    panelWindow.reallyVisible = false;
-                }
+                panelWindow.reallyVisible = GlobalStates.sidebarRightOpen;
             }
-        }
-
-        Timer {
-            id: closeAnimTimer
-            interval: 150
-            onTriggered: panelWindow.reallyVisible = false
         }
 
         function hide() {
@@ -70,7 +56,6 @@ Scope {
             top: true
             right: true
             bottom: true
-            left: animatedEntrance
         }
 
         margins {
@@ -89,14 +74,6 @@ Scope {
         Item {
             anchors.fill: parent
 
-            MouseArea {
-                id: outsideClickArea
-                anchors.fill: parent
-                enabled: panelWindow.animatedEntrance
-                visible: panelWindow.animatedEntrance
-                onClicked: panelWindow.hide()
-            }
-
             Item {
                 id: entranceWrapper
                 anchors.top: parent.top
@@ -104,31 +81,15 @@ Scope {
                 width: sidebarWidth
                 clip: true
 
-                readonly property bool open: GlobalStates.sidebarRightOpen
                 property real cachedParentWidth: sidebarWidth
                 readonly property real restX: cachedParentWidth - width
-                x: panelWindow.animatedEntrance ? (open ? restX : cachedParentWidth) : restX
+                x: restX
 
                 Connections {
                     target: entranceWrapper.parent
                     function onWidthChanged() {
                         if (entranceWrapper.parent.width > 0)
                             entranceWrapper.cachedParentWidth = entranceWrapper.parent.width;
-                    }
-                }
-
-                Behavior on x {
-                    enabled: panelWindow.animatedEntrance
-                    NumberAnimation {
-                        duration: entranceWrapper.open
-                            ? Appearance.animation.sidebarSlideEnter.duration
-                            : Appearance.animation.sidebarSlideExit.duration
-                        easing.type: entranceWrapper.open
-                            ? Appearance.animation.sidebarSlideEnter.type
-                            : Appearance.animation.sidebarSlideExit.type
-                        easing.bezierCurve: entranceWrapper.open
-                            ? Appearance.animation.sidebarSlideEnter.bezierCurve
-                            : Appearance.animation.sidebarSlideExit.bezierCurve
                     }
                 }
 

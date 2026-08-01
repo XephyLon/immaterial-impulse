@@ -25,7 +25,7 @@ Singleton {
     }
 
     Component.onCompleted: {
-        console.log("[GlobalFocusGrab] Initialized" + (WM.compositor !== "hyprland" ? " (inactive, non-Hyprland compositor)" : ""));
+        console.log("[GlobalFocusGrab] Initialized");
     }
 
     function addPersistent(window) {
@@ -81,7 +81,7 @@ Singleton {
     HyprlandFocusGrab {
         id: grab
         windows: root.dismissable.every(w => !w?.focusable) || root.dismissable.some(w => root.hasActive(w?.contentItem)) ? [...root.dismissable, ...root.persistent] : [...root.dismissable]
-        active: WM.compositor === "hyprland" && root.dismissable.length > 0
+        active: root.dismissable.length > 0
         onCleared: () => {
             dismissDebounce.restart();
         }

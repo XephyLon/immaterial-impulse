@@ -36,7 +36,6 @@ Item {
     property bool editMode: false
     property bool showIconPickerDialog: false
 
-    readonly property bool animatedEntrance: WM.compositor !== "hyprland"
     readonly property bool sidebarOpen: GlobalStates.sidebarRightOpen
 
     readonly property MprisPlayer activePlayer: MprisController.activePlayer

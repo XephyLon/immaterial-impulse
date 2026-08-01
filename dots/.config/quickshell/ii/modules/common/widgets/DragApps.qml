@@ -319,8 +319,7 @@ Item {
         id: previewPopup
         property var appTopLevel: root.lastHoveredButton?.appToplevel ?? null
 
-        property bool shouldShow: WM.compositor === "hyprland"
-                                  && (popupMouseArea.containsMouse || root.buttonHovered)
+        property bool shouldShow: (popupMouseArea.containsMouse || root.buttonHovered)
                                   && !root._dragging
                                   && !(root.contextMenu?.isOpen ?? false)
                                   && appTopLevel
@@ -417,7 +416,7 @@ Item {
 
                     Repeater {
                         model: ScriptModel {
-                            values: WM.compositor === "hyprland" ? (previewPopup.appTopLevel?.toplevels ?? []) : []
+                            values: previewPopup.appTopLevel?.toplevels ?? []
                         }
 
                         RippleButton {

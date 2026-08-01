@@ -11,10 +11,8 @@ NestableObject {
     required property var screen
     readonly property string monitorName: screen?.name ?? ""
 
-    readonly property var hyprMonitor: WM.compositor === "hyprland" ? Hyprland.monitorFor(screen) : null
-    readonly property var liveMonitorData: WM.compositor === "hyprland"
-        ? HyprlandData.monitors.find(m => m.id === hyprMonitor?.id)
-        : null
+    readonly property var hyprMonitor: Hyprland.monitorFor(screen)
+    readonly property var liveMonitorData: HyprlandData.monitors.find(m => m.id === hyprMonitor?.id)
 
     readonly property Toplevel activeWindow: ToplevelManager.activeToplevel
     readonly property int shownCount: C.Config.options.bar.workspaces.shown

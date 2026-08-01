@@ -61,28 +61,23 @@ Singleton {
     // Internals
 
     function updateWindowList() {
-        if (WM.compositor !== "hyprland") return;
         getClients.running = true;
     }
 
     function updateLayers() {
-        if (WM.compositor !== "hyprland") return;
         getLayers.running = true;
     }
 
     function updateMonitors() {
-        if (WM.compositor !== "hyprland") return;
         getMonitors.running = true;
     }
 
     function updateWorkspaces() {
-        if (WM.compositor !== "hyprland") return;
         getWorkspaces.running = true;
         getActiveWorkspace.running = true;
     }
 
     function updateAll() {
-        if (WM.compositor !== "hyprland") return;
         updateWindowList();
         updateMonitors();
         updateLayers();
@@ -115,7 +110,6 @@ Singleton {
 
     Connections {
         target: Hyprland
-        enabled: WM.compositor === "hyprland"
 
         function onRawEvent(event) {
             if (["openlayer", "closelayer", "screencast"].includes(event.name)) return;

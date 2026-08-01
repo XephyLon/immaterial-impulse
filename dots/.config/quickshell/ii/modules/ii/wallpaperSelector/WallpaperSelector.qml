@@ -40,9 +40,7 @@ Scope {
         sourceComponent: PanelWindow {
             id: panelWindow
             readonly property var monitor: WM.monitorFor(panelWindow.screen)
-            property bool monitorIsFocused: WM.compositor === "hyprland"
-                ? (Hyprland.focusedMonitor?.name == monitor?.name)
-                : (WM.focusedMonitor?.name == monitor?.name)
+            property bool monitorIsFocused: Hyprland.focusedMonitor?.name == monitor?.name
 
             exclusionMode: ExclusionMode.Ignore
             WlrLayershell.namespace: "quickshell:wallpaperSelector"
