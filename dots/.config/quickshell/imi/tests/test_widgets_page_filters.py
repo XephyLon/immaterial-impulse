@@ -14,6 +14,7 @@ CHIP = ROOT / "modules/common/widgets/FilterChip.qml"
 STORE = ROOT / "modules/imi/settings/pages/PluginStorePage.qml"
 MANAGER = ROOT / "modules/common/plugins/PluginManager.qml"
 PAGE = ROOT / "modules/imi/settings/pages/PluginsPage.qml"
+SWITCH = ROOT / "modules/common/widgets/ConfigSwitch.qml"
 
 
 class FilterChipIsShared(unittest.TestCase):
@@ -175,6 +176,30 @@ class WidgetsPageFilterUi(unittest.TestCase):
     def test_empty_state_exists(self):
         """A filter that matches nothing must say so, not render a blank gap."""
         self.assertRegex(self.src, r"filteredPlugins\.length === 0")
+
+
+class SettingsLabelsArePlainText(unittest.TestCase):
+    def test_config_switch_renders_both_strings_as_plain_text(self):
+        """ConfigSwitch renders its label and description through StyledText,
+        which has no textFormat and so inherits Text.AutoText - Qt auto-detects
+        and renders rich text. Plugin manifests are attacker-controlled, so a
+        manifest name of "<img src=...>" would render as markup.
+        """
+        src = SWITCH.read_text(encoding="utf-8")
+        self.assertEqual(
+            src.count("textFormat: Text.PlainText"), 2,
+            "both the label and the description StyledText need PlainText")
+
+    def test_page_still_feeds_manifest_strings_through_config_switch(self):
+        """Pins why the fix lives in ConfigSwitch rather than on the page: if
+        the page ever renders manifest strings directly, this test's premise is
+        stale and the new render site needs its own textFormat.
+        """
+        page = PAGE.read_text(encoding="utf-8")
+        self.assertIn("text: modelData.name", page)
+        self.assertNotRegex(
+            page, r"StyledText\s*\{[^}]*text:\s*modelData\.(name|description)",
+            "the page renders a manifest string directly - harden it too")
 
 
 if __name__ == "__main__":

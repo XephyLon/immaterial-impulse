@@ -35,6 +35,7 @@ RippleButton {
                 id: labelWidget
                 Layout.fillWidth: true
                 text: root.text
+                textFormat: Text.PlainText
                 font: root.font
                 color: Appearance.colors.colOnSecondaryContainer
                 opacity: root.enabled ? 1 : 0.4
@@ -43,6 +44,7 @@ RippleButton {
                 Layout.fillWidth: true
                 visible: root.description.length > 0
                 text: root.description
+                textFormat: Text.PlainText
                 font.pixelSize: Appearance.font.pixelSize.smaller
                 color: Appearance.colors.colSubtext
                 wrapMode: Text.Wrap
