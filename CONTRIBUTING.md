@@ -297,15 +297,16 @@ concurrently, not as a default for every subagent dispatch.
   context.
 - Never push without explicit confirmation for that specific push. An earlier approval to push
   doesn't carry forward to later, unrelated changes.
-- `git remote -v` before assuming which remote is "upstream" vs "the fork you push to" - this repo
-  has both, and they matter for where a `git pull`/`git push` actually lands.
+- This repo has **no upstream**. It publishes to `gh` (`XephyLon/immaterial-impulse`) and nothing
+  else is fetched or merged. Never re-add `pctrade/end4-pC` or `end-4/dots-hyprland` as a remote,
+  and never justify a code shape by "it keeps upstream merges clean".
 - **Hard rule: agents do not add themselves as co-authors** (no `Co-Authored-By: <agent/model>` or
   similar trailer). Commits in this repo are attributed to the human maintainer only, regardless of
   which agent or model did the work. The same applies to **pull request bodies** - no "Generated
   with <tool>" footer or equivalent attribution line, even when the agent's own tooling suggests one
   by default.
-- `gh pr create` defaults its base to the **parent** repo (`pctrade/end4-pC`) because `origin` is a
-  fork. Pass `--repo XephyLon/immaterial-impulse` for a PR that stays in this fork.
+- `gh pr create` can still resolve a base from GitHub's fork metadata rather than from this repo.
+  Pass `--repo XephyLon/immaterial-impulse` so a PR always lands here.
 
 ## Style
 

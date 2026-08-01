@@ -17,16 +17,22 @@ UI (bar, docks, sidebars, on-screen displays, notifications, launchers, lock scr
 entirely in QML and run by the [Quickshell](https://quickshell.org) runtime (`qs`), not a compiled
 application.
 
-It's a personal fork of [illogical-impulse](https://github.com/end-4/dots-hyprland) (by `end-4`),
-itself forked by `pctrade` as `end4-pC`, and further forked and rebranded here as Immaterial
-Impulse. The upstream chain is:
+It originated as a fork of [illogical-impulse](https://github.com/end-4/dots-hyprland) (by `end-4`)
+by way of `pctrade`'s `end4-pC`, but **it is no longer a fork in any operational sense** — it is an
+independent project that happens to share ancestry.
 
 ```
-end-4/dots-hyprland  →  pctrade/end4-pC (upstream remote)  →  this fork (origin remote)
+end-4/dots-hyprland  →  pctrade/end4-pC  →  Immaterial Impulse (independent as of 0.7.0)
 ```
 
-Check `git remote -v` before assuming which remote is "the real one" — `origin` is this fork,
-`upstream` is `pctrade/end4-pC`.
+**There is no upstream.** The `pctrade/end4-pC` and `end-4/dots-hyprland` remotes are gone and
+neither is fetched, merged, or diffed against any more. Do not add them back, do not "check what
+upstream does" when making a design decision, and do not preserve a shape purely because it keeps a
+future merge tractable — that constraint no longer exists. `gh` is the publishing remote
+(`XephyLon/immaterial-impulse`).
+
+Attribution to `end-4` and `pctrade` stays in `LICENSE`, `licenses/`, and the README credits — the
+project is GPL-3.0 and the ancestry is real. Independence is about direction, not erasure.
 
 This directory is **not a standalone app repo** — it's dropped into `~/.config/quickshell/ii`
 on a running Hyprland system and loaded by `qs -c ii`. ImI ships the whole suite, so it supersedes
