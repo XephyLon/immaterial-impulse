@@ -12,6 +12,13 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-08-01
+
+Mostly a correctness release. Two of the fixes below were reported by
+users and neither was ours originally — the quick-toggle scrambling came
+in with the upstream absorb, and the Qt 6.8 requirement was a property
+assignment nobody noticed was version-gated.
+
 ### Changed
 - The **Docker plugin popup** is built from the shell's own M3 Expressive
   components instead of widgets it defined for itself: `SecondaryTabBar`
@@ -611,7 +618,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.5.1...v0.6.0
