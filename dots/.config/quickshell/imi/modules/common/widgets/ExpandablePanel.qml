@@ -36,6 +36,17 @@ StyledRectangle {
     // nothing happening.
     property Item staggerTarget: contentColumn
 
+    // Makes the whole header a ripple surface rather than leaving interaction
+    // to whatever the call site puts in it. Without this a panel whose header
+    // holds only a small chevron feels dead next to one whose header is filled
+    // by a ConfigSwitch, even though both are this component.
+    //
+    // It emits rather than assigning `expanded`: the trigger still belongs to
+    // the call site, and a call site that binds `expanded` to its own state
+    // would have that binding destroyed by a write from in here.
+    property bool headerClickable: false
+    signal headerClicked()
+
     // Fixed: the container needs a visible head start, otherwise staggered
     // children race the reveal instead of landing in space that exists.
     readonly property int staggerLeadIn: 120
@@ -104,11 +115,31 @@ StyledRectangle {
         anchors { left: parent.left; right: parent.right; top: parent.top }
         spacing: 0
 
-        RowLayout {
-            id: headerRow
+        Item {
+            id: headerSlot
             Layout.fillWidth: true
-            Layout.margins: Appearance.spacing.space100
-            spacing: Appearance.spacing.space100
+            implicitHeight: headerRow.implicitHeight + Appearance.spacing.space100 * 2
+
+            // Behind the header content, so the header's own controls keep
+            // their clicks and their own ripples.
+            Loader {
+                anchors.fill: parent
+                active: root.headerClickable
+                sourceComponent: RippleButton {
+                    buttonRadius: root.radius
+                    colBackground: "transparent"
+                    colBackgroundHover: Appearance.colors.colLayer1Hover
+                    colRipple: Appearance.colors.colLayer1Active
+                    onClicked: root.headerClicked()
+                }
+            }
+
+            RowLayout {
+                id: headerRow
+                anchors.fill: parent
+                anchors.margins: Appearance.spacing.space100
+                spacing: Appearance.spacing.space100
+            }
         }
 
         Rectangle {
