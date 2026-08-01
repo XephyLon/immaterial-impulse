@@ -148,7 +148,17 @@ Migration order, each its own commit:
    component, not to reintroduce a symmetric inset.
 2. **`DockerPopup.qml`** — replaces the `Revealer` in `Card`. Sets
    `outline: true` and `contentLayer: Subgroup` to keep its current look, and
-   gains input gating, the correct exit curve and the indent.
+   gains input gating, the correct exit curve and the indent. It also turns
+   **`staggerStep` on**: the container cards are where the staggered reveal is
+   wanted, so this migration is what proves that trait rather than leaving it
+   theoretical.
+
+   Pick the interval against the live shell during the migration. The design
+   study is the evidence to weigh: a container card carries five action
+   buttons, so at 120ms the last one lands 600ms after the header moves —
+   longer than the container's own 400ms opening. 40ms and 80ms both keep the
+   tail inside the opening; the fixed 120ms lead-in is separate and does not
+   change.
 3. **`BluetoothDeviceItem.qml`** — evaluate during implementation; migrate only
    if it maps cleanly.
 
@@ -161,13 +171,44 @@ Explicitly **not** adopters:
 - `SettingsContent.qml`'s nav-rail sections — a `Revealer` with an ad hoc
   opacity binding, which this component's card shape does not fit.
 
-## Risk accepted
+## Why the traits are options, not YAGNI
 
-Five optional traits is a wide surface for three adopters, and
-`CONTRIBUTING.md` warns against generalized plumbing beyond what was asked. The
-call was made deliberately: the traits are the vocabulary the design study
-settled on, and each is a one-line binding rather than a subsystem. If two of
-them are still unused after the migrations land, delete them.
+`CONTRIBUTING.md` warns against generalized plumbing beyond what was asked, and
+five optional traits would be exactly that for a component with three internal
+call sites. That is not what this is. **The traits exist for plugin authors.**
+
+The component ships as part of the plugin-facing surface: bundled plugins
+already `import qs.modules.common.widgets` (seven times across the current
+bundle), and `docs/PLUGIN_DESIGN_SYSTEM.md` explicitly permits plugins to use
+existing shell components alongside `ExpressiveTokens`. A plugin author building
+a settings surface or a popup needs an expansion that is correct by default and
+can be dressed to match their widget — without copying the motion contract into
+their own QML and getting the exit curve wrong, which is precisely what the
+in-tree code has been doing.
+
+Two consequences follow, and both are binding:
+
+- **The property names are a compatibility surface.** Once third-party plugins
+  bind `outline`, `divider`, `shapeMorph`, `tonalLift` and `staggerStep`,
+  renaming them breaks installed plugins. Get the names right in the first
+  commit; treat later changes the way any public API change is treated.
+- **It has to be documented, not just exist.** `docs/PLUGINS.md` gains an entry
+  covering the component, its properties and the fact that `expanded` is driven
+  by the call site. An undocumented plugin-facing widget is one nobody uses,
+  and the duplication continues.
+
+The "delete it if unused internally" instinct does not apply here: internal
+adoption is not the measure.
+
+## Deliverables
+
+1. `modules/common/widgets/ExpandablePanel.qml`.
+2. Its contract test and runtime harness (below).
+3. A `docs/PLUGINS.md` entry documenting it as a plugin-facing component.
+4. The `PluginsPage` and `DockerPopup` migrations, one commit each.
+5. A `docs/M3_GUIDELINES.md` note pointing the Expandable Content section at the
+   component, so the next widget author reaches for it instead of re-deriving
+   the rules a fifth time.
 
 ## Verification
 
