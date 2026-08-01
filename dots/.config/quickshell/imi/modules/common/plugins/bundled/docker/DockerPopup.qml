@@ -220,12 +220,18 @@ StyledPopup {
     component Card: ExpandablePanel {
         property var itemData: ({})
 
-        outline: true
+        // Styling matches the settings page's plugin cards: no outline, the
+        // hairline rule between header and detail. Only two things differ, and
+        // both for a reason - the surface sits a layer deeper because these
+        // cards nest inside the popup's own colLayer2 stage rather than
+        // directly on a page, and the action chips stagger in.
         surfaceLayer: StyledRectangle.ContentLayer.Subgroup
         staggerStep: 40
-        // The outline already separates header from detail on these cards; a
-        // rule as well reads as clutter on something this small.
-        divider: false
+        // The whole header toggles, with a ripple across it - the same feel as
+        // the settings page, where a full-width ConfigSwitch fills the header.
+        // The chevron stays as the visual affordance.
+        headerClickable: true
+        onHeaderClicked: expanded = !expanded
     }
 
     // The chevron that expands a card. `expand_more`/`expand_less` swap through
