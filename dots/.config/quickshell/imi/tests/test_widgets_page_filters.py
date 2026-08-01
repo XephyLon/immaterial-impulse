@@ -44,6 +44,15 @@ class CapabilityVocabulary(unittest.TestCase):
     def setUp(self):
         self.src = MANAGER.read_text(encoding="utf-8")
 
+    def test_manager_imports_the_translation_module(self):
+        """surfaceCapabilities wraps every label in Translation.tr(), and
+        Translation is a qs.services singleton. The import is NOT transitive
+        through qs.modules.common: without it each label throws
+        ReferenceError, the property stays undefined, and the chip row renders
+        no chips at all - with a fully green test suite.
+        """
+        self.assertIn("import qs.services", self.src)
+
     def test_manager_owns_the_vocabulary(self):
         self.assertIn("readonly property var surfaceCapabilities", self.src)
 

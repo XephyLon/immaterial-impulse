@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.services
 import qs.modules.common
 import "PluginValidator.js" as PluginValidator
 import "InstalledManifestState.js" as InstalledManifestState
