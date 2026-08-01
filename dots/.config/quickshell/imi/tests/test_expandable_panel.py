@@ -91,6 +91,17 @@ class ExpandablePanelContract(unittest.TestCase):
         completed = panel[panel.index("Component.onCompleted"):]
         self.assertIn("panel.implicitHeight = panel.targetHeight", completed)
 
+    def test_empty_content_gets_no_inset(self):
+        """An expanded panel whose content is empty must occupy nothing.
+
+        targetHeight was contentColumn.implicitHeight + verticalInset
+        unconditionally, so a panel that opened onto no content still claimed
+        its 20px of padding - a band of dead space under every enabled widget
+        exposing no options.
+        """
+        panel = self.src[self.src.index("id: panel"):]
+        self.assertIn("contentColumn.implicitHeight > 0", panel)
+
     def test_rule6_indent_is_leading_only(self):
         # Symmetric insets are what PluginsPage did wrong: the trailing edge
         # must stay aligned with the header. Scoped to the animated panel -
