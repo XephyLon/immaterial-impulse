@@ -69,6 +69,15 @@ StyledRectangle {
         animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
     }
 
+    onStaggerStepChanged: {
+        if (root.staggerStep > 0)
+            return;
+        const kids = (root.staggerTarget ?? contentColumn).children;
+        for (let i = 0; i < kids.length; i++)
+            if (kids[i].appear !== undefined)
+                kids[i].appear = 1;
+    }
+
     onExpandedChanged: {
         panel.animateTo(root.expanded);
         if (root.staggerStep > 0)
@@ -88,14 +97,20 @@ StyledRectangle {
             if (kids[i].appear === undefined)
                 continue;
             if (!root.expanded) {
-                // Collapsing runs everything out together - the panel's own
-                // fade carries them - so reset for the next open.
-                kids[i].appear = 1;
+                // Animate out together rather than snapping: assigning the
+                // value directly meant the entrance was animated and the exit
+                // was not, which reads as the content vanishing rather than
+                // leaving.
+                staggerFade.createObject(root, {
+                    item: kids[i], delay: 0, to: 0,
+                    span: Appearance.animation.elementMoveExit.duration
+                }).start();
                 continue;
             }
             kids[i].appear = 0;
             staggerFade.createObject(root, {
-                item: kids[i],
+                item: kids[i], to: 1,
+                span: Appearance.animation.elementMoveFast.duration,
                 delay: root.staggerLeadIn + index * root.staggerStep
             }).start();
             index++;
@@ -108,12 +123,14 @@ StyledRectangle {
             id: seq
             property Item item
             property int delay: 0
+            property real to: 1
+            property int span: 200
             PauseAnimation { duration: seq.delay }
             NumberAnimation {
                 target: seq.item
                 property: "appear"
-                to: 1
-                duration: Appearance.animation.elementMoveFast.duration
+                to: seq.to
+                duration: seq.span
                 easing.type: Easing.BezierSpline
                 easing.bezierCurve: Appearance.animationCurves.expressiveEffects
             }
@@ -138,6 +155,16 @@ StyledRectangle {
                 active: root.headerClickable
                 sourceComponent: RippleButton {
                     buttonRadius: root.radius
+                    // Square the bottom corners once open so the hover and
+                    // ripple meet the revealed content flush.
+                    cornerBottomLeft: root.expanded ? 0 : root.radius
+                    cornerBottomRight: root.expanded ? 0 : root.radius
+                    Behavior on cornerBottomLeft {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    }
+                    Behavior on cornerBottomRight {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    }
                     colBackground: "transparent"
                     colBackgroundHover: Appearance.colors.colLayer1Hover
                     colRipple: Appearance.colors.colLayer1Active

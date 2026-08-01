@@ -16,6 +16,14 @@ Button {
     property real buttonRadius: Appearance?.rounding?.small ?? 4
     property real buttonRadiusPressed: buttonRadius
     property real buttonEffectiveRadius: root.down ? root.buttonRadiusPressed : root.buttonRadius
+    // Per-corner overrides, defaulting to the uniform radius. A button used as
+    // the header of an expanding surface needs square bottom corners while
+    // open so its hover and ripple blend into the content below instead of
+    // leaving rounded notches.
+    property real cornerTopLeft: root.buttonEffectiveRadius
+    property real cornerTopRight: root.buttonEffectiveRadius
+    property real cornerBottomLeft: root.buttonEffectiveRadius
+    property real cornerBottomRight: root.buttonEffectiveRadius
     property int rippleDuration: 1200
     property bool rippleEnabled: true
     property var downAction // When left clicking (down)
@@ -39,6 +47,11 @@ Button {
     // disabled button then renders as if it were enabled.
     property real appear: 1
     opacity: (root.enabled ? 1 : 0.4) * root.appear
+    // Staggered entrances read as motion, not just a fade: the button rises
+    // into place as it appears. A Translate leaves `y` alone, which a layout
+    // owns, so this is safe inside a Row/Flow/Layout.
+    property real appearRise: 6
+    transform: Translate { y: (1 - root.appear) * root.appearRise }
     property color buttonColor: ColorUtils.transparentize(root.toggled ? 
         (root.hovered ? colBackgroundToggledHover : 
             colBackgroundToggled) :
@@ -146,7 +159,10 @@ Button {
 
     background: Rectangle {
         id: buttonBackground
-        radius: root.buttonEffectiveRadius
+        topLeftRadius: root.cornerTopLeft
+        topRightRadius: root.cornerTopRight
+        bottomLeftRadius: root.cornerBottomLeft
+        bottomRightRadius: root.cornerBottomRight
         implicitHeight: 30
 
         color: root.buttonColor
@@ -161,7 +177,10 @@ Button {
             maskSource: Rectangle {
                 width: buttonBackground.width
                 height: buttonBackground.height
-                radius: root.buttonEffectiveRadius
+                topLeftRadius: root.cornerTopLeft
+                topRightRadius: root.cornerTopRight
+                bottomLeftRadius: root.cornerBottomLeft
+                bottomRightRadius: root.cornerBottomRight
             }
         }
 
