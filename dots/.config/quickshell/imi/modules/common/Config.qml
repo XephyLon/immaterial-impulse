@@ -73,7 +73,17 @@ Singleton {
         onLoadFailed: error => {
             if (error == FileViewError.FileNotFound) {
                 writeAdapter();
+                return;
             }
+            // Any other read failure - bad permissions, an unreadable mount,
+            // a device error - must not leave `ready` false forever. Every
+            // settings page Loader is gated on it, so a config file that
+            // exists but cannot be read blanks the entire settings content
+            // pane while the navigation rail still renders, which reads as
+            // "the app is broken" rather than "your config is unreadable".
+            // Fall back to the built-in defaults instead.
+            console.log(`[Config] Could not read ${root.filePath} (error ${error}); continuing with defaults.`);
+            root.ready = true;
         }
 
         JsonAdapter {
