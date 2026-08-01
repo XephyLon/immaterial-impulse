@@ -737,15 +737,7 @@
   "panelFamily": "imi",
   "plugins": {
     "blurOpacity": 0.75,
-    "enabled": [
-      "docker_plugin",
-      "activate_linux",
-      "discord_voice",
-      "nandoroid_media",
-      "nandoroid_system_monitor",
-      "nandoroid_weather",
-      "nandoroid_currency"
-    ],
+    "enabled": [],
     "frostMode": "blur"
   },
   "policies": {

@@ -198,6 +198,13 @@ class CoreIntegrationTests(unittest.TestCase):
             "blurBackground": True, "dragToBarReveal": True,
             "shakeSensitivity": 1.0, "shakeToSummon": False})
         self.assertNotIn("drop_shelf", defaults["plugins"]["enabled"])
+        # A fresh install enables no plugins at all. Plugin-provided widgets
+        # are configured under Plugins, not Widgets, so anything on by default
+        # is something a new user sees on their desktop and cannot find the
+        # off switch for. Bar layouts keep their `plugin:` entries: the bar
+        # filters disabled ones out, so enabling later restores them in place.
+        self.assertEqual(defaults["plugins"]["enabled"], [],
+                         "no plugin may be enabled in the shipped defaults")
         adapter = (ROOT / "modules/common/Config.qml").read_text()
         self.assertIn("property JsonObject dropShelf", adapter)
 
