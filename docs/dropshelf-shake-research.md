@@ -1,0 +1,146 @@
+# Research: shake-to-summon DropShelf while dragging files
+
+> **Status: implemented.** All three designs shipped as the bundled
+> `drop_shelf` plugin (`modules/common/plugins/bundled/dropShelf/`):
+> C = `Super+U` / `qs -c imi ipc call dropShelf toggle`, B = drag-to-bar
+> reveal, A = `scripts/dropshelf/shake_detector.py` behind the plugin's
+> "Shake cursor to summon" option. The always-armed limitation below was
+> subsequently solved: the detector gates on a held BTN_LEFT (global evdev
+> state via EVIOCGKEY, `input` group required), which is what every pointer
+> drag has in common — shaking a free cursor no longer triggers. See
+> CHANGELOG and `tests/test_dropshelf_summon.py`.
+
+Feature idea: a user picks up files in a file explorer (Dolphin, Nautilus,
+Thunar), shakes the cursor mid-drag, and the DropShelf appears under the
+cursor to receive the drop — the macOS **Dropover** interaction, on Hyprland.
+
+Verdict up front: **plausible, with one honest limitation** — on Wayland the
+shell cannot know a drag is in progress until the cursor is over one of its
+own surfaces, so the shake gesture must be armed *all the time* (mitigated by
+a strict gesture heuristic), or the trigger must be a drag-over-shell-surface
+instead of a shake. Both designs are cheap; they compose well.
+
+## How Dropover actually behaves (reference)
+
+Verified against the app's site/FAQ and reviews:
+
+- The shake gesture is **armed by the drag itself** — macOS lets the app
+  observe the global drag pasteboard, so shaking outside a drag does nothing.
+  The shelf materializes **at the cursor** and floats above all windows.
+- Equal-class activations: **hold a modifier key while dragging** (Shift by
+  default, remappable), a menubar item, and a global shortcut. Commentary
+  (Daring Fireball) credits shake specifically for not needing the second
+  hand.
+- Shake **sensitivity is user-tunable**; summoning again mid-collection
+  **appends to the existing shelf**; multiple shelves can coexist and be
+  pinned.
+- Dragging out of the shelf **moves by default, Option copies**, with a
+  preference to flip the default.
+- Accepts any draggable content: files, folders, text snippets, images, URLs.
+
+## What exists today
+
+- `modules/imi/dropover/DropShelfPanel.qml`: an Overlay-layer PanelWindow at
+  `GlobalStates.dropShelfX/Y`, holding a `DropArea { keys: ["text/uri-list"] }`
+  that accepts `drop.urls` into the `DropShelf` service. Items on the shelf are
+  re-draggable out (`Drag.mimeData` with `text/uri-list`).
+- Opened today only explicitly: the desktop right-click menu sets
+  `dropShelfX/Y` from the click position and flips `GlobalStates.dropShelfOpen`.
+- So the *receiving* side of the feature is done and file-explorer-compatible;
+  the research question is purely about the *summoning* gesture.
+
+## The Wayland constraint (the crux)
+
+`wl_data_device` delivers drag events (`enter`/`motion`/`leave`/`drop`) only
+to the surface currently under the cursor. There is **no global "a drag is
+happening" signal** for uninvolved clients, and Hyprland's IPC exposes
+nothing about DND either (checked: no drag/dnd query or event; `hyprctl`
+knows `cursorpos` and nothing pointer-state related beyond it). macOS
+Dropover can watch the global drag pasteboard; a Wayland client cannot.
+
+Consequences:
+
+1. The shell cannot arm shake detection "only while dragging".
+2. The shell *can* detect a drag the moment the cursor crosses any of its
+   surfaces (a `DropArea.entered` fires on drag-hover without a drop) — the
+   bar already spans the full top edge on every monitor.
+
+## Design A — cursor-shake, always armed
+
+- **Cursor tracking:** poll Hyprland's request socket with `cursorpos` from
+  one persistent helper (or a QML Timer + persistent socket via a tiny
+  long-running process). Measured on this machine: **0.03 ms per query** over
+  the raw socket — 60 Hz polling is negligible. Do NOT fork `hyprctl` per
+  poll (that's a process spawn per frame).
+- **Gesture:** classic shake heuristic — within a sliding ~600–800 ms window,
+  ≥ 3 horizontal direction reversals, each leg ≥ ~60 px, net displacement
+  small. Tunable thresholds; strict defaults make accidental triggers rare.
+- **Action:** open the shelf at the cursor (`dropShelfX/Y` = last position),
+  auto-dismiss after ~5 s if nothing was dropped and the pointer never
+  entered it. If the user was mid-drag, the newly mapped shelf receives the
+  drag's `enter` as soon as the cursor moves over it, and the existing
+  DropArea takes the drop.
+- **Risks:**
+  - False positives while not dragging. Mitigations: strict thresholds,
+    auto-dismiss, suppress while a fullscreen client is focused
+    (`HyprlandData.focusedMonitorHasFullscreen`), config toggle (default off
+    or on — user's call).
+  - **Needs a 5-minute manual test:** Hyprland must re-evaluate DND focus
+    onto a layer surface that maps *mid-drag*. Expected to work (DND focus
+    follows motion), but verify before building the gesture; if it fails,
+    only Design B works.
+  - Polling runs whenever the feature is enabled. At 60 Hz over the raw
+    socket the cost is noise, but gate it: no polling while locked or while
+    a fullscreen app runs.
+
+## Design B — drag-over-bar reveal (the Wayland-native variant)
+
+Put a passive `DropArea { keys: ["text/uri-list"] }` on the existing bar
+window (and/or a screen-corner hot zone). `onEntered` (drag-hover, no drop
+needed) → open the shelf near the cursor. This is 100 % reliable — the shell
+*knows* a file drag is happening because the drag entered its surface — with
+zero polling, zero heuristics, zero false positives, and no new input
+interception (the bar already owns that strip of screen).
+
+UX: "drag files to the bar and the shelf pops out" — discoverable and
+deliberate; the shelf can highlight while the drag hovers it. This is the
+same reachability trick Windows/KDE users know from drag-to-taskbar.
+
+## Design C — global shortcut mid-drag (Dropover's own fallback, free here)
+
+Dropover's documented second activation - a key press while dragging - maps
+onto Hyprland with zero unknowns: a `GlobalShortcut` (the shell already uses
+them) fires fine during a drag, one `cursorpos` query places the shelf under
+the pointer, and the in-flight drag then enters the newly mapped shelf. No
+polling, no heuristics, no false positives; the only cost is Dropover's own
+admission that it needs the second hand.
+
+## Recommendation
+
+Ladder, cheapest-certain first, all feeding the same `dropShelfOpen/X/Y`
+plumbing:
+
+1. **C — mid-drag global shortcut** (hours): certain to work, and doubles as
+   the manual test for the one open question (mid-drag DND focus onto a
+   newly mapped layer surface) that gates the shake design.
+2. **B — drag-over-bar reveal** (a day): deterministic, second-hand-free,
+   discoverable.
+3. **A — shake** behind `dropShelf.shakeToSummon` with a sensitivity option
+   (2–3 days, threshold tuning): the full Dropover feel, accepting the
+   always-armed limitation Wayland forces.
+
+Dropover behaviors worth mirroring while at it: summon-again **appends** to
+the open shelf (our `DropShelf.addItems` already appends), and shelf
+position = cursor position at trigger time.
+
+## Compatibility notes
+
+- Dolphin/Nautilus/Thunar/PCManFM all offer `text/uri-list` on file drags —
+  the existing shelf DropArea already accepts exactly that; multi-selection
+  arrives as a multi-line uri-list. Chromium/Firefox downloads drags also
+  carry uri-list (bonus).
+- Drops both ways already work today (shelf accepts and re-offers items), so
+  explorer compatibility is entirely about the summon gesture, not the data
+  path.
+- Niri/non-Hyprland: Design B is compositor-agnostic; Design A's cursor
+  polling is Hyprland-specific (would need a per-compositor backend).

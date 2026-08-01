@@ -1,0 +1,109 @@
+// Immaterial Impulse Plymouth theme (script plugin).
+// Dark neutral background, centered wordmark, a rotating Material-style arc
+// spinner, and a text-free password prompt (lock glyph + bullet dots) so it
+// never depends on the label plugin being usable in the initramfs.
+
+// ---------------------------------------------------------------- background
+Window.SetBackgroundTopColor(0.055, 0.071, 0.063);     // #0e1210
+Window.SetBackgroundBottomColor(0.043, 0.055, 0.047);  // #0b0e0c
+
+screen_w = Window.GetWidth();
+screen_h = Window.GetHeight();
+
+// ---------------------------------------------------------------- wordmark
+logo.image = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+logo.x = screen_w / 2 - logo.image.GetWidth() / 2;
+logo.y = screen_h / 2 - logo.image.GetHeight() / 2 - 40;
+logo.sprite.SetPosition(logo.x, logo.y, 100);
+
+// ---------------------------------------------------------------- spinner
+spinner.base = Image("spinner.png");
+spinner.sprite = Sprite(spinner.base);
+spinner.x = screen_w / 2 - spinner.base.GetWidth() / 2;
+spinner.y = logo.y + logo.image.GetHeight() + 56;
+spinner.sprite.SetPosition(spinner.x, spinner.y, 100);
+spinner.angle = 0;
+
+// ---------------------------------------------------------------- password ui
+prompt.active = 0;
+prompt.bullet = Image("bullet.png");
+prompt.entry = Image("entry.png");
+prompt.lock = Image("lock.png");
+prompt.max_bullets = 16;
+prompt.sprites = [];
+
+fun hide_prompt() {
+    prompt.entry_sprite = NULL;
+    prompt.lock_sprite = NULL;
+    for (i = 0; i < prompt.max_bullets; i++)
+        prompt.sprites[i] = NULL;
+    prompt.active = 0;
+}
+
+fun show_prompt(bullet_count) {
+    prompt.active = 1;
+    entry_x = screen_w / 2 - prompt.entry.GetWidth() / 2;
+    entry_y = spinner.y + spinner.base.GetHeight() + 48;
+
+    prompt.lock_sprite = Sprite(prompt.lock);
+    prompt.lock_sprite.SetPosition(entry_x - prompt.lock.GetWidth() - 16,
+        entry_y + prompt.entry.GetHeight() / 2 - prompt.lock.GetHeight() / 2, 110);
+
+    prompt.entry_sprite = Sprite(prompt.entry);
+    prompt.entry_sprite.SetPosition(entry_x, entry_y, 110);
+
+    shown = bullet_count;
+    if (shown > prompt.max_bullets)
+        shown = prompt.max_bullets;
+    spacing = prompt.bullet.GetWidth() - 12;
+    start_x = screen_w / 2 - (shown - 1) * spacing / 2 - prompt.bullet.GetWidth() / 2;
+    for (i = 0; i < prompt.max_bullets; i++) {
+        if (i < shown) {
+            prompt.sprites[i] = Sprite(prompt.bullet);
+            prompt.sprites[i].SetPosition(start_x + i * spacing,
+                entry_y + prompt.entry.GetHeight() / 2 - prompt.bullet.GetHeight() / 2, 120);
+        } else {
+            prompt.sprites[i] = NULL;
+        }
+    }
+}
+
+fun display_password_callback(prompt_text, bullet_count) {
+    show_prompt(bullet_count);
+}
+
+fun display_question_callback(prompt_text, entry_text) {
+    show_prompt(0);
+}
+
+fun display_normal_callback() {
+    hide_prompt();
+}
+
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+Plymouth.SetDisplayQuestionFunction(display_question_callback);
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+
+// ---------------------------------------------------------------- animation
+fun refresh_callback() {
+    // ~50 refreshes/s; a full turn every ~1.2 s.
+    spinner.angle += Math.Pi / 30;
+    if (spinner.angle > 2 * Math.Pi)
+        spinner.angle -= 2 * Math.Pi;
+    theta = spinner.angle;
+    rotated = spinner.base.Rotate(theta);
+    spinner.sprite.SetImage(rotated);
+    // Rotation grows the canvas; recenter so the ring doesn't wobble.
+    spinner.sprite.SetPosition(
+        screen_w / 2 - rotated.GetWidth() / 2,
+        spinner.y + spinner.base.GetHeight() / 2 - rotated.GetHeight() / 2, 100);
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+// Progress is intentionally unused for a calmer splash; the spinner alone
+// carries the "alive" signal. Quit restores nothing special.
+fun quit_callback() {
+    hide_prompt();
+}
+Plymouth.SetQuitFunction(quit_callback);

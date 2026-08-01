@@ -1,0 +1,7 @@
+tests/
+screenshots/
+.qmlformat.ini
+.gitignore
+*RuntimeTest.qml
+DesignSystemCompile.qml
+ExpandablePanelGallery.qml

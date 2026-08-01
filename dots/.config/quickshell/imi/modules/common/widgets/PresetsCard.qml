@@ -1,0 +1,222 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
+import qs
+import qs.modules.common
+import qs.modules.common.widgets
+import qs.modules.common
+import qs.modules.common.functions
+
+Rectangle {
+    id: root
+
+    property string imageSource: ""
+    property string title: ""
+    property string description: ""
+    property var onApply: () => {}
+    property var onRemove: () => {}
+    property var onOverwrite: () => {}
+
+    // Two-tap confirm for the destructive overwrite: the first tap arms it, the
+    // second (within the timeout) replaces the preset with the current state.
+    property bool confirmingOverwrite: false
+    Timer {
+        id: overwriteConfirmTimer
+        interval: 3000
+        onTriggered: root.confirmingOverwrite = false
+    }
+
+    implicitWidth: 293 
+    implicitHeight: contentColumn.implicitHeight + 14
+    radius: Appearance.rounding.normal
+    color: Appearance.colors.colLayer1
+    border.width: Appearance.borderWidth.standard
+    border.color: "transparent"
+
+    ColumnLayout {
+        id: contentColumn
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+            margins: 0
+        }
+        spacing: Appearance.spacing.space100
+
+        // Header
+        RowLayout{
+            Layout.leftMargin: Appearance.spacing.space150
+            Layout.topMargin: Appearance.spacing.space100
+            spacing: Appearance.spacing.space150
+            MaterialShapeWrappedMaterialSymbol {
+                id: avatarShape
+                shape: MaterialShape.Shape.Circle 
+                text: root.title.length > 0 ? root.title.charAt(0).toUpperCase() : "?"
+                iconSize: Appearance.font.pixelSize.normal
+                implicitSize: 36
+                font: Appearance.font.family.main
+                color: Appearance.colors.colPrimaryContainer
+                colSymbol: Appearance.colors.colOnPrimaryContainer
+                Layout.alignment: Qt.AlignVCenter
+            }
+            ColumnLayout{
+                spacing: -Appearance.spacing.space50
+                StyledText {
+                    Layout.fillWidth: true
+                    text: root.title
+                    font.pixelSize: Appearance.font.pixelSize.large
+                    font.weight: Font.DemiBold
+                    color: Appearance.colors.colOnLayer1
+                    elide: Text.ElideRight
+                    wrapMode: Text.NoWrap
+                }
+
+                // Description
+                StyledText {
+                    Layout.fillWidth: true
+                    visible: root.description.length > 0
+                    text: root.description
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    color: Appearance.colors.colSubtext
+                    elide: Text.ElideRight
+                }
+            }
+            MaterialSymbol {
+                Layout.alignment: Qt.AlignRight // im a placeholder someday I will do something =P
+                Layout.rightMargin: Appearance.spacing.space150
+                font.pixelSize: Appearance.font.pixelSize.huge
+                text: "more_vert"
+            }
+        }
+
+        // Wall
+        Rectangle {
+            id: imageRect
+            Layout.fillWidth: true
+            Layout.bottomMargin: Appearance.spacing.space50
+            implicitHeight: 130
+            radius: 0
+            color: Appearance.colors.colLayer2
+            clip: true
+
+            StyledImage {
+                anchors.fill: parent
+                fillMode: Image.PreserveAspectCrop
+                source: root.imageSource
+                cache: false
+                antialiasing: true
+                sourceSize.width: imageRect.width * 2
+                sourceSize.height: imageRect.height * 2
+                visible: root.imageSource !== ""
+                layer.enabled: true
+                layer.effect: OpacityMask {
+                    maskSource: Rectangle {
+                        width: imageRect.width
+                        height: imageRect.height
+                        radius: imageRect.radius
+                    }
+                }
+            }
+
+            MaterialSymbol {
+                anchors.centerIn: parent
+                visible: root.imageSource === ""
+                text: "wallpaper"
+                iconSize: Appearance.font.pixelSize.huge
+                color: Appearance.colors.colSubtext
+            }
+        }
+
+        // Buttons
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.rightMargin: Appearance.spacing.space100
+            Layout.bottomMargin: -Appearance.spacing.space50
+            spacing: Appearance.spacing.space100
+
+            Item { Layout.fillWidth: true }
+
+            GroupButton {
+                id: overwriteBtn
+                bounce: false
+                toggled: false
+                leftRadius: height / 2
+                rightRadius: height / 2
+                Layout.fillWidth: false
+                Layout.fillHeight: false
+                implicitHeight: 36
+                horizontalPadding: Appearance.spacing.space175
+                verticalPadding: Appearance.spacing.space100
+                colBackground: "transparent"
+                colBackgroundHover: ColorUtils.transparentize(Appearance.colors.colPrimaryContainerHover, 0.8)
+                colBackgroundActive: Appearance.colors.colPrimaryContainerActive
+                contentItem: StyledText {
+                    text: root.confirmingOverwrite ? "Confirm?" : "Overwrite"
+                    color: root.confirmingOverwrite ? Appearance.colors.colError : Appearance.colors.colPrimary
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: {
+                    if (root.confirmingOverwrite) {
+                        root.confirmingOverwrite = false;
+                        overwriteConfirmTimer.stop();
+                        root.onOverwrite();
+                    } else {
+                        root.confirmingOverwrite = true;
+                        overwriteConfirmTimer.restart();
+                    }
+                }
+                StyledToolTip {
+                    text: "Replace this preset with the current setup"
+                }
+            }
+
+            GroupButton {
+                id: removeBtn
+                bounce: false
+                toggled: false
+                leftRadius: height / 2
+                rightRadius: height / 2
+                Layout.fillWidth: false
+                Layout.fillHeight: false
+                implicitHeight: 36
+                horizontalPadding: Appearance.spacing.space175
+                verticalPadding: Appearance.spacing.space100
+                colBackground: "transparent"
+                colBackgroundHover: ColorUtils.transparentize(Appearance.colors.colPrimaryContainerHover, 0.8)
+                colBackgroundActive: Appearance.colors.colPrimaryContainerActive
+                contentItem: StyledText {
+                    text: "Remove"
+                    color: Appearance.colors.colPrimary
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: root.onRemove()
+            }
+
+            GroupButton {
+                id: applyBtn
+                bounce: false
+                toggled: false
+                leftRadius: height / 2
+                rightRadius: height / 2
+                Layout.fillWidth: false
+                Layout.fillHeight: false
+                implicitHeight: 36
+                horizontalPadding: Appearance.spacing.space175
+                verticalPadding: Appearance.spacing.space100
+                colBackground: Appearance.colors.colPrimaryContainer
+                colBackgroundHover: Appearance.colors.colPrimaryContainerHover
+                colBackgroundActive: Appearance.colors.colPrimaryContainerActive
+                contentItem: StyledText {
+                    text: "Apply"
+                    color: Appearance.colors.colOnPrimaryContainer
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: root.onApply()
+            }
+        }
+    }
+}

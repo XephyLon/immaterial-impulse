@@ -1,0 +1,7 @@
+{
+  "id": "notes", "name": "Notes", "description": "A persistent desktop notepad for quick, autosaved notes", "version": "1.0.0", "apiVersion": 1,
+  "author": "Immaterial Impulse contributors", "license": "AGPL-3.0",
+  "grid": { "cols": 2, "rows": 2 },
+  "capabilities": ["desktop-widget"], "permissions": ["settings_read", "settings_write", "filesystem_read", "filesystem_write"],
+  "desktopWidget": { "component": "Widget.qml", "blur": false }
+}

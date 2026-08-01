@@ -110,7 +110,7 @@ Two real examples from this project's history that justify the paranoia:
   not the same as the real data path working.
 - A brand-new feature (the plugin system: a new singleton, a new settings page, a new shared-widget
   property) merged cleanly, tests passed, and a disposable throwaway `qs -p <worktree>` instance
-  even rendered it correctly during review - but the user's actual long-running `qs -c end4-pC`
+  even rendered it correctly during review - but the user's actual long-running `qs -c imi`
   process kept showing an empty page, because that process had been running since *before* the
   merge and a brand-new `pragma Singleton` file needs the process to actually restart to get
   registered, not just a hot-reload of edited files (see the Runtime model section of `AGENT.md`).
@@ -135,7 +135,7 @@ This only affects manual/CLI invocations for testing, not the QML code itself.
 
 Check `modules/common/widgets/` before writing a new UI primitive - tooltips, combo boxes, sliders,
 form rows for the settings page, card/tile layouts, etc. almost all already exist there and are used
-throughout `modules/ii/`. A fix or feature that touches a shared widget (e.g. `StyledComboBox`)
+throughout `modules/imi/`. A fix or feature that touches a shared widget (e.g. `StyledComboBox`)
 benefits every place that widget is used - that's usually preferable to a one-off local
 implementation, but also means changes there have wider blast radius, so verify a couple of call
 sites, not just the one you were asked about.
@@ -163,7 +163,7 @@ pattern before adding a new settings page.
 
 A new persisted option needs both halves, or it silently does nothing:
 1. The schema property in `Config.qml` (inside the correct nested `JsonObject`).
-2. A corresponding row in the relevant `modules/ii/settings/pages/*.qml` file, wired with
+2. A corresponding row in the relevant `modules/imi/settings/pages/*.qml` file, wired with
    `checked`/`value`/`currentValue` reading from `Config.options....` and an `on*Changed` handler
    writing back to it.
 
@@ -175,7 +175,7 @@ the sibling property name to find all of them before considering the wiring comp
 
 Dynamic plugin state is the exception to the fixed `Config.qml` schema. Values keyed by runtime
 plugin ids or monitor names must go through `modules/common/plugins/PluginState.qml`, which stores
-raw JSON in `~/.config/illogical-impulse/plugin-state.json`. Do not add undeclared children or a
+raw JSON in `~/.config/immaterial-impulse/plugin-state.json`. Do not add undeclared children or a
 dynamic `property var` object to a `JsonAdapter`; both forms have caused native crashes during
 deserialization.
 
@@ -206,7 +206,7 @@ bug in anything that qualifies:
   missing `import qs.modules.common`) passes every test while taking down every panel that reaches
   it. After touching any `.qml` under `modules/`, check the live log for `Configuration Loaded` and
   for `ERROR:` - not just `WARN` - before calling the change verified. See AGENT.md's "Where to look
-  when something goes wrong" for the cascade format and the `pgrep -af 'qs -c end4-pC'` caveat.
+  when something goes wrong" for the cascade format and the `pgrep -af 'qs -c imi'` caveat.
 - **A new Python check must actually run.** `run_tests.sh` invokes each one as `python3 <file>`, so
   a module of bare `test_*` functions exits zero without executing anything. Either subclass
   `unittest.TestCase` with `unittest.main()`, or end the file with the `contract_runner` block
@@ -215,7 +215,7 @@ bug in anything that qualifies:
 - **Prove a new static check can fail.** These checks match source text; a pattern with baked-in
   indentation passes vacuously after any reformat.
 - If the code you're touching depends on live compositor/audio state and genuinely can't be unit
-  tested with the current harness (most `modules/ii/*` UI), that's fine - fall back to this file's
+  tested with the current harness (most `modules/imi/*` UI), that's fine - fall back to this file's
   "Verify against the live shell" workflow instead, but say so rather than silently skipping tests.
 - CI (`.github/workflows/tests.yml`) runs this suite on every PR - a red check is a blocker, not a
   suggestion.
@@ -241,8 +241,8 @@ learned.
 
 ## Multi-agent / parallel workflows (git worktrees)
 
-This repo lives at `~/.config/quickshell/end4-pC` and is loaded by exactly one running process,
-`qs -c end4-pC`, pointed at that exact directory. That has real consequences once more than one
+This repo lives at `~/.config/quickshell/imi` and is loaded by exactly one running process,
+`qs -c imi`, pointed at that exact directory. That has real consequences once more than one
 agent (main session + subagents, or several parallel Claude Code sessions) is touching the repo at
 once:
 
@@ -250,8 +250,8 @@ once:
   configuration and rebuilds Quickshell's desktop-entry registry. On systems with large Wine/Steam
   application directories, several rapid reloads can queue millions of desktop-entry parses,
   consume gigabytes of memory, and make the shell appear frozen. Stop it once with
-  `qs -c end4-pC kill`, finish and test the batch, then launch exactly one clean
-  `qs -c end4-pC -d`. A single small edit may still use hot reload.
+  `qs -c imi kill`, finish and test the batch, then launch exactly one clean
+  `qs -c imi -d`. A single small edit may still use hot reload.
 
 - **Only the primary checkout hot-reloads against the live shell.** A `git worktree add
   ../end4-pC-<feature> <branch>` checkout elsewhere is a completely separate directory - editing
@@ -297,15 +297,16 @@ concurrently, not as a default for every subagent dispatch.
   context.
 - Never push without explicit confirmation for that specific push. An earlier approval to push
   doesn't carry forward to later, unrelated changes.
-- `git remote -v` before assuming which remote is "upstream" vs "the fork you push to" - this repo
-  has both, and they matter for where a `git pull`/`git push` actually lands.
+- This repo has **no upstream**. It publishes to `gh` (`XephyLon/immaterial-impulse`) and nothing
+  else is fetched or merged. Never re-add `pctrade/end4-pC` or `end-4/dots-hyprland` as a remote,
+  and never justify a code shape by "it keeps upstream merges clean".
 - **Hard rule: agents do not add themselves as co-authors** (no `Co-Authored-By: <agent/model>` or
   similar trailer). Commits in this repo are attributed to the human maintainer only, regardless of
   which agent or model did the work. The same applies to **pull request bodies** - no "Generated
   with <tool>" footer or equivalent attribution line, even when the agent's own tooling suggests one
   by default.
-- `gh pr create` defaults its base to the **parent** repo (`pctrade/end4-pC`) because `origin` is a
-  fork. Pass `--repo XephyLon/end4-pC` for a PR that stays in this fork.
+- `gh pr create` can still resolve a base from GitHub's fork metadata rather than from this repo.
+  Pass `--repo XephyLon/immaterial-impulse` so a PR always lands here.
 
 ## Style
 

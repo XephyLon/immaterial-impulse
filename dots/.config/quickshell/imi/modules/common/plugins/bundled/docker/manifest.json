@@ -1,0 +1,60 @@
+{
+    "id": "docker_plugin",
+    "name": "Docker Manager",
+    "description": "Monitor and manage Docker or Podman containers and Compose projects",
+    "version": "1.3.1-port1",
+    "author": "LuckShiba; ported for Immaterial Impulse",
+    "source": "Port of DmsDockerManager",
+    "sourceUrl": "https://github.com/LuckShiba/DmsDockerManager",
+    "apiVersion": 1,
+    "capabilities": ["bar-widget", "settings"],
+    "permissions": ["process", "settings_read", "settings_write"],
+    "defaultWidth": 0,
+    "defaultHeight": 0,
+    "options": [
+        {
+            "key": "showBarWidget",
+            "type": "boolean",
+            "label": "Show bar widget",
+            "icon": "view_day",
+            "default": true
+        },
+        {
+            "key": "dockerBinary",
+            "type": "choice",
+            "label": "Container runtime",
+            "icon": "deployed_code",
+            "default": "docker",
+            "choices": [
+                { "displayName": "Docker", "value": "docker" },
+                { "displayName": "Podman", "value": "podman" }
+            ]
+        },
+        {
+            "key": "terminalApp",
+            "type": "choice",
+            "label": "Terminal application",
+            "icon": "terminal",
+            "default": "kitty",
+            "choices": [
+                { "displayName": "Kitty", "value": "kitty" },
+                { "displayName": "Foot", "value": "foot" },
+                { "displayName": "Alacritty", "value": "alacritty" }
+            ]
+        },
+        {
+            "key": "shellPath",
+            "type": "choice",
+            "label": "Container shell",
+            "icon": "code",
+            "default": "/bin/sh",
+            "choices": [
+                { "displayName": "/bin/sh", "value": "/bin/sh" },
+                { "displayName": "/bin/bash", "value": "/bin/bash" },
+                { "displayName": "/bin/ash", "value": "/bin/ash" }
+            ]
+        },
+        { "key": "showPorts", "type": "boolean", "label": "Show port mappings", "icon": "lan", "default": true }
+    ],
+    "barWidget": { "component": "DockerWidget.qml" }
+}

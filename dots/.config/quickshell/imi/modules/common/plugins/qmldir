@@ -1,0 +1,8 @@
+module qs.modules.common.plugins
+
+singleton PluginManager 1.0 PluginManager.qml
+singleton PluginState 1.0 PluginState.qml
+PluginNode 1.0 PluginNode.qml
+PluginOptions 1.0 PluginOptions.qml
+PluginPanelHost 1.0 PluginPanelHost.qml
+PluginWidget 1.0 PluginWidget.qml

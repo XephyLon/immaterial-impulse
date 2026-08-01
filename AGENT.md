@@ -4,26 +4,41 @@ Reference for coding agents (and humans) working in this repository. This file e
 project is, how it's put together, and where things live. See `CONTRIBUTING.md` for how to work in
 it day to day.
 
+> **Repository layout.** This repo bundles more than the shell. The Quickshell theme lives under
+> `dots/.config/quickshell/imi/`; the installer is `setup` + `sdata/`; project docs are in `docs/`.
+> **Unless a path is written repo-relative (e.g. `dots/...`, `sdata/...`, `docs/...`), file paths in
+> this document are relative to the theme root `dots/.config/quickshell/imi/`** (so `modules/...`,
+> `services/...`, `shell.qml` mean `dots/.config/quickshell/imi/modules/...`, etc.).
+
 ## What this is
 
-`end4-pC` is a **Quickshell** shell configuration for **Hyprland** — a full desktop UI (bar, docks,
-sidebars, on-screen displays, notifications, launchers, lock screen, etc.) written entirely in QML
-and run by the [Quickshell](https://quickshell.org) runtime (`qs`), not a compiled application.
+`Immaterial Impulse` (ImI) is a **Quickshell** shell configuration for **Hyprland** — a full desktop
+UI (bar, docks, sidebars, on-screen displays, notifications, launchers, lock screen, etc.) written
+entirely in QML and run by the [Quickshell](https://quickshell.org) runtime (`qs`), not a compiled
+application.
 
-It's a personal fork of [illogical-impulse](https://github.com/end-4/dots-hyprland) (by `end-4`),
-itself forked by `pctrade` as `end4-pC`, and further forked here. The upstream chain is:
+It originated as a fork of [illogical-impulse](https://github.com/end-4/dots-hyprland) (by `end-4`)
+by way of `pctrade`'s `end4-pC`, but **it is no longer a fork in any operational sense** — it is an
+independent project that happens to share ancestry.
 
 ```
-end-4/dots-hyprland  →  pctrade/end4-pC (upstream remote)  →  this fork (origin remote)
+end-4/dots-hyprland  →  pctrade/end4-pC  →  Immaterial Impulse (independent as of 0.7.0)
 ```
 
-Check `git remote -v` before assuming which remote is "the real one" — `origin` is this fork,
-`upstream` is `pctrade/end4-pC`.
+**There is no upstream.** The `pctrade/end4-pC` and `end-4/dots-hyprland` remotes are gone and
+neither is fetched, merged, or diffed against any more. Do not add them back, do not "check what
+upstream does" when making a design decision, and do not preserve a shape purely because it keeps a
+future merge tractable — that constraint no longer exists. `gh` is the publishing remote
+(`XephyLon/immaterial-impulse`).
 
-This directory is **not a standalone app repo** — it's dropped into `~/.config/quickshell/end4-pC`
-on a running Hyprland system and loaded by `qs -c end4-pC`. It depends on a companion Hyprland
-config (also part of the illogical-impulse project, installed separately to `~/.config/hypr/`) for
-keybinds, IPC event names, and layer-shell behavior assumptions.
+Attribution to `end-4` and `pctrade` stays in `LICENSE`, `licenses/`, and the README credits — the
+project is GPL-3.0 and the ancestry is real. Independence is about direction, not erasure.
+
+This directory is **not a standalone app repo** — it's dropped into `~/.config/quickshell/imi`
+on a running Hyprland system and loaded by `qs -c imi`. ImI ships the whole suite, so it supersedes
+a prior illogical-impulse install rather than coexisting with one: the companion Hyprland config
+lives alongside it in this repo (installed separately to `~/.config/hypr/`) and provides the
+keybinds, IPC event names, and layer-shell behavior assumptions this shell depends on.
 
 ## Runtime model — read this before assuming anything about "building" or "compiling"
 
@@ -38,8 +53,8 @@ Quickshell instance is running. Each write can trigger a full reload; repeated r
 inconsistent module move have coincided with shell and whole-session starvation. Stop Quickshell
 or use a worktree, validate headlessly, then perform one controlled live load.
 
-- Entry point: `shell.qml` → loads a **panel family** (currently only `"ii"`, from
-  `panelFamilies/IllogicalImpulseFamily.qml`) which is a flat list of `PanelLoader { component: X {} }`
+- Entry point: `shell.qml` → loads a **panel family** (currently only `"imi"`, from
+  `panelFamilies/ImmaterialImpulseFamily.qml`) which is a flat list of `PanelLoader { component: X {} }`
   entries, one per top-level feature module.
 - Singletons (declared with `pragma Singleton`) are the shell's shared state and services. They are
   addressed by their QML type name directly (e.g. `Config`, `GlobalStates`, `Audio`) — no explicit
@@ -62,14 +77,14 @@ The running `qs` process writes two logs per instance, found under
 
 Find the current instance's log with:
 ```bash
-ls -la /proc/$(pgrep -f 'qs -c end4-pC')/fd | grep log.log
+ls -la /proc/$(pgrep -f 'qs -c imi')/fd | grep log.log
 ```
 
 The process is named **`qs`**, not `quickshell` — `pgrep quickshell` returns nothing even while the
 shell is running, which reads as "the shell is down" and leads to launching a second instance on top
 of the user's. Always match on `qs`:
 ```bash
-pgrep -af 'qs -c end4-pC'
+pgrep -af 'qs -c imi'
 ```
 
 Do not leave the primary shell running through a rapid multi-file patch series. Each source change
@@ -83,9 +98,9 @@ user has no panels. The error is reported as a cascade from `shell.qml` down to 
 actually failed — the **last** `caused by` line is the real culprit:
 ```
 ERROR: Failed to load configuration
-ERROR:   caused by @shell.qml[50:20]: Type IllogicalImpulseFamily unavailable
+ERROR:   caused by @shell.qml[50:20]: Type ImmaterialImpulseFamily unavailable
 ...
-ERROR:   caused by @modules/ii/sidebarRight/calendar/CalendarHeaderButton.qml[13:5]: Cannot override FINAL property
+ERROR:   caused by @modules/imi/sidebarRight/calendar/CalendarHeaderButton.qml[13:5]: Cannot override FINAL property
 ```
 Because a single bad widget takes down every panel that transitively reaches it, **confirm
 `Configuration Loaded` appears after the reload** rather than only checking that no warnings did.
@@ -126,10 +141,11 @@ modules/common/             Shared, feature-agnostic building blocks
   widgets/                   Shared UI components: StyledText, StyledComboBox, StyledSlider,
                               StyledToolTip(+Content), RippleButton, MaterialSymbol, ResourceCard,
                               PopupToolTip, StyledPopup, GroupedList, ConfigSwitch/ConfigSpinBox/
-                              ConfigSelectionArray (settings-page form controls), etc.
+                              ConfigSelectionArray (settings-page form controls), DockIconMotion
+                              (M3E feedback-motion wrapper for dock icons), etc.
   functions/, models/, utils/, panels/   Supporting JS logic, list models, window-panel base classes
 
-modules/ii/                 The "ii" (illogical-impulse) panel family - one directory per feature:
+modules/imi/                 The "imi" (Immaterial Impulse) panel family - one directory per feature:
   bar/                        The top/bottom bar and everything docked in it (Resources, Media,
                               SysTray, Workspaces, clock, quick toggles, ...)
   sidebarLeft/, sidebarRight/ Slide-out panels (AI chat, quick settings, notifications, volume mixer)
@@ -156,8 +172,8 @@ services/                  Singletons wrapping external state/processes - one pe
   Brightness.qml, Battery.qml, Hyprsunset.qml, Network.qml, BluetoothStatus.qml, TrayService.qml,
   MprisController.qml, Weather.qml, Docker.qml, ... (one per integration)
 
-panelFamilies/              PanelLoader.qml (thin LazyLoader) + IllogicalImpulseFamily.qml (the
-                            actual list of panels for the "ii" family)
+panelFamilies/              PanelLoader.qml (thin LazyLoader) + ImmaterialImpulseFamily.qml (the
+                            actual list of panels for the "imi" family)
 
 scripts/                   Standalone helper scripts (Python/bash) invoked via Process/Quickshell.execDetached
 translations/              i18n string tables (Translation.tr(...) singleton)
@@ -170,7 +186,7 @@ assets/                    Static images/fonts bundled with the shell
 `Config.options.bar.resources.alwaysShowCpu`). This is not just an in-memory tree — Quickshell's
 `JsonAdapter`/`JsonObject` machinery automatically:
 
-1. Loads `~/.config/illogical-impulse/config.json` into `Config.options` on startup.
+1. Loads `~/.config/immaterial-impulse/config.json` into `Config.options` on startup.
 2. Persists any property write back to that file (debounced by `Config.readWriteDelay`, 50ms).
 
 Consequences for making changes:
@@ -178,7 +194,7 @@ Consequences for making changes:
 - Adding a new setting = add a `property <type> name: <default>` inside the right nested
   `JsonObject` in `Config.qml`. No migration code needed; missing keys just fall back to the QML
   default until the user's `config.json` gets the key written the first time it changes.
-- The settings UI (`modules/ii/settings/pages/*.qml`) is hand-written QML, not generated from the
+- The settings UI (`modules/imi/settings/pages/*.qml`) is hand-written QML, not generated from the
   schema — every setting needs a corresponding `ConfigSwitch`/`ConfigSpinBox`/`ConfigSelectionArray`/
   etc. row added manually in the relevant page, bound with `checked: Config.options.x.y` /
   `onCheckedChanged: Config.options.x.y = checked`.
@@ -268,8 +284,8 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   under a fullscreen app by default), but **below `Overlay`**. A special workspace opened on top of a
   fullscreen window compounds this. Fixing "X becomes unclickable/invisible under fullscreen +
   special workspace" generally means conditionally promoting that surface to `Overlay` only in that
-  specific combination (see `modules/ii/bar/Bar.qml`'s `WlrLayershell.layer` binding and
-  `modules/ii/screenCorners/ScreenCorners.qml`'s `fullscreen` property for the reference
+  specific combination (see `modules/imi/bar/Bar.qml`'s `WlrLayershell.layer` binding and
+  `modules/imi/screenCorners/ScreenCorners.qml`'s `fullscreen` property for the reference
   implementation).
 - **Same-layer surfaces resolve overlap by stacking order, not layer priority.** If two `PanelWindow`s
   end up on the same layer and physically overlap, whichever the compositor considers "on top" wins
@@ -413,7 +429,7 @@ imported singleton/module.
 **Do not bind an image source directly to `SystemTrayItem.icon`.** Tray properties are backed by a
 third-party StatusNotifierItem over D-Bus. A broken Electron tray provider repeatedly failed its
 `IconName` getter; the direct `IconImage.source: item.icon` binding then drove the GUI thread to
-100% CPU while anonymous memory grew by gigabytes. `modules/ii/bar/SysTrayItem.qml` deliberately
+100% CPU while anonymous memory grew by gigabytes. `modules/imi/bar/SysTrayItem.qml` deliberately
 debounces icon change signals into `stableIconSource`, retains the last non-empty URL, and uses a
 fallback glyph for missing/error states. Keep that mediation in place; `tests/lint_systray_icon_binding.sh`
 guards the critical source binding.
@@ -482,7 +498,9 @@ Shared building blocks to reach for before writing something from scratch: `Styl
 `StyledComboBox`/`StyledComboBoxSearch`, `StyledSlider`, `StyledToolTip`/`StyledToolTipContent`,
 `RippleButton`, `MaterialSymbol`, `ResourceCard`, `GroupedList` + `ConfigSwitch`/`ConfigSpinBox`/
 `ConfigSelectionArray`/`ConfigComboBox`/`ConfigTextArea` (settings rows), `StyledPopup`,
-`StyledRectangularShadow`. All in `modules/common/widgets/`.
+`StyledRectangularShadow`, `DockIconMotion` (wraps a dock icon's visuals with hover-lift /
+press-squish / launch-bounce / appear-pop feedback, driven by `services/DockLaunchTracker`).
+All in `modules/common/widgets/`.
 
 `ConfigTextArea` is the text-entry counterpart to `ConfigSwitch` (icon + label/description on the
 left, a bordered `TextArea` field on the right) and is the standard single-line settings field -

@@ -21,4 +21,4 @@ jobs:
       - name: Run Tests
         env:
           QT_QPA_PLATFORM: offscreen
-        run: ./tests/run_tests.sh
+        run: ./dots/.config/quickshell/imi/tests/run_tests.sh

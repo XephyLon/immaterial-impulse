@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Immaterial Impulse
+Description=Minimal Material-style boot splash for the Immaterial Impulse suite
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/immaterial-impulse
+ScriptFile=/usr/share/plymouth/themes/immaterial-impulse/immaterial-impulse.script
