@@ -21,6 +21,11 @@ RippleButton {
     // Empty for every caller that does not set it, and an empty RowLayout has
     // no height, so this costs nothing elsewhere.
     property alias detailContent: detailRow.data
+    // Sits on the label's own line, immediately after it. For a secondary
+    // phrase that belongs to the title rather than under it - a byline, a
+    // version. The label is one StyledText, so a caller cannot mix type sizes
+    // into it directly.
+    property alias titleContent: titleRow.data
     colBackgroundHover: "transparent"
 
     Layout.fillWidth: true
@@ -44,14 +49,27 @@ RippleButton {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 0
-                StyledText {
-                    id: labelWidget
+                RowLayout {
                     Layout.fillWidth: true
-                    text: root.text
-                    textFormat: Text.PlainText
-                    font: root.font
-                    color: Appearance.colors.colOnSecondaryContainer
-                    opacity: root.enabled ? 1 : 0.4
+                    spacing: Appearance.spacing.space100
+
+                    StyledText {
+                        id: labelWidget
+                        text: root.text
+                        textFormat: Text.PlainText
+                        font: root.font
+                        color: Appearance.colors.colOnSecondaryContainer
+                        opacity: root.enabled ? 1 : 0.4
+                    }
+                    RowLayout {
+                        id: titleRow
+                        Layout.alignment: Qt.AlignBaseline
+                        spacing: Appearance.spacing.space50
+                        opacity: root.enabled ? 1 : 0.4
+                    }
+                    // Keeps the label left-aligned now that it no longer fills
+                    // the row itself.
+                    Item { Layout.fillWidth: true }
                 }
                 StyledText {
                     Layout.fillWidth: true
