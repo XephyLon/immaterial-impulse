@@ -8,7 +8,7 @@ the same source color and prints a compact JSON map of representative swatches:
 
 Swatches are primary / secondary / tertiary in the requested mode. Needs the
 color venv (materialyoucolor + PIL) - run through generate-colors-venv.sh's
-environment or with ILLOGICAL_IMPULSE_VIRTUAL_ENV activated.
+environment or with IMMATERIAL_IMPULSE_VIRTUAL_ENV activated.
 """
 import argparse
 import json

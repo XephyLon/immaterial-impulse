@@ -323,7 +323,7 @@ switch() {
     "$SCRIPT_DIR/install_matugen_app_themes.sh"
     matugen "${matugen_args[@]}"
     python3 "$SCRIPT_DIR/apply_matugen_app_themes.py"
-    source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
+    source "$(eval echo ${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV})/bin/activate"
     python3 "$SCRIPT_DIR/generate_colors_material.py" "${generate_colors_material_args[@]}" \
         > "$STATE_DIR"/user/generated/material_colors.scss
     deactivate
@@ -357,7 +357,7 @@ main() {
 
     detect_scheme_type_from_image() {
         local img="$1"
-        source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
+        source "$(eval echo ${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV})/bin/activate"
         "$SCRIPT_DIR"/scheme_for_image.py "$img" 2>/dev/null | tr -d '\n'
         deactivate
     }

@@ -67,7 +67,7 @@ def make_stub_venv(directory):
 
 
 def run_wrapper(args, stub_venv):
-    env = dict(os.environ, ILLOGICAL_IMPULSE_VIRTUAL_ENV=stub_venv)
+    env = dict(os.environ, IMMATERIAL_IMPULSE_VIRTUAL_ENV=stub_venv)
     return subprocess.run(
         ["bash", str(WRAPPER), *args],
         capture_output=True, text=True, env=env, timeout=120,

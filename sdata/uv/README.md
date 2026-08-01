@@ -18,10 +18,10 @@ This is important because there has been so many complaints about the failure in
 ## How will the python packages get installed?
 
 For summary:
-- They will be installed to the virtual environment `$ILLOGICAL_IMPULSE_VIRTUAL_ENV`.
-- The default value of `$ILLOGICAL_IMPULSE_VIRTUAL_ENV` is `$XDG_STATE_HOME/quickshell/.venv`.
+- They will be installed to the virtual environment `$IMMATERIAL_IMPULSE_VIRTUAL_ENV`.
+- The default value of `$IMMATERIAL_IMPULSE_VIRTUAL_ENV` is `$XDG_STATE_HOME/quickshell/.venv`.
   - The default value of `$XDG_STATE_HOME` is `$HOME/.local/state`.
-- Currently we use `env = ILLOGICAL_IMPULSE_VIRTUAL_ENV, ~/.local/state/quickshell/.venv` in `~/.config/hypr/hyprland/env.conf` to set this environment variable.[^2]
+- Currently we use `env = IMMATERIAL_IMPULSE_VIRTUAL_ENV, ~/.local/state/quickshell/.venv` in `~/.config/hypr/hyprland/env.conf` to set this environment variable.[^2]
 
 For details: see the function `install-python-packages()` defined in `/sdata/lib/package-installers.sh`.
 
@@ -31,7 +31,7 @@ For details: see the function `install-python-packages()` defined in `/sdata/lib
 
 Basically you'll need to activate the virtual environment first:
 ```bash
-source $(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate
+source $(eval echo $IMMATERIAL_IMPULSE_VIRTUAL_ENV)/bin/activate
 ```
 
 It will add the python executable located in the venv to `$PATH` and give it the highest priority.
@@ -65,7 +65,7 @@ In this example, python script `find_regions.py` is called and receives some arg
 
 Add the shebang below to the beginning of python script:
 ```python
-#!/usr/bin/env -S\_/bin/sh\_-c\_"source\_\$(eval\_echo\_\$ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate&&exec\_python\_-E\_"\$0"\_"\$@""
+#!/usr/bin/env -S\_/bin/sh\_-c\_"source\_\$(eval\_echo\_\$IMMATERIAL_IMPULSE_VIRTUAL_ENV)/bin/activate&&exec\_python\_-E\_"\$0"\_"\$@""
 ```
 And that's it!
 
@@ -89,7 +89,7 @@ Let's continue the `screenshot.qml` example, in the same directory as `find_regi
 # The example below only applies when `find_regions.py` and this wrapper script are under the same folder.
 PY_SCRIPT="$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/find_regions.py"
 
-source $(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate
+source $(eval echo $IMMATERIAL_IMPULSE_VIRTUAL_ENV)/bin/activate
 "$PY_SCRIPT" "$@"
 deactivate
 ```
@@ -121,7 +121,7 @@ Inside a bash script,
 For running a python script,
 take `generate_colors_material.py` as example:
 ```bash
-source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
+source "$(eval echo $IMMATERIAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
 python3 "$SCRIPT_DIR/generate_colors_material.py" "${generate_colors_material_args[@]}" \
   > "$STATE_DIR"/user/generated/material_colors.scss
 "$SCRIPT_DIR"/applycolor.sh
@@ -130,7 +130,7 @@ python3 "$SCRIPT_DIR/generate_colors_material.py" "${generate_colors_material_ar
 For running a python script provided by python package,
 take `kde-material-you-colors` as example:
 ```bash
-source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
+source "$(eval echo $IMMATERIAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
 kde-material-you-colors "$mode_flag" --color "$color" -sv "$sv_num"
 deactivate
 ```

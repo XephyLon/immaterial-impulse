@@ -56,7 +56,7 @@ ContentPage {
     Process {
         id: schemePreviewProc
         command: ["bash", "-c",
-            `source "$ILLOGICAL_IMPULSE_VIRTUAL_ENV/bin/activate" && ` +
+            `source "${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV}/bin/activate" && ` +
             `python3 '${Directories.scriptPath}/colors/scheme_preview.py' ` +
             `--path '${StringUtils.shellSingleQuoteEscape(page.swatchSource)}' ` +
             `--mode ${Appearance.m3colors.darkmode ? "dark" : "light"}`]

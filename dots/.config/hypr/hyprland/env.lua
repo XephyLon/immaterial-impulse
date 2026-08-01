@@ -13,4 +13,7 @@ hl.env("QT_QPA_PLATFORMTHEME", "kde")
 hl.env("XDG_MENU_PREFIX", "plasma-")
 
 -- Virtual environment
+hl.env("IMMATERIAL_IMPULSE_VIRTUAL_ENV", home_dir .. "/.local/state/quickshell/.venv")
+-- Legacy alias. Third-party scripts (and any shell started before the
+-- rename) still read the old name; harmless to keep exporting both.
 hl.env("ILLOGICAL_IMPULSE_VIRTUAL_ENV", home_dir .. "/.local/state/quickshell/.venv")

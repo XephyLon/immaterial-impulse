@@ -1,4 +1,4 @@
-#!/usr/bin/env -S /bin/sh -c "source $(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate&&exec python -E \"$0\" \"$@\""
+#!/usr/bin/env -S /bin/sh -c "source \$(eval echo \${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-\$ILLOGICAL_IMPULSE_VIRTUAL_ENV})/bin/activate&&exec python -E \"\$0\" \"\$@\""
 import argparse
 import os
 import re

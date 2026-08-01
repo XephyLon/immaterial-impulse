@@ -3,10 +3,10 @@
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV_DIR="${ILLOGICAL_IMPULSE_VIRTUAL_ENV:-}"
+VENV_DIR="${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-${ILLOGICAL_IMPULSE_VIRTUAL_ENV:-}}"
 
 if [[ -z "$VENV_DIR" || ! -f "$VENV_DIR/bin/activate" ]]; then
-    echo "generate-colors-venv: ILLOGICAL_IMPULSE_VIRTUAL_ENV is not a valid virtual environment" >&2
+    echo "generate-colors-venv: IMMATERIAL_IMPULSE_VIRTUAL_ENV is not a valid virtual environment" >&2
     exit 1
 fi
 

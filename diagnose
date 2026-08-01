@@ -51,7 +51,7 @@ _check_distro() {
   lsb_release -a || cat /etc/os-release || cat /etc/lsb-release
 }
 _check_venv() {
-  source $(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate
+  source $(eval echo ${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV})/bin/activate
   which python
   deactivate
 }
@@ -78,7 +78,7 @@ x declare -p XDG_CACHE_HOME # ~/.cache
 x declare -p XDG_CONFIG_HOME # ~/.config
 x declare -p XDG_DATA_HOME # ~/.local/share
 x declare -p XDG_STATE_HOME # ~/.local/state
-x declare -p ILLOGICAL_IMPULSE_VIRTUAL_ENV # $XDG_STATE_HOME/quickshell/.venv
+x declare -p IMMATERIAL_IMPULSE_VIRTUAL_ENV # $XDG_STATE_HOME/quickshell/.venv
 
 e "Checking directories/files"
 x ls -l ~/.local/state/quickshell/.venv
