@@ -369,6 +369,10 @@ Item {
                                             Layout.alignment: Qt.AlignVCenter
                                         },
 
+                                        // Pushes the tags to the trailing edge, opposite
+                                        // the byline.
+                                        Item { Layout.fillWidth: true },
+
                                         // Surface tags, from the same vocabulary as the
                                         // filter chips, so a card visibly explains why a
                                         // filter matched it. Values outside the

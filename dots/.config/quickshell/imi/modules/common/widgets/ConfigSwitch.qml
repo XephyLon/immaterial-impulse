@@ -58,6 +58,9 @@ RippleButton {
             }
             RowLayout {
                 id: detailRow
+                // Fills the label block so a call site can push trailing items
+                // to the far edge with a spacer.
+                Layout.fillWidth: true
                 spacing: Appearance.spacing.space50
                 opacity: root.enabled ? 1 : 0.4
             }
