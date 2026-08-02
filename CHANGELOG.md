@@ -84,6 +84,16 @@ own repo; the installer pins which revision it builds.
   you picked survive the upgrade; there is nothing to redo.
 
 ### Fixed
+- **A locked widget could still be resized.** The Calendar, World Clock and
+  Custom Image each draw a corner grip that resizes them, and each one checked
+  only the global `Lock widget positions` switch. Lock one of those widgets on
+  its own and the lock held for dragging but not for the grip — the widget was
+  pinned and still fully resizable, which is not what "locked" means anywhere
+  else. All three grips now follow the same resolved lock the drag does, so a
+  widget locked for any reason (its own switch, the global one, or
+  click-through) has a dead grip. That also closes a hole in **Click through**:
+  the widget itself stopped taking clicks, but a grip drawn *inside* it did
+  not, so a click-through widget could still be resized by its own handle.
 - **Laptops lost their battery reading when the resources widget was deduped.**
   The built-in `ResourcesWidget` showed CPU, RAM and — wherever a battery
   existed — the battery, falling back to disk only on a desktop. The bundled

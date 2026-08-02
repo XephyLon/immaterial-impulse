@@ -403,6 +403,30 @@ none were in the original recipe.
     is already true on every install that has launched this branch once, so
     reusing it excludes exactly the installs the migration exists for.
 
+18. **A widget's own state lives in two places, and a feature has to reach
+    both.** Per-widget lock and click-through were added on
+    `AbstractBackgroundWidget`, which is correct — it computes `draggable`. But
+    three ported widgets draw their *own* resize/toggle grips inside
+    `Widget.qml`, and those read `Config.options.background.widgetsLocked`
+    directly because that was the only lock when they were built. A per-widget
+    lock therefore held for dragging and not for resizing. **When a host gains
+    a capability, grep the bundled `Widget.qml` files for the thing it
+    replaces**, not just the host's own bindings — a plugin widget is a
+    grandchild of the host and cannot see any of its properties unless
+    `PluginNode` is taught to forward them.
+
+19. **`enabled: false` on the host does not disable the plugin's contents.**
+    `AbstractBackgroundWidget` is a `MouseArea`, and `MouseArea.enabled` is
+    `MouseArea`'s own property, not `Item.enabled`: it stops that one area
+    handling events and leaves its whole subtree live. (A plain `Item` with
+    `enabled: false` does disable its children — that is the intuition this
+    breaks.) So click-through made the host stop taking clicks while any
+    `MouseArea` a widget declares for itself kept working, and a click-through
+    widget could still be resized by its own grip. Measured with a two-case
+    probe under headless weston, not reasoned about. Anything that has to be
+    genuinely inert has to be gated inside the widget, which is what the
+    forwarded `hostInteractionLocked` is for.
+
 ---
 
 ## Task 1: One-shot migration from `background.widgets.*` to `plugins.enabled`
