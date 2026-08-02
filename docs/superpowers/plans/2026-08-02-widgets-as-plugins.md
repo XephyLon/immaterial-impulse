@@ -225,6 +225,18 @@ none were in the original recipe.
     escape hatch either: the services tree fails to load with
     `No PanelWindow backend loaded`. *Found by the `world-clock` port.*
 
+    **Correction, from the timezone follow-up:** `Config.ready` does reach
+    `true` in a `qs -p` probe, and the adapter does write - but only once the
+    probe waits for it. The `FileView` load is asynchronous, so everything read
+    in `Component.onCompleted` is the QML default, which is what the original
+    finding sampled. A `Timer` at ~1.5s sees the real config, and a write made
+    after that reaches disk. This makes a probe a legitimate way to verify a
+    persistence path, and the only safe way to do it: point `XDG_CONFIG_HOME`
+    (plus `XDG_STATE_HOME`/`XDG_CACHE_HOME`) at a scratch copy of the config,
+    and the probe reads and rewrites that copy instead of the user's live files,
+    with no compositor and no second bar on screen. That is how the world clock's
+    timezone migration was proved against three seeded install shapes.
+
 12. **A widget with two writers for the same option must funnel both through one
     setter.** `property x: PluginState.option(id, key, default)` is a binding, and
     the first direct assignment to `x` destroys it *for the rest of the session* -
