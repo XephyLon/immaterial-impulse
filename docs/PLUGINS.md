@@ -112,6 +112,34 @@ The empty string is a legal choice and draws an "automatic" slot rather than a s
 the widget has a sensible colour of its own and the option is an override, so the way back to that
 default is one more swatch rather than a second switch sitting beside the row saying the same thing.
 
+## Host context and host opt-ins
+
+A component-backed `Widget.qml` is a grandchild of the `AbstractBackgroundWidget` that hosts it, so
+anything that has to influence the host's own geometry, visibility or wallpaper sampling has to be
+declared as a property and picked up by `PluginNode`. Every one of these is optional; a widget that
+declares none of them behaves exactly as it does today.
+
+Handed **down** to the widget (the host writes them):
+
+| property | meaning |
+|---|---|
+| `screenName` | name of the monitor this instance lives on (see below) |
+| `hostX`, `hostY` | the widget's position on that monitor |
+| `hostColText` | the host's wallpaper-adaptive text colour (see `needsColText`) |
+| `wallpaperSafetyTriggered` | the background is suppressing the wallpaper |
+
+Read **back** off the widget (the host obeys them):
+
+| property | effect |
+|---|---|
+| `visibleWhenLocked: true` | stay visible while the screen is locked regardless of `lock.showWidgets` |
+| `forceCenter: true` | centre on the monitor for as long as it is set, without disturbing the persisted position |
+| `needsColText: true` | run the least-busy-region pass so `hostColText` tracks the wallpaper under the widget |
+
+These exist for widgets that draw straight onto the wallpaper with no panel of their own. The
+bundled Clock uses all of them: it is the lock screen's only clock, it has always centred itself
+there, and its digital style is bare text that has to stay readable over whatever it sits on.
+
 ## Drop Shelf and Screenshot Result
 
 Both were bundled `panel` plugins and are now core shell modules

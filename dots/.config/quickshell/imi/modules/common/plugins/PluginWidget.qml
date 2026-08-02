@@ -13,6 +13,31 @@ AbstractBackgroundWidget {
     required property var manifest
     required property string screenName
 
+    // Set by the background that owns this widget; only forwarded, never read
+    // here. The clock draws a "Wallpaper safety enforced" badge from it.
+    property bool wallpaperSafetyTriggered: false
+
+    // Desktop-widget behaviours a ported built-in used to set on itself, now
+    // opted into by the loaded Widget.qml (see PluginNode). A widget that
+    // declares none of them behaves exactly as before.
+    //
+    // The clock is the only clock the lock screen has, so it must be able to
+    // stay visible while locked regardless of `lock.showWidgets` - which
+    // exists to hide the *other* desktop widgets - and to centre itself there,
+    // which is what `lock.centerClock` has always done.
+    visibleWhenLocked: pluginNode.wantsVisibleWhenLocked
+        || Config.options.lock.showWidgets
+    readonly property bool forceCenter: pluginNode.wantsForceCenter
+
+    // Drives AbstractBackgroundWidget's least-busy-region pass, whose real
+    // output for a "free" widget is `dominantColor` -> `colText`: the text
+    // colour a widget that draws no panel needs in order to stay readable
+    // against whatever part of the wallpaper it happens to sit on.
+    needsColText: pluginNode.wantsAdaptiveTextColor
+    // The item loads after the host, so the flag arrives late and none of the
+    // existing refresh triggers fire for it.
+    onNeedsColTextChanged: rootWidget.refreshPlacementIfNeeded()
+
     // The live in-shell Wallpaper Engine surface (whole-screen), passed down from
     // Background so "blur" frost can sample the animated wallpaper behind each
     // widget. Null when no WE wallpaper is active (static image path).
@@ -93,6 +118,24 @@ AbstractBackgroundWidget {
     onCurrentConfigChanged: applyPersistedPosition()
     Component.onCompleted: applyPersistedPosition()
 
+    // `forceCenter` overrides the persisted position for as long as it is set,
+    // without disturbing it - the widget returns to where the user left it the
+    // moment the condition clears. Dragging assigns x/y directly and so breaks
+    // these bindings; AbstractBackgroundWidget calls restoreXYBinding() on
+    // release for exactly this case, so the override has to be restored there
+    // too or a single drag disables centring for the rest of the session.
+    x: rootWidget.forceCenter ? ((scaledScreenWidth - width) / 2) : targetX
+    y: rootWidget.forceCenter ? ((scaledScreenHeight - height) / 2) : targetY
+
+    function restoreXYBinding() {
+        rootWidget.x = Qt.binding(() => rootWidget.forceCenter
+            ? ((rootWidget.scaledScreenWidth - rootWidget.width) / 2)
+            : rootWidget.targetX);
+        rootWidget.y = Qt.binding(() => rootWidget.forceCenter
+            ? ((rootWidget.scaledScreenHeight - rootWidget.height) / 2)
+            : rootWidget.targetY);
+    }
+
     onReleased: {
         rootWidget.targetX = rootWidget.x;
         rootWidget.targetY = rootWidget.y;
@@ -162,6 +205,10 @@ AbstractBackgroundWidget {
         optionDefinitions: rootWidget.manifest?.options ?? []
         basePath: rootWidget.manifest?._basePath ?? ""
         screenName: rootWidget.screenName
+        hostX: rootWidget.x
+        hostY: rootWidget.y
+        hostColText: rootWidget.colText
+        hostWallpaperSafetyTriggered: rootWidget.wallpaperSafetyTriggered
         // When the manifest declares a grid span, drive the node (and its loaded
         // Widget.qml) to the span size instead of the content's implicit size.
         gridWidth: rootWidget.gridSpanWidth

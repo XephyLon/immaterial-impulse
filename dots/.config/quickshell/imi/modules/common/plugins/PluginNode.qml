@@ -16,6 +16,28 @@ Item {
     // visualiser is full-bleed). Declarative nodes never need it.
     property string screenName: ""
 
+    // Host context handed down to a component-backed Widget.qml, and the
+    // opt-ins it can hand back. Both directions are optional and named on the
+    // loaded item, exactly like blurRegions/managesBlurTint: a widget that
+    // declares none of these properties is completely unaffected.
+    //
+    // These exist because the ported built-ins were direct AbstractBackground-
+    // Widget subclasses and could set these themselves. A plugin widget is a
+    // grandchild of one instead, so anything that has to influence the host's
+    // own geometry, visibility or wallpaper sampling has to travel through
+    // here. See docs/PLUGINS.md.
+    property real hostX: 0
+    property real hostY: 0
+    property color hostColText: Appearance.colors.colOnLayer0
+    property bool hostWallpaperSafetyTriggered: false
+
+    readonly property bool wantsVisibleWhenLocked: componentLoader.item
+        ? componentLoader.item.visibleWhenLocked === true : false
+    readonly property bool wantsForceCenter: componentLoader.item
+        ? componentLoader.item.forceCenter === true : false
+    readonly property bool wantsAdaptiveTextColor: componentLoader.item
+        ? componentLoader.item.needsColText === true : false
+
     // When the host declares a component-grid span (docs/widget-grid.md), it sets
     // these to the span size in px. The node then takes that size instead of the
     // loaded item's implicit size, and the item is stretched to fill so Widget.qml
@@ -114,6 +136,14 @@ Item {
             if (rootNode.componentPath) {
                 if (item.screenName !== undefined)
                     item.screenName = Qt.binding(() => rootNode.screenName);
+                if (item.hostX !== undefined)
+                    item.hostX = Qt.binding(() => rootNode.hostX);
+                if (item.hostY !== undefined)
+                    item.hostY = Qt.binding(() => rootNode.hostY);
+                if (item.hostColText !== undefined)
+                    item.hostColText = Qt.binding(() => rootNode.hostColText);
+                if (item.wallpaperSafetyTriggered !== undefined)
+                    item.wallpaperSafetyTriggered = Qt.binding(() => rootNode.hostWallpaperSafetyTriggered);
                 return;
             }
             if (manifestNode.props) {
