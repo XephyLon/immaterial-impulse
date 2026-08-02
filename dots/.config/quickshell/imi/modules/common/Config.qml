@@ -281,6 +281,35 @@ Singleton {
         obj[keys[keys.length - 1]] = convertedValue;
     }
 
+    // The config directory migration has to have finished before this file is
+    // read or written - see Directories.configDirReady. An unset path is a
+    // real "no file" state in Quickshell: it emits neither `loaded` nor
+    // `loadFailed`, and `writeAdapter()` on it writes nothing, so gating the
+    // path holds the whole adapter off the disk rather than merely delaying a
+    // read.
+    //
+    // Latched, and it also means "never write this session": the only way it
+    // gets set is the watchdog giving up on a migration that is still running,
+    // and a write into a half-migrated directory is the thing the gate exists
+    // to prevent. `FileView.blockWrites` is not this - it makes writes
+    // synchronous, it does not suppress them.
+    property bool configDirTimedOut: false
+    readonly property bool configDirReady: Directories.configDirReady || root.configDirTimedOut
+
+    // A gate that can hang is a shell that never loads its settings: every
+    // settings page Loader is gated on `ready`. Come up anyway, but read-only.
+    // Nothing is guessed at and nothing on disk is touched; the user is told,
+    // and the next launch retries the migration from an unchanged directory.
+    Timer {
+        id: configDirWatchdog
+        interval: 10000
+        running: !Directories.configDirReady
+        onTriggered: {
+            console.log(`[Config] scripts/migrate-config-dir.sh has not finished after ${configDirWatchdog.interval}ms. Loading ${root.filePath} read-only: settings changed this session will NOT be saved, and nothing in the config directory will be modified.`);
+            root.configDirTimedOut = true;
+        }
+    }
+
     Timer {
         id: fileReloadTimer
         interval: root.readWriteDelay
@@ -295,13 +324,15 @@ Singleton {
         interval: root.readWriteDelay
         repeat: false
         onTriggered: {
+            if (root.configDirTimedOut)
+                return;
             configFileView.writeAdapter()
         }
     }
 
     FileView {
         id: configFileView
-        path: root.filePath
+        path: root.configDirReady ? root.filePath : ""
         watchChanges: true
         blockWrites: root.blockWrites
         onFileChanged: fileReloadTimer.restart()
@@ -317,7 +348,14 @@ Singleton {
         }
         onLoadFailed: error => {
             if (error == FileViewError.FileNotFound) {
-                writeAdapter();
+                // Creating the file here is exactly the write that used to
+                // kill the directory migration, so a timed-out gate must not
+                // do it - the migration is still running and may be about to
+                // put the user's own config at this path.
+                if (!root.configDirTimedOut)
+                    writeAdapter();
+                else
+                    root.ready = true;
                 return;
             }
             // Any other read failure - bad permissions, an unreadable mount,

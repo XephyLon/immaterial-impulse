@@ -51,6 +51,14 @@ shipped_default="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/defaults/confi
 # files the user has since deleted.
 stamp="$new/.migrated-from-illogical-impulse"
 
+# Test seam: holds the script open long enough that the shell's config writer
+# would win the startup race if anything still let it, so
+# tests/test_config_dir_migration_runtime.py can force the losing interleaving
+# instead of hoping to observe it. Never set in normal operation.
+if [[ -n "${IMI_MIGRATE_DELAY:-}" ]]; then
+    sleep "$IMI_MIGRATE_DELAY"
+fi
+
 [[ -d "$old" ]] || exit 0            # nothing to migrate
 [[ -f "$stamp" ]] && exit 0          # already merged; the old dir is just a backup now
 

@@ -241,6 +241,15 @@ if ! python3 "$SCRIPT_DIR/test_config_migration.py"; then
     exit 1
 fi
 
+# Launches a real Quickshell and forces the startup race the migration used to
+# lose. Brings its own headless weston, so it needs no display of its own - but
+# it does need weston, and skips without it.
+echo "Running config directory migration runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_config_dir_migration_runtime.py"; then
+    echo "Config directory migration runtime tests failed."
+    exit 1
+fi
+
 echo "Running keyring migration tests..."
 if ! python3 "$SCRIPT_DIR/test_keyring_migration.py"; then
     echo "Keyring migration tests failed."
