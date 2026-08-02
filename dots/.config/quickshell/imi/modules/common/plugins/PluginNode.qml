@@ -30,6 +30,13 @@ Item {
     property real hostY: 0
     property color hostColText: Appearance.colors.colOnLayer0
     property bool hostWallpaperSafetyTriggered: false
+    // The host's *resolved* lock: AbstractBackgroundWidget.interactionLocked,
+    // i.e. per-widget lock OR click-through OR the global switch. Widgets that
+    // draw their own resize/toggle grips gate them on this, so a grip is dead
+    // for exactly the reasons dragging is. Deliberately the resolved value
+    // rather than the three terms - a grip has no business caring which of them
+    // is holding it.
+    property bool hostInteractionLocked: false
 
     readonly property bool wantsVisibleWhenLocked: componentLoader.item
         ? componentLoader.item.visibleWhenLocked === true : false
@@ -144,6 +151,8 @@ Item {
                     item.hostColText = Qt.binding(() => rootNode.hostColText);
                 if (item.wallpaperSafetyTriggered !== undefined)
                     item.wallpaperSafetyTriggered = Qt.binding(() => rootNode.hostWallpaperSafetyTriggered);
+                if (item.hostInteractionLocked !== undefined)
+                    item.hostInteractionLocked = Qt.binding(() => rootNode.hostInteractionLocked);
                 return;
             }
             if (manifestNode.props) {

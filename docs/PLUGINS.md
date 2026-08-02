@@ -212,6 +212,7 @@ Handed **down** to the widget (the host writes them):
 | `hostX`, `hostY` | the widget's position on that monitor |
 | `hostColText` | the host's wallpaper-adaptive text colour (see `needsColText`) |
 | `wallpaperSafetyTriggered` | the background is suppressing the wallpaper |
+| `hostInteractionLocked` | the host's resolved lock (see below) — gate any resize/toggle grip on this |
 
 Read **back** off the widget (the host obeys them):
 
@@ -246,10 +247,45 @@ never unlocks a widget the user deliberately pinned.
 
 Click-through is implemented as `enabled: false` on the host widget, not as a Wayland input region.
 Every desktop widget shares one layer-shell surface (`Background.qml`), so masking that surface
-would blind all of them at once. `enabled` cascades down the item tree and Qt skips disabled items
-when routing mouse events, so the click continues to whatever is behind the widget *inside the same
-surface* — which on the background is the desktop's own right-click area. Turning click-through
-off restores dragging, which is the way to reposition a widget that ships with it on.
+would blind all of them at once. A disabled `MouseArea` does not handle events, so the click
+continues to whatever is behind the widget *inside the same surface* — which on the background is
+the desktop's own right-click area. Turning click-through off restores dragging, which is the way
+to reposition a widget that ships with it on.
+
+**It does not disable the widget's own contents.** `AbstractBackgroundWidget` is a `MouseArea`, and
+`MouseArea.enabled` is `MouseArea`'s own property rather than `Item.enabled` — setting it false
+stops that one area handling events and leaves every item under it live. (A plain `Item` with
+`enabled: false` *does* disable its subtree; a `MouseArea` does not.) So a `Widget.qml` that
+declares interactive children of its own has to disarm them itself, which is what the
+`hostInteractionLocked` context property below is for. Verified in
+`WidgetGripLockRuntimeTest.qml`.
+
+### Grips and other in-widget interaction
+
+`PluginNode` hands a component-backed `Widget.qml` the host's **resolved** lock as
+`hostInteractionLocked` — `positionLocked || clickThrough || background.widgetsLocked`, the same
+value that decides whether the widget is draggable. Anything the widget draws that changes its own
+geometry (the Calendar's and Custom Image's resize corners, the World Clock's size toggle) gates on
+it:
+
+```qml
+property bool hostInteractionLocked: false   // no host, e.g. a bare `qs -p` probe
+
+Rectangle {
+    id: resizeHandle
+    visible: opacity > 0 && !root.hostInteractionLocked
+    MouseArea { anchors.fill: parent /* ... */ }
+}
+```
+
+`visible: false` is what makes the grip *dead* rather than merely invisible — Qt does not route
+mouse events into an invisible item, so hiding the rectangle disarms the `MouseArea` inside it.
+
+The resolved value is deliberately what is forwarded, not the three terms separately: a grip should
+be inert whenever the widget is pinned, and it has no business caring which lock is holding it. A
+widget that genuinely needs to tell them apart can read `Config.options.background.widgetsLocked`
+itself and subtract it — but nothing does, and doing so would mean a grip that outlives its own
+widget's lock, which is the bug this exists to prevent.
 
 The bundled Visualizer is the case this exists for: it is full-bleed (see below), so it covers a
 whole monitor's width, has nothing on it to click, and would otherwise both swallow the desktop

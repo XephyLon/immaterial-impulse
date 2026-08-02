@@ -10,6 +10,14 @@ import qs.modules.common.plugins
 Item {
     id: root
 
+    // The host's resolved lock (PluginNode forwards AbstractBackgroundWidget's
+    // `interactionLocked`). The grips below gate on this, not on the global
+    // `background.widgetsLocked` they used to read: a widget pinned on its own
+    // was still resizable, so the lock held for dragging and not for the two
+    // handles that change the widget's size. False when there is no host at all
+    // (a bare `qs -p` probe of this file), same as `screenName: ""`.
+    property bool hostInteractionLocked: false
+
     // The card fills the whole widget, so the host's default frost region has
     // the right extent - but not the right corner radius (PluginWidget falls
     // back to `Appearance.rounding.large`, 7px tighter than the card's
@@ -536,7 +544,7 @@ Item {
                 margins: Appearance.spacing.space50
             }
             opacity: (widgetHover.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
-            visible: opacity > 0 && !Config.options.background.widgetsLocked
+            visible: opacity > 0 && !root.hostInteractionLocked
             Behavior on opacity {
                 NumberAnimation {
                     duration: Appearance.animation.elementMoveFaster.duration
@@ -583,7 +591,7 @@ Item {
                 margins: Appearance.spacing.space50
             }
             opacity: (widgetHover.hovered || toggleArea.containsMouse) && root.sizeMode !== "1x1" ? 0.5 : 0
-            visible: opacity > 0 && !Config.options.background.widgetsLocked
+            visible: opacity > 0 && !root.hostInteractionLocked
             Behavior on opacity {
                 NumberAnimation {
                     duration: Appearance.animation.elementMoveFaster.duration

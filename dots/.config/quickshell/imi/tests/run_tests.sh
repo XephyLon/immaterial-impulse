@@ -123,6 +123,12 @@ if ! python3 "$SCRIPT_DIR/test_widget_interaction_modes.py"; then
     exit 1
 fi
 
+echo "Running widget grip lock tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_grip_lock.py"; then
+    echo "Widget grip lock tests failed."
+    exit 1
+fi
+
 echo "Running widget plugin migration tests..."
 if ! python3 "$SCRIPT_DIR/test_widget_plugin_migration.py"; then
     echo "Widget plugin migration tests failed."
