@@ -9,6 +9,13 @@ import qs.modules.common.plugins
 Item {
     id: root
 
+    // The host's resolved lock (PluginNode forwards AbstractBackgroundWidget's
+    // `interactionLocked`). The corner handle gates on this rather than on the
+    // global `background.widgetsLocked` it used to read, so a widget the user
+    // pinned on its own cannot still be resized. False with no host, for a bare
+    // `qs -p` probe of this file, the same as `screenName: ""`.
+    property bool hostInteractionLocked: false
+
     // The tile is a shape-masked image, never a rectangular card: the host's
     // frost is a rounded rectangle, so it would render as a square halo around
     // a Circle/Heart/Cookie mask. An empty region list makes PluginWidget skip
@@ -178,7 +185,7 @@ Item {
                 margins: Appearance.spacing.space100
             }
             opacity: (widgetHover.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
-            visible: opacity > 0 && !Config.options.background.widgetsLocked
+            visible: opacity > 0 && !root.hostInteractionLocked
             z: 1
 
             Behavior on opacity {

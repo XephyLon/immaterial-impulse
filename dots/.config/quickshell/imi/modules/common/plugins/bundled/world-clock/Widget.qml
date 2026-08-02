@@ -11,6 +11,13 @@ import qs.modules.common.plugins
 Item {
     id: root
 
+    // The host's resolved lock (PluginNode forwards AbstractBackgroundWidget's
+    // `interactionLocked`). The size-toggle handle gates on this rather than on
+    // the global `background.widgetsLocked` it used to read, so a widget the
+    // user pinned on its own cannot still be reshaped. False with no host, for
+    // a bare `qs -p` probe of this file, the same as `screenName: ""`.
+    property bool hostInteractionLocked: false
+
     // The card fills the whole widget, so the host's default region already has
     // the right extent - but not the right corner radius (it falls back to
     // `Appearance.rounding.large`, 7px tighter than the card's `verylarge`),
@@ -426,7 +433,7 @@ Item {
                 color: Appearance.colors.colOnPrimaryContainer
                 anchors { right: parent.right; bottom: parent.bottom; margins: Appearance.spacing.space50 }
                 opacity: (widgetHover.hovered || toggleArea.containsMouse || toggleArea.pressed) ? 0.5 : 0
-                visible: opacity > 0 && !Config.options.background.widgetsLocked
+                visible: opacity > 0 && !root.hostInteractionLocked
 
                 Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration } }
 
