@@ -889,11 +889,6 @@ ContentPage {
                             icon: "music_note",
                             name: Translation.tr("Media Player"),
                             enabled: Config.options.background.widgets.media.enable
-                        },
-                        {
-                            icon: "memory",
-                            name: Translation.tr("Resources"),
-                            enabled: Config.options.background.widgets.resources.enable
                         }
                     ]
                     delegate: Rectangle {
@@ -927,8 +922,6 @@ ContentPage {
                                             Config.options.background.widgets.weather.enable = checked
                                         else if (modelData.icon === "music_note")
                                             Config.options.background.widgets.media.enable = checked
-                                        else if (modelData.icon === "memory")
-                                            Config.options.background.widgets.resources.enable = checked
                                     }
                                 }
                             }

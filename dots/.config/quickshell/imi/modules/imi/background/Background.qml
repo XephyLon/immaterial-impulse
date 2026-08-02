@@ -19,7 +19,6 @@ import qs.modules.imi.background.widgets.clock
 import qs.modules.imi.background.widgets.weather
 import qs.modules.imi.background.widgets.media
 import qs.modules.common.plugins
-import qs.modules.imi.background.widgets.resources
 
 Variants {
     id: root
@@ -783,18 +782,6 @@ Variants {
                                 mediaTimer.running = true
                             })
                         }
-                    }
-                }
-                FadeLoader {
-                    shown: Config.options.background.widgets.resources.enable
-                        && (Config.options.background.screenList.length === 0
-                            || Config.options.background.screenList.includes(bgRoot.screen.name))
-                    sourceComponent: ResourcesWidget {
-                        screenWidth:        bgRoot.screen.width
-                        screenHeight:       bgRoot.screen.height
-                        scaledScreenWidth:  bgRoot.screen.width
-                        scaledScreenHeight: bgRoot.screen.height
-                        wallpaperScale:     1
                     }
                 }
 
