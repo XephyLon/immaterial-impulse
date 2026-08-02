@@ -209,6 +209,18 @@ Consequences for making changes:
   etc. row added manually in the relevant page, bound with `checked: Config.options.x.y` /
   `onCheckedChanged: Config.options.x.y = checked`.
 - Consumers read `Config.options.x.y` directly and reactively - no separate "load config" step.
+- **The config `FileView` does not start until `Directories.configDirReady` is true**, which happens
+  when `scripts/migrate-config-dir.sh` exits. `~/.config/illogical-impulse` -> `immaterial-impulse`
+  is a runtime migration that refuses to migrate into a directory that already holds a `config.json`,
+  so a Config load reaching the directory first wrote its defaults in and permanently disabled the
+  move - the user silently kept none of their settings. The script used to be fired with
+  `execDetached` (returns immediately), so the ordering was a timing accident. Anything else that
+  writes into `Directories.shellConfig` on startup should think about the same gate; the three
+  `mkdir`s in `Directories.qml` that live inside it are behind it, and the script defends itself with
+  `mv -T` for the rest. If the migration hangs, `Config` gives up after 10s and comes up **read-only**
+  (`configDirTimedOut`) rather than writing into a half-migrated directory. See
+  `docs/UPSTREAM_MIGRATION.md` and `tests/test_config_dir_migration_runtime.py`, which forces the
+  losing interleaving with `IMI_MIGRATE_DELAY` instead of hoping to observe it.
 - **A key with no declared property is destroyed by the first write, not just hidden.** The
   `JsonAdapter` serializes exactly its declared properties, and `writeAdapter()` runs on essentially
   every launch, so an undeclared key present in `config.json` survives only until then - verified
@@ -361,6 +373,19 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   rewrite that called `fileView.reload(); const text = fileView.text();` back-to-back silently got
   an empty string every time, with no error - only a `console.log` inside the failure branch (which
   never fired, since nothing *failed*, it just wasn't ready yet) would have revealed it.
+- **`FileView.blockWrites` makes writes synchronous; it does not suppress them.** The whole
+  `block*` family (`blockLoading`, `blockAllReads`, `blockWrites`) is about blocking the calling
+  thread, not about blocking the operation - the names read like a permission switch and are not
+  one. Setting `Config.blockWrites = true` to stop the shell touching `config.json` looks right,
+  passes review, and writes the file anyway (`Config.qml`'s watchdog was written that way first;
+  only `tests/test_config_dir_migration_runtime.py` reading the file back caught it). To actually
+  not write, gate the call sites - `writeAdapter()` in `onLoadFailed` and the debounced write timer.
+- **An unset `FileView.path` is a real "no file" state, and a useful one.** With `path: ""` the view
+  emits neither `loaded` nor `loadFailed`, and `writeAdapter()` on it writes nothing - so
+  `path: someGate ? realPath : ""` holds an entire `JsonAdapter` off the disk until the gate opens,
+  rather than merely delaying a read. That is how `Config.qml` waits for the config-directory
+  migration. Verified against a real `qs` instance; do not assume an empty path errors or creates
+  a file somewhere.
 - **`Repeater` only auto-binds a model item to a `required property` declared on the delegate's
   *root* object, not on a descendant.** `required property var modelData` on a widget nested a level
   or two inside the actual delegate root throws `Required property modelData was not initialized`
