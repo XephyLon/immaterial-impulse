@@ -38,6 +38,10 @@ Item {
 
     readonly property bool sidebarOpen: GlobalStates.sidebarRightOpen
 
+    // The opaque panel body, exposed so the hosting window can scope its
+    // compositor blur region to it (see WindowBlurRegion in SidebarRight.qml).
+    readonly property Item backgroundItem: sidebarRightBackground
+
     readonly property MprisPlayer activePlayer: MprisController.activePlayer
     readonly property var realPlayers: MprisController.players
     readonly property var meaningfulPlayers: {

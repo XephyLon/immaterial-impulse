@@ -164,6 +164,14 @@ hl.layer_rule({ match = { namespace = "quickshell:session" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:session" }, ignore_alpha = 0})
 hl.layer_rule({ match = { namespace = "quickshell:sidebarRight" }, animation = "slide right"})
 hl.layer_rule({ match = { namespace = "quickshell:sidebarLeft" }, animation = "slide left"})
+-- The sidebars draw a translucent drop shadow (StyledRectangularShadow) in
+-- their surface's elevation margin. The catch-all whole-surface blur above
+-- frosts that shadow into an ugly band along the panel's edge (#82). Turn the
+-- layerrule blur off for these namespaces; the shell scopes blur to just the
+-- panel body instead, via ext-background-effect (WindowBlurRegion.qml), so a
+-- translucent body still gets its backdrop blur while the shadow stays crisp.
+hl.layer_rule({ match = { namespace = "quickshell:sidebarRight" }, blur = false})
+hl.layer_rule({ match = { namespace = "quickshell:sidebarLeft" }, blur = false})
 hl.layer_rule({ match = { namespace = "quickshell:verticalBar" }, animation = "slide"})
 hl.layer_rule({ match = { namespace = "quickshell:osk" }, order = -1})
 -- Quickshell: waffles
