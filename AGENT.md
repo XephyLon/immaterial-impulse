@@ -204,6 +204,18 @@ Consequences for making changes:
   etc. row added manually in the relevant page, bound with `checked: Config.options.x.y` /
   `onCheckedChanged: Config.options.x.y = checked`.
 - Consumers read `Config.options.x.y` directly and reactively - no separate "load config" step.
+- **A key with no declared property is destroyed by the first write, not just hidden.** The
+  `JsonAdapter` serializes exactly its declared properties, and `writeAdapter()` runs on essentially
+  every launch, so an undeclared key present in `config.json` survives only until then - verified
+  end to end against an isolated `XDG_CONFIG_HOME`, including on a launch that changed nothing.
+  This is what makes a key rename lossy, and it is why `Config.qml`'s upstream migration reads
+  `configFileView.text()` (the raw file) inside `onLoaded` rather than `Config.options`: by the time
+  anything else could look, the old key is already gone. Any future migration that needs to read a
+  removed key must run in that same `onLoaded`, before `ready`, on the raw text - and it gets exactly
+  one launch to do it. See `docs/UPSTREAM_MIGRATION.md`.
+  (The desktop-widget migration's "old keys are deliberately left on disk" note is not a
+  counterexample: `background.widgets.*` are still *declared* in `Config.qml`, which is precisely why
+  they persist.)
 - **`Config.readWriteDelay`'s 50ms debounce only covers the disk write - it does nothing to stop
   every keystroke from firing whatever else reactively reads that option.** A `ConfigTextArea`
   bound as `onValueChanged: Config.options.x.y = value` re-triggers every consumer of
