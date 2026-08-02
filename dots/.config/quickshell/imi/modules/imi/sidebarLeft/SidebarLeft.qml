@@ -139,6 +139,16 @@ Scope { // Scope
                 item: sidebarLeftBackground
             }
 
+            // Blur only the panel body. The drop shadow is drawn in the
+            // surface's elevation margin, outside this region, so the
+            // compositor's blur can't frost it (#82). Pairs with rules.lua
+            // turning the whole-surface layerrule blur off for this namespace.
+            WindowBlurRegion {
+                targetWindow: panelWindow
+                regionItem: sidebarLeftBackground
+                regionRadius: sidebarLeftBackground.radius
+            }
+
             onVisibleChanged: {
                 if (visible) {
                     GlobalFocusGrab.addDismissable(panelWindow);

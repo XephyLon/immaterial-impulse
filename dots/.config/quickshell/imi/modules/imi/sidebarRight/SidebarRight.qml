@@ -1,6 +1,7 @@
 import qs
 import qs.services
 import qs.modules.common
+import qs.modules.common.widgets
 import QtQuick
 import Quickshell.Io
 import Quickshell
@@ -56,6 +57,16 @@ Scope {
             top: true
             right: true
             bottom: true
+        }
+
+        // Blur only the panel body (exposed by SidebarRightContent) — the drop
+        // shadow in the elevation margin stays outside the region, so the
+        // compositor's blur can't frost it (#82). Pairs with rules.lua turning
+        // the whole-surface layerrule blur off for this namespace.
+        WindowBlurRegion {
+            targetWindow: panelWindow
+            regionItem: sidebarContentLoader.item?.backgroundItem ?? null
+            regionRadius: sidebarContentLoader.item?.backgroundItem?.radius ?? 0
         }
 
         margins {
