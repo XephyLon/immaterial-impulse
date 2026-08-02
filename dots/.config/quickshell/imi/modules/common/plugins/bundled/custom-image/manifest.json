@@ -4,7 +4,7 @@
   "defaultWidth": 80, "defaultHeight": 80,
   "capabilities": ["desktop-widget"], "permissions": ["settings_read", "settings_write", "filesystem_read"],
   "options": [
-    { "key": "shape", "type": "choice", "label": "", "icon": "shapes", "default": "Cookie4Sided", "choices": [
+    { "key": "shape", "type": "shape", "label": "Shape", "icon": "shapes", "default": "Cookie4Sided", "choices": [
       { "displayName": "Circle", "value": "Circle" },
       { "displayName": "Square", "value": "Square" },
       { "displayName": "Slanted", "value": "Slanted" },

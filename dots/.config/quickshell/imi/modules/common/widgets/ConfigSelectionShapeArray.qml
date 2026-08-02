@@ -12,7 +12,10 @@ Flow {
 
     property list<string> options: []
     property var currentValue: null
-    property color shapeColor: Appearance.colors.colPrimaryContainer
+    // colPrimaryContainer is near-identical to the chip's colSecondaryContainer
+    // background, so the default rendered every unselected shape invisible.
+    // Both existing call sites already override it to exactly this.
+    property color shapeColor: Appearance.colors.colPrimary
     property color backgroundColor: Appearance.colors.colLayer1
 
     signal selected(var newValue)

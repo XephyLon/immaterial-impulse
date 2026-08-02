@@ -86,10 +86,11 @@ function validateManifest(manifest) {
                 return { valid: false, error: "Duplicate plugin option key '" + option.key + "'" };
             }
             optionKeys.add(option.key);
-            if (!["boolean", "choice", "number", "text"].includes(option.type)) {
+            if (!["boolean", "choice", "shape", "number", "text"].includes(option.type)) {
                 return { valid: false, error: "Unsupported plugin option type '" + option.type + "'" };
             }
-            if (option.type === "choice" && (!Array.isArray(option.choices) || option.choices.length === 0)) {
+            if ((option.type === "choice" || option.type === "shape")
+                    && (!Array.isArray(option.choices) || option.choices.length === 0)) {
                 return { valid: false, error: "Choice option '" + option.key + "' must have choices" };
             }
             if (option.type === "number"

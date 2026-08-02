@@ -124,6 +124,36 @@ TestCase {
         compare(result.error, "Unsupported plugin option type 'javascript'");
     }
 
+    function test_shapeOptionTypeIsAccepted() {
+        var manifest = {
+            "id": "shape_options",
+            "name": "Shape Options",
+            "options": [{
+                "key": "shape",
+                "type": "shape",
+                "default": "Heart",
+                "choices": [{ "displayName": "Heart", "value": "Heart" }]
+            }],
+            "desktopWidget": { "component": "Widget.qml" }
+        };
+        var result = PluginValidator.validateManifest(manifest);
+        verify(result.valid);
+    }
+
+    // A shape row with no choices renders an empty Flow, not an error, so the
+    // validator has to be the one that catches it.
+    function test_shapeOptionWithoutChoicesIsRejected() {
+        var manifest = {
+            "id": "empty_shape",
+            "name": "Empty Shape",
+            "options": [{ "key": "shape", "type": "shape", "default": "Heart" }],
+            "desktopWidget": { "component": "Widget.qml" }
+        };
+        var result = PluginValidator.validateManifest(manifest);
+        verify(!result.valid);
+        compare(result.error, "Choice option 'shape' must have choices");
+    }
+
     function test_invalidBindingTarget() {
         var manifest = {
             "id": "bad_binding",

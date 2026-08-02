@@ -55,6 +55,7 @@ ColumnLayout {
                 switch (optionData.type) {
                 case "boolean": return booleanOption;
                 case "choice": return choiceOption;
+                case "shape": return shapeOption;
                 case "number": return numberOption;
                 case "text": return textOption;
                 default: return null;
@@ -84,6 +85,19 @@ ColumnLayout {
                     text: optionLoader.optionData.label
                     icon: optionLoader.optionData.icon || "tune"
                     options: optionLoader.optionData.choices || []
+                    currentValue: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)
+                    onSelected: value => PluginState.setOption(root.manifest.id, optionLoader.optionData.key, value)
+                }
+            }
+
+            // Material shapes are their own preview: a name-chip row for 31
+            // shapes is both unreadable and unlabelable (ConfigSelectionArray's
+            // chip Flow only wraps when it has no label). Draw the shape.
+            Component {
+                id: shapeOption
+                ConfigSelectionShapeArray {
+                    options: (optionLoader.optionData.choices || [])
+                        .map(choice => choice.value ?? choice)
                     currentValue: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)
                     onSelected: value => PluginState.setOption(root.manifest.id, optionLoader.optionData.key, value)
                 }
