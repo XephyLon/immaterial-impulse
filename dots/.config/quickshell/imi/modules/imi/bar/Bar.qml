@@ -195,7 +195,7 @@ Scope {
                         visible: barContent.centerOnly && showBarBackground && Config.options.bar.cornerStyle === 0
                         x: barContent.centerPillX - implicitSize
                         implicitSize: Appearance.rounding.screenRounding
-                        color: Appearance.colors.colLayer0
+                        color: Appearance.colors.colBarBackground
                         corner: RoundCorner.CornerEnum.TopRight
 
                         states: State {
@@ -263,7 +263,7 @@ Scope {
                         visible: barContent.centerOnly && showBarBackground && Config.options.bar.cornerStyle === 0
                         x: barContent.centerPillX + barContent.centerPillWidth
                         implicitSize: Appearance.rounding.screenRounding
-                        color: Appearance.colors.colLayer0
+                        color: Appearance.colors.colBarBackground
                         corner: RoundCorner.CornerEnum.TopLeft
 
                         states: State {
@@ -323,7 +323,7 @@ Scope {
                                 }
 
                                 implicitSize: Appearance.rounding.screenRounding
-                                color: showBarBackground ? Appearance.colors.colLayer0 : "transparent"
+                                color: showBarBackground ? Appearance.colors.colBarBackground : "transparent"
 
                                 corner: RoundCorner.CornerEnum.TopLeft
                                 states: State {
@@ -342,7 +342,7 @@ Scope {
                                     bottom: Config.options.bar.bottom ? parent.bottom : undefined
                                 }
                                 implicitSize: Appearance.rounding.screenRounding
-                                color: showBarBackground ? Appearance.colors.colLayer0 : "transparent"
+                                color: showBarBackground ? Appearance.colors.colBarBackground : "transparent"
 
                                 corner: RoundCorner.CornerEnum.TopRight
                                 states: State {

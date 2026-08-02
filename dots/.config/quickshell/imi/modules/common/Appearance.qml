@@ -126,6 +126,12 @@ Singleton {
         property color colLayer0Hover: ColorUtils.transparentize(ColorUtils.mix(colLayer0, colOnLayer0, 0.9, root.contentTransparency))
         property color colLayer0Active: ColorUtils.transparentize(ColorUtils.mix(colLayer0, colOnLayer0, 0.8, root.contentTransparency))
         property color colLayer0Border: ColorUtils.mix(root.m3colors.m3outlineVariant, colLayer0, 0.4)
+        // The bar's own background chrome (bar/pill fills, hug corners) thins
+        // colLayer0 by the user's bar opacity (Config.options.bar.backgroundOpacity,
+        // 1 = fully opaque = unchanged). Kept separate from colLayer0 so only the
+        // bar goes translucent, composing with — not overriding — the global
+        // transparency setting colLayer0 already carries.
+        property color colBarBackground: ColorUtils.transparentize(colLayer0, 1 - (Config?.options.bar.backgroundOpacity ?? 1))
         // Layer 1
         property color colLayer1Base: m3colors.m3surfaceContainerLow
         property color colLayer1: ColorUtils.solveOverlayColor(colLayer0Base, colLayer1Base, 1 - root.contentTransparency);

@@ -289,6 +289,18 @@ ContentPage {
                     checked: Config.options.bar.shadow
                     onCheckedChanged: { Config.options.bar.shadow = checked; }
                 }
+                ConfigSlider {
+                    text: Translation.tr("Background opacity")
+                    buttonIcon: "opacity"
+                    enabled: Config.options.bar.showBackground
+                    value: Config.options.bar.backgroundOpacity
+                    from: 0
+                    to: 1
+                    stopIndicatorValues: [1]
+                    onValueModified: {
+                        Config.options.bar.backgroundOpacity = newValue;
+                    }
+                }
                 ConfigSwitch {
                     buttonIcon: "cancel_presentation"
                     text: Translation.tr("Auto-dismiss popups on hide")

@@ -114,7 +114,7 @@ Item {
         anchors.fill: parent
         anchors.margins: Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0
         color: (!centerOnly && Config.options.bar.showBackground && Config.options.bar.cornerStyle !== 2 && !root.isMaterial) 
-            ? Appearance.colors.colLayer0 : "transparent"
+            ? Appearance.colors.colBarBackground : "transparent"
         radius: Config.options.bar.cornerStyle === 1 ? Appearance.rounding.windowRounding : 0
         border.width: (!centerOnly && Config.options.bar.cornerStyle === 1) ? 1 : 0
         border.color: Appearance.colors.colLayer0Border
@@ -141,7 +141,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         width: middleRow.implicitWidth + 10
         height: parent.height - (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut * 2 : 0)
-        color: Appearance.colors.colLayer0
+        color: Appearance.colors.colBarBackground
         radius: Config.options.bar.cornerStyle === 1 ? Appearance.rounding.windowRounding : 0
         border.width: Config.options.bar.cornerStyle === 1 ? 1 : 0
         border.color: Appearance.colors.colLayer0Border
@@ -173,7 +173,7 @@ Item {
                 implicitWidth: leftMaterialRow.implicitWidth + 10
                 implicitHeight: leftMaterialRow.implicitHeight
                 radius: Appearance.rounding.full
-                color: Appearance.colors.colLayer0
+                color: Appearance.colors.colBarBackground
 
                 RowLayout {
                     id: leftMaterialRow
@@ -269,7 +269,7 @@ Item {
                 implicitWidth: centerMaterialRow.implicitWidth + 10
                 implicitHeight: centerMaterialRow.implicitHeight 
                 radius: Appearance.rounding.full
-                color: Appearance.colors.colLayer0
+                color: Appearance.colors.colBarBackground
 
                 RowLayout {
                     id: centerMaterialRow
@@ -365,7 +365,7 @@ Item {
                 implicitWidth: rightMaterialRow.implicitWidth + 10
                 implicitHeight: rightMaterialRow.implicitHeight 
                 radius: Appearance.rounding.full
-                color: Appearance.colors.colLayer0
+                color: Appearance.colors.colBarBackground
 
                 RowLayout {
                     id: rightMaterialRow
