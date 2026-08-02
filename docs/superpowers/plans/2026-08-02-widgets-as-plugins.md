@@ -284,6 +284,31 @@ none were in the original recipe.
     (`normalizeSizeMode`) instead of renaming in place. *Found by the user, who
     noticed the world clock's 2x2 was not a 2x2.*
 
+14. **A dedup carries the toggle, never the data.** `desktopWidgetPluginIds`
+    maps an old key onto a surviving plugin id, and the migration copies exactly
+    one bit: `enable`. For a *ported* widget that is fine, because the port
+    brings the implementation with it. For a *deduplicated* widget the surviving
+    plugin is a different program written independently, so the same switch can
+    end up wired to a different store or a different data source, and nothing in
+    the tree says so. Two live examples from Task 4:
+
+    - `notes` persisted to `Directories.desktopNotesPath`
+      (`~/.local/state/quickshell/user/desktopnotes.txt`, a JSON array of note
+      objects); the bundled `notes` plugin persists to `Directories.notesPath`
+      (`.../notes.txt`, one plaintext scratchpad shared with the overlay notes
+      editor). Flipping the migration bit hands the user an empty widget and
+      leaves their notes in a file nothing reads.
+    - `resources` swapped its third card to Battery whenever `Battery.available`;
+      `DesktopSystemMonitorWidget`'s third card is always Disk. A laptop user's
+      widget silently changes what it measures.
+
+    So before deleting a deduplicated built-in, diff the two for **store** and
+    **inputs**, not only for features, and put both paths in the commit body.
+    Neither the suite nor the log can see this: both widgets load, both render,
+    and `plugins.enabled` is correct. Whether to write a content migration is a
+    separate decision from the dedup — but it can only be *made* if the paths
+    were written down at deletion time. *Found by the Task 4 dedups.*
+
 ---
 
 ## Task 1: One-shot migration from `background.widgets.*` to `plugins.enabled`
