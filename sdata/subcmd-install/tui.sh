@@ -215,7 +215,12 @@ VERBOSE_ON="${STATE[VERBOSE]}"
 # --- 4. Map choices to the existing flags/env --------------------------------
 INSTALL_FLAGS=()
 [[ "$WE_ON"   == on ]] && export INSTALL_WE=1
-[[ "$SDDM_ON" == on ]] && export INSTALL_SDDM=1
+# NOTE: INSTALL_SDDM is deliberately NOT exported into the install pipeline.
+# ii-sddm-theme's upstream installer is interactive (it prompts for the install
+# mode and several confirmations via `read`), and the default quiet install runs
+# the whole pipeline with stdin on /dev/null — the installer would EOF on its
+# first prompt and silently abort, installing nothing. So SDDM is handled as a
+# post-install step below (mirroring the fcitx5 extra), on the clean terminal.
 [[ "$DEPS_ON" == on ]] || INSTALL_FLAGS+=(--skip-alldeps)
 [[ "$FONTSET_CHOICE" != "none" ]] && INSTALL_FLAGS+=(--fontset "$FONTSET_CHOICE")
 
@@ -420,6 +425,18 @@ if [[ $INSTALL_RET -eq 0 && "$FCITX5_ON" == on ]]; then
   XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
   mkdir -p "${XDG_CONFIG_HOME}/fcitx5/conf"
   cp -f "${REPO_ROOT}/dots-extra/fcitx5/conf/classicui.conf" "${XDG_CONFIG_HOME}/fcitx5/conf/classicui.conf"
+fi
+
+# The SDDM login theme's upstream installer is interactive and CANNOT run inside
+# the quiet pipeline (stdin is /dev/null there — it would EOF on its first prompt
+# and silently abort). So run it here, after the install, on the clean terminal:
+# the progress bar is done, stdin is the real TTY, and its prompts reach the user.
+# 5.sddm-theme.sh is the same no-op-unless-INSTALL_SDDM=1 wrapper `setup install`
+# would have called; we just invoke it interactively instead of inside --force.
+if [[ $INSTALL_RET -eq 0 && "$SDDM_ON" == on ]]; then
+  echo "[tui] Installing the SDDM login theme (ii-sddm-theme) — interactive."
+  INSTALL_SDDM=1 bash "${REPO_ROOT}/sdata/subcmd-install/5.sddm-theme.sh" \
+    || echo "[tui] SDDM login theme: installer exited non-zero (declined or error)."
 fi
 
 exit $INSTALL_RET
