@@ -97,6 +97,7 @@ In addition to the QML unit tests, `run_tests.sh` runs static lint checks first:
 * **Color pipeline tests (`test_lock_palette_parity.py`, `test_scheme_for_image.py`, `test_generate_colors_material.py`)**: Pin that lock-screen color generation produces byte-identical output to the desktop path for the same image (no `--smart`, `auto` resolved via `scheme_for_image.py`), that the detector returns a valid scheme per image, and that the generator emits every color key the shell consumes for both modes. Behavioural parts skip cleanly when `materialyoucolor`/`cv2` are absent.
 * **Installer safety tests (`test_installer_file_sync.py`, `test_installer_legacy_migration.py`, `test_installer_greeting_traps.py`)**: Sandbox `3.files.sh`'s `rsync --delete` sync/backup helpers with canary files proving deletion never escapes its target, drive `1.deps-router.sh`'s legacy detection/removal against stubbed package managers (only `illogical-impulse-*` matched, exact `-Rn` set, never cascading), and pin the quiet-install cancel machinery (process-group traps, `set -m`, no `setsid` regression).
 * **Status-service and safety contracts (`tst_battery.qml`, `tst_bluetooth_status.qml`, `test_updates_contract.py`, `test_conflict_killer_contract.py`, `test_polkit_service_contract.py`, `test_ydotool_contract.py`, `test_brightness_systeminfo_contract.py`)**: Behaviourally exercise Battery/Bluetooth against new mocks, run the real Updates count pipeline against stubs, and pin the safety envelopes of the silent-failure services — ConflictKiller's exact-name literal kill set (no PID signaling), Polkit's interaction flow, Ydotool's argv-only (no shell splicing) command construction, and Brightness's never-fully-black clamps.
+* **Night light state tests (`test_nightlight_state_runtime.py`)**: hyprsunset cannot be asked whether the blue-light filter is applied — `hyprctl hyprsunset temperature` reports the last temperature the daemon was *told*, and `identity` never resets it — so the shell persists on/off itself and re-applies it at startup. These launch the real `Hyprsunset` singleton against a seeded `states.json` and fake `hyprsunset`/`hyprctl`/`pidof` binaries, pinning that `temperatureActive` comes from the state file rather than from the useless query, that the state is *applied* (warm launch flags on a cold daemon, an `hyprctl` correction on a warm one), and that toggling writes straight back to disk. See Runtime harnesses for why `pidof` has to be faked.
 * **Note store tests (`tst_notes_store.qml`, `test_notes_store_contract.py`, `test_notes_migration_runtime.py`)**: `tst_notes_store.qml` drives `modules/common/functions/notesStore.js` through every on-disk state the two old note stores can be in — plaintext, a valid array, both at once, either absent, either corrupt, and a scratchpad whose text happens to be JSON that is not notes — pinning that nothing is discarded (unparseable content becomes a note verbatim; the deleted built-in service reset it to `[]`). The contract module pins the single owner (`services/Notes.qml` — neither the plugin widget nor the overlay editor may hold a `FileView`), the migration marker being written after the store, and `textFormat: PlainText` everywhere a note body reaches the screen. `test_notes_migration_runtime.py` is the behavioural half: it launches the real service in a real Quickshell against a throwaway `XDG_STATE_HOME`/`XDG_CONFIG_HOME`, once per case, and checks both that content in either old store survives and that neither source file is touched.
 * **Config-dir / keyring migration and prebuilt-WE installer tests (`test_config_migration.py`, `test_keyring_migration.py`, `test_wallpaperengine_prebuilt.py`)**: Previously shipped but never invoked; now wired into `run_tests.sh`. Cover the `illogical-impulse` → `immaterial-impulse` config-dir move (no-clobber), keyring attribute migration, and the checksum-verified prebuilt Wallpaper Engine fast-path against a fixture release. `test_config_migration.py` since grew the decision the move actually turns on: a `config.json` already in the destination is compared byte-for-byte against the shipped `defaults/config.json`, because the installer seeds that file verbatim and "a config.json exists" was silently disabling the whole migration. Where it cannot tell, the script must change nothing and exit `3` — the tests pin the refusal and its message, not just the happy path. `test_config_dir_migration_runtime.py` is the behavioural half (see Runtime harnesses).
 
@@ -190,6 +191,23 @@ watchdog that fires when the migration never finishes. It brings its own
 headless weston for the same reason as the surfaces harness below, minus the
 window: a test that migrates config directories has no business running against
 the caller's session.
+
+`NightLightStateRuntimeTest.qml` is driven by
+`tests/test_nightlight_state_runtime.py`, and exists because hyprsunset has no
+state query: on 0.4.0 `hyprctl hyprsunset --help` lists only `temperature`,
+`identity` and `gamma`, the daemon socket rejects everything else, and the bare
+`temperature` request reports the last temperature the daemon was *told* —
+which `identity` never resets, so a neutral screen and a warm one report the
+same number. The shell therefore persists on/off itself and re-applies it, and
+the harness pins both halves: what `Hyprsunset.temperatureActive` comes up as
+against a seeded `states.json`, and what the shell actually told the daemon to
+do about it. The driver puts fake `hyprsunset`, `hyprctl` and `pidof`
+executables at the front of `PATH` and reads their recorded argv back. `pidof`
+is the load-bearing fake, not scenery: `startHyprsunset` short-circuits on
+`pidof hyprsunset ||`, so on any machine with a live daemon — the developer's
+own, invariably — a launch-flag assertion would pass without the launch path
+ever running. Faking it makes cold start and warm start both reachable on
+purpose, and keeps the suite from ever tinting the caller's screen.
 
 The widget-interaction and surfaces harnesses bring their own **headless weston**
 (`weston --backend=headless --renderer=pixman`, plus `LIBGL_ALWAYS_SOFTWARE=1`

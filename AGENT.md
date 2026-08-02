@@ -288,14 +288,38 @@ whose `minimumSize` equals its `maximumSize` is floated, sized and centred by Hy
 purely from the fixed size hints. Prefer that over a runtime rule. It also keeps the window title
 free to stay translated, since nothing is matching on it.
 
-**`hyprctl hyprsunset temperature` (no argument) is not a reliable on/off query.** It always echoes
-back the last explicitly-`temperature`-set numeric value - calling `hyprctl hyprsunset identity`
-(the "off" dispatch) never resets it to any sentinel, so there is no way to distinguish "identity
-mode, last set to N" from "on at N" through this query. `services/Hyprsunset.qml` used to compare
-this query against a hardcoded `6500` to infer active state (also just factually wrong -
-`hyprsunset --help` confirms the real default is `6000`) and got it wrong on essentially every
-restart. Don't rely on querying `hyprsunset`'s live state at all; track on/off intent yourself
-(see how `Hyprsunset.qml` now persists it via `Persistent.qml` instead).
+**hyprsunset has no state query at all, so the shell owns night light's on/off state.** Checked
+against 0.4.0, not assumed: `hyprctl hyprsunset --help` lists exactly three requests -
+`temperature <temp>`, `identity`, `gamma <gamma>` - bare `hyprctl hyprsunset` answers
+`invalid command`, and the daemon's own socket
+(`$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.hyprsunset.sock`) answers `invalid command`
+to `state`, `status`, `info`, `enabled`, `active` and `matrix` too. Nothing reports the applied
+matrix.
+
+The bare `temperature` request looks like a getter and is not one: it echoes back the last
+temperature the daemon was *told*, which `identity` (the "off" dispatch) never resets. Measured on
+this machine - a daemon running as `hyprsunset --identity`, screen perfectly neutral, reports
+`6000`; a daemon put into identity after `temperature 5000` still reports `5000`. "Off" and "on"
+are indistinguishable through it.
+
+`services/Hyprsunset.qml` used to infer active state by comparing that query against a hardcoded
+`"6500"`. That number is not hyprsunset's - it is the `from:` end of the Intensity slider in
+`modules/imi/sidebarRight/nightLight/NightLightDialog.qml` (6500K, the UI's idea of "neutral
+daylight"), reused as if it were a daemon sentinel. The daemon's actual default is 6000 and its
+actual neutral is `--identity`, not a temperature at all, so the check read "on" whenever the last
+set temperature was not literally 6500 - including with the identity matrix applied and the screen
+neutral. Don't query `hyprsunset` for state; track on/off intent yourself. `Hyprsunset.qml`
+persists it in `Persistent.qml` (`night.temperatureActive`, alongside `idle.inhibit` and
+`record.enable`) and **re-applies** it on startup - applied, not merely displayed, because after a
+reboot the daemon is gone and within a session it may have been left in any state. The restore is
+gated on `Persistent.ready && Config.ready` together: `Persistent` holds the state, `Config` holds
+the temperature to restore it *at*, and restoring without the latter launches the daemon at the
+fallback temperature. `tests/test_nightlight_state_runtime.py` pins all of this against a real
+shell and fake `hyprsunset`/`hyprctl`/`pidof` binaries.
+
+This exact fix was made once before and lost: it landed in `0168b1d1`, and the upstream Niri merge
+`78c58b84` silently restored the query, the `6500` sentinel and the "sync with whatever is running"
+doc comment on top of it. Anything reintroducing `fetchState()` is a regression, not a refinement.
 
 **That same bare `--temperature 6000` default also bit the daemon's cold start, not just state
 queries.** `Hyprsunset.qml` used to spawn `hyprsunset` with no flags (`pidof hyprsunset ||
