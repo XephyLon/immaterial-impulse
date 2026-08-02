@@ -45,11 +45,41 @@ config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 old="$config_home/illogical-impulse"
 new="$config_home/immaterial-impulse"
 shipped_default="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/defaults/config.json"
-# A merge deliberately keeps the old directory as a backup, so without a record
-# of it every later launch would see "both dirs, both with a config.json" - the
-# one shape that must be declined - and would either nag forever or re-copy
-# files the user has since deleted.
+# Written once a merge has succeeded. It used to exist because the merge left
+# the old directory in place and every later launch would otherwise have seen
+# "both dirs, both with a config.json" - the one shape that must be declined.
+# The old directory is archived and removed now, so this is a record rather than
+# a guard; it is also what lets an install that merged under the *old* behaviour
+# recognise its leftover directory and clean it up.
 stamp="$new/.migrated-from-illogical-impulse"
+
+# The old directory is archived rather than deleted outright, and deliberately
+# not left in place: anything that goes looking for a config by absolute path
+# finds a stale one and silently succeeds against it. `ii-sddm-theme`'s
+# installer does exactly that - it reads
+# ~/.config/illogical-impulse/config.json, so a leftover directory means the
+# login theme syncs settings frozen at migration time and never updates again.
+# The tarball lands outside $config_home so no such search can reach it either.
+backup_dir="${XDG_DATA_HOME:-$HOME/.local/share}/immaterial-impulse/backups"
+
+archive_and_purge_old() {
+    local archive
+    archive="$backup_dir/illogical-impulse-$(date +%Y%m%d-%H%M%S).tar.gz"
+    if ! mkdir -p "$backup_dir"; then
+        echo "[ImI] kept $old: could not create $backup_dir to archive it into." >&2
+        return
+    fi
+    # Purge only if the archive actually wrote and reads back, so a full disk or
+    # an unreadable file can never turn "backed up" into "deleted".
+    if ! tar -czf "$archive" -C "$config_home" illogical-impulse 2>/dev/null \
+            || ! tar -tzf "$archive" >/dev/null 2>&1; then
+        rm -f "$archive"
+        echo "[ImI] kept $old: archiving it to $archive failed, so it was not removed." >&2
+        return
+    fi
+    rm -rf "$old"
+    echo "[ImI] archived $old to $archive and removed it" >&2
+}
 
 # Test seam: holds the script open long enough that the shell's config writer
 # would win the startup race if anything still let it, so
@@ -60,7 +90,15 @@ if [[ -n "${IMI_MIGRATE_DELAY:-}" ]]; then
 fi
 
 [[ -d "$old" ]] || exit 0            # nothing to migrate
-[[ -f "$stamp" ]] && exit 0          # already merged; the old dir is just a backup now
+
+# Already merged, but the directory is still there: an install that ran the
+# earlier behaviour, which kept it as a backup in place. Its contents are
+# already in $new, so archive and remove it rather than leaving a stale config
+# for something else to find.
+if [[ -f "$stamp" ]]; then
+    archive_and_purge_old
+    exit 0
+fi
 
 # -T so a directory appearing underneath us mid-flight fails the rename instead
 # of quietly producing $new/illogical-impulse. Other singletons write into the
@@ -92,5 +130,6 @@ if ! cp -an "$old/." "$new/"; then
     exit $DECLINED
 fi
 touch "$stamp"
-echo "[ImI] migrated user config from $old into existing $new (kept $old as a backup)" >&2
+echo "[ImI] migrated user config from $old into existing $new" >&2
+archive_and_purge_old
 exit 0

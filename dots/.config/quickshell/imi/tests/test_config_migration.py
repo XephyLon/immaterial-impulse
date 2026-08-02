@@ -24,9 +24,13 @@ class ConfigMigrationTests(unittest.TestCase):
         # Override XDG_CONFIG_HOME too: the script prefers it over $HOME/.config,
         # and CI runners export it (pointing at the runner's real home), which
         # silently no-ops the migration outside the sandbox.
+        # XDG_DATA_HOME for the same reason: the script archives the old
+        # directory underneath it before removing it, so leaving it unset would
+        # write tarballs into the caller's real ~/.local/share.
         proc = subprocess.run(["bash", str(MIGRATE)],
                               env=dict(os.environ, HOME=str(home),
-                                       XDG_CONFIG_HOME=str(home / ".config")),
+                                       XDG_CONFIG_HOME=str(home / ".config"),
+                                       XDG_DATA_HOME=str(home / ".local/share")),
                               capture_output=True, text=True)
         self.assertEqual(proc.returncode, expect,
                          f"unexpected exit {proc.returncode}\n{proc.stderr}")
@@ -66,8 +70,9 @@ class ConfigMigrationTests(unittest.TestCase):
         # The installer pre-creates ~/.config/immaterial-impulse (installed_true
         # etc.) but no config.json yet, while the user's real settings are still
         # under illogical-impulse. Migrate the user data in, keep installer files,
-        # leave the old dir as a backup. (Regression: this used to be skipped and
-        # the user got a default config.)
+        # and archive the old dir away rather than leaving it in .config for
+        # something else to read. (Regression: this used to be skipped and the
+        # user got a default config.)
         with tempfile.TemporaryDirectory() as d:
             home = Path(d)
             old = home / ".config/illogical-impulse"
@@ -81,7 +86,7 @@ class ConfigMigrationTests(unittest.TestCase):
             self.assertEqual((new / "config.json").read_text(), '{"bar": "mine"}')
             self.assertTrue((new / "actions" / "a.json").is_file())
             self.assertTrue((new / "installed_true").is_file())  # installer file kept
-            self.assertTrue(old.exists())                        # old kept as backup
+            self.assertFalse(old.exists())  # archived out of .config, not left behind
 
     def test_noop_when_nothing_to_migrate(self):
         with tempfile.TemporaryDirectory() as d:
@@ -111,7 +116,7 @@ class ConfigMigrationTests(unittest.TestCase):
                              '{"osd": {"timeout": 4321}}')
             self.assertTrue((new / "presets" / "p.json").is_file())
             self.assertTrue((new / "installed_true").is_file())
-            self.assertTrue(old.exists())
+            self.assertFalse(old.exists())
 
     def test_a_seeded_default_with_one_edit_is_the_users_and_is_kept(self):
         # The whole point of comparing bytes rather than shape: one changed
@@ -204,3 +209,98 @@ class ConfigMigrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LegacyDirIsArchivedThenPurged(unittest.TestCase):
+    """The old directory must not survive a successful migration.
+
+    Leaving it in place is not harmless: anything that looks a config up by
+    absolute path finds a stale one and silently succeeds against it. The
+    ii-sddm-theme installer reads ~/.config/illogical-impulse/config.json
+    directly, so a leftover directory means the login theme syncs settings
+    frozen at migration time and never sees another change.
+
+    It is archived rather than deleted, and the archive lands outside
+    XDG_CONFIG_HOME so the same absolute-path search cannot reach it either.
+    """
+
+    def _run(self, home, expect=0):
+        proc = subprocess.run(["bash", str(MIGRATE)],
+                              env=dict(os.environ, HOME=str(home),
+                                       XDG_CONFIG_HOME=str(home / ".config"),
+                                       XDG_DATA_HOME=str(home / ".local/share")),
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, expect,
+                         f"unexpected exit {proc.returncode}\n{proc.stderr}")
+        return proc
+
+    @staticmethod
+    def _backups(home):
+        d = home / ".local/share/immaterial-impulse/backups"
+        return sorted(d.glob("illogical-impulse-*.tar.gz")) if d.is_dir() else []
+
+    def _seed(self, home, new_config):
+        old = home / ".config/illogical-impulse"
+        new = home / ".config/immaterial-impulse"
+        old.mkdir(parents=True)
+        new.mkdir(parents=True)
+        (old / "config.json").write_text('{"mine": 1}')
+        (new / "config.json").write_text(new_config)
+        return old, new
+
+    def test_a_merge_archives_the_old_dir_and_removes_it(self):
+        with tempfile.TemporaryDirectory() as d:
+            home = Path(d)
+            old, new = self._seed(home, SHIPPED_DEFAULT.read_text())
+            self._run(home)
+            self.assertFalse(old.exists(), "the old directory was left behind")
+            self.assertEqual(len(self._backups(home)), 1, "no archive was written")
+            self.assertIn('"mine"', (new / "config.json").read_text(),
+                          "the user's settings did not survive the merge")
+
+    def test_an_already_merged_install_gets_its_leftover_cleaned_up(self):
+        """Installs that migrated under the earlier behaviour kept the old
+        directory on purpose, so the stamp alone must not stop the cleanup."""
+        with tempfile.TemporaryDirectory() as d:
+            home = Path(d)
+            old, new = self._seed(home, '{"live": 1}')
+            (new / ".migrated-from-illogical-impulse").touch()
+            self._run(home)
+            self.assertFalse(old.exists(), "the leftover directory was not cleaned up")
+            self.assertEqual(len(self._backups(home)), 1)
+            self.assertEqual((new / "config.json").read_text(), '{"live": 1}',
+                             "the live config was modified during cleanup")
+
+    def test_a_declined_migration_never_purges(self):
+        with tempfile.TemporaryDirectory() as d:
+            home = Path(d)
+            old, _ = self._seed(home, '{"user edited this": 1}')
+            self._run(home, expect=DECLINED)
+            self.assertTrue(old.exists(), "declined, yet the old directory was removed")
+            self.assertEqual(self._backups(home), [])
+
+    def test_a_failed_archive_keeps_the_directory(self):
+        """Backed up must never degrade into deleted."""
+        with tempfile.TemporaryDirectory() as d:
+            home = Path(d)
+            old, new = self._seed(home, '{"live": 1}')
+            (new / ".migrated-from-illogical-impulse").touch()
+            # A file where the backup directory has to go, so mkdir -p fails.
+            (home / ".local").mkdir()
+            (home / ".local/share").write_text("not a directory")
+            proc = self._run(home)
+            self.assertTrue(old.exists(), "archiving failed, yet the directory was removed")
+            self.assertIn("kept", proc.stderr)
+
+    def test_a_plain_rename_leaves_no_archive(self):
+        """`mv` already consumes the old directory; archiving it too would just
+        duplicate the whole config on every fresh upgrade."""
+        with tempfile.TemporaryDirectory() as d:
+            home = Path(d)
+            old = home / ".config/illogical-impulse"
+            old.mkdir(parents=True)
+            (old / "config.json").write_text('{"mine": 1}')
+            self._run(home)
+            self.assertFalse(old.exists())
+            self.assertTrue((home / ".config/immaterial-impulse/config.json").exists())
+            self.assertEqual(self._backups(home), [])

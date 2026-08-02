@@ -12,6 +12,22 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **The pre-rename config directory is archived and removed instead of being
+  left behind.** Migrating `~/.config/illogical-impulse` into
+  `~/.config/immaterial-impulse` used to keep the old directory in place as a
+  backup. That is not harmless: anything resolving a config by absolute path
+  finds the stale one and silently succeeds against it — `ii-sddm-theme`'s
+  installer reads `~/.config/illogical-impulse/config.json` directly, so the
+  login theme was syncing settings frozen at migration time and never saw
+  another change. The directory is now archived to
+  `~/.local/share/immaterial-impulse/backups/illogical-impulse-<timestamp>.tar.gz`
+  and removed, and installs that already migrated under the old behaviour get
+  their leftover cleaned up on the next launch. The archive has to write and
+  read back before anything is deleted, so a full disk keeps the directory
+  rather than losing it.
+
+
 ## [0.13.0] — 2026-08-03
 
 ### Added

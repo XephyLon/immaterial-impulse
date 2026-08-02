@@ -122,6 +122,9 @@ class ConfigDirMigrationRuntimeTest(unittest.TestCase):
         env["XDG_CONFIG_HOME"] = str(self.config_home)
         env["XDG_STATE_HOME"] = str(self.home / "state")
         env["XDG_CACHE_HOME"] = str(self.home / "cache")
+        # The migration archives the old config dir under here before removing
+        # it; unset, the tarballs would land in the caller's real ~/.local/share.
+        env["XDG_DATA_HOME"] = str(self.home / "data")
         env["CONFIGDIR_EXPECT"] = json.dumps(expect or {})
         env["CONFIGDIR_MODE"] = mode
         if delay is not None:
@@ -168,7 +171,12 @@ class ConfigDirMigrationRuntimeTest(unittest.TestCase):
         self.assertEqual(stored["osd"]["timeout"], 1700)
         self.assertEqual(stored["panelFamily"], "imi")
         self.assertTrue((self.new / "installed_true").is_file())
-        self.assertTrue(self.old.exists(), "a merge keeps the old dir as a backup")
+        # A merge archives the old dir outside XDG_CONFIG_HOME and removes it,
+        # so nothing that resolves a config by absolute path can still find it.
+        self.assertFalse(self.old.exists(), "a merge must not leave the old dir behind")
+        backups = self.home / "data/immaterial-impulse/backups"
+        self.assertTrue(sorted(backups.glob("illogical-impulse-*.tar.gz")),
+                        "the old dir was removed without being archived first")
 
     def test_a_config_the_user_wrote_here_is_kept_and_the_refusal_is_logged(self):
         """The case the script cannot decide. Nothing may be touched, and the
