@@ -192,6 +192,65 @@ Singleton {
         root.pendingPluginOptions = options;
     }
 
+    // Settings arriving from end-4/dots-hyprland or pctrade/end4-pC. The full
+    // old-key -> new-key table, including every key that was *removed* rather
+    // than renamed and why, is docs/UPSTREAM_MIGRATION.md - keep the two in
+    // step, a migration nobody can audit is worse than none.
+    //
+    // This takes the raw parsed config rather than `root.options`, because the
+    // keys it has to read are exactly the ones `root.options` cannot see: a
+    // JsonAdapter does not expose a key it has no property for. `bar.shadow`
+    // reading `undefined` is precisely the silent loss being fixed here, so
+    // reading the file's own text is the only way to see what the user had.
+    //
+    // Pure on purpose: it computes the writes and makes none, so the mapping
+    // can be tested against fabricated upstream configs (tst_upstream_migration)
+    // instead of against this file's source text.
+    function planUpstreamKeyMigration(legacy) {
+        const plan = {};
+        if (!legacy || typeof legacy !== "object")
+            return plan;
+
+        // A value, not a key, so the adapter carries it across intact and then
+        // nothing matches it. "ii" is aliased at read time in shell.qml; the
+        // waffle family was never ported, so a config naming it activates no
+        // panel loader at all and the desktop comes up empty with no error.
+        // Anything else is someone's own value and not ours to overwrite.
+        if (legacy.panelFamily === "ii" || legacy.panelFamily === "waffle")
+            plan["panelFamily"] = "imi";
+
+        // bar.floatStyleShadow -> bar.shadow. Upstream drew the shadow only
+        // under the Float corner style; ours draws it under every style that
+        // paints a background. The flag defaults to true up there, so copying
+        // it straight across would switch on a shadow that most arriving users
+        // have never seen. Migrate what was on screen, not what was on disk.
+        const legacyBar = legacy.bar;
+        if (legacyBar && typeof legacyBar.floatStyleShadow === "boolean")
+            plan["bar.shadow"] = legacyBar.floatStyleShadow && legacyBar.cornerStyle === 1;
+
+        return plan;
+    }
+
+    // Compute, then write, then mark - the ordering `migrateDesktopWidgetOptionsToPlugins`
+    // already argues for. A config we could not even parse is left unmarked so
+    // the next launch tries again, rather than recording a migration that never
+    // happened; a config we did inspect is marked even when it needed nothing,
+    // so the parse does not repeat forever.
+    function migrateUpstreamKeys(rawConfigText) {
+        if (root.options.migratedUpstreamSchema)
+            return;
+        let legacy;
+        try {
+            legacy = JSON.parse(rawConfigText);
+        } catch (e) {
+            return;
+        }
+        const plan = root.planUpstreamKeyMigration(legacy);
+        for (const key in plan)
+            root.setNestedValue(key, plan[key]);
+        root.setNestedValue("migratedUpstreamSchema", true);
+    }
+
     function setNestedValue(nestedKey, value) {
         let keys = nestedKey.split(".");
         let obj = root.options;
@@ -248,6 +307,10 @@ Singleton {
         onFileChanged: fileReloadTimer.restart()
         onAdapterUpdated: fileWriteTimer.restart()
         onLoaded: {
+            // Before `ready`, and before the plugin migrations: those read
+            // `root.options`, and this one can still rewrite panelFamily, which
+            // decides which panel family loads at all.
+            root.migrateUpstreamKeys(text());
             root.ready = true;
             root.migrateDesktopWidgetsToPlugins();
             root.migrateDesktopWidgetOptionsToPlugins();
@@ -271,7 +334,15 @@ Singleton {
         JsonAdapter {
             id: configOptionsJsonAdapter
 
-            property string panelFamily: "imi" // "imi", "waffle"
+            property string panelFamily: "imi"
+
+            // Set once a config written against the upstream schema
+            // (end-4/dots-hyprland, pctrade/end4-pC) has been converted. It is
+            // the only usable "this file has not been converted yet" signal:
+            // the installer's has_legacy_config() tests for the old *directory*,
+            // which is already gone for anyone whose directory migration ran
+            // before this existed - exactly the users who still need this.
+            property bool migratedUpstreamSchema: false
 
             property JsonObject plugins: JsonObject {
                 property list<string> enabled: []
