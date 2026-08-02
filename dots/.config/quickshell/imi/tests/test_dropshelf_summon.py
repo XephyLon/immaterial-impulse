@@ -198,13 +198,24 @@ class CoreIntegrationTests(unittest.TestCase):
             "blurBackground": True, "dragToBarReveal": True,
             "shakeSensitivity": 1.0, "shakeToSummon": False})
         self.assertNotIn("drop_shelf", defaults["plugins"]["enabled"])
-        # A fresh install enables no plugins at all. Plugin-provided widgets
-        # are configured under Plugins, not Widgets, so anything on by default
-        # is something a new user sees on their desktop and cannot find the
-        # off switch for. Bar layouts keep their `plugin:` entries: the bar
-        # filters disabled ones out, so enabling later restores them in place.
+        # `plugins.enabled` ships empty, but that no longer means a fresh
+        # install shows nothing: `Config.migrateDesktopWidgetsToPlugins()` runs
+        # on the first load of the seeded config and turns the curated
+        # `background.widgets.*.enable` bits into plugin ids. The shipped set is
+        # asserted by test_default_config.ShippedDesktopWidgetsSurviveTheMigration;
+        # what matters *here* is only that the drop shelf is not in it.
+        #
+        # The original rule was "no plugin may be enabled in the shipped
+        # defaults", justified by plugin widgets living under a Plugins page a
+        # new user would not think to search. That page is now Settings ->
+        # Widgets (SettingsContent.qml), so the discoverability argument the
+        # rule rested on no longer holds.
+        #
+        # Bar layouts keep their `plugin:` entries either way: the bar filters
+        # disabled ones out, so enabling later restores them in place.
         self.assertEqual(defaults["plugins"]["enabled"], [],
-                         "no plugin may be enabled in the shipped defaults")
+                         "the shipped file enables plugins through the widget "
+                         "migration, never by listing them directly")
         adapter = (ROOT / "modules/common/Config.qml").read_text()
         self.assertIn("property JsonObject dropShelf", adapter)
 

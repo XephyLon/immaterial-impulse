@@ -12,6 +12,14 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- A fresh install now ships the clock and the visualizer on its desktop, not
+  the calendar. Both of the two sit at an edge - the clock centred, the
+  visualizer full-bleed along the bottom - so neither claims a tile the user
+  has not chosen to give it. Existing installs are untouched: the curated
+  defaults are seeded only when `~/.config/immaterial-impulse/config.json` does
+  not already exist.
+
 ### Fixed
 - The design-system compile check swept a hardcoded list of bundled packages
   that had rotted: it still named `nandoroid-clock` and `nandoroid-at-a-glance`,

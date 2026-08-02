@@ -115,14 +115,16 @@ class ShippedDesktopWidgetsSurviveTheMigration(unittest.TestCase):
     So deleting a block does not mean "off" - it means "whatever `Config.qml`
     says", which is `true` for the clock and `false` for the calendar and the
     visualizer. Tidying the whole block away would therefore have silently
-    stripped two widgets from every fresh install.
+    stripped the visualizer, and leaving a `calendar` block in would ship a
+    widget the curated desktop does not want.
 
-    Existing installs are not affected either way: `seed_default_config` in
-    `sdata/subcmd-install/3.files.sh` copies this file only when
-    `~/.config/immaterial-impulse/config.json` does not exist.
+    The shipped desktop is the clock and the visualizer. Both sit at an edge -
+    the clock centred, the visualizer full-bleed along the bottom - so neither
+    claims a tile a new user has not chosen to give it. The calendar does claim
+    one, which is why it ships off.
     """
 
-    EXPECTED = {"clock", "calendar", "visualizer"}
+    EXPECTED = {"clock", "visualizer"}
 
     def setUp(self):
         self.cfg = json.loads(DEFAULT_CONFIG.read_text())

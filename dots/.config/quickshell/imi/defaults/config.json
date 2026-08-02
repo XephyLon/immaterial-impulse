@@ -273,9 +273,6 @@
     "wallpaperAnimation": "Peel",
     "wallpaperPath": "",
     "widgets": {
-      "calendar": {
-        "enable": true
-      },
       "clock": {
         "color": "",
         "cookie": {
