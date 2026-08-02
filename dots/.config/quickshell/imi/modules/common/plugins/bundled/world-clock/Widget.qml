@@ -1,18 +1,44 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
-import qs
 import qs.services
 import qs.modules.common
+import qs.modules.common.functions
 import qs.modules.common.widgets
-import qs.modules.common.widgets.widgetCanvas
-import qs.modules.imi.background.widgets
+import qs.modules.common.plugins
 
-AbstractBackgroundWidget {
+Item {
     id: root
-    configEntryName: "worldClock"
-    hoverEnabled: true
 
-    property string sizeMode: root.configEntry.sizeMode ?? "2x2"
+    // The card fills the whole widget, so the host's default region already has
+    // the right extent - but not the right corner radius (it falls back to
+    // `Appearance.rounding.large`, 7px tighter than the card's `verylarge`),
+    // which would leave frosted slivers outside the four corners. Naming the
+    // card is the only way to hand the host its actual radius.
+    readonly property bool blurEnabled: PluginState.option("world-clock", "blurEnabled", false)
+    readonly property real backgroundOpacity: Config.options.plugins.blurOpacity
+    readonly property bool managesBlurTint: true
+    readonly property var blurRegions: [
+        { x: contentRect.x, y: contentRect.y, width: contentRect.width,
+            height: contentRect.height, radius: contentRect.radius }
+    ]
+
+    function tinted(surfaceColor) {
+        return root.blurEnabled
+            ? ColorUtils.transparentize(surfaceColor, 1 - root.backgroundOpacity)
+            : surfaceColor;
+    }
+
+    // The corner handle switches the widget between a 2x2 card and a 4x1 row of
+    // dials, so the manifest can declare no `grid`: a span is a fixed pixel size
+    // the host assigns, and it would overwrite the toggled size on every load.
+    // The widget stays content-sized instead, which is also why its root must
+    // not `anchors.fill: parent` (PluginNode derives its own size from this
+    // one - anchoring is a binding loop). Both sizes are unchanged from the
+    // built-in and both are whole 12px steps, so the widget still tiles flush
+    // against grid widgets. See docs/widget-grid.md.
+    property string sizeMode: PluginState.option("world-clock", "sizeMode", "2x2")
 
     property real widgetWidth:  sizeMode === "2x2" ? 276 : 420
     property real widgetHeight: sizeMode === "2x2" ? 252 : 120
@@ -26,12 +52,19 @@ AbstractBackgroundWidget {
     property string localCityName: Weather.data?.city ?? "..."
     property string localTime: DateTime.time
     property string localDate: Qt.locale().toString(new Date(), "dddd, MMMM dd yyyy")
+    // The timezone list itself stays in Config, owned by the WorldClock service:
+    // it is shell-wide service state rather than per-widget state, so the port
+    // leaves it exactly where an existing install already has it.
     property var worldCities: WorldClock.entries
     property bool showingSettings: false
 
-    keyboardFocusRequested: showingSettings
-
     function toggleFlip() { flipAnim.start() }
+
+    // The host (PluginWidget) is the MouseArea that drags this widget; a
+    // HoverHandler reads hover without taking press events away from it.
+    HoverHandler {
+        id: widgetHover
+    }
 
     Item {
         id: cardWrapper
@@ -64,7 +97,7 @@ AbstractBackgroundWidget {
         Rectangle {
             id: contentRect
             anchors.fill: parent
-            color:  Appearance.colors.colPrimaryContainer
+            color:  root.tinted(Appearance.colors.colPrimaryContainer)
             radius: Appearance.rounding?.verylarge ?? 30
 
             // 2x2
@@ -72,7 +105,7 @@ AbstractBackgroundWidget {
                 id: mainColumn
                 anchors { fill: parent; margins: Appearance.spacing.space150 }
                 spacing: Appearance.spacing.space150
-                visible: sizeMode === "2x2" && !root.showingSettings
+                visible: root.sizeMode === "2x2" && !root.showingSettings
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -88,6 +121,9 @@ AbstractBackgroundWidget {
                         Layout.fillWidth: true
                         spacing: -Appearance.spacing.space25
                         StyledText {
+                            // Carries the weather provider's own city string, so
+                            // it must not be parsed as markup.
+                            textFormat: Text.PlainText
                             font.pixelSize: Appearance.font.pixelSize.normal
                             font.weight: Font.Medium
                             color: Appearance.colors.colOnPrimaryContainer
@@ -96,8 +132,9 @@ AbstractBackgroundWidget {
                     }
                     Item { Layout.fillWidth: true }
                     Rectangle {
+                        id: settingsButton
                         radius: Appearance.rounding.full
-                        color: Appearance.colors.colSurfaceContainerLow
+                        color: root.tinted(Appearance.colors.colSurfaceContainerLow)
                         implicitWidth: 28; implicitHeight: 28
                         MaterialSymbol {
                             anchors.centerIn: parent
@@ -146,10 +183,10 @@ AbstractBackgroundWidget {
                             required property int index
                             Layout.preferredWidth: 120; Layout.preferredHeight: 54
                             radius: Appearance.rounding.normal
-                            color: modelData.isDay
+                            color: root.tinted(cityCard.modelData.isDay
                                 ? Appearance.colors.colPrimary
-                                : Appearance.colors.colSurfaceContainerLow
-                            property color fg: modelData.isDay
+                                : Appearance.colors.colSurfaceContainerLow)
+                            property color fg: cityCard.modelData.isDay
                                 ? Appearance.colors.colOnPrimary
                                 : Appearance.colors.colOnLayer0
                             Behavior on color { ColorAnimation { duration: 400 } }
@@ -161,6 +198,9 @@ AbstractBackgroundWidget {
                                     Layout.fillWidth: true
                                     StyledText {
                                         Layout.fillWidth: true
+                                        // Derived from a timezone id in the user's
+                                        // config, so it must not render as markup.
+                                        textFormat: Text.PlainText
                                         font.pixelSize: Appearance.font.pixelSize.smaller
                                         font.weight: Font.Medium
                                         color: cityCard.fg
@@ -197,7 +237,7 @@ AbstractBackgroundWidget {
 
             Item {
                 anchors.fill: parent
-                visible: sizeMode === "2x2" && root.showingSettings
+                visible: root.sizeMode === "2x2" && root.showingSettings
 
                 ColumnLayout {
                     anchors { fill: parent; margins: Appearance.spacing.space150 }
@@ -206,6 +246,7 @@ AbstractBackgroundWidget {
                     RowLayout {
                         Layout.fillWidth: true; spacing: Appearance.spacing.space100
                         Rectangle {
+                            id: backButton
                             radius: Appearance.rounding.full
                             color: "transparent"
                             implicitWidth: 28; implicitHeight: 28
@@ -225,6 +266,7 @@ AbstractBackgroundWidget {
                     }
 
                     StyledComboBoxSearch {
+                        id: firstZonePicker
                         model: WorldClock.comboModel
                         colBackground: Appearance.colors.colSurfaceContainerLow
                         textRole: "label"
@@ -232,18 +274,21 @@ AbstractBackgroundWidget {
                         onActivated: (idx) => WorldClock.setTimezone(0, WorldClock.comboModel[idx].tz)
                     }
                     StyledComboBoxSearch {
+                        id: secondZonePicker
                         model: WorldClock.comboModel; textRole: "label"
                         colBackground: Appearance.colors.colSurfaceContainerLow
                         currentIndex: WorldClock.comboModel.findIndex(m => m.tz === WorldClock.timezones[1])
                         onActivated: (idx) => WorldClock.setTimezone(1, WorldClock.comboModel[idx].tz)
                     }
                     StyledComboBoxSearch {
+                        id: thirdZonePicker
                         model: WorldClock.comboModel; textRole: "label"
                         colBackground: Appearance.colors.colSurfaceContainerLow
                         currentIndex: WorldClock.comboModel.findIndex(m => m.tz === WorldClock.timezones[2])
                         onActivated: (idx) => WorldClock.setTimezone(2, WorldClock.comboModel[idx].tz)
                     }
                     StyledComboBoxSearch {
+                        id: fourthZonePicker
                         model: WorldClock.comboModel; textRole: "label"
                         colBackground: Appearance.colors.colSurfaceContainerLow
                         currentIndex: WorldClock.comboModel.findIndex(m => m.tz === WorldClock.timezones[3])
@@ -256,7 +301,7 @@ AbstractBackgroundWidget {
             RowLayout {
                 anchors { fill: parent; margins: Appearance.spacing.space100 }
                 spacing: Appearance.spacing.space100
-                visible: sizeMode === "4x1"
+                visible: root.sizeMode === "4x1"
 
                 Repeater {
                     model: Math.min(root.worldCities.length, 4)
@@ -267,9 +312,9 @@ AbstractBackgroundWidget {
                         Layout.fillHeight: true
                         Layout.fillWidth:  true
 
-                        backgroundColor: cityData?.isDay ?? true
+                        backgroundColor: root.tinted(cityData?.isDay ?? true
                             ? Appearance.colors.colPrimary
-                            : Appearance.colors.colSurfaceContainerLow
+                            : Appearance.colors.colSurfaceContainerLow)
                         handColor: cityData?.isDay ?? true
                             ? Appearance.colors.colOnPrimary
                             : Appearance.colors.colOnLayer0
@@ -303,7 +348,7 @@ AbstractBackgroundWidget {
                 width: 16; height: 16; radius: Appearance.rounding.unsharpenslight
                 color: Appearance.colors.colOnPrimaryContainer
                 anchors { right: parent.right; bottom: parent.bottom; margins: Appearance.spacing.space50 }
-                opacity: (root.containsMouse || toggleArea.containsMouse || toggleArea.pressed) ? 0.5 : 0
+                opacity: (widgetHover.hovered || toggleArea.containsMouse || toggleArea.pressed) ? 0.5 : 0
                 visible: opacity > 0 && !Config.options.background.widgetsLocked
 
                 Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration } }
@@ -322,8 +367,8 @@ AbstractBackgroundWidget {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         if (root.showingSettings) root.showingSettings = false
-                        root.sizeMode = root.sizeMode === "2x2" ? "4x1" : "2x2"
-                        root.configEntry.sizeMode = root.sizeMode
+                        PluginState.setOption("world-clock", "sizeMode",
+                            root.sizeMode === "2x2" ? "4x1" : "2x2")
                     }
                 }
             }

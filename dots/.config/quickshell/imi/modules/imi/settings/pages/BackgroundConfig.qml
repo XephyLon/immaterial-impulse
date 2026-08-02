@@ -901,11 +901,6 @@ ContentPage {
                             enabled: Config.options.background.widgets.calendar.enable
                         },
                         {
-                            icon: "public",
-                            name: Translation.tr("World Clock"),
-                            enabled: Config.options.background.widgets.worldClock.enable
-                        },
-                        {
                             icon: "note_stack_add",
                             name: Translation.tr("Notes"),
                             enabled: Config.options.background.widgets.notes.enable
@@ -946,8 +941,6 @@ ContentPage {
                                             Config.options.background.widgets.resources.enable = checked
                                         else if (modelData.icon === "calendar_month")
                                             Config.options.background.widgets.calendar.enable = checked
-                                        else if (modelData.icon === "public")
-                                            Config.options.background.widgets.worldClock.enable = checked
                                         else if (modelData.icon === "note_stack_add")
                                             Config.options.background.widgets.notes.enable = checked
                                     }

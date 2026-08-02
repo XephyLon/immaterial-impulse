@@ -121,7 +121,7 @@ Singleton {
                 nandoroidWeatherManifestFile, nandoroidCurrencyManifestFile,
                 notesManifestFile, visualizerManifestFile,
                 customImageManifestFile, imageConverterManifestFile,
-                userCardManifestFile].forEach(fileView => {
+                userCardManifestFile, worldClockManifestFile].forEach(fileView => {
             if (!fileView.loaded) return;
             try {
                 const text = fileView.text();
@@ -391,6 +391,12 @@ Singleton {
     FileView {
         id: userCardManifestFile
         property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/user-card")
+        path: pluginBase + "/manifest.json"
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: worldClockManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/world-clock")
         path: pluginBase + "/manifest.json"
         onLoaded: root.scheduleRebuild()
     }
