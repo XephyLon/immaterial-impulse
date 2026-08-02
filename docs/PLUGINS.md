@@ -53,10 +53,18 @@ directory also requires a full `qs` restart — hot reload will not register it.
 
 Existing installs carried their desktop widgets in `background.widgets.*.enable`. A one-shot
 migration in `Config.qml` translates those into `plugins.enabled` (marker:
-`plugins.migratedDesktopWidgets`), and a second one carries the clock's own settings and position
-into `PluginState` (marker: `plugins.migratedDesktopWidgetOptions`). The old schema keys are
+`plugins.migratedDesktopWidgets`), a second one carries the clock's own settings and position into
+`PluginState` (marker: `plugins.migratedDesktopWidgetOptions`), and a third carries the world
+clock's timezone list (marker: `plugins.migratedWorldClockTimezones`). The old schema keys are
 deliberately still declared — deleting them would break the migration for anyone who has not run
 it yet.
+
+Each half needs its own marker: an install that has already run an earlier migration has that
+marker set, and reusing it would permanently exclude exactly the installs the new half exists for.
+The later halves share one pending batch, so each contributes only what its own marker still says
+is outstanding, and `PluginState.drainPendingConfigOptions()` stops only once every marker it
+discharges is set. A key already present for a plugin always wins over the legacy value being
+migrated onto it, so a preference the user has since changed in the widget is never clobbered.
 
 ## Directory naming
 

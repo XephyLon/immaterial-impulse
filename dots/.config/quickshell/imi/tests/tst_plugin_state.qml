@@ -71,6 +71,32 @@ TestCase {
         compare(PluginState.option("at_a_glance_plugin", "blurEnabled", true), false);
     }
 
+    // The world clock keeps its four timezones here, and it is the only plugin
+    // option that is a list rather than a scalar. Nothing in `setOption` is
+    // list-aware - it does an `Object.assign` shallow copy and hands the value
+    // straight to `JSON.stringify` - so this pins that an array survives both
+    // the in-memory store and the serialize/parse round trip through the file,
+    // element order included. A silently flattened or stringified list would
+    // hand the service `undefined` timezones and no error.
+    function test_setOptionRoundTripsAList() {
+        var zones = ["Australia/Sydney", "Asia/Tokyo", "Europe/London", "America/New_York"];
+        PluginState.setOption("world-clock", "timezones", zones);
+        var stored = PluginState.option("world-clock", "timezones", []);
+        compare(Array.isArray(stored), true);
+        compare(stored.length, 4);
+        compare(stored.join(","), zones.join(","));
+    }
+
+    function test_aListSurvivesTheFileRoundTrip() {
+        PluginState.setOption("world-clock", "timezones",
+            ["Europe/Berlin", "Asia/Kolkata", "America/Denver", "Pacific/Auckland"]);
+        PluginState.loadText(PluginState.snapshot());
+        var stored = PluginState.option("world-clock", "timezones", []);
+        compare(Array.isArray(stored), true);
+        compare(stored.join(","),
+            "Europe/Berlin,Asia/Kolkata,America/Denver,Pacific/Auckland");
+    }
+
     function test_loadTextIgnoresMalformedState() {
         PluginState.setPosition("docker_plugin", "DP-1", { x: 1, y: 2, placementStrategy: "free" });
         PluginState.loadText("{ not valid json");

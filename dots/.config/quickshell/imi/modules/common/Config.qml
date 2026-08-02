@@ -132,35 +132,64 @@ Singleton {
     // keeps one per monitor, so the drain seeds every monitor with it.
     property var pendingPluginPositions: ({})
 
+    // The world clock is the second widget whose data has to travel, and the
+    // last `background.widgets.*` key anything wrote at runtime: its four
+    // timezones. Every other port's data was either a size mode (regenerated
+    // from a default nobody notices) or a dedup onto a plugin with its own
+    // store, but a picked timezone is typed-in state - drop it and the card
+    // silently goes back to Sydney/Tokyo/London/New York.
+    //
+    // Its marker is separate from `migratedDesktopWidgetOptions` for the same
+    // reason that one is separate from `migratedDesktopWidgets`: every install
+    // that has launched this branch once already has the clock marker set, and
+    // reusing it would exclude all of them from this half. Both markers ride
+    // the same pending batch, so each half only contributes what its own marker
+    // still says is outstanding.
     function migrateDesktopWidgetOptionsToPlugins() {
-        if (root.options.plugins.migratedDesktopWidgetOptions)
-            return;
-        const clock = root.options.background.widgets.clock;
-        if (!clock)
-            return;
-        root.pendingPluginPositions = ({
-                "clock": {
+        const options = {};
+        const positions = {};
+
+        if (!root.options.plugins.migratedDesktopWidgetOptions) {
+            const clock = root.options.background.widgets.clock;
+            if (clock) {
+                positions["clock"] = {
                     x: clock.x,
                     y: clock.y,
                     placementStrategy: clock.placementStrategy
+                };
+                const values = {};
+                for (const path in root.desktopClockOptionKeys) {
+                    const parts = path.split(".");
+                    let node = clock;
+                    for (let i = 0; i < parts.length; i++) {
+                        if (node === undefined || node === null)
+                            break;
+                        node = node[parts[i]];
+                    }
+                    if (node === undefined || node === null)
+                        continue;
+                    values[root.desktopClockOptionKeys[path]] = node;
                 }
-            });
-        const values = {};
-        for (const path in root.desktopClockOptionKeys) {
-            const parts = path.split(".");
-            let node = clock;
-            for (let i = 0; i < parts.length; i++) {
-                if (node === undefined || node === null)
-                    break;
-                node = node[parts[i]];
+                options["clock"] = values;
             }
-            if (node === undefined || node === null)
-                continue;
-            values[root.desktopClockOptionKeys[path]] = node;
         }
-        root.pendingPluginOptions = ({
-                "clock": values
-            });
+
+        if (!root.options.plugins.migratedWorldClockTimezones) {
+            const legacy = root.options.background.widgets.worldClock?.timezones;
+            if (legacy && legacy.length > 0) {
+                // `list<string>` is not a JS array, and PluginState hands the
+                // value straight to JSON.stringify - copy it out element by
+                // element, or the file gets an object with numeric keys that
+                // `Array.isArray` then rejects on the way back in.
+                const zones = [];
+                for (let i = 0; i < legacy.length; i++)
+                    zones.push(legacy[i]);
+                options["world-clock"] = { "timezones": zones };
+            }
+        }
+
+        root.pendingPluginPositions = positions;
+        root.pendingPluginOptions = options;
     }
 
     function setNestedValue(nestedKey, value) {
@@ -269,6 +298,12 @@ Singleton {
                 // fonts or quote carried across. PluginState sets this, and
                 // only after the values have actually reached its file.
                 property bool migratedDesktopWidgetOptions: false
+                // Set once the world clock's timezone list has been translated
+                // into a plugin option. Its own key for the same reason again:
+                // every install that has launched this branch once already has
+                // the marker above set, and those are exactly the installs whose
+                // timezones still need carrying across.
+                property bool migratedWorldClockTimezones: false
             }
 
             property JsonObject policies: JsonObject {
