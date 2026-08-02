@@ -1,3 +1,4 @@
+import qs
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
@@ -42,8 +43,27 @@ LazyLoader {
         onTriggered: root.hoverHeld = false
     }
 
-    onTargetHoveredChanged: updateHoverHold()
+    onTargetHoveredChanged: {
+        // Claim the shared slot the moment this popup's widget is hovered, so any
+        // neighbour that was still open collapses before it can paint over us.
+        if (targetHovered) GlobalStates.activeBarPopup = root;
+        updateHoverHold();
+    }
     onPopupHoveredChanged: updateHoverHold()
+
+    // A different bar popup just took over. If we're only lingering on the
+    // hover-hold grace period (pointer no longer on our widget or our surface),
+    // close now rather than overlapping the incoming popup during that window.
+    Connections {
+        target: GlobalStates
+        function onActiveBarPopupChanged() {
+            if (GlobalStates.activeBarPopup !== root && root.hoverHeld
+                    && !root.targetHovered && !root.popupHovered) {
+                root.hoverCloseTimer.stop();
+                root.hoverHeld = false;
+            }
+        }
+    }
 
     readonly property bool barVertical: Config.options.bar.vertical
     readonly property string barEdge: {
