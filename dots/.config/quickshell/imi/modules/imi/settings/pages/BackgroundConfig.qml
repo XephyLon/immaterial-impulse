@@ -894,11 +894,6 @@ ContentPage {
                             icon: "memory",
                             name: Translation.tr("Resources"),
                             enabled: Config.options.background.widgets.resources.enable
-                        },
-                        {
-                            icon: "note_stack_add",
-                            name: Translation.tr("Notes"),
-                            enabled: Config.options.background.widgets.notes.enable
                         }
                     ]
                     delegate: Rectangle {
@@ -934,8 +929,6 @@ ContentPage {
                                             Config.options.background.widgets.media.enable = checked
                                         else if (modelData.icon === "memory")
                                             Config.options.background.widgets.resources.enable = checked
-                                        else if (modelData.icon === "note_stack_add")
-                                            Config.options.background.widgets.notes.enable = checked
                                     }
                                 }
                             }
