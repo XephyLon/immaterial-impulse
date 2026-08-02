@@ -107,13 +107,55 @@ class TheHostOwnsTheMechanism(unittest.TestCase):
         self.assertIn("draggable: placementStrategy === \"free\" && !interactionLocked",
                       self.src)
 
-    def test_click_through_disables_the_widget_subtree(self):
-        """`enabled` is the mechanism, not decoration. Qt skips disabled items
-        when routing mouse events and `enabled` cascades to children, which is
-        what lets the click reach the desktop's right-click area behind the
-        widget on the same surface.
+    def test_click_through_disarms_the_host_itself(self):
+        """`MouseArea.enabled` is what stops *this* area handling events - the
+        drag, and the right-click that toggles the global lock. Dropping it
+        because the wrapper below "already covers it" would put both back: the
+        widget would swallow the desktop menu's right-click and flip the global
+        lock with it.
         """
         self.assertIn("enabled: !clickThrough", self.src)
+
+    def test_click_through_reaches_the_widget_s_own_contents(self):
+        """The bug this class of assertion exists for. `MouseArea.enabled` is
+        MouseArea's own property shadowing `Item.enabled`, so it disables that
+        one area and leaves its whole subtree live - a widget with a MouseArea
+        of its own kept taking clicks with click-through on. A plain `Item`
+        does cascade, so the subclass's children are parented into one and it
+        carries the gate.
+        """
+        self.assertIn("default property alias contentData: contentItem.data",
+                      self.src)
+        self.assertRegex(
+            self.src,
+            r"Item \{ id: contentItem [^}]*enabled: !root\.clickThrough",
+            "the content wrapper does not gate on clickThrough")
+
+    def test_the_content_wrapper_gates_on_click_through_not_the_lock(self):
+        """`!root.interactionLocked` reads like a tidier version of the same
+        thing and is the mutation to fear: it would deaden every pinned
+        widget's controls, collapsing the two switches this feature
+        deliberately kept apart back into one.
+        """
+        wrapper = self.src[self.src.index("Item { id: contentItem"):]
+        wrapper = wrapper[:wrapper.index("}")]
+        self.assertNotIn("interactionLocked", wrapper)
+        self.assertNotIn("positionLocked", wrapper)
+
+    def test_the_content_wrapper_takes_no_part_in_sizing(self):
+        """It has to be `anchors.fill: parent`. Left unsized it collapses to
+        0x0 and every child anchored to it goes with it - the widget renders
+        nothing at all, which is a far louder failure but still one nobody
+        would attribute to a click-through gate. Deriving its size from its
+        children instead is the quiet one: PluginWidget's width already comes
+        from PluginNode's implicit size, so that closes the loop.
+        """
+        wrapper = self.src[self.src.index("Item { id: contentItem"):]
+        wrapper = wrapper[:wrapper.index("}")]
+        self.assertIn("anchors.fill: parent", wrapper)
+        self.assertNotIn("childrenRect", wrapper)
+        self.assertNotIn("implicitWidth", wrapper)
+        self.assertNotIn("implicitHeight", wrapper)
 
     def test_click_through_implies_locked(self):
         """Dragging is pointer input. A click-through widget that still

@@ -1,25 +1,32 @@
 import QtQuick
 import QtTest
 import Quickshell
+import qs
+import qs.services
 import qs.modules.common
 import qs.modules.common.plugins
+import qs.modules.common.widgets
 import qs.modules.common.widgets.widgetCanvas
 
 /**
- * Builds two real PluginWidgets on a real WidgetCanvas and drives per-widget
+ * Builds four real PluginWidgets on a real WidgetCanvas and drives per-widget
  * lock and click-through through actual mouse events.
  *
  * `tests/test_widget_interaction_modes.py` can only grep the bindings, and the
  * qmltestrunner suite cannot instantiate the host at all (it needs Quickshell's
  * types and a canvas parent). Neither can answer the question that matters:
- * does a click over a click-through widget actually reach the thing behind it.
+ * does a click over a click-through widget actually reach the thing behind it,
+ * and - the half this harness was missing - does it stop reaching the controls
+ * the widget draws for itself.
  *
  * The layout mirrors Background.qml exactly - a right-click-only sentinel below
  * the canvas, standing in for the desktop menu's MouseArea - because that is
  * the propagation path the feature exists to restore. Left-clicks would prove
- * less: WidgetCanvas itself accepts them and swallows them either way.
+ * less: WidgetCanvas itself accepts them and swallows them either way. The two
+ * content cases are the exception and click left on purpose: their whole point
+ * is a control inside the widget, and that is what a user clicks it with.
  *
- * Run it against a throwaway config:
+ * Run it against a throwaway config - it writes the note store:
  *   XDG_CONFIG_HOME=$(mktemp -d) XDG_STATE_HOME=$(mktemp -d) qs -p WidgetInteractionRuntimeTest.qml
  */
 ShellRoot {
@@ -27,13 +34,21 @@ ShellRoot {
 
     property int failures: 0
     property int desktopMenuHits: 0
+    // Clicks that reached a MouseArea the widget declares for itself.
+    property int contentAreaHits: 0
 
     readonly property string testScreen: "RUNTIME-TEST"
+    readonly property string bundledRoot: Quickshell.shellPath("modules/common/plugins/bundled")
 
     function check(label, ok) {
         console.log(`[WidgetInteraction] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
+    }
+
+    function finish() {
+        console.log(`[WidgetInteraction] failures: ${harness.failures}`);
+        Qt.exit(harness.failures === 0 ? 0 : 1);
     }
 
     // A widget that ships click-through on, like the bundled visualizer.
@@ -54,10 +69,57 @@ ShellRoot {
         desktopWidget: { type: "Item" }
     })
 
+    // The synthetic half of the content case: a widget that ships click-through
+    // and declares a MouseArea of its own inside the host.
+    readonly property var contentWidget: ({
+        id: "runtime_content",
+        name: "Runtime Content",
+        defaultWidth: 160,
+        defaultHeight: 100,
+        desktopWidget: { type: "Item", clickThrough: true }
+    })
+
+    // The real half. The bundled notes widget draws a per-note delete button
+    // that calls straight into the Notes singleton, so "did the widget's own
+    // control fire" is observable from outside the widget with no instrumentation.
+    readonly property var notesManifest: ({
+        id: "notes",
+        name: "Notes",
+        grid: { cols: 2, rows: 2 },
+        _basePath: `${harness.bundledRoot}/notes`,
+        desktopWidget: { component: "Widget.qml", blur: false, clickThrough: true }
+    })
+
     // Right-click over a widget, in canvas coordinates.
     function rightClickOver(widget) {
         driver.mouseClick(canvas, widget.x + widget.width / 2,
                           widget.y + widget.height / 2, Qt.RightButton);
+    }
+
+    function leftClickOver(widget) {
+        driver.mouseClick(canvas, widget.x + widget.width / 2,
+                          widget.y + widget.height / 2, Qt.LeftButton);
+    }
+
+    // Clicks the centre of `item` in canvas coordinates. Ids inside a loaded
+    // Widget.qml are not reachable from here, so the bundled widgets carry
+    // objectNames for exactly this.
+    function clickItem(item) {
+        const point = item.mapToItem(canvas, item.width / 2, item.height / 2);
+        driver.mouseClick(canvas, point.x, point.y, Qt.LeftButton);
+    }
+
+    function findByName(item, name) {
+        if (!item)
+            return null;
+        if (item.objectName === name)
+            return item;
+        for (let i = 0; i < item.children.length; i++) {
+            const found = harness.findByName(item.children[i], name);
+            if (found)
+                return found;
+        }
+        return null;
     }
 
     TestCase {
@@ -68,8 +130,8 @@ ShellRoot {
 
     FloatingWindow {
         visible: true
-        implicitWidth: 640
-        implicitHeight: 400
+        implicitWidth: 1000
+        implicitHeight: 560
         color: "black"
 
         // Stands in for Background.qml's desktopRightClickArea: a sibling of
@@ -92,10 +154,10 @@ ShellRoot {
                 id: clickThroughWidget
                 manifest: harness.shippedClickThrough
                 screenName: harness.testScreen
-                screenWidth: 640
-                screenHeight: 400
-                scaledScreenWidth: 640
-                scaledScreenHeight: 400
+                screenWidth: 1000
+                screenHeight: 560
+                scaledScreenWidth: 1000
+                scaledScreenHeight: 560
                 wallpaperScale: 1
             }
 
@@ -103,10 +165,44 @@ ShellRoot {
                 id: plainPluginWidget
                 manifest: harness.plainWidget
                 screenName: harness.testScreen
-                screenWidth: 640
-                screenHeight: 400
-                scaledScreenWidth: 640
-                scaledScreenHeight: 400
+                screenWidth: 1000
+                screenHeight: 560
+                scaledScreenWidth: 1000
+                scaledScreenHeight: 560
+                wallpaperScale: 1
+            }
+
+            // A MouseArea declared as the host's own child is what every
+            // ported widget's controls amount to once the plugin tree is
+            // flattened - and what `MouseArea.enabled` on the host does not
+            // reach. Left *and* right so a right-click that this swallows is
+            // visibly a swallowed one, not a button it never accepted.
+            PluginWidget {
+                id: contentPluginWidget
+                manifest: harness.contentWidget
+                screenName: harness.testScreen
+                screenWidth: 1000
+                screenHeight: 560
+                scaledScreenWidth: 1000
+                scaledScreenHeight: 560
+                wallpaperScale: 1
+
+                MouseArea {
+                    id: contentArea
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: harness.contentAreaHits++
+                }
+            }
+
+            PluginWidget {
+                id: notesPluginWidget
+                manifest: harness.notesManifest
+                screenName: harness.testScreen
+                screenWidth: 1000
+                screenHeight: 560
+                scaledScreenWidth: 1000
+                scaledScreenHeight: 560
                 wallpaperScale: 1
             }
         }
@@ -119,6 +215,10 @@ ShellRoot {
                                 { x: 40, y: 40, placementStrategy: "free" });
         PluginState.setPosition(harness.plainWidget.id, harness.testScreen,
                                 { x: 360, y: 40, placementStrategy: "free" });
+        PluginState.setPosition(harness.contentWidget.id, harness.testScreen,
+                                { x: 40, y: 300, placementStrategy: "free" });
+        PluginState.setPosition(harness.notesManifest.id, harness.testScreen,
+                                { x: 640, y: 40, placementStrategy: "free" });
     }
 
     // PluginState's FileView load lands asynchronously and replaces the whole
@@ -138,11 +238,13 @@ ShellRoot {
         repeat: true
         running: true
         onTriggered: {
-            if (!PluginState.ready || !Config.ready)
+            if (!PluginState.ready || !Config.ready || !Notes.ready)
                 return;
             Config.options.background.widgetsLocked = false;
             if (Math.round(clickThroughWidget.x) === 40
-                    && Math.round(plainPluginWidget.x) === 360) {
+                    && Math.round(plainPluginWidget.x) === 360
+                    && Math.round(contentPluginWidget.y) === 300
+                    && Math.round(notesPluginWidget.x) === 640) {
                 setup.running = false;
                 step1.running = true;
                 return;
@@ -237,9 +339,145 @@ ShellRoot {
                           plainPluginWidget.draggable === false);
             harness.check("and it does give the unpinned one back",
                           clickThroughWidget.draggable === true);
+            step4.running = true;
+        }
+    }
 
-            console.log(`[WidgetInteraction] failures: ${harness.failures}`);
-            Qt.exit(harness.failures === 0 ? 0 : 1);
+    // The half `MouseArea.enabled` on the host never covered: a control the
+    // widget draws for itself. Disabling the host stops the *host* handling
+    // events; it does not disable the items under it, so this MouseArea kept
+    // taking clicks with click-through on.
+    Timer {
+        id: step4
+        interval: 400
+        onTriggered: {
+            harness.check("the content widget ships click-through on",
+                          contentPluginWidget.clickThrough === true);
+
+            const menuBefore = harness.desktopMenuHits;
+            const contentBefore = harness.contentAreaHits;
+            harness.rightClickOver(contentPluginWidget);
+            harness.check("a click-through widget's own MouseArea takes nothing",
+                          harness.contentAreaHits === contentBefore);
+            harness.check("and the click still reaches the desktop menu",
+                          harness.desktopMenuHits === menuBefore + 1);
+
+            Config.options.background.widgetsLocked = false;
+            step5.running = true;
+        }
+    }
+
+    // The control. Without it "took nothing" is equally satisfied by a widget
+    // that was never under the pointer, or a harness that stopped delivering.
+    Timer {
+        id: step5
+        interval: 400
+        onTriggered: {
+            PluginState.setOption(harness.contentWidget.id, "clickThrough", false);
+            const menuBefore = harness.desktopMenuHits;
+            const contentBefore = harness.contentAreaHits;
+            harness.leftClickOver(contentPluginWidget);
+            harness.check("with click-through off the same control fires",
+                          harness.contentAreaHits === contentBefore + 1);
+            harness.check("and the desktop menu sees nothing",
+                          harness.desktopMenuHits === menuBefore);
+
+            // Pinned but still clickable is the state the two separate flags
+            // exist for, so the gate has to be click-through and not the
+            // resolved lock - which would deaden every locked widget's
+            // controls as a side effect of pinning it.
+            PluginState.setOption(harness.contentWidget.id, "positionLocked", true);
+            step6.running = true;
+        }
+    }
+
+    Timer {
+        id: step6
+        interval: 400
+        onTriggered: {
+            harness.check("a pinned widget is not draggable",
+                          contentPluginWidget.draggable === false);
+            const contentBefore = harness.contentAreaHits;
+            harness.leftClickOver(contentPluginWidget);
+            harness.check("but its own controls still work",
+                          harness.contentAreaHits === contentBefore + 1);
+
+            PluginState.setOption(harness.contentWidget.id, "positionLocked", false);
+
+            // A real widget with a real control, not a synthetic MouseArea: the
+            // bundled notes widget's per-note delete button calls straight into
+            // the Notes singleton, so the outcome is observable from out here.
+            Notes.addNote("runtime click-through note");
+            step7.running = true;
+        }
+    }
+
+    Timer {
+        id: step7
+        interval: 600
+        onTriggered: {
+            harness.check("the notes widget ships click-through for this run",
+                          notesPluginWidget.clickThrough === true);
+            harness.check("the store has the note to delete",
+                          Notes.list.length === 1);
+
+            const deleteButton = harness.findByName(notesPluginWidget, "deleteNoteButton");
+            harness.check("the notes widget draws a per-note delete button",
+                          deleteButton !== null);
+            if (!deleteButton) {
+                harness.finish();
+                return;
+            }
+            harness.clickItem(deleteButton);
+            step8.running = true;
+        }
+    }
+
+    Timer {
+        id: step8
+        interval: 500
+        onTriggered: {
+            harness.check("a real widget's own button is dead under click-through",
+                          Notes.list.length === 1);
+
+            // On a build where the click above went through, the note is gone
+            // and the control below would fail for the wrong reason - the real
+            // failure is already recorded, so put a note back and keep going.
+            if (Notes.list.length === 0)
+                Notes.addNote("runtime click-through note");
+            PluginState.setOption(harness.notesManifest.id, "clickThrough", false);
+            step9.running = true;
+        }
+    }
+
+    // The control, on the real widget: the same button, the same coordinates,
+    // click-through off. Without it "dead" is also what a mis-aimed click and
+    // a widget that never rendered its list would report.
+    Timer {
+        id: step9
+        interval: 600
+        onTriggered: {
+            harness.check("switching click-through off gives the widget back",
+                          notesPluginWidget.clickThrough === false);
+            const deleteButton = harness.findByName(notesPluginWidget, "deleteNoteButton");
+            harness.check("the delete button is still there to click",
+                          deleteButton !== null);
+            if (!deleteButton) {
+                harness.finish();
+                return;
+            }
+            harness.clickItem(deleteButton);
+            step10.running = true;
+        }
+    }
+
+    Timer {
+        id: step10
+        interval: 500
+        onTriggered: {
+            harness.check("and the same button on the same widget now deletes",
+                          Notes.list.length === 0);
+            harness.finish();
         }
     }
 }
