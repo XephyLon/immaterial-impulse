@@ -233,7 +233,19 @@ Item {
                                 // step under the card's own inset. The two text
                                 // rows carry their own leading, so they need no
                                 // gap between them on top of that.
-                                anchors { fill: parent; margins: Appearance.spacing.space75 }
+                                //
+                                // Horizontally it takes a step more than that:
+                                // the chip's `normal` radius is 17px, so at a
+                                // uniform space75 the city name and the offset
+                                // start inside the corner curve and read as
+                                // stuck to the edge. space150 clears the arc.
+                                anchors {
+                                    fill: parent
+                                    topMargin: Appearance.spacing.space75
+                                    bottomMargin: Appearance.spacing.space75
+                                    leftMargin: Appearance.spacing.space150
+                                    rightMargin: Appearance.spacing.space150
+                                }
                                 spacing: Appearance.spacing.space0
                                 RowLayout {
                                     Layout.fillWidth: true
