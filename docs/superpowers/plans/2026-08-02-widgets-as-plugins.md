@@ -151,6 +151,25 @@ none were in the original recipe.
    Fixing this needs a host-side anchor concept (a manifest `anchor`/`fullBleed`
    field driving default position and `draggable`), which is a separate decision.
 
+7. **The settings nav tree mirrors `BackgroundConfig.qml`'s section list.**
+   `modules/imi/settings/SettingsContent.qml:149` repeats the section titles and
+   `tests/test_settings_navigation.py` pins them. Deleting a `ContentSection`
+   reddens the suite until the nav entry goes too — so each port deletes **three**
+   things in the settings UI, not two (Repeater model row, `onCheckedChanged`
+   branch, nav tree entry). *Found by the `custom-image` port.*
+
+8. **A widget whose value is not a scalar may need a new option type.**
+   `custom-image`'s shape picker had no representable form: `choice` renders 31
+   Material shapes as text chips, and `ConfigSelectionArray`'s chip `Flow` only
+   wraps when the row has no label, so a labelled 31-chip row overflows the card
+   unclickably. Resolved by adding a `shape` option type (commit `bb3a181e`) that
+   reuses `ConfigSelectionShapeArray`. The lesson generalises: when the built-in
+   used a bespoke picker, check whether `PluginOptions` can express it *before*
+   settling for a degraded `choice` row. Adding an option type means editing
+   three places — `PluginOptions.qml`'s `switch`, `PluginValidator.js`'s type
+   whitelist (**it rejects unknown types and the manifest silently fails to
+   parse**), and the type list in `docs/PLUGINS.md`.
+
 ---
 
 ## Task 1: One-shot migration from `background.widgets.*` to `plugins.enabled`
