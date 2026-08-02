@@ -9,6 +9,7 @@ CACHE_DIR="$XDG_CACHE_HOME/quickshell"
 STATE_DIR="$XDG_STATE_HOME/quickshell"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHELL_CONFIG_FILE="$XDG_CONFIG_HOME/immaterial-impulse/config.json"
+PLUGIN_STATE_FILE="$XDG_CONFIG_HOME/immaterial-impulse/plugin-state.json"
 MATUGEN_DIR="$XDG_CONFIG_HOME/matugen"
 terminalscheme="$SCRIPT_DIR/terminal/scheme-base.json"
 
@@ -178,7 +179,11 @@ switch() {
     # the desktop wallpaper.
     coloronly="$6"
 
-    aiStylingEnabled=$(jq -r '.background.widgets.clock.cookie.aiStyling' "$SHELL_CONFIG_FILE")
+    # The clock is a bundled plugin now, so its settings live in
+    # plugin-state.json rather than config.json. Left reading config.json this
+    # would come back "null" forever and the wallpaper category would never be
+    # generated, silently disabling the cookie clock's auto styling.
+    aiStylingEnabled=$(jq -r '.pluginOptions.clock.cookieAiStyling // false' "$PLUGIN_STATE_FILE" 2>/dev/null)
     if [[ "$aiStylingEnabled" == "true" ]]; then
         categorize_wallpaper "$imgpath" &
     fi

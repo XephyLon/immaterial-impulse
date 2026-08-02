@@ -7,13 +7,17 @@ import Qt5Compat.GraphicalEffects
 Item {
     id: root
 
-    readonly property string quoteText: Config.options.background.widgets.clock.quote.text
+    property string quoteText: ""
+    property string quoteFontFamily: Appearance.font.family.reading
+    // The horizontal pixel clock leaves a band of empty space under its
+    // glyphs, so the quote is lifted into it instead of sitting below.
+    property bool aboveHorizontalPixelClock: false
 
     implicitWidth: quoteBox.implicitWidth
     implicitHeight: quoteBox.implicitHeight
 
     DropShadow {
-        source: quoteBox 
+        source: quoteBox
         anchors.fill: quoteBox
         horizontalOffset: 0
         verticalOffset: 2
@@ -22,10 +26,10 @@ Item {
         color: Appearance.colors.colShadow
         transparentBorder: true
     }
-    
+
     Rectangle {
         id: quoteBox
-        y: Config.options.background.widgets.clock.style === "pixel" && Config.options.background.widgets.clock.pixel.orientation === "horizontal" ? -26 : 0
+        y: root.aboveHorizontalPixelClock ? -26 : 0
         implicitWidth: quoteRow.implicitWidth + 8 * 2
         implicitHeight: quoteRow.implicitHeight + 4 * 2
         radius: Appearance.rounding.small
@@ -35,7 +39,7 @@ Item {
             id: quoteRow
             anchors.centerIn: parent
             spacing: Appearance.spacing.space50
-            
+
             MaterialSymbol {
                 id: quoteIcon
                 anchors.top: parent.top
@@ -46,10 +50,14 @@ Item {
             StyledText {
                 id: quoteStyledText
                 horizontalAlignment: Text.AlignLeft
-                text: Config.options.background.widgets.clock.quote.text
+                text: root.quoteText
+                // StyledText is a bare Text and so inherits Text.AutoText,
+                // which would render anything markup-shaped the user typed
+                // into the quote field.
+                textFormat: Text.PlainText
                 color: Appearance.colors.colOnSecondaryContainer
                 font {
-                    family: Config.options.background.widgets.clock.quote.followClock ? Config.options.background.widgets.clock.digital.font.family : Appearance.font.family.reading 
+                    family: root.quoteFontFamily
                     pixelSize: Appearance.font.pixelSize.large
                     weight: Font.Normal
                 }

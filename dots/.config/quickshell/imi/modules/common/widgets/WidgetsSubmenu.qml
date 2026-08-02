@@ -11,9 +11,12 @@ Item {
     id: root
     implicitHeight: col.implicitHeight + 16
 
-    readonly property var widgetList: [
-        { key: "clock",       icon: "schedule",           name: Translation.tr("Clock") },
-    ]
+    // Empty since the clock became a bundled plugin. This Repeater can only
+    // drive `background.widgets.<key>.enable`, and no widget is stored there
+    // any more - every desktop widget is enabled from Settings > Widgets. The
+    // submenu still renders "Lock widget positions", which is real and still
+    // lives in Config; what to do with the rest of it is Task 6's call.
+    readonly property var widgetList: []
 
     Rectangle {
         anchors.fill: parent
@@ -35,6 +38,7 @@ Item {
         }
 
         Rectangle {
+            visible: root.widgetList.length > 0
             Layout.fillWidth: true
             Layout.topMargin: Appearance.spacing.space50
             Layout.bottomMargin: Appearance.spacing.space50

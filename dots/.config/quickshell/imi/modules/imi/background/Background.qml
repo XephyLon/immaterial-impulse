@@ -14,8 +14,6 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 
-import qs.modules.imi.background.widgets
-import qs.modules.imi.background.widgets.clock
 import qs.modules.common.plugins
 
 Variants {
@@ -734,21 +732,6 @@ Variants {
                         easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
                     }
                 }
-                FadeLoader {
-                    shown: Config.options.background.widgets.clock.enable
-                        && (GlobalStates.screenLocked
-                            || Config.options.background.screenList.length === 0
-                            || Config.options.background.screenList.includes(bgRoot.screen.name))
-                    sourceComponent: ClockWidget {
-                        screenWidth: bgRoot.screen.width
-                        screenHeight: bgRoot.screen.height
-                        scaledScreenWidth: bgRoot.screen.width
-                        scaledScreenHeight: bgRoot.screen.height
-                        wallpaperScale: 1
-                        wallpaperSafetyTriggered: bgRoot.wallpaperSafetyTriggered
-                    }
-                }
-
                 Repeater {
                     model: PluginManager.availablePlugins
 
@@ -779,6 +762,7 @@ Variants {
                             // Use the exact source resolved by this background,
                             // including lock wallpaper and video thumbnails.
                             wallpaperPath: bgRoot.wallpaperPath
+                            wallpaperSafetyTriggered: bgRoot.wallpaperSafetyTriggered
                             // Live surface for in-shell "blur" frost. During lock
                             // and the lock<->WE peel, frost against the peel itself
                             // so it tracks the exact lock background (avoids the WE

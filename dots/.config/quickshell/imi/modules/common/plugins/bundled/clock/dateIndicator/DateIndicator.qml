@@ -14,9 +14,10 @@ Item {
     // Rotating date
     FadeLoader {
         anchors.fill: parent
-        shown: Config.options.background.widgets.clock.cookie.dateStyle === "border"
+        shown: root.style === "border"
         sourceComponent: RotatingDate {
             color: root.color
+            style: root.style
         }
     }
 

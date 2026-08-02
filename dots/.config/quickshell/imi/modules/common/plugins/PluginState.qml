@@ -116,7 +116,19 @@ Singleton {
     //   - the marker is written last, so a launch that dies mid-migration
     //     simply migrates again rather than recording a migration that never
     //     landed.
+    //
+    // Writing the marker last is also why the re-entrancy guard is needed:
+    // clearing `Config.pendingPluginOptions` at the end re-emits the very
+    // signal this is connected to, while the marker two lines below it is
+    // still false. Without the guard the first migration recurses until the JS
+    // stack blows - and the RangeError that produces is attributed to whatever
+    // unrelated file happens to be next on the stack, so it does not even read
+    // as a migration bug.
+    property bool drainingConfigOptions: false
+
     function drainPendingConfigOptions() {
+        if (root.drainingConfigOptions)
+            return;
         if (!root.ready || !Config.ready)
             return;
         if (Config.options.plugins.migratedDesktopWidgetOptions)
@@ -124,6 +136,8 @@ Singleton {
         const pending = Config.pendingPluginOptions;
         if (!pending || typeof pending !== "object")
             return;
+
+        root.drainingConfigOptions = true;
 
         const nextState = Object.assign({}, root.state);
         const nextOptions = Object.assign({}, nextState.pluginOptions || {});
@@ -167,6 +181,7 @@ Singleton {
         Config.pendingPluginOptions = ({});
         Config.pendingPluginPositions = ({});
         Config.options.plugins.migratedDesktopWidgetOptions = true;
+        root.drainingConfigOptions = false;
     }
 
     Connections {

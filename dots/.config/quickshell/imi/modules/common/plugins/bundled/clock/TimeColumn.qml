@@ -8,10 +8,8 @@ import QtQuick
 Column {
     id: root
     property list<string> clockNumbers: DateTime.time.split(/[: ]/)
-    property bool isEnabled: Config.options.background.widgets.clock.cookie.timeIndicators
     property color color: Appearance.colors.colOnSecondaryContainer
-
-    property bool hourMarksEnabled: Config.options.background.widgets.clock.cookie.hourMarks
+    property bool hourMarksEnabled: false
     spacing: -Appearance.spacing.space200
 
     Repeater {

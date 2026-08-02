@@ -9,11 +9,21 @@ ColumnLayout {
     id: clockColumn
     spacing: Appearance.spacing.space50
 
-    property bool isVertical: Config.options.background.widgets.clock.digital.vertical
-    property color colText: Config.options.background.widgets.clock.color !== ""
-        ? Config.options.background.widgets.clock.color
-        : Appearance.colors.colOnSecondaryContainer
+    property bool isVertical: false
+    property bool showDate: true
+    property bool animateTimeChange: true
+    property color colText: Appearance.colors.colOnSecondaryContainer
     property var textHorizontalAlignment: Text.AlignHCenter
+
+    property string clockFontFamily: Appearance.font.family.expressive
+    property real clockFontSize: 90
+    property real clockFontWeight: 350
+    property real clockFontWidth: 100
+    property real clockFontRoundness: 0
+
+    property bool quoteShown: false
+    property string quoteText: ""
+    property string quoteFontFamily: Appearance.font.family.expressive
 
     // Time
     ClockText {
@@ -21,13 +31,14 @@ ColumnLayout {
         text: clockColumn.isVertical ? DateTime.time.split(":")[0].padStart(2, "0") : DateTime.time
         color: clockColumn.colText
         horizontalAlignment: Text.AlignHCenter
+        clockFontFamily: clockColumn.clockFontFamily
+        animateChange: clockColumn.animateTimeChange
         font {
-            pixelSize: Config.options.background.widgets.clock.digital.font.size
-            weight: Config.options.background.widgets.clock.digital.font.weight
-            family: Config.options.background.widgets.clock.digital.font.family
+            pixelSize: clockColumn.clockFontSize
+            weight: clockColumn.clockFontWeight
             variableAxes: ({
-                "wdth": Config.options.background.widgets.clock.digital.font.width,
-                "ROND": Config.options.background.widgets.clock.digital.font.roundness
+                "wdth": clockColumn.clockFontWidth,
+                "ROND": clockColumn.clockFontRoundness
             })
         }
     }
@@ -42,10 +53,11 @@ ColumnLayout {
             text: DateTime.time.split(":")[1].split(" ")[0].padStart(2, "0")
             color: clockColumn.colText
             horizontalAlignment: clockColumn.textHorizontalAlignment
+            clockFontFamily: clockColumn.clockFontFamily
+            animateChange: clockColumn.animateTimeChange
             font {
                 pixelSize: timeTextTop.font.pixelSize
                 weight: timeTextTop.font.weight
-                family: timeTextTop.font.family
                 variableAxes: timeTextTop.font.variableAxes
             }
         }
@@ -53,21 +65,27 @@ ColumnLayout {
 
     // Date
     ClockText {
-        visible: Config.options.background.widgets.clock.digital.showDate
+        visible: clockColumn.showDate
         Layout.topMargin: -Appearance.spacing.space250
         Layout.fillWidth: true
         text: DateTime.longDate
         color: clockColumn.colText
         horizontalAlignment: clockColumn.textHorizontalAlignment
+        clockFontFamily: clockColumn.clockFontFamily
+        animateChange: clockColumn.animateTimeChange
     }
 
     // Quote
     ClockText {
-        visible: Config.options.background.widgets.clock.quote.enable && Config.options.background.widgets.clock.quote.text.length > 0
+        visible: clockColumn.quoteShown
         font.pixelSize: Appearance.font.pixelSize.normal
-        text: Config.options.background.widgets.clock.quote.text
+        text: clockColumn.quoteText
+        // StyledText is a bare Text and so inherits Text.AutoText, which would
+        // render anything markup-shaped the user typed into the quote field.
+        textFormat: Text.PlainText
         animateChange: false
         color: clockColumn.colText
         horizontalAlignment: clockColumn.textHorizontalAlignment
+        clockFontFamily: clockColumn.quoteFontFamily
     }
 }

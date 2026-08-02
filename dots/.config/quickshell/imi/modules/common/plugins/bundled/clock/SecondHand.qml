@@ -13,12 +13,13 @@ Item {
     property real handLength: 95
     property real dotSize: 20
     property string style: "hide"
+    property bool animateRotation: false
     property color color: Appearance.colors.colSecondary
     
     rotation: (360 / 60 * clockSecond) + 90
 
     Behavior on rotation {
-        enabled: Config.options.background.widgets.clock.cookie.constantlyRotate // Animating every second is expensive...
+        enabled: root.animateRotation // Animating every second is expensive...
         animation: RotationAnimation {
             direction: RotationAnimation.Clockwise
             duration: 1000 // 1 second

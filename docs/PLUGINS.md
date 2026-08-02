@@ -112,6 +112,30 @@ The empty string is a legal choice and draws an "automatic" slot rather than a s
 the widget has a sensible colour of its own and the option is an override, so the way back to that
 default is one more swatch rather than a second switch sitting beside the row saying the same thing.
 
+## Multi-file packages
+
+A package whose `Widget.qml` is split across several files needs a **`qmldir`** in the directory
+naming every component:
+
+```
+module ClockDesktopWidget
+Widget 1.0 Widget.qml
+ClockText 1.0 ClockText.qml
+```
+
+That file is what makes the siblings types. No `import` is needed for same-directory siblings once
+it exists; a **subdirectory** is its own module and needs its own `qmldir` plus an explicit
+`import "subdir"` in the parent. Subdirectory names must be legal QML module segments, so no
+hyphens (`tests/lint_qml_module_dirs.py` guards this).
+
+This is not the usual Qt behaviour and it is easy to lose an afternoon to. A package is loaded by
+absolute path through Quickshell's `qs:` URL scheme, under which Qt adds no usable implicit import
+for the containing directory; and `bundled/` is not scanned into the `qs.modules.*` tree either, so
+`import qs.modules.common.plugins.bundled.<pkg>` does not resolve. Without the `qmldir` every
+sibling reference fails with `X is not a type` — but only the *first* one per file is reported, so
+it reads as one broken component rather than the whole package failing. The bundled `docker` and
+`clock` packages are the two multi-file examples.
+
 ## Host context and host opt-ins
 
 A component-backed `Widget.qml` is a grandchild of the `AbstractBackgroundWidget` that hosts it, so

@@ -8,8 +8,7 @@ Item {
     id: root
 
     property color color: Appearance.colors.colOnSecondaryContainer
-    property string style: Config.options.background.widgets.clock.cookie.dialNumberStyle // "dots", "numbers", "full", "hide"
-    property string dateStyle : Config.options.background.widgets.clock.cookie.dateStyle
+    property string style: "full" // "dots", "numbers", "full", "none"
 
     // 12 Dots
     FadeLoader {

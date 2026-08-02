@@ -7,12 +7,11 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
-import qs.modules.imi.background.widgets
 
 Item {
     id: root
 
-    readonly property bool isVertical: Config.options.background.widgets.clock.pixel.orientation === "vertical"
+    property bool isVertical: true
 
     implicitWidth: isVertical ? 276 : 420
     implicitHeight: isVertical ? 252 : 150

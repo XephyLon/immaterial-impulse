@@ -1,0 +1,10 @@
+# Without this file none of the components below is a type. A bundled
+# package is loaded by absolute path through Quickshell's `qs:` URL scheme,
+# and under it Qt adds no usable implicit import for the containing
+# directory - so every sibling reference fails with "X is not a type".
+# See docs/PLUGINS.md, "Multi-file packages".
+module ClockDesktopWidgetMinuteMarks
+BigHourNumbers 1.0 BigHourNumbers.qml
+Dots 1.0 Dots.qml
+Lines 1.0 Lines.qml
+MinuteMarks 1.0 MinuteMarks.qml
