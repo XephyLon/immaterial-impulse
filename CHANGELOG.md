@@ -13,6 +13,23 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **Per-widget lock and click-through for desktop widgets.** Every desktop
+  widget gains two switches of its own next to `Blur background` in
+  Settings → Widgets. **Lock position** pins that one widget while the rest
+  stay draggable; it combines with the existing global `Lock widget positions`
+  rather than replacing it, so the global switch can only ever lock further and
+  never unpins something you pinned deliberately. **Click through** takes the
+  widget out of pointer input entirely, so clicks land on whatever is behind it
+  — including the desktop's own right-click menu. They stay two separate
+  switches because "pinned but still clickable" is a real thing to want; the
+  reverse is not, so click-through implies the lock. A plugin can ship either
+  one on by default from its manifest (`desktopWidget.locked`,
+  `desktopWidget.clickThrough`), and you can still switch it back off.
+- **The Visualizer now ships click-through on.** It spans the full width of a
+  monitor and has nothing on it to click, so it was covering a whole strip of
+  desktop, swallowing the right-click menu there, and could be dragged half
+  off-screen with no bounds. Switch its click-through off if you want to
+  reposition it.
 - **`shape` and `color` manifest option types.** `shape` takes the same
   `choices` array as `choice` but renders each entry as the Material shape it
   names rather than as a text chip — a 31-entry row of shape *names* is

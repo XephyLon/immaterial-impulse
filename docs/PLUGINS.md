@@ -102,6 +102,13 @@ Component paths must be relative, remain inside the package, and must not contai
 entry points are `barWidget`, `desktopWidget`, `controlCenterWidget`, `launcherProvider`, `panel`,
 and `settingsUi`. Bar entries use the stable `plugin:<id>` layout identifier.
 
+`desktopWidget` additionally takes three optional booleans — `blur`, `locked` and `clickThrough`.
+None of them is a setting: each **seeds the default** of the matching per-plugin option in
+`plugin-state.json` (`blurEnabled`, `positionLocked`, `clickThrough`), so a widget can ship an
+opinion the user can still overturn from Settings → Widgets. A non-boolean is rejected by
+`PluginValidator.js` and the whole manifest then fails to parse. See
+[Lock and click-through](#lock-and-click-through).
+
 ## Desktop widget size
 
 Desktop-widget plugins should declare their size on the shared **component grid** with a
@@ -218,6 +225,36 @@ These exist for widgets that draw straight onto the wallpaper with no panel of t
 bundled Clock uses all of them: it is the lock screen's only clock, it has always centred itself
 there, and its digital style is bare text that has to stay readable over whatever it sits on.
 
+## Lock and click-through
+
+Every desktop-widget plugin gets two host toggles of its own next to `Blur background`, both
+persisted per plugin in `plugin-state.json`:
+
+| option | manifest seed | effect |
+|---|---|---|
+| `positionLocked` | `desktopWidget.locked` | this widget alone stops being draggable |
+| `clickThrough` | `desktopWidget.clickThrough` | this widget stops receiving pointer input at all |
+
+They are two capabilities, not one. *Locked but clickable* is a real state — a pinned widget whose
+controls still work — so the lock does not imply click-through. The converse does hold: dragging
+**is** pointer input, so a click-through widget is always locked as well, and the host folds
+`clickThrough` into its lock the same way it folds in the global switch.
+
+`background.widgetsLocked` ("Lock widget positions", the desktop Widgets submenu) still exists and
+**ORs** with the per-widget lock. It can only ever lock further; flipping the global switch off
+never unlocks a widget the user deliberately pinned.
+
+Click-through is implemented as `enabled: false` on the host widget, not as a Wayland input region.
+Every desktop widget shares one layer-shell surface (`Background.qml`), so masking that surface
+would blind all of them at once. `enabled` cascades down the item tree and Qt skips disabled items
+when routing mouse events, so the click continues to whatever is behind the widget *inside the same
+surface* — which on the background is the desktop's own right-click area. Turning click-through
+off restores dragging, which is the way to reposition a widget that ships with it on.
+
+The bundled Visualizer is the case this exists for: it is full-bleed (see below), so it covers a
+whole monitor's width, has nothing on it to click, and would otherwise both swallow the desktop
+menu and be draggable off-screen with no bounds. Its manifest ships `"clickThrough": true`.
+
 ## Drop Shelf and Screenshot Result
 
 Both were bundled `panel` plugins and are now core shell modules
@@ -263,8 +300,11 @@ readonly property var widgetScreen: Quickshell.screens.find(s => s.name === root
 This is how a full-bleed widget sizes itself: the bundled Visualizer omits `grid` from its manifest
 (the grid caps at 12 columns / 1716px, a third of a 5120px display) and binds
 `implicitWidth` to `widgetScreen.width`, so the host's content sizing gives it the whole monitor.
-Note that the host still makes such a widget draggable and still restores a persisted free
-position — full-bleed does not mean edge-anchored. See [widget-grid.md](widget-grid.md).
+Full-bleed still does not mean edge-anchored: the host restores a persisted free position, and a
+full-bleed widget that is neither locked nor click-through is dragged like any other, with no
+bounds. The Visualizer opts out of that with `clickThrough` (see
+[Lock and click-through](#lock-and-click-through)); an anchoring concept that would decide *where*
+such a widget lands does not exist yet. See [widget-grid.md](widget-grid.md).
 
 ## Remote installation
 

@@ -80,6 +80,7 @@ In addition to the QML unit tests, `run_tests.sh` runs static lint checks first:
 * **Lockscreen theme lint (`lint_lockscreen_theme.sh`)**: Keeps transient lock colors owned by `MaterialThemeLoader`, verifies that its virtual-environment wrapper preserves wallpaper paths containing spaces, guards the precomputed palette cache/delayed transition, caps the animated palette-role budget, requires the bounded fast color duration, and prevents locking from switching to synthetic Hyprland workspaces. This avoids theme races, animation contention, and persistent compositor/screencopy state corruption.
 * **Region selector capture lint (`lint_region_selector_capture.sh`)**: Requires the selector preview and final crop to share the same freshly generated `grim` image, with image caching disabled and visibility gated on decoding. This prevents an independent screencopy from displaying a stale compositor frame.
 * **Plugin process lifecycle lint (`lint_plugin_processes.py`)**: Rejects bundled streaming processes with persistent `running` bindings unless they document restart-safe backoff, prevents Docker's known-runaway desktop host from being re-enabled, and keeps package bar entries behind exactly one loader instead of the runaway nested sizing path. This prevents instant-exit respawn loops and multi-gigabyte allocation failures from starving the shell session.
+* **Widget interaction mode tests (`test_widget_interaction_modes.py`)**: Pin per-widget lock and click-through on `AbstractBackgroundWidget` — that both flags default off (that class sits under every desktop widget in the shell), that the global `background.widgetsLocked` toggle ORs with the per-widget lock rather than replacing it, that `clickThrough` drives `enabled` rather than a Wayland surface mask, that `PluginWidget` reads both from `PluginState` with the manifest as the seed and never assigns them, and that the settings rows exist so a shipped default stays reversible. Every assertion was confirmed to fail under a matching mutation; `WidgetInteractionRuntimeTest.qml` is the behavioural half.
 * **Plugin installer tests (`test_plugin_installer.py`)**: Verify remote package paths cannot be absolute or escape the plugin directory using `..`.
 * **Preset tests (`test_presets.py`)**: Verify complete desktop plugin state—including positions and per-plugin options—round-trips through presets, while position-only legacy presets retain options they never captured.
 * **Matugen application theme tests (`test_matugen_app_themes.py`)**: Verify Cava, btop, and tmux templates are registered idempotently, generated themes preserve unrelated application settings, and live reload hooks run after Matugen renders.
@@ -140,6 +141,21 @@ line that implements it.
 `DockerBarControlRuntimeTest.qml`, and `DockerBarHostRuntimeTest.qml` are
 manually launched harnesses, driven by `run_docker_memory_test.sh` via
 `quickshell -p <file>`.
+
+`WidgetInteractionRuntimeTest.qml` joins them and is self-checking: it builds
+two real `PluginWidget`s on a real `WidgetCanvas` and drives per-widget lock
+and click-through with actual mouse events, exiting non-zero on any failure.
+`import QtTest` works inside `qs -p`, so `TestCase.mouseClick()` delivers real
+events without `ydotool` — which is the only way to prove a click over a
+click-through widget reaches the desktop area behind it rather than merely that
+a property flipped. Run it against a throwaway config, because it writes plugin
+options and positions, and a stale state file from a previous run would make it
+start from the wrong defaults:
+
+```bash
+XDG_CONFIG_HOME=$(mktemp -d) XDG_STATE_HOME=$(mktemp -d) \
+  qs -p WidgetInteractionRuntimeTest.qml
+```
 
 They live at the repository root on purpose and should not be moved into
 `tests/`: `quickshell -p` roots the `qs` module at the directory of the file it

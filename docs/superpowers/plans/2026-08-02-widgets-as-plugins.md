@@ -137,19 +137,31 @@ none were in the original recipe.
    to its width. `defaultWidth`/`defaultHeight` in the manifest are then only a
    floor. Measured: 5120px wide, 426 bars, matching the built-in exactly.
 
+   **Draggability resolved separately.** `AbstractBackgroundWidget` now carries
+   two neutral-default host flags, `positionLocked` and `clickThrough`, seeded
+   by `desktopWidget.locked` / `desktopWidget.clickThrough` in the manifest and
+   overridable per plugin through `PluginState`. `clickThrough` sets
+   `enabled: false` on the host, which drops the widget out of Qt's pointer
+   routing so clicks continue to the desktop's own right-click area on the same
+   surface; it therefore implies the lock. The per-widget lock ORs with the
+   global `background.widgetsLocked` — the global switch can lock further but
+   never unlocks a widget the user pinned. The visualizer ships
+   `"clickThrough": true`, so it is no longer draggable off-screen and no longer
+   eats the desktop menu. See `docs/PLUGINS.md` § Lock and click-through.
+
    *Anchoring is still unsolved*, and it is a real behavioural regression for
    every widget that was edge-pinned:
    - **First enable lands at `y = 100`** (the host's generic default), i.e. near
      the top, not the bottom edge the built-in was hardcoded to.
-   - **It is draggable**, and `AbstractWidget` sets no drag bounds, so a
-     full-bleed bar can be dragged partly off-screen and stays there for the
-     session.
    - Horizontal drift is self-healing but only on reload: `applyPersistedPosition()`
      clamps x into `[0, screenWidth - width]` = `[0, 0]`. Vertical position
      persists freely in `[0, screenHeight - height]`.
 
-   Fixing this needs a host-side anchor concept (a manifest `anchor`/`fullBleed`
-   field driving default position and `draggable`), which is a separate decision.
+   Fixing that still needs a host-side anchor concept (a manifest `anchor`/
+   `fullBleed` field driving the default position), which is a separate
+   decision. The lock work makes it cheaper rather than harder: an `anchor`
+   field would seed a position the same way `locked`/`clickThrough` seed their
+   options, and an anchored widget already has a reason not to be draggable.
 
 7. **The settings nav tree mirrors `BackgroundConfig.qml`'s section list.**
    `modules/imi/settings/SettingsContent.qml:149` repeats the section titles and
