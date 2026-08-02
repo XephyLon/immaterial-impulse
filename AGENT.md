@@ -265,6 +265,20 @@ currently open, is the bar in autoHide-triggered-show state, etc.) - don't add e
 
 ## Hyprland integration
 
+**Hyprland only.** `README.md`'s "Compositor support" section is policy, not aspiration: there are no
+plans to support Niri or any other compositor, upstream's compositor-abstraction layer is kept *only*
+as a thin Hyprland facade so merges stay tractable, and compositor-specific code for anything else is
+**removed when it lands**. `services/HyprlandBackend.qml` is what "thin facade" means. The Niri
+counterparts that arrived with the `78c58b84` merge - `NiriBackend`, `NiriXkb`, `NiriConfig`,
+`NiriBackdrop`, `CompositorGlobalShortcut` - were all removed on landing, as the policy requires.
+
+Do not read a leftover `niri` string as evidence that support exists, is wanted, or needs cleaning
+up. Everything that still matches is Hyprland code *imitating* Niri: the `overview.style = "niri"`
+look (`modules/imi/overview/NiriOverview.qml`, which imports `Quickshell.Hyprland` and reads
+`HyprlandData`), the `"niri"` animation preset in `scripts/hyprland/hyprconfigurator.py` built from
+`hl.curve`/`hl.animation`, their `"Niri Like"` labels, and a generic `pkill sway || pkill niri`
+logout fallback. None of it is compositor support.
+
 Two separate mechanisms are in play, for different reasons:
 
 1. **Quickshell's native `Quickshell.Hyprland` IPC bindings** (`Hyprland`, `HyprlandMonitor`,
