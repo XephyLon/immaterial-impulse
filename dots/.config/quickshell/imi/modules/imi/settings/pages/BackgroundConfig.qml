@@ -886,11 +886,6 @@ ContentPage {
                             enabled: Config.options.background.widgets.weather.enable
                         },
                         {
-                            icon: "image",
-                            name: Translation.tr("Image converter"),
-                            enabled: Config.options.background.widgets.images.enable
-                        },
-                        {
                             icon: "music_note",
                             name: Translation.tr("Media Player"),
                             enabled: Config.options.background.widgets.media.enable
@@ -950,8 +945,6 @@ ContentPage {
                                     onCheckedChanged: {
                                         if (modelData.icon === "weather_mix")
                                             Config.options.background.widgets.weather.enable = checked
-                                        else if (modelData.icon === "image")
-                                            Config.options.background.widgets.images.enable = checked
                                         else if (modelData.icon === "music_note")
                                             Config.options.background.widgets.media.enable = checked
                                         else if (modelData.icon === "memory")
