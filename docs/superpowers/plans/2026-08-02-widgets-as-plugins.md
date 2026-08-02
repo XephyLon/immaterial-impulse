@@ -415,7 +415,8 @@ none were in the original recipe.
     grandchild of the host and cannot see any of its properties unless
     `PluginNode` is taught to forward them.
 
-19. **`enabled: false` on the host does not disable the plugin's contents.**
+19. **`enabled: false` on a `MouseArea` does not disable what is under it —
+    the gate has to sit on a plain `Item` wrapper.**
     `AbstractBackgroundWidget` is a `MouseArea`, and `MouseArea.enabled` is
     `MouseArea`'s own property, not `Item.enabled`: it stops that one area
     handling events and leaves its whole subtree live. (A plain `Item` with
@@ -423,9 +424,24 @@ none were in the original recipe.
     breaks.) So click-through made the host stop taking clicks while any
     `MouseArea` a widget declares for itself kept working, and a click-through
     widget could still be resized by its own grip. Measured with a two-case
-    probe under headless weston, not reasoned about. Anything that has to be
-    genuinely inert has to be gated inside the widget, which is what the
-    forwarded `hostInteractionLocked` is for.
+    probe under headless weston, not reasoned about.
+
+    **Fixed.** The base class now declares
+    `default property alias contentData: contentItem.data` over an
+    `anchors.fill: parent` `Item` carrying `enabled: !clickThrough`, so
+    everything a subclass declares is parented into it and goes inert together.
+    The host keeps its own `enabled: !clickThrough` as well: that one disarms
+    the drag and the right-click that toggles the global lock, which the wrapper
+    cannot reach. The wrapper gates on `clickThrough` and *not* on the resolved
+    `interactionLocked`, because pinning a widget must leave its controls
+    working — the whole reason the two are separate switches. Covered by
+    `WidgetInteractionRuntimeTest.qml` (a synthetic `MouseArea` and the real
+    notes widget's per-note delete button), which
+    `tests/test_widget_interaction_runtime.py` now runs in the suite.
+
+    The forwarded `hostInteractionLocked` is unaffected and still needed: it
+    covers what the wrapper deliberately does not, a grip that must be dead
+    whenever the widget is merely *pinned*.
 
 ---
 

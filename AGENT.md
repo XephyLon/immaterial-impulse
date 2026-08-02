@@ -416,6 +416,18 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   to do nothing. This only surfaces where focus is obtained by clicking - `LockSurface.qml`'s
   password box uses the identical overlay structure but never hit this, since it
   `forceActiveFocus()`s itself programmatically instead of depending on a click.
+- **`enabled: false` on a `MouseArea` disables that area and nothing under it.**
+  `QQuickMouseArea` declares its own `enabled` property, which shadows `Item.enabled` — so the
+  usual "`enabled` cascades to the whole subtree" intuition, which is true of a plain `Item`, is
+  false here. `AbstractBackgroundWidget` (a `MouseArea` via `AbstractWidget`) used `enabled:
+  !clickThrough` as its entire click-through mechanism: it correctly stopped the host's own drag
+  and right-click, and left every `MouseArea` a widget drew inside itself fully live, so a
+  "click-through" widget still swallowed clicks aimed at the desktop behind it. The fix is a plain
+  `Item` wrapper carrying the gate, with the children routed into it via a `default property alias`
+  (`contentData: contentItem.data`) — anchored `fill: parent` so it takes no part in sizing and
+  cannot reintroduce the `Loader` binding loop above. Both gates are needed; neither covers the
+  other. Whenever the disabled thing is a `MouseArea`, `Control`, or anything else that redeclares
+  `enabled`, check what you actually disabled with a probe rather than assuming the cascade.
 - **A QML property binding that calls a C++ invokable method (not a property read) will not
   re-evaluate when that method's underlying data changes.** `DesktopEntries.applications` takes a
   few seconds to populate after `qs` starts. `DragApps.qml`'s pinned-app launcher bound
