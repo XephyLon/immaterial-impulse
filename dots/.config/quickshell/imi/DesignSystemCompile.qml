@@ -7,6 +7,10 @@ ShellRoot {
 
     readonly property string designSystemRoot: Quickshell.shellPath("modules/common/plugins/designsystem")
     readonly property string bundledRoot: Quickshell.shellPath("modules/common/plugins/bundled")
+    // Every settings page, because a settings page only ever compiles when the
+    // user opens that page: a bad property or a renamed signal handler on one
+    // of them leaves the whole shell green until someone clicks it.
+    readonly property string settingsPagesRoot: Quickshell.shellPath("modules/imi/settings/pages")
 
     Process {
         id: finder
@@ -14,7 +18,8 @@ ShellRoot {
         // be a hardcoded array, which rotted: it still named `nandoroid-clock`
         // and `nandoroid-at-a-glance` long after those directories stopped
         // existing, so every run reported two failures that meant nothing.
-        command: ["find", root.designSystemRoot, root.bundledRoot, "-type", "f", "-name", "*.qml", "-print"]
+        command: ["find", root.designSystemRoot, root.bundledRoot, root.settingsPagesRoot,
+            "-type", "f", "-name", "*.qml", "-print"]
         running: true
         stdout: StdioCollector { id: output }
         onExited: (exitCode, exitStatus) => {
@@ -27,18 +32,20 @@ ShellRoot {
             const designSystem = found.filter(path => path.startsWith(root.designSystemRoot));
             const packages = found.filter(path => path.startsWith(root.bundledRoot)
                 && path.endsWith("/Widget.qml"));
+            const settingsPages = found.filter(path => path.startsWith(root.settingsPagesRoot));
 
             // A sweep that finds nothing would otherwise pass silently, which is
             // the same failure the hardcoded list had in the other direction.
-            if (designSystem.length === 0 || packages.length === 0) {
-                console.error(`[DesignSystemCompile] swept nothing: designsystem=${designSystem.length} packages=${packages.length}`);
+            if (designSystem.length === 0 || packages.length === 0 || settingsPages.length === 0) {
+                console.error(`[DesignSystemCompile] swept nothing: designsystem=${designSystem.length} packages=${packages.length} settingsPages=${settingsPages.length}`);
                 Qt.exit(1);
                 return;
             }
 
-            const paths = designSystem.concat(packages).concat([
+            const paths = designSystem.concat(packages).concat(settingsPages).concat([
                 Quickshell.shellPath("modules/common/plugins/PluginOptions.qml"),
-                Quickshell.shellPath("modules/imi/settings/pages/PluginsPage.qml")
+                Quickshell.shellPath("modules/common/widgets/AutostartApps.qml"),
+                Quickshell.shellPath("modules/common/widgets/WallpaperSubmenu.qml")
             ]);
             for (const path of paths) {
                 const component = Qt.createComponent(`file://${path}`, Component.PreferSynchronous);
