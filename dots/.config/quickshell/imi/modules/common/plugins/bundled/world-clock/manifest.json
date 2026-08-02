@@ -1,0 +1,7 @@
+{
+  "id": "world-clock", "name": "World Clock", "description": "Local time and date plus four timezones you pick, as a card or a row of dials", "version": "1.0.0", "apiVersion": 1,
+  "author": "Immaterial Impulse contributors", "license": "AGPL-3.0",
+  "defaultWidth": 276, "defaultHeight": 108,
+  "capabilities": ["desktop-widget"], "permissions": ["settings_read", "settings_write", "process"],
+  "desktopWidget": { "component": "Widget.qml", "blur": false }
+}

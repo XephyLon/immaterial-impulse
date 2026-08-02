@@ -1,0 +1,42 @@
+{
+  "id": "custom-image", "name": "Custom Image", "description": "Drop an image onto the desktop, masked into a Material shape", "version": "1.0.0", "apiVersion": 1,
+  "author": "Immaterial Impulse contributors", "license": "AGPL-3.0",
+  "defaultWidth": 80, "defaultHeight": 80,
+  "capabilities": ["desktop-widget"], "permissions": ["settings_read", "settings_write", "filesystem_read"],
+  "options": [
+    { "key": "shape", "type": "shape", "label": "Shape", "icon": "shapes", "default": "Cookie4Sided", "choices": [
+      { "displayName": "Circle", "value": "Circle" },
+      { "displayName": "Square", "value": "Square" },
+      { "displayName": "Slanted", "value": "Slanted" },
+      { "displayName": "Arch", "value": "Arch" },
+      { "displayName": "Arrow", "value": "Arrow" },
+      { "displayName": "Semi circle", "value": "SemiCircle" },
+      { "displayName": "Oval", "value": "Oval" },
+      { "displayName": "Pill", "value": "Pill" },
+      { "displayName": "Triangle", "value": "Triangle" },
+      { "displayName": "Diamond", "value": "Diamond" },
+      { "displayName": "Clam shell", "value": "ClamShell" },
+      { "displayName": "Pentagon", "value": "Pentagon" },
+      { "displayName": "Gem", "value": "Gem" },
+      { "displayName": "Sunny", "value": "Sunny" },
+      { "displayName": "Very sunny", "value": "VerySunny" },
+      { "displayName": "Cookie 4", "value": "Cookie4Sided" },
+      { "displayName": "Cookie 6", "value": "Cookie6Sided" },
+      { "displayName": "Cookie 7", "value": "Cookie7Sided" },
+      { "displayName": "Cookie 9", "value": "Cookie9Sided" },
+      { "displayName": "Cookie 12", "value": "Cookie12Sided" },
+      { "displayName": "Ghostish", "value": "Ghostish" },
+      { "displayName": "Clover 4", "value": "Clover4Leaf" },
+      { "displayName": "Clover 8", "value": "Clover8Leaf" },
+      { "displayName": "Burst", "value": "Burst" },
+      { "displayName": "Soft burst", "value": "SoftBurst" },
+      { "displayName": "Flower", "value": "Flower" },
+      { "displayName": "Puffy", "value": "Puffy" },
+      { "displayName": "Puffy diamond", "value": "PuffyDiamond" },
+      { "displayName": "Pixel circle", "value": "PixelCircle" },
+      { "displayName": "Bun", "value": "Bun" },
+      { "displayName": "Heart", "value": "Heart" }
+    ]}
+  ],
+  "desktopWidget": { "component": "Widget.qml", "blur": false }
+}

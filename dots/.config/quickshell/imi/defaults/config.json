@@ -273,13 +273,6 @@
     "wallpaperAnimation": "Peel",
     "wallpaperPath": "",
     "widgets": {
-      "calendar": {
-        "enable": true,
-        "placementStrategy": "free",
-        "sizeMode": "2x2",
-        "x": 1500,
-        "y": 684
-      },
       "clock": {
         "color": "",
         "cookie": {
@@ -322,69 +315,8 @@
         "x": 1524,
         "y": 372
       },
-      "customImage": {
-        "enable": false,
-        "path": "",
-        "placementStrategy": "free",
-        "shape": "Cookie4Sided",
-        "size": 200,
-        "x": 400,
-        "y": 100
-      },
-      "images": {
-        "enable": false,
-        "placementStrategy": "free",
-        "x": 400,
-        "y": 100
-      },
-      "media": {
-        "backgroundShape": "Cookie4Sided",
-        "enable": false,
-        "placementStrategy": "free",
-        "showControls": true,
-        "showLyrics": false,
-        "showTitles": true,
-        "x": 4296,
-        "y": 828
-      },
-      "resources": {
-        "enable": false,
-        "placementStrategy": "free",
-        "vertical": false,
-        "x": 1896,
-        "y": 156
-      },
-      "userCard": {
-        "enable": false,
-        "placementStrategy": "free",
-        "x": 1896,
-        "y": 300
-      },
       "visualizer": {
-        "enable": true,
-        "placementStrategy": "free",
-        "x": 0,
-        "y": 1200
-      },
-      "weather": {
-        "enable": false,
-        "placementStrategy": "free",
-        "sizeMode": "1x3",
-        "x": 400,
-        "y": 100
-      },
-      "worldClock": {
-        "enable": false,
-        "placementStrategy": "free",
-        "sizeMode": "2x2",
-        "timezones": [
-          "Australia/Sydney",
-          "Asia/Tokyo",
-          "Europe/London",
-          "America/New_York"
-        ],
-        "x": 4824,
-        "y": 84
+        "enable": true
       }
     },
     "widgetsLocked": false

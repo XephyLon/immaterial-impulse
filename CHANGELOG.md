@@ -12,6 +12,266 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Settings now survive the move from upstream.** Arriving from
+  `end-4/dots-hyprland` or `pctrade/end4-pC` already moved your config
+  *directory*; it never converted anything inside it. The shell reads
+  `config.json` through a JSON adapter that silently ignores any key it does not
+  recognise, so a setting this fork renamed was replaced by a default with no
+  error and nothing to point at. Two things were being lost and are now carried
+  across on first launch:
+  - **`panelFamily`.** A config naming `ii` or `waffle` (end-4's second panel
+    family, which was never ported here) matched no panel family at all - the
+    desktop came up **completely blank**: no bar, no dock, and no error in the
+    log. Both now resolve to `imi`.
+  - **`bar.floatStyleShadow` -> `bar.shadow`.** Not a straight copy. Upstream
+    only ever drew that shadow under the Float corner style, while ours draws it
+    under every style that paints a background, so what migrates is the shadow
+    you actually had on screen rather than the flag on disk.
+
+  Everything else in the schema turned out to be intact - this fork's key set is
+  a superset of upstream's, with no type changes and nothing moved to a different
+  parent. The keys that were *removed* rather than renamed (`waffles.*`, and
+  end-4's `notifications.monitor.*`, which nothing ever read) are recorded as
+  removals rather than given an invented destination. The full audited
+  old-key -> new-key table, and an explicit list of what is **not** covered
+  (`~/.config/hypr/`, `~/.config/matugen/`), is in `docs/UPSTREAM_MIGRATION.md`.
+
+  It runs once, keyed on a marker of its own rather than on the old directory
+  still existing - that directory is already gone for anyone whose directory
+  migration ran earlier, and those are exactly the people who still need this.
+
+### Changed
+- **Notes are a list of notes again, not one scratchpad — and both notes
+  surfaces now share it.** The notes desktop widget and the overlay notes
+  editor (`Super`-summoned overlay) used to share a single plaintext file, so
+  there was only ever one note. They now share a JSON array of separate notes,
+  stored in the same file as before
+  (`~/.local/state/quickshell/user/notes.txt`). **What happens to your existing
+  text:**
+  - Whatever is in your scratchpad today becomes your first note, word for
+    word. Nothing is deleted, and a file that cannot be parsed is kept as a
+    note rather than reset.
+  - If you used the old built-in notes widget (removed earlier in this cycle),
+    the notes it kept in `~/.local/state/quickshell/user/desktopnotes.txt` are
+    **imported back** and will reappear alongside your scratchpad. That import
+    runs exactly once; notes you delete afterwards stay deleted.
+  - `desktopnotes.txt` is read and then left alone forever — it is never
+    modified or removed, so it remains your own copy of those notes.
+  - `notes.txt` now contains JSON rather than raw text. If you edit or sync it
+    by hand, expect an array of `{ id, content, attachments, createdAt }`.
+    Replacing it with plain text is safe: it is read back as a single note.
+  The desktop widget gets a list of notes, an add button, a per-note delete
+  button and a flip to a full-size editor. Swipe-to-delete and the old
+  per-note colour cycling from the removed built-in were **not** restored. The
+  overlay editor keeps its editor and its copyable-bullet buttons, and gains a
+  strip of note chips plus add and delete buttons, so it can reach every note
+  instead of only the first. Adding, editing or deleting a note in one surface
+  shows up in the other immediately.
+- A fresh install now ships the clock and the visualizer on its desktop, not
+  the calendar. Both of the two sit at an edge - the clock centred, the
+  visualizer full-bleed along the bottom - so neither claims a tile the user
+  has not chosen to give it. Existing installs are untouched: the curated
+  defaults are seeded only when `~/.config/immaterial-impulse/config.json` does
+  not already exist.
+
+### Fixed
+- **Click through only made half of a widget click-through.** A desktop widget
+  switched to **Click through** stopped taking the drag and stopped swallowing
+  the desktop's right-click menu — but every control the widget drew for itself
+  kept working, and a click that landed on one never reached the desktop behind
+  it. The widget host is a `MouseArea`, and disabling a `MouseArea` disables
+  only that one area, not the items inside it; the mechanism read as if it
+  disabled the whole widget and never did. Everything a desktop widget draws now
+  sits inside a wrapper that goes inert with it, so **Click through** means what
+  the switch says: the widget is transparent to the pointer, controls included.
+  Nothing visibly changes and no widget changes size. Only the Visualizer ships
+  click-through on, and it has nothing to click, so nobody was hitting this yet —
+  it is fixed before anything else opts in. Pinning a widget with **Lock
+  position** still leaves its controls working, which is the difference between
+  the two switches.
+- **Coming from upstream no longer silently loses your entire settings
+  directory.** Moving `~/.config/illogical-impulse` to
+  `~/.config/immaterial-impulse` is done at first launch by a script that
+  refused to migrate into a directory that already contained a `config.json`.
+  That guard cannot tell your config from a file you have never seen, and two
+  things routinely put one there before it ran:
+  - **The installer put it there itself.** It seeds the curated
+    `defaults/config.json` into `~/.config/immaterial-impulse` whenever it finds
+    no config there — which is always true for someone arriving from upstream,
+    because theirs is still under the old name. The migration then found that
+    seeded file in the way and skipped the whole directory. No race needed; this
+    happened to everyone who used the installer.
+  - **The shell could get there first.** The migration was launched and then not
+    waited for, so it ran alongside the shell's own config load. When the shell
+    won, it wrote a default `config.json` into the destination and the migration
+    skipped the directory for the same reason.
+
+  Either way you kept none of your settings, none of your custom actions,
+  presets or AI prompts, and there was nothing in the log to say why. Your old
+  directory was never deleted, so nothing was ever destroyed — but you had no
+  way to know that was where your settings still were.
+
+  Now: the shell waits for the migration to finish before it reads or writes the
+  config directory at all, and the migration decides by comparing the file in
+  the way against the config this shell ships. An untouched shipped default is
+  replaced by your real config; anything you have actually changed here is
+  **never overwritten** — instead the shell declines, changes nothing, and logs
+  which directory your settings are still in so you can merge them by hand. If
+  the migration itself gets stuck, the shell still comes up, but read-only, so a
+  half-finished move can't cost you the file. A successful merge keeps the old
+  directory as a backup; delete or rename it once you no longer want it.
+- The design-system compile check swept a hardcoded list of bundled packages
+  that had rotted: it still named `nandoroid-clock` and `nandoroid-at-a-glance`,
+  directories that have never existed at that path, so every run reported two
+  meaningless failures. Both roots are discovered with `find` now, so the check
+  covers every bundled package's entry point (118 files, up from a fixed list)
+  and cannot drift again; a sweep that matches nothing fails instead of passing
+  silently. It is also wired into `tests/run_tests.sh` for the first time -
+  nothing ran it before, which is why the dead names survived since the ii->imi
+  rename. It skips where there is no Wayland display, so CI is unaffected.
+
+### Added
+- **Per-widget lock and click-through for desktop widgets.** Every desktop
+  widget gains two switches of its own next to `Blur background` in
+  Settings → Widgets. **Lock position** pins that one widget while the rest
+  stay draggable; it combines with the existing global `Lock widget positions`
+  rather than replacing it, so the global switch can only ever lock further and
+  never unpins something you pinned deliberately. **Click through** takes the
+  widget out of pointer input entirely, so clicks land on whatever is behind it
+  — including the desktop's own right-click menu. They stay two separate
+  switches because "pinned but still clickable" is a real thing to want; the
+  reverse is not, so click-through implies the lock. A plugin can ship either
+  one on by default from its manifest (`desktopWidget.locked`,
+  `desktopWidget.clickThrough`), and you can still switch it back off.
+- **The Visualizer now ships click-through on.** It spans the full width of a
+  monitor and has nothing on it to click, so it was covering a whole strip of
+  desktop, swallowing the right-click menu there, and could be dragged half
+  off-screen with no bounds. Switch its click-through off if you want to
+  reposition it.
+- **`shape` and `color` manifest option types.** `shape` takes the same
+  `choices` array as `choice` but renders each entry as the Material shape it
+  names rather than as a text chip — a 31-entry row of shape *names* is
+  unreadable, and `ConfigSelectionArray`'s chip flow only wraps when the row
+  has no label, so such a row could not be labelled either. `color` renders a
+  row of palette swatches from `Appearance.colors` role names; the empty
+  string is a legal choice and draws an "automatic" slot, so a widget with a
+  sensible colour of its own gets its override *and* the way back to that
+  default in one row, rather than a second switch sitting beside the row
+  saying the same thing.
+- **A `grid`-exempt escape hatch for full-bleed widgets.** The component grid
+  caps at 12 columns (1716px — barely a third of a 5120px display), so a
+  screen-wide widget cannot express itself through `grid` at all. It omits
+  `grid`, takes the host's content sizing, and binds its own `implicitWidth` to
+  the monitor the host tells it it is on. `docs/widget-grid.md` documents the
+  rule and the two other legitimate exemptions (user-resizable, and square).
+- **Host opt-ins for widgets that draw straight onto the wallpaper.** A package
+  component may now declare `visibleWhenLocked` (stay up while the screen is
+  locked, regardless of `lock.showWidgets`), `forceCenter` (centre on the
+  monitor without disturbing the persisted position), and `needsColText` (run
+  the least-busy-region pass so `hostColText` tracks the wallpaper underneath).
+  The bundled Clock uses all three. Every one is optional; a widget that
+  declares none behaves exactly as it did before.
+
+### Changed
+- **The two desktop-widget systems are now one.** Every desktop widget used to
+  be either a hardcoded `FadeLoader` in `modules/imi/background/Background.qml`
+  gated on `background.widgets.<key>.enable`, or a bundled plugin gated on
+  `plugins.enabled`. All eleven built-ins are gone: seven were ported to
+  bundled plugins (Visualizer, Custom Image, Image Converter, User Card, World
+  Clock, Calendar, Clock) and four were deleted as duplicates of a plugin that
+  already shipped (resources → System Monitor, media → Media Player, weather →
+  Weather, notes → Notes). Every desktop widget now goes through one code path
+  (`PluginManager` → `PluginWidget` → `PluginNode`) and is enabled from
+  Settings → Widgets — which means one frost/blur implementation, one position
+  persistence system, and one place to look. Porting the clock also retired the
+  older declarative `clock_plugin`, so there is exactly one clock in the list.
+- **Nothing you had switched on switches off.** A one-shot migration translates
+  `background.widgets.*.enable` into `plugins.enabled`. The clock gets a second
+  one: it is the only widget that shipped *on*, and its four styles look
+  nothing like one another, so it carries its own settings and its desktop
+  position across as well rather than silently repainting and moving itself.
+  Both migrations are marked so they never run twice, and the clock's marker is
+  written only once the values have actually landed.
+- **The world clock's timezones moved in with the rest of its settings.** They
+  were the last thing in the old desktop-widget config block that the shell
+  still wrote to while running; they now live in `plugin-state.json` alongside
+  the widget's other options. A third one-shot migration carries an existing
+  list across — including on installs that had already run the two earlier
+  ones, which is all of them — and a list you have since changed through the
+  widget's own picker always wins over the one being migrated. The four zones
+  you picked survive the upgrade; there is nothing to redo.
+
+### Fixed
+- **A locked widget could still be resized.** The Calendar, World Clock and
+  Custom Image each draw a corner grip that resizes them, and each one checked
+  only the global `Lock widget positions` switch. Lock one of those widgets on
+  its own and the lock held for dragging but not for the grip — the widget was
+  pinned and still fully resizable, which is not what "locked" means anywhere
+  else. All three grips now follow the same resolved lock the drag does, so a
+  widget locked for any reason (its own switch, the global one, or
+  click-through) has a dead grip. That also closes a hole in **Click through**:
+  the widget itself stopped taking clicks, but a grip drawn *inside* it did
+  not, so a click-through widget could still be resized by its own handle.
+- **Laptops lost their battery reading when the resources widget was deduped.**
+  The built-in `ResourcesWidget` showed CPU, RAM and — wherever a battery
+  existed — the battery, falling back to disk only on a desktop. The bundled
+  `nandoroid-system-monitor` it was deduped into is always Disk, so every
+  laptop the migration moved onto the plugin quietly lost the reading. The
+  third card follows the battery again, gated on `Battery.available` rather
+  than the raw display device, so a transient UPower device swap cannot make
+  the whole card flip to Disk and back. The plugin also gains a **Battery
+  instead of disk** switch (on by default): the built-in never let a laptop
+  user keep disk, and that guess is wrong for anyone who put the widget there
+  to watch it. A machine with no battery renders exactly what it did before,
+  to the pixel.
+- **The world clock card overflowed its own bottom margin, and always had.**
+  Its content came to 6px more than the card at both the old height and the
+  new one, so the bottom row of city chips sat 2px off the card edge while the
+  top sat on a full margin. The chips now take the column's leftover height
+  instead of a fixed 50px, so the card cannot be overshot by a font that
+  renders a little tall, and they divide the card width instead of being a
+  fixed 120px block centred inside it — they line up with the header and the
+  time above them now, down both edges. The local time drops 42px to 36px,
+  which is where the room for a real `space150` card inset comes from; it is
+  still 2.4× the largest text under it. The timezone-picker side gets that
+  same inset and a heading, instead of a back arrow alone against an empty row.
+- **The wide world clock drew each city's name through its own clock hands.**
+  `AndroidClock` placed the label just under the centre dot while the minute
+  hand reaches 0.82 of the dial radius, so the two always overlapped. A
+  labelled clock now reserves a band for the label and centres the dial in
+  what is left; an unlabelled one (the clock preview in Settings) is laid out
+  exactly as before. The label also picks up the shell's own font instead of
+  asking the canvas for `sans-serif`.
+- **The calendar's padding was whatever made it fit.** Putting the widget on
+  the real grid cell left every gap inside it set to whatever absorbed the 24px
+  it lost, so the month title, the weekday letters and the day grid all sat the
+  same 4px apart with nothing saying which belonged to which. All three sizes
+  now share one card inset and one three-step rhythm — `space150` around the
+  card, `space100` between the title block and the calendar block, `space50`
+  between the weekday letters and the grid they label. The day columns spread
+  across the full card width instead of sitting as a fixed 196px block centred
+  in a 252px surface, so the weekday letters line up over the days they name
+  and the day block is inset evenly on all four sides; the week strip is
+  centred in its card rather than piled against the top with all the slack
+  under it.
+- **Every "2×2" world clock and calendar was 24px too tall.** Both assumed a
+  132×**120** grid cell; the cell is 132×**108**. A widget off the lattice
+  cannot line up with its neighbours no matter where it is dropped — its bottom
+  edge lands past every other tile's, on every row. Both are now sized through
+  `Appearance.sizes.widgetGridSpanX/Y`, which also makes them follow
+  `effectiveScale` instead of being wrong on every scaled setup.
+- **Every unselected shape in a shape picker rendered invisible.**
+  `ConfigSelectionShapeArray`'s default `shapeColor` was `colPrimaryContainer`,
+  near-identical to the chip background it was drawn on.
+- **The desktop media widget would have thrown on its first reset.**
+  `Background.qml`'s media `onLoaded` referenced a `mediaTimer` that was
+  declared nowhere in the tree.
+- **The cookie clock's Gemini auto-styling would have silently stopped.**
+  `scripts/colors/switchwall.sh` read `.background.widgets.clock.cookie.aiStyling`
+  out of `config.json`. The clock's settings live in `plugin-state.json` now, so
+  that read would have returned `"null"` forever and the wallpaper category
+  would never have been generated.
 ## [0.12.0] — 2026-08-02
 
 ### Added

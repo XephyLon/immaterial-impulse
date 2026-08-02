@@ -6,8 +6,22 @@ import qs.modules.common.functions
 import QtCore
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 Singleton {
+    id: root
+
+    // False until scripts/migrate-config-dir.sh has exited. Nothing may read
+    // or write `shellConfig` before that: the migration refuses to migrate
+    // into a directory that already holds a config.json, so a Config load that
+    // got there first used to write its defaults in and permanently disable
+    // the move - the user silently kept none of their settings. It was fired
+    // with `execDetached`, which returns immediately, so the ordering was a
+    // timing accident that happened to hold. `Config.qml` waits on this;
+    // `tests/test_config_dir_migration_runtime.py` forces the losing
+    // interleaving and checks it does.
+    property bool configDirReady: false
+
     // XDG Dirs, with "file://"
     readonly property string home: StandardPaths.standardLocations(StandardPaths.HomeLocation)[0]
     readonly property string config: StandardPaths.standardLocations(StandardPaths.ConfigLocation)[0]
@@ -36,8 +50,15 @@ Singleton {
     property string shellConfigName: "config.json"
     property string shellConfigPath: `${Directories.shellConfig}/${Directories.shellConfigName}`
 	property string todoPath: FileUtils.trimFileProtocol(`${Directories.state}/user/todo.json`)
+	// The note store: a JSON array owned by services/Notes.qml, which the bundled
+	// notes plugin and the overlay notes editor both go through. Still named
+	// .txt because it used to hold one plaintext scratchpad, and renaming it
+	// would strand that scratchpad in a file nothing reads.
 	property string notesPath: FileUtils.trimFileProtocol(`${Directories.state}/user/notes.txt`)
 	property string clipboardPinsPath: FileUtils.trimFileProtocol(`${Directories.state}/user/clipboard-pins.json`)
+	// Where the deleted built-in notes widget kept its note array. Imported into
+	// notesPath once (Config.options.notes.importedLegacyStore) and never
+	// written to again - it stays on disk as the user's copy of record.
 	property string desktopNotesPath: FileUtils.trimFileProtocol(`${Directories.state}/user/desktopnotes.txt`)
 	property string conflictCachePath: FileUtils.trimFileProtocol(`${Directories.cache}/conflict-killer`)
     property string notificationsPath: FileUtils.trimFileProtocol(`${Directories.cache}/notifications/notifications.json`)
@@ -60,18 +81,49 @@ Singleton {
     property string userPresetsPath: FileUtils.trimFileProtocol(`${Directories.shellConfig}/presets`)
     property string presetsScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/presets.sh`)
     property string generatedLockMaterialThemePath: FileUtils.trimFileProtocol(`${Directories.state}/user/generated/colors-lock.json`)
+
+    // A Process rather than `execDetached` purely so there is an exit to wait
+    // for. It costs one bash spawn on the startup path of every launch, which
+    // buys a happens-before instead of a coincidence.
+    Process {
+        id: configDirMigration
+        command: ["bash", Quickshell.shellPath("scripts/migrate-config-dir.sh")]
+        stderr: SplitParser {
+            onRead: line => console.log(line)
+        }
+        onExited: (exitCode, exitStatus) => {
+            // 3 is the script's DECLINED: it found something it could not
+            // safely decide and deliberately changed nothing. Its own stderr
+            // above says which directory and why; this line is here so the
+            // headline is greppable and cannot be mistaken for noise.
+            if (exitCode === 3)
+                console.log("[Directories] Your settings were not migrated. The shell left both config directories untouched - see the [ImI] line above for which one still holds them.");
+            else if (exitCode !== 0)
+                console.log(`[Directories] scripts/migrate-config-dir.sh exited ${exitCode}; continuing with whatever is in ${root.shellConfig}.`);
+            root.configDirReady = true;
+        }
+    }
+
+    // Deliberately not in Component.onCompleted: these three live inside
+    // `shellConfig`, and creating them before the migration has run is how the
+    // rename loses to a directory appearing underneath it.
+    onConfigDirReadyChanged: {
+        if (!root.configDirReady)
+            return;
+        Quickshell.execDetached(["mkdir", "-p", `${root.shellConfig}`])
+        Quickshell.execDetached(["mkdir", "-p", `${root.userPresetsPath}`])
+        Quickshell.execDetached(["mkdir", "-p", `${root.userActions}`])
+    }
+
     // Cleanup on init
     Component.onCompleted: {
-        Quickshell.execDetached(["bash", Quickshell.shellPath("scripts/migrate-config-dir.sh")])
-        Quickshell.execDetached(["mkdir", "-p", `${userPresetsPath}`])
-        Quickshell.execDetached(["mkdir", "-p", `${shellConfig}`])
+        configDirMigration.running = true
         Quickshell.execDetached(["mkdir", "-p", `${favicons}`])
         Quickshell.execDetached(["bash", "-c", `rm -rf '${coverArt}'; mkdir -p '${coverArt}'`])
         Quickshell.execDetached(["bash", "-c", `rm -rf '${booruPreviews}'; mkdir -p '${booruPreviews}'`])
         Quickshell.execDetached(["bash", "-c", `rm -rf '${latexOutput}'; mkdir -p '${latexOutput}'`])
         Quickshell.execDetached(["bash", "-c", `rm -rf '${cliphistDecode}'; mkdir -p '${cliphistDecode}'`])
         Quickshell.execDetached(["mkdir", "-p", `${aiChats}`])
-        Quickshell.execDetached(["mkdir", "-p", `${userActions}`])
         Quickshell.execDetached(["rm", "-rf", `${tempImages}`])
     }
 }

@@ -1,0 +1,617 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Layouts
+import qs.modules.common
+import qs.modules.common.functions
+import qs.modules.common.widgets
+import qs.modules.common.plugins
+
+Item {
+    id: root
+
+    // The host's resolved lock (PluginNode forwards AbstractBackgroundWidget's
+    // `interactionLocked`). The grips below gate on this, not on the global
+    // `background.widgetsLocked` they used to read: a widget pinned on its own
+    // was still resizable, so the lock held for dragging and not for the two
+    // handles that change the widget's size. False when there is no host at all
+    // (a bare `qs -p` probe of this file), same as `screenName: ""`.
+    property bool hostInteractionLocked: false
+
+    // The card fills the whole widget, so the host's default frost region has
+    // the right extent - but not the right corner radius (PluginWidget falls
+    // back to `Appearance.rounding.large`, 7px tighter than the card's
+    // `verylarge`), which would leave blurred slivers outside the four corners.
+    // Naming the card is the only way to hand the host the radius it has.
+    readonly property bool blurEnabled: PluginState.option("calendar", "blurEnabled", false)
+    readonly property real backgroundOpacity: Config.options.plugins.blurOpacity
+    readonly property bool managesBlurTint: true
+    readonly property var blurRegions: [
+        {
+            x: card.x,
+            y: card.y,
+            width: card.width,
+            height: card.height,
+            radius: card.radius
+        }
+    ]
+
+    function tinted(surfaceColor) {
+        return root.blurEnabled ? ColorUtils.transparentize(surfaceColor, 1 - root.backgroundOpacity) : surfaceColor;
+    }
+
+    // Every size is a real component-grid span rather than a pixel literal, so
+    // the three modes land on the lattice and follow effectiveScale.
+    // See docs/widget-grid.md.
+    readonly property real snapWidth1: Appearance.sizes.widgetGridSpanX(1)   // 132
+    readonly property real snapWidth2: Appearance.sizes.widgetGridSpanX(2)   // 276
+    readonly property real shortHeight: Appearance.sizes.widgetGridSpanY(1)  // 108
+    readonly property real tallHeight: Appearance.sizes.widgetGridSpanY(2)   // 228
+
+    // The corner handle resizes this widget and the opposite handle flips the
+    // wide size between a month and a week, so the manifest declares no `grid`:
+    // a span is a fixed pixel size the host assigns on every load, and it would
+    // overwrite whichever size the handles last chose. The widget stays
+    // content-sized instead, which is also why this root must not
+    // `anchors.fill: parent` - the host derives its own size from this one, so
+    // anchoring is a binding loop (see PluginNode.qml).
+    //
+    // The wide-short mode was called "1x2" while being two columns by one row,
+    // and every mode was 120 tall on the assumption of a 120px cell - the cell
+    // is 108. Normalising on read maps the legacy string onto the mode it
+    // actually described; without it "1x2" falls through the switch default
+    // below and silently promotes the user's week strip to the full month.
+    function normalizeSizeMode(mode) {
+        if (mode === "1x1")
+            return "1x1";
+        if (mode === "2x1" || mode === "1x2")
+            return "2x1";
+        return "2x2";
+    }
+
+    property string sizeMode: root.normalizeSizeMode(PluginState.option("calendar", "sizeMode", "2x2"))
+
+    // The handles assign `sizeMode` directly for live feedback, which breaks
+    // the binding above on purpose (the same trade custom-image makes), so
+    // persisting has to write the property as well as the option.
+    function setSizeMode(mode) {
+        root.sizeMode = mode;
+        PluginState.setOption("calendar", "sizeMode", mode);
+    }
+
+    property real widgetWidth: {
+        switch (root.sizeMode) {
+        case "1x1":
+            return root.snapWidth1;
+        case "2x1":
+            return root.snapWidth2;
+        default:
+            return root.snapWidth2;
+        }
+    }
+
+    // One padding for every mode, so the three sizes read as the same card at
+    // different scales. space150 rather than the space200 the notes tile uses:
+    // a 228-tall card has to seat a title row, a weekday strip and six week
+    // rows, and the 8px space200 would take comes straight off the day grid,
+    // which has less of it to give than the card edge does.
+    readonly property real cardInset: Appearance.spacing.space150
+
+    // Padding between the day-grid surface and the block of day pills inside
+    // it. The pills are centred in their columns, so the *visible* gap is this
+    // plus half a column's slack; space50 lands that at roughly the same 7px
+    // the compressed row pitch leaves above and below (see twoByTwoContent).
+    readonly property real dayGridInset: Appearance.spacing.space50
+
+    // Column width for the wide-short mode, which has no inner surface: the
+    // card's own content width split seven ways.
+    readonly property real weekColumnWidth: (root.snapWidth2 - root.cardInset * 2) / 7
+
+    property int monthShift: 0
+    readonly property var today: new Date()
+
+    property var viewingDate: {
+        let d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() + monthShift);
+        return d;
+    }
+
+    function getMonthMatrix(date) {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstOfMonth = new Date(year, month, 1);
+        const startOffset = (firstOfMonth.getDay() + 6) % 7;
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+        let cells = [];
+        for (let i = 0; i < startOffset; i++)
+            cells.push({
+                day: daysInPrevMonth - startOffset + i + 1,
+                currentMonth: false,
+                isToday: false
+            });
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const isToday = monthShift === 0 && d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+            cells.push({
+                day: d,
+                currentMonth: true,
+                isToday: isToday
+            });
+        }
+
+        let nextDay = 1;
+        while (cells.length < 42) {
+            cells.push({
+                day: nextDay++,
+                currentMonth: false,
+                isToday: false
+            });
+        }
+
+        let weeks = [];
+        for (let i = 0; i < cells.length; i += 7)
+            weeks.push(cells.slice(i, i + 7));
+        return weeks;
+    }
+
+    function getCurrentWeek() {
+        const matrix = getMonthMatrix(viewingDate);
+        for (let w = 0; w < matrix.length; w++) {
+            if (matrix[w].some(c => c.isToday))
+                return matrix[w];
+        }
+        return matrix[0];
+    }
+
+    property var weeks: getMonthMatrix(viewingDate)
+
+    implicitWidth: card.implicitWidth
+    implicitHeight: card.implicitHeight
+
+    Behavior on widgetWidth {
+        animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
+    }
+
+    // The host (PluginWidget) is the MouseArea that drags this widget; a
+    // HoverHandler reads hover without taking press events away from it.
+    HoverHandler {
+        id: widgetHover
+    }
+
+    component DayCell: Rectangle {
+        id: dayCell
+        property int day: 0
+        property bool currentMonth: true
+        property bool isToday: false
+        property bool bold: false
+        // Set by the caller so today's pill frosts with the rest of the card.
+        property color highlightColor: Appearance.colors.colPrimary
+
+        implicitWidth: 28
+        implicitHeight: 28
+        radius: Appearance.rounding.full
+        color: dayCell.isToday ? dayCell.highlightColor : "transparent"
+
+        StyledText {
+            anchors.centerIn: parent
+            text: dayCell.day
+            font.pixelSize: Appearance.font.pixelSize.smaller
+            font.weight: dayCell.bold || dayCell.isToday ? Font.Bold : Font.Normal
+            color: dayCell.isToday ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
+            opacity: dayCell.currentMonth ? 1.0 : 0.3
+        }
+    }
+
+    Rectangle {
+        id: card
+        implicitWidth: root.widgetWidth
+        implicitHeight: root.sizeMode === "1x1" ? root.shortHeight : root.sizeMode === "2x1" ? root.shortHeight : root.tallHeight
+        radius: Appearance.rounding?.verylarge ?? 30
+        color: root.tinted(Appearance.colors.colPrimaryContainer)
+
+        StyledRectangularShadow {
+            target: card
+            z: -2
+        }
+
+        Loader {
+            anchors.fill: parent
+            sourceComponent: {
+                if (root.sizeMode === "1x1")
+                    return oneByOneContent;
+                if (root.sizeMode === "2x1")
+                    return twoByOneContent;
+                return twoByTwoContent;
+            }
+        }
+
+        // 1x1. Two full-bleed bands, so there is no card inset here - the
+        // banner is the padding. Its height is its own label plus space100
+        // above and below rather than a fraction of the card: a fraction
+        // silently re-tunes the banner's padding every time the card is
+        // resized, which is how it survived being sized to a 120px cell that
+        // was really 108 without anyone noticing.
+        Component {
+            id: oneByOneContent
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: Appearance.spacing.space0
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: bannerRow.implicitHeight + Appearance.spacing.space100 * 2
+                    color: root.tinted(Appearance.colors.colPrimary)
+                    topLeftRadius: card.radius
+                    topRightRadius: card.radius
+
+                    RowLayout {
+                        id: bannerRow
+                        anchors.centerIn: parent
+                        spacing: Appearance.spacing.space50
+                        StyledText {
+                            text: root.today.toLocaleDateString(Qt.locale(), "MMM").toUpperCase()
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.Bold
+                            color: Appearance.colors.colOnPrimary
+                        }
+                        StyledText {
+                            text: root.today.toLocaleDateString(Qt.locale(), "ddd").toUpperCase()
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.Bold
+                            color: Appearance.colors.colOnPrimary
+                            opacity: 0.7
+                        }
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    StyledText {
+                        anchors.centerIn: parent
+                        text: root.today.getDate()
+                        font.pixelSize: 54
+                        font.weight: Font.Bold
+                        color: Appearance.colors.colOnPrimaryContainer
+                    }
+                }
+            }
+        }
+
+        // 2x1. The same three-step rhythm as the 2x2: cardInset (space150)
+        // around the card, space100 between the month pill and the week strip
+        // it heads, space50 between the weekday letters and the day row they
+        // label. That comes to 84px of content, and the column is *centred*
+        // rather than filled so the remaining 24px lands as 12 above and 12
+        // below - exactly the card inset - instead of piling up under a
+        // trailing fillHeight spacer and leaving the card bottom-heavy.
+        Component {
+            id: twoByOneContent
+            Item {
+                anchors.fill: parent
+
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    width: parent.width - root.cardInset * 2
+                    spacing: Appearance.spacing.space100
+
+                    Rectangle {
+                        implicitHeight: 28
+                        implicitWidth: monthText.implicitWidth + Appearance.spacing.space150 * 2
+                        radius: Appearance.rounding.full
+                        color: root.tinted(Appearance.colors.colPrimary)
+
+                        StyledText {
+                            id: monthText
+                            anchors.centerIn: parent
+                            text: root.today.toLocaleDateString(Qt.locale(), "MMMM yyyy")
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            font.weight: Font.Bold
+                            color: Appearance.colors.colOnPrimary
+                        }
+                    }
+
+                    Grid {
+                        columns: 7
+                        rowSpacing: Appearance.spacing.space50
+                        columnSpacing: Appearance.spacing.space0
+                        Layout.fillWidth: true
+
+                        Repeater {
+                            model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+                            delegate: Item {
+                                id: weekdayHeaderCell
+                                required property var modelData
+                                implicitWidth: root.weekColumnWidth
+                                implicitHeight: 16
+                                StyledText {
+                                    anchors.centerIn: parent
+                                    text: weekdayHeaderCell.modelData
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    font.weight: Font.Bold
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                    opacity: 0.5
+                                }
+                            }
+                        }
+
+                        Repeater {
+                            model: root.getCurrentWeek()
+                            delegate: Item {
+                                id: weekDayCell
+                                required property var modelData
+                                implicitWidth: root.weekColumnWidth
+                                implicitHeight: 28
+
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 28
+                                    height: 28
+                                    radius: Appearance.rounding.full
+                                    color: weekDayCell.modelData.isToday ? root.tinted(Appearance.colors.colPrimary) : "transparent"
+
+                                    StyledText {
+                                        anchors.centerIn: parent
+                                        text: weekDayCell.modelData.day
+                                        font.pixelSize: Appearance.font.pixelSize.smaller
+                                        font.weight: weekDayCell.modelData.isToday ? Font.Bold : Font.Normal
+                                        color: weekDayCell.modelData.isToday ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
+                                        opacity: weekDayCell.modelData.currentMonth ? 1.0 : 0.3
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2x2. Three consecutive steps of the scale, each one naming a real
+        // relationship rather than whatever made the pixels add up:
+        //
+        //   space150  cardInset - the card's edge padding
+        //   space100  between the month title block and the calendar block
+        //   space50   between the weekday letters and the grid they label
+        //
+        // Grouping the weekday strip with the grid inside one column is what
+        // makes those last two different: the strip is a header for the grid,
+        // not a third peer of the title, and reading it as a peer is why every
+        // gap in here used to be the same space50.
+        Component {
+            id: twoByTwoContent
+            ColumnLayout {
+                anchors {
+                    fill: parent
+                    margins: root.cardInset
+                }
+                spacing: Appearance.spacing.space100
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Appearance.spacing.space50
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        font.pixelSize: Appearance.font.pixelSize.normal
+                        font.weight: Font.Medium
+                        color: Appearance.colors.colOnPrimaryContainer
+                        text: root.viewingDate.toLocaleDateString(Qt.locale(), "MMMM yyyy")
+                    }
+
+                    Rectangle {
+                        implicitWidth: 24
+                        implicitHeight: 24
+                        radius: Appearance.rounding.full
+                        color: "transparent"
+                        border.width: Appearance.borderWidth.standard
+                        border.color: Appearance.colors.colPrimary
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            text: "chevron_left"
+                            iconSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnPrimaryContainer
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.monthShift--
+                        }
+                    }
+
+                    Rectangle {
+                        implicitWidth: 24
+                        implicitHeight: 24
+                        radius: Appearance.rounding.full
+                        color: "transparent"
+                        border.width: Appearance.borderWidth.standard
+                        border.color: Appearance.colors.colPrimary
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            text: "chevron_right"
+                            iconSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnPrimaryContainer
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.monthShift++
+                        }
+                    }
+                }
+
+                // The weekday strip and the grid it labels, as one block.
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    spacing: Appearance.spacing.space50
+
+                    // Seven equal columns across the full content width, inset
+                    // by dayGridInset so the letters sit exactly over the day
+                    // columns inside the surface below. They used to be a
+                    // fixed 28px block centred in a much wider row, which left
+                    // the strip and the grid on two different column pitches.
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: root.dayGridInset
+                        Layout.rightMargin: root.dayGridInset
+                        spacing: Appearance.spacing.space0
+                        Repeater {
+                            model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+                            delegate: StyledText {
+                                id: weekdayHeader
+                                required property var modelData
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                font.weight: Font.Bold
+                                color: Appearance.colors.colOnPrimaryContainer
+                                opacity: 0.6
+                                text: weekdayHeader.modelData
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        color: root.tinted(Appearance.colors.colLayer1)
+                        // Nested inside the card at cardInset, so the corners
+                        // stay concentric with the card's own.
+                        radius: card.radius - root.cardInset
+
+                        ColumnLayout {
+                            anchors {
+                                left: parent.left
+                                right: parent.right
+                                verticalCenter: parent.verticalCenter
+                                leftMargin: root.dayGridInset
+                                rightMargin: root.dayGridInset
+                            }
+                            // Six 28px day pills do not fit in the 150-odd px
+                            // this surface gets, so the rows deliberately
+                            // overlap: the pill is a 28px hit/highlight target
+                            // but the row *pitch* is 22. The glyphs are 12px
+                            // and centred, so they still clear each other, and
+                            // only today's pill is ever filled. The negated
+                            // token is the documented form for this.
+                            spacing: -Appearance.spacing.space75
+
+                            Repeater {
+                                model: root.weeks
+                                delegate: RowLayout {
+                                    id: weekRow
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    spacing: Appearance.spacing.space0
+                                    Repeater {
+                                        model: weekRow.modelData
+                                        delegate: Item {
+                                            id: dayColumn
+                                            required property var modelData
+                                            Layout.fillWidth: true
+                                            implicitHeight: 28
+
+                                            DayCell {
+                                                anchors.centerIn: parent
+                                                day: dayColumn.modelData.day
+                                                currentMonth: dayColumn.modelData.currentMonth
+                                                isToday: dayColumn.modelData.isToday
+                                                highlightColor: root.tinted(Appearance.colors.colPrimary)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            id: resizeHandle
+            width: 16
+            height: 16
+            radius: Appearance.rounding.unsharpenslight
+            color: Appearance.colors.colOnPrimaryContainer
+            anchors {
+                right: card.right
+                bottom: card.bottom
+                margins: Appearance.spacing.space50
+            }
+            opacity: (widgetHover.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
+            visible: opacity > 0 && !root.hostInteractionLocked
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Appearance.animation.elementMoveFaster.duration
+                }
+            }
+
+            MouseArea {
+                id: resizeArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.SizeHorCursor
+                preventStealing: true
+                property real startWidth: 0
+                property real startX: 0
+                onPressed: mouse => {
+                    resizeArea.startWidth = root.widgetWidth;
+                    resizeArea.startX = resizeArea.mapToItem(null, mouse.x, mouse.y).x;
+                }
+                onPositionChanged: mouse => {
+                    if (!resizeArea.pressed)
+                        return;
+                    var globalX = resizeArea.mapToItem(null, mouse.x, mouse.y).x;
+                    var dx = globalX - resizeArea.startX;
+                    var newW = resizeArea.startWidth + dx;
+                    var mid = (root.snapWidth1 + root.snapWidth2) / 2;
+                    if (newW < mid)
+                        root.sizeMode = "1x1";
+                    else if (root.sizeMode === "1x1")
+                        root.sizeMode = "2x2";
+                }
+                onReleased: root.setSizeMode(root.sizeMode)
+            }
+        }
+
+        Rectangle {
+            id: toggleHandle
+            width: 16
+            height: 16
+            radius: Appearance.rounding.unsharpenslight
+            color: Appearance.colors.colOnPrimaryContainer
+            anchors {
+                left: card.left
+                bottom: card.bottom
+                margins: Appearance.spacing.space50
+            }
+            opacity: (widgetHover.hovered || toggleArea.containsMouse) && root.sizeMode !== "1x1" ? 0.5 : 0
+            visible: opacity > 0 && !root.hostInteractionLocked
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Appearance.animation.elementMoveFaster.duration
+                }
+            }
+
+            MaterialSymbol {
+                anchors.centerIn: parent
+                text: root.sizeMode === "2x1" ? "calendar_view_month" : "calendar_view_week"
+                iconSize: 11
+                color: Appearance.colors.colPrimaryContainer
+            }
+
+            MouseArea {
+                id: toggleArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.setSizeMode(root.sizeMode === "2x2" ? "2x1" : "2x2")
+            }
+        }
+    }
+}

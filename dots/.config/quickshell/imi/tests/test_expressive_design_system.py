@@ -18,7 +18,7 @@ PLUGIN_DIRS = (
 )
 EXPECTED_OPTIONS = {
     "nandoroid-media": {"showLyrics", "useRomaji"},
-    "nandoroid-system-monitor": {"vertical"},
+    "nandoroid-system-monitor": {"vertical", "showBattery"},
     "nandoroid-weather": {"sizeMode"},
     "nandoroid-currency": {"sizeMode", "baseCurrency", "quote1", "quote2", "quote3", "quote4"},
 }
@@ -73,6 +73,47 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             self.assertIn("height: implicitHeight", wrapper)
             for option_key in option_keys:
                 self.assertIn(f'PluginState.option("{manifest["id"]}", "{option_key}"', wrapper)
+
+    def test_system_monitor_third_card_can_show_the_battery(self):
+        """The built-in this widget replaced showed Battery on a laptop.
+
+        The port was always Disk, so laptops silently lost the reading in the
+        dedup. The decision belongs to the wrapper (the design system's entry
+        component keeps its upstream default), and the third card's three
+        readings - fill level, percentage, label - must all follow the same
+        flag or the card renders a battery icon over a disk number.
+        """
+        package = PLUGIN_ROOT / "nandoroid-system-monitor"
+        monitor = (DESIGN_SYSTEM / "widgets" / "DesktopSystemMonitorWidget.qml").read_text(
+            encoding="utf-8"
+        )
+        wrapper = (package / "Widget.qml").read_text(encoding="utf-8")
+        helper = (package / "ThirdCard.js").read_text(encoding="utf-8")
+
+        self.assertIn("property bool showBattery: false", monitor,
+                      "the injected flag must default to the upstream rendering")
+        self.assertIn("Battery.percentage", monitor)
+        for binding in ("root.thirdCardLevel", "root.thirdCardIcon", "root.thirdCardLabel"):
+            self.assertIn(binding, monitor,
+                          f"the third card must read {binding}, not a disk-only expression")
+        level = re.search(
+            r"readonly property real thirdCardLevel:.*?(?=\n\s*readonly property string)",
+            monitor, re.S)
+        self.assertIsNotNone(level, "the third card needs one shared level expression")
+        self.assertIn("SystemData.diskStats", level.group(0))
+        self.assertEqual(
+            monitor.count("SystemData.diskStats"),
+            level.group(0).count("SystemData.diskStats"),
+            "the disk reading must not survive anywhere but the level expression, "
+            "or the battery branch renders a battery icon over a disk number",
+        )
+
+        self.assertIn("function showsBattery(", helper)
+        self.assertIn("import qs.services", wrapper,
+                      "Battery is not transitive through qs.modules.common")
+        self.assertIn("Battery.available", wrapper,
+                      "availability, not the option alone, gates the battery card")
+        self.assertIn("ThirdCard.showsBattery(", wrapper)
 
     def test_currency_is_startup_safe(self):
         currency = json.loads(

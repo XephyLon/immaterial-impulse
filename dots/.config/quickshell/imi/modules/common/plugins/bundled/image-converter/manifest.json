@@ -1,0 +1,7 @@
+{
+  "id": "image-converter", "name": "Image Converter", "description": "Drop images on the desktop to convert them to another format, or merge them into a PDF", "version": "1.0.0", "apiVersion": 1,
+  "author": "Immaterial Impulse contributors", "license": "AGPL-3.0",
+  "grid": { "cols": 2, "rows": 2 },
+  "capabilities": ["desktop-widget"], "permissions": ["settings_read", "process", "filesystem_read", "filesystem_write"],
+  "desktopWidget": { "component": "Widget.qml", "blur": false }
+}

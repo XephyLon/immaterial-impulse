@@ -138,6 +138,8 @@ modules/common/             Shared, feature-agnostic building blocks
   plugins/                    Declarative + package-QML plugin renderer/validator/manager. It scans
                               bundled and user-installed manifests; PluginState.qml keeps dynamic
                               per-plugin, per-monitor layout in raw plugin-state.json.
+                              bundled/ is where every desktop widget the shell ships lives -
+                              there are no built-in desktop widgets (see docs/PLUGINS.md).
   widgets/                   Shared UI components: StyledText, StyledComboBox, StyledSlider,
                               StyledToolTip(+Content), RippleButton, MaterialSymbol, ResourceCard,
                               PopupToolTip, StyledPopup, GroupedList, ConfigSwitch/ConfigSpinBox/
@@ -153,7 +155,10 @@ modules/imi/                 The "imi" (Immaterial Impulse) panel family - one d
                               layout, audio device switches) - see "OSD system" below
   screenCorners/              Decorative fake screen-rounding + corner hover/click zones that open
                               the sidebars
-  background/                 Desktop background + draggable desktop widgets (resources, clock, ...)
+  background/                 Desktop background + the canvas the draggable desktop widgets sit on.
+                              The widgets themselves are all bundled plugins now (see
+                              modules/common/plugins/bundled/); background/widgets/ holds only
+                              AbstractBackgroundWidget.qml, which is the plugin host's base class.
   overview/                   Workspace/window overview (like GNOME Activities)
   notificationPopup/          Desktop notification popups
   settings/                   The in-shell settings UI (pages/ = one file per settings category)
@@ -169,6 +174,11 @@ services/                  Singletons wrapping external state/processes - one pe
                               (e.g. per-monitor special-workspace state)
   HyprlandXkb.qml              Tracks active keyboard layout via Hyprland's `activelayout` IPC event
   Notifications.qml            org.freedesktop.Notifications server + notification history
+  Notes.qml                    The note store: a JSON array in Directories.notesPath. Sole owner -
+                              the bundled `notes` desktop plugin (one instance per monitor) and the
+                              overlay notes editor both go through it rather than opening the file,
+                              and it imports the legacy desktopnotes.txt array once
+                              (Config.options.notes.importedLegacyStore) without ever writing to it
   Brightness.qml, Battery.qml, Hyprsunset.qml, Network.qml, BluetoothStatus.qml, TrayService.qml,
   MprisController.qml, Weather.qml, Docker.qml, ... (one per integration)
 
@@ -199,6 +209,30 @@ Consequences for making changes:
   etc. row added manually in the relevant page, bound with `checked: Config.options.x.y` /
   `onCheckedChanged: Config.options.x.y = checked`.
 - Consumers read `Config.options.x.y` directly and reactively - no separate "load config" step.
+- **The config `FileView` does not start until `Directories.configDirReady` is true**, which happens
+  when `scripts/migrate-config-dir.sh` exits. `~/.config/illogical-impulse` -> `immaterial-impulse`
+  is a runtime migration that refuses to migrate into a directory that already holds a `config.json`,
+  so a Config load reaching the directory first wrote its defaults in and permanently disabled the
+  move - the user silently kept none of their settings. The script used to be fired with
+  `execDetached` (returns immediately), so the ordering was a timing accident. Anything else that
+  writes into `Directories.shellConfig` on startup should think about the same gate; the three
+  `mkdir`s in `Directories.qml` that live inside it are behind it, and the script defends itself with
+  `mv -T` for the rest. If the migration hangs, `Config` gives up after 10s and comes up **read-only**
+  (`configDirTimedOut`) rather than writing into a half-migrated directory. See
+  `docs/UPSTREAM_MIGRATION.md` and `tests/test_config_dir_migration_runtime.py`, which forces the
+  losing interleaving with `IMI_MIGRATE_DELAY` instead of hoping to observe it.
+- **A key with no declared property is destroyed by the first write, not just hidden.** The
+  `JsonAdapter` serializes exactly its declared properties, and `writeAdapter()` runs on essentially
+  every launch, so an undeclared key present in `config.json` survives only until then - verified
+  end to end against an isolated `XDG_CONFIG_HOME`, including on a launch that changed nothing.
+  This is what makes a key rename lossy, and it is why `Config.qml`'s upstream migration reads
+  `configFileView.text()` (the raw file) inside `onLoaded` rather than `Config.options`: by the time
+  anything else could look, the old key is already gone. Any future migration that needs to read a
+  removed key must run in that same `onLoaded`, before `ready`, on the raw text - and it gets exactly
+  one launch to do it. See `docs/UPSTREAM_MIGRATION.md`.
+  (The desktop-widget migration's "old keys are deliberately left on disk" note is not a
+  counterexample: `background.widgets.*` are still *declared* in `Config.qml`, which is precisely why
+  they persist.)
 - **`Config.readWriteDelay`'s 50ms debounce only covers the disk write - it does nothing to stop
   every keystroke from firing whatever else reactively reads that option.** A `ConfigTextArea`
   bound as `onValueChanged: Config.options.x.y = value` re-triggers every consumer of
@@ -339,6 +373,19 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   rewrite that called `fileView.reload(); const text = fileView.text();` back-to-back silently got
   an empty string every time, with no error - only a `console.log` inside the failure branch (which
   never fired, since nothing *failed*, it just wasn't ready yet) would have revealed it.
+- **`FileView.blockWrites` makes writes synchronous; it does not suppress them.** The whole
+  `block*` family (`blockLoading`, `blockAllReads`, `blockWrites`) is about blocking the calling
+  thread, not about blocking the operation - the names read like a permission switch and are not
+  one. Setting `Config.blockWrites = true` to stop the shell touching `config.json` looks right,
+  passes review, and writes the file anyway (`Config.qml`'s watchdog was written that way first;
+  only `tests/test_config_dir_migration_runtime.py` reading the file back caught it). To actually
+  not write, gate the call sites - `writeAdapter()` in `onLoadFailed` and the debounced write timer.
+- **An unset `FileView.path` is a real "no file" state, and a useful one.** With `path: ""` the view
+  emits neither `loaded` nor `loadFailed`, and `writeAdapter()` on it writes nothing - so
+  `path: someGate ? realPath : ""` holds an entire `JsonAdapter` off the disk until the gate opens,
+  rather than merely delaying a read. That is how `Config.qml` waits for the config-directory
+  migration. Verified against a real `qs` instance; do not assume an empty path errors or creates
+  a file somewhere.
 - **`Repeater` only auto-binds a model item to a `required property` declared on the delegate's
   *root* object, not on a descendant.** `required property var modelData` on a widget nested a level
   or two inside the actual delegate root throws `Required property modelData was not initialized`
@@ -394,6 +441,18 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   to do nothing. This only surfaces where focus is obtained by clicking - `LockSurface.qml`'s
   password box uses the identical overlay structure but never hit this, since it
   `forceActiveFocus()`s itself programmatically instead of depending on a click.
+- **`enabled: false` on a `MouseArea` disables that area and nothing under it.**
+  `QQuickMouseArea` declares its own `enabled` property, which shadows `Item.enabled` — so the
+  usual "`enabled` cascades to the whole subtree" intuition, which is true of a plain `Item`, is
+  false here. `AbstractBackgroundWidget` (a `MouseArea` via `AbstractWidget`) used `enabled:
+  !clickThrough` as its entire click-through mechanism: it correctly stopped the host's own drag
+  and right-click, and left every `MouseArea` a widget drew inside itself fully live, so a
+  "click-through" widget still swallowed clicks aimed at the desktop behind it. The fix is a plain
+  `Item` wrapper carrying the gate, with the children routed into it via a `default property alias`
+  (`contentData: contentItem.data`) — anchored `fill: parent` so it takes no part in sizing and
+  cannot reintroduce the `Loader` binding loop above. Both gates are needed; neither covers the
+  other. Whenever the disabled thing is a `MouseArea`, `Control`, or anything else that redeclares
+  `enabled`, check what you actually disabled with a probe rather than assuming the cascade.
 - **A QML property binding that calls a C++ invokable method (not a property read) will not
   re-evaluate when that method's underlying data changes.** `DesktopEntries.applications` takes a
   few seconds to populate after `qs` starts. `DragApps.qml`'s pinned-app launcher bound

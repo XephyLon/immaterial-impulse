@@ -12,6 +12,68 @@ Immaterial Impulse supports two complementary plugin formats:
 Installed packages live at `~/.config/immaterial-impulse/plugins/<plugin-id>/`. The manager scans
 that directory for `manifest.json`; installed packages override bundled packages with the same id.
 
+## Bundled packages
+
+**There are no built-in desktop widgets.** Every desktop widget the shell ships is a bundled
+plugin under `modules/common/plugins/bundled/<dir>/`, loaded through the one host path
+(`PluginManager` → `PluginWidget` → `PluginNode`) and enabled from Settings → Widgets. The
+hardcoded `FadeLoader` widgets that used to live in `modules/imi/background/Background.qml` are
+gone; the only `FadeLoader` left there is the plugin `Repeater`'s.
+
+| directory | id | name | capabilities |
+| --- | --- | --- | --- |
+| `calendar` | `calendar` | Calendar | desktop-widget |
+| `clock` | `clock` | Clock | desktop-widget |
+| `custom-image` | `custom-image` | Custom Image | desktop-widget |
+| `discordVoice` | `discord_voice` | Discord Voice | bar-widget, overlay-widget, settings |
+| `docker` | `docker_plugin` | Docker Manager | bar-widget, settings |
+| `image-converter` | `image-converter` | Image Converter | desktop-widget |
+| `nandoroid-currency` | `nandoroid_currency` | Currency | desktop-widget |
+| `nandoroid-media` | `nandoroid_media` | Media Player | desktop-widget |
+| `nandoroid-system-monitor` | `nandoroid_system_monitor` | System Monitor | desktop-widget |
+| `nandoroid-weather` | `nandoroid_weather` | Weather | desktop-widget |
+| `notes` | `notes` | Notes | desktop-widget |
+| `user-card` | `user-card` | User Card | desktop-widget |
+| `visualizer` | `visualizer` | Visualizer | desktop-widget |
+| `world-clock` | `world-clock` | World Clock | desktop-widget |
+
+`clock`, `calendar`, `world-clock`, `visualizer`, `user-card`, `custom-image` and
+`image-converter` are ports of former built-ins; the old declarative `clock_plugin` was retired by
+the port rather than kept alongside it. The former built-in resources, media, weather and notes
+widgets were duplicates and were deleted in favour of `nandoroid_system_monitor`,
+`nandoroid_media`, `nandoroid_weather` and `notes`. A dedup is only a dedup where the survivor is a
+superset: the built-in resources widget swapped its third card to the battery on a laptop and
+`nandoroid_system_monitor` did not, so that branch was ported into the plugin (its **Battery
+instead of disk** option) rather than lost.
+
+The `notes` dedup was the other place the survivor was not a superset: the built-in kept a list of
+discrete notes, the plugin kept one plaintext scratchpad, and the dedup flattened the model. Notes
+are a JSON array again, and the plugin does **not** own that file — `services/Notes.qml` does, and
+the plugin (one instance per monitor) and the overlay notes editor both read and write it through
+that singleton. A desktop widget that needs shared, multi-surface state should take the same shape:
+a service singleton owning the file, the widget owning only its view of it. A `FileView` in the
+widget is one writer per monitor.
+
+Bundled packages are **not** auto-discovered. `PluginManager.qml` needs both a `FileView` per
+package and that view's id inside `rebuildFromLoadedFiles()`; miss either half and the plugin
+silently never exists. `tests/test_widget_plugin_migration.py` guards both halves. Adding a package
+directory also requires a full `qs` restart — hot reload will not register it.
+
+Existing installs carried their desktop widgets in `background.widgets.*.enable`. A one-shot
+migration in `Config.qml` translates those into `plugins.enabled` (marker:
+`plugins.migratedDesktopWidgets`), a second one carries the clock's own settings and position into
+`PluginState` (marker: `plugins.migratedDesktopWidgetOptions`), and a third carries the world
+clock's timezone list (marker: `plugins.migratedWorldClockTimezones`). The old schema keys are
+deliberately still declared — deleting them would break the migration for anyone who has not run
+it yet.
+
+Each half needs its own marker: an install that has already run an earlier migration has that
+marker set, and reusing it would permanently exclude exactly the installs the new half exists for.
+The later halves share one pending batch, so each contributes only what its own marker still says
+is outstanding, and `PluginState.drainPendingConfigOptions()` stops only once every marker it
+discharges is set. A key already present for a plugin always wins over the legacy value being
+migrated onto it, so a preference the user has since changed in the widget is never clobbered.
+
 ## Directory naming
 
 A bundled package directory that any QML file imports *as a directory* -
@@ -47,6 +109,13 @@ or a package component:
 Component paths must be relative, remain inside the package, and must not contain `..`. Supported
 entry points are `barWidget`, `desktopWidget`, `controlCenterWidget`, `launcherProvider`, `panel`,
 and `settingsUi`. Bar entries use the stable `plugin:<id>` layout identifier.
+
+`desktopWidget` additionally takes three optional booleans — `blur`, `locked` and `clickThrough`.
+None of them is a setting: each **seeds the default** of the matching per-plugin option in
+`plugin-state.json` (`blurEnabled`, `positionLocked`, `clickThrough`), so a widget can ship an
+opinion the user can still overturn from Settings → Widgets. A non-boolean is rejected by
+`PluginValidator.js` and the whole manifest then fails to parse. See
+[Lock and click-through](#lock-and-click-through).
 
 ## Desktop widget size
 
@@ -96,9 +165,163 @@ A companion fault emits `companion_error`, not `error`. Discord's own RPC
 backend stays usable, so the UI must show the reason without offering an
 authorization button the user cannot act on.
 
-Manifest options support `boolean`, `choice`, `number`, and `text`. Text options use the shell's
-native `ConfigTextArea`; `placeholder`, `maxLength`, and `uppercase` may be supplied for short values
-such as currency codes.
+Manifest options support `boolean`, `choice`, `shape`, `color`, `number`, and `text`. Text options use
+the shell's native `ConfigTextArea`; `placeholder`, `maxLength`, and `uppercase` may be supplied for
+short values such as currency codes.
+
+`shape` takes the same `choices` array as `choice` but renders each entry as the Material shape it
+names rather than as a text chip, via `ConfigSelectionShapeArray`. Values must be `MaterialShape.Shape`
+enum names (`Cookie4Sided`, `Heart`, …); an unrecognised name falls back to `Cookie4Sided`. Use it
+whenever the value *is* a shape — a 31-entry name-chip row is unreadable, and `ConfigSelectionArray`'s
+chip `Flow` only wraps when the row has no label, so such a row cannot be labelled either.
+
+`color` renders a row of palette swatches (`ColorSelectionArray`) instead of chips. Its `choices` are
+`Appearance.colors` role names without the `col` prefix (`primary`, `secondaryContainer`, `layer0`, …).
+The empty string is a legal choice and draws an "automatic" slot rather than a swatch — use it when
+the widget has a sensible colour of its own and the option is an override, so the way back to that
+default is one more swatch rather than a second switch sitting beside the row saying the same thing.
+
+## Multi-file packages
+
+A package whose `Widget.qml` is split across several files needs a **`qmldir`** in the directory
+naming every component:
+
+```
+module ClockDesktopWidget
+Widget 1.0 Widget.qml
+ClockText 1.0 ClockText.qml
+```
+
+That file is what makes the siblings types. No `import` is needed for same-directory siblings once
+it exists; a **subdirectory** is its own module and needs its own `qmldir` plus an explicit
+`import "subdir"` in the parent. Subdirectory names must be legal QML module segments, so no
+hyphens (`tests/lint_qml_module_dirs.py` guards this).
+
+This is not the usual Qt behaviour and it is easy to lose an afternoon to. A package is loaded by
+absolute path through Quickshell's `qs:` URL scheme, under which Qt adds no usable implicit import
+for the containing directory; and `bundled/` is not scanned into the `qs.modules.*` tree either, so
+`import qs.modules.common.plugins.bundled.<pkg>` does not resolve. Without the `qmldir` every
+sibling reference fails with `X is not a type` — but only the *first* one per file is reported, so
+it reads as one broken component rather than the whole package failing. The bundled `docker` and
+`clock` packages are the two multi-file examples.
+
+## Host context and host opt-ins
+
+A component-backed `Widget.qml` is a grandchild of the `AbstractBackgroundWidget` that hosts it, so
+anything that has to influence the host's own geometry, visibility or wallpaper sampling has to be
+declared as a property and picked up by `PluginNode`. Every one of these is optional; a widget that
+declares none of them behaves exactly as it does today.
+
+Handed **down** to the widget (the host writes them):
+
+| property | meaning |
+|---|---|
+| `screenName` | name of the monitor this instance lives on (see below) |
+| `hostX`, `hostY` | the widget's position on that monitor |
+| `hostColText` | the host's wallpaper-adaptive text colour (see `needsColText`) |
+| `wallpaperSafetyTriggered` | the background is suppressing the wallpaper |
+| `hostInteractionLocked` | the host's resolved lock (see below) — gate any resize/toggle grip on this |
+
+Read **back** off the widget (the host obeys them):
+
+| property | effect |
+|---|---|
+| `visibleWhenLocked: true` | stay visible while the screen is locked regardless of `lock.showWidgets` |
+| `forceCenter: true` | centre on the monitor for as long as it is set, without disturbing the persisted position |
+| `needsColText: true` | run the least-busy-region pass so `hostColText` tracks the wallpaper under the widget |
+
+These exist for widgets that draw straight onto the wallpaper with no panel of their own. The
+bundled Clock uses all of them: it is the lock screen's only clock, it has always centred itself
+there, and its digital style is bare text that has to stay readable over whatever it sits on.
+
+## Lock and click-through
+
+Every desktop-widget plugin gets two host toggles of its own next to `Blur background`, both
+persisted per plugin in `plugin-state.json`:
+
+| option | manifest seed | effect |
+|---|---|---|
+| `positionLocked` | `desktopWidget.locked` | this widget alone stops being draggable |
+| `clickThrough` | `desktopWidget.clickThrough` | this widget stops receiving pointer input at all |
+
+They are two capabilities, not one. *Locked but clickable* is a real state — a pinned widget whose
+controls still work — so the lock does not imply click-through. The converse does hold: dragging
+**is** pointer input, so a click-through widget is always locked as well, and the host folds
+`clickThrough` into its lock the same way it folds in the global switch.
+
+`background.widgetsLocked` ("Lock widget positions", the desktop Widgets submenu) still exists and
+**ORs** with the per-widget lock. It can only ever lock further; flipping the global switch off
+never unlocks a widget the user deliberately pinned.
+
+Click-through is implemented as `enabled: false`, not as a Wayland input region. Every desktop
+widget shares one layer-shell surface (`Background.qml`), so masking that surface would blind all of
+them at once. The click continues to whatever is behind the widget *inside the same surface* — which
+on the background is the desktop's own right-click area. Turning click-through off restores
+dragging, which is the way to reposition a widget that ships with it on.
+
+It takes **two** gates on `AbstractBackgroundWidget`, because the same property name means two
+different things there and neither covers the other:
+
+| gate | what it disarms |
+|---|---|
+| `enabled: !clickThrough` on the host | the host's own `MouseArea`: the drag, and the right-click that toggles the global lock |
+| `enabled: !clickThrough` on the `contentItem` wrapper | everything the widget draws for itself |
+
+`AbstractBackgroundWidget` is a `MouseArea` (via `AbstractWidget`), and `MouseArea.enabled` is
+`MouseArea`'s own property shadowing `Item.enabled` — setting it false stops that one area handling
+events and leaves every item under it live. A plain `Item` with `enabled: false` *does* disable its
+whole subtree, so the base class declares
+`default property alias contentData: contentItem.data` and puts the second gate on that wrapper.
+Everything a subclass declares — `PluginWidget`'s `PluginNode` and its blur surfaces, and through
+`PluginNode` every loaded `Widget.qml` — lands inside it and goes inert together.
+
+The wrapper is `anchors.fill: parent` and takes no part in sizing: `PluginWidget` still derives its
+own width and height from `PluginNode`'s implicit size, and `PluginNode`'s `Loader` stays unanchored
+(anchoring it is a binding loop).
+
+The gate is `clickThrough`, not the resolved `interactionLocked`: pinning a widget must not deaden
+its controls, which is the whole reason the lock and click-through are two switches. A widget that
+wants a *particular* control dead whenever it is pinned reads `hostInteractionLocked` instead — see
+below.
+
+Both halves are driven with real mouse events in `WidgetInteractionRuntimeTest.qml` (run by
+`tests/test_widget_interaction_runtime.py`), including a real bundled widget: the notes widget's
+per-note delete button, under click-through and then again with it off.
+
+### Grips and other in-widget interaction
+
+`PluginNode` hands a component-backed `Widget.qml` the host's **resolved** lock as
+`hostInteractionLocked` — `positionLocked || clickThrough || background.widgetsLocked`, the same
+value that decides whether the widget is draggable. Anything the widget draws that changes its own
+geometry (the Calendar's and Custom Image's resize corners, the World Clock's size toggle) gates on
+it:
+
+```qml
+property bool hostInteractionLocked: false   // no host, e.g. a bare `qs -p` probe
+
+Rectangle {
+    id: resizeHandle
+    visible: opacity > 0 && !root.hostInteractionLocked
+    MouseArea { anchors.fill: parent /* ... */ }
+}
+```
+
+`visible: false` is what makes the grip *dead* rather than merely invisible — Qt does not route
+mouse events into an invisible item, so hiding the rectangle disarms the `MouseArea` inside it.
+
+The resolved value is deliberately what is forwarded, not the three terms separately: a grip should
+be inert whenever the widget is pinned, and it has no business caring which lock is holding it. A
+widget that genuinely needs to tell them apart can read `Config.options.background.widgetsLocked`
+itself and subtract it — but nothing does, and doing so would mean a grip that outlives its own
+widget's lock, which is the bug this exists to prevent.
+
+`clickThrough` sits in that OR belt-and-braces: the `contentItem` wrapper above already makes the
+whole widget inert under click-through, so a grip is dead twice over there. It stays because the
+grip must also be dead when the widget is merely *pinned* — which the wrapper deliberately is not.
+
+The bundled Visualizer is the case this exists for: it is full-bleed (see below), so it covers a
+whole monitor's width, has nothing on it to click, and would otherwise both swallow the desktop
+menu and be draggable off-screen with no bounds. Its manifest ships `"clickThrough": true`.
 
 ## Drop Shelf and Screenshot Result
 
@@ -131,6 +354,25 @@ that the component has no background surface and disables host blur. Components 
 background tint can expose `managesBlurTint: true` and apply the persisted opacity to that internal
 fill, preventing the host from adding a second generic scrim. The nandoroid System Monitor,
 Currency, Media, and Weather widgets are reference implementations.
+
+## Knowing which monitor you are on
+
+A package component may declare `property string screenName: ""`. When it does, the host
+(`PluginWidget` → `PluginNode`) binds it to the name of the monitor that instance of the widget
+lives on. Resolve the `ShellScreen` from it with the same lookup the rest of the shell uses:
+
+```qml
+readonly property var widgetScreen: Quickshell.screens.find(s => s.name === root.screenName) ?? null
+```
+
+This is how a full-bleed widget sizes itself: the bundled Visualizer omits `grid` from its manifest
+(the grid caps at 12 columns / 1716px, a third of a 5120px display) and binds
+`implicitWidth` to `widgetScreen.width`, so the host's content sizing gives it the whole monitor.
+Full-bleed still does not mean edge-anchored: the host restores a persisted free position, and a
+full-bleed widget that is neither locked nor click-through is dragged like any other, with no
+bounds. The Visualizer opts out of that with `clickThrough` (see
+[Lock and click-through](#lock-and-click-through)); an anchoring concept that would decide *where*
+such a widget lands does not exist yet. See [widget-grid.md](widget-grid.md).
 
 ## Remote installation
 

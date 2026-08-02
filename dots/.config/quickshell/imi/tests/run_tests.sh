@@ -111,6 +111,60 @@ if ! python3 "$SCRIPT_DIR/test_widgets_page_filters.py"; then
     exit 1
 fi
 
+echo "Running widget grid lattice tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_grid_lattice.py"; then
+    echo "Widget grid lattice tests failed."
+    exit 1
+fi
+
+echo "Running widget interaction mode tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_interaction_modes.py"; then
+    echo "Widget interaction mode tests failed."
+    exit 1
+fi
+
+# Brings its own headless weston, so it needs no display of its own - but it
+# does need weston, and skips without it.
+echo "Running widget interaction runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_interaction_runtime.py"; then
+    echo "Widget interaction runtime tests failed."
+    exit 1
+fi
+
+echo "Running widget grip lock tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_grip_lock.py"; then
+    echo "Widget grip lock tests failed."
+    exit 1
+fi
+
+echo "Running widget plugin migration tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_plugin_migration.py"; then
+    echo "Widget plugin migration tests failed."
+    exit 1
+fi
+
+echo "Running notes store contract tests..."
+if ! python3 "$SCRIPT_DIR/test_notes_store_contract.py"; then
+    echo "Notes store contract tests failed."
+    exit 1
+fi
+
+# Launches a real Quickshell against throwaway XDG dirs, so it skips where
+# there is no Wayland display - notably CI.
+echo "Running notes migration runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_notes_migration_runtime.py"; then
+    echo "Notes migration runtime tests failed."
+    exit 1
+fi
+
+# Brings its own headless weston, so it needs no display of its own - but it
+# does need weston, and skips without it.
+echo "Running notes surfaces runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_notes_surfaces_runtime.py"; then
+    echo "Notes surfaces runtime tests failed."
+    exit 1
+fi
+
 echo "Running plugin installer tests..."
 if ! python3 "$SCRIPT_DIR/test_plugin_installer.py"; then
     echo "Plugin installer tests failed."
@@ -192,6 +246,15 @@ fi
 echo "Running config directory migration tests..."
 if ! python3 "$SCRIPT_DIR/test_config_migration.py"; then
     echo "Config directory migration tests failed."
+    exit 1
+fi
+
+# Launches a real Quickshell and forces the startup race the migration used to
+# lose. Brings its own headless weston, so it needs no display of its own - but
+# it does need weston, and skips without it.
+echo "Running config directory migration runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_config_dir_migration_runtime.py"; then
+    echo "Config directory migration runtime tests failed."
     exit 1
 fi
 
@@ -396,6 +459,24 @@ fi
 if [[ "${RUN_DOCKER_RUNTIME_MEMORY_TEST:-0}" == "1" ]]; then
     echo "Running capped Docker runtime memory test..."
     bash "$SCRIPT_DIR/run_docker_memory_test.sh"
+fi
+
+# Design-system and bundled-package compile check. It needs a real Quickshell
+# process and therefore a compositor, so it skips rather than fails where there
+# is no Wayland display - notably CI. Wiring it in at all is the point: two
+# package names in its sweep had been dead since the ii->imi rename and nobody
+# noticed, because nothing ever ran it.
+echo "Running design system compile check..."
+if [ -z "${WAYLAND_DISPLAY:-}" ] || ! command -v qs >/dev/null 2>&1; then
+    echo "  SKIPPED (no WAYLAND_DISPLAY, or qs not on PATH)"
+else
+    DSC_OUT="$(cd "$PROJECT_ROOT" && timeout 120 qs -p DesignSystemCompile.qml 2>&1 | grep "DesignSystemCompile" || true)"
+    if ! printf '%s' "$DSC_OUT" | grep -q "failures=0"; then
+        echo "Design system compile check failed:" >&2
+        printf '%s\n' "$DSC_OUT" >&2
+        exit 1
+    fi
+    printf '  %s\n' "$DSC_OUT"
 fi
 
 # Run the test runner

@@ -124,6 +124,36 @@ TestCase {
         compare(result.error, "Unsupported plugin option type 'javascript'");
     }
 
+    function test_shapeOptionTypeIsAccepted() {
+        var manifest = {
+            "id": "shape_options",
+            "name": "Shape Options",
+            "options": [{
+                "key": "shape",
+                "type": "shape",
+                "default": "Heart",
+                "choices": [{ "displayName": "Heart", "value": "Heart" }]
+            }],
+            "desktopWidget": { "component": "Widget.qml" }
+        };
+        var result = PluginValidator.validateManifest(manifest);
+        verify(result.valid);
+    }
+
+    // A shape row with no choices renders an empty Flow, not an error, so the
+    // validator has to be the one that catches it.
+    function test_shapeOptionWithoutChoicesIsRejected() {
+        var manifest = {
+            "id": "empty_shape",
+            "name": "Empty Shape",
+            "options": [{ "key": "shape", "type": "shape", "default": "Heart" }],
+            "desktopWidget": { "component": "Widget.qml" }
+        };
+        var result = PluginValidator.validateManifest(manifest);
+        verify(!result.valid);
+        compare(result.error, "Choice option 'shape' must have choices");
+    }
+
     function test_invalidBindingTarget() {
         var manifest = {
             "id": "bad_binding",
@@ -201,6 +231,50 @@ TestCase {
         });
         verify(!result.valid);
         compare(result.error, "Manifest 'grid' must be an object with integer 'cols'/'rows'");
+    }
+
+    // `locked` and `clickThrough` seed the per-plugin PluginState options of the
+    // same name. They are optional, so their absence must stay valid.
+    function test_desktopWidgetInteractionFlagsAreAccepted() {
+        var result = PluginValidator.validateManifest({
+            "id": "pinned",
+            "name": "Pinned",
+            "desktopWidget": { "component": "Widget.qml", "locked": true, "clickThrough": true }
+        });
+        verify(result.valid, "Interaction flags should be valid: " + (result.error ? result.error : ""));
+    }
+
+    // A string "true" is the realistic mistake, and it is truthy - left
+    // unchecked it would silently pin a widget the author only meant to
+    // annotate, with no error anywhere.
+    function test_rejectsNonBooleanClickThrough() {
+        var result = PluginValidator.validateManifest({
+            "id": "bad_click",
+            "name": "Bad Click",
+            "desktopWidget": { "component": "Widget.qml", "clickThrough": "true" }
+        });
+        verify(!result.valid);
+        compare(result.error, "desktopWidget.clickThrough must be a boolean");
+    }
+
+    function test_rejectsNonBooleanLocked() {
+        var result = PluginValidator.validateManifest({
+            "id": "bad_lock",
+            "name": "Bad Lock",
+            "desktopWidget": { "component": "Widget.qml", "locked": 1 }
+        });
+        verify(!result.valid);
+        compare(result.error, "desktopWidget.locked must be a boolean");
+    }
+
+    function test_rejectsNonBooleanBlur() {
+        var result = PluginValidator.validateManifest({
+            "id": "bad_blur",
+            "name": "Bad Blur",
+            "desktopWidget": { "component": "Widget.qml", "blur": "yes" }
+        });
+        verify(!result.valid);
+        compare(result.error, "desktopWidget.blur must be a boolean");
     }
 
     function test_nestedInvalidChild() {

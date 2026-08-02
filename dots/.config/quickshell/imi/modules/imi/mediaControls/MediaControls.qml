@@ -84,7 +84,7 @@ Scope {
             Config.options.bar.layouts.leftLayout.includes("visualizer") ||
             Config.options.bar.layouts.middleLayout.includes("visualizer") ||
             Config.options.bar.layouts.rightLayout.includes("visualizer") ||
-            Config.options.background.widgets.visualizer.enable)
+            Config.options.plugins.enabled.includes("visualizer"))
             && MprisController.activePlayer !== null
         onRunningChanged: {
             if (!cavaProc.running) {

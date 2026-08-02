@@ -14,6 +14,243 @@ Singleton {
     property int readWriteDelay: 50 // milliseconds
     property bool blockWrites: false
 
+    // Built-in desktop widgets became bundled plugins. Existing installs carry
+    // their state in `background.widgets.<key>.enable`, while ported widgets
+    // read `plugins.enabled`, which defaults to []. Translate once, then never
+    // again.
+    //
+    // The old keys are deliberately left on disk: the JsonAdapter does not
+    // expose keys it has no property for, so they are inert, and leaving them
+    // means a user who downgrades still has their settings.
+    readonly property var desktopWidgetPluginIds: ({
+            // Ported to new bundled plugins of their own.
+            "clock": "clock",
+            "calendar": "calendar",
+            "worldClock": "world-clock",
+            "userCard": "user-card",
+            "images": "image-converter",
+            "visualizer": "visualizer",
+            "customImage": "custom-image",
+            // Deduplicated: an equivalent plugin already ships, so the
+            // built-in is deleted rather than ported and its state maps onto
+            // that plugin's existing id. Getting one of these wrong silently
+            // drops the widget for anyone who had it on, because the marker
+            // records the migration as done either way.
+            "resources": "nandoroid_system_monitor",
+            "media": "nandoroid_media",
+            "weather": "nandoroid_weather",
+            "notes": "notes"
+        })
+
+    function migrateDesktopWidgetsToPlugins() {
+        if (root.options.plugins.migratedDesktopWidgets)
+            return;
+        const widgets = root.options.background.widgets;
+        const enabled = [];
+        for (let i = 0; i < root.options.plugins.enabled.length; i++)
+            enabled.push(root.options.plugins.enabled[i]);
+        for (const key in root.desktopWidgetPluginIds) {
+            const id = root.desktopWidgetPluginIds[key];
+            if (widgets[key]?.enable && !enabled.includes(id))
+                enabled.push(id);
+        }
+        root.setNestedValue("plugins.enabled", enabled);
+        root.setNestedValue("plugins.migratedDesktopWidgets", true);
+    }
+
+    // `desktopWidgetPluginIds` above carries exactly one bit per widget:
+    // `enable`. Everything else a built-in kept under `background.widgets.<key>`
+    // is dropped, which is right for the deduplicated widgets (the surviving
+    // plugin is a different program with its own defaults and its own store)
+    // and cheap for the ports whose remaining state was one size mode.
+    //
+    // The clock is the exception, on both counts that matter. It is the only
+    // built-in that was on by default, and its four styles look nothing like
+    // each other - so an upgrade that keeps `enable` and drops `style` silently
+    // repaints every existing desktop, and the user's clock "changes into
+    // something else" with no setting they can point at. Its settings therefore
+    // migrate too, as a legacy nested path -> flat plugin option key map
+    // (plugin options are one flat namespace per plugin:
+    // PluginState.option(id, key, default)).
+    //
+    // Host-owned keys are deliberately absent: `enable` is the line above,
+    // `x`/`y`/`placementStrategy` belong to PluginState's per-monitor layout.
+    readonly property var desktopClockOptionKeys: ({
+            "showOnlyWhenLocked": "showOnlyWhenLocked",
+            "style": "style",
+            "styleLocked": "styleLocked",
+            "color": "color",
+            "cookie.aiStyling": "cookieAiStyling",
+            "cookie.sides": "cookieSides",
+            "cookie.dialNumberStyle": "cookieDialNumberStyle",
+            "cookie.hourHandStyle": "cookieHourHandStyle",
+            "cookie.minuteHandStyle": "cookieMinuteHandStyle",
+            "cookie.secondHandStyle": "cookieSecondHandStyle",
+            "cookie.dateStyle": "cookieDateStyle",
+            "cookie.timeIndicators": "cookieTimeIndicators",
+            "cookie.hourMarks": "cookieHourMarks",
+            "cookie.dateInClock": "cookieDateInClock",
+            "cookie.constantlyRotate": "cookieConstantlyRotate",
+            "cookie.useSineCookie": "cookieUseSineCookie",
+            "digital.adaptiveAlignment": "digitalAdaptiveAlignment",
+            "digital.showDate": "digitalShowDate",
+            "digital.animateChange": "digitalAnimateChange",
+            "digital.vertical": "digitalVertical",
+            "digital.font.family": "digitalFontFamily",
+            "digital.font.weight": "digitalFontWeight",
+            "digital.font.width": "digitalFontWidth",
+            "digital.font.size": "digitalFontSize",
+            "digital.font.roundness": "digitalFontRoundness",
+            "pixel.orientation": "pixelOrientation",
+            "quote.enable": "quoteEnable",
+            "quote.text": "quoteText",
+            "quote.followClock": "quoteFollowClock"
+        })
+
+    // Plugin options live in plugin-state.json, which is PluginState's file,
+    // not Config's - and Config cannot import the plugins module, because that
+    // module imports Config back. So this half of the migration only *computes*
+    // the batch; PluginState drains `pendingPluginOptions` once both files are
+    // loaded and sets the marker only after the values are actually in. A
+    // launch that dies in between therefore migrates again next time rather
+    // than recording a migration that never happened.
+    //
+    // The marker is its own key rather than reusing `migratedDesktopWidgets`:
+    // installs that already ran the enable-only migration would otherwise be
+    // permanently excluded from the settings half.
+    property var pendingPluginOptions: ({})
+
+    // The clock's position moves too, for the same reason its style does. Every
+    // other port let the first enable land on the host's generic x/y 100,
+    // because those widgets were off by default - being asked to place a widget
+    // you just switched on is not a regression. The clock is on already and has
+    // been sitting where the user put it, possibly for as long as the install
+    // has existed, so the same reset would silently *move* something rather
+    // than place something new.
+    //
+    // The legacy position is one pair for the whole desktop while PluginState
+    // keeps one per monitor, so the drain seeds every monitor with it.
+    property var pendingPluginPositions: ({})
+
+    // The world clock is the second widget whose data has to travel, and the
+    // last `background.widgets.*` key anything wrote at runtime: its four
+    // timezones. Every other port's data was either a size mode (regenerated
+    // from a default nobody notices) or a dedup onto a plugin with its own
+    // store, but a picked timezone is typed-in state - drop it and the card
+    // silently goes back to Sydney/Tokyo/London/New York.
+    //
+    // Its marker is separate from `migratedDesktopWidgetOptions` for the same
+    // reason that one is separate from `migratedDesktopWidgets`: every install
+    // that has launched this branch once already has the clock marker set, and
+    // reusing it would exclude all of them from this half. Both markers ride
+    // the same pending batch, so each half only contributes what its own marker
+    // still says is outstanding.
+    function migrateDesktopWidgetOptionsToPlugins() {
+        const options = {};
+        const positions = {};
+
+        if (!root.options.plugins.migratedDesktopWidgetOptions) {
+            const clock = root.options.background.widgets.clock;
+            if (clock) {
+                positions["clock"] = {
+                    x: clock.x,
+                    y: clock.y,
+                    placementStrategy: clock.placementStrategy
+                };
+                const values = {};
+                for (const path in root.desktopClockOptionKeys) {
+                    const parts = path.split(".");
+                    let node = clock;
+                    for (let i = 0; i < parts.length; i++) {
+                        if (node === undefined || node === null)
+                            break;
+                        node = node[parts[i]];
+                    }
+                    if (node === undefined || node === null)
+                        continue;
+                    values[root.desktopClockOptionKeys[path]] = node;
+                }
+                options["clock"] = values;
+            }
+        }
+
+        if (!root.options.plugins.migratedWorldClockTimezones) {
+            const legacy = root.options.background.widgets.worldClock?.timezones;
+            if (legacy && legacy.length > 0) {
+                // `list<string>` is not a JS array, and PluginState hands the
+                // value straight to JSON.stringify - copy it out element by
+                // element, or the file gets an object with numeric keys that
+                // `Array.isArray` then rejects on the way back in.
+                const zones = [];
+                for (let i = 0; i < legacy.length; i++)
+                    zones.push(legacy[i]);
+                options["world-clock"] = { "timezones": zones };
+            }
+        }
+
+        root.pendingPluginPositions = positions;
+        root.pendingPluginOptions = options;
+    }
+
+    // Settings arriving from end-4/dots-hyprland or pctrade/end4-pC. The full
+    // old-key -> new-key table, including every key that was *removed* rather
+    // than renamed and why, is docs/UPSTREAM_MIGRATION.md - keep the two in
+    // step, a migration nobody can audit is worse than none.
+    //
+    // This takes the raw parsed config rather than `root.options`, because the
+    // keys it has to read are exactly the ones `root.options` cannot see: a
+    // JsonAdapter does not expose a key it has no property for. `bar.shadow`
+    // reading `undefined` is precisely the silent loss being fixed here, so
+    // reading the file's own text is the only way to see what the user had.
+    //
+    // Pure on purpose: it computes the writes and makes none, so the mapping
+    // can be tested against fabricated upstream configs (tst_upstream_migration)
+    // instead of against this file's source text.
+    function planUpstreamKeyMigration(legacy) {
+        const plan = {};
+        if (!legacy || typeof legacy !== "object")
+            return plan;
+
+        // A value, not a key, so the adapter carries it across intact and then
+        // nothing matches it. "ii" is aliased at read time in shell.qml; the
+        // waffle family was never ported, so a config naming it activates no
+        // panel loader at all and the desktop comes up empty with no error.
+        // Anything else is someone's own value and not ours to overwrite.
+        if (legacy.panelFamily === "ii" || legacy.panelFamily === "waffle")
+            plan["panelFamily"] = "imi";
+
+        // bar.floatStyleShadow -> bar.shadow. Upstream drew the shadow only
+        // under the Float corner style; ours draws it under every style that
+        // paints a background. The flag defaults to true up there, so copying
+        // it straight across would switch on a shadow that most arriving users
+        // have never seen. Migrate what was on screen, not what was on disk.
+        const legacyBar = legacy.bar;
+        if (legacyBar && typeof legacyBar.floatStyleShadow === "boolean")
+            plan["bar.shadow"] = legacyBar.floatStyleShadow && legacyBar.cornerStyle === 1;
+
+        return plan;
+    }
+
+    // Compute, then write, then mark - the ordering `migrateDesktopWidgetOptionsToPlugins`
+    // already argues for. A config we could not even parse is left unmarked so
+    // the next launch tries again, rather than recording a migration that never
+    // happened; a config we did inspect is marked even when it needed nothing,
+    // so the parse does not repeat forever.
+    function migrateUpstreamKeys(rawConfigText) {
+        if (root.options.migratedUpstreamSchema)
+            return;
+        let legacy;
+        try {
+            legacy = JSON.parse(rawConfigText);
+        } catch (e) {
+            return;
+        }
+        const plan = root.planUpstreamKeyMigration(legacy);
+        for (const key in plan)
+            root.setNestedValue(key, plan[key]);
+        root.setNestedValue("migratedUpstreamSchema", true);
+    }
+
     function setNestedValue(nestedKey, value) {
         let keys = nestedKey.split(".");
         let obj = root.options;
@@ -61,6 +298,35 @@ Singleton {
         root.options.migratedKbOptionsGrpToggle = true;
     }
 
+    // The config directory migration has to have finished before this file is
+    // read or written - see Directories.configDirReady. An unset path is a
+    // real "no file" state in Quickshell: it emits neither `loaded` nor
+    // `loadFailed`, and `writeAdapter()` on it writes nothing, so gating the
+    // path holds the whole adapter off the disk rather than merely delaying a
+    // read.
+    //
+    // Latched, and it also means "never write this session": the only way it
+    // gets set is the watchdog giving up on a migration that is still running,
+    // and a write into a half-migrated directory is the thing the gate exists
+    // to prevent. `FileView.blockWrites` is not this - it makes writes
+    // synchronous, it does not suppress them.
+    property bool configDirTimedOut: false
+    readonly property bool configDirReady: Directories.configDirReady || root.configDirTimedOut
+
+    // A gate that can hang is a shell that never loads its settings: every
+    // settings page Loader is gated on `ready`. Come up anyway, but read-only.
+    // Nothing is guessed at and nothing on disk is touched; the user is told,
+    // and the next launch retries the migration from an unchanged directory.
+    Timer {
+        id: configDirWatchdog
+        interval: 10000
+        running: !Directories.configDirReady
+        onTriggered: {
+            console.log(`[Config] scripts/migrate-config-dir.sh has not finished after ${configDirWatchdog.interval}ms. Loading ${root.filePath} read-only: settings changed this session will NOT be saved, and nothing in the config directory will be modified.`);
+            root.configDirTimedOut = true;
+        }
+    }
+
     Timer {
         id: fileReloadTimer
         interval: root.readWriteDelay
@@ -75,24 +341,41 @@ Singleton {
         interval: root.readWriteDelay
         repeat: false
         onTriggered: {
+            if (root.configDirTimedOut)
+                return;
             configFileView.writeAdapter()
         }
     }
 
     FileView {
         id: configFileView
-        path: root.filePath
+        path: root.configDirReady ? root.filePath : ""
         watchChanges: true
         blockWrites: root.blockWrites
         onFileChanged: fileReloadTimer.restart()
         onAdapterUpdated: fileWriteTimer.restart()
         onLoaded: {
+            // Before `ready`, and before every other migration: the rest read
+            // `root.options`, while this one works off the raw file text
+            // because the keys it converts are exactly the ones the adapter
+            // dropped. It can also rewrite panelFamily, which decides which
+            // panel family loads at all.
+            root.migrateUpstreamKeys(text());
             root.ready = true;
             root.migrateStaleKbOptions();
+            root.migrateDesktopWidgetsToPlugins();
+            root.migrateDesktopWidgetOptionsToPlugins();
         }
         onLoadFailed: error => {
             if (error == FileViewError.FileNotFound) {
-                writeAdapter();
+                // Creating the file here is exactly the write that used to
+                // kill the directory migration, so a timed-out gate must not
+                // do it - the migration is still running and may be about to
+                // put the user's own config at this path.
+                if (!root.configDirTimedOut)
+                    writeAdapter();
+                else
+                    root.ready = true;
                 return;
             }
             // Any other read failure - bad permissions, an unreadable mount,
@@ -109,7 +392,15 @@ Singleton {
         JsonAdapter {
             id: configOptionsJsonAdapter
 
-            property string panelFamily: "imi" // "imi", "waffle"
+            property string panelFamily: "imi"
+
+            // Set once a config written against the upstream schema
+            // (end-4/dots-hyprland, pctrade/end4-pC) has been converted. It is
+            // the only usable "this file has not been converted yet" signal:
+            // the installer's has_legacy_config() tests for the old *directory*,
+            // which is already gone for anyone whose directory migration ran
+            // before this existed - exactly the users who still need this.
+            property bool migratedUpstreamSchema: false
 
             // One-time migration marker (issue #69): set once a stale
             // hyprland.input.kbOptions = "grp:win_space_toggle" has been
@@ -129,6 +420,24 @@ Singleton {
                 //            the widget (samples the live Wallpaper Engine surface
                 //            or the static image)
                 property string frostMode: "blur"
+                // Set once the built-in desktop widgets have been
+                // translated into `enabled`. Without it the migration
+                // re-adds a widget on every launch and the user can never
+                // turn one off.
+                property bool migratedDesktopWidgets: false
+                // Set once the clock's own settings have been translated into
+                // plugin options. Separate from the marker above on purpose:
+                // the enable-only migration shipped first, so installs that
+                // already ran it would otherwise never get their clock style,
+                // fonts or quote carried across. PluginState sets this, and
+                // only after the values have actually reached its file.
+                property bool migratedDesktopWidgetOptions: false
+                // Set once the world clock's timezone list has been translated
+                // into a plugin option. Its own key for the same reason again:
+                // every install that has launched this branch once already has
+                // the marker above set, and those are exactly the installs whose
+                // timezones still need carrying across.
+                property bool migratedWorldClockTimezones: false
             }
 
             property JsonObject policies: JsonObject {
@@ -794,6 +1103,20 @@ Singleton {
                 property bool enable: false
                 property string mode: "black" // "black" | "clock"
                 property int timeout: 240 // seconds (mirror in hypridle.conf; must be < lock timeout)
+            }
+
+            property JsonObject notes: JsonObject {
+                // Set once services/Notes.qml has folded the old desktop-notes
+                // store (Directories.desktopNotesPath, the array the deleted
+                // built-in notes widget wrote) into the live note array.
+                //
+                // That file is deliberately left on disk, so without a marker
+                // every launch would re-import it and any note the user deleted
+                // would come back. The plaintext-scratchpad half of the
+                // migration needs no marker: it is driven by the shape of the
+                // live store, which stops being plaintext the moment it is
+                // converted.
+                property bool importedLegacyStore: false
             }
 
             property JsonObject notifications: JsonObject {

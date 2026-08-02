@@ -1,0 +1,7 @@
+{
+  "id": "calendar", "name": "Calendar", "description": "A month calendar with today highlighted, resizable down to the current week or just today's date", "version": "1.0.0", "apiVersion": 1,
+  "author": "Immaterial Impulse contributors", "license": "AGPL-3.0",
+  "defaultWidth": 132, "defaultHeight": 108,
+  "capabilities": ["desktop-widget"], "permissions": ["settings_read", "settings_write"],
+  "desktopWidget": { "component": "Widget.qml", "blur": false }
+}

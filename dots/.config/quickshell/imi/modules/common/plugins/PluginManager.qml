@@ -30,9 +30,12 @@ Singleton {
 
     // The surfaces a single manifest occupies.
     //
-    // Manifests of the older declarative-JSON generation (clock) carry a
+    // Manifests of the older declarative-JSON generation carry a
     // `desktopWidget` block and no `capabilities` array at all. Without the
     // fallback they match no chip and disappear from every filtered view.
+    // No bundled manifest is in that shape any more - the last one was the
+    // declarative clock, replaced by the ported package - but a user-installed
+    // plugin written against the older docs still can be.
     // The display entry for one surface value, or null when a manifest
     // declares something outside the vocabulary - `settings`, or a capability
     // from a newer shell. Callers drop the nulls rather than rendering a raw
@@ -119,7 +122,10 @@ Singleton {
         [clockManifestFile, dockerManifestFile, discordVoiceManifestFile,
                 nandoroidMediaManifestFile, nandoroidSystemMonitorManifestFile,
                 nandoroidWeatherManifestFile, nandoroidCurrencyManifestFile,
-                notesManifestFile].forEach(fileView => {
+                notesManifestFile, visualizerManifestFile,
+                customImageManifestFile, imageConverterManifestFile,
+                userCardManifestFile, worldClockManifestFile,
+                calendarManifestFile].forEach(fileView => {
             if (!fileView.loaded) return;
             try {
                 const text = fileView.text();
@@ -365,6 +371,42 @@ Singleton {
     FileView {
         id: notesManifestFile
         property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/notes")
+        path: pluginBase + "/manifest.json"
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: visualizerManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/visualizer")
+        path: pluginBase + "/manifest.json"
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: customImageManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/custom-image")
+        path: pluginBase + "/manifest.json"
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: imageConverterManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/image-converter")
+        path: pluginBase + "/manifest.json"
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: userCardManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/user-card")
+        path: pluginBase + "/manifest.json"
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: worldClockManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/world-clock")
+        path: pluginBase + "/manifest.json"
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: calendarManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/calendar")
         path: pluginBase + "/manifest.json"
         onLoaded: root.scheduleRebuild()
     }

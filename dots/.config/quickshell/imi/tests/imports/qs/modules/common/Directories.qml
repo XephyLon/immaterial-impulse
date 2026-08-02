@@ -2,6 +2,11 @@ pragma Singleton
 import QtQuick
 
 QtObject {
+    // The real singleton flips this once scripts/migrate-config-dir.sh exits.
+    // The stub stands for an install whose directory was migrated long ago, so
+    // Config's gate is not held shut for every unit test.
+    property bool configDirReady: true
+
     readonly property string home: "file:///tmp/mock-home"
     readonly property string config: "file:///tmp/mock-config"
     readonly property string state: "file:///tmp/mock-state"

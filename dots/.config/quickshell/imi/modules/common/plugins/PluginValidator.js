@@ -52,9 +52,17 @@ function validateManifest(manifest) {
         return { valid: false, error: "Manifest must have at least one entry point (e.g. desktopWidget, barWidget)" };
     }
 
-    if (manifest.desktopWidget && manifest.desktopWidget.blur !== undefined
-            && typeof manifest.desktopWidget.blur !== "boolean") {
-        return { valid: false, error: "desktopWidget.blur must be a boolean" };
+    // Host desktop-widget defaults. Each one only seeds the initial value of
+    // the matching PluginState option, so a non-boolean would slip through as
+    // a truthy default nobody can account for later - reject it here instead.
+    if (manifest.desktopWidget) {
+        const desktopFlags = ["blur", "locked", "clickThrough"];
+        for (const flag of desktopFlags) {
+            if (manifest.desktopWidget[flag] !== undefined
+                    && typeof manifest.desktopWidget[flag] !== "boolean") {
+                return { valid: false, error: "desktopWidget." + flag + " must be a boolean" };
+            }
+        }
     }
 
     // Optional component-grid span: `"grid": { "cols": int>=1, "rows": int>=1 }`.
@@ -86,10 +94,14 @@ function validateManifest(manifest) {
                 return { valid: false, error: "Duplicate plugin option key '" + option.key + "'" };
             }
             optionKeys.add(option.key);
-            if (!["boolean", "choice", "number", "text"].includes(option.type)) {
+            if (!["boolean", "choice", "shape", "color", "number", "text"].includes(option.type)) {
                 return { valid: false, error: "Unsupported plugin option type '" + option.type + "'" };
             }
-            if (option.type === "choice" && (!Array.isArray(option.choices) || option.choices.length === 0)) {
+            if (option.type === "color" && typeof option.default !== "string") {
+                return { valid: false, error: "Color option '" + option.key + "' must have a string default" };
+            }
+            if ((option.type === "choice" || option.type === "shape" || option.type === "color")
+                    && (!Array.isArray(option.choices) || option.choices.length === 0)) {
                 return { valid: false, error: "Choice option '" + option.key + "' must have choices" };
             }
             if (option.type === "number"

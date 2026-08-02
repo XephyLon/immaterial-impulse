@@ -104,6 +104,100 @@ Singleton {
         writeTimer.restart();
     }
 
+    // A ported built-in's own settings have to end up in this file, but Config
+    // cannot write it (and cannot import this module - it is imported *by* it).
+    // Config computes the batch instead and parks it on
+    // `Config.pendingPluginOptions`; this drains it once both files are loaded.
+    //
+    // Two rules make it safe to run on any launch:
+    //   - a key already present for that plugin wins, so a preference the user
+    //     has since set through the widget's settings panel is never clobbered
+    //     by the legacy value it was migrated from;
+    //   - the marker is written last, so a launch that dies mid-migration
+    //     simply migrates again rather than recording a migration that never
+    //     landed.
+    //
+    // Writing the marker last is also why the re-entrancy guard is needed:
+    // clearing `Config.pendingPluginOptions` at the end re-emits the very
+    // signal this is connected to, while the marker two lines below it is
+    // still false. Without the guard the first migration recurses until the JS
+    // stack blows - and the RangeError that produces is attributed to whatever
+    // unrelated file happens to be next on the stack, so it does not even read
+    // as a migration bug.
+    property bool drainingConfigOptions: false
+
+    function drainPendingConfigOptions() {
+        if (root.drainingConfigOptions)
+            return;
+        if (!root.ready || !Config.ready)
+            return;
+        // Both halves of the migration ride one batch, so this stops only once
+        // every marker it discharges is set. Testing the clock's alone would
+        // compute the world clock's timezones and throw them away on every
+        // install that has already run the clock half - which is all of them.
+        if (Config.options.plugins.migratedDesktopWidgetOptions
+            && Config.options.plugins.migratedWorldClockTimezones)
+            return;
+        const pending = Config.pendingPluginOptions;
+        if (!pending || typeof pending !== "object")
+            return;
+
+        root.drainingConfigOptions = true;
+
+        const nextState = Object.assign({}, root.state);
+        const nextOptions = Object.assign({}, nextState.pluginOptions || {});
+        for (const pluginId in pending) {
+            const incoming = pending[pluginId];
+            if (!incoming || typeof incoming !== "object")
+                continue;
+            const nextPlugin = Object.assign({}, nextOptions[pluginId] || {});
+            for (const key in incoming) {
+                if (nextPlugin[key] !== undefined)
+                    continue;
+                nextPlugin[key] = incoming[key];
+            }
+            nextOptions[pluginId] = nextPlugin;
+        }
+
+        // The legacy position is one pair for the whole desktop, so it seeds
+        // every monitor. A monitor that already has a position for the plugin
+        // keeps it, same rule as the options above.
+        const pendingPositions = Config.pendingPluginPositions || {};
+        const nextScreens = Object.assign({}, nextState.desktopPositions || {});
+        for (const screen of Quickshell.screens) {
+            const nextScreen = Object.assign({}, nextScreens[screen.name] || {});
+            let touched = false;
+            for (const pluginId in pendingPositions) {
+                if (nextScreen[pluginId] !== undefined)
+                    continue;
+                nextScreen[pluginId] = root.normalizedPosition(pendingPositions[pluginId]);
+                touched = true;
+            }
+            if (touched)
+                nextScreens[screen.name] = nextScreen;
+        }
+
+        nextState.version = root.schemaVersion;
+        nextState.pluginOptions = nextOptions;
+        nextState.desktopPositions = nextScreens;
+        root.state = nextState;
+        writeTimer.restart();
+
+        Config.pendingPluginOptions = ({});
+        Config.pendingPluginPositions = ({});
+        Config.options.plugins.migratedDesktopWidgetOptions = true;
+        Config.options.plugins.migratedWorldClockTimezones = true;
+        root.drainingConfigOptions = false;
+    }
+
+    Connections {
+        target: Config
+        function onPendingPluginOptionsChanged() { root.drainPendingConfigOptions() }
+        function onReadyChanged() { root.drainPendingConfigOptions() }
+    }
+
+    onReadyChanged: root.drainPendingConfigOptions()
+
     function snapshot() {
         return JSON.stringify(root.state);
     }

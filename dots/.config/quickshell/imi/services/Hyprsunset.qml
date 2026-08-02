@@ -90,11 +90,17 @@ Singleton {
         }
     }
 
-    function startHyprsunset(initialArgs = []) {
-        // hyprsunset defaults to `--temperature 6000` (a warm tint, not identity)
-        // when launched bare. Pass the target state as launch flags: the separate
-        // hyprctl correction is fire-and-forget and races the daemon's socket on
-        // a cold start, silently leaving the wrong temperature applied.
+    // `hyprsunset --help`: "--temperature -t  Set the temperature in K
+    // (default 6000)". So a bare `hyprsunset` does not start neutral - it
+    // applies a 6000K warm tint the moment it comes up. Every launch that is
+    // not explicitly turning night light *on* must therefore say --identity
+    // ("Use the identity matrix (no color change)"), or merely starting the
+    // daemon switches night light on for someone who never enabled it.
+    //
+    // The target state goes in as launch flags rather than a follow-up hyprctl
+    // call: that call is fire-and-forget and races the daemon's socket on a
+    // cold start, silently leaving the wrong temperature applied.
+    function startHyprsunset(initialArgs = ["--identity"]) {
         const launch = ["hyprsunset"].concat(initialArgs).join(" ");
         Quickshell.execDetached(["bash", "-c", `pidof hyprsunset || ${launch}`]);
     }

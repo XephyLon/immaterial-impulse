@@ -16,6 +16,13 @@ Item {
         0.75)
     property real labelSpacing: Appearance.spacing.space150
 
+    // The dial and its label lay out inside this inset rather than against the
+    // background's edge. Without it the label's top lands half a labelSpacing
+    // below the dial band and its bottom lands the same distance off the
+    // surface - 3px at the world clock's settings - so a labelled clock reads
+    // as stuck to its own squircle.
+    property real contentInset: Appearance.spacing.space100
+
     property real hourAngle:   0
     property real minuteAngle: 0
 
@@ -49,9 +56,35 @@ Item {
         id: clockCanvas
         anchors.fill: parent
 
-        property real cx: width  / 2
-        property real cy: height / 2
-        property real r:  Math.min(width, height) * 0.36
+        // The label used to be drawn at `cy + dotR + labelSpacing`, a few px
+        // below the centre dot - but the minute hand reaches 0.82r, so at any
+        // size where the label is legible the hands sweep straight through it.
+        // A labelled clock therefore reserves a band at the bottom and centres
+        // the dial in what is left, so the two never share the same pixels. An
+        // unlabelled clock reserves nothing and is laid out exactly as before.
+        readonly property real inset: root.contentInset
+        readonly property real boxW:  Math.max(0, width  - inset * 2)
+        readonly property real boxH:  Math.max(0, height - inset * 2)
+
+        property real labelPixelSize: Math.max(11, Math.min(boxW, boxH) * 0.36 * 0.2)
+        property real labelBand: root.label === "" ? 0 : labelPixelSize + root.labelSpacing
+        property real dialHeight: boxH - labelBand
+
+        property real cx: inset + boxW / 2
+        property real cy: inset + dialHeight / 2
+        property real r:  Math.min(boxW, dialHeight) * 0.36
+
+        // Canvas text does not clip, so a city name wider than the inset box
+        // would run out under the surface's rounded corners. Truncate to fit.
+        function fitLabel(ctx, text, maxWidth) {
+            if (maxWidth <= 0 || ctx.measureText(text).width <= maxWidth)
+                return text;
+            let truncated = text;
+            while (truncated.length > 1
+                    && ctx.measureText(truncated + "…").width > maxWidth)
+                truncated = truncated.slice(0, -1);
+            return truncated + "…";
+        }
 
         onPaint: {
             const ctx = getContext("2d")
@@ -97,12 +130,14 @@ Item {
             ctx.fill()
 
             if (root.label !== "") {
-                const dotBottom = cy + dotR + root.labelSpacing
-                ctx.font         = `${Math.max(11, r * 0.2)}px sans-serif`
+                // Sits in the reserved band under the dial, half the label
+                // spacing clear of it and a full inset clear of the bottom.
+                const labelTop = clockCanvas.inset + clockCanvas.dialHeight + root.labelSpacing / 2
+                ctx.font         = `${clockCanvas.labelPixelSize}px "${Appearance.font.family.main}"`
                 ctx.fillStyle    = root.labelColor.toString()
                 ctx.textAlign    = "center"
                 ctx.textBaseline = "top"
-                ctx.fillText(root.label, cx, dotBottom)
+                ctx.fillText(clockCanvas.fitLabel(ctx, root.label, clockCanvas.boxW), cx, labelTop)
             }
         }
 
@@ -111,6 +146,7 @@ Item {
             function onHourAngleChanged()      { clockCanvas.requestPaint() }
             function onMinuteAngleChanged()    { clockCanvas.requestPaint() }
             function onLabelChanged()          { clockCanvas.requestPaint() }
+            function onLabelSpacingChanged()   { clockCanvas.requestPaint() }
             function onHandColorChanged()      { clockCanvas.requestPaint() }
             function onCenterDotColorChanged() { clockCanvas.requestPaint() }
             function onLabelColorChanged()     { clockCanvas.requestPaint() }

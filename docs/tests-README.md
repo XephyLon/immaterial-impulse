@@ -80,6 +80,8 @@ In addition to the QML unit tests, `run_tests.sh` runs static lint checks first:
 * **Lockscreen theme lint (`lint_lockscreen_theme.sh`)**: Keeps transient lock colors owned by `MaterialThemeLoader`, verifies that its virtual-environment wrapper preserves wallpaper paths containing spaces, guards the precomputed palette cache/delayed transition, caps the animated palette-role budget, requires the bounded fast color duration, and prevents locking from switching to synthetic Hyprland workspaces. This avoids theme races, animation contention, and persistent compositor/screencopy state corruption.
 * **Region selector capture lint (`lint_region_selector_capture.sh`)**: Requires the selector preview and final crop to share the same freshly generated `grim` image, with image caching disabled and visibility gated on decoding. This prevents an independent screencopy from displaying a stale compositor frame.
 * **Plugin process lifecycle lint (`lint_plugin_processes.py`)**: Rejects bundled streaming processes with persistent `running` bindings unless they document restart-safe backoff, prevents Docker's known-runaway desktop host from being re-enabled, and keeps package bar entries behind exactly one loader instead of the runaway nested sizing path. This prevents instant-exit respawn loops and multi-gigabyte allocation failures from starving the shell session.
+* **Widget interaction mode tests (`test_widget_interaction_modes.py`)**: Pin per-widget lock and click-through on `AbstractBackgroundWidget` — that both flags default off (that class sits under every desktop widget in the shell), that the global `background.widgetsLocked` toggle ORs with the per-widget lock rather than replacing it, that `clickThrough` drives `enabled` rather than a Wayland surface mask, that it drives *both* gates (the host's own `MouseArea` and the `contentItem` wrapper every child is parented into, since `MouseArea.enabled` shadows `Item.enabled` and reaches nothing under it), that the wrapper gates on `clickThrough` rather than on the resolved lock and takes no part in sizing, that `PluginWidget` reads both flags from `PluginState` with the manifest as the seed and never assigns them, and that the settings rows exist so a shipped default stays reversible. Every assertion was confirmed to fail under a matching mutation; `WidgetInteractionRuntimeTest.qml` is the behavioural half.
+* **Widget interaction runtime tests (`test_widget_interaction_runtime.py`)**: Drive `WidgetInteractionRuntimeTest.qml` under a headless weston with throwaway XDG dirs, failing on any check it reports and on any `Binding loop` in its output. This is what the source contract cannot reach: whether a click over a click-through widget actually lands on the desktop menu behind it, and whether it stops landing on the controls the widget draws for itself — proved on a synthetic `MouseArea` and on the real bundled notes widget's per-note delete button, each with the same click repeated with click-through off as its control. Skips where weston or `qs` is missing, as in CI.
 * **Plugin installer tests (`test_plugin_installer.py`)**: Verify remote package paths cannot be absolute or escape the plugin directory using `..`.
 * **Preset tests (`test_presets.py`)**: Verify complete desktop plugin state—including positions and per-plugin options—round-trips through presets, while position-only legacy presets retain options they never captured.
 * **Matugen application theme tests (`test_matugen_app_themes.py`)**: Verify Cava, btop, and tmux templates are registered idempotently, generated themes preserve unrelated application settings, and live reload hooks run after Matugen renders.
@@ -95,7 +97,8 @@ In addition to the QML unit tests, `run_tests.sh` runs static lint checks first:
 * **Color pipeline tests (`test_lock_palette_parity.py`, `test_scheme_for_image.py`, `test_generate_colors_material.py`)**: Pin that lock-screen color generation produces byte-identical output to the desktop path for the same image (no `--smart`, `auto` resolved via `scheme_for_image.py`), that the detector returns a valid scheme per image, and that the generator emits every color key the shell consumes for both modes. Behavioural parts skip cleanly when `materialyoucolor`/`cv2` are absent.
 * **Installer safety tests (`test_installer_file_sync.py`, `test_installer_legacy_migration.py`, `test_installer_greeting_traps.py`)**: Sandbox `3.files.sh`'s `rsync --delete` sync/backup helpers with canary files proving deletion never escapes its target, drive `1.deps-router.sh`'s legacy detection/removal against stubbed package managers (only `illogical-impulse-*` matched, exact `-Rn` set, never cascading), and pin the quiet-install cancel machinery (process-group traps, `set -m`, no `setsid` regression).
 * **Status-service and safety contracts (`tst_battery.qml`, `tst_bluetooth_status.qml`, `test_updates_contract.py`, `test_conflict_killer_contract.py`, `test_polkit_service_contract.py`, `test_ydotool_contract.py`, `test_brightness_systeminfo_contract.py`)**: Behaviourally exercise Battery/Bluetooth against new mocks, run the real Updates count pipeline against stubs, and pin the safety envelopes of the silent-failure services — ConflictKiller's exact-name literal kill set (no PID signaling), Polkit's interaction flow, Ydotool's argv-only (no shell splicing) command construction, and Brightness's never-fully-black clamps.
-* **Config-dir / keyring migration and prebuilt-WE installer tests (`test_config_migration.py`, `test_keyring_migration.py`, `test_wallpaperengine_prebuilt.py`)**: Previously shipped but never invoked; now wired into `run_tests.sh`. Cover the `illogical-impulse` → `immaterial-impulse` config-dir move (no-clobber), keyring attribute migration, and the checksum-verified prebuilt Wallpaper Engine fast-path against a fixture release.
+* **Note store tests (`tst_notes_store.qml`, `test_notes_store_contract.py`, `test_notes_migration_runtime.py`)**: `tst_notes_store.qml` drives `modules/common/functions/notesStore.js` through every on-disk state the two old note stores can be in — plaintext, a valid array, both at once, either absent, either corrupt, and a scratchpad whose text happens to be JSON that is not notes — pinning that nothing is discarded (unparseable content becomes a note verbatim; the deleted built-in service reset it to `[]`). The contract module pins the single owner (`services/Notes.qml` — neither the plugin widget nor the overlay editor may hold a `FileView`), the migration marker being written after the store, and `textFormat: PlainText` everywhere a note body reaches the screen. `test_notes_migration_runtime.py` is the behavioural half: it launches the real service in a real Quickshell against a throwaway `XDG_STATE_HOME`/`XDG_CONFIG_HOME`, once per case, and checks both that content in either old store survives and that neither source file is touched.
+* **Config-dir / keyring migration and prebuilt-WE installer tests (`test_config_migration.py`, `test_keyring_migration.py`, `test_wallpaperengine_prebuilt.py`)**: Previously shipped but never invoked; now wired into `run_tests.sh`. Cover the `illogical-impulse` → `immaterial-impulse` config-dir move (no-clobber), keyring attribute migration, and the checksum-verified prebuilt Wallpaper Engine fast-path against a fixture release. `test_config_migration.py` since grew the decision the move actually turns on: a `config.json` already in the destination is compared byte-for-byte against the shipped `defaults/config.json`, because the installer seeds that file verbatim and "a config.json exists" was silently disabling the whole migration. Where it cannot tell, the script must change nothing and exit `3` — the tests pin the refusal and its message, not just the happy path. `test_config_dir_migration_runtime.py` is the behavioural half (see Runtime harnesses).
 
 ### What the Python checks are, and are not
 
@@ -141,7 +144,67 @@ line that implements it.
 manually launched harnesses, driven by `run_docker_memory_test.sh` via
 `quickshell -p <file>`.
 
+`WidgetInteractionRuntimeTest.qml` is self-checking and driven from the suite by
+`tests/test_widget_interaction_runtime.py`: it builds four real `PluginWidget`s
+on a real `WidgetCanvas` and drives per-widget lock and click-through with
+actual mouse events, exiting non-zero on any failure. `import QtTest` works
+inside `qs -p`, so `TestCase.mouseClick()` delivers real events without
+`ydotool` — which is the only way to prove a click over a click-through widget
+reaches the desktop area behind it, and stops reaching the widget's own
+controls, rather than merely that a property flipped. Two of the four widgets
+exist for that second half: one declares a `MouseArea` of its own inside the
+host, and one is the real bundled notes widget, whose per-note delete button
+calls straight into the `Notes` singleton and so is observable from outside the
+widget. Run it by hand against a throwaway config — it writes plugin options,
+positions and the note store, and a stale state file from a previous run would
+make it start from the wrong defaults:
+
+```bash
+XDG_CONFIG_HOME=$(mktemp -d) XDG_STATE_HOME=$(mktemp -d) \
+  qs -p WidgetInteractionRuntimeTest.qml
+```
+
+`NotesMigrationRuntimeTest.qml` and `NotesSurfacesRuntimeTest.qml` are
+self-checking too, and are likewise driven from the suite —
+`tests/test_notes_migration_runtime.py` and `tests/test_notes_surfaces_runtime.py`
+launch them and fail on any check they report. The first exercises the note
+store migration against real files (one launch per on-disk case, throwaway XDG
+dirs). The second builds the bundled notes plugin widget and the overlay notes
+editor side by side over one store and clicks their buttons for real, which is
+the only way to show that a note added in one surface is in the other and that
+the delete button deletes.
+
+`ConfigDirMigrationRuntimeTest.qml` is driven the same way, by
+`tests/test_config_dir_migration_runtime.py`. What it proves cannot be reached
+from the migration script alone: the `~/.config/illogical-impulse` →
+`immaterial-impulse` move has to *finish* before `Config` reads or writes the
+destination, and it used to be fired with `Quickshell.execDetached`, which
+returns immediately. The harness samples `Directories.configDirReady` at the
+instant `Config.ready` turns true, and the driver forces the interleaving that
+used to lose rather than hoping to observe it — `IMI_MIGRATE_DELAY` (a seam in
+the script, never set in normal operation) holds the migration open for
+seconds, which a racing `Config` load wins every single time. The same module
+covers the composition with the in-`Config` upstream-key migration (one launch
+must both move the directory and convert the keys inside it) and the read-only
+watchdog that fires when the migration never finishes. It brings its own
+headless weston for the same reason as the surfaces harness below, minus the
+window: a test that migrates config directories has no business running against
+the caller's session.
+
+The widget-interaction and surfaces harnesses bring their own **headless weston**
+(`weston --backend=headless --renderer=pixman`, plus `LIBGL_ALWAYS_SOFTWARE=1`
+and `QT_QUICK_BACKEND=software` — this box's headless EGL has no driver) rather
+than using the caller's session, because they open a window and would otherwise
+throw one across the user's desktop. Weston implements no wlr-layer-shell, so
+nothing that needs a `PanelWindow` can be proved there: both notes surfaces are
+ordinary `Item`s, and so are `WidgetCanvas` and the widget tree under it — what
+cannot be shown that way is anything about the real `Background.qml` layer
+surface itself, such as how it stacks against another surface.
+
 They live at the repository root on purpose and should not be moved into
 `tests/`: `quickshell -p` roots the `qs` module at the directory of the file it
 is given, so from `tests/` their `import qs.modules.imi.bar` would no longer
-resolve.
+resolve. A file loaded by URL only resolves a `qs.*` module that something
+already in the loaded tree has imported, which is why
+`NotesSurfacesRuntimeTest.qml` imports `qs.modules.imi.overlay` without using a
+type from it.
