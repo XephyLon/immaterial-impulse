@@ -36,8 +36,15 @@ Singleton {
     property string shellConfigName: "config.json"
     property string shellConfigPath: `${Directories.shellConfig}/${Directories.shellConfigName}`
 	property string todoPath: FileUtils.trimFileProtocol(`${Directories.state}/user/todo.json`)
+	// The note store: a JSON array owned by services/Notes.qml, which the bundled
+	// notes plugin and the overlay notes editor both go through. Still named
+	// .txt because it used to hold one plaintext scratchpad, and renaming it
+	// would strand that scratchpad in a file nothing reads.
 	property string notesPath: FileUtils.trimFileProtocol(`${Directories.state}/user/notes.txt`)
 	property string clipboardPinsPath: FileUtils.trimFileProtocol(`${Directories.state}/user/clipboard-pins.json`)
+	// Where the deleted built-in notes widget kept its note array. Imported into
+	// notesPath once (Config.options.notes.importedLegacyStore) and never
+	// written to again - it stays on disk as the user's copy of record.
 	property string desktopNotesPath: FileUtils.trimFileProtocol(`${Directories.state}/user/desktopnotes.txt`)
 	property string conflictCachePath: FileUtils.trimFileProtocol(`${Directories.cache}/conflict-killer`)
     property string notificationsPath: FileUtils.trimFileProtocol(`${Directories.cache}/notifications/notifications.json`)

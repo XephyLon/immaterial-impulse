@@ -96,6 +96,7 @@ In addition to the QML unit tests, `run_tests.sh` runs static lint checks first:
 * **Color pipeline tests (`test_lock_palette_parity.py`, `test_scheme_for_image.py`, `test_generate_colors_material.py`)**: Pin that lock-screen color generation produces byte-identical output to the desktop path for the same image (no `--smart`, `auto` resolved via `scheme_for_image.py`), that the detector returns a valid scheme per image, and that the generator emits every color key the shell consumes for both modes. Behavioural parts skip cleanly when `materialyoucolor`/`cv2` are absent.
 * **Installer safety tests (`test_installer_file_sync.py`, `test_installer_legacy_migration.py`, `test_installer_greeting_traps.py`)**: Sandbox `3.files.sh`'s `rsync --delete` sync/backup helpers with canary files proving deletion never escapes its target, drive `1.deps-router.sh`'s legacy detection/removal against stubbed package managers (only `illogical-impulse-*` matched, exact `-Rn` set, never cascading), and pin the quiet-install cancel machinery (process-group traps, `set -m`, no `setsid` regression).
 * **Status-service and safety contracts (`tst_battery.qml`, `tst_bluetooth_status.qml`, `test_updates_contract.py`, `test_conflict_killer_contract.py`, `test_polkit_service_contract.py`, `test_ydotool_contract.py`, `test_brightness_systeminfo_contract.py`)**: Behaviourally exercise Battery/Bluetooth against new mocks, run the real Updates count pipeline against stubs, and pin the safety envelopes of the silent-failure services — ConflictKiller's exact-name literal kill set (no PID signaling), Polkit's interaction flow, Ydotool's argv-only (no shell splicing) command construction, and Brightness's never-fully-black clamps.
+* **Note store tests (`tst_notes_store.qml`, `test_notes_store_contract.py`, `test_notes_migration_runtime.py`)**: `tst_notes_store.qml` drives `modules/common/functions/notesStore.js` through every on-disk state the two old note stores can be in — plaintext, a valid array, both at once, either absent, either corrupt, and a scratchpad whose text happens to be JSON that is not notes — pinning that nothing is discarded (unparseable content becomes a note verbatim; the deleted built-in service reset it to `[]`). The contract module pins the single owner (`services/Notes.qml` — neither the plugin widget nor the overlay editor may hold a `FileView`), the migration marker being written after the store, and `textFormat: PlainText` everywhere a note body reaches the screen. `test_notes_migration_runtime.py` is the behavioural half: it launches the real service in a real Quickshell against a throwaway `XDG_STATE_HOME`/`XDG_CONFIG_HOME`, once per case, and checks both that content in either old store survives and that neither source file is touched.
 * **Config-dir / keyring migration and prebuilt-WE installer tests (`test_config_migration.py`, `test_keyring_migration.py`, `test_wallpaperengine_prebuilt.py`)**: Previously shipped but never invoked; now wired into `run_tests.sh`. Cover the `illogical-impulse` → `immaterial-impulse` config-dir move (no-clobber), keyring attribute migration, and the checksum-verified prebuilt Wallpaper Engine fast-path against a fixture release.
 
 ### What the Python checks are, and are not
@@ -157,7 +158,28 @@ XDG_CONFIG_HOME=$(mktemp -d) XDG_STATE_HOME=$(mktemp -d) \
   qs -p WidgetInteractionRuntimeTest.qml
 ```
 
+`NotesMigrationRuntimeTest.qml` and `NotesSurfacesRuntimeTest.qml` are
+self-checking too, and unlike the others they are driven from the suite —
+`tests/test_notes_migration_runtime.py` and `tests/test_notes_surfaces_runtime.py`
+launch them and fail on any check they report. The first exercises the note
+store migration against real files (one launch per on-disk case, throwaway XDG
+dirs). The second builds the bundled notes plugin widget and the overlay notes
+editor side by side over one store and clicks their buttons for real, which is
+the only way to show that a note added in one surface is in the other and that
+the delete button deletes.
+
+The surfaces harness brings its own **headless weston**
+(`weston --backend=headless --renderer=pixman`, plus `LIBGL_ALWAYS_SOFTWARE=1`
+and `QT_QUICK_BACKEND=software` — this box's headless EGL has no driver) rather
+than using the caller's session, because it opens a window and would otherwise
+throw one across the user's desktop. Weston implements no wlr-layer-shell, so
+nothing that needs a `PanelWindow` can be proved there; both notes surfaces are
+ordinary `Item`s, which is why it works for this one.
+
 They live at the repository root on purpose and should not be moved into
 `tests/`: `quickshell -p` roots the `qs` module at the directory of the file it
 is given, so from `tests/` their `import qs.modules.imi.bar` would no longer
-resolve.
+resolve. A file loaded by URL only resolves a `qs.*` module that something
+already in the loaded tree has imported, which is why
+`NotesSurfacesRuntimeTest.qml` imports `qs.modules.imi.overlay` without using a
+type from it.

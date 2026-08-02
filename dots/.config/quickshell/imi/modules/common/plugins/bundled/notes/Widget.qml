@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import Quickshell.Io
 import qs
 import qs.services
 import qs.modules.common
@@ -21,9 +20,11 @@ Rectangle {
     readonly property real backgroundOpacity: Config.options.plugins.blurOpacity
     readonly property bool managesBlurTint: true
 
-    // True once the persisted note has been read. Guards the text-change hook so
-    // assigning the loaded content does not schedule a redundant save.
-    property bool ready: false
+    // "list" | "edit". The card flips between the two rather than growing a
+    // second surface - it is a 2x2 tile, there is no room for both.
+    property string mode: "list"
+    // The note being edited, or "" for one that does not exist yet.
+    property string editingId: ""
 
     // A 2x2 component-grid tile (276x228 - cells are wider than tall). The host
     // (PluginWidget) sizes us from the manifest `grid` span and stretches this
@@ -39,93 +40,268 @@ Rectangle {
         : Appearance.colors.colSecondaryContainer
     border.width: 0
 
+    // The objectNames below are how NotesSurfacesRuntimeTest.qml finds these
+    // controls to click them; ids are not reachable from outside the component.
+
     // Keyboard focus for the background layer surface is armed by the host
     // (PluginWidget hover + descendant focus), so this widget needs no per-field
     // OnDemand wiring - clicking the editor grabs Wayland keyboard focus.
 
-    ColumnLayout {
+    readonly property color colSurface: root.blurEnabled
+        ? ColorUtils.transparentize(Appearance.colors.colLayer2, 1 - root.backgroundOpacity)
+        : Appearance.colors.colLayer1
+
+    function openNewNote() {
+        root.editingId = "";
+        editArea.text = "";
+        flipAnim.start();
+    }
+
+    function openNote(note) {
+        root.editingId = note.id;
+        editArea.text = note.content;
+        flipAnim.start();
+    }
+
+    // One exit from edit mode, so an empty new note is never stored and an
+    // emptied existing one is deleted rather than kept as a blank row.
+    function saveAndBack() {
+        const text = editArea.text;
+        if (root.editingId.length === 0) {
+            if (text.trim().length > 0)
+                Notes.addNote(text);
+        } else if (text.trim().length === 0) {
+            Notes.deleteNote(root.editingId);
+        } else {
+            Notes.updateNote(root.editingId, text);
+        }
+        root.editingId = "";
+        flipAnim.start();
+    }
+
+    Item {
+        id: cardWrapper
         anchors.fill: parent
-        anchors.margins: Appearance.spacing.space200
-        spacing: Appearance.spacing.space150
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Appearance.spacing.space100
+        transform: Scale {
+            id: flipScale
+            origin.x: cardWrapper.width / 2
+            origin.y: cardWrapper.height / 2
+            xScale: 1
+        }
 
-            MaterialShapeWrappedMaterialSymbol {
-                shape: MaterialShape.Shape.Clover
-                text: "sticky_note_2"
-                iconSize: Appearance.font.pixelSize.large
-                implicitSize: 36
-                color: Appearance.colors.colPrimaryContainer
-                colSymbol: Appearance.colors.colPrimary
+        SequentialAnimation {
+            id: flipAnim
+            NumberAnimation {
+                target: flipScale
+                property: "xScale"
+                to: 0
+                duration: Appearance.animation.elementMoveFaster.duration
+                easing.type: Easing.InQuad
             }
-
-            StyledText {
-                Layout.fillWidth: true
-                text: Translation.tr("Notes")
-                font.family: Appearance.font.family.expressive
-                font.pixelSize: Appearance.font.pixelSize.large
-                font.weight: Font.DemiBold
-                color: Appearance.colors.colOnSecondaryContainer
+            ScriptAction {
+                script: root.mode = (root.mode === "list" ? "edit" : "list")
+            }
+            NumberAnimation {
+                target: flipScale
+                property: "xScale"
+                to: 1
+                duration: Appearance.animation.elementMoveFaster.duration
+                easing.type: Easing.OutQuad
             }
         }
 
-        // Distinct rounded editing surface so the note area reads as a card
-        // within the widget, not bare text on the background.
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            radius: Appearance.rounding.normal
-            color: root.blurEnabled
-                ? ColorUtils.transparentize(Appearance.colors.colLayer2, 1 - root.backgroundOpacity)
-                : Appearance.colors.colLayer1
+        ColumnLayout {
+            id: listPage
+            anchors.fill: parent
+            anchors.margins: Appearance.spacing.space200
+            spacing: Appearance.spacing.space150
+            visible: root.mode === "list"
 
-            ScrollView {
-                anchors.fill: parent
-                anchors.margins: Appearance.spacing.space100
-                clip: true
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Appearance.spacing.space100
 
-                StyledTextArea {
-                    id: noteArea
-                    background: null
-                    wrapMode: TextEdit.Wrap
-                    placeholderText: Translation.tr("Jot a note…")
-                    color: Appearance.colors.colOnLayer1
-                    onTextChanged: if (root.ready) saveDebounce.restart()
+                MaterialShapeWrappedMaterialSymbol {
+                    shape: MaterialShape.Shape.Clover
+                    text: "sticky_note_2"
+                    iconSize: Appearance.font.pixelSize.large
+                    implicitSize: 36
+                    color: Appearance.colors.colPrimaryContainer
+                    colSymbol: Appearance.colors.colPrimary
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Notes")
+                    font.family: Appearance.font.family.expressive
+                    font.pixelSize: Appearance.font.pixelSize.large
+                    font.weight: Font.DemiBold
+                    color: Appearance.colors.colOnSecondaryContainer
+                }
+
+                ToolbarPairedFab {
+                    id: addNoteButton
+                    objectName: "addNoteButton"
+                    Layout.alignment: Qt.AlignVCenter
+                    baseSize: 34
+                    iconText: "add"
+                    onClicked: root.openNewNote()
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Appearance.rounding.normal
+                color: root.colSurface
+
+                StyledText {
+                    anchors.centerIn: parent
+                    visible: Notes.list.length === 0
+                    text: Translation.tr("No notes yet")
+                    color: Appearance.colors.colSubtext
+                }
+
+                StyledListView {
+                    id: notesList
+                    objectName: "notesList"
+                    anchors.fill: parent
+                    anchors.margins: Appearance.spacing.space100
+                    clip: true
+                    spacing: Appearance.spacing.space75
+                    model: Notes.list
+
+                    delegate: Rectangle {
+                        id: noteRow
+                        required property var modelData
+
+                        width: notesList.width
+                        implicitHeight: 40
+                        radius: Appearance.rounding.small
+                        color: noteRowArea.containsMouse
+                            ? Appearance.colors.colLayer2Hover
+                            : Appearance.colors.colLayer2
+
+                        MouseArea {
+                            id: noteRowArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.openNote(noteRow.modelData)
+                        }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: Appearance.spacing.space125
+                            anchors.rightMargin: Appearance.spacing.space50
+                            spacing: Appearance.spacing.space50
+
+                            StyledText {
+                                Layout.fillWidth: true
+                                // A note's body is user content read off disk;
+                                // StyledText is a bare Text and would render
+                                // markup in it without this.
+                                textFormat: Text.PlainText
+                                text: noteRow.modelData.content
+                                color: Appearance.colors.colOnLayer2
+                                elide: Text.ElideRight
+                                maximumLineCount: 1
+                            }
+
+                            RippleButton {
+                                id: deleteNoteButton
+                                objectName: "deleteNoteButton"
+                                Layout.alignment: Qt.AlignVCenter
+                                implicitWidth: 28
+                                implicitHeight: 28
+                                buttonRadius: Appearance.rounding.full
+                                onClicked: Notes.deleteNote(noteRow.modelData.id)
+
+                                contentItem: MaterialSymbol {
+                                    anchors.centerIn: parent
+                                    horizontalAlignment: Text.AlignHCenter
+                                    text: "delete"
+                                    iconSize: Appearance.font.pixelSize.normal
+                                    color: Appearance.colors.colOnLayer2
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
-    }
 
-    // Debounced autosave: coalesce rapid edits into one write ~500ms after the
-    // last keystroke, matching the overlay notes editor.
-    Timer {
-        id: saveDebounce
-        interval: 500
-        repeat: false
-        onTriggered: noteFile.setText(noteArea.text)
-    }
+        ColumnLayout {
+            id: editPage
+            anchors.fill: parent
+            anchors.margins: Appearance.spacing.space200
+            spacing: Appearance.spacing.space150
+            visible: root.mode === "edit"
 
-    // Single persistent scratchpad shared with the overlay notes editor. Reloads
-    // on external change, but never overwrites text while the user is typing here.
-    FileView {
-        id: noteFile
-        path: Qt.resolvedUrl(Directories.notesPath)
-        watchChanges: true
-        onFileChanged: reload()
-        onLoaded: {
-            if (!noteArea.activeFocus && noteArea.text !== noteFile.text())
-                noteArea.text = noteFile.text();
-            root.ready = true;
-        }
-        onLoadFailed: error => {
-            if (error === FileViewError.FileNotFound) {
-                noteFile.setText("");
-            } else {
-                console.log("[Notes] Error loading file: " + error);
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Appearance.spacing.space100
+
+                RippleButton {
+                    id: backButton
+                    implicitWidth: 30
+                    implicitHeight: 30
+                    buttonRadius: Appearance.rounding.full
+                    onClicked: root.saveAndBack()
+
+                    contentItem: MaterialSymbol {
+                        anchors.centerIn: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        text: "arrow_back"
+                        iconSize: Appearance.font.pixelSize.normal
+                        color: Appearance.colors.colOnSecondaryContainer
+                    }
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: root.editingId.length === 0 ? Translation.tr("New note") : Translation.tr("Edit note")
+                    font.family: Appearance.font.family.expressive
+                    font.pixelSize: Appearance.font.pixelSize.normal
+                    font.weight: Font.DemiBold
+                    color: Appearance.colors.colOnSecondaryContainer
+                }
+
+                ToolbarPairedFab {
+                    id: saveNoteButton
+                    objectName: "saveNoteButton"
+                    Layout.alignment: Qt.AlignVCenter
+                    baseSize: 34
+                    iconText: "save"
+                    onClicked: root.saveAndBack()
+                }
             }
-            root.ready = true;
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Appearance.rounding.normal
+                color: root.colSurface
+
+                ScrollView {
+                    anchors.fill: parent
+                    anchors.margins: Appearance.spacing.space100
+                    clip: true
+
+                    StyledTextArea {
+                        id: editArea
+                        objectName: "editArea"
+                        background: null
+                        wrapMode: TextEdit.Wrap
+                        // Same reason as the list row: never interpret a note's
+                        // own text as markup.
+                        textFormat: TextEdit.PlainText
+                        placeholderText: Translation.tr("Jot a note…")
+                        color: Appearance.colors.colOnLayer1
+                    }
+                }
+            }
         }
     }
 }

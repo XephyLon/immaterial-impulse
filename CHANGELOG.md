@@ -42,6 +42,32 @@ own repo; the installer pins which revision it builds.
   migration ran earlier, and those are exactly the people who still need this.
 
 ### Changed
+- **Notes are a list of notes again, not one scratchpad — and both notes
+  surfaces now share it.** The notes desktop widget and the overlay notes
+  editor (`Super`-summoned overlay) used to share a single plaintext file, so
+  there was only ever one note. They now share a JSON array of separate notes,
+  stored in the same file as before
+  (`~/.local/state/quickshell/user/notes.txt`). **What happens to your existing
+  text:**
+  - Whatever is in your scratchpad today becomes your first note, word for
+    word. Nothing is deleted, and a file that cannot be parsed is kept as a
+    note rather than reset.
+  - If you used the old built-in notes widget (removed earlier in this cycle),
+    the notes it kept in `~/.local/state/quickshell/user/desktopnotes.txt` are
+    **imported back** and will reappear alongside your scratchpad. That import
+    runs exactly once; notes you delete afterwards stay deleted.
+  - `desktopnotes.txt` is read and then left alone forever — it is never
+    modified or removed, so it remains your own copy of those notes.
+  - `notes.txt` now contains JSON rather than raw text. If you edit or sync it
+    by hand, expect an array of `{ id, content, attachments, createdAt }`.
+    Replacing it with plain text is safe: it is read back as a single note.
+  The desktop widget gets a list of notes, an add button, a per-note delete
+  button and a flip to a full-size editor. Swipe-to-delete and the old
+  per-note colour cycling from the removed built-in were **not** restored. The
+  overlay editor keeps its editor and its copyable-bullet buttons, and gains a
+  strip of note chips plus add and delete buttons, so it can reach every note
+  instead of only the first. Adding, editing or deleting a note in one surface
+  shows up in the other immediately.
 - A fresh install now ships the clock and the visualizer on its desktop, not
   the calendar. Both of the two sit at an edge - the clock centred, the
   visualizer full-bleed along the bottom - so neither claims a tile the user

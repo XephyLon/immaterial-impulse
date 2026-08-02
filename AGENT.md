@@ -174,6 +174,11 @@ services/                  Singletons wrapping external state/processes - one pe
                               (e.g. per-monitor special-workspace state)
   HyprlandXkb.qml              Tracks active keyboard layout via Hyprland's `activelayout` IPC event
   Notifications.qml            org.freedesktop.Notifications server + notification history
+  Notes.qml                    The note store: a JSON array in Directories.notesPath. Sole owner -
+                              the bundled `notes` desktop plugin (one instance per monitor) and the
+                              overlay notes editor both go through it rather than opening the file,
+                              and it imports the legacy desktopnotes.txt array once
+                              (Config.options.notes.importedLegacyStore) without ever writing to it
   Brightness.qml, Battery.qml, Hyprsunset.qml, Network.qml, BluetoothStatus.qml, TrayService.qml,
   MprisController.qml, Weather.qml, Docker.qml, ... (one per integration)
 

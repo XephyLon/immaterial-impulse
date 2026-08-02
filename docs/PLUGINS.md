@@ -46,6 +46,14 @@ superset: the built-in resources widget swapped its third card to the battery on
 `nandoroid_system_monitor` did not, so that branch was ported into the plugin (its **Battery
 instead of disk** option) rather than lost.
 
+The `notes` dedup was the other place the survivor was not a superset: the built-in kept a list of
+discrete notes, the plugin kept one plaintext scratchpad, and the dedup flattened the model. Notes
+are a JSON array again, and the plugin does **not** own that file — `services/Notes.qml` does, and
+the plugin (one instance per monitor) and the overlay notes editor both read and write it through
+that singleton. A desktop widget that needs shared, multi-surface state should take the same shape:
+a service singleton owning the file, the widget owning only its view of it. A `FileView` in the
+widget is one writer per monitor.
+
 Bundled packages are **not** auto-discovered. `PluginManager.qml` needs both a `FileView` per
 package and that view's id inside `rebuildFromLoadedFiles()`; miss either half and the plugin
 silently never exists. `tests/test_widget_plugin_migration.py` guards both halves. Adding a package

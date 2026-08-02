@@ -135,6 +135,28 @@ if ! python3 "$SCRIPT_DIR/test_widget_plugin_migration.py"; then
     exit 1
 fi
 
+echo "Running notes store contract tests..."
+if ! python3 "$SCRIPT_DIR/test_notes_store_contract.py"; then
+    echo "Notes store contract tests failed."
+    exit 1
+fi
+
+# Launches a real Quickshell against throwaway XDG dirs, so it skips where
+# there is no Wayland display - notably CI.
+echo "Running notes migration runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_notes_migration_runtime.py"; then
+    echo "Notes migration runtime tests failed."
+    exit 1
+fi
+
+# Brings its own headless weston, so it needs no display of its own - but it
+# does need weston, and skips without it.
+echo "Running notes surfaces runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_notes_surfaces_runtime.py"; then
+    echo "Notes surfaces runtime tests failed."
+    exit 1
+fi
+
 echo "Running plugin installer tests..."
 if ! python3 "$SCRIPT_DIR/test_plugin_installer.py"; then
     echo "Plugin installer tests failed."
