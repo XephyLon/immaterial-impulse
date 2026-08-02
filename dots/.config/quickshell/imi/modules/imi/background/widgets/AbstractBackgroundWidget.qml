@@ -40,12 +40,11 @@ AbstractWidget {
     // something the user deliberately pinned, in either direction.
     //
     // `clickThrough` is the stronger of the two - the widget leaves pointer
-    // routing altogether. `enabled` cascades down the item tree and Qt skips
-    // disabled items when delivering mouse events, so the click continues to
-    // whatever sits behind the widget *within the same surface*: on the
-    // background that is the desktop's own right-click area (Background.qml).
-    // This is deliberately not a Wayland input region - the surface is shared
-    // by every desktop widget, and masking it would blind all of them at once.
+    // routing altogether, so the click continues to whatever sits behind it
+    // *within the same surface*: on the background that is the desktop's own
+    // right-click area (Background.qml). This is deliberately not a Wayland
+    // input region - the surface is shared by every desktop widget, and masking
+    // it would blind all of them at once.
     //
     // Dragging is pointer input, so a click-through widget is necessarily
     // locked as well; the reverse does not hold, and a locked-but-clickable
@@ -54,6 +53,38 @@ AbstractWidget {
     property bool clickThrough: false
     readonly property bool interactionLocked: clickThrough || positionLocked
         || Config.options.background.widgetsLocked
+
+    // Two gates, because one property name means two different things here and
+    // neither covers the other.
+    //
+    // This root is a `MouseArea` (AbstractWidget), and `MouseArea.enabled` is
+    // MouseArea's own property shadowing `Item.enabled`: it stops *this* area
+    // handling events - the drag, and the right-click that toggles the global
+    // lock - and disables nothing underneath it. It is still needed: without
+    // it a click-through widget would swallow the right-click meant for the
+    // desktop menu and flip the global lock with it.
+    //
+    // A plain `Item` does cascade `enabled` to its whole subtree, and Qt skips
+    // disabled items when routing pointer events. So everything a subclass
+    // declares is parented into one, and that Item carries the same gate - the
+    // half that was missing, which left any control a widget drew for itself
+    // (a plugin's buttons, a text field) taking clicks with click-through on.
+    //
+    // The gate is `clickThrough`, not `interactionLocked`: pinning a widget
+    // must not deaden its controls, which is the entire reason the lock and
+    // click-through are two switches instead of one.
+    //
+    // `contentItem` fills this widget and takes no part in sizing it, so
+    // geometry is unchanged - PluginWidget still derives its own width and
+    // height from PluginNode's implicit size, and PluginNode's Loader stays
+    // unanchored (anchoring it is a binding loop).
+    default property alias contentData: contentItem.data
+
+    Item {
+        id: contentItem
+        anchors.fill: parent
+        enabled: !root.clickThrough
+    }
 
     enabled: !clickThrough
     draggable: placementStrategy === "free" && !interactionLocked
