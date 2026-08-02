@@ -12,6 +12,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- Super+Alt+Space (window float toggle) no longer also switches the keyboard
+  layout. The shipped default config still carried `input.kbOptions =
+  grp:win_space_toggle` even after the layout switch was moved to a compositor
+  bind — xkb `grp:` toggles match modifiers loosely, so Super+Space fired with
+  Alt held too. Fresh installs now seed `kbOptions = ""`; Super+Space runs only
+  the exact-matching `switchxkblayout all next` bind, which cycles the real
+  `us, eg` layout list and reverses cleanly.
+
 ## [0.11.0] — 2026-08-02
 
 ### Changed
