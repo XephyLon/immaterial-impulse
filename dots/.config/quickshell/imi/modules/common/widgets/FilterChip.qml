@@ -35,6 +35,10 @@ RippleButton {
                 : Appearance.colors.colOnLayer2
         }
         StyledText {
+            // A chip label can be user content - the overlay notes editor
+            // labels its chips with the note's own first line - and StyledText
+            // is a bare Text, so it would render markup found in one.
+            textFormat: Text.PlainText
             text: chip.label
             font.pixelSize: Appearance.font.pixelSize.smaller
             color: chip.toggled
