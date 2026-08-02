@@ -12,6 +12,15 @@ Singleton {
     property alias options: configOptionsJsonAdapter
     property bool ready: false
     property int readWriteDelay: 50 // milliseconds
+
+    // Forwarded to FileView.blockWrites, which means "block the calling thread
+    // until the write completes" - NOT "do not write". The whole block* family
+    // names a threading mode, not a permission. Setting this to stop the shell
+    // touching config.json looks right, passes review, and writes the file
+    // anyway; to actually not write, gate the call sites (see the write timer
+    // and onLoadFailed below, which is how configDirTimedOut does it).
+    // killDialog.qml is the only user and wants exactly the documented
+    // behaviour - see the comment there.
     property bool blockWrites: false
 
     // Built-in desktop widgets became bundled plugins. Existing installs carry
