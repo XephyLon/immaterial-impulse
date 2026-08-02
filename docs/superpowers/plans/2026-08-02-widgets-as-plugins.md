@@ -309,6 +309,76 @@ none were in the original recipe.
     separate decision from the dedup — but it can only be *made* if the paths
     were written down at deletion time. *Found by the Task 4 dedups.*
 
+15. **A multi-file package needs a `qmldir`, and the failure names the wrong
+    thing.** Every port so far was one `Widget.qml`; the clock is nineteen
+    files. Dropping them next to `Widget.qml` compiles nothing: a bundled
+    package is loaded by absolute path through Quickshell's `qs:` URL scheme,
+    under which Qt adds no usable implicit import for the containing directory,
+    and `bundled/` is not scanned into the `qs.modules.*` tree either, so
+    `import qs.modules.common.plugins.bundled.<pkg>` reports "module is not
+    installed". Add a `qmldir` naming every component; a subdirectory is its own
+    module and needs its own `qmldir` plus an explicit `import "subdir"` in the
+    parent. Measured all four combinations: **the `qmldir` is the required half
+    and `import "."` is not**, which matters because the bundled `docker`
+    package carries both and copying it teaches the wrong lesson.
+
+    What makes this expensive is the diagnostic. Only the **first** unresolved
+    type per file is reported, so nineteen broken files produced exactly one
+    line in the log - `PixelClock is not a type` - which reads as one bad
+    component rather than a package that never compiled at all. Enumerating each
+    file with `Qt.createComponent(...).errorString()` from a non-visual
+    `Scope` probe is what turned one misleading line into the real list.
+
+16. **The whole-desktop behaviours a built-in set on itself have no plugin
+    equivalent, and one of them is the lock screen.** `AbstractBackgroundWidget`
+    gives a built-in three things a plugin's `Widget.qml` cannot reach, because
+    it is a grandchild of one rather than a subclass:
+
+    - `visibleWhenLocked`. The clock overrode it to `true`; a plugin inherits
+      `lock.showWidgets`, which **defaults to false**. `LockSurface` draws the
+      password field and nothing else, so the desktop clock *is* the lock
+      screen's clock - ported naively, locking the screen leaves no clock at
+      all, and the suite, the log and the unlocked desktop all look perfect.
+    - `forceCenter` (`lock.centerClock`, on by default), which overrides the
+      host's x/y while locked.
+    - `needsColText`, which gates the least-busy-region pass whose real output
+      for a free-placed widget is `dominantColor` -> `colText`: the colour a
+      widget that draws no panel needs to stay readable over the wallpaper.
+
+    Resolved by having `PluginNode` carry host context down (`hostX`, `hostY`,
+    `hostColText`, `wallpaperSafetyTriggered`) and read the three opt-ins back
+    off the item, keyed on the property existing - the same shape as
+    `screenName`/`blurRegions`/`managesBlurTint`. Two traps inside the fix:
+    `forceCenter` must be reapplied in `restoreXYBinding()` as well as bound on
+    x/y, or one drag kills centring for the session; and `needsColText` arrives
+    *after* the host loads, so it needs its own `refreshPlacementIfNeeded()`
+    trigger. *Found by the clock port.*
+
+17. **Gap 14's "carry the data" has a third case: the position.** Every port
+    before the clock let the first enable land on the host's default x/y 100,
+    correctly - those widgets were off, so the migration was placing something
+    new. The clock ships **on**, so the same reset does not place a widget, it
+    *moves* one the user has had somewhere deliberate. Measured on the live
+    machine: 1896,240 -> 100,100 on a 5120px desktop, i.e. from the middle of
+    the screen into the top-left corner under everything else. A migration that
+    carries settings should carry the position too when the widget was already
+    enabled.
+
+    The mechanism has a second lesson. `Config` cannot write `plugin-state.json`
+    and cannot import `PluginState` (that module imports `Config` back), so the
+    migration has to be split: Config computes a batch onto a plain property,
+    PluginState drains it once both files are ready. **The drain re-enters
+    itself** - clearing the pending property re-emits the signal it is connected
+    to while the marker is still false - and the resulting stack overflow is
+    reported as `RangeError: Maximum call stack size exceeded` attributed to
+    whatever unrelated file was next on the stack (`DockerService.qml`, here),
+    so it does not read as a migration bug at all. It needs an explicit
+    re-entrancy guard.
+
+    Also: give the settings migration **its own marker**. `migratedDesktopWidgets`
+    is already true on every install that has launched this branch once, so
+    reusing it excludes exactly the installs the migration exists for.
+
 ---
 
 ## Task 1: One-shot migration from `background.widgets.*` to `plugins.enabled`
@@ -638,7 +708,7 @@ The largest single piece: 19 files, ~1350 lines, four styles (cookie, digital, p
 - Modify: `dots/.config/quickshell/imi/modules/imi/background/Background.qml`
 - Delete: `dots/.config/quickshell/imi/modules/imi/background/widgets/clock/` (19 files)
 
-- [ ] **Step 1: Rewrite the manifest, without `grid`**
+- [x] **Step 1: Rewrite the manifest, without `grid`**
 
 ```json
 {
@@ -652,23 +722,23 @@ The largest single piece: 19 files, ~1350 lines, four styles (cookie, digital, p
 
 Set `defaultWidth`/`defaultHeight` from the built-in's actual size. Note the `id` stays `clock`, matching the Task 1 migration mapping, and the version goes to `2.0.0` because this replaces the declarative-JSON plugin of the same id.
 
-- [ ] **Step 2: Move the clock sources into the plugin**
+- [x] **Step 2: Move the clock sources into the plugin**
 
 Move all 19 files from `modules/imi/background/widgets/clock/` into `modules/common/plugins/bundled/clock/`, renaming `ClockWidget.qml` to `Widget.qml` and fixing the imports. Keep the subdirectory structure (`dateIndicator/`, `minuteMarks/`).
 
-- [ ] **Step 3: Convert the style options**
+- [x] **Step 3: Convert the style options**
 
 The built-in reads `Config.options.background.widgets.clock.{cookie,digital,pixel,quote}` and nested font config. Convert each read to `PluginState.option("clock", "<key>", <default>)`, and declare the corresponding `options` in the manifest so they appear in the widget's settings panel. List every option you moved in the commit message.
 
-- [ ] **Step 4: Remove the built-in and verify all four styles**
+- [x] **Step 4: Remove the built-in and verify all four styles**
 
 Delete the `ClockWidget` `FadeLoader` and the old directory. Then verify **each style renders**: cookie, digital, pixel, and the quote overlay, plus each date-indicator variant. This is the one port where a regression is easy to miss, because only one style is visible at a time.
 
-- [ ] **Step 5: Confirm there is exactly one clock**
+- [x] **Step 5: Confirm there is exactly one clock**
 
 In Settings → Widgets, confirm a single `Clock` entry. If two appear, the old `clock_plugin` manifest is still being discovered — find and remove it.
 
-- [ ] **Step 6: Suite, live check, commit**
+- [x] **Step 6: Suite, live check, commit**
 
 As Task 2 steps 6–8. Commit message: `feat(widgets): port the desktop clock to a bundled plugin, retiring clock_plugin`.
 
