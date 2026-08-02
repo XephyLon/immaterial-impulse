@@ -342,6 +342,15 @@ if ! python3 "$SCRIPT_DIR/test_ydotool_contract.py"; then
     exit 1
 fi
 
+# Brings its own headless weston and fake hyprsunset/hyprctl/pidof binaries, so
+# it needs no display of its own and never touches the caller's screen - but it
+# does need weston, and skips without it.
+echo "Running night light state runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_nightlight_state_runtime.py"; then
+    echo "Night light state runtime tests failed."
+    exit 1
+fi
+
 echo "Running brightness/system info contract tests..."
 if ! python3 "$SCRIPT_DIR/test_brightness_systeminfo_contract.py"; then
     echo "brightness/system info contract tests failed."

@@ -4,15 +4,31 @@ import QtQuick
 import qs.modules.common
 import qs.services
 import Quickshell
-import Quickshell.Io
 import Quickshell.Hyprland
 
 /**
  * Night light service on hyprsunset (controlled via hyprctl).
  *
- * Automatic scheduling is opt-in going forward only: on startup we merely
- * SYNC with whatever is actually running (fetchState), we never force-enable
- * just because the clock happens to fall in the night window at load time.
+ * The shell owns the on/off state, because hyprsunset will not tell us. On
+ * 0.4.0 `hyprctl hyprsunset --help` lists exactly three requests -
+ * `temperature`, `gamma`, `identity` - and the daemon's own socket answers
+ * "invalid command" to everything else, so there is nothing to ask. The bare
+ * `temperature` request reports the last temperature the daemon was *told*,
+ * and `identity` (the off switch) never resets it: measured here, a daemon
+ * running as `hyprsunset --identity` with a perfectly neutral screen reports
+ * 6000, and a daemon put into identity after `temperature 5000` still reports
+ * 5000. "Off" and "on" are indistinguishable through it.
+ *
+ * So on/off intent is persisted (Persistent.states.night.temperatureActive,
+ * alongside idle.inhibit and record.enable) and re-*applied* at startup rather
+ * than probed. Applied, not merely displayed: after a reboot the daemon is
+ * gone, and within a session it may have been left in any state, so telling it
+ * what we believe is the only way the indicator and the screen can agree.
+ *
+ * Automatic scheduling is still opt-in going forward only. Startup restores
+ * the state the user last had and never consults the clock - we never
+ * force-enable just because the clock happens to fall in the night window at
+ * load time (see `firstEvaluation`).
  */
 Singleton {
     id: root
@@ -28,6 +44,7 @@ Singleton {
     property bool shouldBeOn
     property bool firstEvaluation: true
     property bool temperatureActive: false
+    property bool stateRestored: false
 
     property int fromHour: Number(from.split(":")[0])
     property int fromMinute: Number(from.split(":")[1])
@@ -69,7 +86,6 @@ Singleton {
 
         if (firstEvaluation) {
             firstEvaluation = false;
-            root.fetchState();
             return;
         }
         root.ensureState();
@@ -106,47 +122,69 @@ Singleton {
     }
 
     function load() {
-        root.startHyprsunset();
-        root.fetchState();
+        root.restoreState();
+    }
+
+    // Both loads are asynchronous and shell.qml calls load() from
+    // Component.onCompleted, so neither is normally there yet. Persistent
+    // holds the state to restore; Config holds the temperature to restore it
+    // *at*, and restoring without it launches the daemon at the fallback
+    // temperature and then corrects it over a hyprctl call that races the
+    // daemon's socket on a cold start - the failure startHyprsunset's launch
+    // flags exist to avoid.
+    readonly property bool readyToRestore: (Persistent.ready ?? false) && (Config.ready ?? false)
+    onReadyToRestoreChanged: root.restoreState()
+
+    function restoreState() {
+        if (root.stateRestored || !root.readyToRestore)
+            return;
+        root.stateRestored = true;
+        // Unlike idle.inhibit, this is restored across a compositor restart
+        // too (no `isNewHyprlandInstance` check): night light is a standing
+        // preference, and a new session means a daemon that has just come up
+        // knowing nothing, which is exactly when re-applying matters most.
+        if (Persistent.states.night.temperatureActive) {
+            root.enableTemperature();
+        } else {
+            root.disableTemperature();
+        }
     }
 
     function enableTemperature() {
         root.startHyprsunset(["--temperature", String(root.colorTemperature)]);
         Quickshell.execDetached(["bash", "-c", `hyprctl hyprsunset temperature ${root.colorTemperature}`]);
-        root.temperatureActive = true;
+        root.setActive(true);
     }
 
     function disableTemperature() {
+        // Mirrors enableTemperature deliberately: the launch flags cover a cold
+        // start (where the hyprctl call races the daemon's socket and can be
+        // lost), the hyprctl call covers a daemon that is already up.
+        root.startHyprsunset(["--identity"]);
         Quickshell.execDetached(["hyprctl", "hyprsunset", "identity"]);
-        root.temperatureActive = false;
+        root.setActive(false);
+    }
+
+    // The only writer of temperatureActive. hyprsunset cannot be asked what it
+    // is doing, so this value *is* the state - it has to reach disk, or the
+    // next launch has nothing to restore from and is back to guessing.
+    function setActive(active) {
+        root.temperatureActive = active;
+        Persistent.states.night.temperatureActive = active;
+    }
+
+    // The launch flags that reproduce the state we believe is applied, so a
+    // launch that is not itself a night-light change cannot silently reset it.
+    function currentStateArgs() {
+        return root.temperatureActive ? ["--temperature", String(root.colorTemperature)] : ["--identity"];
     }
 
     function setGamma(gamma) {
         root.gamma = Math.max(root.gammaLowerLimit, Math.min(100, gamma));
         root.gammaChangeAttempt();
 
-        root.startHyprsunset();
+        root.startHyprsunset(root.currentStateArgs());
         Quickshell.execDetached(["bash", "-c", `hyprctl hyprsunset gamma ${root.gamma}`]);
-    }
-
-    function fetchState() {
-        fetchProc.running = true;
-    }
-
-    Process {
-        id: fetchProc
-        running: true
-        command: ["bash", "-c", "hyprctl hyprsunset temperature"]
-        stdout: StdioCollector {
-            id: stateCollector
-            onStreamFinished: {
-                const output = stateCollector.text.trim();
-                if (output.length == 0 || output.startsWith("Couldn't"))
-                    root.temperatureActive = false;
-                else
-                    root.temperatureActive = (output != "6500");
-            }
-        }
     }
 
     function toggleTemperature(active = undefined) {

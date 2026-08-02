@@ -76,6 +76,22 @@ own repo; the installer pins which revision it builds.
   not already exist.
 
 ### Fixed
+- **The night light indicator now tells the truth, and your setting survives a
+  restart.** The toggle and the bar indicator could say night light was on with
+  a perfectly neutral screen, or off with a warm one. The shell was asking
+  `hyprsunset` what it was doing, and `hyprsunset` cannot answer: its only
+  requests are `temperature`, `identity` and `gamma`, and the `temperature`
+  query reports the last temperature the daemon was *told* — turning night light
+  off with `identity` never changes that number. The shell then compared it
+  against a hardcoded `6500`, which was never `hyprsunset`'s neutral to begin
+  with (it is the cool end of the Intensity slider; the daemon's own default is
+  6000 and its neutral is the identity matrix, not a temperature). The answer
+  was therefore wrong on essentially every restart. The shell now remembers
+  whether you had night light on and re-applies it on startup instead of
+  guessing — so the setting survives a reboot, and turning it off actually stays
+  off. Automatic scheduling is unchanged: startup restores what you last had and
+  never consults the clock, so it still does not switch itself on just because
+  you logged in after sunset.
 - **Click through only made half of a widget click-through.** A desktop widget
   switched to **Click through** stopped taking the drag and stopped swallowing
   the desktop's right-click menu — but every control the widget drew for itself
