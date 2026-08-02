@@ -15,12 +15,29 @@ ColumnLayout {
     // Host blur is a desktop-widget mechanism (PluginWidget frost); bar/
     // overlay-only plugins were getting a dead "Blur background" toggle.
     readonly property bool hasBlurSurface: manifest.desktopWidget !== undefined
+    // Lock and click-through are host behaviours too (AbstractBackgroundWidget),
+    // not plugin-authored options, so they are synthesized here alongside the
+    // blur row instead of being declared in a manifest `options` array. Their
+    // manifest fields - `desktopWidget.locked` / `desktopWidget.clickThrough` -
+    // only seed the default, which is what keeps a shipped default reversible.
     readonly property var optionRows: (hasBlurSurface ? [{
         key: "blurEnabled",
         type: "boolean",
         label: "Blur background",
         icon: "blur_on",
         default: manifest.blur?.default ?? (manifest.desktopWidget?.blur === true)
+    }, {
+        key: "positionLocked",
+        type: "boolean",
+        label: "Lock position",
+        icon: "lock",
+        default: manifest.desktopWidget?.locked === true
+    }, {
+        key: "clickThrough",
+        type: "boolean",
+        label: "Click through",
+        icon: "do_not_touch",
+        default: manifest.desktopWidget?.clickThrough === true
     }] : []).concat(manifest.options || [])
 
     // Not a pluginOption on purpose: preset application replaces those, and

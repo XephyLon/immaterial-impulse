@@ -46,6 +46,22 @@ AbstractBackgroundWidget {
     readonly property bool blurEnabled: manifest
         ? PluginState.option(manifest.id, "blurEnabled", manifest.desktopWidget?.blur === true)
         : false
+
+    // Per-widget lock and click-through (AbstractBackgroundWidget). Same shape
+    // as blurEnabled: the manifest seeds the default - a full-bleed widget with
+    // nothing to click, like the visualiser, ships `clickThrough` on - and
+    // PluginState carries the user's override, so a shipped default stays
+    // reversible from Settings > Widgets.
+    //
+    // These are bindings and nothing may assign them: a direct assignment kills
+    // the PluginState binding, and the value would then be frozen for the rest
+    // of the session while the settings toggle appears to do nothing.
+    positionLocked: manifest
+        ? PluginState.option(manifest.id, "positionLocked", manifest.desktopWidget?.locked === true)
+        : false
+    clickThrough: manifest
+        ? PluginState.option(manifest.id, "clickThrough", manifest.desktopWidget?.clickThrough === true)
+        : false
     // Frost mode is user-selectable: "blur" samples + blurs the wallpaper region
     // behind the widget; "tint" (any non-"blur" value) leaves the widget's own
     // translucent panel to show the sharp wallpaper through it.

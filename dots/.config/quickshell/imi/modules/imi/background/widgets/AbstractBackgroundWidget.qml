@@ -32,7 +32,31 @@ AbstractWidget {
         animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
     }
 
-    draggable: placementStrategy === "free" && !Config.options.background.widgetsLocked
+    // Per-widget interaction, layered over the one global toggle. Both default
+    // off, so a widget that sets neither behaves exactly as it did before.
+    //
+    // `positionLocked` pins this widget alone. It ORs with the global switch
+    // rather than overriding it: "Lock widget positions" must never *unlock*
+    // something the user deliberately pinned, in either direction.
+    //
+    // `clickThrough` is the stronger of the two - the widget leaves pointer
+    // routing altogether. `enabled` cascades down the item tree and Qt skips
+    // disabled items when delivering mouse events, so the click continues to
+    // whatever sits behind the widget *within the same surface*: on the
+    // background that is the desktop's own right-click area (Background.qml).
+    // This is deliberately not a Wayland input region - the surface is shared
+    // by every desktop widget, and masking it would blind all of them at once.
+    //
+    // Dragging is pointer input, so a click-through widget is necessarily
+    // locked as well; the reverse does not hold, and a locked-but-clickable
+    // widget (pinned media controls, say) stays a useful state.
+    property bool positionLocked: false
+    property bool clickThrough: false
+    readonly property bool interactionLocked: clickThrough || positionLocked
+        || Config.options.background.widgetsLocked
+
+    enabled: !clickThrough
+    draggable: placementStrategy === "free" && !interactionLocked
     // Overridable: subclasses with conditional positioning (e.g. the clock's
     // forceCenter) re-bind x/y with their own expression after a drag ends.
     function restoreXYBinding() {
