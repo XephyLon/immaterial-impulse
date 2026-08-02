@@ -135,6 +135,14 @@ if ! python3 "$SCRIPT_DIR/test_widget_plugin_migration.py"; then
     exit 1
 fi
 
+# Launches a real Quickshell against throwaway XDG dirs, so it skips where
+# there is no Wayland display - notably CI.
+echo "Running notes migration runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_notes_migration_runtime.py"; then
+    echo "Notes migration runtime tests failed."
+    exit 1
+fi
+
 echo "Running plugin installer tests..."
 if ! python3 "$SCRIPT_DIR/test_plugin_installer.py"; then
     echo "Plugin installer tests failed."

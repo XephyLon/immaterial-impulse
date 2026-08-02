@@ -971,6 +971,20 @@ Singleton {
                 property int timeout: 240 // seconds (mirror in hypridle.conf; must be < lock timeout)
             }
 
+            property JsonObject notes: JsonObject {
+                // Set once services/Notes.qml has folded the old desktop-notes
+                // store (Directories.desktopNotesPath, the array the deleted
+                // built-in notes widget wrote) into the live note array.
+                //
+                // That file is deliberately left on disk, so without a marker
+                // every launch would re-import it and any note the user deleted
+                // would come back. The plaintext-scratchpad half of the
+                // migration needs no marker: it is driven by the shape of the
+                // live store, which stops being plaintext the moment it is
+                // converted.
+                property bool importedLegacyStore: false
+            }
+
             property JsonObject notifications: JsonObject {
                 property int timeout: 7000
                 property string position: "top_right"
