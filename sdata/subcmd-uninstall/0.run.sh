@@ -21,9 +21,9 @@ pause
 if [[ -d /usr/share/sddm/themes/ii-sddm-theme ]]; then
   printf "${STY_CYAN}Undo install step 5 (ii-sddm-theme SDDM login theme)...\n${STY_RST}"
   if command -v curl >/dev/null; then
-    _sddm_ref="${SDDM_REF:-1d4bcb66647f750bcc14d73de025eae8dd1e3db7}"
+    _sddm_ref="${SDDM_REF:-05add894bd337c80c10f8c660e24db9ed4258a65}"
     _sddm_un="$(mktemp --suffix=-ii-sddm-uninstall.sh)"
-    if curl -fsSL "https://raw.githubusercontent.com/3d3f/ii-sddm-theme/${_sddm_ref}/uninstall.sh" -o "$_sddm_un"; then
+    if curl -fsSL "https://raw.githubusercontent.com/XephyLon/imi-sddm-theme/${_sddm_ref}/uninstall.sh" -o "$_sddm_un"; then
       bash "$_sddm_un" || printf "${STY_YELLOW}ii-sddm-theme uninstaller exited non-zero; remove it manually if needed.${STY_RST}\n"
     else
       printf "${STY_YELLOW}Could not fetch the ii-sddm-theme uninstaller. Remove manually: /usr/share/sddm/themes/ii-sddm-theme, /etc/sddm.conf.d/ii-sddm-theme.conf, ~/.config/ii-sddm-theme, its /etc/sudoers.d rule and its fonts.${STY_RST}\n"

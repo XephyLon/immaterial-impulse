@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
-# 5.sddm-theme.sh — OPTIONAL. Installs the ii-sddm-theme SDDM login theme
-# (https://github.com/3d3f/ii-sddm-theme) by fetching and running its own
-# upstream installer. No-op unless INSTALL_SDDM=1.
+# 5.sddm-theme.sh — OPTIONAL. Installs the SDDM login theme by fetching and
+# running its own installer. No-op unless INSTALL_SDDM=1.
+#
+# Points at XephyLon/imi-sddm-theme, our fork of 3d3f/ii-sddm-theme. The fork
+# exists for three reasons upstream could not serve, since it has had no commit
+# since 2026-06:
+#   - it resolved the shell config as ~/.config/illogical-impulse/config.json,
+#     a path that stopped existing when the shell was renamed, so its "ii +
+#     matugen" mode silently synced settings frozen at the rename;
+#   - every confirmation was a bare `read`, so an unattended caller EOF'd on
+#     the first prompt and the installer exited 0 having installed nothing;
+#   - it ignored Wallpaper Engine, so the greeter fell back to a stock
+#     background exactly when the desktop was at its least default.
 #
 # Like 4.wallpaperengine.sh, this is meant to be RUN (`bash 5.sddm-theme.sh`),
 # not sourced: it is self-contained and uses `exit 0` for the skip path, which
@@ -33,9 +43,9 @@ if ! command -v curl >/dev/null 2>&1; then
   exit 0
 fi
 
-SDDM_REPO_RAW="${SDDM_REPO_RAW:-https://raw.githubusercontent.com/3d3f/ii-sddm-theme}"
+SDDM_REPO_RAW="${SDDM_REPO_RAW:-https://raw.githubusercontent.com/XephyLon/imi-sddm-theme}"
 # Pin the installer for reproducibility. Bump this to adopt a newer ii-sddm-theme.
-SDDM_REF="${SDDM_REF:-1d4bcb66647f750bcc14d73de025eae8dd1e3db7}"
+SDDM_REF="${SDDM_REF:-05add894bd337c80c10f8c660e24db9ed4258a65}"
 SETUP_URL="${SDDM_REPO_RAW}/${SDDM_REF}/setup.sh"
 
 echo "[ImI] SDDM theme: fetching ii-sddm-theme installer (${SDDM_REF:0:12})..."
@@ -47,24 +57,20 @@ if ! curl -fsSL "$SETUP_URL" -o "$TMP_SETUP"; then
   exit 0
 fi
 
-echo "[ImI] SDDM theme: handing off to the upstream installer (interactive)..."
-# The upstream installer is purely interactive: its very first action is a
-# `read -p "Continue? [y/n]"`, and it has no non-interactive/env-driven mode.
-# If our stdin is not a terminal, that `read` gets EOF, falls to its default
-# case, and the installer exits 0 — silently installing nothing. This bites the
-# quiet install path, which runs the whole pipeline with stdin on /dev/null.
-# So: if stdin isn't a TTY, reconnect the installer to the controlling terminal
-# (/dev/tty) so its prompts still reach the user; if there is no controlling
-# terminal at all (truly headless/CI), skip loudly rather than silently abort.
-# Optional extra — never let a decline/failure abort the whole install.
-if [[ -t 0 ]]; then
-  bash "$TMP_SETUP" || echo "[ImI] SDDM theme: upstream installer exited non-zero (declined or error)."
-elif { : >/dev/tty; } 2>/dev/null; then
-  echo "[ImI] SDDM theme: stdin is not a terminal; reconnecting the installer to /dev/tty for its prompts."
-  bash "$TMP_SETUP" </dev/tty || echo "[ImI] SDDM theme: upstream installer exited non-zero (declined or error)."
-else
-  echo "[ImI] SDDM theme: the upstream installer is interactive but no terminal is available (stdin isn't a TTY and there is no controlling terminal); skipping." >&2
-  echo "[ImI] SDDM theme: to install it, run 'INSTALL_SDDM=1 sdata/subcmd-install/5.sddm-theme.sh' from a terminal." >&2
-  exit 0
-fi
+# The fork takes IMI_SDDM_ASSUME_YES and IMI_SDDM_MODE, so this runs unattended
+# and needs no terminal. Upstream had neither: every confirmation was a bare
+# `read`, so a caller whose stdin was not a tty hit EOF on the first prompt,
+# fell through to the default case and exited 0 - installing nothing, silently.
+# That is what the /dev/tty reconnection here used to work around.
+#
+# ii-matugen is the mode worth having: it syncs the shell's own settings,
+# wallpaper and colors to the greeter. The fork validates the mode against what
+# the run can actually offer, so if the shell config is not there yet it falls
+# back to asking rather than being forced into a state that cannot work.
+echo "[ImI] SDDM theme: handing off to the theme installer (unattended)..."
+# Optional extra - never let a decline/failure abort the whole install.
+IMI_SDDM_ASSUME_YES="${IMI_SDDM_ASSUME_YES:-1}" \
+IMI_SDDM_MODE="${IMI_SDDM_MODE:-ii-matugen}" \
+  bash "$TMP_SETUP" \
+  || echo "[ImI] SDDM theme: theme installer exited non-zero (declined or error)."
 echo "[ImI] SDDM theme: done."

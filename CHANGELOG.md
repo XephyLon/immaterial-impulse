@@ -13,6 +13,23 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **The login theme follows the desktop again, and installs unattended.** The
+  SDDM theme now comes from our fork (`XephyLon/imi-sddm-theme`). Upstream
+  resolved the shell's config at `~/.config/illogical-impulse/config.json`, a
+  path that stopped existing when the shell was renamed, so its "sync ii
+  settings" mode had been syncing a copy frozen at the rename. It also had no
+  non-interactive mode, so an unattended install EOF'd on its first prompt and
+  exited having installed nothing; and it ignored Wallpaper Engine entirely, so
+  the greeter fell back to a stock background exactly when the desktop was at
+  its least default — it now plays a WE video wallpaper directly, or uses the
+  still the shell renders for scene/web ones.
+- **Wallpaper changes reach the login screen again.** The theme registers its
+  trigger as a `post_hook` inside `~/.config/matugen/config.toml`, and the
+  installer deploys that file with `rsync --delete` from a copy that has no
+  such line — so every update deleted the hook and the greeter quietly froze.
+  The installer restores it after deploying, deriving the right variant from
+  what the theme actually installed.
+
 - **The pre-rename config directory is archived and removed instead of being
   left behind.** Migrating `~/.config/illogical-impulse` into
   `~/.config/immaterial-impulse` used to keep the old directory in place as a

@@ -4,6 +4,43 @@
 # shellcheck shell=bash
 
 #####################################################################################
+# The loop above deploys dots/.config/* with rsync --delete, and the SDDM login
+# theme keeps its trigger *inside* one of those files: its installer appends a
+# `post_hook` to ~/.config/matugen/config.toml so the greeter's background and
+# colors are regenerated on every wallpaper change. We ship our own
+# config.toml without that line, so each update deleted the hook and the login
+# screen quietly froze at whatever it looked like when the theme was installed.
+#
+# Put it back if the theme is installed. Idempotent, and it re-derives the mode
+# rather than assuming: generate_settings.py is only present for the
+# ii+matugen mode, which additionally syncs the shell's own settings.
+restore_sddm_matugen_hook(){
+  local theme_dir="${XDG_CONFIG_HOME}/ii-sddm-theme"
+  local matugen_conf="${XDG_CONFIG_HOME}/matugen/config.toml"
+  local apply="${theme_dir}/sddm-theme-apply.sh"
+
+  [[ -f "$apply" && -f "$matugen_conf" ]] || return 0
+  grep -q '^post_hook' "$matugen_conf" && return 0
+
+  local hook
+  if [[ -f "${theme_dir}/generate_settings.py" ]]; then
+    hook="python3 ~/.config/ii-sddm-theme/generate_settings.py && sudo ~/.config/ii-sddm-theme/sddm-theme-apply.sh &"
+  else
+    hook="sudo ~/.config/ii-sddm-theme/sddm-theme-apply.sh &"
+  fi
+
+  # Belongs under [config]; matugen reads it from there.
+  # The hook ends in `&` to background it, and `&` in a sed replacement means
+  # "the whole match" - unescaped it expands to the literal text [config].
+  local hook_sed="${hook//&/\\&}"
+  if grep -q '^\[config\]' "$matugen_conf"; then
+    sed -i "0,/^\[config\]/s|^\[config\]|[config]\npost_hook = '${hook_sed}'|" "$matugen_conf"
+  else
+    printf '[config]\npost_hook = %s\n' "'${hook}'" >> "$matugen_conf"
+  fi
+  echo -e "${STY_BLUE}[$0]: restored the SDDM theme's matugen post_hook (our config.toml sync removes it).${STY_RST}"
+}
+
 # MISC (For dots/.config/* but not quickshell, not fish, not Hyprland, not fontconfig)
 case "${SKIP_MISCCONF}" in
   true) true;;
@@ -16,6 +53,7 @@ case "${SKIP_MISCCONF}" in
       fi
     done
     install_dir "dots/.local/share/konsole" "${XDG_DATA_HOME}"/konsole
+    restore_sddm_matugen_hook
     ;;
 esac
 
