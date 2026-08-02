@@ -152,9 +152,9 @@ ColumnLayout {
                     from: optionLoader.optionData.from ?? 0
                     to: optionLoader.optionData.to ?? 100
                     value: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)
-                    onValueChanged: {
+                    onValueModified: {
                         const step = optionLoader.optionData.step ?? 1;
-                        const rounded = Math.round(value / step) * step;
+                        const rounded = Math.round(newValue / step) * step;
                         if (rounded !== PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default))
                             PluginState.setOption(root.manifest.id, optionLoader.optionData.key, rounded);
                     }

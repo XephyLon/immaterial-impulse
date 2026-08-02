@@ -178,7 +178,7 @@ Item {
                     from: 400
                     to: 800
                     stopIndicatorValues: [400]
-                    onValueChanged: Config.options.background.centeredWallpaperSize = value
+                    onValueModified: Config.options.background.centeredWallpaperSize = newValue
                 }
             }
         }

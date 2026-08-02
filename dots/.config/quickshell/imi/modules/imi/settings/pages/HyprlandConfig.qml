@@ -156,8 +156,8 @@ ContentPage {
                         text: Translation.tr("Scale")
                         value: Math.round((monitorConfig.monitors[monitorCanvas.selectedIndex]?.scale ?? 1.0) * 100)
                         from: 50; to: 300; stepSize: 25
-                        onValueChanged: {
-                            const newVal = value / 100.0
+                        onValueModified: {
+                            const newVal = newValue / 100.0
                             if (newVal === (monitorConfig.monitors[monitorCanvas.selectedIndex]?.scale ?? 1.0)) return
                             monitorConfig.updateMonitor(monitorCanvas.selectedIndex, { scale: newVal })
                             monitorConfig.applyAndSave(monitorCanvas.selectedIndex)
@@ -169,9 +169,9 @@ ContentPage {
                         text: Translation.tr("Position X")
                         value: monitorConfig.monitors[monitorCanvas.selectedIndex]?.x ?? 0
                         from: 0; to: 7680; stepSize: 1
-                        onValueChanged: {
-                            if (value === (monitorConfig.monitors[monitorCanvas.selectedIndex]?.x ?? 0)) return
-                            monitorConfig.updateMonitor(monitorCanvas.selectedIndex, { x: value })
+                        onValueModified: {
+                            if (newValue === (monitorConfig.monitors[monitorCanvas.selectedIndex]?.x ?? 0)) return
+                            monitorConfig.updateMonitor(monitorCanvas.selectedIndex, { x: newValue })
                             monitorConfig.applyAndSave(monitorCanvas.selectedIndex)
                         }
                     }
@@ -181,9 +181,9 @@ ContentPage {
                         text: Translation.tr("Position Y")
                         value: monitorConfig.monitors[monitorCanvas.selectedIndex]?.y ?? 0
                         from: 0; to: 4320; stepSize: 1
-                        onValueChanged: {
-                            if (value === (monitorConfig.monitors[monitorCanvas.selectedIndex]?.y ?? 0)) return
-                            monitorConfig.updateMonitor(monitorCanvas.selectedIndex, { y: value })
+                        onValueModified: {
+                            if (newValue === (monitorConfig.monitors[monitorCanvas.selectedIndex]?.y ?? 0)) return
+                            monitorConfig.updateMonitor(monitorCanvas.selectedIndex, { y: newValue })
                             monitorConfig.applyAndSave(monitorCanvas.selectedIndex)
                         }
                     }
@@ -277,10 +277,10 @@ ContentPage {
                         text: Translation.tr("Repeat delay (ms)")
                         value: Config.options.hyprland.input.repeatDelay
                         from: 100; to: 1000; stepSize: 10
-                        onValueChanged: {
-                            if (value === Config.options.hyprland.input.repeatDelay) return
-                            Config.options.hyprland.input.repeatDelay = value
-                            HyprlandConfig.set("input:repeat_delay", value)
+                        onValueModified: {
+                            if (newValue === Config.options.hyprland.input.repeatDelay) return
+                            Config.options.hyprland.input.repeatDelay = newValue
+                            HyprlandConfig.set("input:repeat_delay", newValue)
                         }
                     }
 
@@ -289,10 +289,10 @@ ContentPage {
                         text: Translation.tr("Repeat rate")
                         value: Config.options.hyprland.input.repeatRate
                         from: 10; to: 100; stepSize: 1
-                        onValueChanged: {
-                            if (value === Config.options.hyprland.input.repeatRate) return
-                            Config.options.hyprland.input.repeatRate = value
-                            HyprlandConfig.set("input:repeat_rate", value)
+                        onValueModified: {
+                            if (newValue === Config.options.hyprland.input.repeatRate) return
+                            Config.options.hyprland.input.repeatRate = newValue
+                            HyprlandConfig.set("input:repeat_rate", newValue)
                         }
                     }
                     ConfigSelectionArray {
@@ -354,8 +354,8 @@ ContentPage {
                         text: Translation.tr("Scroll factor")
                         value: Math.round(Config.options.hyprland.input.touchpad.scrollFactor * 10)
                         from: 1; to: 30; stepSize: 1
-                        onValueChanged: {
-                            const newVal = value / 10.0
+                        onValueModified: {
+                            const newVal = newValue / 10.0
                             if (newVal === Config.options.hyprland.input.touchpad.scrollFactor) return
                             Config.options.hyprland.input.touchpad.scrollFactor = newVal
                             HyprlandConfig.set("input:touchpad:scroll_factor", newVal)
@@ -377,10 +377,10 @@ ContentPage {
                     text: Translation.tr("Window Rounding")
                     value: Config.options.hyprland.decoration.rounding
                     from: 0; to: 30; stepSize: 1
-                    onValueChanged: {
-                        if (value === Config.options.hyprland.decoration.rounding) return
-                        Config.options.hyprland.decoration.rounding = value
-                        HyprlandConfig.set("decoration:rounding", value)
+                    onValueModified: {
+                        if (newValue === Config.options.hyprland.decoration.rounding) return
+                        Config.options.hyprland.decoration.rounding = newValue
+                        HyprlandConfig.set("decoration:rounding", newValue)
                     }
                 }
 
@@ -389,10 +389,10 @@ ContentPage {
                     text: Translation.tr("Border Size")
                     value: Config.options.hyprland.general.borderSize
                     from: 0; to: 10; stepSize: 1
-                    onValueChanged: {
-                        if (value === Config.options.hyprland.general.borderSize) return
-                        Config.options.hyprland.general.borderSize = value
-                        HyprlandConfig.set("general:border_size", value)
+                    onValueModified: {
+                        if (newValue === Config.options.hyprland.general.borderSize) return
+                        Config.options.hyprland.general.borderSize = newValue
+                        HyprlandConfig.set("general:border_size", newValue)
                     }
                 }
 
@@ -401,10 +401,10 @@ ContentPage {
                     text: Translation.tr("Gaps In")
                     value: Config.options.hyprland.general.gapsIn
                     from: 0; to: 40; stepSize: 1
-                    onValueChanged: {
-                        if (value === Config.options.hyprland.general.gapsIn) return
-                        Config.options.hyprland.general.gapsIn = value
-                        HyprlandConfig.set("general:gaps_in", value)
+                    onValueModified: {
+                        if (newValue === Config.options.hyprland.general.gapsIn) return
+                        Config.options.hyprland.general.gapsIn = newValue
+                        HyprlandConfig.set("general:gaps_in", newValue)
                     }
                 }
 
@@ -413,10 +413,10 @@ ContentPage {
                     text: Translation.tr("Gaps Out")
                     value: Config.options.hyprland.general.gapsOut
                     from: 0; to: 60; stepSize: 1
-                    onValueChanged: {
-                        if (value === Config.options.hyprland.general.gapsOut) return
-                        Config.options.hyprland.general.gapsOut = value
-                        HyprlandConfig.set("general:gaps_out", value)
+                    onValueModified: {
+                        if (newValue === Config.options.hyprland.general.gapsOut) return
+                        Config.options.hyprland.general.gapsOut = newValue
+                        HyprlandConfig.set("general:gaps_out", newValue)
                     }
                 }
 
@@ -425,8 +425,8 @@ ContentPage {
                     text: Translation.tr("Active Opacity")
                     value: Math.round(Config.options.hyprland.decoration.activeOpacity * 100)
                     from: 10; to: 100; stepSize: 5
-                    onValueChanged: {
-                        const newVal = value / 100.0
+                    onValueModified: {
+                        const newVal = newValue / 100.0
                         if (newVal === Config.options.hyprland.decoration.activeOpacity) return
                         Config.options.hyprland.decoration.activeOpacity = newVal
                         HyprlandConfig.set("decoration:active_opacity", newVal)
@@ -438,8 +438,8 @@ ContentPage {
                     text: Translation.tr("Inactive Opacity")
                     value: Math.round(Config.options.hyprland.decoration.inactiveOpacity * 100)
                     from: 10; to: 100; stepSize: 5
-                    onValueChanged: {
-                        const newVal = value / 100.0
+                    onValueModified: {
+                        const newVal = newValue / 100.0
                         if (newVal === Config.options.hyprland.decoration.inactiveOpacity) return
                         Config.options.hyprland.decoration.inactiveOpacity = newVal
                         HyprlandConfig.set("decoration:inactive_opacity", newVal)
@@ -473,10 +473,10 @@ ContentPage {
                     infoText: Translation.tr("Blur radius, in pixels. Larger values blur further but cost more to render.")
                     value: Config.options.hyprland.decoration.blur.size
                     from: 0; to: 100; stepSize: 1
-                    onValueChanged: {
-                        if (value === Config.options.hyprland.decoration.blur.size) return
-                        Config.options.hyprland.decoration.blur.size = value
-                        HyprlandConfig.set("decoration:blur:size", value)
+                    onValueModified: {
+                        if (newValue === Config.options.hyprland.decoration.blur.size) return
+                        Config.options.hyprland.decoration.blur.size = newValue
+                        HyprlandConfig.set("decoration:blur:size", newValue)
                     }
                 }
 
@@ -486,10 +486,10 @@ ContentPage {
                     infoText: Translation.tr("How many blur passes to perform. More passes look smoother and cost more.")
                     value: Config.options.hyprland.decoration.blur.passes
                     from: 0; to: 10; stepSize: 1
-                    onValueChanged: {
-                        if (value === Config.options.hyprland.decoration.blur.passes) return
-                        Config.options.hyprland.decoration.blur.passes = value
-                        HyprlandConfig.set("decoration:blur:passes", value)
+                    onValueModified: {
+                        if (newValue === Config.options.hyprland.decoration.blur.passes) return
+                        Config.options.hyprland.decoration.blur.passes = newValue
+                        HyprlandConfig.set("decoration:blur:passes", newValue)
                     }
                 }
 
@@ -535,8 +535,8 @@ ContentPage {
                     infoText: Translation.tr("How much noise to mix into the blur, which hides colour banding.")
                     value: Math.round(Config.options.hyprland.decoration.blur.noise * 100)
                     from: 0; to: 100; stepSize: 1
-                    onValueChanged: {
-                        const newVal = value / 100.0
+                    onValueModified: {
+                        const newVal = newValue / 100.0
                         if (newVal === Config.options.hyprland.decoration.blur.noise) return
                         Config.options.hyprland.decoration.blur.noise = newVal
                         HyprlandConfig.set("decoration:blur:noise", newVal)
@@ -549,8 +549,8 @@ ContentPage {
                     infoText: Translation.tr("Contrast modulation for the blur. 100% leaves it unchanged.")
                     value: Math.round(Config.options.hyprland.decoration.blur.contrast * 100)
                     from: 0; to: 200; stepSize: 1
-                    onValueChanged: {
-                        const newVal = value / 100.0
+                    onValueModified: {
+                        const newVal = newValue / 100.0
                         if (newVal === Config.options.hyprland.decoration.blur.contrast) return
                         Config.options.hyprland.decoration.blur.contrast = newVal
                         HyprlandConfig.set("decoration:blur:contrast", newVal)
@@ -563,8 +563,8 @@ ContentPage {
                     infoText: Translation.tr("Brightness modulation for the blur. 100% leaves it unchanged.")
                     value: Math.round(Config.options.hyprland.decoration.blur.brightness * 100)
                     from: 0; to: 200; stepSize: 1
-                    onValueChanged: {
-                        const newVal = value / 100.0
+                    onValueModified: {
+                        const newVal = newValue / 100.0
                         if (newVal === Config.options.hyprland.decoration.blur.brightness) return
                         Config.options.hyprland.decoration.blur.brightness = newVal
                         HyprlandConfig.set("decoration:blur:brightness", newVal)
@@ -577,8 +577,8 @@ ContentPage {
                     infoText: Translation.tr("Increase the saturation of blurred colours.")
                     value: Math.round(Config.options.hyprland.decoration.blur.vibrancy * 100)
                     from: 0; to: 100; stepSize: 1
-                    onValueChanged: {
-                        const newVal = value / 100.0
+                    onValueModified: {
+                        const newVal = newValue / 100.0
                         if (newVal === Config.options.hyprland.decoration.blur.vibrancy) return
                         Config.options.hyprland.decoration.blur.vibrancy = newVal
                         HyprlandConfig.set("decoration:blur:vibrancy", newVal)
@@ -591,8 +591,8 @@ ContentPage {
                     infoText: Translation.tr("How strongly vibrancy applies to dark areas.")
                     value: Math.round(Config.options.hyprland.decoration.blur.vibrancyDarkness * 100)
                     from: 0; to: 100; stepSize: 1
-                    onValueChanged: {
-                        const newVal = value / 100.0
+                    onValueModified: {
+                        const newVal = newValue / 100.0
                         if (newVal === Config.options.hyprland.decoration.blur.vibrancyDarkness) return
                         Config.options.hyprland.decoration.blur.vibrancyDarkness = newVal
                         HyprlandConfig.set("decoration:blur:vibrancy_darkness", newVal)
@@ -629,8 +629,8 @@ ContentPage {
                     infoText: Translation.tr("Pixels in a popup more transparent than this are not blurred.")
                     value: Math.round(Config.options.hyprland.decoration.blur.popupsIgnorealpha * 100)
                     from: 0; to: 100; stepSize: 1
-                    onValueChanged: {
-                        const newVal = value / 100.0
+                    onValueModified: {
+                        const newVal = newValue / 100.0
                         if (newVal === Config.options.hyprland.decoration.blur.popupsIgnorealpha) return
                         Config.options.hyprland.decoration.blur.popupsIgnorealpha = newVal
                         HyprlandConfig.set("decoration:blur:popups_ignorealpha", newVal)
@@ -655,8 +655,8 @@ ContentPage {
                     infoText: Translation.tr("Pixels in an input method more transparent than this are not blurred.")
                     value: Math.round(Config.options.hyprland.decoration.blur.inputMethodsIgnorealpha * 100)
                     from: 0; to: 100; stepSize: 1
-                    onValueChanged: {
-                        const newVal = value / 100.0
+                    onValueModified: {
+                        const newVal = newValue / 100.0
                         if (newVal === Config.options.hyprland.decoration.blur.inputMethodsIgnorealpha) return
                         Config.options.hyprland.decoration.blur.inputMethodsIgnorealpha = newVal
                         HyprlandConfig.set("decoration:blur:input_methods_ignorealpha", newVal)

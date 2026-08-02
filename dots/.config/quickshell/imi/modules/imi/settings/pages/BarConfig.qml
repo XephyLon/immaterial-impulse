@@ -343,8 +343,8 @@ ContentPage {
                     from: 4
                     to: 100
                     stepSize: 2
-                    onValueChanged: {
-                        Config.options.bar.divider.spacing = value;
+                    onValueModified: {
+                        Config.options.bar.divider.spacing = newValue;
                     }
                 }
             }
@@ -455,7 +455,7 @@ ContentPage {
                     icon: "view_column"; text: Translation.tr("Workspaces shown")
                     value: Config.options.bar.workspaces.shown
                     from: 1; to: 30
-                    onValueChanged: { Config.options.bar.workspaces.shown = value; }
+                    onValueModified: { Config.options.bar.workspaces.shown = newValue; }
                 }
                 ConfigSelectionArray {
                     text: Translation.tr("Indicator style")
@@ -560,8 +560,8 @@ ContentPage {
                     from: 100
                     to: 10000
                     stepSize: 100
-                    onValueChanged: {
-                        Config.options.resources.updateInterval = value;
+                    onValueModified: {
+                        Config.options.resources.updateInterval = newValue;
                     }
                 }
             }
@@ -610,8 +610,8 @@ ContentPage {
                     from: 100
                     to: 500
                     stepSize: 10
-                    onValueChanged: {
-                        Config.options.bar.media.maxWidth = value;
+                    onValueModified: {
+                        Config.options.bar.media.maxWidth = newValue;
                     }
                 }
             }

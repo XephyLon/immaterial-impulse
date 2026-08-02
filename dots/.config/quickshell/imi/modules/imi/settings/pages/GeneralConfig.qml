@@ -205,8 +205,8 @@ ContentPage {
                         from: 0
                         to: 100
                         stepSize: 5
-                        onValueChanged: {
-                            Config.options.battery.low = value;
+                        onValueModified: {
+                            Config.options.battery.low = newValue;
                         }
                     }
                     ConfigSpinBox {
@@ -216,8 +216,8 @@ ContentPage {
                         from: 0
                         to: 100
                         stepSize: 5
-                        onValueChanged: {
-                            Config.options.battery.critical = value;
+                        onValueModified: {
+                            Config.options.battery.critical = newValue;
                         }
                     }
                 }
@@ -238,8 +238,8 @@ ContentPage {
                         from: 0
                         to: 100
                         stepSize: 5
-                        onValueChanged: {
-                            Config.options.battery.suspend = value;
+                        onValueModified: {
+                            Config.options.battery.suspend = newValue;
                         }
                     }
                 }
@@ -252,8 +252,8 @@ ContentPage {
                         from: 0
                         to: 101
                         stepSize: 5
-                        onValueChanged: {
-                            Config.options.battery.full = value;
+                        onValueModified: {
+                            Config.options.battery.full = newValue;
                         }
                     }
                 }
@@ -282,8 +282,8 @@ ContentPage {
                         from: 0
                         to: 100
                         stepSize: 2
-                        onValueChanged: {
-                            Config.options.audio.protection.maxAllowedIncrease = value;
+                        onValueModified: {
+                            Config.options.audio.protection.maxAllowedIncrease = newValue;
                         }
                     }
                     ConfigSpinBox {
@@ -293,8 +293,8 @@ ContentPage {
                         from: 0
                         to: 154 // pavucontrol allows up to 153%
                         stepSize: 2
-                        onValueChanged: {
-                            Config.options.audio.protection.maxAllowed = value;
+                        onValueModified: {
+                            Config.options.audio.protection.maxAllowed = newValue;
                         }
                     }
                 }

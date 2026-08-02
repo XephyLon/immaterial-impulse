@@ -150,13 +150,7 @@ ColumnLayout {
                     from: 1
                     to: 20
 
-                    property bool ready: false
-                    Component.onCompleted: ready = true
-
-                    onValueChanged: {
-                        if (!ready) return
-                        root.updateEntry(entryRow.index, "workspace", value)
-                    }
+                    onValueModified: root.updateEntry(entryRow.index, "workspace", newValue)
                 }
 
                 ConfigSpinBox {
@@ -166,13 +160,7 @@ ColumnLayout {
                     to: 60
                     stepSize: 1
 
-                    property bool ready: false
-                    Component.onCompleted: ready = true
-
-                    onValueChanged: {
-                        if (!ready) return
-                        root.updateEntry(entryRow.index, "delay", value)
-                    }
+                    onValueModified: root.updateEntry(entryRow.index, "delay", newValue)
                 }
 
                 RippleButton {

@@ -269,8 +269,8 @@ ContentPage {
                     from: 10
                     to: 100
                     stepSize: 2
-                    onValueChanged: {
-                        Config.options.musicRecognition.timeout = value;
+                    onValueModified: {
+                        Config.options.musicRecognition.timeout = newValue;
                     }
                 }
                 ConfigSpinBox {
@@ -280,8 +280,8 @@ ContentPage {
                     from: 2
                     to: 10
                     stepSize: 1
-                    onValueChanged: {
-                        Config.options.musicRecognition.interval = value;
+                    onValueModified: {
+                        Config.options.musicRecognition.interval = newValue;
                     }
                 }
             }
@@ -512,8 +512,8 @@ ContentPage {
                     from: 60
                     to: 1440
                     stepSize: 60
-                    onValueChanged: {
-                        Config.options.updates.checkInterval = value;
+                    onValueModified: {
+                        Config.options.updates.checkInterval = newValue;
                     }
                 }
             }
@@ -574,8 +574,8 @@ ContentPage {
                     from: 5
                     to: 50
                     stepSize: 5
-                    onValueChanged: {
-                        Config.options.bar.weather.fetchInterval = value;
+                    onValueModified: {
+                        Config.options.bar.weather.fetchInterval = newValue;
                     }
                 }
                 ConfigTextArea {

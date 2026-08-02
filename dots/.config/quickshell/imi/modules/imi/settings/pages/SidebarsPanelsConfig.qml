@@ -271,8 +271,8 @@ ContentPage {
                         from: 1
                         to: 8
                         stepSize: 1
-                        onValueChanged: {
-                            Config.options.sidebar.quickToggles.android.columns = value;
+                        onValueModified: {
+                            Config.options.sidebar.quickToggles.android.columns = newValue;
                         }
                     }
                 }
@@ -369,21 +369,21 @@ ContentPage {
                         text: Translation.tr("Vertical offset")
                         value: Config.options.sidebar.cornerOpen.clicklessCornerVerticalOffset
                         from: 0; to: 20; stepSize: 1
-                        onValueChanged: { Config.options.sidebar.cornerOpen.clicklessCornerVerticalOffset = value }
+                        onValueModified: { Config.options.sidebar.cornerOpen.clicklessCornerVerticalOffset = newValue }
                     }
                     ConfigSpinBox {
                         icon: "arrow_range"
                         text: Translation.tr("Region width")
                         value: Config.options.sidebar.cornerOpen.cornerRegionWidth
                         from: 1; to: 300; stepSize: 1
-                        onValueChanged: { Config.options.sidebar.cornerOpen.cornerRegionWidth = value }
+                        onValueModified: { Config.options.sidebar.cornerOpen.cornerRegionWidth = newValue }
                     }
                     ConfigSpinBox {
                         icon: "height"
                         text: Translation.tr("Region height")
                         value: Config.options.sidebar.cornerOpen.cornerRegionHeight
                         from: 1; to: 300; stepSize: 1
-                        onValueChanged: { Config.options.sidebar.cornerOpen.cornerRegionHeight = value }
+                        onValueModified: { Config.options.sidebar.cornerOpen.cornerRegionHeight = newValue }
                     }
                 }
             }
@@ -418,8 +418,8 @@ ContentPage {
                     from: 1
                     to: 100
                     stepSize: 1
-                    onValueChanged: {
-                        Config.options.overview.scale = value / 100;
+                    onValueModified: {
+                        Config.options.overview.scale = newValue / 100;
                     }
                 }
                 ConfigSelectionArray {
@@ -460,8 +460,8 @@ ContentPage {
                             from: 1
                             to: 20
                             stepSize: 1
-                            onValueChanged: {
-                                Config.options.overview.rows = value;
+                            onValueModified: {
+                                Config.options.overview.rows = newValue;
                             }
                         }
                         ConfigSpinBox {
@@ -471,8 +471,8 @@ ContentPage {
                             from: 1
                             to: 20
                             stepSize: 1
-                            onValueChanged: {
-                                Config.options.overview.columns = value;
+                            onValueModified: {
+                                Config.options.overview.columns = newValue;
                             }
                         }
                     }
@@ -645,14 +645,17 @@ ContentPage {
             title: Translation.tr("On-screen display")
             GroupedList {
                 ConfigSpinBox {
+                    // Reached by name from ConfigControlWriteBackRuntimeTest.qml,
+                    // which opens this page against an out-of-range stored value.
+                    objectName: "osdTimeoutSpinBox"
                     icon: "av_timer"
                     text: Translation.tr("Timeout (ms)")
                     value: Config.options.osd.timeout
                     from: 100
                     to: 3000
                     stepSize: 100
-                    onValueChanged: {
-                        Config.options.osd.timeout = value;
+                    onValueModified: {
+                        Config.options.osd.timeout = newValue;
                     }
                 }
             }
@@ -684,7 +687,7 @@ ContentPage {
                     from: 50
                     to: 300
                     stepSize: 25
-                    onValueChanged: { Config.options.dropShelf.shakeSensitivity = value / 100 }
+                    onValueModified: { Config.options.dropShelf.shakeSensitivity = newValue / 100 }
                 }
                 ConfigSpinBox {
                     icon: "timer"
@@ -693,7 +696,7 @@ ContentPage {
                     from: 0
                     to: 60
                     stepSize: 1
-                    onValueChanged: { Config.options.dropShelf.autoDismissSeconds = value }
+                    onValueModified: { Config.options.dropShelf.autoDismissSeconds = newValue }
                 }
                 ConfigSwitch {
                     buttonIcon: "blur_on"
@@ -709,7 +712,7 @@ ContentPage {
                     from: 0
                     to: 100
                     stepSize: 5
-                    onValueChanged: { Config.options.dropShelf.backgroundOpacity = value / 100 }
+                    onValueModified: { Config.options.dropShelf.backgroundOpacity = newValue / 100 }
                 }
             }
         }

@@ -342,8 +342,8 @@ ContentPage {
                     from: 0
                     to: 100
                     stepSize: 5
-                    onValueChanged: {
-                        Config.options.appearance.terminal.background.opacity = value / 100
+                    onValueModified: {
+                        Config.options.appearance.terminal.background.opacity = newValue / 100
                         page.scheduleTerminalBackgroundApply()
                     }
                 }
@@ -399,21 +399,21 @@ ContentPage {
                     text: Translation.tr("Terminal: Harmony (%)")
                     value: Config.options.appearance.wallpaperTheming.terminalGenerationProps.harmony * 100
                     from: 0; to: 100; stepSize: 10
-                    onValueChanged: { Config.options.appearance.wallpaperTheming.terminalGenerationProps.harmony = value / 100 }
+                    onValueModified: { Config.options.appearance.wallpaperTheming.terminalGenerationProps.harmony = newValue / 100 }
                 }
                 ConfigSpinBox {
                     icon: "gradient"
                     text: Translation.tr("Terminal: Harmonize threshold")
                     value: Config.options.appearance.wallpaperTheming.terminalGenerationProps.harmonizeThreshold
                     from: 0; to: 100; stepSize: 10
-                    onValueChanged: { Config.options.appearance.wallpaperTheming.terminalGenerationProps.harmonizeThreshold = value }
+                    onValueModified: { Config.options.appearance.wallpaperTheming.terminalGenerationProps.harmonizeThreshold = newValue }
                 }
                 ConfigSpinBox {
                     icon: "format_color_text"
                     text: Translation.tr("Terminal: Foreground boost (%)")
                     value: Config.options.appearance.wallpaperTheming.terminalGenerationProps.termFgBoost * 100
                     from: 0; to: 100; stepSize: 10
-                    onValueChanged: { Config.options.appearance.wallpaperTheming.terminalGenerationProps.termFgBoost = value / 100 }
+                    onValueModified: { Config.options.appearance.wallpaperTheming.terminalGenerationProps.termFgBoost = newValue / 100 }
                 }
             }
         }

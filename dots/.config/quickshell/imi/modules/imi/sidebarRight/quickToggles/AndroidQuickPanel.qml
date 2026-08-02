@@ -215,8 +215,8 @@ AbstractQuickPanel {
             from: 1
             to: 8
             stepSize: 1
-            onValueChanged: {
-                Config.options.sidebar.quickToggles.android.columns = value;
+            onValueModified: {
+                Config.options.sidebar.quickToggles.android.columns = newValue;
             }
         }
     }

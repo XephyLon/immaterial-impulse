@@ -137,14 +137,14 @@ ContentPage {
                         text: Translation.tr("Samples")
                         value: Config.options.lock.blur.size
                         from: 20; to: 200; stepSize: 10
-                        onValueChanged: { Config.options.lock.blur.size = value }
+                        onValueModified: { Config.options.lock.blur.size = newValue }
                     }
                     ConfigSpinBox {
                         icon: "loupe"
                         text: Translation.tr("Extra wallpaper zoom (%)")
                         value: Config.options.lock.blur.extraZoom * 100
                         from: 1; to: 150; stepSize: 2
-                        onValueChanged: { Config.options.lock.blur.extraZoom = value / 100 }
+                        onValueModified: { Config.options.lock.blur.extraZoom = newValue / 100 }
                     }
                 }
             }

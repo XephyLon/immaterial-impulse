@@ -96,8 +96,8 @@ ContentPage {
                     from: 1000
                     to: 60000
                     stepSize: 1000
-                    onValueChanged: {
-                        Config.options.notifications.timeout = value;
+                    onValueModified: {
+                        Config.options.notifications.timeout = newValue;
                     }
                 }
             }

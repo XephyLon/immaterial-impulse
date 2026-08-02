@@ -182,8 +182,8 @@ ContentPage {
                     from: 0
                     to: 1440
                     stepSize: 5
-                    onValueChanged: {
-                        Config.options.wallpaperSelector.changeInterval = value * 60000;
+                    onValueModified: {
+                        Config.options.wallpaperSelector.changeInterval = newValue * 60000;
                     }
                 }
 
@@ -285,8 +285,8 @@ ContentPage {
                         from: 400
                         to: 800
                         stopIndicatorValues: [400]
-                        onValueChanged: {
-                            Config.options.background.centeredWallpaperSize = value;
+                        onValueModified: {
+                            Config.options.background.centeredWallpaperSize = newValue;
                         }
                     }
                 }
@@ -384,8 +384,8 @@ ContentPage {
                     from: 3
                     to: 10
                     stepSize: 1
-                    onValueChanged: {
-                        Config.options.wallpaperSelector.columns = value;
+                    onValueModified: {
+                        Config.options.wallpaperSelector.columns = newValue;
                     }
                 }
 
@@ -396,8 +396,8 @@ ContentPage {
                     from: 0
                     to: 1440
                     stepSize: 5
-                    onValueChanged: {
-                        Config.options.wallpaperSelector.changeInterval = value * 60000;
+                    onValueModified: {
+                        Config.options.wallpaperSelector.changeInterval = newValue * 60000;
                     }
                 }
 

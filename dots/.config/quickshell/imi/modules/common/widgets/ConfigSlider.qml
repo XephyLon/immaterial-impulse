@@ -12,11 +12,15 @@ RowLayout {
 
     property string text: ""
     property string buttonIcon: ""
-    property alias value: slider.value
+    property real value: 0
     property alias stopIndicatorValues: slider.stopIndicatorValues
     property bool usePercentTooltip: true
-    property real from: slider.from
-    property real to: slider.to
+    property real from: 0
+    property real to: 1
+    // See ConfigSpinBox: only a drag is an edit. `value` also runs through
+    // StyledSlider's `Behavior`, so binding a write to `onValueChanged` wrote
+    // every intermediate animation frame to the config as well.
+    signal valueModified(real newValue)
     property real textWidth: 120
     property bool showLabel: true
 
@@ -50,7 +54,10 @@ RowLayout {
         configuration: StyledSlider.Configuration.XS
         usePercentTooltip: root.usePercentTooltip
         value: root.value
-        from: root.from
-        to: root.to
+        from: Math.min(root.from, root.value)
+        to: Math.max(root.to, root.value)
+        // `value` lags behind the drag because of the Behavior above;
+        // `valueAt(position)` is the value the handle is actually at.
+        onMoved: root.valueModified(slider.valueAt(slider.position))
     }
 }

@@ -79,7 +79,7 @@ ContentPage {
                     from: 24
                     to: 240
                     stepSize: 6
-                    onValueChanged: { Config.options.screenRecord.fps = value }
+                    onValueModified: { Config.options.screenRecord.fps = newValue }
                 }
                 ConfigSwitch {
                     buttonIcon: "volume_up"
@@ -117,7 +117,7 @@ ContentPage {
                         from: 10
                         to: 600
                         stepSize: 10
-                        onValueChanged: { Config.options.screenRecord.replay.duration = value }
+                        onValueModified: { Config.options.screenRecord.replay.duration = newValue }
                     }
                     ConfigSwitch {
                         buttonIcon: "save"
@@ -173,7 +173,7 @@ ContentPage {
                     from: 1500
                     to: 30000
                     stepSize: 500
-                    onValueChanged: Config.options.screenshotResult.timeoutMs = value
+                    onValueModified: Config.options.screenshotResult.timeoutMs = newValue
                 }
             }
         }
@@ -257,8 +257,8 @@ ContentPage {
                         from: 1
                         to: 20
                         stepSize: 1
-                        onValueChanged: {
-                            Config.options.regionSelector.circle.strokeWidth = value;
+                        onValueModified: {
+                            Config.options.regionSelector.circle.strokeWidth = newValue;
                         }
                     }
 
@@ -269,8 +269,8 @@ ContentPage {
                         from: 0
                         to: 100
                         stepSize: 5
-                        onValueChanged: {
-                            Config.options.regionSelector.circle.padding = value;
+                        onValueModified: {
+                            Config.options.regionSelector.circle.padding = newValue;
                         }
                     }
                 }

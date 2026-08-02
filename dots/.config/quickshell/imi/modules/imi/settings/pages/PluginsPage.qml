@@ -106,8 +106,8 @@ Item {
                         to: 1
                         usePercentTooltip: true
                         value: Config.options.plugins.blurOpacity
-                        onValueChanged: {
-                            const rounded = Math.round(value * 20) / 20;
+                        onValueModified: {
+                            const rounded = Math.round(newValue * 20) / 20;
                             if (rounded !== Config.options.plugins.blurOpacity)
                                 Config.options.plugins.blurOpacity = rounded;
                         }

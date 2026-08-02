@@ -499,8 +499,8 @@ ContentPage {
                     from: 100
                     to: 2000
                     stepSize: 50
-                    onValueChanged: {
-                        Config.options.appearance.openrgb.monitorPollInterval = value;
+                    onValueModified: {
+                        Config.options.appearance.openrgb.monitorPollInterval = newValue;
                     }
                 }
             }
