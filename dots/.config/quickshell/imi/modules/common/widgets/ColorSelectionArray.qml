@@ -73,13 +73,33 @@ RowLayout {
                     }
                 }
 
+                // The empty string is a real value for callers that treat "no
+                // role picked" as "decide the colour yourself" - it needs a
+                // slot in the row, or the only way back to automatic is a
+                // separate switch sitting beside the swatches saying the same
+                // thing twice. It is not in the default `options`, so rows
+                // that have no automatic mode never grow one.
+                readonly property bool isAutomatic: slot.modelData === ""
+
                 Rectangle {
                     id: swatch
                     anchors.centerIn: parent
                     width: slot.isSelected ? parent.width - 8 : parent.width - 8
                     height: slot.isSelected ? parent.height - 8 : parent.height - 8
-                    radius: slot.isSelected ? Appearance.rounding.normal - 4 : width / 2 
-                    color: Appearance.colors["col" + slot.modelData.charAt(0).toUpperCase() + slot.modelData.slice(1)]
+                    radius: slot.isSelected ? Appearance.rounding.normal - 4 : width / 2
+                    color: slot.isAutomatic
+                        ? "transparent"
+                        : Appearance.colors["col" + slot.modelData.charAt(0).toUpperCase() + slot.modelData.slice(1)]
+                    border.width: slot.isAutomatic ? 2 : 0
+                    border.color: Appearance.colors.colOutlineVariant
+
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        visible: slot.isAutomatic
+                        text: "auto_awesome"
+                        iconSize: Appearance.font.pixelSize.large
+                        color: Appearance.colors.colOnLayer0
+                    }
 
                     Behavior on radius {
                         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)

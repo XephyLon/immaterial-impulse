@@ -56,6 +56,7 @@ ColumnLayout {
                 case "boolean": return booleanOption;
                 case "choice": return choiceOption;
                 case "shape": return shapeOption;
+                case "color": return colorOption;
                 case "number": return numberOption;
                 case "text": return textOption;
                 default: return null;
@@ -96,6 +97,23 @@ ColumnLayout {
             Component {
                 id: shapeOption
                 ConfigSelectionShapeArray {
+                    options: (optionLoader.optionData.choices || [])
+                        .map(choice => choice.value ?? choice)
+                    currentValue: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)
+                    onSelected: value => PluginState.setOption(root.manifest.id, optionLoader.optionData.key, value)
+                }
+            }
+
+            // A palette role is its own preview too, and the roles are fixed by
+            // the theme rather than by the plugin - so there are no `choices`,
+            // only the swatch row ColorSelectionArray already draws. The empty
+            // string is a real value here: "no override, follow the widget's
+            // own colour", which is why the row pairs with a boolean.
+            Component {
+                id: colorOption
+                ColorSelectionArray {
+                    icon: optionLoader.optionData.icon || "palette"
+                    text: optionLoader.optionData.label
                     options: (optionLoader.optionData.choices || [])
                         .map(choice => choice.value ?? choice)
                     currentValue: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)

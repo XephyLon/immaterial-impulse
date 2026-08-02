@@ -96,15 +96,21 @@ A companion fault emits `companion_error`, not `error`. Discord's own RPC
 backend stays usable, so the UI must show the reason without offering an
 authorization button the user cannot act on.
 
-Manifest options support `boolean`, `choice`, `shape`, `number`, and `text`. Text options use the
-shell's native `ConfigTextArea`; `placeholder`, `maxLength`, and `uppercase` may be supplied for short
-values such as currency codes.
+Manifest options support `boolean`, `choice`, `shape`, `color`, `number`, and `text`. Text options use
+the shell's native `ConfigTextArea`; `placeholder`, `maxLength`, and `uppercase` may be supplied for
+short values such as currency codes.
 
 `shape` takes the same `choices` array as `choice` but renders each entry as the Material shape it
 names rather than as a text chip, via `ConfigSelectionShapeArray`. Values must be `MaterialShape.Shape`
 enum names (`Cookie4Sided`, `Heart`, …); an unrecognised name falls back to `Cookie4Sided`. Use it
 whenever the value *is* a shape — a 31-entry name-chip row is unreadable, and `ConfigSelectionArray`'s
 chip `Flow` only wraps when the row has no label, so such a row cannot be labelled either.
+
+`color` renders a row of palette swatches (`ColorSelectionArray`) instead of chips. Its `choices` are
+`Appearance.colors` role names without the `col` prefix (`primary`, `secondaryContainer`, `layer0`, …).
+The empty string is a legal choice and draws an "automatic" slot rather than a swatch — use it when
+the widget has a sensible colour of its own and the option is an override, so the way back to that
+default is one more swatch rather than a second switch sitting beside the row saying the same thing.
 
 ## Drop Shelf and Screenshot Result
 
