@@ -172,10 +172,13 @@ hl.layer_rule({ match = { namespace = "quickshell:sidebarLeft" }, animation = "s
 -- translucent body still gets its backdrop blur while the shadow stays crisp.
 hl.layer_rule({ match = { namespace = "quickshell:sidebarRight" }, blur = false})
 hl.layer_rule({ match = { namespace = "quickshell:sidebarLeft" }, blur = false})
--- Same treatment for the bar: its drop shadow (bar.shadow) and screen-rounding
--- margin share the surface with the body, so the whole-surface blur frosted
--- them too. The shell scopes blur to the painted body rects (see Bar.qml).
+-- Same treatment for the bars and dock: their drop shadows and margin strips
+-- share the surface with the body, so the whole-surface blur frosted them
+-- too. The shell scopes blur to the painted body rects instead (see
+-- WindowBlurRegion in Bar.qml / VerticalBar.qml / Dock.qml).
 hl.layer_rule({ match = { namespace = "quickshell:bar" }, blur = false})
+hl.layer_rule({ match = { namespace = "quickshell:verticalBar" }, blur = false})
+hl.layer_rule({ match = { namespace = "quickshell:dock" }, blur = false})
 hl.layer_rule({ match = { namespace = "quickshell:verticalBar" }, animation = "slide"})
 hl.layer_rule({ match = { namespace = "quickshell:osk" }, order = -1})
 -- Quickshell: waffles

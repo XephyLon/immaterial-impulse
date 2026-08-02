@@ -72,6 +72,17 @@ Item {
 
     property var screen: root.QsWindow.window?.screen
 
+    // The painted body shapes, exposed so the hosting window can scope its
+    // compositor blur region to them (see WindowBlurRegion in VerticalBar.qml).
+    // The "painted" flags mirror each shape's own color/visible condition: a
+    // blur region is a plain rect, so covering an unpainted (transparent)
+    // shape would frost the bare wallpaper behind it.
+    readonly property Item backgroundItem: barBackground
+    readonly property bool backgroundPainted: Config.options.bar.showBackground
+        && Config.options.bar.cornerStyle !== 2 && !root.isMaterial && !root.centerOnly
+    readonly property Item centerPillItem: centerPill
+    readonly property bool centerPillPainted: centerPill.visible
+
     // Optional soft drop shadow under the bar background (Config.options.bar.shadow).
     // Only rendered when the background itself is painted (mirrors barBackground's color condition).
     Loader {

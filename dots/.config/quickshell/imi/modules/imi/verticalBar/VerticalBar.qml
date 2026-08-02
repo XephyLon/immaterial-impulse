@@ -61,6 +61,27 @@ Scope {
                 mask: Region { item: hoverMaskRegion }
                 color: "transparent"
 
+                // Blur only the painted body shapes — same treatment as the
+                // horizontal bar (see Bar.qml for the full rationale). Pairs
+                // with rules.lua turning the whole-surface layerrule blur off
+                // for this namespace.
+                WindowBlurRegion {
+                    targetWindow: barRoot
+                    region: Region {
+                        Region {
+                            item: barContent.backgroundPainted ? barContent.backgroundItem : null
+                            radius: barContent.backgroundItem.radius
+                        }
+                        Region {
+                            item: barContent.centerPillPainted ? barContent.centerPillItem : null
+                            topLeftRadius: barContent.centerPillItem.topLeftRadius
+                            topRightRadius: barContent.centerPillItem.topRightRadius
+                            bottomLeftRadius: barContent.centerPillItem.bottomLeftRadius
+                            bottomRightRadius: barContent.centerPillItem.bottomRightRadius
+                        }
+                    }
+                }
+
                 anchors {
                     left: !Config.options.bar.bottom
                     right: Config.options.bar.bottom
