@@ -189,6 +189,42 @@ none were in the original recipe.
    The host masks one blurred texture with all regions, so a circle is just a
    region whose `radius` is half its width. *Found by the `user-card` port.*
 
+10. **The host's frost region does not follow the card's corner radius.** Gap 9's
+    third case has a fourth sibling, and it is the easiest to miss because the
+    region's *extent* is right: a card that fills the whole widget still gets a
+    frost rectangle rounded to `Appearance.rounding.large` (23), because
+    `PluginWidget.widgetRounding` only ever reads `desktopWidget.props.radius`
+    from the manifest and otherwise falls back to `large`. A card drawn at
+    `verylarge` (30) - the house style for a desktop card - therefore leaves 7px
+    of blurred wallpaper poking out past each corner. Name the card in
+    `blurRegions` with its own radius even when the region is the whole widget:
+
+    ```qml
+    readonly property var blurRegions: [
+        { x: card.x, y: card.y, width: card.width, height: card.height, radius: card.radius }
+    ]
+    ```
+
+    (Setting `desktopWidget.props.radius` in the manifest works too, but for a
+    component-backed widget `PluginNode` never applies `props` to the item, so
+    the manifest value would exist purely to inform the host - easy to read as
+    dead config later.) The bundled `notes` and `image-converter` widgets still
+    carry this mismatch. *Found by the `world-clock` port.*
+
+11. **A `qs -p` probe renders a widget faithfully but cannot verify anything
+    that reads or writes `Config`.** Loading `Widget.qml` into a throwaway
+    `FloatingWindow` is the one way to check a ported widget's looks when the
+    desktop is covered by the user's windows - `Item.grabToImage(...)` +
+    `result.saveToFile(...)` gives a pixel-exact PNG and logs the widget's real
+    size, which is how the world-clock port confirmed 276x252 / 420x120. But in
+    that mode `Config.ready` stays `false` and the adapter never writes: a probe
+    that calls a service setter appears to succeed (the singleton's own property
+    updates) while `config.json`'s mtime never changes. Do not use a probe to
+    verify a persistence path, and do not read a probe's config values as the
+    user's - they are the QML defaults. `QT_QPA_PLATFORM=offscreen` is not an
+    escape hatch either: the services tree fails to load with
+    `No PanelWindow backend loaded`. *Found by the `world-clock` port.*
+
 ---
 
 ## Task 1: One-shot migration from `background.widgets.*` to `plugins.enabled`
