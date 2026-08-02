@@ -117,6 +117,12 @@ if ! python3 "$SCRIPT_DIR/test_widget_grid_lattice.py"; then
     exit 1
 fi
 
+echo "Running widget interaction mode tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_interaction_modes.py"; then
+    echo "Widget interaction mode tests failed."
+    exit 1
+fi
+
 echo "Running widget plugin migration tests..."
 if ! python3 "$SCRIPT_DIR/test_widget_plugin_migration.py"; then
     echo "Widget plugin migration tests failed."

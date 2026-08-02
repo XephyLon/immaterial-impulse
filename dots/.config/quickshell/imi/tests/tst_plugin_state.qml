@@ -71,6 +71,25 @@ TestCase {
         compare(PluginState.option("at_a_glance_plugin", "blurEnabled", true), false);
     }
 
+    // A manifest can ship a host behaviour on by default (the visualiser ships
+    // `desktopWidget.clickThrough: true`), and the seed is passed as the
+    // fallback argument here. Turning it back off in Settings stores `false`,
+    // which must win over the `true` seed - so the lookup has to test for
+    // `undefined`, not for falsiness. A `value || fallback` implementation
+    // would silently make a shipped-on default impossible to switch off.
+    function test_storedFalseOverridesATrueManifestDefault() {
+        PluginState.setOption("visualizer", "clickThrough", false);
+        compare(PluginState.option("visualizer", "clickThrough", true), false);
+        PluginState.setOption("visualizer", "positionLocked", false);
+        compare(PluginState.option("visualizer", "positionLocked", true), false);
+    }
+
+    // The inverse: with nothing stored, the manifest seed is what the host sees.
+    function test_manifestDefaultAppliesUntilTheUserDecides() {
+        compare(PluginState.option("never_configured_widget", "clickThrough", true), true);
+        compare(PluginState.option("never_configured_widget", "clickThrough", false), false);
+    }
+
     // The world clock keeps its four timezones here, and it is the only plugin
     // option that is a list rather than a scalar. Nothing in `setOption` is
     // list-aware - it does an `Object.assign` shallow copy and hands the value
