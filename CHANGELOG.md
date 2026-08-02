@@ -57,6 +57,14 @@ own repo; the installer pins which revision it builds.
   position across as well rather than silently repainting and moving itself.
   Both migrations are marked so they never run twice, and the clock's marker is
   written only once the values have actually landed.
+- **The world clock's timezones moved in with the rest of its settings.** They
+  were the last thing in the old desktop-widget config block that the shell
+  still wrote to while running; they now live in `plugin-state.json` alongside
+  the widget's other options. A third one-shot migration carries an existing
+  list across — including on installs that had already run the two earlier
+  ones, which is all of them — and a list you have since changed through the
+  widget's own picker always wins over the one being migrated. The four zones
+  you picked survive the upgrade; there is nothing to redo.
 
 ### Fixed
 - **The world clock card overflowed its own bottom margin, and always had.**
