@@ -884,11 +884,6 @@ ContentPage {
                             icon: "weather_mix",
                             name: Translation.tr("Weather"),
                             enabled: Config.options.background.widgets.weather.enable
-                        },
-                        {
-                            icon: "music_note",
-                            name: Translation.tr("Media Player"),
-                            enabled: Config.options.background.widgets.media.enable
                         }
                     ]
                     delegate: Rectangle {
@@ -920,8 +915,6 @@ ContentPage {
                                     onCheckedChanged: {
                                         if (modelData.icon === "weather_mix")
                                             Config.options.background.widgets.weather.enable = checked
-                                        else if (modelData.icon === "music_note")
-                                            Config.options.background.widgets.media.enable = checked
                                     }
                                 }
                             }

@@ -17,7 +17,6 @@ import Quickshell.Hyprland
 import qs.modules.imi.background.widgets
 import qs.modules.imi.background.widgets.clock
 import qs.modules.imi.background.widgets.weather
-import qs.modules.imi.background.widgets.media
 import qs.modules.common.plugins
 
 Variants {
@@ -760,28 +759,6 @@ Variants {
                         scaledScreenHeight: bgRoot.screen.height
                         wallpaperScale: 1
                         wallpaperSafetyTriggered: bgRoot.wallpaperSafetyTriggered
-                    }
-                }
-                FadeLoader {
-                    id: mediaLoader
-                    property bool enableLoading: true
-                    shown: Config.options.background.widgets.media.enable && enableLoading
-                        && (Config.options.background.screenList.length === 0
-                            || Config.options.background.screenList.includes(bgRoot.screen.name))
-                    sourceComponent: MediaWidget {
-                        screenWidth: bgRoot.screen.width
-                        screenHeight: bgRoot.screen.height
-                        scaledScreenWidth: bgRoot.screen.width
-                        scaledScreenHeight: bgRoot.screen.height
-                        wallpaperScale: 1
-                    }
-                    onLoaded: {
-                        if (item && item.requestReset) {
-                            item.requestReset.connect(() => {
-                                mediaLoader.enableLoading = false
-                                mediaTimer.running = true
-                            })
-                        }
                     }
                 }
 
