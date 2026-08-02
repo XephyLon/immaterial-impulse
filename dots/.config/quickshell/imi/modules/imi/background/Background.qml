@@ -22,7 +22,6 @@ import qs.modules.common.plugins
 import qs.modules.imi.background.widgets.resources
 import qs.modules.imi.background.widgets.calendar
 import qs.modules.imi.background.widgets.worldclock
-import qs.modules.imi.background.widgets.usercard
 import qs.modules.imi.background.widgets.notes
 
 Variants {
@@ -835,19 +834,6 @@ Variants {
                         scaledScreenWidth: bgRoot.screen.width
                         scaledScreenHeight: bgRoot.screen.height
                         wallpaperScale: 1
-                    }
-                }
-                FadeLoader {
-                    shown: Config.options.background.widgets.userCard.enable
-                        && (Config.options.background.screenList.length === 0
-                            || Config.options.background.screenList.includes(bgRoot.screen.name))
-                    sourceComponent: UserCardWidget {
-                        screenWidth: bgRoot.screen.width
-                        screenHeight: bgRoot.screen.height
-                        scaledScreenWidth: bgRoot.screen.width
-                        scaledScreenHeight: bgRoot.screen.height
-                        wallpaperScale: 1
-                        wallpaperPath: bgRoot.wallpaperPath
                     }
                 }
 

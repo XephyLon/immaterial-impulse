@@ -120,7 +120,8 @@ Singleton {
                 nandoroidMediaManifestFile, nandoroidSystemMonitorManifestFile,
                 nandoroidWeatherManifestFile, nandoroidCurrencyManifestFile,
                 notesManifestFile, visualizerManifestFile,
-                customImageManifestFile, imageConverterManifestFile].forEach(fileView => {
+                customImageManifestFile, imageConverterManifestFile,
+                userCardManifestFile].forEach(fileView => {
             if (!fileView.loaded) return;
             try {
                 const text = fileView.text();
@@ -384,6 +385,12 @@ Singleton {
     FileView {
         id: imageConverterManifestFile
         property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/image-converter")
+        path: pluginBase + "/manifest.json"
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: userCardManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/user-card")
         path: pluginBase + "/manifest.json"
         onLoaded: root.scheduleRebuild()
     }

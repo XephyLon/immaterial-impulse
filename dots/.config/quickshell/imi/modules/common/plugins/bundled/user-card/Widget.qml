@@ -1,22 +1,44 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import Quickshell.Io
 import Quickshell
 import qs
 import qs.services
 import qs.modules.common
+import qs.modules.common.functions
 import qs.modules.common.widgets
-import qs.modules.common.widgets.widgetCanvas
-import qs.modules.imi.background.widgets
+import qs.modules.common.plugins
 
-AbstractBackgroundWidget {
+Item {
     id: root
-    configEntryName: "userCard"
-    implicitWidth: 276
-    implicitHeight: 252
 
-    property int cardWidth: 276
+    // The visual is a card with an avatar bubble straddling its top edge, plus
+    // the name lines sitting on the bare wallpaper - not one continuous surface.
+    // Naming both surfaces keeps the host's frost off the empty corners and off
+    // the name text.
+    readonly property bool blurEnabled: PluginState.option("user-card", "blurEnabled", false)
+    readonly property real backgroundOpacity: Config.options.plugins.blurOpacity
+    readonly property bool managesBlurTint: true
+    readonly property var blurRegions: [
+        { x: contentBox.x, y: contentBox.y, width: contentBox.width,
+            height: contentBox.height, radius: contentBox.radius },
+        { x: avatarRect.x, y: avatarRect.y, width: avatarRect.width,
+            height: avatarRect.height, radius: avatarRect.radius }
+    ]
+
+    // A 2x2 component-grid tile (276x228). The built-in was 276x252: the width
+    // is already exactly spanX(2), and the 24px of height the span does not have
+    // comes out of the empty strip above the avatar, so no element changes size.
+    // The card is pinned to the bottom of the tile with the avatar hanging off
+    // its top edge, exactly as before. The host (PluginWidget) sizes us from the
+    // manifest `grid` and stretches this root to fill it; the implicit size is
+    // only a fallback for standalone use. See docs/widget-grid.md.
+    implicitWidth: Appearance.sizes.widgetGridSpanX(2)
+    implicitHeight: Appearance.sizes.widgetGridSpanY(2)
+    anchors.fill: parent
+
     property int blurMargin: Appearance.spacing.space250
     property int avatarSize: 64
     property string hostname: SystemInfo.hostname
@@ -44,15 +66,20 @@ AbstractBackgroundWidget {
 
     Item {
         id: outerRect
-        implicitWidth: root.cardWidth 
-        implicitHeight: 252
+        anchors.fill: parent
 
         Rectangle {
             id: contentBox
-            x: root.blurMargin
-            y: root.avatarSize / 2 + root.blurMargin + 30
+            anchors {
+                left: parent.left
+                bottom: parent.bottom
+                leftMargin: root.blurMargin
+                bottomMargin: root.blurMargin
+            }
             width: 240
-            color: Appearance.colors.colPrimaryContainer
+            color: root.blurEnabled
+                ? ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 1 - root.backgroundOpacity)
+                : Appearance.colors.colPrimaryContainer
             radius: Appearance.rounding.large
             implicitHeight: contentColumn.implicitHeight + 30
 
@@ -88,12 +115,15 @@ AbstractBackgroundWidget {
                     StyledText {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
+                        // Carries the weather provider's own description string,
+                        // so it must not be parsed as markup.
+                        textFormat: Text.PlainText
                         font.pixelSize: Appearance.font.pixelSize.small
                         color: Appearance.colors.colOnPrimaryContainer
                         opacity: 0.85
                         text: root.currentQuip.text
                     }
-                } 
+                }
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -101,6 +131,7 @@ AbstractBackgroundWidget {
                     spacing: Appearance.spacing.space100
 
                     Rectangle {
+                        id: lockButton
                         Layout.fillWidth: true
                         implicitHeight: 40
                         radius: Appearance.rounding.full
@@ -129,6 +160,7 @@ AbstractBackgroundWidget {
                     }
 
                     Rectangle {
+                        id: settingsButton
                         implicitWidth: 40
                         implicitHeight: 40
                         radius: Appearance.rounding.full
@@ -149,6 +181,7 @@ AbstractBackgroundWidget {
                     }
 
                     Rectangle {
+                        id: sessionButton
                         implicitWidth: 40
                         implicitHeight: 40
                         radius: Appearance.rounding.full
@@ -178,7 +211,9 @@ AbstractBackgroundWidget {
             width: root.avatarSize + 10
             height: root.avatarSize + 10
             radius: width / 2
-            color: Appearance.colors.colPrimaryContainer
+            color: root.blurEnabled
+                ? ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 1 - root.backgroundOpacity)
+                : Appearance.colors.colPrimaryContainer
             border.width: Appearance.borderWidth.heavy
             border.color: Appearance.colors.colLayer1
             z: 2
@@ -217,13 +252,16 @@ AbstractBackgroundWidget {
         }
 
         ColumnLayout {
+            id: identityColumn
             x: avatarRect.x + avatarRect.width + 13
             y: avatarRect.y + (avatarRect.height - implicitHeight) / 2 + 20
             spacing: 0
             z: 2
-            
 
             StyledText {
+                // The display name comes from the user's own config or from the
+                // system account record, so it must not be parsed as markup.
+                textFormat: Text.PlainText
                 text: root.userDisplay
                 font.pixelSize: Appearance.font.pixelSize.small
                 font.weight: Font.DemiBold

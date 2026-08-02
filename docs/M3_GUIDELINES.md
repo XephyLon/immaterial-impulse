@@ -151,7 +151,7 @@ The following existing widgets contain hardcoded values that violate these stric
   - `radius: 1` in `ClippedProgressBar.qml` (progress-bar end caps) and `TodoWidget.qml` (a 1px text
     cursor) - deliberately near-zero on already-tiny elements; snapping to `unsharpen` (2px) would
     double their rounding proportionally, so these are left as literals rather than force-fit.
-  - (`CliphistImage.qml`'s `GaussianBlur.radius`, `UserCardWidget.qml`/`WallpaperSelectorContent.qml`'s
+  - (`CliphistImage.qml`'s `GaussianBlur.radius`, `WallpaperSelectorContent.qml`'s
     `FastBlur.radius`, `StyledDropShadow.qml`'s `radius`, and `Config.qml`'s lock-screen blur radius
     option are *blur* radii, a different semantic axis from corner rounding, and are not violations.)
 - **Hardcoded Colors**:

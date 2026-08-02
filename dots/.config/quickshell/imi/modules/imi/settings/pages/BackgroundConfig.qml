@@ -906,11 +906,6 @@ ContentPage {
                             enabled: Config.options.background.widgets.worldClock.enable
                         },
                         {
-                            icon: "person",
-                            name: Translation.tr("User Card"),
-                            enabled: Config.options.background.widgets.userCard.enable
-                        },
-                        {
                             icon: "note_stack_add",
                             name: Translation.tr("Notes"),
                             enabled: Config.options.background.widgets.notes.enable
@@ -953,8 +948,6 @@ ContentPage {
                                             Config.options.background.widgets.calendar.enable = checked
                                         else if (modelData.icon === "public")
                                             Config.options.background.widgets.worldClock.enable = checked
-                                        else if (modelData.icon === "person")
-                                            Config.options.background.widgets.userCard.enable = checked
                                         else if (modelData.icon === "note_stack_add")
                                             Config.options.background.widgets.notes.enable = checked
                                     }
