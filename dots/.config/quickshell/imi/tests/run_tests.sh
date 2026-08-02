@@ -111,6 +111,12 @@ if ! python3 "$SCRIPT_DIR/test_widgets_page_filters.py"; then
     exit 1
 fi
 
+echo "Running widget grid lattice tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_grid_lattice.py"; then
+    echo "Widget grid lattice tests failed."
+    exit 1
+fi
+
 echo "Running widget plugin migration tests..."
 if ! python3 "$SCRIPT_DIR/test_widget_plugin_migration.py"; then
     echo "Widget plugin migration tests failed."
