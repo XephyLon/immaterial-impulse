@@ -8,6 +8,13 @@ The grid is not new: it is the same grid the built-in `nandoroid-*` design-syste
 already use (the system-monitor's "Choice A" grid). Formalizing it as tokens lets new
 plugins line up with those widgets instead of guessing pixel sizes.
 
+> **The cell is 132 wide by 108 tall — the row is not 120.** A widget that is 120 or 252
+> tall is on no span at all, however round the number looks. Both figures are multiples of
+> 12, which is *not* the test (see [Position snapping](#position-snapping)); the test is
+> whether the number comes out of `widgetGridSpanY(rows)`. One row is **108**, two rows are
+> **228**. Two independent widget ports got this wrong by assuming a 120px cell, so if you
+> are about to write a pixel height, write `Appearance.sizes.widgetGridSpanY(n)` instead.
+
 ## The grid model
 
 A widget occupies a whole number of **cells** in each axis. Between adjacent cells sits one
@@ -93,6 +100,13 @@ Flush tiling still works because every span is a whole multiple of 12: the cell 
 Place a grid widget one 12px step away from its neighbour and the gutters line up exactly. This
 keeps grid widgets and the content-sized `nandoroid-*` widgets on one shared lattice.
 
+**Being a multiple of 12 is necessary, not sufficient.** The 12px snap only decides where a
+widget can be *dropped*; it says nothing about whether its *size* matches its neighbours. A
+252-tall widget snaps to the same positions as a 228-tall one and still refuses to line up
+with it — its bottom edge lands 24px past every other tile's, on every row, forever. Read
+"whole 12px step" as a property every span happens to have, never as a test a size can pass.
+The only test is `size === widgetGridSpanX(cols)` / `widgetGridSpanY(rows)`.
+
 ## Guidance for authors
 
 - **Design content to fill its declared span.** The `Widget.qml` root should `anchors.fill:
@@ -132,6 +146,23 @@ overwrite the dragged size on every load. Such a widget omits `grid` too, keeps 
 it also stays square, which no span can be (the cell is 132x108), and its manifest sets
 `defaultWidth`/`defaultHeight` to the *smallest* size the handle allows so the host's floor never
 fights the user's choice.
+
+**Omitting `grid` is not permission to hardcode pixels.** A widget that toggles or drags between
+a fixed set of sizes — the bundled `world-clock` (2x2 / 3x1) and `calendar` (1x1 / 2x1 / 2x2) —
+still has to name each of those sizes with `Appearance.sizes.widgetGridSpanX/Y`. Skipping the
+helpers costs twice: the size drifts off the lattice, and it stops following `effectiveScale`,
+so it is wrong on every scaled setup even if the unscaled number happens to be right. Only a
+genuinely non-span shape (square, full-bleed, or a free-drag size the user chose) may be a
+literal, and `tests/test_widget_grid_lattice.py` enforces exactly that, with the exceptions
+named in one place. A manifest's `defaultWidth`/`defaultHeight` floor is a size too: make it
+the smallest span the widget can actually take, or the floor pins the widget off-grid no
+matter what the QML says.
+
+**Name a size mode after the shape it really is.** `world-clock`'s wide mode was called `"4x1"`
+while being 420px — which is `spanX(3)`, three columns — and `calendar`'s was `"1x2"` while
+being two columns by one row. The name is persisted state, so renaming it strands whatever is
+already on disk: normalise the value on read (`normalizeSizeMode`) so a legacy string maps onto
+the mode it described, rather than falling through to a default or matching no branch at all.
 
 Either way, a widget that omits `grid` must **not** `anchors.fill: parent`. The host derives its
 own size from the widget's implicit size in that mode, so filling the parent is a binding loop —

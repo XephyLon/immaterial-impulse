@@ -250,6 +250,40 @@ none were in the original recipe.
     not use one to verify that a preset or an `ipc call pluginState replace`
     landed. *Found by the `calendar` port.*
 
+13. **"A whole multiple of 12" is not the grid test - only `widgetGridSpanX/Y`
+    is.** Two independent ports (`world-clock`, then `calendar`) each kept the
+    built-in's pixel sizes verbatim and each wrote a comment justifying it with
+    the same reasoning: 120 and 252 are whole 12px steps, therefore the widget
+    tiles flush. It does not. The 12px step is the *drag snap*, which only
+    decides where a widget may be dropped; the cell is 132x108, so one row is
+    108 and two are 228, and a 252-tall card lands 24px past every neighbour's
+    bottom edge no matter where it is dropped. Nothing catches this: the widget
+    renders perfectly, the log is clean and the suite is green - the only
+    symptom is a bento layout that will not line up, noticed long after the
+    port. Two failure modes hide inside the one mistake:
+
+    - **Off-lattice size.** `276x252` and `420x120` look deliberate. Only
+      `Appearance.sizes.widgetGridSpanX(2) x widgetGridSpanY(2)` is.
+    - **Off-scale size.** Both helpers multiply by `effectiveScale`, so a literal
+      is *also* wrong on any scaled setup even when the unscaled number is right.
+
+    A widget that omits `grid` because it is user-resizable (both of these are)
+    is exempt from the *manifest* declaration, not from the *helpers*. The
+    manifest's `defaultWidth`/`defaultHeight` floor is a size too, and must be
+    the smallest real span the widget can take.
+    `tests/test_widget_grid_lattice.py` now fails on any widget-scale pixel
+    literal in a bundled widget's root size properties, with the genuinely
+    off-grid widgets named in one allowlist.
+
+    The related trap is the *mode name*: `world-clock`'s wide mode was `"4x1"`
+    at 420px wide, which is three columns, and `calendar`'s was `"1x2"` at two
+    columns by one row. The name is persisted state, so a rename strands what is
+    already on disk - `visible: sizeMode === "4x1"` leaves a legacy install
+    rendering an empty card with no error, and a `switch` default silently
+    promotes a legacy value to the wrong mode. Normalise on read
+    (`normalizeSizeMode`) instead of renaming in place. *Found by the user, who
+    noticed the world clock's 2x2 was not a 2x2.*
+
 ---
 
 ## Task 1: One-shot migration from `background.widgets.*` to `plugins.enabled`
