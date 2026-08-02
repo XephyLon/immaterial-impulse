@@ -59,6 +59,24 @@ own repo; the installer pins which revision it builds.
   written only once the values have actually landed.
 
 ### Fixed
+- **The world clock card overflowed its own bottom margin, and always had.**
+  Its content came to 6px more than the card at both the old height and the
+  new one, so the bottom row of city chips sat 2px off the card edge while the
+  top sat on a full margin. The chips now take the column's leftover height
+  instead of a fixed 50px, so the card cannot be overshot by a font that
+  renders a little tall, and they divide the card width instead of being a
+  fixed 120px block centred inside it — they line up with the header and the
+  time above them now, down both edges. The local time drops 42px to 36px,
+  which is where the room for a real `space150` card inset comes from; it is
+  still 2.4× the largest text under it. The timezone-picker side gets that
+  same inset and a heading, instead of a back arrow alone against an empty row.
+- **The wide world clock drew each city's name through its own clock hands.**
+  `AndroidClock` placed the label just under the centre dot while the minute
+  hand reaches 0.82 of the dial radius, so the two always overlapped. A
+  labelled clock now reserves a band for the label and centres the dial in
+  what is left; an unlabelled one (the clock preview in Settings) is laid out
+  exactly as before. The label also picks up the shell's own font instead of
+  asking the canvas for `sans-serif`.
 - **The calendar's padding was whatever made it fit.** Putting the widget on
   the real grid cell left every gap inside it set to whatever absorbed the 24px
   it lost, so the month title, the weekday letters and the day grid all sat the

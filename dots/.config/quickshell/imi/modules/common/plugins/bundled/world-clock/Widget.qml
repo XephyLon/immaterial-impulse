@@ -52,6 +52,10 @@ Item {
     property real widgetWidth:  sizeMode === "2x2" ? Appearance.sizes.widgetGridSpanX(2) : Appearance.sizes.widgetGridSpanX(3)
     property real widgetHeight: sizeMode === "2x2" ? Appearance.sizes.widgetGridSpanY(2) : Appearance.sizes.widgetGridSpanY(1)
 
+    // The card's own padding, shared by the 2x2 face and its settings back.
+    // The wide mode deliberately does not use it - see the 3x1 layout below.
+    readonly property real cardInset: Appearance.spacing.space150
+
     Behavior on widgetWidth  { animation: Appearance.animation.elementResize.numberAnimation.createObject(this) }
     Behavior on widgetHeight { animation: Appearance.animation.elementResize.numberAnimation.createObject(this) }
 
@@ -109,12 +113,25 @@ Item {
             color:  root.tinted(Appearance.colors.colPrimaryContainer)
             radius: Appearance.rounding?.verylarge ?? 30
 
-            // 2x2. spanY(2) is 228, 24px shorter than the 252 the built-in
-            // used, so the card margins and the column gaps each give up 4px
-            // per edge and the city cards lose 4px of height apiece.
+            // 2x2. Two steps of the scale: cardInset (space150) at the card
+            // edge, space100 between the three blocks inside it. The inset is
+            // what keeps the four city chips clear of a 30px corner radius -
+            // at the space100 it had, the bottom two chips ran into the
+            // rounding.
+            //
+            // This side has always been over-budget: at the built-in's 252 the
+            // content came to 258, and at 228 it came to 234, so the bottom
+            // row of chips sat 2px off the card edge instead of on the margin.
+            // Two things fix that rather than shaving gaps again. The chip
+            // grid is Layout.fillHeight, so it takes whatever is left over
+            // instead of pushing past the bottom margin whenever a font is a
+            // little taller than the one this was tuned against; and the local
+            // time drops 42 -> 36, which is where the room actually comes from.
+            // It is still 2.4x the largest text under it, so it still reads as
+            // the hero.
             ColumnLayout {
                 id: mainColumn
-                anchors { fill: parent; margins: Appearance.spacing.space100 }
+                anchors { fill: parent; margins: root.cardInset }
                 spacing: Appearance.spacing.space100
                 visible: root.sizeMode === "2x2" && !root.showingSettings
 
@@ -146,7 +163,7 @@ Item {
                         id: settingsButton
                         radius: Appearance.rounding.full
                         color: root.tinted(Appearance.colors.colSurfaceContainerLow)
-                        implicitWidth: 28; implicitHeight: 28
+                        implicitWidth: 24; implicitHeight: 24
                         MaterialSymbol {
                             anchors.centerIn: parent
                             iconSize: Appearance.font.pixelSize.normal
@@ -167,7 +184,7 @@ Item {
                     spacing: -Appearance.spacing.space50
                     StyledText {
                         Layout.alignment: Qt.AlignRight
-                        font.pixelSize: 42; font.weight: Font.Bold
+                        font.pixelSize: 36; font.weight: Font.Bold
                         font.features: { "tnum": 1 }
                         color: Appearance.colors.colOnPrimaryContainer
                         text: root.localTime
@@ -181,10 +198,18 @@ Item {
                     }
                 }
 
+                // The chips used to be a fixed 120px wide, centred - 246px of
+                // grid inside 260px of content, so they sat 7px inboard of the
+                // header and the time above them and nothing lined up down
+                // either edge. They divide the content width instead now, and
+                // take the column's leftover height rather than a fixed 50,
+                // which is what stops the bottom row overshooting the margin.
                 GridLayout {
                     Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignHCenter
-                    columns: 2; rowSpacing: 6; columnSpacing: 6
+                    Layout.fillHeight: true
+                    columns: 2
+                    rowSpacing: Appearance.spacing.space75
+                    columnSpacing: Appearance.spacing.space75
 
                     Repeater {
                         model: root.worldCities
@@ -192,7 +217,8 @@ Item {
                             id: cityCard
                             required property var modelData
                             required property int index
-                            Layout.preferredWidth: 120; Layout.preferredHeight: 50
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
                             radius: Appearance.rounding.normal
                             color: root.tinted(cityCard.modelData.isDay
                                 ? Appearance.colors.colPrimary
@@ -203,8 +229,12 @@ Item {
                             Behavior on color { ColorAnimation { duration: 400 } }
 
                             ColumnLayout {
+                                // A chip inside the card, so its padding is a
+                                // step under the card's own inset. The two text
+                                // rows carry their own leading, so they need no
+                                // gap between them on top of that.
                                 anchors { fill: parent; margins: Appearance.spacing.space75 }
-                                spacing: Appearance.spacing.space25
+                                spacing: Appearance.spacing.space0
                                 RowLayout {
                                     Layout.fillWidth: true
                                     StyledText {
@@ -250,12 +280,16 @@ Item {
                 anchors.fill: parent
                 visible: root.sizeMode === "2x2" && root.showingSettings
 
-                // A back row plus four 40px pickers is 188px of fixed content.
-                // At the old margins and gaps that came to 260 and the fourth
-                // picker was already cut off at 252; the tighter rhythm brings
-                // it to 220, which fits inside spanY(2) with room to spare.
+                // Four 40px pickers plus a 24px header row is 184px of content
+                // that cannot shrink, which leaves 20px to spend inside a 228
+                // card. So this side gets the same cardInset as the face - the
+                // two are the same card and must not breathe differently when
+                // it flips - and the four pickers, a homogeneous list, sit at
+                // the tightest step. That is 224 of 228: no picker is cut off
+                // (the fourth one was, before the card was even resized) and
+                // nothing is squeezed to make it fit.
                 ColumnLayout {
-                    anchors { fill: parent; margins: Appearance.spacing.space100 }
+                    anchors { fill: parent; margins: root.cardInset }
                     spacing: Appearance.spacing.space50
 
                     RowLayout {
@@ -264,7 +298,7 @@ Item {
                             id: backButton
                             radius: Appearance.rounding.full
                             color: "transparent"
-                            implicitWidth: 28; implicitHeight: 28
+                            implicitWidth: 24; implicitHeight: 24
                             MaterialSymbol {
                                 anchors.centerIn: parent
                                 iconSize: Appearance.font.pixelSize.normal
@@ -277,7 +311,16 @@ Item {
                                 onClicked: root.toggleFlip()
                             }
                         }
-                        Item { Layout.fillWidth: true }
+                        // The back arrow used to sit alone against a whole row
+                        // of empty card. Naming the side is what the row is
+                        // for, and it costs no height.
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: Translation.tr("Time zones")
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.Medium
+                            color: Appearance.colors.colOnPrimaryContainer
+                        }
                     }
 
                     StyledComboBoxSearch {
@@ -312,7 +355,12 @@ Item {
                 }
             }
 
-            // 3x1
+            // 3x1. Deliberately *not* cardInset: the dials are full-bleed
+            // tiles rather than content on a surface, and at space100 the
+            // card's 30px rounding minus the inset (22) lands on the dial's
+            // own `large` radius (23), so the four tiles nest concentrically
+            // in the corners. At cardInset they would be 30-12=18 against 23
+            // and the corners would visibly fight.
             RowLayout {
                 anchors { fill: parent; margins: Appearance.spacing.space100 }
                 spacing: Appearance.spacing.space100
@@ -342,7 +390,7 @@ Item {
                             (cityData?.isDay ?? true ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0).g,
                             (cityData?.isDay ?? true ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0).b,
                             0.75)
-                        labelSpacing: 6
+                        labelSpacing: Appearance.spacing.space75
                         autoTime:    false
                         hourAngle: {
                             if (!cityData?.time) return 0
