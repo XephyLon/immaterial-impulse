@@ -872,66 +872,7 @@ ContentPage {
                     configEntry: Config.options.background
                 }
             }
-            
-            GridLayout {
-                Layout.fillWidth: true
-                columns: 3
-                rowSpacing: Appearance.spacing.space100
-                columnSpacing: Appearance.spacing.space100
-                Repeater {
-                    model: [
-                        {
-                            icon: "weather_mix",
-                            name: Translation.tr("Weather"),
-                            enabled: Config.options.background.widgets.weather.enable
-                        }
-                    ]
-                    delegate: Rectangle {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 105
-                        radius: Appearance.rounding.normal
-                        color: Appearance.colors.colLayer1
-                        border.width: Appearance.borderWidth.standard
-                        border.color: Appearance.colors.colLayer0Border
-                        ColumnLayout {
-                            anchors {
-                                top: parent.top
-                                left: parent.left
-                                right: parent.right
-                                margins: Appearance.spacing.space150
-                            }
-                            spacing: 0
-                            RowLayout {
-                                Layout.fillWidth: true
-                                MaterialSymbol {
-                                    text: modelData.icon
-                                    iconSize: Appearance.font.pixelSize.normal + 5
-                                    color: Appearance.colors.colPrimary
-                                }
-                                Item { Layout.fillWidth: true }
-                                ConfigSwitch {
-                                    Layout.fillWidth: false
-                                    checked: modelData.enabled
-                                    onCheckedChanged: {
-                                        if (modelData.icon === "weather_mix")
-                                            Config.options.background.widgets.weather.enable = checked
-                                    }
-                                }
-                            }
-                            StyledText {
-                                text: modelData.name
-                                font.pixelSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colOnLayer1
-                            }
-                            StyledText {
-                                text: modelData.enabled ? Translation.tr("Enabled") : Translation.tr("Disabled")
-                                font.pixelSize: Appearance.font.pixelSize.small
-                                color: Appearance.colors.colSubtext
-                            }
-                        }
-                    }
-                }
-            }
+
             ContentSubsection {
                 title: Translation.tr("Canvas")
                 Layout.bottomMargin: Appearance.spacing.space150

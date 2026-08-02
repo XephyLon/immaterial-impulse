@@ -16,7 +16,6 @@ import Quickshell.Hyprland
 
 import qs.modules.imi.background.widgets
 import qs.modules.imi.background.widgets.clock
-import qs.modules.imi.background.widgets.weather
 import qs.modules.common.plugins
 
 Variants {
@@ -733,18 +732,6 @@ Variants {
                         duration: Appearance.animation.elementMove.duration
                         easing.type: Appearance.animation.elementMove.type
                         easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
-                    }
-                }
-                FadeLoader {
-                    shown: Config.options.background.widgets.weather.enable
-                        && (Config.options.background.screenList.length === 0
-                            || Config.options.background.screenList.includes(bgRoot.screen.name))
-                    sourceComponent: WeatherWidget {
-                        screenWidth: bgRoot.screen.width
-                        screenHeight: bgRoot.screen.height
-                        scaledScreenWidth: bgRoot.screen.width
-                        scaledScreenHeight: bgRoot.screen.height
-                        wallpaperScale: 1
                     }
                 }
                 FadeLoader {

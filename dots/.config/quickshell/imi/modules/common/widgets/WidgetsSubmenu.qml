@@ -12,7 +12,6 @@ Item {
     implicitHeight: col.implicitHeight + 16
 
     readonly property var widgetList: [
-        { key: "weather",     icon: "partly_cloudy_day",  name: Translation.tr("Weather") },
         { key: "clock",       icon: "schedule",           name: Translation.tr("Clock") },
     ]
 
