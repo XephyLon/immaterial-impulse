@@ -67,10 +67,13 @@ ShellRoot {
 
     component PanelFamilyLoader: LazyLoader {
         required property string identifier
-        // "ii" is what configs written before the rename hold. Matching it
-        // here upgrades them in place; without it an existing install loads
-        // no panels at all.
-        readonly property string selected: Config.options.panelFamily === "ii" ? "imi" : Config.options.panelFamily
+        // "ii" is what configs written before the rename hold; "waffle" is
+        // end-4's second family, which was never ported here. Config's upstream
+        // key migration rewrites both, but this stays as the backstop, because
+        // what it prevents is a completely blank desktop with no error anywhere
+        // - too costly to make conditional on a write having landed.
+        readonly property var legacyFamilies: ["ii", "waffle"]
+        readonly property string selected: legacyFamilies.includes(Config.options.panelFamily) ? "imi" : Config.options.panelFamily
         active: Config.ready && selected === identifier
     }
 }
