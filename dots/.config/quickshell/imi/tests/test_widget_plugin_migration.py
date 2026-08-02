@@ -14,6 +14,7 @@ CONFIG = ROOT / "modules/common/Config.qml"
 BUNDLED = ROOT / "modules/common/plugins/bundled"
 MANAGER = ROOT / "modules/common/plugins/PluginManager.qml"
 STATE = ROOT / "modules/common/plugins/PluginState.qml"
+WORLD_CLOCK = ROOT / "services/WorldClock.qml"
 
 
 class WidgetPluginMigration(unittest.TestCase):
@@ -187,6 +188,111 @@ class ClockSettingsMigrateTooNotJustTheToggle(unittest.TestCase):
         body = body[:body.index("\n    }")]
         self.assertLess(body.index("root.state = nextState"),
                         body.index("migratedDesktopWidgetOptions = true"))
+
+
+class WorldClockTimezonesLiveInPluginState(unittest.TestCase):
+    """The world clock's timezone list was the last legacy key with a writer.
+
+    `services/WorldClock.qml` both read and wrote
+    `background.widgets.worldClock.timezones`, so the ported plugin kept its
+    only piece of user-entered data in Config's fixed schema while every other
+    plugin option lived in plugin-state.json. Four picked timezones are typed-in
+    state - unlike a size mode, nobody can shrug off losing them - so the move
+    needs a migration of its own, and that migration has to reach installs that
+    already ran the clock-settings one.
+    """
+
+    def setUp(self):
+        self.src = CONFIG.read_text(encoding="utf-8")
+        self.state = STATE.read_text(encoding="utf-8")
+        self.service = WORLD_CLOCK.read_text(encoding="utf-8")
+
+    def migration_body(self):
+        body = self.src[self.src.index(
+            "function migrateDesktopWidgetOptionsToPlugins"):]
+        return body[:body.index("\n    }")]
+
+    def drain_body(self):
+        body = self.state[self.state.index("function drainPendingConfigOptions"):]
+        return body[:body.index("\n    }")]
+
+    def set_timezone_body(self):
+        body = self.service[self.service.index("function setTimezone"):]
+        return body[:body.index("\n    }")]
+
+    def test_the_service_no_longer_writes_the_legacy_key(self):
+        """The whole point: one writer left in the legacy schema, now zero."""
+        self.assertNotIn("Config.options.background", self.service)
+
+    def test_the_service_reads_the_list_from_plugin_state(self):
+        self.assertRegex(
+            self.service,
+            r'PluginState\.option\(\s*root\.pluginId,\s*"timezones"',
+            "the list must come from the plugin's own options")
+
+    def test_the_picker_persists_through_plugin_state(self):
+        self.assertIn('PluginState.setOption(root.pluginId, "timezones"',
+                      self.set_timezone_body())
+
+    def test_set_timezone_never_assigns_the_bound_property(self):
+        """`timezones` is a PluginState.option(...) binding. The first direct
+        assignment severs it for the rest of the session, after which every
+        later pick updates plugin-state.json while the card, the chips and the
+        other three pickers keep showing the old zones - silently, with no
+        error. See gap 12 in the port plan.
+        """
+        self.assertNotRegex(self.set_timezone_body(), r'root\.timezones\s*=[^=]')
+
+    def test_the_legacy_key_survives_for_the_migration_to_read(self):
+        """Same rule as every other port: the schema block stays so an install
+        that has not migrated yet can still be read.
+        """
+        block = self.src[self.src.index("property JsonObject worldClock: JsonObject {"):]
+        block = block[:block.index("\n                    }")]
+        self.assertIn("property list<string> timezones:", block)
+
+    def test_the_timezone_migration_has_its_own_marker(self):
+        """`migratedDesktopWidgetOptions` is already set on every install that
+        has launched this branch once - reusing it would permanently exclude
+        exactly the installs whose timezones still need carrying.
+        """
+        self.assertIn("property bool migratedWorldClockTimezones: false", self.src)
+        self.assertIn("migratedWorldClockTimezones", self.migration_body())
+
+    def test_the_migration_carries_the_list_onto_the_plugin(self):
+        body = self.migration_body()
+        self.assertIn("worldClock", body)
+        self.assertRegex(body, r'"world-clock"\]?\s*=\s*\{\s*"timezones"')
+
+    def test_the_migration_copies_the_list_out_element_by_element(self):
+        """`list<string>` is not a JS array. Handing it to PluginState as-is
+        serialises an object with numeric keys, which `Array.isArray` then
+        rejects on the way back in - so the user's zones would reach the file
+        and still not survive the trip home.
+        """
+        body = self.migration_body()
+        self.assertRegex(body, r'zones\.push\(legacy\[i\]\)')
+
+    def test_the_drain_sets_the_timezone_marker(self):
+        """Config cannot write plugin-state.json, so nothing else can."""
+        self.assertIn("migratedWorldClockTimezones = true", self.drain_body())
+
+    def test_the_drain_is_not_short_circuited_by_the_clock_marker(self):
+        """Both halves ride one batch. If the early return still tests the
+        clock's marker alone, the timezone batch is computed and thrown away on
+        every existing install.
+        """
+        body = self.drain_body()
+        guard = body[:body.index("const pending")]
+        self.assertIn("migratedWorldClockTimezones", guard,
+                      "the drain must not stop while the timezone half is "
+                      "still outstanding")
+
+    def test_the_timezone_marker_is_written_after_the_values(self):
+        """Marker first would record a migration a crash could lose."""
+        body = self.drain_body()
+        self.assertLess(body.index("root.state = nextState"),
+                        body.index("migratedWorldClockTimezones = true"))
 
 
 class BundledPluginsAreRegistered(unittest.TestCase):

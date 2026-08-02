@@ -65,9 +65,11 @@ Item {
     property string localCityName: Weather.data?.city ?? "..."
     property string localTime: DateTime.time
     property string localDate: Qt.locale().toString(new Date(), "dddd, MMMM dd yyyy")
-    // The timezone list itself stays in Config, owned by the WorldClock service:
-    // it is shell-wide service state rather than per-widget state, so the port
-    // leaves it exactly where an existing install already has it.
+    // The timezone list lives in this plugin's own options, but the service
+    // owns it rather than the widget: it feeds one offset process and one
+    // shared model, and this component is instantiated once per monitor. The
+    // pickers below therefore read and write it through WorldClock, not through
+    // PluginState directly.
     property var worldCities: WorldClock.entries
     property bool showingSettings: false
 

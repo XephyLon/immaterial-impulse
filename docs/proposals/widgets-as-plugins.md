@@ -121,6 +121,13 @@ not written down.
 - **`PixelClock.qml` reads `Config.options.background.widgets.enableShadows`**, a
   key the schema does not declare, so its drop shadow has never drawn.
   Pre-existing; carried over by the port unchanged.
-- **`background.widgets.worldClock.timezones` is still live.** `services/WorldClock.qml`
-  reads and writes it, so the ported plugin keeps its timezone list in the Config
-  schema rather than in `PluginState` like every other plugin option.
+- ~~**`background.widgets.worldClock.timezones` is still live.**~~ **Resolved as a
+  follow-up.** `services/WorldClock.qml` now reads the list from
+  `PluginState.option("world-clock", "timezones", ...)` and writes it back with
+  `setOption`, so no `background.widgets.*` key has a runtime writer left. The
+  service keeps owning the list rather than handing it to the widget: it drives
+  one offset `Process` and one shared `entries` model, while the widget is
+  instantiated once per monitor. The legacy key stays in the schema, read-only,
+  as the input to a third migration marker (`migratedWorldClockTimezones`) —
+  installs that had already run the clock-settings migration would otherwise
+  have been skipped.

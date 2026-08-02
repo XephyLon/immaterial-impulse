@@ -1,6 +1,7 @@
 pragma Singleton
 import qs
 import qs.modules.common
+import qs.modules.common.plugins
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -79,15 +80,45 @@ Singleton {
 
     readonly property var comboModel: root.timezoneList.map(tz => ({ label: root.labelFor(tz), tz: tz, icon: "" }))
 
-    property list<string> timezones: Config.options?.background?.widgets?.worldClock?.timezones ?? [
+    // The list stays owned by this singleton rather than by the widget that
+    // shows it: it drives one offset `Process` and one shared `entries` model,
+    // while the widget is instantiated once per monitor. Four copies of the
+    // widget must not mean four copies of the list or four `date` processes.
+    //
+    // It is stored under the world clock's own plugin options because that is
+    // where every other preference of that widget already lives. Config's fixed
+    // schema still declares the legacy key, but only so
+    // `Config.migrateDesktopWidgetOptionsToPlugins()` can read it once on an
+    // upgrade - nothing writes it any more.
+    readonly property string pluginId: "world-clock"
+    readonly property var defaultTimezones: [
         "Australia/Sydney", "Asia/Tokyo", "Europe/London", "America/New_York"
     ]
 
+    // Reading the list as a binding is what keeps the widget's four pickers,
+    // its chips and its dials in step with the file. `setTimezone` must never
+    // assign this property: the first direct assignment severs the binding for
+    // the rest of the session, after which every later pick still updates
+    // plugin-state.json while nothing on screen moves.
+    property list<string> timezones: root.normalizedTimezones(
+        PluginState.option(root.pluginId, "timezones", root.defaultTimezones))
+
+    // plugin-state.json is plain JSON that nothing validates, unlike the
+    // JsonAdapter this list used to live in, so a hand-edited file can put
+    // anything here - and a non-string would reach `TZ='...' date` below as the
+    // word `undefined`. The widget is four zones by construction (four chips,
+    // four dials, four pickers), so normalising to exactly that length also
+    // means `timezones[3]` is always a real zone.
+    function normalizedTimezones(value) {
+        const incoming = Array.isArray(value) ? value : []
+        return root.defaultTimezones.map((fallback, i) =>
+            (typeof incoming[i] === "string" && incoming[i].length > 0) ? incoming[i] : fallback)
+    }
+
     function setTimezone(index, tz) {
-        let updated = root.timezones.slice()
+        const updated = root.timezones.slice()
         updated[index] = tz
-        root.timezones = updated
-        Config.options.background.widgets.worldClock.timezones = updated
+        PluginState.setOption(root.pluginId, "timezones", updated)
     }
 
     onTimezonesChanged: root.refreshOffsets()

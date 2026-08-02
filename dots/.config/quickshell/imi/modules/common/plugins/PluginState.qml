@@ -131,7 +131,12 @@ Singleton {
             return;
         if (!root.ready || !Config.ready)
             return;
-        if (Config.options.plugins.migratedDesktopWidgetOptions)
+        // Both halves of the migration ride one batch, so this stops only once
+        // every marker it discharges is set. Testing the clock's alone would
+        // compute the world clock's timezones and throw them away on every
+        // install that has already run the clock half - which is all of them.
+        if (Config.options.plugins.migratedDesktopWidgetOptions
+            && Config.options.plugins.migratedWorldClockTimezones)
             return;
         const pending = Config.pendingPluginOptions;
         if (!pending || typeof pending !== "object")
@@ -181,6 +186,7 @@ Singleton {
         Config.pendingPluginOptions = ({});
         Config.pendingPluginPositions = ({});
         Config.options.plugins.migratedDesktopWidgetOptions = true;
+        Config.options.plugins.migratedWorldClockTimezones = true;
         root.drainingConfigOptions = false;
     }
 
