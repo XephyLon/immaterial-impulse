@@ -933,11 +933,6 @@ ContentPage {
                             enabled: Config.options.background.widgets.resources.enable
                         },
                         {
-                            icon: "graphic_eq",
-                            name: Translation.tr("Visualizer"),
-                            enabled: Config.options.background.widgets.visualizer.enable
-                        },
-                        {
                             icon: "calendar_month",
                             name: Translation.tr("Calendar"),
                             enabled: Config.options.background.widgets.calendar.enable
@@ -993,8 +988,6 @@ ContentPage {
                                             Config.options.background.widgets.media.enable = checked
                                         else if (modelData.icon === "memory")
                                             Config.options.background.widgets.resources.enable = checked
-                                        else if (modelData.icon === "graphic_eq")
-                                            Config.options.background.widgets.visualizer.enable = checked
                                         else if (modelData.icon === "calendar_month")
                                             Config.options.background.widgets.calendar.enable = checked
                                         else if (modelData.icon === "public")

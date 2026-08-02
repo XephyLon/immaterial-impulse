@@ -21,7 +21,6 @@ import qs.modules.imi.background.widgets.media
 import qs.modules.common.plugins
 import qs.modules.imi.background.widgets.images
 import qs.modules.imi.background.widgets.resources
-import qs.modules.imi.background.widgets.visualizer
 import qs.modules.imi.background.widgets.calendar
 import qs.modules.imi.background.widgets.worldclock
 import qs.modules.imi.background.widgets.usercard
@@ -741,18 +740,6 @@ Variants {
                         duration: Appearance.animation.elementMove.duration
                         easing.type: Appearance.animation.elementMove.type
                         easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
-                    }
-                }
-                FadeLoader {
-                    shown: Config.options.background.widgets.visualizer.enable
-                        && (Config.options.background.screenList.length === 0
-                            || Config.options.background.screenList.includes(bgRoot.screen.name))
-                    sourceComponent: VisualizerWidget {
-                        screenWidth: bgRoot.screen.width
-                        screenHeight: bgRoot.screen.height
-                        scaledScreenWidth: bgRoot.screen.width
-                        scaledScreenHeight: bgRoot.screen.height
-                        wallpaperScale: 1
                     }
                 }
                 FadeLoader {

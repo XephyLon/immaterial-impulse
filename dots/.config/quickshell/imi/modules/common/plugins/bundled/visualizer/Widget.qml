@@ -1,28 +1,43 @@
-import QtQuick
-import QtQuick.Layouts
-import Quickshell.Services.Mpris
-import qs
-import qs.services
-import qs.modules.common
-import qs.modules.common.widgets
-import qs.modules.imi.background.widgets
+pragma ComponentBehavior: Bound
 
-AbstractBackgroundWidget {
+import QtQuick
+import qs
+import qs.modules.common
+
+Item {
     id: root
 
-    configEntryName: "visualizer"
+    // The visualiser draws bars straight onto the wallpaper - it has no panel,
+    // card or tint of its own - so it opts out of the host's frost entirely by
+    // declaring an empty blur-region list. PluginWidget skips the blur surface
+    // when a widget declares custom regions and supplies none.
+    readonly property var blurRegions: []
 
-    readonly property MprisPlayer activePlayer: MprisController.activePlayer
-    readonly property bool isPlaying: activePlayer?.isPlaying ?? false
+    // A 12x2 component-grid tile (1716x228). The built-in was screen-wide and
+    // 240px tall: 2 rows (228) is the nearest vertical span, and 12 columns is
+    // the widest span the grid allows, so it stays close to full-bleed on a
+    // 1080p display. The host (PluginWidget) sizes us from the manifest `grid`
+    // and stretches this root to fill it; the implicit size is only a fallback
+    // for standalone use. See docs/widget-grid.md.
+    implicitWidth: Appearance.sizes.widgetGridSpanX(12)
+    implicitHeight: Appearance.sizes.widgetGridSpanY(2)
+    anchors.fill: parent
+
     readonly property list<real> points: GlobalStates.visualizerPoints
 
     property real barWidth: 4
     property real barSpacing: Appearance.spacing.space100
-    property real maxBarHeight: 220
+    // Fill the tile, leaving the same headroom the built-in kept above its
+    // tallest bar. At the default scale this is exactly the old 220px.
+    property real maxBarHeight: root.height > 0
+        ? Math.max(1, root.height - Appearance.spacing.space100)
+        : 220
     property real maxVisualizerValue: 1000
     property real smoothingDuration: 150
 
-    readonly property int barCount: Math.max(1, Math.floor(screenWidth / (barWidth + barSpacing)))
+    // Bar count follows the widget's own width now that the host, not the
+    // screen, decides how wide the visualiser is.
+    readonly property int barCount: Math.max(1, Math.floor(root.width / (barWidth + barSpacing)))
 
     readonly property var smoothedPoints: {
         let raw = points
@@ -67,13 +82,6 @@ AbstractBackgroundWidget {
             silenceTimer.restart()
         }
     }
-
-    implicitWidth: screenWidth
-    implicitHeight: maxBarHeight + 20
-
-    x: 0
-    y: screenHeight - implicitHeight
-    draggable: false
 
     Row {
         anchors.bottom: parent.bottom
