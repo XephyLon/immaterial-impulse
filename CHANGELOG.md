@@ -12,6 +12,17 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- The design-system compile check swept a hardcoded list of bundled packages
+  that had rotted: it still named `nandoroid-clock` and `nandoroid-at-a-glance`,
+  directories that have never existed at that path, so every run reported two
+  meaningless failures. Both roots are discovered with `find` now, so the check
+  covers every bundled package's entry point (118 files, up from a fixed list)
+  and cannot drift again; a sweep that matches nothing fails instead of passing
+  silently. It is also wired into `tests/run_tests.sh` for the first time -
+  nothing ran it before, which is why the dead names survived since the ii->imi
+  rename. It skips where there is no Wayland display, so CI is unaffected.
+
 ### Added
 - **Per-widget lock and click-through for desktop widgets.** Every desktop
   widget gains two switches of its own next to `Blur background` in

@@ -416,6 +416,24 @@ if [[ "${RUN_DOCKER_RUNTIME_MEMORY_TEST:-0}" == "1" ]]; then
     bash "$SCRIPT_DIR/run_docker_memory_test.sh"
 fi
 
+# Design-system and bundled-package compile check. It needs a real Quickshell
+# process and therefore a compositor, so it skips rather than fails where there
+# is no Wayland display - notably CI. Wiring it in at all is the point: two
+# package names in its sweep had been dead since the ii->imi rename and nobody
+# noticed, because nothing ever ran it.
+echo "Running design system compile check..."
+if [ -z "${WAYLAND_DISPLAY:-}" ] || ! command -v qs >/dev/null 2>&1; then
+    echo "  SKIPPED (no WAYLAND_DISPLAY, or qs not on PATH)"
+else
+    DSC_OUT="$(cd "$PROJECT_ROOT" && timeout 120 qs -p DesignSystemCompile.qml 2>&1 | grep "DesignSystemCompile" || true)"
+    if ! printf '%s' "$DSC_OUT" | grep -q "failures=0"; then
+        echo "Design system compile check failed:" >&2
+        printf '%s\n' "$DSC_OUT" >&2
+        exit 1
+    fi
+    printf '  %s\n' "$DSC_OUT"
+fi
+
 # Run the test runner
 "$QMLTESTRUNNER" \
     -import "$PROJECT_ROOT/tests/mocks" \
