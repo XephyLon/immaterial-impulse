@@ -363,6 +363,15 @@ if ! python3 "$SCRIPT_DIR/test_shared_widget_contracts.py"; then
     exit 1
 fi
 
+# The source half is static. The runtime half opens a real settings page
+# against a real config and brings its own headless weston, so it needs no
+# display of its own - but it does need weston, and skips without it.
+echo "Running config control write-back tests..."
+if ! python3 "$SCRIPT_DIR/test_config_control_write_back.py"; then
+    echo "Config control write-back tests failed."
+    exit 1
+fi
+
 echo "Running Docker memory-safety contract tests..."
 if ! python3 "$SCRIPT_DIR/test_docker_memory_safety.py"; then
     echo "Docker memory-safety contract tests failed."
