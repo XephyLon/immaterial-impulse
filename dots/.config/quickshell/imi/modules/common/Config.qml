@@ -58,6 +58,92 @@ Singleton {
         root.setNestedValue("plugins.migratedDesktopWidgets", true);
     }
 
+    // `desktopWidgetPluginIds` above carries exactly one bit per widget:
+    // `enable`. Everything else a built-in kept under `background.widgets.<key>`
+    // is dropped, which is right for the deduplicated widgets (the surviving
+    // plugin is a different program with its own defaults and its own store)
+    // and cheap for the ports whose remaining state was one size mode.
+    //
+    // The clock is the exception, on both counts that matter. It is the only
+    // built-in that was on by default, and its four styles look nothing like
+    // each other - so an upgrade that keeps `enable` and drops `style` silently
+    // repaints every existing desktop, and the user's clock "changes into
+    // something else" with no setting they can point at. Its settings therefore
+    // migrate too, as a legacy nested path -> flat plugin option key map
+    // (plugin options are one flat namespace per plugin:
+    // PluginState.option(id, key, default)).
+    //
+    // Host-owned keys are deliberately absent: `enable` is the line above,
+    // `x`/`y`/`placementStrategy` belong to PluginState's per-monitor layout.
+    readonly property var desktopClockOptionKeys: ({
+            "showOnlyWhenLocked": "showOnlyWhenLocked",
+            "style": "style",
+            "styleLocked": "styleLocked",
+            "color": "color",
+            "cookie.aiStyling": "cookieAiStyling",
+            "cookie.sides": "cookieSides",
+            "cookie.dialNumberStyle": "cookieDialNumberStyle",
+            "cookie.hourHandStyle": "cookieHourHandStyle",
+            "cookie.minuteHandStyle": "cookieMinuteHandStyle",
+            "cookie.secondHandStyle": "cookieSecondHandStyle",
+            "cookie.dateStyle": "cookieDateStyle",
+            "cookie.timeIndicators": "cookieTimeIndicators",
+            "cookie.hourMarks": "cookieHourMarks",
+            "cookie.dateInClock": "cookieDateInClock",
+            "cookie.constantlyRotate": "cookieConstantlyRotate",
+            "cookie.useSineCookie": "cookieUseSineCookie",
+            "digital.adaptiveAlignment": "digitalAdaptiveAlignment",
+            "digital.showDate": "digitalShowDate",
+            "digital.animateChange": "digitalAnimateChange",
+            "digital.vertical": "digitalVertical",
+            "digital.font.family": "digitalFontFamily",
+            "digital.font.weight": "digitalFontWeight",
+            "digital.font.width": "digitalFontWidth",
+            "digital.font.size": "digitalFontSize",
+            "digital.font.roundness": "digitalFontRoundness",
+            "pixel.orientation": "pixelOrientation",
+            "quote.enable": "quoteEnable",
+            "quote.text": "quoteText",
+            "quote.followClock": "quoteFollowClock"
+        })
+
+    // Plugin options live in plugin-state.json, which is PluginState's file,
+    // not Config's - and Config cannot import the plugins module, because that
+    // module imports Config back. So this half of the migration only *computes*
+    // the batch; PluginState drains `pendingPluginOptions` once both files are
+    // loaded and sets the marker only after the values are actually in. A
+    // launch that dies in between therefore migrates again next time rather
+    // than recording a migration that never happened.
+    //
+    // The marker is its own key rather than reusing `migratedDesktopWidgets`:
+    // installs that already ran the enable-only migration would otherwise be
+    // permanently excluded from the settings half.
+    property var pendingPluginOptions: ({})
+
+    function migrateDesktopWidgetOptionsToPlugins() {
+        if (root.options.plugins.migratedDesktopWidgetOptions)
+            return;
+        const clock = root.options.background.widgets.clock;
+        if (!clock)
+            return;
+        const values = {};
+        for (const path in root.desktopClockOptionKeys) {
+            const parts = path.split(".");
+            let node = clock;
+            for (let i = 0; i < parts.length; i++) {
+                if (node === undefined || node === null)
+                    break;
+                node = node[parts[i]];
+            }
+            if (node === undefined || node === null)
+                continue;
+            values[root.desktopClockOptionKeys[path]] = node;
+        }
+        root.pendingPluginOptions = ({
+                "clock": values
+            });
+    }
+
     function setNestedValue(nestedKey, value) {
         let keys = nestedKey.split(".");
         let obj = root.options;
@@ -116,6 +202,7 @@ Singleton {
         onLoaded: {
             root.ready = true;
             root.migrateDesktopWidgetsToPlugins();
+            root.migrateDesktopWidgetOptionsToPlugins();
         }
         onLoadFailed: error => {
             if (error == FileViewError.FileNotFound) {
@@ -156,6 +243,13 @@ Singleton {
                 // re-adds a widget on every launch and the user can never
                 // turn one off.
                 property bool migratedDesktopWidgets: false
+                // Set once the clock's own settings have been translated into
+                // plugin options. Separate from the marker above on purpose:
+                // the enable-only migration shipped first, so installs that
+                // already ran it would otherwise never get their clock style,
+                // fonts or quote carried across. PluginState sets this, and
+                // only after the values have actually reached its file.
+                property bool migratedDesktopWidgetOptions: false
             }
 
             property JsonObject policies: JsonObject {

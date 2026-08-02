@@ -104,6 +104,58 @@ Singleton {
         writeTimer.restart();
     }
 
+    // A ported built-in's own settings have to end up in this file, but Config
+    // cannot write it (and cannot import this module - it is imported *by* it).
+    // Config computes the batch instead and parks it on
+    // `Config.pendingPluginOptions`; this drains it once both files are loaded.
+    //
+    // Two rules make it safe to run on any launch:
+    //   - a key already present for that plugin wins, so a preference the user
+    //     has since set through the widget's settings panel is never clobbered
+    //     by the legacy value it was migrated from;
+    //   - the marker is written last, so a launch that dies mid-migration
+    //     simply migrates again rather than recording a migration that never
+    //     landed.
+    function drainPendingConfigOptions() {
+        if (!root.ready || !Config.ready)
+            return;
+        if (Config.options.plugins.migratedDesktopWidgetOptions)
+            return;
+        const pending = Config.pendingPluginOptions;
+        if (!pending || typeof pending !== "object")
+            return;
+
+        const nextState = Object.assign({}, root.state);
+        const nextOptions = Object.assign({}, nextState.pluginOptions || {});
+        for (const pluginId in pending) {
+            const incoming = pending[pluginId];
+            if (!incoming || typeof incoming !== "object")
+                continue;
+            const nextPlugin = Object.assign({}, nextOptions[pluginId] || {});
+            for (const key in incoming) {
+                if (nextPlugin[key] !== undefined)
+                    continue;
+                nextPlugin[key] = incoming[key];
+            }
+            nextOptions[pluginId] = nextPlugin;
+        }
+        nextState.version = root.schemaVersion;
+        nextState.pluginOptions = nextOptions;
+        root.state = nextState;
+        writeTimer.restart();
+
+        Config.pendingPluginOptions = ({});
+        Config.options.plugins.migratedDesktopWidgetOptions = true;
+    }
+
+    Connections {
+        target: Config
+        function onPendingPluginOptionsChanged() { root.drainPendingConfigOptions() }
+        function onReadyChanged() { root.drainPendingConfigOptions() }
+    }
+
+    onReadyChanged: root.drainPendingConfigOptions()
+
     function snapshot() {
         return JSON.stringify(root.state);
     }
