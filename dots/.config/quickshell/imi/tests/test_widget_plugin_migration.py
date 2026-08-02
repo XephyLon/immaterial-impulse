@@ -34,6 +34,21 @@ class WidgetPluginMigration(unittest.TestCase):
                     "media", "resources"):
             self.assertIn(key, mapping, f"no migration mapping for {key}")
 
+    def test_deduplicated_widgets_map_to_the_plugin_that_already_ships(self):
+        """resources/media/weather/notes are deleted rather than ported, so
+        their state must land on the id of the plugin that already exists. A
+        wrong id here silently drops the widget for anyone who had it on,
+        because the marker records the migration as done either way.
+        """
+        mapping = self.src[self.src.index("desktopWidgetPluginIds"):]
+        mapping = mapping[:mapping.index("})")]
+        for key, plugin in (("resources", "nandoroid_system_monitor"),
+                            ("media", "nandoroid_media"),
+                            ("weather", "nandoroid_weather"),
+                            ("notes", "notes")):
+            self.assertRegex(mapping, rf'"{key}":\s*"{plugin}"',
+                             f"{key} must migrate onto {plugin}")
+
     def test_migration_never_drops_existing_entries(self):
         """It appends to plugins.enabled; a user's third-party plugins must
         survive it untouched.

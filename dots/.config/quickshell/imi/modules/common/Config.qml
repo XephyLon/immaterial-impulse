@@ -23,17 +23,23 @@ Singleton {
     // expose keys it has no property for, so they are inert, and leaving them
     // means a user who downgrades still has their settings.
     readonly property var desktopWidgetPluginIds: ({
+            // Ported to new bundled plugins of their own.
             "clock": "clock",
-            "weather": "weather",
             "calendar": "calendar",
             "worldClock": "world-clock",
-            "notes": "notes",
             "userCard": "user-card",
             "images": "image-converter",
             "visualizer": "visualizer",
             "customImage": "custom-image",
-            "media": "media",
-            "resources": "resources"
+            // Deduplicated: an equivalent plugin already ships, so the
+            // built-in is deleted rather than ported and its state maps onto
+            // that plugin's existing id. Getting one of these wrong silently
+            // drops the widget for anyone who had it on, because the marker
+            // records the migration as done either way.
+            "resources": "nandoroid_system_monitor",
+            "media": "nandoroid_media",
+            "weather": "nandoroid_weather",
+            "notes": "notes"
         })
 
     function migrateDesktopWidgetsToPlugins() {

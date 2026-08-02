@@ -52,21 +52,47 @@ Read this before the first port; every task depends on it.
 
 ## Widget inventory
 
-Port order is smallest-first so the recipe is proven before it meets a hard one. The clock is last.
+**Revised after survey.** Five of the eleven built-ins already have an
+equivalent bundled plugin, so they are *deletions*, not ports. The user
+confirmed all four dedups (`resources`, `media`, `weather`, `notes`); `clock`
+is a port that retires the older plugin of the same name.
 
-| # | id | Built-in source | Lines | Config key | Grid |
-|---|---|---|---|---|---|
-| 1 | `resources` | `widgets/resources/ResourcesWidget.qml` | 161 | `resources` | yes |
-| 2 | `visualizer` | `widgets/visualizer/VisualizerWidget.qml` | 116 | `visualizer` | yes |
-| 3 | `user-card` | `widgets/usercard/UserCardWidget.qml` | 240 | `userCard` | yes |
-| 4 | `custom-image` | `widgets/images/CustomImage.qml` | 203 | `customImage` | yes |
-| 5 | `image-converter` | `widgets/images/ImageConverterWidget.qml` | — | `images` | yes |
-| 6 | `media` | `widgets/media/MediaWidget.qml` | 306 | `media` | yes |
-| 7 | `world-clock` | `widgets/worldclock/WorldClockWidget.qml` | 332 | `worldClock` | yes |
-| 8 | `calendar` | `widgets/calendar/CalendarWidget.qml` | 444 | `calendar` | yes |
-| 9 | `weather` | `widgets/weather/WeatherWidget.qml` | 443 | `weather` | yes |
-| 10 | `notes` | `widgets/notes/NotesWidget.qml` | 244 | `notes` | **dedup — see Task 4** |
-| 11 | `clock` | `widgets/clock/` (19 files, ~1350) | — | `clock` | **no grid** |
+The nandoroid plugins look tiny (22-line `Widget.qml`) but are thin wrappers
+over substantial designsystem widgets, so in every case the surviving
+implementation is comparable to or richer than the built-in:
+
+| built-in | lines | surviving plugin renders | lines |
+|---|---|---|---|
+| `resources` | 161 | `DesktopSystemMonitorWidget` | 381 |
+| `media` | 306 | `DesktopMediaWidget` | 522 |
+| `weather` | 443 | `DesktopWeatherWidget` | 455 |
+
+### Ports — new bundled plugin (Tasks 2–3)
+
+Smallest first, so the recipe is proven before it meets a hard one.
+
+| # | id | Built-in source | Lines | Config key |
+|---|---|---|---|---|
+| 1 | `visualizer` | `widgets/visualizer/VisualizerWidget.qml` | 116 | `visualizer` |
+| 2 | `custom-image` | `widgets/images/CustomImage.qml` | 203 | `customImage` |
+| 3 | `image-converter` | `widgets/images/ImageConverterWidget.qml` | — | `images` |
+| 4 | `user-card` | `widgets/usercard/UserCardWidget.qml` | 240 | `userCard` |
+| 5 | `world-clock` | `widgets/worldclock/WorldClockWidget.qml` | 332 | `worldClock` |
+| 6 | `calendar` | `widgets/calendar/CalendarWidget.qml` | 444 | `calendar` |
+
+### Dedups — delete the built-in (Task 4)
+
+| built-in source | Config key | survives as |
+|---|---|---|
+| `widgets/resources/ResourcesWidget.qml` | `resources` | `nandoroid_system_monitor` |
+| `widgets/media/MediaWidget.qml` | `media` | `nandoroid_media` |
+| `widgets/weather/WeatherWidget.qml` | `weather` | `nandoroid_weather` |
+| `widgets/notes/NotesWidget.qml` | `notes` | `notes` |
+
+### Port and retire (Task 5)
+
+`clock` — `widgets/clock/` (19 files, ~1350 lines), **no grid**, replaces the
+declarative-JSON `clock_plugin`.
 
 ---
 
@@ -262,15 +288,15 @@ git commit -m "feat(widgets): migrate built-in desktop widget state into plugins
 
 ---
 
-## Task 2: Port `resources` — the pilot
+## Task 2: Port `visualizer` — the pilot
 
 This one proves the recipe. Do it fully and carefully; Task 3 repeats it.
 
 **Files:**
-- Create: `dots/.config/quickshell/imi/modules/common/plugins/bundled/resources/manifest.json`
-- Create: `dots/.config/quickshell/imi/modules/common/plugins/bundled/resources/Widget.qml`
+- Create: `dots/.config/quickshell/imi/modules/common/plugins/bundled/visualizer/manifest.json`
+- Create: `dots/.config/quickshell/imi/modules/common/plugins/bundled/visualizer/Widget.qml`
 - Modify: `dots/.config/quickshell/imi/modules/imi/background/Background.qml`
-- Delete: `dots/.config/quickshell/imi/modules/imi/background/widgets/resources/ResourcesWidget.qml`
+- Delete: `dots/.config/quickshell/imi/modules/imi/background/widgets/visualizer/VisualizerWidget.qml`
 
 - [ ] **Step 1: Read the reference first**
 
@@ -278,15 +304,15 @@ Read `modules/common/plugins/bundled/notes/Widget.qml` and `modules/common/plugi
 
 - [ ] **Step 2: Determine the grid span**
 
-Read `modules/imi/background/widgets/resources/ResourcesWidget.qml` and note its current `implicitWidth`/`implicitHeight`. Convert to the nearest whole grid span using `Appearance.sizes.widgetGridSpanX(cols)` / `widgetGridSpanY(rows)` (cell 132×108, gap 12 — see `docs/widget-grid.md`). Record the chosen `cols`/`rows` in the commit message.
+Read `modules/imi/background/widgets/visualizer/VisualizerWidget.qml` and note its current `implicitWidth`/`implicitHeight`. Convert to the nearest whole grid span using `Appearance.sizes.widgetGridSpanX(cols)` / `widgetGridSpanY(rows)` (cell 132×108, gap 12 — see `docs/widget-grid.md`). Record the chosen `cols`/`rows` in the commit message.
 
 - [ ] **Step 3: Write the manifest**
 
-Create `modules/common/plugins/bundled/resources/manifest.json`, following the `notes` manifest exactly:
+Create `modules/common/plugins/bundled/visualizer/manifest.json`, following the `notes` manifest exactly:
 
 ```json
 {
-  "id": "resources", "name": "Resources", "description": "CPU, memory and disk usage at a glance", "version": "1.0.0", "apiVersion": 1,
+  "id": "visualizer", "name": "Visualizer", "description": "Audio spectrum visualiser for the desktop", "version": "1.0.0", "apiVersion": 1,
   "author": "Immaterial Impulse contributors", "license": "AGPL-3.0",
   "grid": { "cols": 2, "rows": 1 },
   "capabilities": ["desktop-widget"], "permissions": ["settings_read"],
@@ -294,22 +320,22 @@ Create `modules/common/plugins/bundled/resources/manifest.json`, following the `
 }
 ```
 
-Adjust `grid`, `description` and `permissions` to what the widget actually needs. Keep `id` equal to the value the Task 1 migration maps to (`resources`).
+Adjust `grid`, `description` and `permissions` to what the widget actually needs. Keep `id` equal to the value the Task 1 migration maps to (`visualizer`).
 
 - [ ] **Step 4: Port the widget body**
 
-Create `modules/common/plugins/bundled/resources/Widget.qml` from the built-in source, changing exactly these things and nothing else:
+Create `modules/common/plugins/bundled/visualizer/Widget.qml` from the built-in source, changing exactly these things and nothing else:
 
 - Drop `screenWidth`, `screenHeight`, `scaledScreenWidth`, `scaledScreenHeight`, `wallpaperScale`, `wallpaperSafetyTriggered` and anything that only existed to position the widget.
 - Add `anchors.fill: parent`, and `implicitWidth`/`implicitHeight` from the grid span as a standalone fallback.
-- Replace any `Config.options.background.widgets.resources.<opt>` read with `PluginState.option("resources", "<opt>", <default>)`.
+- Replace any `Config.options.background.widgets.visualizer.<opt>` read with `PluginState.option("visualizer", "<opt>", <default>)`.
 - Add the frost trio if the widget draws a background: `blurEnabled`, `backgroundOpacity`, `managesBlurTint`.
 
 This is a structural refactor, not a redesign. The rendered result must look the same.
 
 - [ ] **Step 5: Remove the built-in**
 
-In `modules/imi/background/Background.qml`, delete the `FadeLoader` block whose `sourceComponent` is `ResourcesWidget`. Then delete `modules/imi/background/widgets/resources/ResourcesWidget.qml` and remove any now-unused import.
+In `modules/imi/background/Background.qml`, delete the `FadeLoader` block whose `sourceComponent` is `VisualizerWidget`. Then delete `modules/imi/background/widgets/resources/ResourcesWidget.qml` and remove any now-unused import.
 
 - [ ] **Step 6: Run the suite**
 
@@ -329,7 +355,7 @@ pkill -x quickshell; sleep 2; setsid -f bash -c "qs -c imi > /tmp/imi.log 2>&1"
 
 Then confirm, and report each honestly:
 
-1. `Resources` appears in Settings → Widgets, tagged `Desktop`.
+1. `Visualizer` appears in Settings → Widgets, tagged `Desktop`.
 2. Enabling it puts the widget on the desktop.
 3. It looks the same as the built-in did.
 4. It can be dragged, and the position survives a restart.
@@ -339,14 +365,14 @@ Then confirm, and report each honestly:
 
 ```bash
 git add -A dots/.config/quickshell/imi
-git commit -m "feat(widgets): port the resources widget to a bundled plugin"
+git commit -m "feat(widgets): port the visualizer widget to a bundled plugin"
 ```
 
 ---
 
-## Task 3: Port the remaining eight grid widgets
+## Task 3: Port the remaining five grid widgets
 
-One widget per commit, in inventory order (2–9, skipping `notes` and `clock`). For each, repeat Task 2 steps 2–8 exactly, substituting the id, source path and config key from the inventory table.
+One widget per commit, in Ports-table order (2–6). For each, repeat Task 2 steps 2–8 exactly, substituting the id, source path and config key from the inventory table.
 
 Per-widget notes, so these are not rediscovered:
 
@@ -361,7 +387,7 @@ Stop and report rather than improvising if a widget needs something the plugin A
 
 ---
 
-## Task 4: Port `notes` by removing the duplicate
+## Task 4: Delete the four duplicated built-ins
 
 `notes` already exists as a bundled plugin **and** as a built-in. This task deletes the built-in; it does not create a plugin.
 
