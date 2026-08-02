@@ -41,7 +41,10 @@ gone; the only `FadeLoader` left there is the plugin `Repeater`'s.
 `image-converter` are ports of former built-ins; the old declarative `clock_plugin` was retired by
 the port rather than kept alongside it. The former built-in resources, media, weather and notes
 widgets were duplicates and were deleted in favour of `nandoroid_system_monitor`,
-`nandoroid_media`, `nandoroid_weather` and `notes`.
+`nandoroid_media`, `nandoroid_weather` and `notes`. A dedup is only a dedup where the survivor is a
+superset: the built-in resources widget swapped its third card to the battery on a laptop and
+`nandoroid_system_monitor` did not, so that branch was ported into the plugin (its **Battery
+instead of disk** option) rather than lost.
 
 Bundled packages are **not** auto-discovered. `PluginManager.qml` needs both a `FileView` per
 package and that view's id inside `rebuildFromLoadedFiles()`; miss either half and the plugin
