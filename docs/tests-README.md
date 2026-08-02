@@ -82,6 +82,7 @@ In addition to the QML unit tests, `run_tests.sh` runs static lint checks first:
 * **Plugin process lifecycle lint (`lint_plugin_processes.py`)**: Rejects bundled streaming processes with persistent `running` bindings unless they document restart-safe backoff, prevents Docker's known-runaway desktop host from being re-enabled, and keeps package bar entries behind exactly one loader instead of the runaway nested sizing path. This prevents instant-exit respawn loops and multi-gigabyte allocation failures from starving the shell session.
 * **Widget interaction mode tests (`test_widget_interaction_modes.py`)**: Pin per-widget lock and click-through on `AbstractBackgroundWidget` — that both flags default off (that class sits under every desktop widget in the shell), that the global `background.widgetsLocked` toggle ORs with the per-widget lock rather than replacing it, that `clickThrough` drives `enabled` rather than a Wayland surface mask, that it drives *both* gates (the host's own `MouseArea` and the `contentItem` wrapper every child is parented into, since `MouseArea.enabled` shadows `Item.enabled` and reaches nothing under it), that the wrapper gates on `clickThrough` rather than on the resolved lock and takes no part in sizing, that `PluginWidget` reads both flags from `PluginState` with the manifest as the seed and never assigns them, and that the settings rows exist so a shipped default stays reversible. Every assertion was confirmed to fail under a matching mutation; `WidgetInteractionRuntimeTest.qml` is the behavioural half.
 * **Widget interaction runtime tests (`test_widget_interaction_runtime.py`)**: Drive `WidgetInteractionRuntimeTest.qml` under a headless weston with throwaway XDG dirs, failing on any check it reports and on any `Binding loop` in its output. This is what the source contract cannot reach: whether a click over a click-through widget actually lands on the desktop menu behind it, and whether it stops landing on the controls the widget draws for itself — proved on a synthetic `MouseArea` and on the real bundled notes widget's per-note delete button, each with the same click repeated with click-through off as its control. Skips where weston or `qs` is missing, as in CI.
+* **Config control write-back tests (`test_config_control_write_back.py`)**: Two halves of one rule — a ranged settings control must not write to the config just because it was built. The source contract sweeps every `ConfigSpinBox`/`ConfigSlider` in the tree (69 across 16 files) and rejects a write-back hung off `onValueChanged`, and pins the widgets' own shape: the user-only `valueModified` signal, the `onTextEdited` (not `onTextChanged`) path for the spin box's text field, the range that widens to admit an out-of-range stored value, and the explicit padding that keeps the editable number off the decrement button. Every assertion was confirmed to fail under a matching mutation. The runtime half drives `ConfigControlWriteBackRuntimeTest.qml` under a headless weston and reads `config.json` back off disk. Skips where weston or `qs` is missing, as in CI.
 * **Plugin installer tests (`test_plugin_installer.py`)**: Verify remote package paths cannot be absolute or escape the plugin directory using `..`.
 * **Preset tests (`test_presets.py`)**: Verify complete desktop plugin state—including positions and per-plugin options—round-trips through presets, while position-only legacy presets retain options they never captured.
 * **Matugen application theme tests (`test_matugen_app_themes.py`)**: Verify Cava, btop, and tmux templates are registered idempotently, generated themes preserve unrelated application settings, and live reload hooks run after Matugen renders.
@@ -140,10 +141,18 @@ line that implements it.
 
 ## Runtime harnesses (repository root)
 
-`CurrencyRuntimeTest.qml`, `DesignSystemCompile.qml`, `DiscordVoiceRuntimeTest.qml`, `DockerRuntimeTest.qml`,
+`CurrencyRuntimeTest.qml`, `DiscordVoiceRuntimeTest.qml`, `DockerRuntimeTest.qml`,
 `DockerBarControlRuntimeTest.qml`, and `DockerBarHostRuntimeTest.qml` are
 manually launched harnesses, driven by `run_docker_memory_test.sh` via
 `quickshell -p <file>`.
+
+`DesignSystemCompile.qml` is run by the suite itself (it needs a compositor, so
+it skips without `WAYLAND_DISPLAY`). It compiles every design-system file, every
+bundled package entry point, **every settings page**, and the shared widgets
+those pages are built from. The settings pages are in that sweep because a
+settings page is only ever compiled when the user opens it: a renamed signal
+handler or a misspelled property on one of them leaves the whole shell green,
+and the `qmltestrunner` suite green too, until somebody clicks that tab.
 
 `WidgetInteractionRuntimeTest.qml` is self-checking and driven from the suite by
 `tests/test_widget_interaction_runtime.py`: it builds four real `PluginWidget`s
@@ -163,6 +172,24 @@ make it start from the wrong defaults:
 ```bash
 XDG_CONFIG_HOME=$(mktemp -d) XDG_STATE_HOME=$(mktemp -d) \
   qs -p WidgetInteractionRuntimeTest.qml
+```
+
+`ConfigControlWriteBackRuntimeTest.qml` is self-checking and driven by
+`tests/test_config_control_write_back.py`. It seeds a throwaway
+`XDG_CONFIG_HOME` with `osd.timeout: 4321` — a value the config format accepts
+and the shell honours, and one the Sidebars & Panels page's own spin box
+declares out of range at `to: 3000` — waits for `Config.ready`, and only *then*
+builds the real `SidebarsPanelsConfig`, because that is what the Settings window
+does and because building it earlier hides the bug entirely (the page is
+constructed against schema defaults and its binding is gone before the file
+lands). It asserts the negative, that nothing changed, then scrolls to the
+control and clicks its decrement button through `QtTest` to prove it is not
+merely inert. Against the unfixed code the same harness turned 4321 into 3000 on
+disk. Run it by hand against a throwaway config — it writes `config.json`:
+
+```bash
+XDG_CONFIG_HOME=$(mktemp -d) XDG_STATE_HOME=$(mktemp -d) \
+  qs -p ConfigControlWriteBackRuntimeTest.qml
 ```
 
 `NotesMigrationRuntimeTest.qml` and `NotesSurfacesRuntimeTest.qml` are

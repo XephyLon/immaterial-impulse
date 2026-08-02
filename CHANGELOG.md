@@ -92,6 +92,28 @@ own repo; the installer pins which revision it builds.
   off. Automatic scheduling is unchanged: startup restores what you last had and
   never consults the clock, so it still does not switch itself on just because
   you logged in after sunset.
+- **Opening a Settings page no longer eats the setting you had.** Every numeric
+  setting is edited through a spin box or slider that declares its own range —
+  the OSD timeout's box, for instance, stops at 3000 ms. Nothing in the config
+  format does: `osd.timeout` is a plain number and the shell honours whatever is
+  in it. Those controls used to report the value being *loaded* as if it were a
+  value you had just typed, so a config holding `4321` was quietly cut down to
+  `3000` and written back to disk **the moment the page was drawn** — no prompt,
+  no warning, and nothing you did. Anything you set by hand, restored from a
+  backup, or imported from a preset outside a control's range was lost on the
+  first look at the page that shows it, and the same round trip rounded off
+  fractional values (a 90-second wallpaper interval became 60, a 0.185 overview
+  scale became 0.18). Sliders were worse: their smoothing animation wrote every
+  intermediate frame of it.
+
+  Controls now write only when you actually move them, and a stored value
+  outside a control's range is shown as it is rather than silently pinned to the
+  nearest end — so you can see the real number and, if you want, walk it back
+  into range. Values already inside a control's range behave exactly as before.
+- **The "−" button on every number field was almost unclickable.** Only its
+  leftmost few pixels did anything; the rest of it sat underneath the editable
+  number, which swallowed the clicks. The whole button works now. Number fields
+  are a little wider as a result.
 - **Click through only made half of a widget click-through.** A desktop widget
   switched to **Click through** stopped taking the drag and stopped swallowing
   the desktop's right-click menu — but every control the widget drew for itself

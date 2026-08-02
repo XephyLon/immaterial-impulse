@@ -167,6 +167,14 @@ A new persisted option needs both halves, or it silently does nothing:
    `checked`/`value`/`currentValue` reading from `Config.options....` and an `on*Changed` handler
    writing back to it.
 
+**Exception — `ConfigSpinBox` and `ConfigSlider` write back from `onValueModified`, not
+`onValueChanged`.** Their `value` also changes when the control is merely built (QQC2 clamps it to
+the declared `from`/`to` at component completion) and, for the slider, on every frame of its
+smoothing animation. Hanging the write on `onValueChanged` means opening a settings page rewrites
+the config — which is how a hand-set `osd.timeout: 4321` used to become `3000` with no user action.
+Use the signal's `newValue` argument in the handler body. See AGENT.md's Config section and
+`tests/test_config_control_write_back.py`, which fails the suite on any call site that regresses.
+
 If a feature is gated by config (e.g. "always show X"), search for where the sibling options are
 consumed (usually a `Resource`/similar component's `shown`/`visible` binding) and wire the new one
 into every layout variant that repeats the pattern (this codebase often has near-duplicate blocks
@@ -207,6 +215,9 @@ bug in anything that qualifies:
   it. After touching any `.qml` under `modules/`, check the live log for `Configuration Loaded` and
   for `ERROR:` - not just `WARN` - before calling the change verified. See AGENT.md's "Where to look
   when something goes wrong" for the cascade format and the `pgrep -af 'qs -c imi'` caveat.
+  `DesignSystemCompile.qml` (run by `run_tests.sh`, skipped without `WAYLAND_DISPLAY`) narrows this
+  for the design system, the bundled packages and every settings page - it compiles them, so a bad
+  property on a page nobody opened is caught. Everything else still needs the live load.
 - **A new Python check must actually run.** `run_tests.sh` invokes each one as `python3 <file>`, so
   a module of bare `test_*` functions exits zero without executing anything. Either subclass
   `unittest.TestCase` with `unittest.main()`, or end the file with the `contract_runner` block

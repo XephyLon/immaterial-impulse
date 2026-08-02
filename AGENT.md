@@ -208,6 +208,23 @@ Consequences for making changes:
   schema — every setting needs a corresponding `ConfigSwitch`/`ConfigSpinBox`/`ConfigSelectionArray`/
   etc. row added manually in the relevant page, bound with `checked: Config.options.x.y` /
   `onCheckedChanged: Config.options.x.y = checked`.
+- **A ranged control writes back from `onValueModified`, never `onValueChanged`.** `ConfigSpinBox`
+  and `ConfigSlider` are the two controls with a `from`/`to`, and their `value` changes for reasons
+  that are not edits: QQC2 bounds `SpinBox.value` to `[from, to]` when the component completes,
+  `Slider` does the same, and `StyledSlider`'s `Behavior on value` animates through intermediate
+  values. `Config.qml` declares no ranges at all, so a control's range is always narrower than what
+  the schema accepts — and a write-back on `onValueChanged` meant *instantiating a settings page*
+  clamped whatever the config held to the control's range and wrote it out, destroying hand-edited,
+  restored and preset-supplied values with no user action. Both controls now expose
+  `signal valueModified(newValue)`, raised only for a real interaction, and the write-back handler
+  reads the signal's `newValue`. The same reasoning applies to any lossy display expression
+  (`value: Config.options.x / 60000`): a write-back that fires on load round-trips the value through
+  an `int` and loses it. `tests/test_config_control_write_back.py` guards both halves — a source
+  contract over every call site, plus a real settings page opened against a real out-of-range config.
+- The inner control's own range widens to admit an out-of-range stored value
+  (`from: Math.min(root.from, root.value)`), so a spin box shows the number the config really holds
+  rather than a plausible-looking lie, and the user can only move it back toward the sanctioned
+  range. Don't "fix" that back to a plain `root.from`/`root.to`.
 - Consumers read `Config.options.x.y` directly and reactively - no separate "load config" step.
 - **The config `FileView` does not start until `Directories.configDirReady` is true**, which happens
   when `scripts/migrate-config-dir.sh` exits. `~/.config/illogical-impulse` -> `immaterial-impulse`
