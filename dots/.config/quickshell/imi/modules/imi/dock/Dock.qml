@@ -56,6 +56,19 @@ Scope {
 
             mask: Region { item: dockMouseArea }
 
+            // Blur only the painted dock body — its surface carries an
+            // elevation margin for the drop shadow, and the whole-surface
+            // layerrule blur frosted that margin too (#82). Same treatment as
+            // the bar/sidebars; pairs with rules.lua turning the layerrule
+            // blur off for this namespace. No region when the background
+            // isn't painted: blurring a transparent rect frosts bare
+            // wallpaper.
+            WindowBlurRegion {
+                targetWindow: dockRoot
+                regionItem: Config.options.dock.showBackground ? dockVisualBackground : null
+                regionRadius: dockVisualBackground.radius
+            }
+
             DockContextMenu {
                 id: dockContextMenu
             }
