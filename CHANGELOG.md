@@ -90,6 +90,37 @@ own repo; the installer pins which revision it builds.
   it is fixed before anything else opts in. Pinning a widget with **Lock
   position** still leaves its controls working, which is the difference between
   the two switches.
+- **Coming from upstream no longer silently loses your entire settings
+  directory.** Moving `~/.config/illogical-impulse` to
+  `~/.config/immaterial-impulse` is done at first launch by a script that
+  refused to migrate into a directory that already contained a `config.json`.
+  That guard cannot tell your config from a file you have never seen, and two
+  things routinely put one there before it ran:
+  - **The installer put it there itself.** It seeds the curated
+    `defaults/config.json` into `~/.config/immaterial-impulse` whenever it finds
+    no config there — which is always true for someone arriving from upstream,
+    because theirs is still under the old name. The migration then found that
+    seeded file in the way and skipped the whole directory. No race needed; this
+    happened to everyone who used the installer.
+  - **The shell could get there first.** The migration was launched and then not
+    waited for, so it ran alongside the shell's own config load. When the shell
+    won, it wrote a default `config.json` into the destination and the migration
+    skipped the directory for the same reason.
+
+  Either way you kept none of your settings, none of your custom actions,
+  presets or AI prompts, and there was nothing in the log to say why. Your old
+  directory was never deleted, so nothing was ever destroyed — but you had no
+  way to know that was where your settings still were.
+
+  Now: the shell waits for the migration to finish before it reads or writes the
+  config directory at all, and the migration decides by comparing the file in
+  the way against the config this shell ships. An untouched shipped default is
+  replaced by your real config; anything you have actually changed here is
+  **never overwritten** — instead the shell declines, changes nothing, and logs
+  which directory your settings are still in so you can merge them by hand. If
+  the migration itself gets stuck, the shell still comes up, but read-only, so a
+  half-finished move can't cost you the file. A successful merge keeps the old
+  directory as a backup; delete or rename it once you no longer want it.
 - The design-system compile check swept a hardcoded list of bundled packages
   that had rotted: it still named `nandoroid-clock` and `nandoroid-at-a-glance`,
   directories that have never existed at that path, so every run reported two

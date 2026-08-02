@@ -36,6 +36,37 @@ not be parsed is left unmarked so the next launch retries, rather than recording
 migration that never happened. A config that was successfully inspected is marked
 even when it needed nothing, so the parse does not repeat forever.
 
+### This migration runs *after* the directory move, and that is now enforced
+
+The key migration reads `~/.config/immaterial-impulse/config.json`. For an
+arriving upstream user that file only exists because
+`scripts/migrate-config-dir.sh` put it there, so the two migrations are ordered
+by construction: **directory first, keys second, on the same launch.**
+
+That ordering used to be a coincidence. The directory migration was fired with
+`Quickshell.execDetached`, which returns immediately, so it ran concurrently
+with `Config`'s asynchronous `FileView` load. Whenever `Config` got there first
+it wrote a default `config.json` into the destination, the directory migration
+refused to migrate into a directory that already had one, and the key migration
+then ran happily against a config with nothing in it — converting a file the
+user had never seen and setting `migratedUpstreamSchema` on it, which is the
+one thing that cannot be undone: the marker is checked *before* the file is
+read, so a launch that marks the wrong file spends the user's single chance.
+
+`Directories.configDirReady` now makes it a happens-before. It is `false` until
+the migration script exits; `Config`'s `FileView` binds its `path` to it, and an
+unset path in Quickshell emits neither `loaded` nor `loadFailed` and writes
+nothing on `writeAdapter()`, so nothing in `onLoaded` — including this
+migration — can run against a directory that has not been migrated yet.
+`tests/test_config_dir_migration_runtime.py` forces the interleaving that used
+to lose (`IMI_MIGRATE_DELAY` holds the script open for seconds) and asserts both
+halves land on one launch.
+
+The two migrations stay separate for the reason the table above already gives:
+a directory test cannot distinguish "converted" from "moved but not converted",
+and only the marker key can. What changed is that the directory move is now
+guaranteed to have happened first, rather than usually having happened first.
+
 ## The mapping
 
 Derived from this repository's own history — there is no upstream remote and there
@@ -123,7 +154,7 @@ migrates whenever the user gets here.
 
 | Concern | Where |
 | --- | --- |
-| `~/.config/illogical-impulse` → `~/.config/immaterial-impulse` | `scripts/migrate-config-dir.sh` (+ `tests/test_config_migration.py`) |
+| `~/.config/illogical-impulse` → `~/.config/immaterial-impulse` | `scripts/migrate-config-dir.sh` (+ `tests/test_config_migration.py`, `tests/test_config_dir_migration_runtime.py`) |
 | `background.widgets.*` → `plugins.enabled` / plugin options | `Config.qml` `migrateDesktopWidgets*` (+ `tests/test_widget_plugin_migration.py`) |
 | Secrets keyed `illogical-impulse` → `immaterial-impulse` | `services/KeyringStorage.qml` (+ `tests/test_keyring_migration.py`) |
 | `illogical-impulse-*` packages | `sdata/lib/migrate-existing.sh` (+ `tests/test_installer_legacy_migration.py`) |
