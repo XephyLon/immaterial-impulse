@@ -38,6 +38,11 @@ TestCase {
         compare(config.options.bar.divider.style, "rect")
         compare(config.options.bar.divider.spacing, 20)
 
+        // Bar background opacity must default to fully opaque so the out-of-box
+        // look is unchanged; Appearance.colBarBackground multiplies colLayer0 by
+        // this, and any value < 1 silently thins the whole bar chrome.
+        compare(config.options.bar.backgroundOpacity, 1.0)
+
         // Test other options
         compare(config.options.dock.enable, false)
         compare(config.options.osd.timeout, 1000)

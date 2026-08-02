@@ -878,6 +878,12 @@ Singleton {
                 property string borderless: "pills"
                 property string topLeftIcon: "spark" // Options: "distro" or any icon name in ~/.config/quickshell/imi/assets/icons
                 property bool showBackground: true
+                // Opacity of the bar's background chrome (bar/pill fills, hug
+                // corners), 0-1. 1 = fully opaque (unchanged). Multiplies the
+                // global appearance.transparency alpha rather than replacing it,
+                // so the two compose. Below the compositor's per-namespace
+                // ignore_alpha blur threshold it reads as plain transparency.
+                property real backgroundOpacity: 1.0
                 property bool verbose: true
                 property bool vertical: false
                 property JsonObject resources: JsonObject {

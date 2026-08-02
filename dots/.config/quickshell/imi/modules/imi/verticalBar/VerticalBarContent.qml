@@ -90,7 +90,7 @@ Item {
             margins: Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0
         }
         color: (Config.options.bar.showBackground && Config.options.bar.cornerStyle !== 2 && !root.isMaterial && !root.centerOnly)
-            ? Appearance.colors.colLayer0 : "transparent"
+            ? Appearance.colors.colBarBackground : "transparent"
         radius: Config.options.bar.cornerStyle === 1 ? Appearance.rounding.windowRounding : 0
         border.width: (!root.centerOnly && Config.options.bar.cornerStyle === 1) ? 1 : 0
         border.color: Appearance.colors.colLayer0Border
@@ -113,7 +113,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         height: middleCol.implicitHeight + 7
         width: parent.width - (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut * 2 : 0)
-        color: Appearance.colors.colLayer0
+        color: Appearance.colors.colBarBackground
         radius: Config.options.bar.cornerStyle === 1 ? Appearance.rounding.windowRounding : 0
         border.width: Config.options.bar.cornerStyle === 1 ? 1 : 0
         border.color: Appearance.colors.colLayer0Border
@@ -144,7 +144,7 @@ Item {
                 implicitWidth: topMaterialCol.implicitWidth
                 implicitHeight: topMaterialCol.implicitHeight + 10
                 radius: Appearance.rounding.full
-                color: Appearance.colors.colLayer0
+                color: Appearance.colors.colBarBackground
 
                 ColumnLayout {
                     id: topMaterialCol
@@ -220,7 +220,7 @@ Item {
                 implicitWidth: centerMaterialCol.implicitWidth 
                 implicitHeight: centerMaterialCol.implicitHeight + 10
                 radius: Appearance.rounding.full
-                color: Appearance.colors.colLayer0
+                color: Appearance.colors.colBarBackground
 
                 ColumnLayout {
                     id: centerMaterialCol
@@ -297,7 +297,7 @@ Item {
                 implicitWidth: bottomMaterialCol.implicitWidth
                 implicitHeight: bottomMaterialCol.implicitHeight + 10 
                 radius: Appearance.rounding.full
-                color: Appearance.colors.colLayer0
+                color: Appearance.colors.colBarBackground
 
                 ColumnLayout {
                     id: bottomMaterialCol
