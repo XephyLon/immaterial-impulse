@@ -225,6 +225,31 @@ none were in the original recipe.
     escape hatch either: the services tree fails to load with
     `No PanelWindow backend loaded`. *Found by the `world-clock` port.*
 
+12. **A widget with two writers for the same option must funnel both through one
+    setter.** `property x: PluginState.option(id, key, default)` is a binding, and
+    the first direct assignment to `x` destroys it *for the rest of the session* -
+    normal QML semantics, but the failure it produces here is silent and delayed.
+    A drag handle has to assign directly (the widget must resize while the mouse
+    moves, before anything is persisted), so after one drag every other writer
+    that only calls `PluginState.setOption(...)` - the pattern `world-clock` uses
+    for its toggle, which is correct in isolation - updates the file and nothing
+    on screen. The calendar has both kinds of writer (a resize handle and a
+    month/week toggle), which is what surfaces it. Give the widget one setter and
+    route every non-drag writer through it:
+
+    ```qml
+    function setSizeMode(mode) {
+        root.sizeMode = mode;                                  // survives a severed binding
+        PluginState.setOption("calendar", "sizeMode", mode);   // persists
+    }
+    ```
+
+    The drag path still assigns directly per frame and calls the setter once on
+    release. Note the corollary: a widget whose option is ever assigned directly
+    stops tracking external edits to `plugin-state.json` for that session, so do
+    not use one to verify that a preset or an `ipc call pluginState replace`
+    landed. *Found by the `calendar` port.*
+
 ---
 
 ## Task 1: One-shot migration from `background.widgets.*` to `plugins.enabled`
