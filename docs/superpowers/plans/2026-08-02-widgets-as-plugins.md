@@ -170,6 +170,25 @@ none were in the original recipe.
    whitelist (**it rejects unknown types and the manifest silently fails to
    parse**), and the type list in `docs/PLUGINS.md`.
 
+9. **Frost is not a binary between "whole tile" and "opted out".** Gap 4 covers
+   the widget that draws no surface at all; a widget whose card is smaller than
+   its tile is the third case, and both of the other answers are wrong for it —
+   the default full-widget region frosts empty corners, and `blurRegions: []`
+   throws away frost the card actually wants. Name each surface instead, in
+   local coordinates:
+
+   ```qml
+   readonly property var blurRegions: [
+       { x: card.x, y: card.y, width: card.width, height: card.height, radius: card.radius },
+       { x: avatar.x, y: avatar.y, width: avatar.width, height: avatar.height, radius: avatar.radius }
+   ]
+   ```
+
+   Keep `managesBlurTint: true` and apply the persisted opacity to *every*
+   surface named, or the ones you missed stay opaque against frosted siblings.
+   The host masks one blurred texture with all regions, so a circle is just a
+   region whose `radius` is half its width. *Found by the `user-card` port.*
+
 ---
 
 ## Task 1: One-shot migration from `background.widgets.*` to `plugins.enabled`
