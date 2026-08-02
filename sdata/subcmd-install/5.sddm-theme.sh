@@ -48,6 +48,23 @@ if ! curl -fsSL "$SETUP_URL" -o "$TMP_SETUP"; then
 fi
 
 echo "[ImI] SDDM theme: handing off to the upstream installer (interactive)..."
+# The upstream installer is purely interactive: its very first action is a
+# `read -p "Continue? [y/n]"`, and it has no non-interactive/env-driven mode.
+# If our stdin is not a terminal, that `read` gets EOF, falls to its default
+# case, and the installer exits 0 — silently installing nothing. This bites the
+# quiet install path, which runs the whole pipeline with stdin on /dev/null.
+# So: if stdin isn't a TTY, reconnect the installer to the controlling terminal
+# (/dev/tty) so its prompts still reach the user; if there is no controlling
+# terminal at all (truly headless/CI), skip loudly rather than silently abort.
 # Optional extra — never let a decline/failure abort the whole install.
-bash "$TMP_SETUP" || echo "[ImI] SDDM theme: upstream installer exited non-zero (declined or error)."
+if [[ -t 0 ]]; then
+  bash "$TMP_SETUP" || echo "[ImI] SDDM theme: upstream installer exited non-zero (declined or error)."
+elif { : >/dev/tty; } 2>/dev/null; then
+  echo "[ImI] SDDM theme: stdin is not a terminal; reconnecting the installer to /dev/tty for its prompts."
+  bash "$TMP_SETUP" </dev/tty || echo "[ImI] SDDM theme: upstream installer exited non-zero (declined or error)."
+else
+  echo "[ImI] SDDM theme: the upstream installer is interactive but no terminal is available (stdin isn't a TTY and there is no controlling terminal); skipping." >&2
+  echo "[ImI] SDDM theme: to install it, run 'INSTALL_SDDM=1 sdata/subcmd-install/5.sddm-theme.sh' from a terminal." >&2
+  exit 0
+fi
 echo "[ImI] SDDM theme: done."

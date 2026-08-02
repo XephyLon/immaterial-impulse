@@ -227,6 +227,41 @@ own repo; the installer pins which revision it builds.
   out of `config.json`. The clock's settings live in `plugin-state.json` now, so
   that read would have returned `"null"` forever and the wallpaper category
   would never have been generated.
+## [0.12.0] — 2026-08-02
+
+### Added
+- (#75) Kitty terminal colors now follow the wallpaper through a matugen
+  template, so its palette re-themes together with the shell and other apps on
+  a wallpaper change (alongside the existing terminal palette pass).
+
+### Fixed
+- Super+Alt+Space (window float toggle) no longer also switches the keyboard
+  layout. The shipped default config still carried `input.kbOptions =
+  grp:win_space_toggle` even after the layout switch was moved to a compositor
+  bind — xkb `grp:` toggles match modifiers loosely, so Super+Space fired with
+  Alt held too. Fresh installs now seed `kbOptions = ""`, and a one-time
+  migration clears a stale `grp:win_space_toggle` from existing configs on the
+  next shell start, so both are fixed. Super+Space then runs only the
+  exact-matching `switchxkblayout all next` bind, which cycles the real
+  `us, eg` layout list and reverses cleanly.
+- (#70) The wallpaper no longer disappears after a transition on OpenGL
+  2.1-class GPUs. The Doom melt transition used a `const int[256]` table and a
+  bitwise `&`, which the GLSL ES 1.00 profile the RHI compiles to on those
+  backends rejects, so its shader failed to build and left the desktop blank.
+  The shader now compiles there (procedural noise, `mod` instead of `&`), and a
+  transition-shader compile error falls back to the plain wallpaper instead of
+  blank output.
+- (#71) A bar hover popup opened next to a closing one (e.g. weather after
+  clock) is no longer painted over by the one still finishing its close
+  animation. Adjacent popups are separate layer-shell surfaces, so stacking
+  order — not activeness — decided which drew on top; a lingering popup now
+  collapses the moment a neighbour opens.
+- (#72) The SDDM login theme (ii-sddm-theme) no longer silently fails to
+  install from the default TUI. Its upstream installer is interactive, but the
+  default fzf TUI ran the install pipeline with stdin from `/dev/null`, so the
+  installer hit EOF on its first prompt and aborted with no output. It now runs
+  as an interactive post-install step on the real terminal, and the wrapper
+  reconnects to `/dev/tty` (or skips with a message) instead of aborting.
 
 ## [0.11.0] — 2026-08-02
 

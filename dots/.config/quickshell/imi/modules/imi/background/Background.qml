@@ -245,6 +245,13 @@ Variants {
 
         property real transitionProgress: 1.0
         property int wallpaperTransitionGeneration: 0
+        // Latched when the transition ShaderEffect reports a compile failure (e.g.
+        // a shader using constructs the machine's GL profile rejects - see issue
+        // #70). While set, the plain wallpaper image is revealed instead of the
+        // blank shader output, so an incompatible transition degrades to a snap
+        // rather than erasing the desktop. Reset at the start of each switch so a
+        // one-off bad shader does not disable transitions permanently.
+        property bool transitionShaderBroken: false
 
         screen: modelData
         exclusionMode: ExclusionMode.Ignore
@@ -313,6 +320,7 @@ Variants {
             previousWallpaper.source = bgRoot.currentWallpaperSource
             wallpaper.source = wallpaperPath
             bgRoot.currentWallpaperSource = wallpaperPath
+            bgRoot.transitionShaderBroken = false
             if (bgRoot.wallpaperAnimation === "random") {
                 bgRoot.currentShader = bgRoot.shaderList[Math.floor(Math.random() * bgRoot.shaderList.length)]
             } else {
@@ -452,7 +460,7 @@ Variants {
                 asynchronous: true
                 layer.enabled: bgRoot.wallpaperAnimation !== ""
                     && bgRoot.transitionProgress < 1
-                visible: !bgRoot.weShown && bgRoot.wallpaperAnimation === "" && !blurLoader.active && !bgRoot.centeredWallpaperEnabled && !bgRoot.videoRevealed
+                visible: !bgRoot.weShown && (bgRoot.wallpaperAnimation === "" || bgRoot.transitionShaderBroken) && !blurLoader.active && !bgRoot.centeredWallpaperEnabled && !bgRoot.videoRevealed
                 onStatusChanged: {
                     if (status === Image.Ready && bgRoot.transitionProgress === 0.0) {
                         transitionAnim.restart()
@@ -463,7 +471,7 @@ Variants {
             ShaderEffect {
                 id: transitionEffect
                 anchors.fill: parent
-                visible: !bgRoot.weShown && !blurLoader.active && bgRoot.wallpaperAnimation !== "" && !bgRoot.centeredWallpaperEnabled && !bgRoot.videoRevealed
+                visible: !bgRoot.weShown && !blurLoader.active && bgRoot.wallpaperAnimation !== "" && !bgRoot.centeredWallpaperEnabled && !bgRoot.videoRevealed && !bgRoot.transitionShaderBroken
                 property var fromImage: previousWallpaper
                 property var toImage: wallpaper
                 property real progress: bgRoot.transitionProgress
@@ -474,6 +482,20 @@ Variants {
                 fragmentShader: bgRoot.wallpaperAnimation !== ""
                     ? Qt.resolvedUrl(`shaders/${bgRoot.currentShader}.frag.qsb`)
                     : ""
+                onStatusChanged: {
+                    // A shader that will not compile on this machine's GL profile
+                    // renders nothing; without this the desktop would stay blank
+                    // after the switch (issue #70). Settle the transition and let
+                    // the plain wallpaper image take over instead.
+                    if (status === ShaderEffect.Error) {
+                        console.warn("[Background] wallpaper transition shader '" + bgRoot.currentShader + "' failed to compile, falling back to plain image:", log)
+                        bgRoot.transitionShaderBroken = true
+                        transitionAnim.stop()
+                        bgRoot.transitionProgress = 1.0
+                        previousWallpaper.source = ""
+                        bgRoot.previousWallpaperSource = ""
+                    }
+                }
             }
 
             // Lock wallpaper (static image), sampled by the lock peel shader.

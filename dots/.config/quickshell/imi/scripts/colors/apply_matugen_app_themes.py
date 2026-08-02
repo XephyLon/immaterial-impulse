@@ -76,10 +76,30 @@ def apply_tmux() -> None:
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def reload_kitty() -> None:
+    # matugen writes ~/.config/kitty/colors-matugen.conf directly (see
+    # matugen/config.toml), and kitty.conf `include`s it, so newly launched
+    # kitty windows always get the new palette. Running windows only live-reload
+    # if kitty remote control is enabled; this repo ships it off, so this call is
+    # a harmless no-op there and running instances are instead recolored by
+    # applycolor.sh's `kill -SIGUSR1 $(pidof kitty)` later in the same switch.
+    if not shutil.which("kitty"):
+        return
+    colors = CONFIG / "kitty/colors-matugen.conf"
+    if not colors.is_file():
+        return
+    if subprocess.run(["pidof", "kitty"], stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL, check=False).returncode != 0:
+        return
+    subprocess.run(["kitty", "@", "set-colors", "--all", "--configured", str(colors)],
+                   check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 def main() -> None:
     apply_cava()
     apply_btop()
     apply_tmux()
+    reload_kitty()
 
 
 if __name__ == "__main__":

@@ -281,6 +281,23 @@ Singleton {
         obj[keys[keys.length - 1]] = convertedValue;
     }
 
+    // One-time migration (issue #69): older installs seeded
+    // hyprland.input.kbOptions = "grp:win_space_toggle" before the layout
+    // switch became a compositor bind. That xkb option matches Super+Space
+    // loosely, so Super+Alt+Space (window float toggle) also switched the
+    // layout and Super+Space double-toggled. seed_default_config never
+    // overwrites an existing config, so clearing the QML default alone only
+    // helps fresh installs; clear a stale value here so existing configs are
+    // fixed on the next shell start too. The marker persists in the config, so
+    // this runs once and never touches a value the user has since chosen.
+    function migrateStaleKbOptions() {
+        if (root.options.migratedKbOptionsGrpToggle)
+            return;
+        if (root.options.hyprland.input.kbOptions === "grp:win_space_toggle")
+            root.options.hyprland.input.kbOptions = "";
+        root.options.migratedKbOptionsGrpToggle = true;
+    }
+
     Timer {
         id: fileReloadTimer
         interval: root.readWriteDelay
@@ -307,11 +324,14 @@ Singleton {
         onFileChanged: fileReloadTimer.restart()
         onAdapterUpdated: fileWriteTimer.restart()
         onLoaded: {
-            // Before `ready`, and before the plugin migrations: those read
-            // `root.options`, and this one can still rewrite panelFamily, which
-            // decides which panel family loads at all.
+            // Before `ready`, and before every other migration: the rest read
+            // `root.options`, while this one works off the raw file text
+            // because the keys it converts are exactly the ones the adapter
+            // dropped. It can also rewrite panelFamily, which decides which
+            // panel family loads at all.
             root.migrateUpstreamKeys(text());
             root.ready = true;
+            root.migrateStaleKbOptions();
             root.migrateDesktopWidgetsToPlugins();
             root.migrateDesktopWidgetOptionsToPlugins();
         }
@@ -343,6 +363,11 @@ Singleton {
             // which is already gone for anyone whose directory migration ran
             // before this existed - exactly the users who still need this.
             property bool migratedUpstreamSchema: false
+
+            // One-time migration marker (issue #69): set once a stale
+            // hyprland.input.kbOptions = "grp:win_space_toggle" has been
+            // cleared from this config. See root.migrateStaleKbOptions().
+            property bool migratedKbOptionsGrpToggle: false
 
             property JsonObject plugins: JsonObject {
                 property list<string> enabled: []

@@ -46,6 +46,11 @@ Singleton {
     property real desktopMenuX: 0
     property real desktopMenuY: 0
     property string wallpaperSelectorTarget: "wallpaper"
+    // The bar hover popup (StyledPopup) whose target widget is currently
+    // hovered. Adjacent bar popups are separate layer-shell surfaces, so a
+    // lingering one can paint over a newly opened neighbour; each popup watches
+    // this so the previous one closes at once instead of overlapping the new one.
+    property var activeBarPopup: null
     property bool dropShelfOpen: false
     property real dropShelfX: 0
     property real dropShelfY: 0
