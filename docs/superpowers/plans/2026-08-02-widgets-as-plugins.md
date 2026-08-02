@@ -96,6 +96,39 @@ declarative-JSON `clock_plugin`.
 
 ---
 
+## Recipe gaps found by the visualizer pilot
+
+The pilot exists to find these. Every remaining port must handle all of them;
+none were in the original recipe.
+
+1. **Bundled plugins are not auto-discovered.** `modules/common/plugins/PluginManager.qml`
+   needs a hardcoded `FileView` per bundled plugin *and* the id added to the
+   array in `rebuildFromLoadedFiles()`. Without both, the plugin silently never
+   exists. Highest-impact gap — check it first when a ported widget fails to
+   appear.
+2. **The enable key is read outside `Background.qml`.** `background.widgets.visualizer.enable`
+   also gated the cava `Process` in `modules/imi/mediaControls/MediaControls.qml`;
+   left alone, the ported widget would have rendered with permanently zero data.
+   **Grep the config key across the whole repo, not just `Background.qml`.**
+3. **`BackgroundConfig.qml` carries a legacy toggle grid** (around lines
+   913–1005): every built-in appears both in a `Repeater` model *and* in a
+   parallel icon-keyed `if/else` chain in `onCheckedChanged`. Each port must
+   delete **two** entries or leave a toggle writing to a dead key.
+4. **Widgets that draw no background must opt out of frost explicitly.** The
+   frost trio only applies when the widget draws its own surface. Otherwise
+   declare `readonly property var blurRegions: []` — the host skips the blur
+   surface when custom regions are declared but empty. Note this leaves a dead
+   "Blur background" toggle in the widget's settings panel.
+5. **Conditional-visibility widgets need their trigger active before you judge
+   them missing.** The visualizer fades out after a second of silence, which
+   produced two false "the widget is gone" readings when a player auto-paused.
+6. **Full-bleed and non-draggable have no host support.** The grid caps at 12
+   columns and every plugin is draggable and grid-sized. A widget that was
+   screen-wide or edge-anchored cannot express that through `grid`; it must
+   omit `grid` and size itself. `customImage` is likely to hit this hardest.
+
+---
+
 ## Task 1: One-shot migration from `background.widgets.*` to `plugins.enabled`
 
 Do this **first**. Every later port depends on it, and shipping a port without it removes a user's clock.
