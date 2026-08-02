@@ -139,12 +139,33 @@ Singleton {
             }
             nextOptions[pluginId] = nextPlugin;
         }
+
+        // The legacy position is one pair for the whole desktop, so it seeds
+        // every monitor. A monitor that already has a position for the plugin
+        // keeps it, same rule as the options above.
+        const pendingPositions = Config.pendingPluginPositions || {};
+        const nextScreens = Object.assign({}, nextState.desktopPositions || {});
+        for (const screen of Quickshell.screens) {
+            const nextScreen = Object.assign({}, nextScreens[screen.name] || {});
+            let touched = false;
+            for (const pluginId in pendingPositions) {
+                if (nextScreen[pluginId] !== undefined)
+                    continue;
+                nextScreen[pluginId] = root.normalizedPosition(pendingPositions[pluginId]);
+                touched = true;
+            }
+            if (touched)
+                nextScreens[screen.name] = nextScreen;
+        }
+
         nextState.version = root.schemaVersion;
         nextState.pluginOptions = nextOptions;
+        nextState.desktopPositions = nextScreens;
         root.state = nextState;
         writeTimer.restart();
 
         Config.pendingPluginOptions = ({});
+        Config.pendingPluginPositions = ({});
         Config.options.plugins.migratedDesktopWidgetOptions = true;
     }
 

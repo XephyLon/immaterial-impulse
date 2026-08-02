@@ -120,12 +120,31 @@ Singleton {
     // permanently excluded from the settings half.
     property var pendingPluginOptions: ({})
 
+    // The clock's position moves too, for the same reason its style does. Every
+    // other port let the first enable land on the host's generic x/y 100,
+    // because those widgets were off by default - being asked to place a widget
+    // you just switched on is not a regression. The clock is on already and has
+    // been sitting where the user put it, possibly for as long as the install
+    // has existed, so the same reset would silently *move* something rather
+    // than place something new.
+    //
+    // The legacy position is one pair for the whole desktop while PluginState
+    // keeps one per monitor, so the drain seeds every monitor with it.
+    property var pendingPluginPositions: ({})
+
     function migrateDesktopWidgetOptionsToPlugins() {
         if (root.options.plugins.migratedDesktopWidgetOptions)
             return;
         const clock = root.options.background.widgets.clock;
         if (!clock)
             return;
+        root.pendingPluginPositions = ({
+                "clock": {
+                    x: clock.x,
+                    y: clock.y,
+                    placementStrategy: clock.placementStrategy
+                }
+            });
         const values = {};
         for (const path in root.desktopClockOptionKeys) {
             const parts = path.split(".");

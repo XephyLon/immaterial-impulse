@@ -137,6 +137,21 @@ class ClockSettingsMigrateTooNotJustTheToggle(unittest.TestCase):
             self.assertNotIn(f'"{key}":', self.mapping,
                              f"{key} is host state, not a plugin option")
 
+    def test_the_position_is_carried_as_a_position(self):
+        """Every other port let the first enable land at the host's default
+        x/y 100, which is fine for a widget that was off. The clock is on, and
+        has been where the user put it - the same reset moves it instead of
+        placing it.
+        """
+        self.assertIn("pendingPluginPositions", self.src)
+        self.assertIn("pendingPluginPositions", self.state)
+        body = self.state[self.state.index("function drainPendingConfigOptions"):]
+        body = body[:body.index("\n    }")]
+        self.assertIn("desktopPositions", body)
+        self.assertIn("Quickshell.screens", body,
+                      "the legacy position is desktop-wide, so it has to seed "
+                      "every monitor PluginState keeps a position for")
+
     def test_the_settings_migration_has_its_own_marker(self):
         """Reusing migratedDesktopWidgets would permanently exclude every
         install that already ran the enable-only migration - which is every
