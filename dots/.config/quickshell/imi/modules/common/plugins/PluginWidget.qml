@@ -161,6 +161,7 @@ AbstractBackgroundWidget {
         pluginId: rootWidget.manifest?.id ?? ""
         optionDefinitions: rootWidget.manifest?.options ?? []
         basePath: rootWidget.manifest?._basePath ?? ""
+        screenName: rootWidget.screenName
         // When the manifest declares a grid span, drive the node (and its loaded
         // Widget.qml) to the span size instead of the content's implicit size.
         gridWidth: rootWidget.gridSpanWidth

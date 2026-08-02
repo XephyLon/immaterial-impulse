@@ -1,6 +1,8 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Window
+import Quickshell
 import qs
 import qs.modules.common
 
@@ -13,31 +15,36 @@ Item {
     // when a widget declares custom regions and supplies none.
     readonly property var blurRegions: []
 
-    // A 12x2 component-grid tile (1716x228). The built-in was screen-wide and
-    // 240px tall: 2 rows (228) is the nearest vertical span, and 12 columns is
-    // the widest span the grid allows, so it stays close to full-bleed on a
-    // 1080p display. The host (PluginWidget) sizes us from the manifest `grid`
-    // and stretches this root to fill it; the implicit size is only a fallback
-    // for standalone use. See docs/widget-grid.md.
-    implicitWidth: Appearance.sizes.widgetGridSpanX(12)
-    implicitHeight: Appearance.sizes.widgetGridSpanY(2)
-    anchors.fill: parent
+    // The name of the monitor this instance lives on. PluginWidget knows it
+    // (Background passes `screen.name`); PluginNode forwards it to any
+    // component-backed widget that declares this property.
+    property string screenName: ""
+    // Same lookup idiom as services/Brightness.qml and the OSD modules: find the
+    // ShellScreen whose name matches. The attached Screen of the window we are
+    // in is the same monitor, so the fallback is correct on a secondary display
+    // too - it only covers the window between load and the name arriving.
+    readonly property var widgetScreen: Quickshell.screens.find(s => s.name === root.screenName) ?? null
+    readonly property real targetScreenWidth: widgetScreen ? widgetScreen.width : Screen.width
+
+    // Full-bleed, like the built-in this replaced. The manifest deliberately
+    // declares no `grid`: the grid caps at 12 columns (1716px), which is a third
+    // of a 5120px display, and a spectrum that stops a third of the way across
+    // is not the widget. With no grid the host sizes us from our own implicit
+    // size (manifest defaultWidth/Height act only as a floor), so we bind the
+    // width to the real monitor. See docs/widget-grid.md.
+    implicitWidth: Math.max(1, root.targetScreenWidth)
+    implicitHeight: root.maxBarHeight + 20
 
     readonly property list<real> points: GlobalStates.visualizerPoints
 
     property real barWidth: 4
     property real barSpacing: Appearance.spacing.space100
-    // Fill the tile, leaving the same headroom the built-in kept above its
-    // tallest bar. At the default scale this is exactly the old 220px.
-    property real maxBarHeight: root.height > 0
-        ? Math.max(1, root.height - Appearance.spacing.space100)
-        : 220
+    property real maxBarHeight: 220
     property real maxVisualizerValue: 1000
     property real smoothingDuration: 150
 
-    // Bar count follows the widget's own width now that the host, not the
-    // screen, decides how wide the visualiser is.
-    readonly property int barCount: Math.max(1, Math.floor(root.width / (barWidth + barSpacing)))
+    // Bars span the whole monitor again, at the built-in's density.
+    readonly property int barCount: Math.max(1, Math.floor(root.targetScreenWidth / (barWidth + barSpacing)))
 
     readonly property var smoothedPoints: {
         let raw = points

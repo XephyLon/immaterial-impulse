@@ -10,6 +10,11 @@ Item {
     property string pluginId: ""
     property var optionDefinitions: []
     property string basePath: ""
+    // Name of the monitor the host widget lives on. Forwarded to a
+    // component-backed Widget.qml that declares a `screenName` property, so a
+    // widget can size or place itself against its own real screen (the
+    // visualiser is full-bleed). Declarative nodes never need it.
+    property string screenName: ""
 
     // When the host declares a component-grid span (docs/widget-grid.md), it sets
     // these to the span size in px. The node then takes that size instead of the
@@ -106,7 +111,11 @@ Item {
 
         onLoaded: {
             if (!item) return;
-            if (rootNode.componentPath) return;
+            if (rootNode.componentPath) {
+                if (item.screenName !== undefined)
+                    item.screenName = Qt.binding(() => rootNode.screenName);
+                return;
+            }
             if (manifestNode.props) {
                 for (let prop in manifestNode.props) {
                     let val = manifestNode.props[prop];
