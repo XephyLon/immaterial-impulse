@@ -9,6 +9,13 @@ import QtQuick.Controls
 SpinBox {
     id: root
 
+    // Emitted for a change the user actually made, and never for one that
+    // arrived from a binding. QQC2 raises `valueModified` itself for the
+    // buttons, the wheel and the arrow keys, but it only wires the text field
+    // up when `contentItem` *is* the TextInput - this one wraps it in an Item
+    // to centre it, so the typed path has to report itself.
+    signal userModified
+
     property real baseHeight: 35
     property real radius: Appearance.rounding.small
     property real innerButtonRadius: Appearance.rounding.unsharpen
@@ -21,6 +28,8 @@ SpinBox {
     // pixels of that button did anything at all.
     leftPadding: root.down.indicator ? root.down.indicator.width : 0
     rightPadding: root.up.indicator ? root.up.indicator.width : 0
+
+    onValueModified: root.userModified()
 
     opacity: root.enabled ? 1 : 0.4
 
@@ -42,8 +51,16 @@ SpinBox {
             font.variableAxes: Appearance.font.variableAxes.numbers
             font.pixelSize: Appearance.font.pixelSize.small
             validator: root.validator
-            onTextChanged: {
-                root.value = parseFloat(text);
+            // `onTextChanged` also fires when the binding above refreshes the
+            // text, which made every construction of this control write its
+            // own value straight back out. `onTextEdited` is the user-only
+            // half of the same signal.
+            onTextEdited: {
+                const parsed = parseFloat(labelText.text);
+                if (isNaN(parsed))
+                    return;
+                root.value = parsed;
+                root.userModified();
             }
         }
     }
