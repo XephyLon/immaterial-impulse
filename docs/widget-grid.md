@@ -4,7 +4,7 @@ The **component grid** is the design standard for sizing desktop-widget plugins 
 tile cleanly in a bento layout with even gutters. It replaces ad-hoc pixel sizes with a
 declarative cell/gap span a plugin states in its manifest.
 
-The grid is not new: it is the same grid the built-in `nandoroid-*` design-system widgets
+The grid is not new: it is the same grid the bundled `nandoroid-*` design-system widgets
 already use (the system-monitor's "Choice A" grid). Formalizing it as tokens lets new
 plugins line up with those widgets instead of guessing pixel sizes.
 
@@ -55,9 +55,9 @@ implicitHeight: Appearance.sizes.widgetGridSpanY(2)   // 228
 | 4 | 564 | 468 |
 
 A `cols` x `rows` tile is `spanX(cols)` wide by `spanY(rows)` tall. Worked examples, with the
-matching built-in widget:
+matching bundled widget:
 
-| grid | pixels (w x h) | built-in reference |
+| grid | pixels (w x h) | bundled reference |
 | --- | --- | --- |
 | `{ "cols": 1, "rows": 1 }` | 132 x 108 | currency (1x1) |
 | `{ "cols": 2, "rows": 1 }` | 276 x 108 | currency (2x1) |
@@ -120,7 +120,8 @@ The only test is `size === widgetGridSpanX(cols)` / `widgetGridSpanY(rows)`.
 - **The `nandoroid-*` widgets already conform.** They define this grid (media = 3x2,
   system monitor = 3x1 / 1x3, currency = 1x1 / 2x1 via their internal `sizeMode`). They are
   content-sized rather than declaring `grid`, but their pixel sizes are exactly on it, so new
-  `grid` widgets tile flush beside them. `clock` predates the grid and is left content-sized.
+  `grid` widgets tile flush beside them. `clock` is exempt by decision: its shape places neatly
+  without a span, so it stays content-sized behind `defaultWidth`/`defaultHeight`.
 
 ## Widgets that cannot use the grid
 

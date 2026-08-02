@@ -138,6 +138,8 @@ modules/common/             Shared, feature-agnostic building blocks
   plugins/                    Declarative + package-QML plugin renderer/validator/manager. It scans
                               bundled and user-installed manifests; PluginState.qml keeps dynamic
                               per-plugin, per-monitor layout in raw plugin-state.json.
+                              bundled/ is where every desktop widget the shell ships lives -
+                              there are no built-in desktop widgets (see docs/PLUGINS.md).
   widgets/                   Shared UI components: StyledText, StyledComboBox, StyledSlider,
                               StyledToolTip(+Content), RippleButton, MaterialSymbol, ResourceCard,
                               PopupToolTip, StyledPopup, GroupedList, ConfigSwitch/ConfigSpinBox/
@@ -153,7 +155,10 @@ modules/imi/                 The "imi" (Immaterial Impulse) panel family - one d
                               layout, audio device switches) - see "OSD system" below
   screenCorners/              Decorative fake screen-rounding + corner hover/click zones that open
                               the sidebars
-  background/                 Desktop background + draggable desktop widgets (resources, clock, ...)
+  background/                 Desktop background + the canvas the draggable desktop widgets sit on.
+                              The widgets themselves are all bundled plugins now (see
+                              modules/common/plugins/bundled/); background/widgets/ holds only
+                              AbstractBackgroundWidget.qml, which is the plugin host's base class.
   overview/                   Workspace/window overview (like GNOME Activities)
   notificationPopup/          Desktop notification popups
   settings/                   The in-shell settings UI (pages/ = one file per settings category)

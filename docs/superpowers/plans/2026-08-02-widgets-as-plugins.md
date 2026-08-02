@@ -746,26 +746,41 @@ As Task 2 steps 6–8. Commit message: `feat(widgets): port the desktop clock to
 
 ## Task 6: Cleanup
 
-- [ ] **Step 1: Confirm `Background.qml` has no widget `FadeLoader`s left**
+- [x] **Step 1: Confirm `Background.qml` has no widget `FadeLoader`s left**
 
 ```bash
 grep -n "FadeLoader" dots/.config/quickshell/imi/modules/imi/background/Background.qml
 ```
 Expected: only the `PluginWidget` repeater remains. Any other hit is an unported widget.
 
-- [ ] **Step 2: Reconcile `defaults/config.json` with the adapter**
+One hit, inside the plugin `Repeater`. `modules/imi/background/widgets/` holds one file, `AbstractBackgroundWidget.qml`, and it **stays** — `modules/common/plugins/PluginWidget.qml` imports it as the plugin host's own base class. Its directory path is misleading now (a "background widgets" directory holding only the host's base class); moving it is a possible follow-up, not part of this task.
+
+- [x] **Step 2: Reconcile `defaults/config.json` with the adapter**
 
 `defaults/config.json` is missing `background.widgets.notes` while `Config.qml` declares it — the two are out of sync independently of this work. Bring the file in line with the adapter, and remove the `background.widgets.*` blocks for widgets that are now plugins.
 
 Leave the migration marker and `plugins.enabled` alone.
 
-- [ ] **Step 3: Update the docs**
+**Done, but not by deleting the block.** Two corrections to the framing above, both verified rather than reasoned:
 
-- `docs/PLUGINS.md` — the bundled-plugin list now includes the ported widgets.
-- `docs/proposals/widgets-as-plugins.md` — tick the checklist and note the two decisions taken.
-- `CHANGELOG.md` — one `### Changed` entry for the unification and one `### Fixed` if any port fixed a real bug along the way.
+1. **An unmigrated install never reads this file.** `seed_default_config` (`sdata/subcmd-install/3.files.sh`) copies it to `~/.config/immaterial-impulse/config.json` only when that file does not exist, and `Config.qml` reads only that user path. Nothing else in the shell opens it — the sole runtime reference into `defaults/` is `Directories.defaultAiPrompts`. So the exposure is **fresh installs**, not upgrades.
+2. **Omitting a key does not mean `false`, it means the adapter default.** Verified against a live Quickshell instance (a real `FileView` + `JsonAdapter` over a file with no `clock` object at all): `clock.enable` still read `true`. Deleting a block hands the decision back to `Config.qml`.
 
-- [ ] **Step 4: Commit**
+Cross-referencing the two gives the real risk, and it is not the clock. `clock.enable` is `true` in both the curated file and the adapter, so dropping it would be inert. `calendar` and `visualizer` are `true` in the file and `false` in the adapter — deleting those two blocks would have silently stripped both widgets from every fresh install. The clock block is load-bearing for a different reason: `migrateDesktopWidgetOptionsToPlugins()` seeds the plugin's options *and* its position from it, so trimming it to `enable` would repaint a fresh install's clock and move it to the host's generic 100,100.
+
+So the file keeps `calendar` and `visualizer` trimmed to their enable bit, keeps the `clock` block whole, and sheds the other seven, which only restated adapter defaults. The `notes` divergence resolves the same way: the file is a sparse overlay, not a roster, so an omitted widget is no longer a divergence. `tests/test_default_config.py::ShippedDesktopWidgetsSurviveTheMigration` pins the effective fresh-install plugin set (`{clock, calendar, visualizer}`) so a future tidy-up cannot quietly change it.
+
+Note that `tests/test_dropshelf_summon.py` asserts `plugins.enabled == []` in the shipped defaults, with the rationale "no plugin may be enabled in the shipped defaults". That literal assertion still holds, but it is now only half true in effect: the migration turns those three enable bits into `plugins.enabled` on the first load of a seeded config. Whether a fresh install *should* light up three desktop widgets is a product call, deliberately left as it was.
+
+- [x] **Step 3: Update the docs**
+
+- `docs/PLUGINS.md` — bundled-package roster, the "there are no built-in desktop widgets" statement, and the migration note.
+- `docs/proposals/widgets-as-plugins.md` — checklist ticked, decisions recorded, and a "Known gaps left open" section carrying the deferred items so they survive the merge.
+- `CHANGELOG.md` — `### Added` / `### Changed` / `### Fixed` under `[Unreleased]`.
+- `docs/widget-grid.md` — already correct after the lattice work; only "built-in reference" wording that would have resurrected the split was changed, plus the clock's exemption reason.
+- `AGENT.md` — the directory map no longer describes `background/` as holding the widgets.
+
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A

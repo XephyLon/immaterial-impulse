@@ -12,6 +12,49 @@ Immaterial Impulse supports two complementary plugin formats:
 Installed packages live at `~/.config/immaterial-impulse/plugins/<plugin-id>/`. The manager scans
 that directory for `manifest.json`; installed packages override bundled packages with the same id.
 
+## Bundled packages
+
+**There are no built-in desktop widgets.** Every desktop widget the shell ships is a bundled
+plugin under `modules/common/plugins/bundled/<dir>/`, loaded through the one host path
+(`PluginManager` → `PluginWidget` → `PluginNode`) and enabled from Settings → Widgets. The
+hardcoded `FadeLoader` widgets that used to live in `modules/imi/background/Background.qml` are
+gone; the only `FadeLoader` left there is the plugin `Repeater`'s.
+
+| directory | id | name | capabilities |
+| --- | --- | --- | --- |
+| `calendar` | `calendar` | Calendar | desktop-widget |
+| `clock` | `clock` | Clock | desktop-widget |
+| `custom-image` | `custom-image` | Custom Image | desktop-widget |
+| `discordVoice` | `discord_voice` | Discord Voice | bar-widget, overlay-widget, settings |
+| `docker` | `docker_plugin` | Docker Manager | bar-widget, settings |
+| `image-converter` | `image-converter` | Image Converter | desktop-widget |
+| `nandoroid-currency` | `nandoroid_currency` | Currency | desktop-widget |
+| `nandoroid-media` | `nandoroid_media` | Media Player | desktop-widget |
+| `nandoroid-system-monitor` | `nandoroid_system_monitor` | System Monitor | desktop-widget |
+| `nandoroid-weather` | `nandoroid_weather` | Weather | desktop-widget |
+| `notes` | `notes` | Notes | desktop-widget |
+| `user-card` | `user-card` | User Card | desktop-widget |
+| `visualizer` | `visualizer` | Visualizer | desktop-widget |
+| `world-clock` | `world-clock` | World Clock | desktop-widget |
+
+`clock`, `calendar`, `world-clock`, `visualizer`, `user-card`, `custom-image` and
+`image-converter` are ports of former built-ins; the old declarative `clock_plugin` was retired by
+the port rather than kept alongside it. The former built-in resources, media, weather and notes
+widgets were duplicates and were deleted in favour of `nandoroid_system_monitor`,
+`nandoroid_media`, `nandoroid_weather` and `notes`.
+
+Bundled packages are **not** auto-discovered. `PluginManager.qml` needs both a `FileView` per
+package and that view's id inside `rebuildFromLoadedFiles()`; miss either half and the plugin
+silently never exists. `tests/test_widget_plugin_migration.py` guards both halves. Adding a package
+directory also requires a full `qs` restart — hot reload will not register it.
+
+Existing installs carried their desktop widgets in `background.widgets.*.enable`. A one-shot
+migration in `Config.qml` translates those into `plugins.enabled` (marker:
+`plugins.migratedDesktopWidgets`), and a second one carries the clock's own settings and position
+into `PluginState` (marker: `plugins.migratedDesktopWidgetOptions`). The old schema keys are
+deliberately still declared — deleting them would break the migration for anyone who has not run
+it yet.
+
 ## Directory naming
 
 A bundled package directory that any QML file imports *as a directory* -

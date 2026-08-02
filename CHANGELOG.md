@@ -12,6 +12,71 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **`shape` and `color` manifest option types.** `shape` takes the same
+  `choices` array as `choice` but renders each entry as the Material shape it
+  names rather than as a text chip — a 31-entry row of shape *names* is
+  unreadable, and `ConfigSelectionArray`'s chip flow only wraps when the row
+  has no label, so such a row could not be labelled either. `color` renders a
+  row of palette swatches from `Appearance.colors` role names; the empty
+  string is a legal choice and draws an "automatic" slot, so a widget with a
+  sensible colour of its own gets its override *and* the way back to that
+  default in one row, rather than a second switch sitting beside the row
+  saying the same thing.
+- **A `grid`-exempt escape hatch for full-bleed widgets.** The component grid
+  caps at 12 columns (1716px — barely a third of a 5120px display), so a
+  screen-wide widget cannot express itself through `grid` at all. It omits
+  `grid`, takes the host's content sizing, and binds its own `implicitWidth` to
+  the monitor the host tells it it is on. `docs/widget-grid.md` documents the
+  rule and the two other legitimate exemptions (user-resizable, and square).
+- **Host opt-ins for widgets that draw straight onto the wallpaper.** A package
+  component may now declare `visibleWhenLocked` (stay up while the screen is
+  locked, regardless of `lock.showWidgets`), `forceCenter` (centre on the
+  monitor without disturbing the persisted position), and `needsColText` (run
+  the least-busy-region pass so `hostColText` tracks the wallpaper underneath).
+  The bundled Clock uses all three. Every one is optional; a widget that
+  declares none behaves exactly as it did before.
+
+### Changed
+- **The two desktop-widget systems are now one.** Every desktop widget used to
+  be either a hardcoded `FadeLoader` in `modules/imi/background/Background.qml`
+  gated on `background.widgets.<key>.enable`, or a bundled plugin gated on
+  `plugins.enabled`. All eleven built-ins are gone: seven were ported to
+  bundled plugins (Visualizer, Custom Image, Image Converter, User Card, World
+  Clock, Calendar, Clock) and four were deleted as duplicates of a plugin that
+  already shipped (resources → System Monitor, media → Media Player, weather →
+  Weather, notes → Notes). Every desktop widget now goes through one code path
+  (`PluginManager` → `PluginWidget` → `PluginNode`) and is enabled from
+  Settings → Widgets — which means one frost/blur implementation, one position
+  persistence system, and one place to look. Porting the clock also retired the
+  older declarative `clock_plugin`, so there is exactly one clock in the list.
+- **Nothing you had switched on switches off.** A one-shot migration translates
+  `background.widgets.*.enable` into `plugins.enabled`. The clock gets a second
+  one: it is the only widget that shipped *on*, and its four styles look
+  nothing like one another, so it carries its own settings and its desktop
+  position across as well rather than silently repainting and moving itself.
+  Both migrations are marked so they never run twice, and the clock's marker is
+  written only once the values have actually landed.
+
+### Fixed
+- **Every "2×2" world clock and calendar was 24px too tall.** Both assumed a
+  132×**120** grid cell; the cell is 132×**108**. A widget off the lattice
+  cannot line up with its neighbours no matter where it is dropped — its bottom
+  edge lands past every other tile's, on every row. Both are now sized through
+  `Appearance.sizes.widgetGridSpanX/Y`, which also makes them follow
+  `effectiveScale` instead of being wrong on every scaled setup.
+- **Every unselected shape in a shape picker rendered invisible.**
+  `ConfigSelectionShapeArray`'s default `shapeColor` was `colPrimaryContainer`,
+  near-identical to the chip background it was drawn on.
+- **The desktop media widget would have thrown on its first reset.**
+  `Background.qml`'s media `onLoaded` referenced a `mediaTimer` that was
+  declared nowhere in the tree.
+- **The cookie clock's Gemini auto-styling would have silently stopped.**
+  `scripts/colors/switchwall.sh` read `.background.widgets.clock.cookie.aiStyling`
+  out of `config.json`. The clock's settings live in `plugin-state.json` now, so
+  that read would have returned `"null"` forever and the wallpaper category
+  would never have been generated.
+
 ## [0.11.0] — 2026-08-02
 
 ### Changed
