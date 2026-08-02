@@ -1,24 +1,32 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Layouts
-import QtQuick.Effects
 import Qt5Compat.GraphicalEffects
-import Quickshell
 import qs.modules.common
 import qs.modules.common.widgets
-import qs.modules.imi.background.widgets
+import qs.modules.common.plugins
 
-AbstractBackgroundWidget {
+Item {
     id: root
 
-    configEntryName: "customImage"
-    hoverEnabled: true
+    // The tile is a shape-masked image, never a rectangular card: the host's
+    // frost is a rounded rectangle, so it would render as a square halo around
+    // a Circle/Heart/Cookie mask. An empty region list makes PluginWidget skip
+    // the blur surface entirely.
+    readonly property var blurRegions: []
 
-    property string imagePath: Config.options.background.widgets.customImage.path ?? ""
+    readonly property string imagePath: PluginState.option("custom-image", "path", "")
+    readonly property string shapeName: PluginState.option("custom-image", "shape", "Cookie4Sided")
     property bool dropHover: false
-    property real widgetSize: Config.options.background.widgets.customImage.size ?? 200
+    // The resize handle assigns this directly, which breaks the binding on
+    // purpose - the same trade the built-in made - and persists it on release.
+    property real widgetSize: PluginState.option("custom-image", "size", 200)
 
+    // The manifest deliberately declares no `grid`, so the host sizes itself
+    // from this implicit size and the root must NOT anchor to its parent (that
+    // would be a binding loop - see PluginNode.qml). Sizing ourselves is also
+    // the only way to stay square and stay user-resizable: a grid span is a
+    // fixed count of 132x108 cells, which is neither. See docs/widget-grid.md.
     implicitWidth: contentItem.implicitWidth
     implicitHeight: contentItem.implicitHeight
 
@@ -63,6 +71,12 @@ AbstractBackgroundWidget {
         }
     }
 
+    // The host (PluginWidget) is the MouseArea that drags this widget; a
+    // HoverHandler reads hover without taking press events away from it.
+    HoverHandler {
+        id: widgetHover
+    }
+
     Item {
         id: contentItem
         implicitWidth: root.widgetSize
@@ -79,7 +93,7 @@ AbstractBackgroundWidget {
             id: shadowShape
             anchors.fill: parent
             color: Appearance.colors.colPrimaryContainer
-            shape: getShape(Config.options.background.widgets.customImage.shape ?? "Cookie4Sided")
+            shape: root.getShape(root.shapeName)
             visible: false
         }
 
@@ -93,14 +107,14 @@ AbstractBackgroundWidget {
             anchors.fill: parent
             z: 0
             color: Appearance.colors.colPrimaryContainer
-            shape: getShape(Config.options.background.widgets.customImage.shape ?? "Cookie4Sided")
+            shape: root.getShape(root.shapeName)
 
             layer.enabled: true
             layer.effect: OpacityMask {
                 maskSource: MaterialShape {
                     width: imageShape.width
                     height: imageShape.height
-                    shape: getShape(Config.options.background.widgets.customImage.shape ?? "Cookie4Sided")
+                    shape: root.getShape(root.shapeName)
                 }
             }
 
@@ -144,7 +158,7 @@ AbstractBackgroundWidget {
                         var ext = cleanPath.split(".").pop().toLowerCase()
                         var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif"]
                         if (accepted.indexOf(ext) !== -1) {
-                            Config.options.background.widgets.customImage.path = cleanPath
+                            PluginState.setOption("custom-image", "path", cleanPath)
                         }
                     }
                     root.dropHover = false
@@ -163,7 +177,7 @@ AbstractBackgroundWidget {
                 bottom: imageShape.bottom
                 margins: Appearance.spacing.space100
             }
-            opacity: (root.containsMouse || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
+            opacity: (widgetHover.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
             visible: opacity > 0 && !Config.options.background.widgetsLocked
             z: 1
 
@@ -195,7 +209,7 @@ AbstractBackgroundWidget {
                     root.widgetSize = Math.max(80, startSize + delta)
                 }
                 onReleased: {
-                    Config.options.background.widgets.customImage.size = root.widgetSize
+                    PluginState.setOption("custom-image", "size", root.widgetSize)
                 }
             }
         }

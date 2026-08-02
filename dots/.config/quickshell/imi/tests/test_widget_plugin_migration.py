@@ -11,6 +11,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "modules/common/Config.qml"
+BUNDLED = ROOT / "modules/common/plugins/bundled"
+MANAGER = ROOT / "modules/common/plugins/PluginManager.qml"
 
 
 class WidgetPluginMigration(unittest.TestCase):
@@ -55,6 +57,38 @@ class WidgetPluginMigration(unittest.TestCase):
         """
         body = self.src[self.src.index("function migrateDesktopWidgetsToPlugins"):]
         self.assertNotRegex(body, r'setNestedValue\("plugins\.enabled",\s*\[\]')
+
+
+class BundledPluginsAreRegistered(unittest.TestCase):
+    """Bundled plugins are not auto-discovered.
+
+    PluginManager needs a FileView per bundled package AND that FileView's id
+    inside rebuildFromLoadedFiles()'s array. Miss either half and the plugin
+    silently never exists - which is exactly how a ported desktop widget
+    disappears without a single error in the log.
+    """
+
+    def setUp(self):
+        self.src = MANAGER.read_text(encoding="utf-8")
+        self.file_views = dict(re.findall(
+            r"id:\s*(\w+)\s*\n\s*property string pluginBase:"
+            r' Quickshell\.shellPath\("modules/common/plugins/bundled/([^"]+)"\)',
+            self.src))
+        body = self.src[self.src.index("function rebuildFromLoadedFiles"):]
+        self.rebuild_list = body[body.index("["):body.index("].forEach")]
+
+    def test_every_bundled_package_has_a_file_view(self):
+        for directory in sorted(BUNDLED.iterdir()):
+            if not (directory / "manifest.json").exists():
+                continue
+            self.assertIn(directory.name, self.file_views.values(),
+                          f"{directory.name} has no FileView in PluginManager")
+
+    def test_every_file_view_is_read_by_the_rebuild(self):
+        for view_id, package in self.file_views.items():
+            self.assertIn(view_id, self.rebuild_list,
+                          f"{package}'s FileView is never read by "
+                          "rebuildFromLoadedFiles")
 
 
 if __name__ == "__main__":

@@ -119,7 +119,8 @@ Singleton {
         [clockManifestFile, dockerManifestFile, discordVoiceManifestFile,
                 nandoroidMediaManifestFile, nandoroidSystemMonitorManifestFile,
                 nandoroidWeatherManifestFile, nandoroidCurrencyManifestFile,
-                notesManifestFile, visualizerManifestFile].forEach(fileView => {
+                notesManifestFile, visualizerManifestFile,
+                customImageManifestFile].forEach(fileView => {
             if (!fileView.loaded) return;
             try {
                 const text = fileView.text();
@@ -371,6 +372,12 @@ Singleton {
     FileView {
         id: visualizerManifestFile
         property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/visualizer")
+        path: pluginBase + "/manifest.json"
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: customImageManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/custom-image")
         path: pluginBase + "/manifest.json"
         onLoaded: root.scheduleRebuild()
     }

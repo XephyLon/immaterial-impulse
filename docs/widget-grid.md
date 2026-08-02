@@ -124,6 +124,19 @@ implicitWidth: widgetScreen ? widgetScreen.width : Screen.width
 The manifest's `defaultWidth`/`defaultHeight` then act only as a floor (the host takes
 `Math.max(defaultWidth, content width)`). The bundled `visualizer` is the reference case.
 
+**User-resizable widgets are the other exception.** A `grid` span is a fixed pixel size the host
+assigns, so a widget the user resizes with a drag handle cannot declare one — the span would
+overwrite the dragged size on every load. Such a widget omits `grid` too, keeps its own
+`implicitWidth`/`implicitHeight` bound to a persisted option, and writes the new value back with
+`PluginState.setOption(...)` when the drag ends. The bundled `custom-image` is the reference case:
+it also stays square, which no span can be (the cell is 132x108), and its manifest sets
+`defaultWidth`/`defaultHeight` to the *smallest* size the handle allows so the host's floor never
+fights the user's choice.
+
+Either way, a widget that omits `grid` must **not** `anchors.fill: parent`. The host derives its
+own size from the widget's implicit size in that mode, so filling the parent is a binding loop —
+`PluginNode.qml` leaves the `Loader` unanchored precisely to avoid it.
+
 **Full-bleed is not anchoring.** The host has no edge-anchor or non-draggable mode: a full-bleed
 widget is still draggable and still gets the generic `x: 100, y: 100` default position on first
 enable, so it lands near the *top* rather than pinned to the bottom edge the way a hardcoded
