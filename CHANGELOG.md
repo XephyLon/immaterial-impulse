@@ -59,6 +59,18 @@ own repo; the installer pins which revision it builds.
   written only once the values have actually landed.
 
 ### Fixed
+- **The calendar's padding was whatever made it fit.** Putting the widget on
+  the real grid cell left every gap inside it set to whatever absorbed the 24px
+  it lost, so the month title, the weekday letters and the day grid all sat the
+  same 4px apart with nothing saying which belonged to which. All three sizes
+  now share one card inset and one three-step rhythm — `space150` around the
+  card, `space100` between the title block and the calendar block, `space50`
+  between the weekday letters and the grid they label. The day columns spread
+  across the full card width instead of sitting as a fixed 196px block centred
+  in a 252px surface, so the weekday letters line up over the days they name
+  and the day block is inset evenly on all four sides; the week strip is
+  centred in its card rather than piled against the top with all the slack
+  under it.
 - **Every "2×2" world clock and calendar was 24px too tall.** Both assumed a
   132×**120** grid cell; the cell is 132×**108**. A widget off the lattice
   cannot line up with its neighbours no matter where it is dropped — its bottom

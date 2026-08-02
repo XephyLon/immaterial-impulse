@@ -82,9 +82,22 @@ Item {
         }
     }
 
-    // The inset the wide-short mode uses on all four sides. The weekday grid
-    // divides the card width by it, so it has to be one named value.
-    readonly property real weekInset: Appearance.spacing.space100
+    // One padding for every mode, so the three sizes read as the same card at
+    // different scales. space150 rather than the space200 the notes tile uses:
+    // a 228-tall card has to seat a title row, a weekday strip and six week
+    // rows, and the 8px space200 would take comes straight off the day grid,
+    // which has less of it to give than the card edge does.
+    readonly property real cardInset: Appearance.spacing.space150
+
+    // Padding between the day-grid surface and the block of day pills inside
+    // it. The pills are centred in their columns, so the *visible* gap is this
+    // plus half a column's slack; space50 lands that at roughly the same 7px
+    // the compressed row pitch leaves above and below (see twoByTwoContent).
+    readonly property real dayGridInset: Appearance.spacing.space50
+
+    // Column width for the wide-short mode, which has no inner surface: the
+    // card's own content width split seven ways.
+    readonly property real weekColumnWidth: (root.snapWidth2 - root.cardInset * 2) / 7
 
     property int monthShift: 0
     readonly property var today: new Date()
@@ -207,167 +220,167 @@ Item {
             }
         }
 
-        // 1x1. spanY(1) is 108, 12px shorter than the 120 the built-in used.
-        // The banner is a fraction of the card so it shrinks on its own; the
-        // date below it is what runs out of room, so it drops from 60px to 54px
-        // and still clears the banner.
+        // 1x1. Two full-bleed bands, so there is no card inset here - the
+        // banner is the padding. Its height is its own label plus space100
+        // above and below rather than a fraction of the card: a fraction
+        // silently re-tunes the banner's padding every time the card is
+        // resized, which is how it survived being sized to a 120px cell that
+        // was really 108 without anyone noticing.
         Component {
             id: oneByOneContent
-            Rectangle {
-                anchors.fill: parent
-                radius: card.radius
-                color: "transparent"
-
-                ColumnLayout {
-                    anchors {
-                        fill: parent
-                        margins: 0
-                    }
-                    spacing: 0
-
-                    Rectangle {
-                        id: todayBanner
-                        Layout.fillWidth: true
-                        implicitHeight: todayBanner.parent.height * 0.35
-                        color: root.tinted(Appearance.colors.colPrimary)
-                        topLeftRadius: card.radius
-                        topRightRadius: card.radius
-
-                        RowLayout {
-                            anchors.centerIn: parent
-                            spacing: Appearance.spacing.space50
-                            StyledText {
-                                text: root.today.toLocaleDateString(Qt.locale(), "MMM").toUpperCase()
-                                font.pixelSize: Appearance.font.pixelSize.normal
-                                font.weight: Font.Bold
-                                color: Appearance.colors.colOnPrimary
-                            }
-                            StyledText {
-                                text: root.today.toLocaleDateString(Qt.locale(), "ddd").toUpperCase()
-                                font.pixelSize: Appearance.font.pixelSize.normal
-                                font.weight: Font.Bold
-                                color: Appearance.colors.colOnPrimary
-                                opacity: 0.7
-                            }
-                        }
-                    }
-
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-
-                        StyledText {
-                            anchors.centerIn: parent
-                            text: root.today.getDate()
-                            font.pixelSize: 54
-                            font.weight: Font.Bold
-                            color: Appearance.colors.colOnPrimaryContainer
-                        }
-                    }
-                }
-            }
-        }
-
-        // 2x1. spanY(1) is 108, 12px shorter than the 120 the built-in used,
-        // and the column had no slack left at 120, so the whole inset drops
-        // from 14 to space100 (8) - the 12px comes back off the top and bottom.
-        Component {
-            id: twoByOneContent
             ColumnLayout {
-                anchors {
-                    fill: parent
-                    margins: root.weekInset
-                }
-                spacing: Appearance.spacing.space100
+                anchors.fill: parent
+                spacing: Appearance.spacing.space0
 
                 Rectangle {
-                    Layout.leftMargin: Appearance.spacing.space50
-                    implicitHeight: 28
-                    implicitWidth: monthText.implicitWidth + 20
-                    radius: Appearance.rounding.full
-                    color: root.tinted(Appearance.colors.colPrimary)
-
-                    StyledText {
-                        id: monthText
-                        anchors.centerIn: parent
-                        text: root.today.toLocaleDateString(Qt.locale(), "MMMM yyyy")
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        font.weight: Font.Bold
-                        color: Appearance.colors.colOnPrimary
-                    }
-                }
-
-                Grid {
-                    columns: 7
-                    rowSpacing: Appearance.spacing.space50
-                    columnSpacing: 0
                     Layout.fillWidth: true
-                    Layout.topMargin: Appearance.spacing.space50
+                    implicitHeight: bannerRow.implicitHeight + Appearance.spacing.space100 * 2
+                    color: root.tinted(Appearance.colors.colPrimary)
+                    topLeftRadius: card.radius
+                    topRightRadius: card.radius
 
-                    Repeater {
-                        model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-                        delegate: Item {
-                            id: weekdayHeaderCell
-                            required property var modelData
-                            implicitWidth: (card.implicitWidth - root.weekInset * 2) / 7
-                            implicitHeight: 16
-                            StyledText {
-                                anchors.centerIn: parent
-                                text: weekdayHeaderCell.modelData
-                                font.pixelSize: Appearance.font.pixelSize.smaller
-                                font.weight: Font.Bold
-                                color: Appearance.colors.colOnPrimaryContainer
-                                opacity: 0.5
-                            }
+                    RowLayout {
+                        id: bannerRow
+                        anchors.centerIn: parent
+                        spacing: Appearance.spacing.space50
+                        StyledText {
+                            text: root.today.toLocaleDateString(Qt.locale(), "MMM").toUpperCase()
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.Bold
+                            color: Appearance.colors.colOnPrimary
                         }
-                    }
-
-                    Repeater {
-                        model: root.getCurrentWeek()
-                        delegate: Item {
-                            id: weekDayCell
-                            required property var modelData
-                            implicitWidth: (card.implicitWidth - root.weekInset * 2) / 7
-                            implicitHeight: 28
-
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: 28
-                                height: 28
-                                radius: Appearance.rounding.full
-                                color: weekDayCell.modelData.isToday ? root.tinted(Appearance.colors.colPrimary) : "transparent"
-
-                                StyledText {
-                                    anchors.centerIn: parent
-                                    text: weekDayCell.modelData.day
-                                    font.pixelSize: Appearance.font.pixelSize.smaller
-                                    font.weight: weekDayCell.modelData.isToday ? Font.Bold : Font.Normal
-                                    color: weekDayCell.modelData.isToday ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
-                                    opacity: weekDayCell.modelData.currentMonth ? 1.0 : 0.3
-                                }
-                            }
+                        StyledText {
+                            text: root.today.toLocaleDateString(Qt.locale(), "ddd").toUpperCase()
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.Bold
+                            color: Appearance.colors.colOnPrimary
+                            opacity: 0.7
                         }
                     }
                 }
 
                 Item {
+                    Layout.fillWidth: true
                     Layout.fillHeight: true
+
+                    StyledText {
+                        anchors.centerIn: parent
+                        text: root.today.getDate()
+                        font.pixelSize: 54
+                        font.weight: Font.Bold
+                        color: Appearance.colors.colOnPrimaryContainer
+                    }
                 }
             }
         }
 
-        // 2x2. spanY(2) is 228, 24px shorter than the 252 the built-in used.
-        // 8px comes off the card margins; the remaining 16px comes off the day
-        // grid, which is Layout.fillHeight and had that much slack around its
-        // six centred week rows.
+        // 2x1. The same three-step rhythm as the 2x2: cardInset (space150)
+        // around the card, space100 between the month pill and the week strip
+        // it heads, space50 between the weekday letters and the day row they
+        // label. That comes to 84px of content, and the column is *centred*
+        // rather than filled so the remaining 24px lands as 12 above and 12
+        // below - exactly the card inset - instead of piling up under a
+        // trailing fillHeight spacer and leaving the card bottom-heavy.
+        Component {
+            id: twoByOneContent
+            Item {
+                anchors.fill: parent
+
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    width: parent.width - root.cardInset * 2
+                    spacing: Appearance.spacing.space100
+
+                    Rectangle {
+                        implicitHeight: 28
+                        implicitWidth: monthText.implicitWidth + Appearance.spacing.space150 * 2
+                        radius: Appearance.rounding.full
+                        color: root.tinted(Appearance.colors.colPrimary)
+
+                        StyledText {
+                            id: monthText
+                            anchors.centerIn: parent
+                            text: root.today.toLocaleDateString(Qt.locale(), "MMMM yyyy")
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            font.weight: Font.Bold
+                            color: Appearance.colors.colOnPrimary
+                        }
+                    }
+
+                    Grid {
+                        columns: 7
+                        rowSpacing: Appearance.spacing.space50
+                        columnSpacing: Appearance.spacing.space0
+                        Layout.fillWidth: true
+
+                        Repeater {
+                            model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+                            delegate: Item {
+                                id: weekdayHeaderCell
+                                required property var modelData
+                                implicitWidth: root.weekColumnWidth
+                                implicitHeight: 16
+                                StyledText {
+                                    anchors.centerIn: parent
+                                    text: weekdayHeaderCell.modelData
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    font.weight: Font.Bold
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                    opacity: 0.5
+                                }
+                            }
+                        }
+
+                        Repeater {
+                            model: root.getCurrentWeek()
+                            delegate: Item {
+                                id: weekDayCell
+                                required property var modelData
+                                implicitWidth: root.weekColumnWidth
+                                implicitHeight: 28
+
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 28
+                                    height: 28
+                                    radius: Appearance.rounding.full
+                                    color: weekDayCell.modelData.isToday ? root.tinted(Appearance.colors.colPrimary) : "transparent"
+
+                                    StyledText {
+                                        anchors.centerIn: parent
+                                        text: weekDayCell.modelData.day
+                                        font.pixelSize: Appearance.font.pixelSize.smaller
+                                        font.weight: weekDayCell.modelData.isToday ? Font.Bold : Font.Normal
+                                        color: weekDayCell.modelData.isToday ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
+                                        opacity: weekDayCell.modelData.currentMonth ? 1.0 : 0.3
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2x2. Three consecutive steps of the scale, each one naming a real
+        // relationship rather than whatever made the pixels add up:
+        //
+        //   space150  cardInset - the card's edge padding
+        //   space100  between the month title block and the calendar block
+        //   space50   between the weekday letters and the grid they label
+        //
+        // Grouping the weekday strip with the grid inside one column is what
+        // makes those last two different: the strip is a header for the grid,
+        // not a third peer of the title, and reading it as a peer is why every
+        // gap in here used to be the same space50.
         Component {
             id: twoByTwoContent
             ColumnLayout {
                 anchors {
                     fill: parent
-                    margins: Appearance.spacing.space150
+                    margins: root.cardInset
                 }
-                spacing: Appearance.spacing.space50
+                spacing: Appearance.spacing.space100
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -382,8 +395,8 @@ Item {
                     }
 
                     Rectangle {
-                        implicitWidth: 26
-                        implicitHeight: 26
+                        implicitWidth: 24
+                        implicitHeight: 24
                         radius: Appearance.rounding.full
                         color: "transparent"
                         border.width: Appearance.borderWidth.standard
@@ -402,8 +415,8 @@ Item {
                     }
 
                     Rectangle {
-                        implicitWidth: 26
-                        implicitHeight: 26
+                        implicitWidth: 24
+                        implicitHeight: 24
                         radius: Appearance.rounding.full
                         color: "transparent"
                         border.width: Appearance.borderWidth.standard
@@ -422,50 +435,86 @@ Item {
                     }
                 }
 
-                RowLayout {
-                    Layout.alignment: Qt.AlignHCenter
-                    spacing: Appearance.spacing.space50
-                    Repeater {
-                        model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-                        delegate: StyledText {
-                            id: weekdayHeader
-                            required property var modelData
-                            Layout.preferredWidth: 28
-                            horizontalAlignment: Text.AlignHCenter
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            font.weight: Font.Bold
-                            color: Appearance.colors.colOnPrimaryContainer
-                            opacity: 0.6
-                            text: weekdayHeader.modelData
-                        }
-                    }
-                }
-
-                Rectangle {
+                // The weekday strip and the grid it labels, as one block.
+                ColumnLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    color: root.tinted(Appearance.colors.colLayer1)
-                    radius: (Appearance.rounding?.verylarge ?? 30) - 8
+                    spacing: Appearance.spacing.space50
 
-                    ColumnLayout {
-                        anchors.centerIn: parent
-                        spacing: -Appearance.spacing.space50
-
+                    // Seven equal columns across the full content width, inset
+                    // by dayGridInset so the letters sit exactly over the day
+                    // columns inside the surface below. They used to be a
+                    // fixed 28px block centred in a much wider row, which left
+                    // the strip and the grid on two different column pitches.
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: root.dayGridInset
+                        Layout.rightMargin: root.dayGridInset
+                        spacing: Appearance.spacing.space0
                         Repeater {
-                            model: root.weeks
-                            delegate: RowLayout {
-                                id: weekRow
+                            model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+                            delegate: StyledText {
+                                id: weekdayHeader
                                 required property var modelData
-                                spacing: Appearance.spacing.space50
-                                Repeater {
-                                    model: weekRow.modelData
-                                    delegate: DayCell {
-                                        id: dayOfMonth
-                                        required property var modelData
-                                        day: dayOfMonth.modelData.day
-                                        currentMonth: dayOfMonth.modelData.currentMonth
-                                        isToday: dayOfMonth.modelData.isToday
-                                        highlightColor: root.tinted(Appearance.colors.colPrimary)
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                font.weight: Font.Bold
+                                color: Appearance.colors.colOnPrimaryContainer
+                                opacity: 0.6
+                                text: weekdayHeader.modelData
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        color: root.tinted(Appearance.colors.colLayer1)
+                        // Nested inside the card at cardInset, so the corners
+                        // stay concentric with the card's own.
+                        radius: card.radius - root.cardInset
+
+                        ColumnLayout {
+                            anchors {
+                                left: parent.left
+                                right: parent.right
+                                verticalCenter: parent.verticalCenter
+                                leftMargin: root.dayGridInset
+                                rightMargin: root.dayGridInset
+                            }
+                            // Six 28px day pills do not fit in the 150-odd px
+                            // this surface gets, so the rows deliberately
+                            // overlap: the pill is a 28px hit/highlight target
+                            // but the row *pitch* is 22. The glyphs are 12px
+                            // and centred, so they still clear each other, and
+                            // only today's pill is ever filled. The negated
+                            // token is the documented form for this.
+                            spacing: -Appearance.spacing.space75
+
+                            Repeater {
+                                model: root.weeks
+                                delegate: RowLayout {
+                                    id: weekRow
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    spacing: Appearance.spacing.space0
+                                    Repeater {
+                                        model: weekRow.modelData
+                                        delegate: Item {
+                                            id: dayColumn
+                                            required property var modelData
+                                            Layout.fillWidth: true
+                                            implicitHeight: 28
+
+                                            DayCell {
+                                                anchors.centerIn: parent
+                                                day: dayColumn.modelData.day
+                                                currentMonth: dayColumn.modelData.currentMonth
+                                                isToday: dayColumn.modelData.isToday
+                                                highlightColor: root.tinted(Appearance.colors.colPrimary)
+                                            }
+                                        }
                                     }
                                 }
                             }
