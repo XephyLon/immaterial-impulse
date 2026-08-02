@@ -12,6 +12,35 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Settings now survive the move from upstream.** Arriving from
+  `end-4/dots-hyprland` or `pctrade/end4-pC` already moved your config
+  *directory*; it never converted anything inside it. The shell reads
+  `config.json` through a JSON adapter that silently ignores any key it does not
+  recognise, so a setting this fork renamed was replaced by a default with no
+  error and nothing to point at. Two things were being lost and are now carried
+  across on first launch:
+  - **`panelFamily`.** A config naming `ii` or `waffle` (end-4's second panel
+    family, which was never ported here) matched no panel family at all - the
+    desktop came up **completely blank**: no bar, no dock, and no error in the
+    log. Both now resolve to `imi`.
+  - **`bar.floatStyleShadow` -> `bar.shadow`.** Not a straight copy. Upstream
+    only ever drew that shadow under the Float corner style, while ours draws it
+    under every style that paints a background, so what migrates is the shadow
+    you actually had on screen rather than the flag on disk.
+
+  Everything else in the schema turned out to be intact - this fork's key set is
+  a superset of upstream's, with no type changes and nothing moved to a different
+  parent. The keys that were *removed* rather than renamed (`waffles.*`, and
+  end-4's `notifications.monitor.*`, which nothing ever read) are recorded as
+  removals rather than given an invented destination. The full audited
+  old-key -> new-key table, and an explicit list of what is **not** covered
+  (`~/.config/hypr/`, `~/.config/matugen/`), is in `docs/UPSTREAM_MIGRATION.md`.
+
+  It runs once, keyed on a marker of its own rather than on the old directory
+  still existing - that directory is already gone for anyone whose directory
+  migration ran earlier, and those are exactly the people who still need this.
+
 ### Changed
 - A fresh install now ships the clock and the visualizer on its desktop, not
   the calendar. Both of the two sit at an edge - the clock centred, the
