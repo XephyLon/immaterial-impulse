@@ -14,6 +14,14 @@ SpinBox {
     property real innerButtonRadius: Appearance.rounding.unsharpen
     editable: true
 
+    // The style computes these for a skin with both indicators on one side.
+    // This one puts decrement at the left end and increment at the right, so
+    // the defaults (4 / 39 here) lay the editable text field straight over the
+    // decrement button, which then swallows its clicks: only the leftmost few
+    // pixels of that button did anything at all.
+    leftPadding: root.down.indicator ? root.down.indicator.width : 0
+    rightPadding: root.up.indicator ? root.up.indicator.width : 0
+
     opacity: root.enabled ? 1 : 0.4
 
     background: Rectangle {
