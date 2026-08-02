@@ -59,6 +59,18 @@ own repo; the installer pins which revision it builds.
   written only once the values have actually landed.
 
 ### Fixed
+- **Laptops lost their battery reading when the resources widget was deduped.**
+  The built-in `ResourcesWidget` showed CPU, RAM and — wherever a battery
+  existed — the battery, falling back to disk only on a desktop. The bundled
+  `nandoroid-system-monitor` it was deduped into is always Disk, so every
+  laptop the migration moved onto the plugin quietly lost the reading. The
+  third card follows the battery again, gated on `Battery.available` rather
+  than the raw display device, so a transient UPower device swap cannot make
+  the whole card flip to Disk and back. The plugin also gains a **Battery
+  instead of disk** switch (on by default): the built-in never let a laptop
+  user keep disk, and that guess is wrong for anyone who put the widget there
+  to watch it. A machine with no battery renders exactly what it did before,
+  to the pixel.
 - **The world clock card overflowed its own bottom margin, and always had.**
   Its content came to 6px more than the card at both the old height and the
   new one, so the bottom row of city chips sat 2px off the card edge while the

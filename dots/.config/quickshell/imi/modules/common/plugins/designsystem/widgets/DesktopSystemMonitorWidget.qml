@@ -15,8 +15,18 @@ Item {
     property bool useBlurBackground: false
     property real backgroundOpacity: 0.1
     property bool interactive: true
+    // Injected by the plugin wrapper. False keeps the upstream nandoroid
+    // rendering, so a host that knows nothing about this flag is unchanged.
+    property bool showBattery: false
     signal verticalRequested(bool value)
     readonly property bool managesBlurTint: true
+
+    readonly property real thirdCardLevel: showBattery
+        ? Battery.percentage
+        : (SystemData.diskStats && SystemData.diskStats.length > 0
+            ? SystemData.diskStats[0].usage : 0)
+    readonly property string thirdCardIcon: showBattery ? "battery_full" : "storage"
+    readonly property string thirdCardLabel: showBattery ? "Battery" : "Disk"
 
     // Scale dimensions cleanly based on Choice A (Grid: 132x108, Gap: 12)
     // Horizontal 3x1: 420 x 108
@@ -33,7 +43,7 @@ Item {
     readonly property var blurRegions: [
         { x: cpuCard.x, y: cpuCard.y, width: cpuCard.width, height: cpuCard.height, radius: cpuCard.radius },
         { x: ramCard.x, y: ramCard.y, width: ramCard.width, height: ramCard.height, radius: ramCard.radius },
-        { x: diskCard.x, y: diskCard.y, width: diskCard.width, height: diskCard.height, radius: diskCard.radius }
+        { x: thirdCard.x, y: thirdCard.y, width: thirdCard.width, height: thirdCard.height, radius: thirdCard.radius }
     ]
 
     function cardColor(color) {
@@ -223,9 +233,9 @@ Item {
             }
         }
 
-        // CARD 3: DISK (Split-Level Centered Layout)
+        // CARD 3: DISK or BATTERY (Split-Level Centered Layout)
         Rectangle {
-            id: diskCard
+            id: thirdCard
             implicitWidth: root.cardWidth
             implicitHeight: root.cardHeight
             radius: Appearance.rounding.large
@@ -233,7 +243,7 @@ Item {
 
             // Sisi Atas: Liquid Cookie12Sided (Centered Top)
             Item {
-                id: diskVisualContainer
+                id: thirdVisualContainer
                 width: 38 * Appearance.effectiveScale
                 height: 38 * Appearance.effectiveScale
                 anchors {
@@ -243,7 +253,7 @@ Item {
                 }
 
                 MaterialShape {
-                    id: diskMask
+                    id: thirdMask
                     anchors.fill: parent
                     shape: MaterialShape.Shape.Cookie12Sided
                     color: "black"
@@ -251,7 +261,7 @@ Item {
                 }
 
                 Item {
-                    id: diskContent
+                    id: thirdContent
                     anchors.fill: parent
                     visible: false
 
@@ -267,33 +277,25 @@ Item {
                             right: parent.right
                             bottom: parent.bottom
                         }
-                        height: {
-                            if (SystemData.diskStats && SystemData.diskStats.length > 0) {
-                                return parent.height * SystemData.diskStats[0].usage;
-                            }
-                            return 0;
-                        }
+                        height: parent.height * root.thirdCardLevel
                         color: Appearance.colors.colTertiary
                     }
                 }
 
                 OpacityMask {
                     anchors.fill: parent
-                    source: diskContent
-                    maskSource: diskMask
+                    source: thirdContent
+                    maskSource: thirdMask
                 }
 
                 MaterialSymbol {
                     anchors.centerIn: parent
-                    text: "storage"
+                    text: root.thirdCardIcon
                     iconSize: 16 * Appearance.effectiveScale
-                    color: {
-                        let usage = 0;
-                        if (SystemData.diskStats && SystemData.diskStats.length > 0) {
-                            usage = SystemData.diskStats[0].usage;
-                        }
-                        return usage > 0.55 ? Appearance.colors.colOnTertiary : Appearance.colors.colTertiary;
-                    }
+                    // Inverts once the fill has risen past the glyph, so this
+                    // tracks the fill level rather than meaning "too high".
+                    color: root.thirdCardLevel > 0.55
+                        ? Appearance.colors.colOnTertiary : Appearance.colors.colTertiary
                 }
             }
 
@@ -308,19 +310,14 @@ Item {
 
                 StyledText {
                     Layout.alignment: Qt.AlignHCenter
-                    text: {
-                        if (SystemData.diskStats && SystemData.diskStats.length > 0) {
-                            return Math.round(SystemData.diskStats[0].usage * 100) + "%";
-                        }
-                        return "0%";
-                    }
+                    text: Math.round(root.thirdCardLevel * 100) + "%"
                     font.pixelSize: Appearance.font.pixelSize.normal
                     font.weight: Font.Bold
                     color: Appearance.colors.colOnTertiaryContainer
                 }
                 StyledText {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "Disk"
+                    text: root.thirdCardLabel
                     font.pixelSize: Appearance.font.pixelSize.smallest
                     color: Appearance.colors.colOnTertiaryContainer
                     opacity: 0.6
