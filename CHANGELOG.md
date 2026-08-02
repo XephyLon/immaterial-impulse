@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-08-03
+
 ### Added
 - **Settings now survive the move from upstream.** Arriving from
   `end-4/dots-hyprland` or `pctrade/end4-pC` already moved your config
