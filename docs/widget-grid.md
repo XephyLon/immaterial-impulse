@@ -107,3 +107,26 @@ keeps grid widgets and the content-sized `nandoroid-*` widgets on one shared lat
   system monitor = 3x1 / 1x3, currency = 1x1 / 2x1 via their internal `sizeMode`). They are
   content-sized rather than declaring `grid`, but their pixel sizes are exactly on it, so new
   `grid` widgets tile flush beside them. `clock` predates the grid and is left content-sized.
+
+## Widgets that cannot use the grid
+
+The grid caps at 12 columns, which is `spanX(12) = 1716px` — barely a third of a 5120px display.
+A widget that must be **full-bleed** (screen-wide) therefore cannot express itself through `grid`
+at all. Such a widget omits `grid` entirely, takes the host's content sizing, and binds its own
+`implicitWidth` to its monitor:
+
+```qml
+property string screenName: ""   // bound by the host, see PLUGINS.md
+readonly property var widgetScreen: Quickshell.screens.find(s => s.name === root.screenName) ?? null
+implicitWidth: widgetScreen ? widgetScreen.width : Screen.width
+```
+
+The manifest's `defaultWidth`/`defaultHeight` then act only as a floor (the host takes
+`Math.max(defaultWidth, content width)`). The bundled `visualizer` is the reference case.
+
+**Full-bleed is not anchoring.** The host has no edge-anchor or non-draggable mode: a full-bleed
+widget is still draggable and still gets the generic `x: 100, y: 100` default position on first
+enable, so it lands near the *top* rather than pinned to the bottom edge the way a hardcoded
+built-in could be. Horizontal drift self-corrects — `PluginWidget.applyPersistedPosition()` clamps
+x into `[0, screenWidth - width]`, which is `[0, 0]` for a full-bleed widget — but only on the next
+load; within a session the widget stays wherever it was dragged, including partly off-screen.

@@ -122,10 +122,34 @@ none were in the original recipe.
 5. **Conditional-visibility widgets need their trigger active before you judge
    them missing.** The visualizer fades out after a second of silence, which
    produced two false "the widget is gone" readings when a player auto-paused.
+   The cava process that feeds it is additionally gated on
+   `MprisController.activePlayer !== null`, so a bare `mpv` (no MPRIS) proves
+   nothing — use a player that registers on the bus.
 6. **Full-bleed and non-draggable have no host support.** The grid caps at 12
    columns and every plugin is draggable and grid-sized. A widget that was
    screen-wide or edge-anchored cannot express that through `grid`; it must
    omit `grid` and size itself. `customImage` is likely to hit this hardest.
+
+   **Half-resolved by the pilot.** *Full-bleed* now works: omit `grid`, declare
+   `property string screenName: ""` (the host binds it — `PluginWidget` →
+   `PluginNode` → `Widget.qml`), resolve the monitor with
+   `Quickshell.screens.find(s => s.name === screenName)`, and bind `implicitWidth`
+   to its width. `defaultWidth`/`defaultHeight` in the manifest are then only a
+   floor. Measured: 5120px wide, 426 bars, matching the built-in exactly.
+
+   *Anchoring is still unsolved*, and it is a real behavioural regression for
+   every widget that was edge-pinned:
+   - **First enable lands at `y = 100`** (the host's generic default), i.e. near
+     the top, not the bottom edge the built-in was hardcoded to.
+   - **It is draggable**, and `AbstractWidget` sets no drag bounds, so a
+     full-bleed bar can be dragged partly off-screen and stays there for the
+     session.
+   - Horizontal drift is self-healing but only on reload: `applyPersistedPosition()`
+     clamps x into `[0, screenWidth - width]` = `[0, 0]`. Vertical position
+     persists freely in `[0, screenHeight - height]`.
+
+   Fixing this needs a host-side anchor concept (a manifest `anchor`/`fullBleed`
+   field driving default position and `draggable`), which is a separate decision.
 
 ---
 

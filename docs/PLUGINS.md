@@ -132,6 +132,22 @@ background tint can expose `managesBlurTint: true` and apply the persisted opaci
 fill, preventing the host from adding a second generic scrim. The nandoroid System Monitor,
 Currency, Media, and Weather widgets are reference implementations.
 
+## Knowing which monitor you are on
+
+A package component may declare `property string screenName: ""`. When it does, the host
+(`PluginWidget` → `PluginNode`) binds it to the name of the monitor that instance of the widget
+lives on. Resolve the `ShellScreen` from it with the same lookup the rest of the shell uses:
+
+```qml
+readonly property var widgetScreen: Quickshell.screens.find(s => s.name === root.screenName) ?? null
+```
+
+This is how a full-bleed widget sizes itself: the bundled Visualizer omits `grid` from its manifest
+(the grid caps at 12 columns / 1716px, a third of a 5120px display) and binds
+`implicitWidth` to `widgetScreen.width`, so the host's content sizing gives it the whole monitor.
+Note that the host still makes such a widget draggable and still restores a persisted free
+position — full-bleed does not mean edge-anchored. See [widget-grid.md](widget-grid.md).
+
 ## Remote installation
 
 The Widgets settings page accepts an HTTPS manifest URL. This is the power-user path; the curated
