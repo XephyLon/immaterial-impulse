@@ -896,11 +896,6 @@ ContentPage {
                             enabled: Config.options.background.widgets.resources.enable
                         },
                         {
-                            icon: "calendar_month",
-                            name: Translation.tr("Calendar"),
-                            enabled: Config.options.background.widgets.calendar.enable
-                        },
-                        {
                             icon: "note_stack_add",
                             name: Translation.tr("Notes"),
                             enabled: Config.options.background.widgets.notes.enable
@@ -939,8 +934,6 @@ ContentPage {
                                             Config.options.background.widgets.media.enable = checked
                                         else if (modelData.icon === "memory")
                                             Config.options.background.widgets.resources.enable = checked
-                                        else if (modelData.icon === "calendar_month")
-                                            Config.options.background.widgets.calendar.enable = checked
                                         else if (modelData.icon === "note_stack_add")
                                             Config.options.background.widgets.notes.enable = checked
                                     }

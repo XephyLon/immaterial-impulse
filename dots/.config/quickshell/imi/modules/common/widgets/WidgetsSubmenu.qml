@@ -16,7 +16,6 @@ Item {
         { key: "clock",       icon: "schedule",           name: Translation.tr("Clock") },
         { key: "media",       icon: "music_note",         name: Translation.tr("Media") },
         { key: "resources",   icon: "monitor_heart",      name: Translation.tr("Resources") },
-        { key: "calendar",    icon: "calendar_month",     name: Translation.tr("Calendar") },
         { key: "notes",       icon: "note_stack_add",     name: Translation.tr("Notes") },
     ]
 

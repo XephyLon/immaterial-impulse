@@ -1,130 +1,180 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
-import qs
-import qs.services
 import qs.modules.common
+import qs.modules.common.functions
 import qs.modules.common.widgets
-import qs.modules.common.widgets.widgetCanvas
-import qs.modules.imi.background.widgets
+import qs.modules.common.plugins
 
-AbstractBackgroundWidget {
+Item {
     id: root
-    configEntryName: "calendar"
-    hoverEnabled: true
+
+    // The card fills the whole widget, so the host's default frost region has
+    // the right extent - but not the right corner radius (PluginWidget falls
+    // back to `Appearance.rounding.large`, 7px tighter than the card's
+    // `verylarge`), which would leave blurred slivers outside the four corners.
+    // Naming the card is the only way to hand the host the radius it has.
+    readonly property bool blurEnabled: PluginState.option("calendar", "blurEnabled", false)
+    readonly property real backgroundOpacity: Config.options.plugins.blurOpacity
+    readonly property bool managesBlurTint: true
+    readonly property var blurRegions: [
+        {
+            x: card.x,
+            y: card.y,
+            width: card.width,
+            height: card.height,
+            radius: card.radius
+        }
+    ]
+
+    function tinted(surfaceColor) {
+        return root.blurEnabled ? ColorUtils.transparentize(surfaceColor, 1 - root.backgroundOpacity) : surfaceColor;
+    }
 
     readonly property real cardSpacing: Appearance.spacing.space150
     readonly property real singleWidth: 132
     readonly property real cardHeight: 120
 
-    readonly property real snapWidth1: singleWidth            
-    readonly property real snapWidth2: singleWidth * 2 + cardSpacing  
-    readonly property real snapWidth3: singleWidth * 2 + cardSpacing  
+    readonly property real snapWidth1: singleWidth
+    readonly property real snapWidth2: singleWidth * 2 + cardSpacing
+    readonly property real snapWidth3: singleWidth * 2 + cardSpacing
 
-    property string sizeMode: root.configEntry.sizeMode ?? "2x2"
+    // The corner handle resizes this widget and the opposite handle flips the
+    // wide size between a month and a week, so the manifest declares no `grid`:
+    // a span is a fixed pixel size the host assigns on every load, and it would
+    // overwrite whichever size the handles last chose. The widget stays
+    // content-sized instead, which is also why this root must not
+    // `anchors.fill: parent` - the host derives its own size from this one, so
+    // anchoring is a binding loop (see PluginNode.qml). All three sizes are
+    // unchanged from the built-in and every one is a whole 12px step
+    // (132 = 11x12, 276 = 23x12, 120 = 10x12, 252 = 21x12), so the widget still
+    // tiles flush beside grid widgets. See docs/widget-grid.md.
+    property string sizeMode: PluginState.option("calendar", "sizeMode", "2x2")
+
+    // The handles assign `sizeMode` directly for live feedback, which breaks
+    // the binding above on purpose (the same trade custom-image makes), so
+    // persisting has to write the property as well as the option.
+    function setSizeMode(mode) {
+        root.sizeMode = mode;
+        PluginState.setOption("calendar", "sizeMode", mode);
+    }
 
     property real widgetWidth: {
         switch (root.sizeMode) {
-            case "1x1": return snapWidth1
-            case "1x2": return snapWidth2
-            default:    return snapWidth3
+        case "1x1":
+            return snapWidth1;
+        case "1x2":
+            return snapWidth2;
+        default:
+            return snapWidth3;
         }
-    }
-
-    function modeForWidth(value) {
-        var mid1 = (snapWidth1 + snapWidth2) / 2
-        if (value < mid1) return "1x1"
-        return root.sizeMode === "1x2" ? "1x2" : "2x2"
     }
 
     property int monthShift: 0
     readonly property var today: new Date()
 
     property var viewingDate: {
-        let d = new Date()
-        d.setDate(1)
-        d.setMonth(d.getMonth() + monthShift)
-        return d
+        let d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() + monthShift);
+        return d;
     }
 
     function getMonthMatrix(date) {
-        const year  = date.getFullYear()
-        const month = date.getMonth()
-        const firstOfMonth   = new Date(year, month, 1)
-        const startOffset    = (firstOfMonth.getDay() + 6) % 7
-        const daysInMonth    = new Date(year, month + 1, 0).getDate()
-        const daysInPrevMonth = new Date(year, month, 0).getDate()
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstOfMonth = new Date(year, month, 1);
+        const startOffset = (firstOfMonth.getDay() + 6) % 7;
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-        let cells = []
+        let cells = [];
         for (let i = 0; i < startOffset; i++)
-            cells.push({ day: daysInPrevMonth - startOffset + i + 1, currentMonth: false, isToday: false })
+            cells.push({
+                day: daysInPrevMonth - startOffset + i + 1,
+                currentMonth: false,
+                isToday: false
+            });
 
         for (let d = 1; d <= daysInMonth; d++) {
-            const isToday = monthShift === 0
-                && d === today.getDate()
-                && month === today.getMonth()
-                && year  === today.getFullYear()
-            cells.push({ day: d, currentMonth: true, isToday: isToday })
+            const isToday = monthShift === 0 && d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+            cells.push({
+                day: d,
+                currentMonth: true,
+                isToday: isToday
+            });
         }
 
-        let nextDay = 1
+        let nextDay = 1;
         while (cells.length < 42) {
-            cells.push({ day: nextDay++, currentMonth: false, isToday: false })
+            cells.push({
+                day: nextDay++,
+                currentMonth: false,
+                isToday: false
+            });
         }
 
-        let weeks = []
+        let weeks = [];
         for (let i = 0; i < cells.length; i += 7)
-            weeks.push(cells.slice(i, i + 7))
-        return weeks
+            weeks.push(cells.slice(i, i + 7));
+        return weeks;
     }
 
     function getCurrentWeek() {
-        const matrix = getMonthMatrix(viewingDate)
+        const matrix = getMonthMatrix(viewingDate);
         for (let w = 0; w < matrix.length; w++) {
-            if (matrix[w].some(c => c.isToday)) return matrix[w]
+            if (matrix[w].some(c => c.isToday))
+                return matrix[w];
         }
-        return matrix[0]
+        return matrix[0];
     }
 
     property var weeks: getMonthMatrix(viewingDate)
 
-    implicitWidth:  card.implicitWidth
+    implicitWidth: card.implicitWidth
     implicitHeight: card.implicitHeight
 
     Behavior on widgetWidth {
         animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
     }
 
+    // The host (PluginWidget) is the MouseArea that drags this widget; a
+    // HoverHandler reads hover without taking press events away from it.
+    HoverHandler {
+        id: widgetHover
+    }
+
     component DayCell: Rectangle {
+        id: dayCell
         property int day: 0
         property bool currentMonth: true
         property bool isToday: false
         property bool bold: false
+        // Set by the caller so today's pill frosts with the rest of the card.
+        property color highlightColor: Appearance.colors.colPrimary
 
         implicitWidth: 28
         implicitHeight: 28
         radius: Appearance.rounding.full
-        color: isToday ? Appearance.colors.colPrimary : "transparent"
+        color: dayCell.isToday ? dayCell.highlightColor : "transparent"
 
         StyledText {
             anchors.centerIn: parent
-            text: parent.day
+            text: dayCell.day
             font.pixelSize: Appearance.font.pixelSize.smaller
-            font.weight: parent.bold || parent.isToday ? Font.Bold : Font.Normal
-            color: parent.isToday
-                ? Appearance.colors.colOnPrimary
-                : Appearance.colors.colOnLayer0
-            opacity: parent.currentMonth ? 1.0 : 0.3
+            font.weight: dayCell.bold || dayCell.isToday ? Font.Bold : Font.Normal
+            color: dayCell.isToday ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
+            opacity: dayCell.currentMonth ? 1.0 : 0.3
         }
     }
 
     Rectangle {
         id: card
         implicitWidth: root.widgetWidth
-        implicitHeight: root.sizeMode === "1x1" ? root.cardHeight
-                      : root.sizeMode === "1x2" ? root.cardHeight
-                      : root.cardHeight * 2 + root.cardSpacing
+        implicitHeight: root.sizeMode === "1x1" ? root.cardHeight : root.sizeMode === "1x2" ? root.cardHeight : root.cardHeight * 2 + root.cardSpacing
         radius: Appearance.rounding?.verylarge ?? 30
-        color: Appearance.colors.colPrimaryContainer
+        color: root.tinted(Appearance.colors.colPrimaryContainer)
 
         StyledRectangularShadow {
             target: card
@@ -134,9 +184,11 @@ AbstractBackgroundWidget {
         Loader {
             anchors.fill: parent
             sourceComponent: {
-                if (root.sizeMode === "1x1") return oneByOneContent
-                if (root.sizeMode === "1x2") return oneByTwoContent
-                return twoByTwoContent
+                if (root.sizeMode === "1x1")
+                    return oneByOneContent;
+                if (root.sizeMode === "1x2")
+                    return oneByTwoContent;
+                return twoByTwoContent;
             }
         }
 
@@ -145,17 +197,21 @@ AbstractBackgroundWidget {
             id: oneByOneContent
             Rectangle {
                 anchors.fill: parent
-                radius: parent.radius
+                radius: card.radius
                 color: "transparent"
 
                 ColumnLayout {
-                    anchors { fill: parent; margins: 0 }
+                    anchors {
+                        fill: parent
+                        margins: 0
+                    }
                     spacing: 0
 
                     Rectangle {
+                        id: todayBanner
                         Layout.fillWidth: true
-                        implicitHeight: parent.height * 0.35
-                        color: Appearance.colors.colPrimary
+                        implicitHeight: todayBanner.parent.height * 0.35
+                        color: root.tinted(Appearance.colors.colPrimary)
                         topLeftRadius: card.radius
                         topRightRadius: card.radius
 
@@ -198,7 +254,10 @@ AbstractBackgroundWidget {
         Component {
             id: oneByTwoContent
             ColumnLayout {
-                anchors { fill: parent; margins: 14 }
+                anchors {
+                    fill: parent
+                    margins: 14
+                }
                 spacing: Appearance.spacing.space100
 
                 Rectangle {
@@ -206,7 +265,7 @@ AbstractBackgroundWidget {
                     implicitHeight: 28
                     implicitWidth: monthText.implicitWidth + 20
                     radius: Appearance.rounding.full
-                    color: Appearance.colors.colPrimary
+                    color: root.tinted(Appearance.colors.colPrimary)
 
                     StyledText {
                         id: monthText
@@ -226,13 +285,15 @@ AbstractBackgroundWidget {
                     Layout.topMargin: Appearance.spacing.space50
 
                     Repeater {
-                        model: ["Mo","Tu","We","Th","Fr","Sa","Su"]
+                        model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
                         delegate: Item {
+                            id: weekdayHeaderCell
+                            required property var modelData
                             implicitWidth: (card.implicitWidth - 28) / 7
                             implicitHeight: 20
                             StyledText {
                                 anchors.centerIn: parent
-                                text: modelData
+                                text: weekdayHeaderCell.modelData
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                                 font.weight: Font.Bold
                                 color: Appearance.colors.colOnPrimaryContainer
@@ -244,32 +305,34 @@ AbstractBackgroundWidget {
                     Repeater {
                         model: root.getCurrentWeek()
                         delegate: Item {
+                            id: weekDayCell
                             required property var modelData
                             implicitWidth: (card.implicitWidth - 28) / 7
                             implicitHeight: 28
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: 28; height: 28
+                                width: 28
+                                height: 28
                                 radius: Appearance.rounding.full
-                                color: modelData.isToday ? Appearance.colors.colPrimary : "transparent"
+                                color: weekDayCell.modelData.isToday ? root.tinted(Appearance.colors.colPrimary) : "transparent"
 
                                 StyledText {
                                     anchors.centerIn: parent
-                                    text: modelData.day
+                                    text: weekDayCell.modelData.day
                                     font.pixelSize: Appearance.font.pixelSize.smaller
-                                    font.weight: modelData.isToday ? Font.Bold : Font.Normal
-                                    color: modelData.isToday
-                                        ? Appearance.colors.colOnPrimary
-                                        : Appearance.colors.colOnPrimaryContainer
-                                    opacity: modelData.currentMonth ? 1.0 : 0.3
+                                    font.weight: weekDayCell.modelData.isToday ? Font.Bold : Font.Normal
+                                    color: weekDayCell.modelData.isToday ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
+                                    opacity: weekDayCell.modelData.currentMonth ? 1.0 : 0.3
                                 }
                             }
                         }
                     }
                 }
 
-                Item { Layout.fillHeight: true }
+                Item {
+                    Layout.fillHeight: true
+                }
             }
         }
 
@@ -277,7 +340,10 @@ AbstractBackgroundWidget {
         Component {
             id: twoByTwoContent
             ColumnLayout {
-                anchors { fill: parent; margins: Appearance.spacing.space200 }
+                anchors {
+                    fill: parent
+                    margins: Appearance.spacing.space200
+                }
                 spacing: Appearance.spacing.space50
 
                 RowLayout {
@@ -293,7 +359,9 @@ AbstractBackgroundWidget {
                     }
 
                     Rectangle {
-                        implicitWidth: 26; implicitHeight: 26; radius: Appearance.rounding.full
+                        implicitWidth: 26
+                        implicitHeight: 26
+                        radius: Appearance.rounding.full
                         color: "transparent"
                         border.width: Appearance.borderWidth.standard
                         border.color: Appearance.colors.colPrimary
@@ -311,7 +379,9 @@ AbstractBackgroundWidget {
                     }
 
                     Rectangle {
-                        implicitWidth: 26; implicitHeight: 26; radius: Appearance.rounding.full
+                        implicitWidth: 26
+                        implicitHeight: 26
+                        radius: Appearance.rounding.full
                         color: "transparent"
                         border.width: Appearance.borderWidth.standard
                         border.color: Appearance.colors.colPrimary
@@ -333,15 +403,17 @@ AbstractBackgroundWidget {
                     Layout.alignment: Qt.AlignHCenter
                     spacing: Appearance.spacing.space50
                     Repeater {
-                        model: ["Mo","Tu","We","Th","Fr","Sa","Su"]
+                        model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
                         delegate: StyledText {
+                            id: weekdayHeader
+                            required property var modelData
                             Layout.preferredWidth: 28
                             horizontalAlignment: Text.AlignHCenter
                             font.pixelSize: Appearance.font.pixelSize.smaller
                             font.weight: Font.Bold
                             color: Appearance.colors.colOnPrimaryContainer
                             opacity: 0.6
-                            text: modelData
+                            text: weekdayHeader.modelData
                         }
                     }
                 }
@@ -349,7 +421,7 @@ AbstractBackgroundWidget {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    color: Appearance.colors.colLayer1
+                    color: root.tinted(Appearance.colors.colLayer1)
                     radius: (Appearance.rounding?.verylarge ?? 30) - 8
 
                     ColumnLayout {
@@ -359,15 +431,18 @@ AbstractBackgroundWidget {
                         Repeater {
                             model: root.weeks
                             delegate: RowLayout {
+                                id: weekRow
                                 required property var modelData
                                 spacing: Appearance.spacing.space50
                                 Repeater {
-                                    model: parent.modelData
+                                    model: weekRow.modelData
                                     delegate: DayCell {
+                                        id: dayOfMonth
                                         required property var modelData
-                                        day: modelData.day
-                                        currentMonth: modelData.currentMonth
-                                        isToday: modelData.isToday
+                                        day: dayOfMonth.modelData.day
+                                        currentMonth: dayOfMonth.modelData.currentMonth
+                                        isToday: dayOfMonth.modelData.isToday
+                                        highlightColor: root.tinted(Appearance.colors.colPrimary)
                                     }
                                 }
                             }
@@ -379,12 +454,22 @@ AbstractBackgroundWidget {
 
         Rectangle {
             id: resizeHandle
-            width: 16; height: 16; radius: Appearance.rounding.unsharpenslight
+            width: 16
+            height: 16
+            radius: Appearance.rounding.unsharpenslight
             color: Appearance.colors.colOnPrimaryContainer
-            anchors { right: card.right; bottom: card.bottom; margins: Appearance.spacing.space50 }
-            opacity: (root.containsMouse || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
+            anchors {
+                right: card.right
+                bottom: card.bottom
+                margins: Appearance.spacing.space50
+            }
+            opacity: (widgetHover.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
             visible: opacity > 0 && !Config.options.background.widgetsLocked
-            Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Appearance.animation.elementMoveFaster.duration
+                }
+            }
 
             MouseArea {
                 id: resizeArea
@@ -394,33 +479,44 @@ AbstractBackgroundWidget {
                 preventStealing: true
                 property real startWidth: 0
                 property real startX: 0
-                onPressed: (mouse) => {
-                    startWidth = root.widgetWidth
-                    startX = mapToItem(null, mouse.x, mouse.y).x
+                onPressed: mouse => {
+                    resizeArea.startWidth = root.widgetWidth;
+                    resizeArea.startX = resizeArea.mapToItem(null, mouse.x, mouse.y).x;
                 }
-                onPositionChanged: (mouse) => {
-                    if (!pressed) return
-                    var globalX = mapToItem(null, mouse.x, mouse.y).x
-                    var dx = globalX - startX
-                    var newW = startWidth + dx
-                    var mid = (root.snapWidth1 + root.snapWidth2) / 2
-                    if (newW < mid) root.sizeMode = "1x1"
-                    else if (root.sizeMode === "1x1") root.sizeMode = "2x2"
+                onPositionChanged: mouse => {
+                    if (!resizeArea.pressed)
+                        return;
+                    var globalX = resizeArea.mapToItem(null, mouse.x, mouse.y).x;
+                    var dx = globalX - resizeArea.startX;
+                    var newW = resizeArea.startWidth + dx;
+                    var mid = (root.snapWidth1 + root.snapWidth2) / 2;
+                    if (newW < mid)
+                        root.sizeMode = "1x1";
+                    else if (root.sizeMode === "1x1")
+                        root.sizeMode = "2x2";
                 }
-                onReleased: {
-                    root.configEntry.sizeMode = root.sizeMode
-                }
+                onReleased: root.setSizeMode(root.sizeMode)
             }
         }
 
         Rectangle {
             id: toggleHandle
-            width: 16; height: 16; radius: Appearance.rounding.unsharpenslight
+            width: 16
+            height: 16
+            radius: Appearance.rounding.unsharpenslight
             color: Appearance.colors.colOnPrimaryContainer
-            anchors { left: card.left; bottom: card.bottom; margins: Appearance.spacing.space50 }
-            opacity: (root.containsMouse || toggleArea.containsMouse) && root.sizeMode !== "1x1" ? 0.5 : 0
+            anchors {
+                left: card.left
+                bottom: card.bottom
+                margins: Appearance.spacing.space50
+            }
+            opacity: (widgetHover.hovered || toggleArea.containsMouse) && root.sizeMode !== "1x1" ? 0.5 : 0
             visible: opacity > 0 && !Config.options.background.widgetsLocked
-            Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Appearance.animation.elementMoveFaster.duration
+                }
+            }
 
             MaterialSymbol {
                 anchors.centerIn: parent
@@ -434,10 +530,7 @@ AbstractBackgroundWidget {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    root.sizeMode = root.sizeMode === "2x2" ? "1x2" : "2x2"
-                    root.configEntry.sizeMode = root.sizeMode
-                }
+                onClicked: root.setSizeMode(root.sizeMode === "2x2" ? "1x2" : "2x2")
             }
         }
     }
