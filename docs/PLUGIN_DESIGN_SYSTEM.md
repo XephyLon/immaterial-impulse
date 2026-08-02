@@ -58,7 +58,8 @@ Each port also exposes its own persisted options through the Plugins settings pa
 - Clock: style and date visibility.
 - At a Glance: greeting, date, events, quote, alignment, and greeting size.
 - Media Player: lyrics visibility and romaji preference.
-- System Monitor: horizontal or vertical layout.
+- System Monitor: horizontal or vertical layout, and whether the third card shows the battery or
+  the disk.
 - Weather: compact, medium, or wide size.
 - Currency: compact or wide size, base currency, and two quote currencies.
 
@@ -80,6 +81,14 @@ Ported plugins must preserve their upstream nandoroid visual entry component. Co
 may adapt imports, services, and configuration injection, but must not substitute a redesigned UI.
 Plugin manifests may set `startupSafe: false` to quarantine a problematic desktop entry without
 removing its package or settings.
+
+Where a port has to render something upstream does not — usually because it replaced a built-in that
+did — express it as a property on the entry component whose **default is the upstream rendering**,
+and put the decision in the package wrapper. `DesktopSystemMonitorWidget`'s `showBattery` is the
+reference: false is upstream's disk card verbatim, and only `bundled/nandoroid-system-monitor`
+(which owns the manifest option and the `Battery.available` check) ever sets it. A branch written
+into the entry component itself is the thing to avoid — it makes the next re-import from upstream a
+merge instead of a copy.
 
 Do not copy nandoroid's always-running metric pollers into plugins. Extend the adapters or inject a
 service explicitly, and follow the process lifecycle rules in `PLUGINS.md`.
