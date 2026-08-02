@@ -80,7 +80,8 @@ In addition to the QML unit tests, `run_tests.sh` runs static lint checks first:
 * **Lockscreen theme lint (`lint_lockscreen_theme.sh`)**: Keeps transient lock colors owned by `MaterialThemeLoader`, verifies that its virtual-environment wrapper preserves wallpaper paths containing spaces, guards the precomputed palette cache/delayed transition, caps the animated palette-role budget, requires the bounded fast color duration, and prevents locking from switching to synthetic Hyprland workspaces. This avoids theme races, animation contention, and persistent compositor/screencopy state corruption.
 * **Region selector capture lint (`lint_region_selector_capture.sh`)**: Requires the selector preview and final crop to share the same freshly generated `grim` image, with image caching disabled and visibility gated on decoding. This prevents an independent screencopy from displaying a stale compositor frame.
 * **Plugin process lifecycle lint (`lint_plugin_processes.py`)**: Rejects bundled streaming processes with persistent `running` bindings unless they document restart-safe backoff, prevents Docker's known-runaway desktop host from being re-enabled, and keeps package bar entries behind exactly one loader instead of the runaway nested sizing path. This prevents instant-exit respawn loops and multi-gigabyte allocation failures from starving the shell session.
-* **Widget interaction mode tests (`test_widget_interaction_modes.py`)**: Pin per-widget lock and click-through on `AbstractBackgroundWidget` — that both flags default off (that class sits under every desktop widget in the shell), that the global `background.widgetsLocked` toggle ORs with the per-widget lock rather than replacing it, that `clickThrough` drives `enabled` rather than a Wayland surface mask, that `PluginWidget` reads both from `PluginState` with the manifest as the seed and never assigns them, and that the settings rows exist so a shipped default stays reversible. Every assertion was confirmed to fail under a matching mutation; `WidgetInteractionRuntimeTest.qml` is the behavioural half.
+* **Widget interaction mode tests (`test_widget_interaction_modes.py`)**: Pin per-widget lock and click-through on `AbstractBackgroundWidget` — that both flags default off (that class sits under every desktop widget in the shell), that the global `background.widgetsLocked` toggle ORs with the per-widget lock rather than replacing it, that `clickThrough` drives `enabled` rather than a Wayland surface mask, that it drives *both* gates (the host's own `MouseArea` and the `contentItem` wrapper every child is parented into, since `MouseArea.enabled` shadows `Item.enabled` and reaches nothing under it), that the wrapper gates on `clickThrough` rather than on the resolved lock and takes no part in sizing, that `PluginWidget` reads both flags from `PluginState` with the manifest as the seed and never assigns them, and that the settings rows exist so a shipped default stays reversible. Every assertion was confirmed to fail under a matching mutation; `WidgetInteractionRuntimeTest.qml` is the behavioural half.
+* **Widget interaction runtime tests (`test_widget_interaction_runtime.py`)**: Drive `WidgetInteractionRuntimeTest.qml` under a headless weston with throwaway XDG dirs, failing on any check it reports and on any `Binding loop` in its output. This is what the source contract cannot reach: whether a click over a click-through widget actually lands on the desktop menu behind it, and whether it stops landing on the controls the widget draws for itself — proved on a synthetic `MouseArea` and on the real bundled notes widget's per-note delete button, each with the same click repeated with click-through off as its control. Skips where weston or `qs` is missing, as in CI.
 * **Plugin installer tests (`test_plugin_installer.py`)**: Verify remote package paths cannot be absolute or escape the plugin directory using `..`.
 * **Preset tests (`test_presets.py`)**: Verify complete desktop plugin state—including positions and per-plugin options—round-trips through presets, while position-only legacy presets retain options they never captured.
 * **Matugen application theme tests (`test_matugen_app_themes.py`)**: Verify Cava, btop, and tmux templates are registered idempotently, generated themes preserve unrelated application settings, and live reload hooks run after Matugen renders.
@@ -143,15 +144,20 @@ line that implements it.
 manually launched harnesses, driven by `run_docker_memory_test.sh` via
 `quickshell -p <file>`.
 
-`WidgetInteractionRuntimeTest.qml` joins them and is self-checking: it builds
-two real `PluginWidget`s on a real `WidgetCanvas` and drives per-widget lock
-and click-through with actual mouse events, exiting non-zero on any failure.
-`import QtTest` works inside `qs -p`, so `TestCase.mouseClick()` delivers real
-events without `ydotool` — which is the only way to prove a click over a
-click-through widget reaches the desktop area behind it rather than merely that
-a property flipped. Run it against a throwaway config, because it writes plugin
-options and positions, and a stale state file from a previous run would make it
-start from the wrong defaults:
+`WidgetInteractionRuntimeTest.qml` is self-checking and driven from the suite by
+`tests/test_widget_interaction_runtime.py`: it builds four real `PluginWidget`s
+on a real `WidgetCanvas` and drives per-widget lock and click-through with
+actual mouse events, exiting non-zero on any failure. `import QtTest` works
+inside `qs -p`, so `TestCase.mouseClick()` delivers real events without
+`ydotool` — which is the only way to prove a click over a click-through widget
+reaches the desktop area behind it, and stops reaching the widget's own
+controls, rather than merely that a property flipped. Two of the four widgets
+exist for that second half: one declares a `MouseArea` of its own inside the
+host, and one is the real bundled notes widget, whose per-note delete button
+calls straight into the `Notes` singleton and so is observable from outside the
+widget. Run it by hand against a throwaway config — it writes plugin options,
+positions and the note store, and a stale state file from a previous run would
+make it start from the wrong defaults:
 
 ```bash
 XDG_CONFIG_HOME=$(mktemp -d) XDG_STATE_HOME=$(mktemp -d) \
@@ -159,7 +165,7 @@ XDG_CONFIG_HOME=$(mktemp -d) XDG_STATE_HOME=$(mktemp -d) \
 ```
 
 `NotesMigrationRuntimeTest.qml` and `NotesSurfacesRuntimeTest.qml` are
-self-checking too, and unlike the others they are driven from the suite —
+self-checking too, and are likewise driven from the suite —
 `tests/test_notes_migration_runtime.py` and `tests/test_notes_surfaces_runtime.py`
 launch them and fail on any check they report. The first exercises the note
 store migration against real files (one launch per on-disk case, throwaway XDG
@@ -168,13 +174,15 @@ editor side by side over one store and clicks their buttons for real, which is
 the only way to show that a note added in one surface is in the other and that
 the delete button deletes.
 
-The surfaces harness brings its own **headless weston**
+The widget-interaction and surfaces harnesses bring their own **headless weston**
 (`weston --backend=headless --renderer=pixman`, plus `LIBGL_ALWAYS_SOFTWARE=1`
 and `QT_QUICK_BACKEND=software` — this box's headless EGL has no driver) rather
-than using the caller's session, because it opens a window and would otherwise
+than using the caller's session, because they open a window and would otherwise
 throw one across the user's desktop. Weston implements no wlr-layer-shell, so
-nothing that needs a `PanelWindow` can be proved there; both notes surfaces are
-ordinary `Item`s, which is why it works for this one.
+nothing that needs a `PanelWindow` can be proved there: both notes surfaces are
+ordinary `Item`s, and so are `WidgetCanvas` and the widget tree under it — what
+cannot be shown that way is anything about the real `Background.qml` layer
+surface itself, such as how it stacks against another surface.
 
 They live at the repository root on purpose and should not be moved into
 `tests/`: `quickshell -p` roots the `qs` module at the directory of the file it

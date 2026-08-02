@@ -253,20 +253,40 @@ controls still work — so the lock does not imply click-through. The converse d
 **ORs** with the per-widget lock. It can only ever lock further; flipping the global switch off
 never unlocks a widget the user deliberately pinned.
 
-Click-through is implemented as `enabled: false` on the host widget, not as a Wayland input region.
-Every desktop widget shares one layer-shell surface (`Background.qml`), so masking that surface
-would blind all of them at once. A disabled `MouseArea` does not handle events, so the click
-continues to whatever is behind the widget *inside the same surface* — which on the background is
-the desktop's own right-click area. Turning click-through off restores dragging, which is the way
-to reposition a widget that ships with it on.
+Click-through is implemented as `enabled: false`, not as a Wayland input region. Every desktop
+widget shares one layer-shell surface (`Background.qml`), so masking that surface would blind all of
+them at once. The click continues to whatever is behind the widget *inside the same surface* — which
+on the background is the desktop's own right-click area. Turning click-through off restores
+dragging, which is the way to reposition a widget that ships with it on.
 
-**It does not disable the widget's own contents.** `AbstractBackgroundWidget` is a `MouseArea`, and
-`MouseArea.enabled` is `MouseArea`'s own property rather than `Item.enabled` — setting it false
-stops that one area handling events and leaves every item under it live. (A plain `Item` with
-`enabled: false` *does* disable its subtree; a `MouseArea` does not.) So a `Widget.qml` that
-declares interactive children of its own has to disarm them itself, which is what the
-`hostInteractionLocked` context property below is for. Verified in
-`WidgetGripLockRuntimeTest.qml`.
+It takes **two** gates on `AbstractBackgroundWidget`, because the same property name means two
+different things there and neither covers the other:
+
+| gate | what it disarms |
+|---|---|
+| `enabled: !clickThrough` on the host | the host's own `MouseArea`: the drag, and the right-click that toggles the global lock |
+| `enabled: !clickThrough` on the `contentItem` wrapper | everything the widget draws for itself |
+
+`AbstractBackgroundWidget` is a `MouseArea` (via `AbstractWidget`), and `MouseArea.enabled` is
+`MouseArea`'s own property shadowing `Item.enabled` — setting it false stops that one area handling
+events and leaves every item under it live. A plain `Item` with `enabled: false` *does* disable its
+whole subtree, so the base class declares
+`default property alias contentData: contentItem.data` and puts the second gate on that wrapper.
+Everything a subclass declares — `PluginWidget`'s `PluginNode` and its blur surfaces, and through
+`PluginNode` every loaded `Widget.qml` — lands inside it and goes inert together.
+
+The wrapper is `anchors.fill: parent` and takes no part in sizing: `PluginWidget` still derives its
+own width and height from `PluginNode`'s implicit size, and `PluginNode`'s `Loader` stays unanchored
+(anchoring it is a binding loop).
+
+The gate is `clickThrough`, not the resolved `interactionLocked`: pinning a widget must not deaden
+its controls, which is the whole reason the lock and click-through are two switches. A widget that
+wants a *particular* control dead whenever it is pinned reads `hostInteractionLocked` instead — see
+below.
+
+Both halves are driven with real mouse events in `WidgetInteractionRuntimeTest.qml` (run by
+`tests/test_widget_interaction_runtime.py`), including a real bundled widget: the notes widget's
+per-note delete button, under click-through and then again with it off.
 
 ### Grips and other in-widget interaction
 
@@ -294,6 +314,10 @@ be inert whenever the widget is pinned, and it has no business caring which lock
 widget that genuinely needs to tell them apart can read `Config.options.background.widgetsLocked`
 itself and subtract it — but nothing does, and doing so would mean a grip that outlives its own
 widget's lock, which is the bug this exists to prevent.
+
+`clickThrough` sits in that OR belt-and-braces: the `contentItem` wrapper above already makes the
+whole widget inert under click-through, so a grip is dead twice over there. It stays because the
+grip must also be dead when the widget is merely *pinned* — which the wrapper deliberately is not.
 
 The bundled Visualizer is the case this exists for: it is full-bleed (see below), so it covers a
 whole monitor's width, has nothing on it to click, and would otherwise both swallow the desktop

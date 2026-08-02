@@ -123,6 +123,14 @@ if ! python3 "$SCRIPT_DIR/test_widget_interaction_modes.py"; then
     exit 1
 fi
 
+# Brings its own headless weston, so it needs no display of its own - but it
+# does need weston, and skips without it.
+echo "Running widget interaction runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_interaction_runtime.py"; then
+    echo "Widget interaction runtime tests failed."
+    exit 1
+fi
+
 echo "Running widget grip lock tests..."
 if ! python3 "$SCRIPT_DIR/test_widget_grip_lock.py"; then
     echo "Widget grip lock tests failed."

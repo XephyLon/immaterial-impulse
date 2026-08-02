@@ -76,6 +76,20 @@ own repo; the installer pins which revision it builds.
   not already exist.
 
 ### Fixed
+- **Click through only made half of a widget click-through.** A desktop widget
+  switched to **Click through** stopped taking the drag and stopped swallowing
+  the desktop's right-click menu — but every control the widget drew for itself
+  kept working, and a click that landed on one never reached the desktop behind
+  it. The widget host is a `MouseArea`, and disabling a `MouseArea` disables
+  only that one area, not the items inside it; the mechanism read as if it
+  disabled the whole widget and never did. Everything a desktop widget draws now
+  sits inside a wrapper that goes inert with it, so **Click through** means what
+  the switch says: the widget is transparent to the pointer, controls included.
+  Nothing visibly changes and no widget changes size. Only the Visualizer ships
+  click-through on, and it has nothing to click, so nobody was hitting this yet —
+  it is fixed before anything else opts in. Pinning a widget with **Lock
+  position** still leaves its controls working, which is the difference between
+  the two switches.
 - The design-system compile check swept a hardcoded list of bundled packages
   that had rotted: it still named `nandoroid-clock` and `nandoroid-at-a-glance`,
   directories that have never existed at that path, so every run reported two
