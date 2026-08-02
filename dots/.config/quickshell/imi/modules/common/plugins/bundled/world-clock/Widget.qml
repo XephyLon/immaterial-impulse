@@ -30,18 +30,27 @@ Item {
             : surfaceColor;
     }
 
-    // The corner handle switches the widget between a 2x2 card and a 4x1 row of
+    // The corner handle switches the widget between a 2x2 card and a 3x1 row of
     // dials, so the manifest can declare no `grid`: a span is a fixed pixel size
     // the host assigns, and it would overwrite the toggled size on every load.
     // The widget stays content-sized instead, which is also why its root must
     // not `anchors.fill: parent` (PluginNode derives its own size from this
-    // one - anchoring is a binding loop). Both sizes are unchanged from the
-    // built-in and both are whole 12px steps, so the widget still tiles flush
-    // against grid widgets. See docs/widget-grid.md.
-    property string sizeMode: PluginState.option("world-clock", "sizeMode", "2x2")
+    // one - anchoring is a binding loop). Both sizes come from the component
+    // grid helpers rather than pixel literals, so they land on the lattice and
+    // follow effectiveScale. See docs/widget-grid.md.
+    //
+    // The wide mode was called "4x1" and sized 420x120, but 420 is spanX(3) and
+    // no row is 120 tall - the grid cell is 132x108. Normalising on read keeps
+    // an install that persisted "4x1" on the same mode; without it the string
+    // matches neither branch and the card renders empty with no error.
+    function normalizeSizeMode(mode) {
+        return (mode === "3x1" || mode === "4x1") ? "3x1" : "2x2";
+    }
 
-    property real widgetWidth:  sizeMode === "2x2" ? 276 : 420
-    property real widgetHeight: sizeMode === "2x2" ? 252 : 120
+    property string sizeMode: root.normalizeSizeMode(PluginState.option("world-clock", "sizeMode", "2x2"))
+
+    property real widgetWidth:  sizeMode === "2x2" ? Appearance.sizes.widgetGridSpanX(2) : Appearance.sizes.widgetGridSpanX(3)
+    property real widgetHeight: sizeMode === "2x2" ? Appearance.sizes.widgetGridSpanY(2) : Appearance.sizes.widgetGridSpanY(1)
 
     Behavior on widgetWidth  { animation: Appearance.animation.elementResize.numberAnimation.createObject(this) }
     Behavior on widgetHeight { animation: Appearance.animation.elementResize.numberAnimation.createObject(this) }
@@ -100,11 +109,13 @@ Item {
             color:  root.tinted(Appearance.colors.colPrimaryContainer)
             radius: Appearance.rounding?.verylarge ?? 30
 
-            // 2x2
+            // 2x2. spanY(2) is 228, 24px shorter than the 252 the built-in
+            // used, so the card margins and the column gaps each give up 4px
+            // per edge and the city cards lose 4px of height apiece.
             ColumnLayout {
                 id: mainColumn
-                anchors { fill: parent; margins: Appearance.spacing.space150 }
-                spacing: Appearance.spacing.space150
+                anchors { fill: parent; margins: Appearance.spacing.space100 }
+                spacing: Appearance.spacing.space100
                 visible: root.sizeMode === "2x2" && !root.showingSettings
 
                 RowLayout {
@@ -181,7 +192,7 @@ Item {
                             id: cityCard
                             required property var modelData
                             required property int index
-                            Layout.preferredWidth: 120; Layout.preferredHeight: 54
+                            Layout.preferredWidth: 120; Layout.preferredHeight: 50
                             radius: Appearance.rounding.normal
                             color: root.tinted(cityCard.modelData.isDay
                                 ? Appearance.colors.colPrimary
@@ -192,7 +203,7 @@ Item {
                             Behavior on color { ColorAnimation { duration: 400 } }
 
                             ColumnLayout {
-                                anchors { fill: parent; margins: Appearance.spacing.space100 }
+                                anchors { fill: parent; margins: Appearance.spacing.space75 }
                                 spacing: Appearance.spacing.space25
                                 RowLayout {
                                     Layout.fillWidth: true
@@ -239,9 +250,13 @@ Item {
                 anchors.fill: parent
                 visible: root.sizeMode === "2x2" && root.showingSettings
 
+                // A back row plus four 40px pickers is 188px of fixed content.
+                // At the old margins and gaps that came to 260 and the fourth
+                // picker was already cut off at 252; the tighter rhythm brings
+                // it to 220, which fits inside spanY(2) with room to spare.
                 ColumnLayout {
-                    anchors { fill: parent; margins: Appearance.spacing.space150 }
-                    spacing: Appearance.spacing.space150
+                    anchors { fill: parent; margins: Appearance.spacing.space100 }
+                    spacing: Appearance.spacing.space50
 
                     RowLayout {
                         Layout.fillWidth: true; spacing: Appearance.spacing.space100
@@ -297,11 +312,11 @@ Item {
                 }
             }
 
-            // 4x1
+            // 3x1
             RowLayout {
                 anchors { fill: parent; margins: Appearance.spacing.space100 }
                 spacing: Appearance.spacing.space100
-                visible: root.sizeMode === "4x1"
+                visible: root.sizeMode !== "2x2"
 
                 Repeater {
                     model: Math.min(root.worldCities.length, 4)
@@ -368,7 +383,7 @@ Item {
                     onClicked: {
                         if (root.showingSettings) root.showingSettings = false
                         PluginState.setOption("world-clock", "sizeMode",
-                            root.sizeMode === "2x2" ? "4x1" : "2x2")
+                            root.sizeMode === "2x2" ? "3x1" : "2x2")
                     }
                 }
             }

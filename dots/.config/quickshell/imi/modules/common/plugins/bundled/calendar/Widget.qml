@@ -32,13 +32,13 @@ Item {
         return root.blurEnabled ? ColorUtils.transparentize(surfaceColor, 1 - root.backgroundOpacity) : surfaceColor;
     }
 
-    readonly property real cardSpacing: Appearance.spacing.space150
-    readonly property real singleWidth: 132
-    readonly property real cardHeight: 120
-
-    readonly property real snapWidth1: singleWidth
-    readonly property real snapWidth2: singleWidth * 2 + cardSpacing
-    readonly property real snapWidth3: singleWidth * 2 + cardSpacing
+    // Every size is a real component-grid span rather than a pixel literal, so
+    // the three modes land on the lattice and follow effectiveScale.
+    // See docs/widget-grid.md.
+    readonly property real snapWidth1: Appearance.sizes.widgetGridSpanX(1)   // 132
+    readonly property real snapWidth2: Appearance.sizes.widgetGridSpanX(2)   // 276
+    readonly property real shortHeight: Appearance.sizes.widgetGridSpanY(1)  // 108
+    readonly property real tallHeight: Appearance.sizes.widgetGridSpanY(2)   // 228
 
     // The corner handle resizes this widget and the opposite handle flips the
     // wide size between a month and a week, so the manifest declares no `grid`:
@@ -46,11 +46,22 @@ Item {
     // overwrite whichever size the handles last chose. The widget stays
     // content-sized instead, which is also why this root must not
     // `anchors.fill: parent` - the host derives its own size from this one, so
-    // anchoring is a binding loop (see PluginNode.qml). All three sizes are
-    // unchanged from the built-in and every one is a whole 12px step
-    // (132 = 11x12, 276 = 23x12, 120 = 10x12, 252 = 21x12), so the widget still
-    // tiles flush beside grid widgets. See docs/widget-grid.md.
-    property string sizeMode: PluginState.option("calendar", "sizeMode", "2x2")
+    // anchoring is a binding loop (see PluginNode.qml).
+    //
+    // The wide-short mode was called "1x2" while being two columns by one row,
+    // and every mode was 120 tall on the assumption of a 120px cell - the cell
+    // is 108. Normalising on read maps the legacy string onto the mode it
+    // actually described; without it "1x2" falls through the switch default
+    // below and silently promotes the user's week strip to the full month.
+    function normalizeSizeMode(mode) {
+        if (mode === "1x1")
+            return "1x1";
+        if (mode === "2x1" || mode === "1x2")
+            return "2x1";
+        return "2x2";
+    }
+
+    property string sizeMode: root.normalizeSizeMode(PluginState.option("calendar", "sizeMode", "2x2"))
 
     // The handles assign `sizeMode` directly for live feedback, which breaks
     // the binding above on purpose (the same trade custom-image makes), so
@@ -63,13 +74,17 @@ Item {
     property real widgetWidth: {
         switch (root.sizeMode) {
         case "1x1":
-            return snapWidth1;
-        case "1x2":
-            return snapWidth2;
+            return root.snapWidth1;
+        case "2x1":
+            return root.snapWidth2;
         default:
-            return snapWidth3;
+            return root.snapWidth2;
         }
     }
+
+    // The inset the wide-short mode uses on all four sides. The weekday grid
+    // divides the card width by it, so it has to be one named value.
+    readonly property real weekInset: Appearance.spacing.space100
 
     property int monthShift: 0
     readonly property var today: new Date()
@@ -172,7 +187,7 @@ Item {
     Rectangle {
         id: card
         implicitWidth: root.widgetWidth
-        implicitHeight: root.sizeMode === "1x1" ? root.cardHeight : root.sizeMode === "1x2" ? root.cardHeight : root.cardHeight * 2 + root.cardSpacing
+        implicitHeight: root.sizeMode === "1x1" ? root.shortHeight : root.sizeMode === "2x1" ? root.shortHeight : root.tallHeight
         radius: Appearance.rounding?.verylarge ?? 30
         color: root.tinted(Appearance.colors.colPrimaryContainer)
 
@@ -186,13 +201,16 @@ Item {
             sourceComponent: {
                 if (root.sizeMode === "1x1")
                     return oneByOneContent;
-                if (root.sizeMode === "1x2")
-                    return oneByTwoContent;
+                if (root.sizeMode === "2x1")
+                    return twoByOneContent;
                 return twoByTwoContent;
             }
         }
 
-        // 1x1
+        // 1x1. spanY(1) is 108, 12px shorter than the 120 the built-in used.
+        // The banner is a fraction of the card so it shrinks on its own; the
+        // date below it is what runs out of room, so it drops from 60px to 54px
+        // and still clears the banner.
         Component {
             id: oneByOneContent
             Rectangle {
@@ -241,7 +259,7 @@ Item {
                         StyledText {
                             anchors.centerIn: parent
                             text: root.today.getDate()
-                            font.pixelSize: 60
+                            font.pixelSize: 54
                             font.weight: Font.Bold
                             color: Appearance.colors.colOnPrimaryContainer
                         }
@@ -250,13 +268,15 @@ Item {
             }
         }
 
-        // 1x2
+        // 2x1. spanY(1) is 108, 12px shorter than the 120 the built-in used,
+        // and the column had no slack left at 120, so the whole inset drops
+        // from 14 to space100 (8) - the 12px comes back off the top and bottom.
         Component {
-            id: oneByTwoContent
+            id: twoByOneContent
             ColumnLayout {
                 anchors {
                     fill: parent
-                    margins: 14
+                    margins: root.weekInset
                 }
                 spacing: Appearance.spacing.space100
 
@@ -289,8 +309,8 @@ Item {
                         delegate: Item {
                             id: weekdayHeaderCell
                             required property var modelData
-                            implicitWidth: (card.implicitWidth - 28) / 7
-                            implicitHeight: 20
+                            implicitWidth: (card.implicitWidth - root.weekInset * 2) / 7
+                            implicitHeight: 16
                             StyledText {
                                 anchors.centerIn: parent
                                 text: weekdayHeaderCell.modelData
@@ -307,7 +327,7 @@ Item {
                         delegate: Item {
                             id: weekDayCell
                             required property var modelData
-                            implicitWidth: (card.implicitWidth - 28) / 7
+                            implicitWidth: (card.implicitWidth - root.weekInset * 2) / 7
                             implicitHeight: 28
 
                             Rectangle {
@@ -336,13 +356,16 @@ Item {
             }
         }
 
-        // 2x2
+        // 2x2. spanY(2) is 228, 24px shorter than the 252 the built-in used.
+        // 8px comes off the card margins; the remaining 16px comes off the day
+        // grid, which is Layout.fillHeight and had that much slack around its
+        // six centred week rows.
         Component {
             id: twoByTwoContent
             ColumnLayout {
                 anchors {
                     fill: parent
-                    margins: Appearance.spacing.space200
+                    margins: Appearance.spacing.space150
                 }
                 spacing: Appearance.spacing.space50
 
@@ -520,7 +543,7 @@ Item {
 
             MaterialSymbol {
                 anchors.centerIn: parent
-                text: root.sizeMode === "1x2" ? "calendar_view_month" : "calendar_view_week"
+                text: root.sizeMode === "2x1" ? "calendar_view_month" : "calendar_view_week"
                 iconSize: 11
                 color: Appearance.colors.colPrimaryContainer
             }
@@ -530,7 +553,7 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.setSizeMode(root.sizeMode === "2x2" ? "1x2" : "2x2")
+                onClicked: root.setSizeMode(root.sizeMode === "2x2" ? "2x1" : "2x2")
             }
         }
     }
