@@ -626,7 +626,7 @@
     "input": {
       "followMouse": 1,
       "kbLayout": "us, eg",
-      "kbOptions": "grp:win_space_toggle",
+      "kbOptions": "",
       "numlock": true,
       "repeatDelay": 250,
       "repeatRate": 35,
