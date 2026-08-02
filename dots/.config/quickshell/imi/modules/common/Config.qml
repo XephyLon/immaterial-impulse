@@ -44,6 +44,23 @@ Singleton {
         obj[keys[keys.length - 1]] = convertedValue;
     }
 
+    // One-time migration (issue #69): older installs seeded
+    // hyprland.input.kbOptions = "grp:win_space_toggle" before the layout
+    // switch became a compositor bind. That xkb option matches Super+Space
+    // loosely, so Super+Alt+Space (window float toggle) also switched the
+    // layout and Super+Space double-toggled. seed_default_config never
+    // overwrites an existing config, so clearing the QML default alone only
+    // helps fresh installs; clear a stale value here so existing configs are
+    // fixed on the next shell start too. The marker persists in the config, so
+    // this runs once and never touches a value the user has since chosen.
+    function migrateStaleKbOptions() {
+        if (root.options.migratedKbOptionsGrpToggle)
+            return;
+        if (root.options.hyprland.input.kbOptions === "grp:win_space_toggle")
+            root.options.hyprland.input.kbOptions = "";
+        root.options.migratedKbOptionsGrpToggle = true;
+    }
+
     Timer {
         id: fileReloadTimer
         interval: root.readWriteDelay
@@ -69,7 +86,10 @@ Singleton {
         blockWrites: root.blockWrites
         onFileChanged: fileReloadTimer.restart()
         onAdapterUpdated: fileWriteTimer.restart()
-        onLoaded: root.ready = true
+        onLoaded: {
+            root.ready = true;
+            root.migrateStaleKbOptions();
+        }
         onLoadFailed: error => {
             if (error == FileViewError.FileNotFound) {
                 writeAdapter();
@@ -90,6 +110,11 @@ Singleton {
             id: configOptionsJsonAdapter
 
             property string panelFamily: "imi" // "imi", "waffle"
+
+            // One-time migration marker (issue #69): set once a stale
+            // hyprland.input.kbOptions = "grp:win_space_toggle" has been
+            // cleared from this config. See root.migrateStaleKbOptions().
+            property bool migratedKbOptionsGrpToggle: false
 
             property JsonObject plugins: JsonObject {
                 property list<string> enabled: []
