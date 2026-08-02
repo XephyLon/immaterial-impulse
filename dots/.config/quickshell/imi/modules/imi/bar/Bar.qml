@@ -92,6 +92,32 @@ Scope {
                 }
                 color: "transparent"
 
+                // Blur only the painted body shapes. The bar's drop shadow and
+                // the screen-rounding margin live outside these rects, so the
+                // compositor's blur can't frost them (#82) — same treatment as
+                // the sidebars. Pairs with rules.lua turning the whole-surface
+                // layerrule blur off for this namespace. The RoundCorner
+                // decorators and the islands/material pills are left out: a
+                // region is a plain rect, so covering their transparent parts
+                // would frost bare wallpaper; they are opaque by default and
+                // merely read as unblurred translucency under transparency mode.
+                WindowBlurRegion {
+                    targetWindow: barRoot
+                    region: Region {
+                        Region {
+                            item: barContent.backgroundPainted ? barContent.backgroundItem : null
+                            radius: barContent.backgroundItem.radius
+                        }
+                        Region {
+                            item: barContent.centerPillPainted ? barContent.centerPillItem : null
+                            topLeftRadius: barContent.centerPillItem.topLeftRadius
+                            topRightRadius: barContent.centerPillItem.topRightRadius
+                            bottomLeftRadius: barContent.centerPillItem.bottomLeftRadius
+                            bottomRightRadius: barContent.centerPillItem.bottomRightRadius
+                        }
+                    }
+                }
+
                 // Positioning
                 anchors {
                     top: !Config.options.bar.bottom

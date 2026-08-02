@@ -22,6 +22,17 @@ Item {
 
     readonly property bool trayHasItems: SystemTray.items.values.length > 0
 
+    // The painted body shapes, exposed so the hosting window can scope its
+    // compositor blur region to them (see WindowBlurRegion in Bar.qml). The
+    // "painted" flags mirror each shape's own color/visible condition: a blur
+    // region is a plain rect, so covering an unpainted (transparent) shape
+    // would frost the bare wallpaper behind it.
+    readonly property Item backgroundItem: barBackground
+    readonly property bool backgroundPainted: !centerOnly && Config.options.bar.showBackground
+        && Config.options.bar.cornerStyle !== 2 && !root.isMaterial
+    readonly property Item centerPillItem: centerPill
+    readonly property bool centerPillPainted: centerPill.visible
+
     function filterLayout(layout) {
         return layout.filter(name => {
             if (name === "sysTray" && !trayHasItems) return false;

@@ -25,8 +25,10 @@ Item {
     property Item regionItem
     property int regionRadius: 0
 
-    Region {
-        id: blurRegion
+    // The published region. Defaults to regionItem's rect; a caller whose body
+    // is not a single rect (the bar's background + center pill, say) can
+    // replace it with a composed Region whose children Combine into a union.
+    property Region region: Region {
         item: root.regionItem
         radius: root.regionRadius
     }
@@ -35,8 +37,10 @@ Item {
         if (!root.targetWindow)
             return;
         root.targetWindow.BackgroundEffect.blurRegion = null;
-        root.targetWindow.BackgroundEffect.blurRegion = blurRegion;
+        root.targetWindow.BackgroundEffect.blurRegion = root.region;
     }
+
+    onRegionChanged: settleTimer.restart()
 
     Timer {
         id: settleTimer
@@ -62,7 +66,7 @@ Item {
 
     Component.onCompleted: {
         if (targetWindow)
-            targetWindow.BackgroundEffect.blurRegion = blurRegion;
+            targetWindow.BackgroundEffect.blurRegion = region;
         settleTimer.restart();
     }
     Component.onDestruction: {
