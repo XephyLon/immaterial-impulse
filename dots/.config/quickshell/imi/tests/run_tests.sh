@@ -135,6 +135,12 @@ if ! python3 "$SCRIPT_DIR/test_widget_plugin_migration.py"; then
     exit 1
 fi
 
+echo "Running notes store contract tests..."
+if ! python3 "$SCRIPT_DIR/test_notes_store_contract.py"; then
+    echo "Notes store contract tests failed."
+    exit 1
+fi
+
 # Launches a real Quickshell against throwaway XDG dirs, so it skips where
 # there is no Wayland display - notably CI.
 echo "Running notes migration runtime tests..."
