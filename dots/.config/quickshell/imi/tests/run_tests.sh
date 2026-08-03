@@ -264,6 +264,16 @@ if ! python3 "$SCRIPT_DIR/test_config_dir_migration_runtime.py"; then
     exit 1
 fi
 
+# Both halves of the stale grp:win_space_toggle clear (issue #69) live in
+# on-disk state - a marker burned against a config that never carried the
+# value, and the generated lua the compositor actually reads - so this needs a
+# real Quickshell against real files rather than a unit test.
+echo "Running stale kbOptions clear runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_kboptions_migration_runtime.py"; then
+    echo "Stale kbOptions clear runtime tests failed."
+    exit 1
+fi
+
 echo "Running keyring migration tests..."
 if ! python3 "$SCRIPT_DIR/test_keyring_migration.py"; then
     echo "Keyring migration tests failed."
