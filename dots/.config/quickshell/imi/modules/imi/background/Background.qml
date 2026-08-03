@@ -93,24 +93,27 @@ Variants {
         property string currentShader: "pixelate"
         property string wallpaperAnimation: Config.options.background.wallpaperAnimation ?? "random"
 
-        // See HyprlandData.fullscreenByMonitorName for why the fullscreen test
-        // is polled from there instead of read off Hyprland.workspaces here.
+        // True fullscreen only, not maximized - see
+        // HyprlandData.fullscreenByMonitorName.
         readonly property bool monitorHasFullscreen:
             HyprlandData.fullscreenByMonitorName[bgRoot.monitor?.name ?? ""] ?? false
 
-        // `hideWhenFullscreen` used to set `visible: false` here, which unmaps the
-        // layer surface outright. That is what made this window dangerous: every
-        // remap tore down and rebuilt the scene graph's GL context, the Wallpaper
-        // Engine thread was rebuilt with it, and a rebuild landing mid-transition
-        // left the peel shader sampling a dead texture - a full-screen 30Hz
-        // strobe. Flipping between workspaces with a fullscreen window on one of
-        // them did it reliably.
+        // `hideWhenFullscreen` used to set `visible: false` on this window. Under
+        // WlrLayershell that does not hide anything - it destroys the QQuickWindow
+        // (deleteOnInvisible; window reuse is forbidden outright), so every
+        // fullscreen transition tore down the surface and built a new scene-graph
+        // GL context, which in turn forced the embedded Wallpaper Engine renderer
+        // to rebuild against it. Flipping between workspaces with a fullscreen
+        // window on one of them left the desktop strobing at 30Hz, alternating
+        // between the wallpaper and a transition shader sampling a texture that
+        // no longer existed. The exact path from the rebuild to the stuck shader
+        // was never pinned down; destroying the surface on a routine user action
+        // is reason enough not to.
         //
-        // So the window now stays mapped and the *contents* are suppressed
-        // instead: nothing is drawn and the WE renderer is paused, which is the
-        // GPU saving the option was for, without ever destroying the surface.
-        // Still debounced - resuming the renderer for a workspace the user is
-        // flipping through is pure churn.
+        // So the window stays mapped and the *contents* are suppressed instead -
+        // nothing is drawn, and there is no surface to destroy. Debounced because
+        // a workspace the user is flipping through should not cost a suppress and
+        // an un-suppress; the un-suppress direction is deliberately immediate.
         property bool suppressedForFullscreen: false
         readonly property bool suppressContents: bgRoot.suppressedForFullscreen
             && !GlobalStates.screenLocked && (Config?.options.background.hideWhenFullscreen ?? true)
@@ -127,11 +130,24 @@ Variants {
             interval: 400
             onTriggered: bgRoot.suppressedForFullscreen = bgRoot.monitorHasFullscreen
         }
-        // Pause/resume the WE renderer alongside. Assigned rather than bound
-        // because the layer is loaded by URL and may not exist (stock binary).
+        // `live` drives the surface's repaint timer, which is what advances the
+        // wallpaper: with it off the item stops asking for new frames, and with
+        // it back on the animation picks up again. (It does not stop the WE
+        // render thread itself - that keeps running - so this is not a GPU
+        // saving, it is what makes suppress/resume symmetrical.) Assigned rather
+        // than bound because the layer is loaded by URL and may not exist at all
+        // on a stock Quickshell binary.
         onSuppressContentsChanged: {
             if (weLoader.item)
                 weLoader.item.live = !bgRoot.suppressContents;
+            // A switch requested while suppressed could not be applied - the
+            // surface only builds a project from updatePaintNode, which does not
+            // run for an item that is not being drawn. Apply it now.
+            if (!bgRoot.suppressContents && bgRoot.wePendingProject !== "") {
+                const pending = bgRoot.wePendingProject;
+                bgRoot.wePendingProject = "";
+                bgRoot.loadWeWallpaper(pending);
+            }
         }
 
         property HyprlandMonitor monitor: Hyprland.monitorFor(modelData)
@@ -207,6 +223,7 @@ Variants {
 
         // WE wallpaper switch transition state.
         property string weLoadedProject: ""     // project currently in the surface
+        property string wePendingProject: ""    // requested while suppressed, not applied yet
         property real weTransitionProgress: 1.0  // 0 = old still, 1 = new surface
         property bool weTransitioning: false
 
@@ -216,11 +233,25 @@ Variants {
         // be captured before the surface reloads.
         function loadWeWallpaper(path) {
             if (!weLoader.item || path === bgRoot.weLoadedProject) return
+            // Nothing draws this item while suppressed, so the surface would never
+            // reach updatePaintNode to build the new project - it would sit on the
+            // old one with QML believing otherwise, and the transition would hang
+            // waiting for a first frame that cannot arrive. Defer to un-suppress.
+            if (bgRoot.suppressContents) {
+                bgRoot.wePendingProject = path
+                return
+            }
             const canTransition = bgRoot.weLoadedProject !== "" && weLoader.item.rendered
                 && bgRoot.wallpaperAnimation !== ""
             if (!canTransition) {
                 bgRoot.weLoadedProject = path
                 weLoader.item.projectPath = path
+                // A switch arriving mid-transition lands here (the outgoing surface
+                // has no rendered frame to snapshot). `weTransitioning` stays true,
+                // so give the watchdog a fresh budget for this new load rather than
+                // letting it run out on the previous one's clock.
+                if (bgRoot.weTransitioning)
+                    weTransitionWatchdog.restart()
                 return
             }
             // Snapshot the outgoing frame, then swap + run the transition.
@@ -242,7 +273,10 @@ Variants {
         Timer {
             id: weTransitionDelay
             interval: 300
-            onTriggered: weTransitionAnim.restart()
+            onTriggered: {
+                weTransitionWatchdog.restart() // the peel is starting for real now
+                weTransitionAnim.restart()
+            }
         }
 
         NumberAnimation {
@@ -259,15 +293,22 @@ Variants {
             }
         }
 
-        // The transition is started by the surface's first rendered frame. If the
-        // surface is rebuilt before that frame arrives - a GL context change does
-        // exactly this - `rendered` never flips again, the animation never starts,
-        // and the peel shader is left on screen forever blending a stale still
-        // against a texture that is no longer valid. That is what strobes. Nothing
-        // else clears it, so time it out and settle on the live surface.
+        // A transition is armed here and only disarmed by the animation finishing,
+        // which the surface's first rendered frame is what starts. Anything that
+        // stops that frame arriving leaves the peel shader on screen indefinitely,
+        // blending a frozen still against a live texture - a wallpaper that never
+        // settles. Nothing else clears that state, so give it a deadline.
+        //
+        // The budget has to cover a cold WE project start: a new thread, the scene
+        // package parsed, textures and shaders uploaded, and mpv brought up for a
+        // video wallpaper. Seconds, not milliseconds, on a large scene. So the
+        // watchdog is restarted at each step that proves progress (first frame,
+        // then the animation actually starting) rather than being one flat budget
+        // from the beginning - otherwise a slow but perfectly healthy load gets
+        // cut off mid-peel.
         Timer {
             id: weTransitionWatchdog
-            interval: Appearance.wallpaperTransitionDuration + 2000
+            interval: Appearance.wallpaperTransitionDuration + 8000
             running: bgRoot.weTransitioning
             onTriggered: {
                 console.warn("[Background] Wallpaper Engine transition did not finish; settling")
@@ -460,8 +501,10 @@ Variants {
                         // warmup/black frame. Hold the old still a touch longer so
                         // the peel reveals real content, not black.
                         if (weLoader.item && weLoader.item.rendered
-                                && bgRoot.weTransitioning && bgRoot.weTransitionProgress === 0.0)
+                                && bgRoot.weTransitioning && bgRoot.weTransitionProgress === 0.0) {
+                            weTransitionWatchdog.restart() // the load finished; re-budget
                             weTransitionDelay.restart()
+                        }
                     }
                 }
             }
