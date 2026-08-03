@@ -12,6 +12,20 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.14.1] — 2026-08-03
+
+### Fixed
+- **Notifications relayed from a phone show their formatting again.** They
+  arrived rendering literal `<b>` and `<br/>`. The renderer was never at fault
+  — the popup parses markup and we advertise `body-markup` on the bus. Captured
+  the `Notify` call to be sure: KDE Connect relays the phone notification's
+  text verbatim and runs one `toHtmlEscaped()` over it, and apps like Teams on
+  Android put HTML in that text, so the markup arrived escaped. The quotes
+  proved it was exactly one level (`&amp;quot;` is escaped twice, which only
+  happens over input that was already HTML), so one decode inverts it. Scoped
+  to that sender: every other app escapes the non-markup parts of its body
+  exactly as the spec asks, and decoding those would corrupt them.
+
 ## [0.14.0] — 2026-08-03
 
 ### Changed
@@ -1218,7 +1232,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.1...HEAD
+[0.14.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.11.0...v0.13.0
