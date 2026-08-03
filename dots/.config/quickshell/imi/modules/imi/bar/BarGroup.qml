@@ -9,7 +9,15 @@ Item {
     property int totalCount: 0
     property bool isMaterial: Config.options.bar.cornerStyle === 3
     property bool paintMaterialPill: false
-    property real padding: (root.isMaterial && !root.paintMaterialPill) ? 0 : Appearance.spacing.space50
+    // Islands is the only style where each group *is* the visible shape, with
+    // fully-round ends (radius = height/2 = 16). 4px of flat padding is mostly
+    // eaten by that curve, so content ends up sitting on the edge - most
+    // visible on short widgets like weather, where the text is the whole pill.
+    // The other styles put their groups inside a shared strip with near-square
+    // joins, where 4px is correct.
+    property real padding: (root.isMaterial && !root.paintMaterialPill) ? 0
+        : Config.options.bar.cornerStyle === 2 ? Appearance.spacing.space150
+        : Appearance.spacing.space50
     property color bgColor: Appearance.colors.colPrimaryContainer
 
     readonly property real fullRadius: height / 2
