@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.13.1] — 2026-08-03
+
 ### Fixed
 - **The login theme follows the desktop again, and installs unattended.** The
   SDDM theme now comes from our fork (`XephyLon/imi-sddm-theme`). Upstream
