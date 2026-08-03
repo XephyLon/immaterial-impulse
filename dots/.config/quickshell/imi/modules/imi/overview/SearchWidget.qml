@@ -25,6 +25,14 @@ Item { // Wrapper
     readonly property bool clipboardMode: root.searchingText.startsWith(Config.options.search.prefix.clipboard)
     readonly property bool clipboardSearching: root.clipboardMode && root.searchingText.length > Config.options.search.prefix.clipboard.length
     readonly property bool clearBtnHasFocus: clearResultsBtn.activeFocus || clearAllBtn.activeFocus
+
+    // The painted body, exposed so the overview window can scope its compositor
+    // blur region to it (see WindowBlurRegion in Overview.qml). Unconditionally
+    // painted, so there is no companion "painted" flag - only the window's own
+    // open state gates it.
+    readonly property Item backgroundItem: searchWidgetContent
+    readonly property real backgroundRadius: searchWidgetContent.radius
+
     implicitWidth: searchWidgetContent.implicitWidth + Appearance.sizes.elevationMargin * 2
     implicitHeight: searchWidgetContent.implicitHeight + searchBar.verticalPadding * 2 + Appearance.sizes.elevationMargin * 2
 

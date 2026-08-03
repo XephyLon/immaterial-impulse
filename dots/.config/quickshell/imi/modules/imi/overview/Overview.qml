@@ -31,6 +31,26 @@ Scope {
             item: GlobalStates.overviewOpen ? columnLayout : null
         }
 
+        // Blur only the painted body cards. This one surface carries two of
+        // them - the search widget and the overview below it - and both draw a
+        // drop shadow in the elevation margin around themselves, which the
+        // catch-all whole-surface blur frosted (#89, the deferred half of #82).
+        // Pairs with rules.lua turning the layerrule blur off for this
+        // namespace. The niri style contributes nothing (see NiriOverview.qml).
+        WindowBlurRegion {
+            targetWindow: panelWindow
+            region: Region {
+                Region {
+                    item: GlobalStates.overviewOpen ? searchWidget.backgroundItem : null
+                    radius: searchWidget.backgroundRadius
+                }
+                Region {
+                    item: (overviewLoader.item?.backgroundPainted ?? false) ? overviewLoader.item.backgroundItem : null
+                    radius: overviewLoader.item?.backgroundRadius ?? 0
+                }
+            }
+        }
+
         anchors {
             top: true
             bottom: true

@@ -419,6 +419,20 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   *not* blurred, they just show plain unblurred transparency. This is why picking the right
   `Appearance.colors.colLayer*` token matters for a floating popup, not just picking "a" transparent
   one - see the Design language section below.
+- **Blur is scoped per-panel now, and scoping it takes an edit in two different files.** The panels
+  ported so far - bar, vertical bar, dock, both sidebars, the OSDs and the overview - each turn the
+  catch-all whole-surface `blur` *off* for their namespace in
+  `~/.config/hypr/hyprland/rules.lua` and publish a `WindowBlurRegion`
+  (`modules/common/widgets/WindowBlurRegion.qml`) over just its painted body instead, so the
+  compositor never blurs the shadow (#82, #89). A blur region is a plain rounded rect and knows
+  nothing about `visible`, `opacity`, or a parent's `clip`, so each sub-region has to be gated on
+  exactly the condition that *paints* its shape - covering an unpainted one frosts bare wallpaper -
+  and `Appearance.rounding.full` (9999) is a "round me completely" sentinel that must be resolved to
+  `Math.round(item.height / 2)` before it goes into a region. A body reached through a `Loader` is
+  exposed to the window as a `backgroundItem`/`backgroundPainted` pair on the content component
+  rather than reached into. Both halves are silent when only one lands: a region without the layer
+  rule changes nothing at all, and the layer rule without a region leaves that panel with no blur
+  whatsoever. `tests/lint_blur_region_pairing.py` pins the two together.
 - **The region selector intentionally takes exclusive focus.** Dismissable panels normally close
   when `GlobalFocusGrab` is cleared, but the selector first sets
   `GlobalStates.settingsHeldForRegionSelector` so Settings can remain visible in screenshots without

@@ -179,6 +179,12 @@ hl.layer_rule({ match = { namespace = "quickshell:sidebarLeft" }, blur = false})
 hl.layer_rule({ match = { namespace = "quickshell:bar" }, blur = false})
 hl.layer_rule({ match = { namespace = "quickshell:verticalBar" }, blur = false})
 hl.layer_rule({ match = { namespace = "quickshell:dock" }, blur = false})
+-- And the transient surfaces, which were the last panels still frosting their
+-- own shadow (#89): every OSD indicator sits in an elevation margin, and the
+-- overview surface carries two shadowed cards (the search widget and the
+-- overview itself). See WindowBlurRegion in OnScreenDisplay.qml / Overview.qml.
+hl.layer_rule({ match = { namespace = "quickshell:onScreenDisplay" }, blur = false})
+hl.layer_rule({ match = { namespace = "quickshell:overview" }, blur = false})
 hl.layer_rule({ match = { namespace = "quickshell:verticalBar" }, animation = "slide"})
 hl.layer_rule({ match = { namespace = "quickshell:osk" }, order = -1})
 -- Quickshell: waffles
