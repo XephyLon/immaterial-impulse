@@ -12,6 +12,28 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Switching keyboard layout works again (#69, second attempt).** The previous
+  fix cleared the stale `input.kbOptions = grp:win_space_toggle` from
+  `config.json` and changed nothing on any real machine, for two independent
+  reasons. It was guarded by a persisted "already migrated" marker, and a
+  marker records that the check ran, not that the value was ever there — an
+  install whose config-directory migration declined burned it against the
+  installer's default and then received the user's real config afterwards,
+  permanently out of reach. And `config.json` is not what Hyprland reads: the
+  option reaches the compositor through the generated
+  `hypr/hyprland/shellOverrides/main.lua`, which is only rewritten when the
+  Hyprland settings page is opened, so the clear never arrived there. The clear
+  is now unconditional — `grp:win_space_toggle` is not a value the shell can
+  hold legitimately, since the settings control offers only "none" and
+  Alt+Shift — and it purges the generated lua too, through a new `--reset-if`
+  mode that removes the managed line only while it still holds the stale value.
+  Both halves are covered by a runtime test against real files; the old fix had
+  no test at all, which is why it shipped broken. Symptoms: Super+Space fired
+  the xkb toggle *and* the compositor bind, two switches that cancelled, so the
+  OSD announced a layout change that had not happened, while Super+Alt+Space
+  switched the layout on top of toggling the window float.
+
 ## [0.13.1] — 2026-08-03
 
 ### Fixed
