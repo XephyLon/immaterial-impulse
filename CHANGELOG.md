@@ -13,6 +13,21 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **The login screen shows the current wallpaper again (second attempt).** The
+  SDDM fork was retargeted for the installer only, and its `setup.sh` clones
+  the theme content from its own `THEME_REPO` rather than copying the checkout
+  it runs from — that still pointed at upstream, so every install laid
+  upstream's theme back down over the fork's. The installed theme therefore
+  still read `~/.config/illogical-impulse/config.json`, a directory the 0.13.1
+  purge removed, and had no Wallpaper Engine handling at all, so the greeter
+  fell back to a stock background. The fork now installs itself, and the
+  installer pin is a full commit SHA checked by a test.
+  Wallpaper Engine is also resolved *before* the static wallpaper now, rather
+  than only when `background.wallpaperPath` is empty: selecting a WE wallpaper
+  does not clear that key, so any install that used a static wallpaper first
+  kept showing the old picture on the login screen. The order now matches
+  `Background.qml`'s `weActive` — a WE project wins unless it is a "web" one,
+  which the shell cannot render either.
 - **Switching keyboard layout works again (#69, second attempt).** The previous
   fix cleared the stale `input.kbOptions = grp:win_space_toggle` from
   `config.json` and changed nothing on any real machine, for two independent
