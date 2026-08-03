@@ -131,7 +131,7 @@ cd immaterial-impulse
   source. The long compile is cancellable (Ctrl-C). Off by default; WE
   wallpapers degrade to static otherwise.
 - **SDDM login theme** (optional, Arch only) — installs
-  [ii-sddm-theme](https://github.com/3d3f/ii-sddm-theme) via its own installer,
+  [imi-sddm-theme](https://github.com/XephyLon/imi-sddm-theme) via its own installer,
   matching the lock-screen aesthetic on the login screen. Off by default.
 - **Extras** — fontset, fcitx5 IME, and other situational overlays.
 

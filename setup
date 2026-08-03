@@ -94,7 +94,7 @@ case ${SUBCMD_NAME} in
     # Run (not sourced): it uses `exit 0` for its skip path, which must not
     # exit this whole `setup` process.
     bash ${SUBCMD_DIR}/4.wallpaperengine.sh
-    # Optional: install the ii-sddm-theme SDDM login theme via its own upstream
+    # Optional: install the imi-sddm-theme SDDM login theme via its own
     # installer (no-op unless INSTALL_SDDM=1). Run (not sourced), same as above.
     bash ${SUBCMD_DIR}/5.sddm-theme.sh
     # Optional: install the Plymouth boot splash (no-op unless

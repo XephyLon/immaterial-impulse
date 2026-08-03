@@ -182,7 +182,7 @@ declare -A STATE=( [DEPS]=on [WE]=off [SDDM]=off )
 declare -A LABELS=(
   [DEPS]="Dependencies"
   [WE]="Wallpaper Engine  ${C_DIM}(builds a custom quickshell)${C_RST}"
-  [SDDM]="SDDM login theme  ${C_DIM}(ii-sddm-theme · Arch only)${C_RST}"
+  [SDDM]="SDDM login theme  ${C_DIM}(imi-sddm-theme · Arch only)${C_RST}"
 )
 ORDER=(DEPS WE SDDM)
 fzf_toggle "Components  (Core config is always installed)" || cancelled
@@ -434,7 +434,7 @@ fi
 # 5.sddm-theme.sh is the same no-op-unless-INSTALL_SDDM=1 wrapper `setup install`
 # would have called; we just invoke it interactively instead of inside --force.
 if [[ $INSTALL_RET -eq 0 && "$SDDM_ON" == on ]]; then
-  echo "[tui] Installing the SDDM login theme (ii-sddm-theme) — interactive."
+  echo "[tui] Installing the SDDM login theme (imi-sddm-theme) — interactive."
   INSTALL_SDDM=1 bash "${REPO_ROOT}/sdata/subcmd-install/5.sddm-theme.sh" \
     || echo "[tui] SDDM login theme: installer exited non-zero (declined or error)."
 fi

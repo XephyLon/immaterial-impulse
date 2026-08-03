@@ -117,7 +117,7 @@ cd immaterial-impulse
   校验和/冒烟测试失败）则回退到从源码编译。漫长的编译可随时取消（Ctrl-C）。
   默认关闭；不装的话 WE 壁纸会退化为静态图片。
 - **SDDM 登录主题**（可选，仅 Arch）—— 通过其自带安装器安装
-  [ii-sddm-theme](https://github.com/3d3f/ii-sddm-theme)，让登录界面与锁屏
+  [imi-sddm-theme](https://github.com/XephyLon/imi-sddm-theme)，让登录界面与锁屏
   美学保持一致。默认关闭。
 - **Extras（附加项）** —— 字体集、fcitx5 输入法及其他按需覆盖项。
 

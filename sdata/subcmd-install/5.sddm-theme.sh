@@ -40,7 +40,7 @@ set -euo pipefail
 [[ "${INSTALL_SDDM:-0}" == "1" ]] || { echo "[ImI] SDDM theme: skipped."; exit 0; }
 
 if ! command -v pacman >/dev/null 2>&1; then
-  echo "[ImI] SDDM theme: ii-sddm-theme supports Arch Linux only (needs pacman); skipping." >&2
+  echo "[ImI] SDDM theme: imi-sddm-theme supports Arch Linux only (needs pacman); skipping." >&2
   exit 0
 fi
 
@@ -50,12 +50,12 @@ if ! command -v curl >/dev/null 2>&1; then
 fi
 
 SDDM_REPO_RAW="${SDDM_REPO_RAW:-https://raw.githubusercontent.com/XephyLon/imi-sddm-theme}"
-# Pin the installer for reproducibility. Bump this to adopt a newer ii-sddm-theme.
+# Pin the installer for reproducibility. Bump this to adopt a newer imi-sddm-theme.
 SDDM_REF="${SDDM_REF:-2736aadbb6ed77a2402bd99dc1b57e480ba3038a}"
 SETUP_URL="${SDDM_REPO_RAW}/${SDDM_REF}/setup.sh"
 
-echo "[ImI] SDDM theme: fetching ii-sddm-theme installer (${SDDM_REF:0:12})..."
-TMP_SETUP="$(mktemp --suffix=-ii-sddm-setup.sh)"
+echo "[ImI] SDDM theme: fetching imi-sddm-theme installer (${SDDM_REF:0:12})..."
+TMP_SETUP="$(mktemp --suffix=-imi-sddm-setup.sh)"
 trap 'rm -f "$TMP_SETUP"' EXIT
 
 if ! curl -fsSL "$SETUP_URL" -o "$TMP_SETUP"; then

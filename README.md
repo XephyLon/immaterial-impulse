@@ -13,7 +13,7 @@ curl -fsSL https://raw.githubusercontent.com/XephyLon/immaterial-impulse/main/ge
 
 The installer is idempotent - re-running it updates an existing install
 (also available as the About page's **Update Dots** button). Optional
-components: Wallpaper Engine integration, the ii-sddm-theme login theme,
+components: Wallpaper Engine integration, the imi-sddm-theme login theme,
 and a Plymouth boot splash.
 
 ## Compositor support

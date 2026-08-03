@@ -57,7 +57,7 @@ COMPONENTS=$(whiptail --title "Immaterial Impulse Installer" \
   "CORE" "Core config (always installed)" ON \
   "DEPS" "Dependencies" ON \
   "WE" "Wallpaper Engine (builds a custom quickshell)" "$we_state" \
-  "SDDM" "SDDM login theme - ii-sddm-theme (Arch only)" "$sddm_state" \
+  "SDDM" "SDDM login theme - imi-sddm-theme (Arch only)" "$sddm_state" \
   "PLYMOUTH" "Plymouth boot splash (Arch only)" "$plymouth_state" \
   3>&1 1>&2 2>&3)
 ret=$?

@@ -135,7 +135,7 @@ cd immaterial-impulse
   長いコンパイルは Ctrl-C でキャンセル可能。デフォルトはオフ。未導入の場合、
   WE 壁紙は静止画にフォールバックします。
 - **SDDM ログインテーマ**（オプション、Arch のみ）――
-  [ii-sddm-theme](https://github.com/3d3f/ii-sddm-theme) を専用インストーラー
+  [imi-sddm-theme](https://github.com/XephyLon/imi-sddm-theme) を専用インストーラー
   経由で導入し、ログイン画面をロック画面の美学に揃えます。デフォルトはオフ。
 - **Extras（エクストラ）** ―― フォントセット、fcitx5 IME、その他状況に応じた
   オーバーレイ。
