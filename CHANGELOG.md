@@ -12,6 +12,21 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- **The SDDM login theme is now named `imi-sddm-theme`**, in the installer menu
+  and on disk. Existing installs migrate on the next update: the theme's
+  installer repoints every `[Theme] Current=` naming the old theme before
+  removing anything, because SDDM resolves that value against
+  `/usr/share/sddm/themes` and reads `/etc/sddm.conf.d/*.conf` in lexical order
+  — so the file that decides is frequently `kde_settings.conf`, written by the
+  KDE settings module rather than by us, and dropping the old directory while
+  that still named it would leave no greeter at all. The old directory, drop-in
+  and scripts are removed only once the replacement is fully in place, so an
+  interrupted migration leaves the old install working rather than half-gone.
+  Our side accepts either name throughout the transition, including the matugen
+  `post_hook` restore, which prefers the new one — both directories exist at
+  once mid-migration.
+
 ### Fixed
 - **The Android quick toggles stop scrambling when you edit them.**
   `DelegateChooser` picks a component when a delegate is *created* and never
