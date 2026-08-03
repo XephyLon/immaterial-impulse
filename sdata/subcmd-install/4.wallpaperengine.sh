@@ -41,23 +41,24 @@ set -euo pipefail
 [[ "${INSTALL_WE:-0}" == "1" ]] || { echo "[ImI] Wallpaper Engine: skipped."; exit 0; }
 
 WE_REPO="${WE_REPO:-https://github.com/XephyLon/qs-wallpaperengine}"
-WE_REF="${WE_REF:-7e58913}"                      # working commit pin; NO prebuilt release exists for it, so installs
-                                                 # fall back to a source build. MUST be >= 40427cf, the commit that added
+WE_REF="${WE_REF:-v0.1.0}"                       # release tag, so installs take the PREBUILT fast path; any checksum /
+                                                 # arch / Qt-too-old / smoke-test failure falls back to a source build, as
+                                                 # does a tag whose release has not published yet. Whatever this points at
+                                                 # MUST be >= 40427cf, the commit that added
                                                  # scripts/build-we.sh (source_build() runs it, and eval's its stdout —
                                                  # 71dea54 made that eval-safe); a11e083 additionally carries the
                                                  # bootstrap patch that stops Quickshell rescanning every .desktop file
                                                  # on parent-dir churn (multi-second QV4 GC freezes per wallpaper switch
                                                  # without it), and 6cb13cd adds the frame-fence glFlush (without it a
                                                  # VIDEO wallpaper throttles the whole shell to the video's frame rate).
-                                                 # 7e58913 is REQUIRED for a live wallpaper to idle when, and only when,
-                                                 # it is behind a fullscreen window: it passes --fullscreen-pause-only-active
-                                                 # to the embedded linux-wallpaperengine, whose detector otherwise counts
-                                                 # EVERY fullscreen toplevel - output, workspace and visibility are not part
-                                                 # of the test - and halts the render loop (pausing mpv with it) for a game
-                                                 # parked on a workspace the user has left. The pin sat at fd5715e, so every
-                                                 # install carried that freeze.
-                                                 # Bump to a release tag (vX.Y.Z) once one is cut to activate the prebuilt
-                                                 # fast-path — see qs-wallpaperengine/docs/cutting-a-release.md.
+                                                 # v0.1.0 (7e58913) is REQUIRED for a live wallpaper to idle when, and only
+                                                 # when, it is behind a fullscreen window: it passes
+                                                 # --fullscreen-pause-only-active to the embedded linux-wallpaperengine,
+                                                 # whose detector otherwise counts EVERY fullscreen toplevel - output,
+                                                 # workspace and visibility are not part of the test - and halts the render
+                                                 # loop (pausing mpv with it) for a game parked on a workspace the user has
+                                                 # left. The pin sat at fd5715e, so every install carried that freeze.
+                                                 # Cutting the next release: qs-wallpaperengine/docs/cutting-a-release.md.
 BUILD_DIR="${BUILD_DIR:-$HOME/.cache/immaterial-impulse/qs-wallpaperengine-build}"
 PREBUILT_ROOT="${PREBUILT_ROOT:-$HOME/.cache/immaterial-impulse/prebuilt}"
 PREFIX="${WE_INSTALL_PREFIX:-/usr/local}"        # install root; binaries land in $PREFIX/bin (prod: /usr/local/bin, shadows distro qs)
