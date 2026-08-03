@@ -497,10 +497,16 @@ Singleton {
         // The bar's body sits between these two, and all four styles derive from
         // them so the gaps stay consistent:
         //
-        //   Hug (0) is flush against the monitor edge, so it has no top margin.
-        //   Float (1), Islands (2) and M3 (3) are detached from the edge and
-        //   share one. All four share the bottom margin - the gap between the
-        //   bar and the windows below it (or beside it, when vertical).
+        //   Hug (0) is flush against the monitor edge, so it has no margin on
+        //   the edge side. Float (1), Islands (2) and M3 (3) are detached from
+        //   the edge and share one. All four share the opposite-side margin -
+        //   the gap between the bar and the windows next to it.
+        //
+        // The names say top/bottom because that is the default case, a
+        // horizontal bar at the top. What they actually mean is edge side vs
+        // window side: BarGroup maps them onto real anchors, and `bar.bottom`
+        // flips which physical side each lands on - left vs right when the bar
+        // is vertical. Do not read them as literal screen directions.
         //
         // Open-coding these per style is what let them drift apart, so nothing
         // below should reintroduce a style-specific margin of its own.

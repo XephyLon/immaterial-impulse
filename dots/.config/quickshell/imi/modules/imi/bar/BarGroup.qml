@@ -20,6 +20,18 @@ Item {
         : Appearance.spacing.space50
     property color bgColor: Appearance.colors.colPrimaryContainer
 
+    // Which side of the group the monitor edge is on. Config.options.bar.bottom
+    // is shared by both orientations: for a horizontal bar it means the bottom
+    // of the screen, for a vertical one the right-hand side. Either way it
+    // names the far edge, so the near edge (top / left) is the default.
+    readonly property bool atFarEdge: Config.options.bar.bottom
+    // Hug (cornerStyle 0) is flush against the monitor edge, so it has no
+    // margin there; Float (1), Islands (2) and M3 (3) are detached and share
+    // one. All four share the opposite-side margin - the gap to the windows
+    // below the bar, or beside it when vertical.
+    readonly property real edgeMargin: Appearance.sizes.barMarginTop
+    readonly property real windowMargin: Appearance.sizes.barMarginBottom
+
     readonly property real fullRadius: height / 2
     readonly property real midRadius: Config.options.bar.cornerStyle === 2 ? Appearance.rounding.unsharpenmore + 2 : Appearance.rounding.unsharpenmore
     property real startRadius: {
@@ -42,13 +54,13 @@ Item {
         id: background
         anchors {
             fill: parent
-            topMargin: root.vertical ? 0 : Appearance.sizes.barMarginTop
-            bottomMargin: root.vertical ? 0 : Appearance.sizes.barMarginBottom
-            // Rotated: for a vertical bar the screen edge is the left side, so
-            // the edge/window margins map onto left/right the same way top and
-            // bottom do horizontally.
-            leftMargin: root.vertical ? Appearance.sizes.barMarginTop : 0
-            rightMargin: root.vertical ? Appearance.sizes.barMarginBottom : 0
+            // The tokens are named for a top bar, but what they mean is edge
+            // side vs window side, so they follow the bar to whichever monitor
+            // edge it is anchored to - bar.bottom flips both orientations.
+            topMargin: root.vertical ? 0 : (root.atFarEdge ? root.windowMargin : root.edgeMargin)
+            bottomMargin: root.vertical ? 0 : (root.atFarEdge ? root.edgeMargin : root.windowMargin)
+            leftMargin: !root.vertical ? 0 : (root.atFarEdge ? root.windowMargin : root.edgeMargin)
+            rightMargin: !root.vertical ? 0 : (root.atFarEdge ? root.edgeMargin : root.windowMargin)
         }
         color: (root.isMaterial && !root.paintMaterialPill)
             ? "transparent"
