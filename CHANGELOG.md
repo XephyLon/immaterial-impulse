@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-08-03
+
 ### Changed
 - **The SDDM login theme is now named `imi-sddm-theme`**, in the installer menu
   and on disk. Existing installs migrate on the next update: the theme's
@@ -1216,7 +1218,11 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.13.1...v0.14.0
+[0.13.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.13.0...v0.13.1
+[0.13.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.11.0...v0.13.0
+[0.11.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.9.0...v0.9.1
