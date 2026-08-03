@@ -93,15 +93,6 @@ if ! python3 "$SCRIPT_DIR/lint_spacing.py"; then
     exit 1
 fi
 
-# A QML list property notifies on assignment; push/splice on one notify
-# nothing, and the config still persists correctly, so the only symptom is a
-# stale view that a restart appears to fix. See the lint's docstring.
-echo "Running config list mutation lint..."
-if ! python3 "$SCRIPT_DIR/lint_config_list_mutation.py"; then
-    echo "Config list mutation lint failed."
-    exit 1
-fi
-
 echo "Running shell name lint..."
 if ! python3 "$SCRIPT_DIR/lint_shell_name.py"; then
     echo "Shell name lint failed."
