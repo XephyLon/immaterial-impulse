@@ -28,7 +28,12 @@ Singleton {
     function pin(itemId) {
         var pins = Config.options.tray.pinnedItems;
         if (pins.includes(itemId)) return;
-        Config.options.tray.pinnedItems.push(itemId);
+        // Assign a new array rather than push into the existing one: a QML list
+        // property notifies on assignment, and an in-place push emits nothing,
+        // so anything bound to pinnedItems would not see the pin until some
+        // unrelated change forced a re-evaluation. `unpin` below already does
+        // this correctly - the asymmetry was the bug.
+        Config.options.tray.pinnedItems = pins.concat([itemId]);
     }
     function unpin(itemId) {
         Config.options.tray.pinnedItems = Config.options.tray.pinnedItems.filter(id => id !== itemId);
