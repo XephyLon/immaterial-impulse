@@ -85,9 +85,49 @@ Singleton {
         return Qt.formatDateTime(messageTime, "MMMM dd");
     }
 
+    // One level of HTML entity decoding, in a single left-to-right pass.
+    //
+    // The single pass is the point, and `&amp;quot;` is why: scanning left to
+    // right, `&amp;` matches first and becomes `&`, and the trailing `quot;`
+    // is left alone because the scan resumes past it - so the result is
+    // `&quot;`, one level decoded rather than two. Decoding `&amp;` in a
+    // separate later pass would turn it into `"` and silently eat a level of
+    // escaping the sender meant to keep.
+    function decodeHtmlEntitiesOnce(text) {
+        const named = {
+            "lt": "<", "gt": ">", "amp": "&",
+            "quot": "\"", "apos": "'", "#39": "'"
+        };
+        return text.replace(/&(lt|gt|amp|quot|apos|#39);/g, (match, entity) => named[entity]);
+    }
+
+    // KDE Connect relays a phone notification's text verbatim and runs it
+    // through Qt's toHtmlEscaped() on the way out. When the Android app put
+    // markup in that text - Teams does, and it is what makes the sender's name
+    // bold and puts the message on its own line - the escaping arrives here as
+    // literal `<b>` and `<br/>` on screen.
+    //
+    // Captured off the bus to be sure, rather than inferred:
+    //   Bilal, Haya, and Nesma: &lt;b&gt;Haya Ezzat&lt;/b&gt;&lt;br/&gt;&amp;quot;companyId&amp;quot;: 146,
+    // The tags are escaped once and the quotes twice, which is exactly one
+    // toHtmlEscaped() over text that was already HTML - so one decode inverts
+    // it precisely, leaving `<b>`/`<br/>` as markup and `&quot;` as the quote
+    // character the phone intended.
+    //
+    // Scoped to this sender on purpose. Every other app is expected to escape
+    // the parts of its body that are *not* markup, exactly as the spec asks
+    // given we advertise body-markup - decoding those would corrupt them, and
+    // the renderer already handles them correctly.
+    function isDoubleEscapingRelay(appName) {
+        return !!appName && appName.replace(/[\s_-]/g, "").toLowerCase().includes("kdeconnect");
+    }
+
     function processNotificationBody(body, appName) {
         let processedBody = body
-        
+
+        if (root.isDoubleEscapingRelay(appName))
+            processedBody = root.decodeHtmlEntitiesOnce(processedBody)
+
         // Clean Chromium-based browsers notifications - remove first line
         if (appName) {
             const lowerApp = appName.toLowerCase()
