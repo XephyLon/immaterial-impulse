@@ -21,7 +21,9 @@ pause
 if [[ -d /usr/share/sddm/themes/ii-sddm-theme ]]; then
   printf "${STY_CYAN}Undo install step 5 (ii-sddm-theme SDDM login theme)...\n${STY_RST}"
   if command -v curl >/dev/null; then
-    _sddm_ref="${SDDM_REF:-05add894bd337c80c10f8c660e24db9ed4258a65}"
+    # Must match SDDM_REF in sdata/subcmd-install/5.sddm-theme.sh -
+    # tests/test_sddm_theme_source.py pins that they agree.
+    _sddm_ref="${SDDM_REF:-2736aadbb6ed77a2402bd99dc1b57e480ba3038a}"
     _sddm_un="$(mktemp --suffix=-ii-sddm-uninstall.sh)"
     if curl -fsSL "https://raw.githubusercontent.com/XephyLon/imi-sddm-theme/${_sddm_ref}/uninstall.sh" -o "$_sddm_un"; then
       bash "$_sddm_un" || printf "${STY_YELLOW}ii-sddm-theme uninstaller exited non-zero; remove it manually if needed.${STY_RST}\n"

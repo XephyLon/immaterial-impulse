@@ -27,6 +27,7 @@ while not (ROOT / "sdata").exists():
     ROOT = ROOT.parent
 
 INSTALLER = ROOT / "sdata/subcmd-install/5.sddm-theme.sh"
+UNINSTALLER = ROOT / "sdata/subcmd-uninstall/0.run.sh"
 FORK = "XephyLon/imi-sddm-theme"
 UPSTREAM = "3d3f/ii-sddm-theme"
 
@@ -51,9 +52,25 @@ class SddmThemeSourceTest(unittest.TestCase):
     def test_the_pin_is_a_full_commit_sha(self):
         """A branch name here would make installs unreproducible and would let
         the theme change under a pinned release."""
+        self.assertRegex(self.installer_ref(), r"^[0-9a-f]{40}$")
+
+    def test_the_uninstaller_is_pinned_to_the_same_commit(self):
+        """The uninstaller fetches the theme's uninstall.sh at its own pinned
+        ref, and it drifted: bumping the installer left it fetching the old
+        commit while its comment still claimed the two matched. A mismatched
+        uninstaller runs against a theme layout it was not written for."""
+        self.assertEqual(self.uninstaller_ref(), self.installer_ref())
+
+    def installer_ref(self):
         match = re.search(r'^SDDM_REF="\$\{SDDM_REF:-([^}"]+)\}"', self.text, re.M)
         self.assertIsNotNone(match, "SDDM_REF is not set in the expected form")
-        self.assertRegex(match.group(1), r"^[0-9a-f]{40}$")
+        return match.group(1)
+
+    def uninstaller_ref(self):
+        match = re.search(r'_sddm_ref="\$\{SDDM_REF:-([^}"]+)\}"',
+                          UNINSTALLER.read_text())
+        self.assertIsNotNone(match, "_sddm_ref is not set in the expected form")
+        return match.group(1)
 
 
 if __name__ == "__main__":
