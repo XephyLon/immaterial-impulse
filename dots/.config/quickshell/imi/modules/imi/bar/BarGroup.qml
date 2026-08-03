@@ -34,10 +34,13 @@ Item {
         id: background
         anchors {
             fill: parent
-            topMargin: root.vertical ? 0 : Appearance.sizes.barPillMargin
-            bottomMargin: root.vertical ? 0 : Appearance.sizes.barPillMargin
-            leftMargin: root.vertical ? Appearance.sizes.barPillMargin : 0
-            rightMargin: root.vertical ? Appearance.sizes.barPillMargin : 0
+            topMargin: root.vertical ? 0 : Appearance.sizes.barMarginTop
+            bottomMargin: root.vertical ? 0 : Appearance.sizes.barMarginBottom
+            // Rotated: for a vertical bar the screen edge is the left side, so
+            // the edge/window margins map onto left/right the same way top and
+            // bottom do horizontally.
+            leftMargin: root.vertical ? Appearance.sizes.barMarginTop : 0
+            rightMargin: root.vertical ? Appearance.sizes.barMarginBottom : 0
         }
         color: (root.isMaterial && !root.paintMaterialPill)
             ? "transparent"

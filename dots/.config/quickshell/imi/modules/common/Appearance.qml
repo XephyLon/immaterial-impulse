@@ -494,7 +494,22 @@ Singleton {
         // barPillMargin top and bottom, giving barPillHeight. Shared by BarGroup
         // and the standalone widget pills (Timer, Privacy) so they line up.
         property real barPillMargin: root.spacing.space50
-        property real barPillHeight: baseBarHeight - root.sizes.barPillMargin * 2
+        // The bar's body sits between these two, and all four styles derive from
+        // them so the gaps stay consistent:
+        //
+        //   Hug (0) is flush against the monitor edge, so it has no top margin.
+        //   Float (1), Islands (2) and M3 (3) are detached from the edge and
+        //   share one. All four share the bottom margin - the gap between the
+        //   bar and the windows below it (or beside it, when vertical).
+        //
+        // Open-coding these per style is what let them drift apart, so nothing
+        // below should reintroduce a style-specific margin of its own.
+        property real barMarginTop: Config?.options.bar.cornerStyle === 0
+            ? 0 : root.sizes.barPillMargin
+        property real barMarginBottom: root.sizes.barPillMargin
+        // Follows from the two margins rather than assuming a symmetric inset,
+        // so Hug's body reclaims the space its missing top margin frees.
+        property real barPillHeight: baseBarHeight - root.sizes.barMarginTop - root.sizes.barMarginBottom
         // Standalone widget pills (Timer, Privacy) read as compact dynamic-island
         // badges: a touch shorter than the full group pill.
         property real barStandalonePillHeight: root.sizes.barPillHeight - root.sizes.barPillMargin
