@@ -25,8 +25,14 @@
 # installer at a pinned commit and hand off — so the SDDM theme stays a thin,
 # opt-in bolt-on rather than code we carry and have to maintain.
 #
-# The pin covers the *installer logic*; the theme content it clones tracks the
-# upstream repo's default branch (its setup.sh re-clones the theme itself).
+# The pin covers the *installer logic*. The theme content is a separate clone
+# the fetched setup.sh performs itself, from the THEME_REPO baked into it — so
+# what lands in /usr/share/sddm/themes is decided by that variable, not by this
+# URL. Pointing this file at the fork while the fork's setup.sh still cloned
+# 3d3f/ii-sddm-theme installed upstream's theme verbatim, silently undoing
+# every fork change to the theme (the immaterial-impulse config path, the
+# Wallpaper Engine resolution) on each install. Fixed in the fork at 81353f6.
+# If the login theme ever looks like upstream's again, check THEME_REPO first.
 #
 # Arch-only: the theme's setup.sh uses pacman. Skipped elsewhere.
 set -euo pipefail
@@ -45,7 +51,7 @@ fi
 
 SDDM_REPO_RAW="${SDDM_REPO_RAW:-https://raw.githubusercontent.com/XephyLon/imi-sddm-theme}"
 # Pin the installer for reproducibility. Bump this to adopt a newer ii-sddm-theme.
-SDDM_REF="${SDDM_REF:-05add894bd337c80c10f8c660e24db9ed4258a65}"
+SDDM_REF="${SDDM_REF:-2736aadbb6ed77a2402bd99dc1b57e480ba3038a}"
 SETUP_URL="${SDDM_REPO_RAW}/${SDDM_REF}/setup.sh"
 
 echo "[ImI] SDDM theme: fetching ii-sddm-theme installer (${SDDM_REF:0:12})..."
