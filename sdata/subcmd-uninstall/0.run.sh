@@ -16,19 +16,21 @@ pause
 # Undo the optional Immaterial Impulse extras (install steps 5 and 4) first,
 # in reverse install order, before reverting the core config/deps below.
 
-# Step 5: the ii-sddm-theme SDDM login theme (if present). Hand off to the
-# theme's own uninstaller, pinned to the same commit our installer used.
-if [[ -d /usr/share/sddm/themes/ii-sddm-theme ]]; then
-  printf "${STY_CYAN}Undo install step 5 (ii-sddm-theme SDDM login theme)...\n${STY_RST}"
+# Step 5: the imi-sddm-theme SDDM login theme (if present). Hand off to the
+# theme's own uninstaller, pinned to the same commit our installer used - it
+# removes both the current and the pre-rename name. Detect either, since an
+# install that predates the rename has not been migrated yet.
+if [[ -d /usr/share/sddm/themes/imi-sddm-theme || -d /usr/share/sddm/themes/ii-sddm-theme ]]; then
+  printf "${STY_CYAN}Undo install step 5 (imi-sddm-theme SDDM login theme)...\n${STY_RST}"
   if command -v curl >/dev/null; then
     # Must match SDDM_REF in sdata/subcmd-install/5.sddm-theme.sh -
     # tests/test_sddm_theme_source.py pins that they agree.
-    _sddm_ref="${SDDM_REF:-2736aadbb6ed77a2402bd99dc1b57e480ba3038a}"
+    _sddm_ref="${SDDM_REF:-becaa770b7fe5d1435fd16ca2f826d3f66c903f8}"
     _sddm_un="$(mktemp --suffix=-ii-sddm-uninstall.sh)"
     if curl -fsSL "https://raw.githubusercontent.com/XephyLon/imi-sddm-theme/${_sddm_ref}/uninstall.sh" -o "$_sddm_un"; then
-      bash "$_sddm_un" || printf "${STY_YELLOW}ii-sddm-theme uninstaller exited non-zero; remove it manually if needed.${STY_RST}\n"
+      bash "$_sddm_un" || printf "${STY_YELLOW}imi-sddm-theme uninstaller exited non-zero; remove it manually if needed.${STY_RST}\n"
     else
-      printf "${STY_YELLOW}Could not fetch the ii-sddm-theme uninstaller. Remove manually: /usr/share/sddm/themes/ii-sddm-theme, /etc/sddm.conf.d/ii-sddm-theme.conf, ~/.config/ii-sddm-theme, its /etc/sudoers.d rule and its fonts.${STY_RST}\n"
+      printf "${STY_YELLOW}Could not fetch the imi-sddm-theme uninstaller. Remove manually: /usr/share/sddm/themes/{imi,ii}-sddm-theme, /etc/sddm.conf.d/{imi,ii}-sddm-theme.conf, ~/.config/{imi,ii}-sddm-theme, its /etc/sudoers.d rule and its fonts.${STY_RST}\n"
     fi
     rm -f "$_sddm_un"
   else

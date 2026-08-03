@@ -15,18 +15,29 @@
 # rather than assuming: generate_settings.py is only present for the
 # ii+matugen mode, which additionally syncs the shell's own settings.
 restore_sddm_matugen_hook(){
-  local theme_dir="${XDG_CONFIG_HOME}/ii-sddm-theme"
   local matugen_conf="${XDG_CONFIG_HOME}/matugen/config.toml"
-  local apply="${theme_dir}/sddm-theme-apply.sh"
 
-  [[ -f "$apply" && -f "$matugen_conf" ]] || return 0
+  # The theme installs as imi-sddm-theme; installs from before that rename are
+  # still under ii-sddm-theme until the theme's own installer migrates them, so
+  # restore the hook for whichever is actually there. Preferring the new name
+  # matters: during a migrating update both directories exist for a moment, and
+  # pointing the hook at the one about to be deleted would break it again.
+  local theme_name theme_dir=""
+  for theme_name in imi-sddm-theme ii-sddm-theme; do
+    if [[ -f "${XDG_CONFIG_HOME}/${theme_name}/sddm-theme-apply.sh" ]]; then
+      theme_dir="${XDG_CONFIG_HOME}/${theme_name}"
+      break
+    fi
+  done
+
+  [[ -n "$theme_dir" && -f "$matugen_conf" ]] || return 0
   grep -q '^post_hook' "$matugen_conf" && return 0
 
   local hook
   if [[ -f "${theme_dir}/generate_settings.py" ]]; then
-    hook="python3 ~/.config/ii-sddm-theme/generate_settings.py && sudo ~/.config/ii-sddm-theme/sddm-theme-apply.sh &"
+    hook="python3 ~/.config/${theme_name}/generate_settings.py && sudo ~/.config/${theme_name}/sddm-theme-apply.sh &"
   else
-    hook="sudo ~/.config/ii-sddm-theme/sddm-theme-apply.sh &"
+    hook="sudo ~/.config/${theme_name}/sddm-theme-apply.sh &"
   fi
 
   # Belongs under [config]; matugen reads it from there.

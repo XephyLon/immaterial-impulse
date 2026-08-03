@@ -48,7 +48,10 @@ cancelled(){
 we_state=OFF
 [[ -f "$HOME/.cache/immaterial-impulse/we-installed-ref" || -x /usr/local/bin/quickshell ]] && we_state=ON
 sddm_state=OFF
-[[ -d /usr/share/sddm/themes/ii-sddm-theme ]] && sddm_state=ON
+# Either name: pre-rename installs are still under ii-sddm-theme until the
+# theme's own installer migrates them, and they must still pre-select so the
+# update reaches them.
+[[ -d /usr/share/sddm/themes/imi-sddm-theme || -d /usr/share/sddm/themes/ii-sddm-theme ]] && sddm_state=ON
 plymouth_state=OFF
 [[ -d /usr/share/plymouth/themes/immaterial-impulse ]] && plymouth_state=ON
 
