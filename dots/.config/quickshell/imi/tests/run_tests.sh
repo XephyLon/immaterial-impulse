@@ -274,6 +274,15 @@ if ! python3 "$SCRIPT_DIR/test_kboptions_migration_runtime.py"; then
     exit 1
 fi
 
+# The hook is a path into the theme's directory, and that directory was
+# renamed - a wrong path here means the login screen silently stops following
+# the wallpaper.
+echo "Running SDDM matugen hook restore tests..."
+if ! python3 "$SCRIPT_DIR/test_sddm_matugen_hook_restore.py"; then
+    echo "SDDM matugen hook restore tests failed."
+    exit 1
+fi
+
 echo "Running SDDM theme source tests..."
 if ! python3 "$SCRIPT_DIR/test_sddm_theme_source.py"; then
     echo "SDDM theme source tests failed."
