@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+#
+# Maintainer status check across the three repos that make up Immaterial Impulse.
+#
+# immaterial-impulse is the hub; qs-wallpaperengine and imi-sddm-theme are
+# satellites it pins by ref. Every cross-repo failure this project has hit came
+# from that pinning, and each one was silent:
+#
+#   - a WE fix sat six commits past the pin for four days, shipping to nobody,
+#     until it surfaced as a user-visible wallpaper freeze;
+#   - the installer and uninstaller pinned different SDDM theme commits while a
+#     comment asserted they matched;
+#   - the qs-wallpaperengine v0.1.0 release built for 34 minutes and then failed
+#     to publish, so the installer's prebuilt path had nothing to fetch and every
+#     install quietly fell back to a source compile.
+#
+# None of those are visible from inside one repo. This prints the joins:
+# pin vs satellite HEAD, pin vs published release, and what is actually
+# installed vs what the pin asks for.
+#
+# Read-only. Network calls go through `gh`; without it, or offline, the local
+# sections still work and the remote ones say so.
+set -uo pipefail
+
+HUB="${HUB:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+WE_DIR="${WE_DIR:-$HOME/dev/qs-wallpaperengine}"
+SDDM_DIR="${SDDM_DIR:-$HOME/dev/imi-sddm-theme}"
+
+WE_SLUG="XephyLon/qs-wallpaperengine"
+SDDM_SLUG="XephyLon/imi-sddm-theme"
+HUB_SLUG="XephyLon/immaterial-impulse"
+
+WE_INSTALLER="$HUB/sdata/subcmd-install/4.wallpaperengine.sh"
+SDDM_INSTALLER="$HUB/sdata/subcmd-install/5.sddm-theme.sh"
+SDDM_UNINSTALLER="$HUB/sdata/subcmd-uninstall/0.run.sh"
+WE_STAMP="$HOME/.cache/immaterial-impulse/we-installed-ref"
+
+if [[ -t 1 ]]; then
+  B=$'\e[1m'; DIM=$'\e[2m'; R=$'\e[31m'; Y=$'\e[33m'; G=$'\e[32m'; N=$'\e[0m'
+else
+  B=""; DIM=""; R=""; Y=""; G=""; N=""
+fi
+ok()   { printf '  %s✓%s %s\n'  "$G" "$N" "$1"; }
+warn() { printf '  %s⚠%s %s\n'  "$Y" "$N" "$1"; }
+bad()  { printf '  %s✗%s %s\n'  "$R" "$N" "$1"; }
+head_() { printf '\n%s%s%s\n' "$B" "$1" "$N"; }
+
+have_gh() { command -v gh >/dev/null 2>&1; }
+
+# Extract a pin's value from a shell assignment like FOO="${FOO:-value}".
+pin_of() { # $1=file $2=varname
+  [[ -r "$1" ]] || return 1
+  sed -n "s/^[[:space:]]*$2=\"\${$2:-\([^}\"]*\)}\".*/\1/p" "$1" | head -1
+}
+
+# ---------------------------------------------------------------- repo state
+repo_state() { # $1=label $2=dir $3=slug
+  local label="$1" dir="$2" slug="$3"
+  head_ "$label"
+  if [[ ! -d "$dir/.git" ]]; then
+    bad "not a git repo at $dir"
+    return
+  fi
+  local branch head dirty tag dist
+  branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+  head=$(git -C "$dir" rev-parse --short HEAD 2>/dev/null)
+  dirty=$(git -C "$dir" status --porcelain 2>/dev/null | wc -l)
+  printf '  %-22s %s (%s)\n' "branch/HEAD" "${branch:-detached}" "$head"
+
+  if (( dirty > 0 )); then
+    warn "$dirty uncommitted change(s) — a tag cut now would not match the tree"
+  fi
+
+  # ahead/behind the tracking branch
+  local ab
+  if ab=$(git -C "$dir" rev-list --left-right --count '@{u}...HEAD' 2>/dev/null); then
+    local behind ahead; behind=${ab%%	*}; ahead=${ab##*	}
+    if (( ahead > 0 || behind > 0 )); then
+      warn "local is ${ahead} ahead / ${behind} behind its remote"
+    else
+      ok "in sync with remote"
+    fi
+  else
+    warn "no upstream tracking branch"
+  fi
+
+  # latest tag, and how far HEAD has drifted past it
+  tag=$(git -C "$dir" tag --sort=-v:refname 2>/dev/null | head -1)
+  if [[ -z "$tag" ]]; then
+    warn "no tags — this repo can only be pinned by SHA, which goes stale silently"
+  else
+    dist=$(git -C "$dir" rev-list --count "$tag..HEAD" 2>/dev/null)
+    if (( dist > 0 )); then
+      warn "latest tag $tag is $dist commit(s) behind HEAD — unreleased work"
+    else
+      ok "latest tag $tag is HEAD"
+    fi
+  fi
+
+  have_gh || return
+  local run
+  run=$(gh -R "$slug" run list --limit 1 --json conclusion,status,displayTitle 2>/dev/null \
+        | python3 -c '
+import json, sys
+try:
+    r = json.load(sys.stdin)
+except Exception:
+    r = []
+if r:
+    x = r[0]
+    state = x.get("conclusion") or x.get("status") or "?"
+    title = (x.get("displayTitle") or "")[:48]
+    print(state + "\t" + title)
+' 2>/dev/null)
+  if [[ -n "$run" ]]; then
+    local concl title; concl=${run%%	*}; title=${run##*	}
+    case "$concl" in
+      success)   ok   "last CI: success ($title)" ;;
+      failure)   bad  "last CI: FAILURE ($title)" ;;
+      *)         warn "last CI: $concl ($title)" ;;
+    esac
+  fi
+
+  local counts
+  counts=$(gh -R "$slug" issue list --state open --limit 100 --json number 2>/dev/null | python3 -c 'import json,sys
+try: print(len(json.load(sys.stdin)))
+except Exception: print("?")' 2>/dev/null)
+  local prs
+  prs=$(gh -R "$slug" pr list --state open --limit 100 --json isDraft 2>/dev/null | python3 -c 'import json,sys
+try:
+    p=json.load(sys.stdin); d=sum(1 for x in p if x["isDraft"])
+    print(f"{len(p)} open ({d} draft)")
+except Exception: print("?")' 2>/dev/null)
+  printf '  %-22s %s open issue(s), %s PR(s)\n' "tracker" "${counts:-?}" "${prs:-?}"
+}
+
+# ------------------------------------------------------------------ the pins
+pin_status() { # $1=label $2=pin $3=satellite dir $4=slug
+  local label="$1" pin="$2" dir="$3" slug="$4"
+  if [[ -z "$pin" ]]; then
+    bad "$label: could not read the pin"
+    return
+  fi
+  printf '  %-22s %s\n' "$label" "$pin"
+  [[ -d "$dir/.git" ]] || { warn "  no local clone at $dir — cannot compare"; return; }
+
+  # Resolve the pin to a commit. A tag that does not exist locally is the
+  # interesting failure: it means the pin points at something unfetched.
+  local pin_sha
+  if ! pin_sha=$(git -C "$dir" rev-parse --verify --quiet "${pin}^{commit}"); then
+    bad "  pin does not resolve in $dir — fetch, or the pin is wrong"
+    return
+  fi
+
+  local default_head behind
+  default_head=$(git -C "$dir" rev-parse --verify --quiet origin/HEAD 2>/dev/null) \
+    || default_head=$(git -C "$dir" rev-parse --verify --quiet origin/main 2>/dev/null)
+  if [[ -n "$default_head" ]]; then
+    behind=$(git -C "$dir" rev-list --count "$pin_sha..$default_head" 2>/dev/null)
+    if (( behind > 0 )); then
+      warn "  pin is $behind commit(s) behind the satellite's default branch"
+    else
+      ok "  pin is current with the satellite's default branch"
+    fi
+  fi
+
+  # If the pin looks like a release tag, confirm the release actually has assets.
+  # v0.1.0 is why this check exists: tagged, built, never published.
+  if have_gh && [[ "$pin" =~ ^v[0-9] ]]; then
+    local assets
+    assets=$(gh -R "$slug" release view "$pin" --json assets 2>/dev/null | python3 -c 'import json,sys
+try: print(len(json.load(sys.stdin)["assets"]))
+except Exception: print(-1)' 2>/dev/null)
+    if [[ "$assets" == "-1" ]]; then
+      bad "  no published release for $pin — installs silently fall back to a source build"
+    elif [[ "$assets" == "0" ]]; then
+      bad "  release $pin exists but has no assets — prebuilt path cannot work"
+    else
+      ok "  release $pin published with $assets asset(s) — prebuilt path live"
+    fi
+  fi
+}
+
+# ---------------------------------------------------------------------- main
+printf '%sImmaterial Impulse — cross-repo status%s\n' "$B" "$N"
+printf '%shub: %s%s\n' "$DIM" "$HUB" "$N"
+have_gh || printf '%s(gh not found — remote sections skipped)%s\n' "$DIM" "$N"
+
+repo_state "immaterial-impulse (hub)" "$HUB"      "$HUB_SLUG"
+repo_state "qs-wallpaperengine"       "$WE_DIR"   "$WE_SLUG"
+repo_state "imi-sddm-theme"           "$SDDM_DIR" "$SDDM_SLUG"
+
+head_ "Pins (hub -> satellites)"
+WE_REF=$(pin_of "$WE_INSTALLER" WE_REF)
+SDDM_REF=$(pin_of "$SDDM_INSTALLER" SDDM_REF)
+pin_status "WE_REF"   "$WE_REF"   "$WE_DIR"   "$WE_SLUG"
+pin_status "SDDM_REF" "$SDDM_REF" "$SDDM_DIR" "$SDDM_SLUG"
+
+# The installer and uninstaller each carry their own copy of the SDDM ref, and
+# they have silently disagreed before while a comment claimed otherwise.
+SDDM_REF_UNINSTALL=$(sed -n 's/.*SDDM_REF:-\([0-9a-f]\{7,\}\)}.*/\1/p' "$SDDM_UNINSTALLER" 2>/dev/null | head -1)
+if [[ -n "$SDDM_REF_UNINSTALL" ]]; then
+  if [[ "$SDDM_REF_UNINSTALL" == "$SDDM_REF" ]]; then
+    ok "installer and uninstaller agree on the SDDM ref"
+  else
+    bad "installer ($SDDM_REF) and uninstaller ($SDDM_REF_UNINSTALL) pin DIFFERENT SDDM refs"
+  fi
+fi
+
+head_ "Installed vs pinned (this machine)"
+if [[ -r "$WE_STAMP" ]]; then
+  stamp=$(awk '{print $1}' "$WE_STAMP")
+  printf '  %-22s %s\n' "we-installed-ref" "$stamp"
+  if [[ "$stamp" == "$WE_REF" ]]; then
+    ok "installed build matches the pin"
+  else
+    warn "installed build is '$stamp' but the pin asks for '$WE_REF' — Update Dots will reinstall"
+  fi
+else
+  warn "no WE install stamp — Wallpaper Engine has not been installed here"
+fi
+
+printf '\n'
