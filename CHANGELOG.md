@@ -13,6 +13,18 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **The wallpaper stops strobing around fullscreen windows.** Two separate
+  defects, both in the "hide the wallpaper under a fullscreen window" test.
+  First, the test was a binding over `Hyprland.workspaces`' `active` flag, which
+  does not re-evaluate when the active workspace changes — so switching away
+  from a workspace holding a fullscreen window left the wallpaper (and the
+  screen corners) hidden, a black desktop. It now reads a per-monitor fullscreen
+  map polled from `hyprctl`, refreshed on every Hyprland event. Second, hiding
+  the wallpaper unmaps its layer surface outright, and bringing it back costs a
+  black gap plus a Wallpaper Engine thread rebuild, so a window blipping through
+  fullscreen strobed the whole desktop. Hiding now waits for fullscreen to
+  settle; un-hiding stays immediate. Six fullscreen toggles in 1.2s used to
+  produce three unmap/remap cycles and three renderer rebuilds — now zero.
 - **The M3 bar is blurred again.** Nothing on it was — not the gaps, not the
   pills. `Bar.qml` scopes the compositor blur through a `WindowBlurRegion`, and
   that region listed only the full-width background strip and the non-M3 centre
