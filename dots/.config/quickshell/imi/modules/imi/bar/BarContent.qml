@@ -33,6 +33,16 @@ Item {
     readonly property Item centerPillItem: centerPill
     readonly property bool centerPillPainted: centerPill.visible
 
+    // M3 paints no full-width strip - it draws three rounded wrappers instead,
+    // and those are the only painted shapes on the bar. They were never handed
+    // to the blur region, so an M3 bar declared an empty region and the
+    // compositor frosted nothing at all, pills included. Exposed here so the
+    // region can cover exactly them and leave the gaps between them clear.
+    readonly property Item leftMaterialPillItem: leftMaterialPill
+    readonly property Item centerMaterialPillItem: centerMaterialPill
+    readonly property Item rightMaterialPillItem: rightMaterialPill
+    readonly property bool materialPillsPainted: root.isMaterial
+
     function filterLayout(layout) {
         return layout.filter(name => {
             if (name === "sysTray" && !trayHasItems) return false;

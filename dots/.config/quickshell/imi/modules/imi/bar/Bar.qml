@@ -115,6 +115,23 @@ Scope {
                             bottomLeftRadius: barContent.centerPillItem.bottomLeftRadius
                             bottomRightRadius: barContent.centerPillItem.bottomRightRadius
                         }
+                        // The M3 wrappers. Their own radius is `full` (9999),
+                        // which is a "round me completely" sentinel rather than
+                        // a length, so it is resolved to the real pill radius
+                        // here - a region is a plain rounded rect and would
+                        // otherwise be squared off against the painted shape.
+                        Region {
+                            item: barContent.materialPillsPainted ? barContent.leftMaterialPillItem : null
+                            radius: Math.round(barContent.leftMaterialPillItem.height / 2)
+                        }
+                        Region {
+                            item: barContent.materialPillsPainted ? barContent.centerMaterialPillItem : null
+                            radius: Math.round(barContent.centerMaterialPillItem.height / 2)
+                        }
+                        Region {
+                            item: barContent.materialPillsPainted ? barContent.rightMaterialPillItem : null
+                            radius: Math.round(barContent.rightMaterialPillItem.height / 2)
+                        }
                     }
                 }
 
