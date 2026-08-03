@@ -150,9 +150,9 @@ Scope {
             required property var modelData
             property HyprlandMonitor monitor: Hyprland.monitorFor(modelData)
 
-            // Hide when fullscreen. Polled from HyprlandData rather than read off
-            // Hyprland.workspaces - see HyprlandData.fullscreenByMonitorName for
-            // why a binding over `workspace.active` leaves this stuck on.
+            // Hide when fullscreen - true fullscreen only, not maximized. See
+            // HyprlandData.fullscreenByMonitorName for why that distinction needs
+            // the polled data.
             property bool fullscreen: HyprlandData.fullscreenByMonitorName[monitorScope.monitor?.name ?? ""] ?? false
             // A special workspace open on top of the fullscreen window should bring corners back,
             // same reasoning as the bar's layer fix: fullscreen only buries them when nothing else is above it.

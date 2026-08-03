@@ -27,13 +27,14 @@ Singleton {
     // active workspace, keyed by monitor name. Hyprland reports fullscreen as an
     // int: 0 none, 1 maximized, 2 fullscreen, 3 both.
     //
-    // Surfaces that hide themselves under a fullscreen window (the wallpaper,
-    // the screen corners) must read it from here rather than from
-    // Quickshell.Hyprland's workspace objects: a binding over
-    // `workspace.active` does not re-evaluate when the active workspace
-    // changes, so switching away from a workspace holding a fullscreen window
-    // left those surfaces hidden - a black desktop. This map is recomputed off
-    // the polled client/monitor lists, which refresh on every Hyprland event.
+    // Worth the poll because it is the only source that separates the two.
+    // Quickshell exposes `HyprlandWorkspace.hasFullscreen`, but that mirrors
+    // Hyprland's own flag, which is set for maximized windows too; a toplevel's
+    // `wayland.fullscreen` answers a different question again (what the client
+    // asked for, not what the compositor did). Only `hyprctl clients -j`'s
+    // integer distinguishes them, so anything that must react to true fullscreen
+    // and ignore maximized reads it from here. Recomputed off the polled
+    // client/monitor lists, which refresh on every Hyprland event.
     readonly property var fullscreenByMonitorName: {
         const out = ({});
         for (const mon of root.monitors) {

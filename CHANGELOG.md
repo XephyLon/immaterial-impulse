@@ -13,24 +13,26 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
-- **The wallpaper stops strobing around fullscreen windows.** Two separate
-  defects, both in the "hide the wallpaper under a fullscreen window" test.
-  First, the test was a binding over `Hyprland.workspaces`' `active` flag, which
-  does not re-evaluate when the active workspace changes — so switching away
-  from a workspace holding a fullscreen window left the wallpaper (and the
-  screen corners) hidden, a black desktop. It now reads a per-monitor fullscreen
-  map polled from `hyprctl`, refreshed on every Hyprland event. Second — the
-  strobe itself — hiding the wallpaper set `visible: false`, which unmaps the
-  layer surface outright. Each remap tore down and rebuilt the scene graph's GL
-  context, taking the Wallpaper Engine renderer with it, and a rebuild landing
-  mid-transition left the peel shader blending a stale snapshot against a
-  texture that no longer existed: a full-screen 30Hz flash, captured at a mean
-  luminance swinging 61↔99 every single frame. `hideWhenFullscreen` now stops
-  drawing and pauses the renderer — the GPU saving it was for — while leaving
-  the surface mapped, so nothing is ever destroyed; the transition also has a
-  watchdog so it can no longer stick. Twelve workspace flips past a fullscreen
-  window used to mean twelve unmap/remap cycles and twelve renderer rebuilds —
-  now zero of each.
+- **The wallpaper no longer strobes or goes black around fullscreen windows.**
+  `hideWhenFullscreen` hid the wallpaper by setting `visible: false` on its
+  window. Under `WlrLayershell` that does not hide anything — it destroys the
+  `QQuickWindow` outright, since window reuse is forbidden there — so every
+  fullscreen transition tore down the layer surface and brought it back on a new
+  scene-graph GL context, forcing the embedded Wallpaper Engine renderer to
+  rebuild against it. The visible results were a wallpaper that came back black
+  after switching workspaces, and a desktop strobing at 30Hz: a screen recording
+  of it alternates between the wallpaper and a transition shader sampling a
+  texture that no longer exists, mean luminance swinging 61↔99 on every single
+  frame at 60fps. The window now stays mapped and its *contents* are switched
+  off instead, so there is nothing to destroy; the wallpaper resumes animating
+  the moment the fullscreen window is gone. Twelve workspace flips past a
+  fullscreen window used to mean twelve surface teardowns and twelve renderer
+  rebuilds — now zero of each. The switch transition also has a watchdog, so a
+  wallpaper change that stalls settles instead of hanging half-peeled.
+- **Fullscreen and maximized are told apart.** The wallpaper and the screen
+  corners now test true fullscreen only, read from a per-monitor map polled from
+  `hyprctl`. Neither Hyprland's own `hasfullscreen` flag nor a toplevel's
+  `wayland.fullscreen` makes that distinction.
 - **The M3 bar is blurred again.** Nothing on it was — not the gaps, not the
   pills. `Bar.qml` scopes the compositor blur through a `WindowBlurRegion`, and
   that region listed only the full-width background strip and the non-M3 centre
