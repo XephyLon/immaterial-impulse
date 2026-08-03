@@ -360,12 +360,12 @@ Variants {
 
         property real transitionProgress: 1.0
         property int wallpaperTransitionGeneration: 0
-        // Latched when the transition ShaderEffect reports a compile failure (e.g.
-        // a shader using constructs the machine's GL profile rejects - see issue
-        // #70). While set, the plain wallpaper image is revealed instead of the
-        // blank shader output, so an incompatible transition degrades to a snap
-        // rather than erasing the desktop. Reset at the start of each switch so a
-        // one-off bad shader does not disable transitions permanently.
+        // Latched when the transition ShaderEffect fails to load its shader pack
+        // (see the handler below for what that does and does not catch). While
+        // set, the transition is skipped entirely and the switch snaps, rather
+        // than holding a shader that draws nothing over the wallpaper. Reset at
+        // the start of each switch so a one-off bad shader does not disable
+        // transitions permanently.
         property bool transitionShaderBroken: false
 
         screen: modelData
@@ -580,7 +580,15 @@ Variants {
                 asynchronous: true
                 layer.enabled: bgRoot.wallpaperAnimation !== ""
                     && bgRoot.transitionProgress < 1
-                visible: !bgRoot.weShown && (bgRoot.wallpaperAnimation === "" || bgRoot.transitionShaderBroken) && !blurLoader.active && !bgRoot.centeredWallpaperEnabled && !bgRoot.videoRevealed
+                // The plain image is the wallpaper. It is always drawn (a
+                // transition only paints *over* it for the length of the
+                // animation - see transitionEffect), so nothing about the
+                // desktop depends on a shader building successfully. Before,
+                // an enabled animation made the ShaderEffect the sole painter
+                // of the wallpaper forever, and any shader the machine's GL
+                // profile could not build left the desktop empty until the
+                // next switch (issue #70).
+                visible: !bgRoot.weShown && !blurLoader.active && !bgRoot.centeredWallpaperEnabled && !bgRoot.videoRevealed
                 onStatusChanged: {
                     if (status === Image.Ready && bgRoot.transitionProgress === 0.0) {
                         transitionAnim.restart()
@@ -591,7 +599,14 @@ Variants {
             ShaderEffect {
                 id: transitionEffect
                 anchors.fill: parent
-                visible: !bgRoot.weShown && !blurLoader.active && bgRoot.wallpaperAnimation !== "" && !bgRoot.centeredWallpaperEnabled && !bgRoot.videoRevealed && !bgRoot.transitionShaderBroken
+                // Only while a switch is in flight. Once it settles the plain
+                // image below is already showing exactly what progress 1.0
+                // would draw, so keeping the shader up buys nothing and costs a
+                // full-screen pass every frame - and, because layer.enabled
+                // drops with the same binding, it would sample the images at
+                // their natural size and stretch them to the screen rather than
+                // PreserveAspectCrop.
+                visible: !bgRoot.weShown && !blurLoader.active && bgRoot.wallpaperAnimation !== "" && !bgRoot.centeredWallpaperEnabled && !bgRoot.videoRevealed && !bgRoot.transitionShaderBroken && bgRoot.transitionProgress < 1
                 property var fromImage: previousWallpaper
                 property var toImage: wallpaper
                 property real progress: bgRoot.transitionProgress
@@ -603,10 +618,16 @@ Variants {
                     ? Qt.resolvedUrl(`shaders/${bgRoot.currentShader}.frag.qsb`)
                     : ""
                 onStatusChanged: {
-                    // A shader that will not compile on this machine's GL profile
-                    // renders nothing; without this the desktop would stay blank
-                    // after the switch (issue #70). Settle the transition and let
-                    // the plain wallpaper image take over instead.
+                    // Covers a .qsb that is missing or will not parse. It does
+                    // NOT cover a shader the driver refuses to compile: Qt bakes
+                    // the GLSL ahead of time, so `status` only reports loading
+                    // the pack, while the real compile happens later inside the
+                    // RHI and surfaces as nothing more than a repeating
+                    // "Failed to build graphics pipeline state" warning - status
+                    // stays Compiled and this handler never runs (verified
+                    // against Qt 6.11 by baking a deliberately invalid variant).
+                    // That case is handled structurally instead, by the plain
+                    // image above always being drawn.
                     if (status === ShaderEffect.Error) {
                         console.warn("[Background] wallpaper transition shader '" + bgRoot.currentShader + "' failed to compile, falling back to plain image:", log)
                         bgRoot.transitionShaderBroken = true
