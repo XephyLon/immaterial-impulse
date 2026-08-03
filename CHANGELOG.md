@@ -24,10 +24,13 @@ own repo; the installer pins which revision it builds.
   Measured on a video wallpaper: the WE render thread kept looping at 0.7% CPU
   with 59 of 60 samples parked in `nanosleep` and its h264 decode threads at
   0.0%, against 3.0% and 71.7% when animating; frame-to-frame change over the
-  desktop was exactly 0.0000 against ~7.2. `qs-wallpaperengine` 844711b passes
-  `--no-fullscreen-pause` so the shell keeps sole ownership of that policy, and
-  the installer's pin — six commits short of it — now points there. Existing
-  installs need one *Update Dots* run to rebuild.
+  desktop was exactly 0.0000 against ~7.2. `qs-wallpaperengine` 7e58913 passes
+  `--fullscreen-pause-only-active`, narrowing that count to *activated*
+  toplevels — a window holds activation exactly while it is focused, which is
+  exactly while it covers the wallpaper. So a live wallpaper idles when it is
+  behind a fullscreen window and animates whenever it is on screen, which is
+  what the pause was always meant to mean. The installer pin now points there;
+  existing installs need one *Update Dots* run to rebuild.
 - **The wallpaper no longer strobes or goes black around fullscreen windows.**
   `hideWhenFullscreen` hid the wallpaper by setting `visible: false` on its
   window. Under `WlrLayershell` that does not hide anything — it destroys the

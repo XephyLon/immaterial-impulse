@@ -147,9 +147,15 @@ Variants {
         // at 0.0%, against 3.0% and 71.7% when animating. linux-wallpaperengine
         // pauses itself: `WallpaperApplication::render()` early-returns while
         // its Wayland detector counts any fullscreen toplevel, and pauses mpv
-        // with it. Nothing in QML can reach that. The fix is in the embed's
-        // argv (`--no-fullscreen-pause`, qs-wallpaperengine 844711b), which the
-        // installer now pins - see sdata/subcmd-install/4.wallpaperengine.sh.
+        // with it. Nothing in QML can reach that.
+        //
+        // So idling a live wallpaper is WE's job, not this file's. The embed
+        // passes --fullscreen-pause-only-active (qs-wallpaperengine 7e58913,
+        // pinned in sdata/subcmd-install/4.wallpaperengine.sh), which counts
+        // only *activated* fullscreen toplevels - a window holds activation
+        // exactly while it is focused, which is exactly while it covers the
+        // wallpaper. This file suppresses the drawing; WE pauses the animation.
+        // The two agree on when, by different routes.
         onSuppressContentsChanged: {
             // A switch requested while suppressed could not be applied - the
             // surface only builds a project from updatePaintNode, which does not

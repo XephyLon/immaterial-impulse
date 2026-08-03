@@ -41,7 +41,7 @@ set -euo pipefail
 [[ "${INSTALL_WE:-0}" == "1" ]] || { echo "[ImI] Wallpaper Engine: skipped."; exit 0; }
 
 WE_REPO="${WE_REPO:-https://github.com/XephyLon/qs-wallpaperengine}"
-WE_REF="${WE_REF:-844711b}"                      # working commit pin; NO prebuilt release exists for it, so installs
+WE_REF="${WE_REF:-7e58913}"                      # working commit pin; NO prebuilt release exists for it, so installs
                                                  # fall back to a source build. MUST be >= 40427cf, the commit that added
                                                  # scripts/build-we.sh (source_build() runs it, and eval's its stdout —
                                                  # 71dea54 made that eval-safe); a11e083 additionally carries the
@@ -49,12 +49,13 @@ WE_REF="${WE_REF:-844711b}"                      # working commit pin; NO prebui
                                                  # on parent-dir churn (multi-second QV4 GC freezes per wallpaper switch
                                                  # without it), and 6cb13cd adds the frame-fence glFlush (without it a
                                                  # VIDEO wallpaper throttles the whole shell to the video's frame rate).
-                                                 # 844711b is REQUIRED for a live wallpaper to keep animating while any
-                                                 # window anywhere is fullscreen: it passes --no-fullscreen-pause to the
-                                                 # embedded linux-wallpaperengine, whose own detector otherwise halts the
-                                                 # render loop (and pauses mpv) for ANY fullscreen toplevel, including one
-                                                 # parked on an invisible workspace. The pin sat at fd5715e, six commits
-                                                 # short of it, so every install carried that freeze.
+                                                 # 7e58913 is REQUIRED for a live wallpaper to idle when, and only when,
+                                                 # it is behind a fullscreen window: it passes --fullscreen-pause-only-active
+                                                 # to the embedded linux-wallpaperengine, whose detector otherwise counts
+                                                 # EVERY fullscreen toplevel - output, workspace and visibility are not part
+                                                 # of the test - and halts the render loop (pausing mpv with it) for a game
+                                                 # parked on a workspace the user has left. The pin sat at fd5715e, so every
+                                                 # install carried that freeze.
                                                  # Bump to a release tag (vX.Y.Z) once one is cut to activate the prebuilt
                                                  # fast-path — see qs-wallpaperengine/docs/cutting-a-release.md.
 BUILD_DIR="${BUILD_DIR:-$HOME/.cache/immaterial-impulse/qs-wallpaperengine-build}"
