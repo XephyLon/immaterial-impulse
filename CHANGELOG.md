@@ -12,6 +12,25 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **The M3 bar is blurred again.** Nothing on it was — not the gaps, not the
+  pills. `Bar.qml` scopes the compositor blur through a `WindowBlurRegion`, and
+  that region listed only the full-width background strip and the non-M3 centre
+  pill, both of which resolve to null under M3. So the region was empty and the
+  Hyprland layer rule had nothing to act on, which is what made it look like a
+  compositor problem. M3's three painted wrappers are now handed to the region,
+  so blur covers exactly the shapes that are painted and the gaps stay clear.
+- **The bar styles agree on their margins.** Each style open-coded its own, so
+  they drifted: Hug carried a top margin despite sitting against the monitor
+  edge, and Islands subtracted 6px from its exclusive zone, reserving less than
+  it drew. They now derive from one pair of tokens — Hug has no top margin, the
+  three detached styles share one, and all four share the bottom margin (the gap
+  to the windows below, or beside, when the bar is vertical).
+- **Islands pills have room for their contents.** Islands is the only style
+  where each group *is* the visible shape, with fully-round ends, so the shared
+  4px of padding was mostly eaten by the curve and content sat on the edge —
+  most visible on the weather widget, whose text is essentially the whole pill.
+
 ## [0.14.1] — 2026-08-03
 
 ### Fixed
