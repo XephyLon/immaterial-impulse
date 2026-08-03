@@ -10,7 +10,7 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
-## [Unreleased]
+## [0.14.2] — 2026-08-03
 
 ### Fixed
 - **A live wallpaper keeps animating while a fullscreen window sits on another
