@@ -62,11 +62,24 @@ class BackgroundSuppressionTests(unittest.TestCase):
         self.assertIn("hideWhenFullscreen", body,
                       "Suppression must remain opt-out via the config option.")
 
-    def test_renderer_resumes_when_suppression_lifts(self):
-        """A live wallpaper has to start animating again on the way back."""
-        self.assertIn("live = !bgRoot.suppressContents", self.background,
-                      "The WE surface's repaint timer must follow suppression "
-                      "in both directions, or the wallpaper comes back frozen.")
+    def test_suppression_never_clears_the_wallpaper_renderer(self):
+        """Suppression stops at not drawing; it does not touch `live`.
+
+        `live` only gates the surface's repaint timer, and `updatePaintNode` -
+        which the timer drives - is the one place the surface re-shares against
+        a recreated GL context and the one place a project switch queued while
+        suppressed gets applied. Stopping the timer on an item that is already
+        not drawn buys nothing and can strand both.
+
+        (`live` is not what froze video wallpapers behind a fullscreen window on
+        another workspace. That is linux-wallpaperengine's own fullscreen pause,
+        fixed in the embed's argv - see the comment in Background.qml.)
+        """
+        self.assertNotRegex(
+            self.background, r"\.live\s*=",
+            "Background assigns the WE surface's `live`. Suppression must only "
+            "stop drawing, or a queued project switch and the GL-context "
+            "recovery both lose the repaint that would apply them.")
 
     def test_unsuppress_is_immediate_and_only_hiding_is_debounced(self):
         """Delaying the wallpaper's return would read as a black flash."""

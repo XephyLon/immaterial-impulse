@@ -130,16 +130,27 @@ Variants {
             interval: 400
             onTriggered: bgRoot.suppressedForFullscreen = bgRoot.monitorHasFullscreen
         }
-        // `live` drives the surface's repaint timer, which is what advances the
-        // wallpaper: with it off the item stops asking for new frames, and with
-        // it back on the animation picks up again. (It does not stop the WE
-        // render thread itself - that keeps running - so this is not a GPU
-        // saving, it is what makes suppress/resume symmetrical.) Assigned rather
-        // than bound because the layer is loaded by URL and may not exist at all
-        // on a stock Quickshell binary.
+        // Deliberately does NOT touch the WE surface's `live`. All `live` gates
+        // is the surface's own repaint timer - whether Qt asks it for another
+        // frame - so clearing it on an item that is already not being drawn buys
+        // nothing, and it costs: `updatePaintNode` is the only place the surface
+        // re-shares against a recreated GL context and the only place a queued
+        // project switch is applied, and a stopped timer never gets there.
+        // Not drawing the contents is the whole of the suppression.
+        //
+        // `live` is also NOT why a video wallpaper could come back frozen. That
+        // was measured to the wrong conclusion once, so: with suppression
+        // disabled outright, a video wallpaper still stopped dead whenever ANY
+        // window anywhere was fullscreen - including one parked on a workspace
+        // that was never on screen. The WE render thread kept looping (0.7% CPU,
+        // 59/60 samples parked in nanosleep) while its h264 decode threads sat
+        // at 0.0%, against 3.0% and 71.7% when animating. linux-wallpaperengine
+        // pauses itself: `WallpaperApplication::render()` early-returns while
+        // its Wayland detector counts any fullscreen toplevel, and pauses mpv
+        // with it. Nothing in QML can reach that. The fix is in the embed's
+        // argv (`--no-fullscreen-pause`, qs-wallpaperengine 844711b), which the
+        // installer now pins - see sdata/subcmd-install/4.wallpaperengine.sh.
         onSuppressContentsChanged: {
-            if (weLoader.item)
-                weLoader.item.live = !bgRoot.suppressContents;
             // A switch requested while suppressed could not be applied - the
             // surface only builds a project from updatePaintNode, which does not
             // run for an item that is not being drawn. Apply it now.
@@ -489,7 +500,6 @@ Variants {
                 onLoaded: if (item) {
                     bgRoot.weLoadedProject = bgRoot.weProjectPath
                     item.projectPath = bgRoot.weProjectPath
-                    item.live = !bgRoot.suppressContents
                 }
                 // First rendered frame of a newly-loaded project: kick off the
                 // shader transition against the captured old frame.
