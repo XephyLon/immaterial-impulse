@@ -98,28 +98,41 @@ Variants {
         readonly property bool monitorHasFullscreen:
             HyprlandData.fullscreenByMonitorName[bgRoot.monitor?.name ?? ""] ?? false
 
-        // Hiding the wallpaper unmaps its layer surface entirely, and bringing
-        // it back costs a black gap plus a Wallpaper Engine thread rebuild
-        // (Hyprland's direct scanout orphans the shared GL context). So hide
-        // only once fullscreen has settled, and un-hide the instant it ends:
-        // a window that blips through fullscreen would otherwise strobe the
-        // whole desktop black.
-        property bool hiddenForFullscreen: false
+        // `hideWhenFullscreen` used to set `visible: false` here, which unmaps the
+        // layer surface outright. That is what made this window dangerous: every
+        // remap tore down and rebuilt the scene graph's GL context, the Wallpaper
+        // Engine thread was rebuilt with it, and a rebuild landing mid-transition
+        // left the peel shader sampling a dead texture - a full-screen 30Hz
+        // strobe. Flipping between workspaces with a fullscreen window on one of
+        // them did it reliably.
+        //
+        // So the window now stays mapped and the *contents* are suppressed
+        // instead: nothing is drawn and the WE renderer is paused, which is the
+        // GPU saving the option was for, without ever destroying the surface.
+        // Still debounced - resuming the renderer for a workspace the user is
+        // flipping through is pure churn.
+        property bool suppressedForFullscreen: false
+        readonly property bool suppressContents: bgRoot.suppressedForFullscreen
+            && !GlobalStates.screenLocked && (Config?.options.background.hideWhenFullscreen ?? true)
         onMonitorHasFullscreenChanged: {
             if (bgRoot.monitorHasFullscreen)
-                fullscreenHideDelay.restart();
+                fullscreenSuppressDelay.restart();
             else {
-                fullscreenHideDelay.stop();
-                bgRoot.hiddenForFullscreen = false;
+                fullscreenSuppressDelay.stop();
+                bgRoot.suppressedForFullscreen = false;
             }
         }
         Timer {
-            id: fullscreenHideDelay
+            id: fullscreenSuppressDelay
             interval: 400
-            onTriggered: bgRoot.hiddenForFullscreen = bgRoot.monitorHasFullscreen
+            onTriggered: bgRoot.suppressedForFullscreen = bgRoot.monitorHasFullscreen
         }
-
-        visible: GlobalStates.screenLocked || !bgRoot.hiddenForFullscreen || !Config?.options.background.hideWhenFullscreen
+        // Pause/resume the WE renderer alongside. Assigned rather than bound
+        // because the layer is loaded by URL and may not exist (stock binary).
+        onSuppressContentsChanged: {
+            if (weLoader.item)
+                weLoader.item.live = !bgRoot.suppressContents;
+        }
 
         property HyprlandMonitor monitor: Hyprland.monitorFor(modelData)
 
@@ -241,6 +254,26 @@ Variants {
             duration: Appearance.wallpaperTransitionDuration
             easing.type: Easing.InOutCubic
             onFinished: {
+                bgRoot.weTransitioning = false
+                weOldStill.source = ""
+            }
+        }
+
+        // The transition is started by the surface's first rendered frame. If the
+        // surface is rebuilt before that frame arrives - a GL context change does
+        // exactly this - `rendered` never flips again, the animation never starts,
+        // and the peel shader is left on screen forever blending a stale still
+        // against a texture that is no longer valid. That is what strobes. Nothing
+        // else clears it, so time it out and settle on the live surface.
+        Timer {
+            id: weTransitionWatchdog
+            interval: Appearance.wallpaperTransitionDuration + 2000
+            running: bgRoot.weTransitioning
+            onTriggered: {
+                console.warn("[Background] Wallpaper Engine transition did not finish; settling")
+                weTransitionAnim.stop()
+                weTransitionDelay.stop()
+                bgRoot.weTransitionProgress = 1.0
                 bgRoot.weTransitioning = false
                 weOldStill.source = ""
             }
@@ -397,6 +430,9 @@ Variants {
 
         Item {
             anchors.fill: parent
+            // Everything the background draws hangs off here, so this is what
+            // `hideWhenFullscreen` switches off - see suppressContents above.
+            visible: !bgRoot.suppressContents
 
             // Live Wallpaper Engine layer - bottom of the stack. When active it
             // is the wallpaper; the static-image layers below are hidden. Loaded
@@ -412,6 +448,7 @@ Variants {
                 onLoaded: if (item) {
                     bgRoot.weLoadedProject = bgRoot.weProjectPath
                     item.projectPath = bgRoot.weProjectPath
+                    item.live = !bgRoot.suppressContents
                 }
                 // First rendered frame of a newly-loaded project: kick off the
                 // shader transition against the captured old frame.

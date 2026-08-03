@@ -19,12 +19,18 @@ own repo; the installer pins which revision it builds.
   does not re-evaluate when the active workspace changes — so switching away
   from a workspace holding a fullscreen window left the wallpaper (and the
   screen corners) hidden, a black desktop. It now reads a per-monitor fullscreen
-  map polled from `hyprctl`, refreshed on every Hyprland event. Second, hiding
-  the wallpaper unmaps its layer surface outright, and bringing it back costs a
-  black gap plus a Wallpaper Engine thread rebuild, so a window blipping through
-  fullscreen strobed the whole desktop. Hiding now waits for fullscreen to
-  settle; un-hiding stays immediate. Six fullscreen toggles in 1.2s used to
-  produce three unmap/remap cycles and three renderer rebuilds — now zero.
+  map polled from `hyprctl`, refreshed on every Hyprland event. Second — the
+  strobe itself — hiding the wallpaper set `visible: false`, which unmaps the
+  layer surface outright. Each remap tore down and rebuilt the scene graph's GL
+  context, taking the Wallpaper Engine renderer with it, and a rebuild landing
+  mid-transition left the peel shader blending a stale snapshot against a
+  texture that no longer existed: a full-screen 30Hz flash, captured at a mean
+  luminance swinging 61↔99 every single frame. `hideWhenFullscreen` now stops
+  drawing and pauses the renderer — the GPU saving it was for — while leaving
+  the surface mapped, so nothing is ever destroyed; the transition also has a
+  watchdog so it can no longer stick. Twelve workspace flips past a fullscreen
+  window used to mean twelve unmap/remap cycles and twelve renderer rebuilds —
+  now zero of each.
 - **The M3 bar is blurred again.** Nothing on it was — not the gaps, not the
   pills. `Bar.qml` scopes the compositor blur through a `WindowBlurRegion`, and
   that region listed only the full-width background strip and the non-M3 centre
