@@ -280,6 +280,15 @@ if ! python3 "$SCRIPT_DIR/test_sddm_theme_source.py"; then
     exit 1
 fi
 
+# Renders the real quick toggle panel and performs the layout edits edit mode
+# performs. The failure is invisible in the config and a restart hides it, so
+# it needs a real shell rather than a unit test. See the module docstring.
+echo "Running quick toggle layout runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_quick_toggles_layout_runtime.py"; then
+    echo "Quick toggle layout runtime tests failed."
+    exit 1
+fi
+
 echo "Running keyring migration tests..."
 if ! python3 "$SCRIPT_DIR/test_keyring_migration.py"; then
     echo "Keyring migration tests failed."
