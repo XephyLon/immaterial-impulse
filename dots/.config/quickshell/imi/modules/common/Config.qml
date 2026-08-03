@@ -290,21 +290,51 @@ Singleton {
         obj[keys[keys.length - 1]] = convertedValue;
     }
 
-    // One-time migration (issue #69): older installs seeded
-    // hyprland.input.kbOptions = "grp:win_space_toggle" before the layout
-    // switch became a compositor bind. That xkb option matches Super+Space
-    // loosely, so Super+Alt+Space (window float toggle) also switched the
-    // layout and Super+Space double-toggled. seed_default_config never
-    // overwrites an existing config, so clearing the QML default alone only
-    // helps fresh installs; clear a stale value here so existing configs are
-    // fixed on the next shell start too. The marker persists in the config, so
-    // this runs once and never touches a value the user has since chosen.
-    function migrateStaleKbOptions() {
-        if (root.options.migratedKbOptionsGrpToggle)
-            return;
-        if (root.options.hyprland.input.kbOptions === "grp:win_space_toggle")
+    // Issue #69: older installs seeded hyprland.input.kbOptions =
+    // "grp:win_space_toggle" before the layout switch became a compositor bind
+    // (hypr/hyprland/keybinds.lua). xkb grp: toggles match modifiers loosely,
+    // so leaving it set breaks Super+Space *and* Super+Alt+Space: the former
+    // fires the xkb toggle and the bind, two switches that cancel out, so the
+    // OSD reports a layout change that did not happen; the latter switches the
+    // layout on top of toggling the window float.
+    //
+    // Unconditional, and deliberately not behind a persisted "already
+    // migrated" marker - that is the version that shipped and did not fix
+    // anything. A marker records that the check ran, not that the value was
+    // ever seen, and the two come apart on exactly the installs this targets:
+    // when the config-directory migration declines (see
+    // scripts/migrate-config-dir.sh), Config loads the installer's default,
+    // where kbOptions is already "", the marker is burned against it, and the
+    // user's real config - grp: and all - arrives afterwards, permanently out
+    // of reach. There is nothing to protect with a marker either way, because
+    // "grp:win_space_toggle" is not a value this shell can hold legitimately:
+    // the settings control offers only "" and grp:alt_shift_toggle.
+    function clearStaleKbOptions() {
+        if (root.options.hyprland.input.kbOptions === "grp:win_space_toggle") {
             root.options.hyprland.input.kbOptions = "";
-        root.options.migratedKbOptionsGrpToggle = true;
+            console.log("[Config] cleared a stale hyprland.input.kbOptions = grp:win_space_toggle (issue #69)");
+        }
+
+        // Deliberately outside the check above, because config.json is not what
+        // Hyprland reads. The option reaches the compositor only through the
+        // generated shellOverrides/main.lua, and nothing rewrites that file at
+        // startup - the Hyprland settings page re-applies it from
+        // Component.onCompleted, and that page is an on-demand Loader. So the
+        // two can disagree, and the disagreement is not hypothetical: the
+        // config-only fix that shipped first cleared config.json and left the
+        // lua line untouched, which is exactly the population still broken.
+        // Keying this purge on the config value would skip every one of them.
+        //
+        // --reset-if removes the managed line only while it still holds the
+        // stale value, so running it on every load is safe: it cannot touch a
+        // grp:alt_shift_toggle the user has since chosen, and it does not
+        // rewrite the file - and so does not make Hyprland reload - when there
+        // is nothing to remove.
+        Quickshell.execDetached([
+            "python3", Quickshell.shellPath("scripts/hyprland/hyprconfigurator.py"),
+            "--file", FileUtils.trimFileProtocol(`${Directories.config}/hypr/hyprland/shellOverrides/main.lua`),
+            "--reset-if", "input:kb_options", "grp:win_space_toggle"
+        ]);
     }
 
     // The config directory migration has to have finished before this file is
@@ -371,7 +401,7 @@ Singleton {
             // panel family loads at all.
             root.migrateUpstreamKeys(text());
             root.ready = true;
-            root.migrateStaleKbOptions();
+            root.clearStaleKbOptions();
             root.migrateDesktopWidgetsToPlugins();
             root.migrateDesktopWidgetOptionsToPlugins();
         }
@@ -410,11 +440,6 @@ Singleton {
             // which is already gone for anyone whose directory migration ran
             // before this existed - exactly the users who still need this.
             property bool migratedUpstreamSchema: false
-
-            // One-time migration marker (issue #69): set once a stale
-            // hyprland.input.kbOptions = "grp:win_space_toggle" has been
-            // cleared from this config. See root.migrateStaleKbOptions().
-            property bool migratedKbOptionsGrpToggle: false
 
             property JsonObject plugins: JsonObject {
                 property list<string> enabled: []
