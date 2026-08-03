@@ -14,6 +14,12 @@ Item {
     property alias from: valueProgressBar.from
     property alias to: valueProgressBar.to
 
+    // Same contract as OsdTextIndicator: the painted body plus a radius with the
+    // Appearance.rounding.full sentinel already resolved, so OnScreenDisplay.qml
+    // can build one blur region without caring which indicator type is loaded.
+    readonly property Item backgroundItem: valueIndicator
+    readonly property real backgroundRadius: Math.round(valueIndicator.height / 2)
+
     implicitWidth: Appearance.sizes.osdWidth + 4 * Appearance.sizes.elevationMargin + 80
     implicitHeight: valueIndicator.implicitHeight + 2 * Appearance.sizes.elevationMargin
 

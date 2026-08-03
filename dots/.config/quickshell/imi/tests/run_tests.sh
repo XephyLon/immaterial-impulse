@@ -105,6 +105,14 @@ if ! python3 "$SCRIPT_DIR/lint_plugin_processes.py"; then
     exit 1
 fi
 
+# Static lint: a body-scoped blur region and its `blur = false` layer rule live
+# in two different files, and either half alone renders wrong without erroring.
+echo "Running blur region pairing lint..."
+if ! python3 "$SCRIPT_DIR/lint_blur_region_pairing.py"; then
+    echo "Blur region pairing lint failed."
+    exit 1
+fi
+
 echo "Running expandable panel contract tests..."
 if ! python3 "$SCRIPT_DIR/test_expandable_panel.py"; then
     echo "Expandable panel contract tests failed."

@@ -178,6 +178,23 @@ Scope {
                 item: osdValuesWrapper
             }
 
+            // Blur only the painted indicator body. Every indicator reserves an
+            // elevation margin inside this surface and the text ones draw their
+            // drop shadow into it, which the catch-all whole-surface blur frosted
+            // into a muddy fringe (#89, the deferred half of #82; the caps lock
+            // OSD is the one apollo79 reported). Same treatment as the
+            // bar/sidebars/dock; pairs with rules.lua turning the layerrule
+            // blur off for this namespace. The protection message is left out:
+            // its m3error fill is a flat opaque hex, so a backdrop blur behind
+            // it can never show, and it keeps its row in the column even while
+            // hidden by opacity alone - covering it would be a no-op that only
+            // risks frosting bare wallpaper if that gate were ever wrong.
+            WindowBlurRegion {
+                targetWindow: osdRoot
+                regionItem: osdIndicatorLoader.item?.backgroundItem ?? null
+                regionRadius: osdIndicatorLoader.item?.backgroundRadius ?? 0
+            }
+
             exclusionMode: ExclusionMode.Ignore
             exclusiveZone: 0
             margins {

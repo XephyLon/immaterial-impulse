@@ -46,6 +46,17 @@ Item {
     implicitWidth: monitorW
     implicitHeight: monitorH
 
+    // Counterpart to OverviewWidget's blur-region contract (see WindowBlurRegion
+    // in Overview.qml). This style paints no single body card - it fills the
+    // monitor with workspace rows inside a clipping Flickable, and a blur region
+    // is an unclipped plain rect, so there is nothing here the compositor can be
+    // pointed at without frosting the wallpaper in the gaps. Its rows keep their
+    // translucency, just unblurred, the same trade the bar's corner decorators
+    // and material pills already make.
+    readonly property Item backgroundItem: null
+    readonly property bool backgroundPainted: false
+    readonly property real backgroundRadius: 0
+
     onActiveWorkspaceIdChanged: scrollTimer.restart()
 
     Timer {

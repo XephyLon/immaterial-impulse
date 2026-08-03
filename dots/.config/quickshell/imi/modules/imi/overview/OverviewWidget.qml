@@ -50,6 +50,14 @@ Item {
     implicitWidth: overviewBackground.implicitWidth + Appearance.sizes.elevationMargin * 2
     implicitHeight: overviewBackground.implicitHeight + Appearance.sizes.elevationMargin * 2
 
+    // The painted body, exposed so the overview window can scope its compositor
+    // blur region to it (see WindowBlurRegion in Overview.qml). The overview is
+    // hidden outright while a search is being typed, and a region over a hidden
+    // card would frost bare wallpaper - hence the "painted" flag.
+    readonly property Item backgroundItem: overviewBackground
+    readonly property bool backgroundPainted: root.visible
+    readonly property real backgroundRadius: overviewBackground.radius
+
     property Component windowComponent: OverviewWindow {}
     property list<OverviewWindow> windowWidgets: []
     

@@ -9,6 +9,14 @@ Item {
     required property string name
     required property string value
 
+    // The painted body, exposed so the OSD window can scope its compositor blur
+    // region to it (see WindowBlurRegion in OnScreenDisplay.qml). The radius is
+    // resolved here rather than at the call site because Appearance.rounding.full
+    // is the "round me completely" sentinel (9999) and not a length - a region is
+    // a plain rounded rect and would otherwise be squared off against the pill.
+    readonly property Item backgroundItem: indicator
+    readonly property real backgroundRadius: Math.round(indicator.height / 2)
+
     implicitWidth: Appearance.sizes.osdWidth + 4 * Appearance.sizes.elevationMargin
     implicitHeight: indicator.implicitHeight + 2 * Appearance.sizes.elevationMargin
 
