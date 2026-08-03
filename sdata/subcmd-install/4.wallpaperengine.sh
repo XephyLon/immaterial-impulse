@@ -219,7 +219,7 @@ try_prebuilt(){
   fi
 
   install_wrapper "$qs_bin" "$lib"
-  write_stamp "$WE_REF" "$qs_bin" "$lib_dir"
+  write_stamp "$WE_REF" "$qs_bin" "$lib"
   say "installed prebuilt $WE_REF (skipped the ~compile)."
   return 0
 }
