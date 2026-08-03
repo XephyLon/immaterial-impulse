@@ -93,9 +93,33 @@ Variants {
         property string currentShader: "pixelate"
         property string wallpaperAnimation: Config.options.background.wallpaperAnimation ?? "random"
 
-        property list<HyprlandWorkspace> workspacesForMonitor: Hyprland.workspaces.values.filter(workspace => workspace.monitor && workspace.monitor.name == monitor.name)
-        property var activeWorkspaceWithFullscreen: workspacesForMonitor.filter(workspace => ((workspace.toplevels.values.filter(window => window.wayland?.fullscreen)[0] != undefined) && workspace.active))[0]
-        visible: GlobalStates.screenLocked || (!(activeWorkspaceWithFullscreen != undefined)) || !Config?.options.background.hideWhenFullscreen
+        // See HyprlandData.fullscreenByMonitorName for why the fullscreen test
+        // is polled from there instead of read off Hyprland.workspaces here.
+        readonly property bool monitorHasFullscreen:
+            HyprlandData.fullscreenByMonitorName[bgRoot.monitor?.name ?? ""] ?? false
+
+        // Hiding the wallpaper unmaps its layer surface entirely, and bringing
+        // it back costs a black gap plus a Wallpaper Engine thread rebuild
+        // (Hyprland's direct scanout orphans the shared GL context). So hide
+        // only once fullscreen has settled, and un-hide the instant it ends:
+        // a window that blips through fullscreen would otherwise strobe the
+        // whole desktop black.
+        property bool hiddenForFullscreen: false
+        onMonitorHasFullscreenChanged: {
+            if (bgRoot.monitorHasFullscreen)
+                fullscreenHideDelay.restart();
+            else {
+                fullscreenHideDelay.stop();
+                bgRoot.hiddenForFullscreen = false;
+            }
+        }
+        Timer {
+            id: fullscreenHideDelay
+            interval: 400
+            onTriggered: bgRoot.hiddenForFullscreen = bgRoot.monitorHasFullscreen
+        }
+
+        visible: GlobalStates.screenLocked || !bgRoot.hiddenForFullscreen || !Config?.options.background.hideWhenFullscreen
 
         property HyprlandMonitor monitor: Hyprland.monitorFor(modelData)
 
