@@ -138,17 +138,23 @@ def write_atomic(path, content):
         raise e
 
 
-def edit_lua(file_path, set_pairs, reset_keys):
+def edit_lua(file_path, set_pairs, reset_keys, reset_if_pairs=None):
     try:
         with open(file_path) as f:
             lines = f.readlines()
     except FileNotFoundError:
         lines = []
 
-    set_dict   = dict(set_pairs)
-    reset_set  = set(reset_keys)
-    all_keys   = list(set_dict) + list(reset_set)
-    markers    = {k: make_marker(k) for k in all_keys}
+    set_dict     = dict(set_pairs)
+    reset_set    = set(reset_keys)
+    # Conditional removal: drop the managed line for KEY only when it still
+    # holds exactly VALUE. This exists so the shell can retract a value it once
+    # wrote (see Config.qml's clearStaleKbOptions) without needing to know
+    # whether the line is there, and without disturbing a value the user has
+    # since chosen for the same key.
+    reset_if     = dict(reset_if_pairs or [])
+    all_keys     = list(set_dict) + list(reset_set) + list(reset_if)
+    markers      = {k: make_marker(k) for k in all_keys}
 
     new_lines  = []
     found_keys = set()
@@ -163,6 +169,15 @@ def edit_lua(file_path, set_pairs, reset_keys):
             new_lines.append(line)
         elif matched in reset_set:
             print(f"Removed: {matched}")
+        elif matched in reset_if:
+            # Compare against the rendering this script would have produced,
+            # rather than parsing the value back out: the line can only have
+            # been written here, so an exact match is both sufficient and the
+            # least fragile test available.
+            if line == to_lua_line(matched, reset_if[matched]):
+                print(f"Removed: {matched} (was {reset_if[matched]})")
+            else:
+                new_lines.append(line)
         else:
             new_lines.append(to_lua_line(matched, set_dict[matched]))
             found_keys.add(matched)
@@ -173,7 +188,13 @@ def edit_lua(file_path, set_pairs, reset_keys):
             new_lines.append(to_lua_line(k, v))
             print(f"Added:   {to_lua_line(k, v).strip()}")
 
-    write_atomic(file_path, "".join(new_lines))
+    content = "".join(new_lines)
+    # A conditional reset runs on every shell start and is a no-op almost every
+    # time. Rewriting the file anyway would churn the mtime of a file Hyprland
+    # watches, making it reload its config on each launch for nothing.
+    if content == "".join(lines):
+        return
+    write_atomic(file_path, content)
 
 
 def save_preset(anim_file, preset_name):
@@ -190,6 +211,7 @@ if __name__ == "__main__":
     p.add_argument("--file", default="~/.config/hypr/hyprland/shellOverrides/main.lua")
     p.add_argument("--set", nargs=2, action="append", metavar=("KEY", "VALUE"))
     p.add_argument("--reset", action="append", metavar="KEY")
+    p.add_argument("--reset-if", nargs=2, action="append", metavar=("KEY", "VALUE"))
     p.add_argument("--anim-preset", metavar="PRESET")
     p.add_argument("--anim-file", default="~/.config/hypr/hyprland/shellOverrides/animations.lua")
     args = p.parse_args()
@@ -199,6 +221,7 @@ if __name__ == "__main__":
 
     raw_sets   = args.set or []
     reset_keys = args.reset or []
+    reset_if   = args.reset_if or []
     set_pairs  = []
     for k, v in raw_sets:
         if v == "[[EMPTY]]":
@@ -206,7 +229,7 @@ if __name__ == "__main__":
         else:
             set_pairs.append((k, v))
 
-    if set_pairs or reset_keys:
-        edit_lua(os.path.expanduser(args.file), set_pairs, reset_keys)
+    if set_pairs or reset_keys or reset_if:
+        edit_lua(os.path.expanduser(args.file), set_pairs, reset_keys, reset_if)
     elif not args.anim_preset:
-        print("Error: specify --set, --reset, or --anim-preset")
+        print("Error: specify --set, --reset, --reset-if, or --anim-preset")
