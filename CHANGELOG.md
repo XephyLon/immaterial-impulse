@@ -13,6 +13,21 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **A live wallpaper keeps animating while a fullscreen window sits on another
+  workspace.** It used to stop dead on a still frame — visible, but frozen —
+  from the moment anything anywhere went fullscreen until it left fullscreen
+  again. None of that was the shell's doing: the embedded
+  `linux-wallpaperengine` pauses *itself*. Its `pauseOnFullscreen` defaults on,
+  its Wayland detector counts every fullscreen toplevel the compositor
+  advertises — workspace and visibility are not part of the test — and
+  `WallpaperApplication::render()` then early-returns, pausing mpv with it.
+  Measured on a video wallpaper: the WE render thread kept looping at 0.7% CPU
+  with 59 of 60 samples parked in `nanosleep` and its h264 decode threads at
+  0.0%, against 3.0% and 71.7% when animating; frame-to-frame change over the
+  desktop was exactly 0.0000 against ~7.2. `qs-wallpaperengine` 844711b passes
+  `--no-fullscreen-pause` so the shell keeps sole ownership of that policy, and
+  the installer's pin — six commits short of it — now points there. Existing
+  installs need one *Update Dots* run to rebuild.
 - **The wallpaper no longer strobes or goes black around fullscreen windows.**
   `hideWhenFullscreen` hid the wallpaper by setting `visible: false` on its
   window. Under `WlrLayershell` that does not hide anything — it destroys the
