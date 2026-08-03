@@ -274,6 +274,12 @@ if ! python3 "$SCRIPT_DIR/test_kboptions_migration_runtime.py"; then
     exit 1
 fi
 
+echo "Running SDDM theme source tests..."
+if ! python3 "$SCRIPT_DIR/test_sddm_theme_source.py"; then
+    echo "SDDM theme source tests failed."
+    exit 1
+fi
+
 echo "Running keyring migration tests..."
 if ! python3 "$SCRIPT_DIR/test_keyring_migration.py"; then
     echo "Keyring migration tests failed."
