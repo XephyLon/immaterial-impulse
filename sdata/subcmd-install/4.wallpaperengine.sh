@@ -41,7 +41,7 @@ set -euo pipefail
 [[ "${INSTALL_WE:-0}" == "1" ]] || { echo "[ImI] Wallpaper Engine: skipped."; exit 0; }
 
 WE_REPO="${WE_REPO:-https://github.com/XephyLon/qs-wallpaperengine}"
-WE_REF="${WE_REF:-v0.1.0}"                       # release tag, so installs take the PREBUILT fast path; any checksum /
+WE_REF="${WE_REF:-v0.2.0}"                       # release tag, so installs take the PREBUILT fast path; any checksum /
                                                  # arch / Qt-too-old / smoke-test failure falls back to a source build, as
                                                  # does a tag whose release has not published yet. Whatever this points at
                                                  # MUST be >= 40427cf, the commit that added
@@ -58,6 +58,13 @@ WE_REF="${WE_REF:-v0.1.0}"                       # release tag, so installs take
                                                  # workspace and visibility are not part of the test - and halts the render
                                                  # loop (pausing mpv with it) for a game parked on a workspace the user has
                                                  # left. The pin sat at fd5715e, so every install carried that freeze.
+                                                 # v0.2.0 adds WallpaperEngineSurface.failed, which Background.qml reads to
+                                                 # fall back to the static image when the renderer cannot draw at all -
+                                                 # that read is inert on any older build, so this is the floor for the
+                                                 # fallback to do anything. v0.2.0 is also the first release whose CI
+                                                 # actually published assets: v0.1.0 built for 34 minutes and then died on
+                                                 # `gh release create`, so the prebuilt path silently fell back to a source
+                                                 # compile on every install.
                                                  # Cutting the next release: qs-wallpaperengine/docs/cutting-a-release.md.
 BUILD_DIR="${BUILD_DIR:-$HOME/.cache/immaterial-impulse/qs-wallpaperengine-build}"
 PREBUILT_ROOT="${PREBUILT_ROOT:-$HOME/.cache/immaterial-impulse/prebuilt}"
