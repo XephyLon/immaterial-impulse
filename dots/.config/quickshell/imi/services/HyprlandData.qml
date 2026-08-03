@@ -23,17 +23,34 @@ Singleton {
     property var monitors: []
     property var layers: ({})
 
-    // True while a fullscreen (not just maximized) client sits on the focused
-    // monitor's active workspace. Hyprland reports fullscreen as an int:
-    // 0 none, 1 maximized, 2 fullscreen, 3 both. Drives OpenRgb's ambient
+    // True while a fullscreen (not just maximized) client sits on that monitor's
+    // active workspace, keyed by monitor name. Hyprland reports fullscreen as an
+    // int: 0 none, 1 maximized, 2 fullscreen, 3 both.
+    //
+    // Surfaces that hide themselves under a fullscreen window (the wallpaper,
+    // the screen corners) must read it from here rather than from
+    // Quickshell.Hyprland's workspace objects: a binding over
+    // `workspace.active` does not re-evaluate when the active workspace
+    // changes, so switching away from a workspace holding a fullscreen window
+    // left those surfaces hidden - a black desktop. This map is recomputed off
+    // the polled client/monitor lists, which refresh on every Hyprland event.
+    readonly property var fullscreenByMonitorName: {
+        const out = ({});
+        for (const mon of root.monitors) {
+            out[mon.name] = root.windowList.some(w => w.monitor === mon.id
+                && w.workspace?.id === mon.activeWorkspace?.id
+                && w.fullscreen >= 2);
+        }
+        return out;
+    }
+
+    // The focused monitor's entry in the map above. Drives OpenRgb's ambient
     // (monitor color) sync, and is reusable by anything else that cares.
     readonly property bool focusedMonitorHasFullscreen: {
         const mon = root.monitors.find(m => m.focused);
         if (!mon)
             return false;
-        return root.windowList.some(w => w.monitor === mon.id
-            && w.workspace?.id === mon.activeWorkspace?.id
-            && w.fullscreen >= 2);
+        return root.fullscreenByMonitorName[mon.name] ?? false;
     }
 
     // Convenient stuff
