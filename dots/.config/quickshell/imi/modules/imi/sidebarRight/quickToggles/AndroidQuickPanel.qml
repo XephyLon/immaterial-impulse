@@ -104,10 +104,36 @@ AbstractQuickPanel {
                     spacing: root.spacing
 
                     Repeater {
-                        model: ScriptModel {
-                            values: toggleRow?.modelData ?? []
-                            objectProp: "type"
-                        }
+                        // A plain array, deliberately, not a ScriptModel.
+                        //
+                        // DelegateChooser picks a component when a delegate is
+                        // *created* and never re-picks for one that survives.
+                        // ScriptModel exists to keep delegates alive across
+                        // model updates, so the two together mean a row entry
+                        // that changes identity in place keeps the previous
+                        // toggle's component - and therefore its QuickToggleModel,
+                        // icon, name and action - while showing the new entry's
+                        // data. A plain array model resets the Repeater instead,
+                        // so every entry gets a delegate chosen for the type it
+                        // actually holds.
+                        //
+                        // Keeping the identities stable (canonicalToggleEntry
+                        // above) is not enough on its own and was the earlier,
+                        // incomplete fix: it makes a *reorder within one row*
+                        // diff as a move, which is correct, but rows are laid
+                        // out by size and nearly every edit reflows them. Once
+                        // an entry crosses a row boundary it leaves one row's
+                        // model and lands in another's at some index that was
+                        // occupied by something else, which is not a move in
+                        // either model - so the stale-component case survived
+                        // and only pure same-row swaps looked fixed.
+                        //
+                        // The cost is that a layout edit recreates the row's
+                        // delegates. That is fine here: this model changes only
+                        // when the layout does, not when a toggle turns on or
+                        // off, and layout edits are deliberate user actions in
+                        // edit mode.
+                        model: toggleRow?.modelData ?? []
                         delegate: AndroidToggleDelegateChooser {
                             startingIndex: toggleRow.startingIndex
                             editMode: root.editMode
@@ -187,10 +213,9 @@ AbstractQuickPanel {
                         spacing: root.spacing
 
                         Repeater {
-                            model: ScriptModel {
-                                values: unusedToggleRow?.modelData ?? []
-                                objectProp: "type"
-                            }
+                            // A plain array, for the reason spelled out on the
+                            // used-rows Repeater above.
+                            model: unusedToggleRow?.modelData ?? []
                             delegate: AndroidToggleDelegateChooser {
                                 startingIndex: -1
                                 editMode: root.editMode
