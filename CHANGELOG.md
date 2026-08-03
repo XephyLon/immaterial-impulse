@@ -13,15 +13,18 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
-- **The Android quick toggles stop scrambling when you edit them.** Reordering,
-  adding, removing or resizing a toggle mutated the config array in place, and
-  a QML `list<var>` notifies on *assignment* — an in-place `push`/`splice`/
-  element write emits nothing. So the panel kept rendering the previous layout
-  until an unrelated change forced a re-evaluation, each button showing the
-  outgoing toggle's icon, name and action. The stored config was correct the
-  whole time, which is why restarting the shell appeared to fix it. Tray
-  pinning had the same bug (`pin` pushed while `unpin` reassigned), and a lint
-  now flags the pattern.
+- **The Android quick toggles stop scrambling when you edit them.**
+  `DelegateChooser` picks a component when a delegate is *created* and never
+  re-picks for one that survives a model update, so a row entry that changed in
+  place kept the previous toggle's component — its icon, name and action —
+  while carrying the new entry's data. Rows are packed by toggle size, so
+  nearly every edit reflows them and moves entries across row boundaries, which
+  is exactly that in-place change. The rows now use a plain array model, which
+  resets the delegates so each is chosen for the type it actually holds. The
+  stored layout was correct throughout, which is why restarting the shell
+  appeared to fix it. Covered by a runtime test that renders the real panel and
+  performs each edit — the earlier attempt kept only same-row reorders honest,
+  which is why it looked fixed and was not.
 - **The login screen shows the current wallpaper again (second attempt).** The
   SDDM fork was retargeted for the installer only, and its `setup.sh` clones
   the theme content from its own `THEME_REPO` rather than copying the checkout
