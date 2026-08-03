@@ -177,7 +177,11 @@ Item {
                 text: {
                     if (!notificationObject) return "";
                     if (root.expanded) {
-                        return NotificationUtils.processNotificationBody(notificationObject.body, notificationObject.summary);
+                        // appName first, as at every other call site: the second
+                        // argument selects per-sender handling, and for a relay
+                        // the summary is the *phone app's* name ("Teams"), not
+                        // the sender's ("KDE Connect").
+                        return NotificationUtils.processNotificationBody(notificationObject.body, notificationObject.appName || notificationObject.summary);
                     } else {
                         let summary = notificationObject.summary || "";
                         let body = notificationObject.body || "";
