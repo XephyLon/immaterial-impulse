@@ -34,6 +34,28 @@ GroupButton {
 
     property bool editMode: false
 
+    // Every edit to the toggle layout has to go through here.
+    //
+    // `sidebar.quickToggles.android.toggles` is a `list<var>`, and a QML list
+    // property notifies on *assignment* - `push`, `splice` and element
+    // assignment change the array in place and emit nothing at all. Each edit
+    // site used to do exactly that, so the panel went on rendering the previous
+    // layout until some unrelated property change happened to force a
+    // re-evaluation. That is what made reordering look drunk: a delegate kept
+    // the outgoing toggle's icon, name and action, and the layout only settled
+    // after a shell restart, which re-reads the config from disk. The stored
+    // config was right the whole time, which is why the restart "fixed" it.
+    //
+    // The entries are copied rather than handed over, because `mutate` may
+    // change one in place (the resize handle does) and mutating the objects the
+    // property already holds is the same non-notifying edit one level down.
+    function updateToggles(mutate) {
+        const list = Config.options.sidebar.quickToggles.android.toggles
+            .map(entry => Object.assign({}, entry));
+        mutate(list);
+        Config.options.sidebar.quickToggles.android.toggles = list;
+    }
+
     baseWidth: root.baseCellWidth * cellSize + cellSpacing * (cellSize - 1)
     baseHeight: root.baseCellHeight
     enableImplicitWidthAnimation: !editMode && root.mouseArea.containsMouse
@@ -208,16 +230,17 @@ GroupButton {
                     const sceneY = centroid.scenePosition.y;
                     const nearest = findNearest(sceneX, sceneY);
                     if (nearest) {
-                        const toggleList = Config.options.sidebar.quickToggles.android.toggles;
                         const myType = root.buttonData.type;
                         const sibType = nearest.buttonData.type;
-                        const myIdx = toggleList.findIndex(t => t.type === myType);
-                        const sibIdx = toggleList.findIndex(t => t.type === sibType);
-                        if (myIdx !== -1 && sibIdx !== -1 && myIdx !== sibIdx) {
-                            const temp = toggleList[myIdx];
-                            toggleList[myIdx] = toggleList[sibIdx];
-                            toggleList[sibIdx] = temp;
-                        }
+                        root.updateToggles(toggleList => {
+                            const myIdx = toggleList.findIndex(t => t.type === myType);
+                            const sibIdx = toggleList.findIndex(t => t.type === sibType);
+                            if (myIdx !== -1 && sibIdx !== -1 && myIdx !== sibIdx) {
+                                const temp = toggleList[myIdx];
+                                toggleList[myIdx] = toggleList[sibIdx];
+                                toggleList[sibIdx] = temp;
+                            }
+                        });
                     }
                 }
             }
@@ -256,10 +279,11 @@ GroupButton {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: {
-            const toggleList = Config.options.sidebar.quickToggles.android.toggles;
             const buttonType = root.buttonData.type;
-            if (!toggleList.find(t => t.type === buttonType))
-                toggleList.push({ type: buttonType, size: 1 });
+            root.updateToggles(toggleList => {
+                if (!toggleList.find(t => t.type === buttonType))
+                    toggleList.push({ type: buttonType, size: 1 });
+            });
         }
     }
 
@@ -298,10 +322,11 @@ GroupButton {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-                const toggleList = Config.options.sidebar.quickToggles.android.toggles;
                 const buttonType = root.buttonData.type;
-                const idx = toggleList.findIndex(t => t.type === buttonType);
-                if (idx !== -1) toggleList.splice(idx, 1);
+                root.updateToggles(toggleList => {
+                    const idx = toggleList.findIndex(t => t.type === buttonType);
+                    if (idx !== -1) toggleList.splice(idx, 1);
+                });
             }
         }
     }
@@ -357,10 +382,11 @@ GroupButton {
                 const steps = Math.round(dx / root.baseCellWidth);
                 const newSize = Math.max(1, Math.min(3, pressSize + steps));
                 if (newSize !== root.cellSize) {
-                    const toggleList = Config.options.sidebar.quickToggles.android.toggles;
                     const buttonType = root.buttonData.type;
-                    const idx = toggleList.findIndex(t => t.type === buttonType);
-                    if (idx !== -1) toggleList[idx].size = newSize;
+                    root.updateToggles(toggleList => {
+                        const idx = toggleList.findIndex(t => t.type === buttonType);
+                        if (idx !== -1) toggleList[idx].size = newSize;
+                    });
                 }
             }
         }
