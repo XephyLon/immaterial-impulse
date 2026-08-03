@@ -13,6 +13,15 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **The Android quick toggles stop scrambling when you edit them.** Reordering,
+  adding, removing or resizing a toggle mutated the config array in place, and
+  a QML `list<var>` notifies on *assignment* — an in-place `push`/`splice`/
+  element write emits nothing. So the panel kept rendering the previous layout
+  until an unrelated change forced a re-evaluation, each button showing the
+  outgoing toggle's icon, name and action. The stored config was correct the
+  whole time, which is why restarting the shell appeared to fix it. Tray
+  pinning had the same bug (`pin` pushed while `unpin` reassigned), and a lint
+  now flags the pattern.
 - **The login screen shows the current wallpaper again (second attempt).** The
   SDDM fork was retargeted for the installer only, and its `setup.sh` clones
   the theme content from its own `THEME_REPO` rather than copying the checkout
