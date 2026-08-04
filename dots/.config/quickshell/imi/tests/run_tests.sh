@@ -257,6 +257,12 @@ if ! python3 "$SCRIPT_DIR/test_default_config.py"; then
     exit 1
 fi
 
+echo "Running bar geometry contract tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_geometry_contract.py"; then
+    echo "Bar geometry contract tests failed."
+    exit 1
+fi
+
 echo "Running dock motion contract tests..."
 if ! python3 "$SCRIPT_DIR/test_dock_motion.py"; then
     echo "Dock motion contract tests failed."
