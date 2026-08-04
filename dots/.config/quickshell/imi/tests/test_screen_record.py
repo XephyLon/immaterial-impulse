@@ -104,6 +104,103 @@ class ServiceTests(unittest.TestCase):
         self.assertIn("_screenRecord: ScreenRecord", shell)
 
 
+class HdrCodecTests(unittest.TestCase):
+    """gpu-screen-recorder does not tonemap.
+
+    Handed an HDR surface with an SDR codec it encodes 8-bit and tags the file
+    bt709, so a PQ signal ends up labelled as gamma and decodes flat and grey.
+    These run the real script against stub hyprctl/gpu-screen-recorder binaries
+    and read back the argv it built, rather than asserting on source text - the
+    mapping is a behaviour, and a source grep would pass on a script that
+    computed the codec correctly and then forgot to pass it.
+    """
+
+    def run_record(self, preset, codec="auto"):
+        """Run record.sh --fullscreen against a monitor whose CM preset is
+        `preset`, and return the argv it handed to gpu-screen-recorder."""
+        import os
+        import shutil
+        import tempfile
+
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        bindir = tmp / "bin"
+        bindir.mkdir()
+        argv_file = tmp / "argv"
+
+        monitors = json.dumps([{
+            "name": "DP-1", "focused": True,
+            "colorManagementPreset": preset,
+            "currentFormat": "XBGR2101010",
+        }])
+        (bindir / "hyprctl").write_text(
+            "#!/usr/bin/env bash\ncat <<'MONEOF'\n" + monitors + "\nMONEOF\n")
+        # Records argv and exits, so record.sh's `wait` returns immediately.
+        (bindir / "gpu-screen-recorder").write_text(
+            '#!/usr/bin/env bash\nprintf "%s\\n" "$@" > "' + str(argv_file) + '"\n')
+        for noop in ("notify-send", "slurp"):
+            (bindir / noop).write_text("#!/usr/bin/env bash\nexit 0\n")
+        for f in bindir.iterdir():
+            f.chmod(0o755)
+
+        home = tmp / "home"
+        (home / ".config/immaterial-impulse").mkdir(parents=True)
+        (home / ".config/immaterial-impulse/config.json").write_text(
+            json.dumps({"screenRecord": {"codec": codec, "savePath": str(tmp / "out")}}))
+
+        env = dict(os.environ)
+        env["PATH"] = str(bindir) + os.pathsep + env["PATH"]
+        env["HOME"] = str(home)
+        env["XDG_CONFIG_HOME"] = str(home / ".config")
+        env["XDG_RUNTIME_DIR"] = str(tmp)
+        subprocess.run(["bash", str(RECORD_SH), "--fullscreen"],
+                       env=env, capture_output=True, text=True, timeout=60)
+        self.assertTrue(argv_file.exists(), "gpu-screen-recorder was never invoked")
+        return argv_file.read_text().split("\n")
+
+    def codec_of(self, argv):
+        return argv[argv.index("-k") + 1] if "-k" in argv else None
+
+    def test_hdr_monitor_upgrades_auto_to_hevc_hdr(self):
+        # The reported bug: on an HDR display "auto" produced 8-bit bt709 HEVC.
+        self.assertEqual(self.codec_of(self.run_record("hdredid")), "hevc_hdr")
+
+    def test_plain_hdr_preset_also_counts(self):
+        # Hyprland has two HDR presets; matching "hdredid" alone misses one.
+        self.assertEqual(self.codec_of(self.run_record("hdr")), "hevc_hdr")
+
+    def test_sdr_monitor_is_left_alone(self):
+        # 10-bit is not HDR: wide-gamut SDR reports the same currentFormat,
+        # which is why the preset and not the format is the signal.
+        self.assertIsNone(self.codec_of(self.run_record("srgb")))
+        self.assertEqual(self.codec_of(self.run_record("srgb", codec="hevc")), "hevc")
+
+    def test_explicit_codecs_map_to_their_hdr_variants(self):
+        self.assertEqual(self.codec_of(self.run_record("hdredid", codec="hevc")), "hevc_hdr")
+        self.assertEqual(self.codec_of(self.run_record("hdredid", codec="av1")), "av1_hdr")
+
+    def test_h264_is_not_silently_swapped(self):
+        # H.264 has no HDR variant. Changing the codec someone explicitly chose
+        # is worse than telling them why the file will look wrong.
+        self.assertEqual(self.codec_of(self.run_record("hdredid", codec="h264")), "h264")
+
+    def test_replay_path_agrees_with_the_script(self):
+        # Two capture paths, one behaviour. The replay daemon lives in QML and
+        # would otherwise drift out of step with record.sh silently.
+        qml = SERVICE.read_text()
+        self.assertIn("hdrCodecFor", qml)
+        self.assertIn('startsWith("hdr")', qml)
+        for expected in ('return "hevc_hdr"', 'return "av1_hdr"'):
+            self.assertIn(expected, qml)
+        self.assertIn("root.hdrCodecFor(o.codec, o.replay.monitor)", qml,
+                      "replayArgs must route its codec through the HDR mapping")
+
+    def test_service_imports_the_module_declaring_HyprlandData(self):
+        # #104 was exactly this shape: a singleton used without importing the
+        # module that declares it throws ReferenceError at the call site.
+        self.assertIn("import qs.services", SERVICE.read_text())
+
+
 class WiringTests(unittest.TestCase):
     def test_keybinds(self):
         keybinds = (ROOT.parents[1] / "hypr/hyprland/keybinds.lua").read_text()
