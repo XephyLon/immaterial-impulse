@@ -41,7 +41,7 @@ set -euo pipefail
 [[ "${INSTALL_WE:-0}" == "1" ]] || { echo "[ImI] Wallpaper Engine: skipped."; exit 0; }
 
 WE_REPO="${WE_REPO:-https://github.com/XephyLon/qs-wallpaperengine}"
-WE_REF="${WE_REF:-v0.2.1}"                       # release tag, so installs take the PREBUILT fast path; any checksum /
+WE_REF="${WE_REF:-v0.2.2}"                       # release tag, so installs take the PREBUILT fast path; any checksum /
                                                  # arch / Qt-too-old / smoke-test failure falls back to a source build, as
                                                  # does a tag whose release has not published yet. Whatever this points at
                                                  # MUST be >= 40427cf, the commit that added
@@ -70,6 +70,24 @@ WE_REF="${WE_REF:-v0.2.1}"                       # release tag, so installs take
                                                  # the replacement thread is allocated at the same size moments later and
                                                  # lands on that address as often as not, at which point the dead
                                                  # wallpaper publishes its texture and fence into the live one's state.
+                                                 # v0.2.2 REPLACES the v0.1.0 arrangement described above. WE's detector
+                                                 # turned out to be output-blind - its toplevel output-enter/leave handlers
+                                                 # are empty stubs, so its count is process-wide while the shell runs one
+                                                 # renderer per monitor, and a game fullscreened on one monitor paused the
+                                                 # wallpapers on all of them. No spelling of the flag fixes that, so the
+                                                 # embed now passes --no-fullscreen-pause and the SHELL decides, per output,
+                                                 # through WallpaperEngineSurface.occluded.
+                                                 #
+                                                 # That makes this pin and the shell a matched pair: on v0.2.2 a shell that
+                                                 # never sets `occluded` gets NO fullscreen pause at all. Background.qml
+                                                 # sets it (via WallpaperEngineLayer's `covered`), guarded by a property
+                                                 # check so it stays inert on older builds - but do not move this pin
+                                                 # backwards past v0.2.2 without checking that guard still holds, and do not
+                                                 # ship a shell without that binding against this pin.
+                                                 # v0.2.2 also fixes a fence race (glWaitSync could name a deleted fence,
+                                                 # which is GL_INVALID_VALUE and therefore no wait at all - a torn frame
+                                                 # with nothing in any log) and a stale scene-graph node surviving a project
+                                                 # switch after its GL texture was deleted.
                                                  # Cutting the next release: qs-wallpaperengine/docs/cutting-a-release.md.
 BUILD_DIR="${BUILD_DIR:-$HOME/.cache/immaterial-impulse/qs-wallpaperengine-build}"
 PREBUILT_ROOT="${PREBUILT_ROOT:-$HOME/.cache/immaterial-impulse/prebuilt}"

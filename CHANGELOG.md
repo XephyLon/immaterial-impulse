@@ -10,6 +10,33 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.14.7] — 2026-08-04
+
+### Changed
+- **The shell now decides when a live wallpaper idles, per monitor.** Until now
+  that call belonged to the embedded Wallpaper Engine, whose fullscreen detector
+  turned out to be blind to outputs entirely — it counts every fullscreen window
+  on the machine through a single counter, while the shell runs one renderer per
+  monitor. A game fullscreened on one screen therefore froze the wallpapers on
+  all of them, and no setting of that detector could fix it, because the problem
+  was never which windows it counted. The shell knows which monitor is covered,
+  so it now tells the renderer directly. Pins `qs-wallpaperengine` v0.2.2.
+
+  Measured on a scene wallpaper: covering the output takes the renderer from
+  about 9% of a core to about 1%, and uncovering it recovers within a frame or
+  two. It does **not** stop a *video* wallpaper decoding — that is inside
+  Wallpaper Engine and cannot be reached from here — so the saving is real for
+  scene wallpapers and close to nothing for video ones.
+
+### Fixed
+- Two rendering faults in the embedded renderer, both silent when they struck. A
+  frame-completion wait could name a fence that had already been deleted, which
+  is not a wait at all — a torn wallpaper frame with nothing in any log to
+  explain it. And switching wallpapers could leave the old frame's scene-graph
+  node pointing at a texture that had been freed, so the next thing to claim that
+  texture slot got drawn in the wallpaper's place — the "a widget's cached layer
+  is suddenly fullscreen" symptom.
+
 ## [0.14.6] — 2026-08-04
 
 ### Fixed
@@ -1361,7 +1388,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.6...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.7...HEAD
+[0.14.7]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.6...v0.14.7
 [0.14.6]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.5...v0.14.6
 [0.14.5]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.4...v0.14.5
 [0.14.4]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.3...v0.14.4
