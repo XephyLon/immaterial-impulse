@@ -107,6 +107,18 @@ class WallpaperEnginePrebuiltTest(unittest.TestCase):
         return subprocess.run(["bash", str(SH)], env=self.env(**extra),
                               capture_output=True, text=True, timeout=300)
 
+    def fake_pacman(self, qt_version):
+        # The host-Qt gate reads `pacman -Q qt6-base`. Off Arch there is no
+        # pacman, host_qt comes back empty and the whole comparison
+        # short-circuits - so without this stub that gate is unreachable and any
+        # test claiming to cover it would be passing vacuously.
+        bindir = self.tmp / "fakebin"
+        bindir.mkdir(exist_ok=True)
+        p = bindir / "pacman"
+        p.write_text(f'#!/bin/sh\n[ "$1" = "-Q" ] && echo "qt6-base {qt_version}"\n')
+        p.chmod(0o755)
+        return str(bindir) + os.pathsep + os.environ.get("PATH", "")
+
     @staticmethod
     def out(r):
         return (r.stdout + r.stderr).lower()
@@ -142,6 +154,26 @@ class WallpaperEnginePrebuiltTest(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("smoke", self.out(r))
         self.assertFalse((self.prefix / "bin" / "quickshell").exists())
+
+    def test_host_qt_older_than_build_qt_falls_back(self):
+        # A prebuilt linked against a newer Qt than the host has will not load,
+        # so the manifest's qt_min has to decline the binary before the smoke
+        # test does. WE_SKIP_OPT_CHECK is left on so the only thing that can
+        # reject this release is the version comparison.
+        make_release(self.rel, qt_min="6.9.0-1")
+        r = self.run_installer(PATH=self.fake_pacman("6.0.0-1"))
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("qt", self.out(r))
+        self.assertFalse((self.prefix / "bin" / "quickshell").exists())
+
+    def test_host_qt_new_enough_installs(self):
+        # The other side of the same gate: an equal-or-newer host Qt must NOT be
+        # rejected. Without this, a version check that refused everything would
+        # still satisfy the test above.
+        make_release(self.rel, qt_min="6.0.0-1")
+        r = self.run_installer(PATH=self.fake_pacman("6.9.0-1"))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue((self.prefix / "bin" / "quickshell").exists())
 
     def test_second_run_skips_when_up_to_date(self):
         make_release(self.rel)
