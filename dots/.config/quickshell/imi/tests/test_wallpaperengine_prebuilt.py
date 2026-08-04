@@ -336,6 +336,31 @@ class RunpathRepairTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertNotIn("not found", self._ldd())
 
+    def test_repairs_a_dependency_of_a_dependency(self):
+        # DT_RUNPATH is NOT transitive. The executable's RUNPATH resolves its
+        # own direct needs and nothing further: a bundled library's own needs
+        # are searched using *that library's* RUNPATH. Repairing only the binary
+        # therefore left the shell unable to start unaided, and the
+        # LD_LIBRARY_PATH fallback - which IS transitive, which is precisely why
+        # it worked where the RUNPATH did not - stayed in the wrapper.
+        #
+        # Build that shape: the bundled lib needs a second lib that only the
+        # sibling directory can supply, and give it a RUNPATH that resolves
+        # nothing, exactly as the shipped one does.
+        inner = "libwe-inner-dep.so"
+        shutil.copy2(self.lib_dir / "liblinux-wallpaperengine-lib.so",
+                     self.lib_dir / inner)
+        subprocess.run(["patchelf", "--add-needed", inner,
+                        str(self.lib_dir / "liblinux-wallpaperengine-lib.so")], check=True)
+        subprocess.run(["patchelf", "--set-rpath", "/nonexistent/builder/path",
+                        str(self.lib_dir / "liblinux-wallpaperengine-lib.so")], check=True)
+        self.assertIn("not found", self._ldd(), "fixture does not reproduce the shape")
+
+        proc = self._run_ensure()
+        self.assertEqual(proc.returncode, 0,
+                         "transitive dependency left unresolved:\n" + proc.stdout + proc.stderr)
+        self.assertNotIn("not found", self._ldd())
+
     def test_repairs_a_binary_that_IS_running(self):
         # The reported case. In-place patchelf returns ETXTBSY here; the repair
         # has to go through a copy and a rename.
