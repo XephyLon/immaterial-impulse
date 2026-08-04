@@ -95,4 +95,36 @@ Singleton {
         }
         return isNight() ? "clear_night" : "clear_day";
     }
+
+    // OpenWeatherMap reports its own condition ids, not the WWO codes
+    // weatherIconMap is keyed on, so an OWM id looked up there matches nothing
+    // and falls through to "clear" for every condition there is. The groups
+    // below are OWM's documented ranges; 800 is the only exact id it defines,
+    // and 801-804 are increasing cloud cover.
+    function getOwmWeatherIcon(code, night): string {
+        const id = Number(code);
+        if (id === 800) return night ? "clear_night" : "clear_day";
+        if (id === 801 || id === 802) return night ? "partly_cloudy_night" : "partly_cloudy_day";
+        if (id > 802 && id < 900) return "cloud";
+        if (id >= 200 && id < 300) return "thunderstorm";
+        if (id >= 300 && id < 400) return "rainy";
+        if (id >= 500 && id < 600) return "rainy";
+        if (id >= 600 && id < 700) return "snowing";
+        if (id >= 700 && id < 800) return "foggy";
+        return night ? "clear_night" : "clear_day";
+    }
+
+    // Which of the two schemes a code is in depends on which provider fetched
+    // it, and nothing in the code itself says - the ranges overlap. Callers that
+    // know their provider should come through here rather than guess.
+    function getProviderWeatherIcon(provider, code, night): string {
+        if (provider === "owm")
+            return getOwmWeatherIcon(code, night);
+        const key = String(code);
+        if (weatherIconMap.hasOwnProperty(key)) {
+            const icons = weatherIconMap[key];
+            return night ? icons.night : icons.day;
+        }
+        return night ? "clear_night" : "clear_day";
+    }
 }
