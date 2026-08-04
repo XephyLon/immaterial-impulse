@@ -146,37 +146,65 @@ libs_resolve_standalone(){
   ! env -u LD_LIBRARY_PATH ldd "$qs_bin" 2>/dev/null | grep -q "not found"
 }
 
+# Rewrite one ELF's RUNPATH. $1=file, $2=new RUNPATH. Returns 0 on success.
+#
+# patchelf rewrites in place, and the kernel refuses to write to a running
+# executable (ETXTBSY). The shell IS the binary being repaired, and Settings >
+# Update Dots runs the installer *from* the shell - so in the one path a user
+# actually takes, the target was always executing and this always failed. The
+# same hazard applies to the bundled .so files, which the running process has
+# mapped.
+#
+# Patch a copy and rename over the original instead. rename(2) swaps the
+# directory entry; the running process keeps the inode it already opened and is
+# unaffected, and the next launch picks up the repaired file. The temporary
+# lives beside the target so the rename stays on one filesystem - mv across
+# filesystems is copy-then-unlink, which is neither atomic nor safe against a
+# concurrent exec.
+set_runpath(){
+  local target="$1" rpath="$2" tmp
+  tmp="$(mktemp "${target}.patchelf.XXXXXX")" || return 1
+  if cp -p "$target" "$tmp" \
+     && patchelf --set-rpath "$rpath" "$tmp" \
+     && mv -f "$tmp" "$target"; then
+    return 0
+  fi
+  rm -f "$tmp"
+  return 1
+}
+
 ensure_standalone_libs(){
   local qs_bin="$1" lib_dir="$2"
   libs_resolve_standalone "$qs_bin" && return 0
   if command -v patchelf >/dev/null 2>&1; then
     local rp; rp="$(patchelf --print-rpath "$qs_bin" 2>/dev/null || true)"
-    # patchelf rewrites in place, and the kernel refuses to write to a running
-    # executable (ETXTBSY). The shell IS this binary, and Settings > Update Dots
-    # runs the installer *from* the shell - so in the one path a user actually
-    # takes, the target was always executing and this always failed. It failed
-    # silently too: stderr went to /dev/null and the caller then advised
-    # installing patchelf, which was already installed. Only a first install,
-    # with nothing running yet, ever succeeded - so the repair worked exactly
-    # when it was not needed, and not when it was.
-    #
-    # Patch a copy and rename over the original instead. rename(2) swaps the
-    # directory entry; the running process keeps the inode it already opened
-    # and is unaffected, and the next launch picks up the repaired file. The
-    # temporary lives beside the target so the rename stays on one filesystem
-    # (mv across filesystems is copy-then-unlink, which is neither atomic nor
-    # safe against a concurrent exec).
-    local tmp; tmp="$(mktemp "${qs_bin}.patchelf.XXXXXX")" || tmp=""
-    if [[ -n "$tmp" ]] && cp -p "$qs_bin" "$tmp" \
-       && patchelf --set-rpath "$lib_dir:$OPT_LIBS${rp:+:$rp}" "$tmp" \
-       && mv -f "$tmp" "$qs_bin"; then
+    if set_runpath "$qs_bin" "$lib_dir:$OPT_LIBS${rp:+:$rp}"; then
       say "baked the WE runtime lib dirs into the binary's RUNPATH."
     else
       # Surface the reason rather than discarding it - the previous silence is
       # what made this look like a missing dependency for so long.
       say "could not repair the binary's RUNPATH with patchelf."
-      [[ -n "$tmp" ]] && rm -f "$tmp"
     fi
+
+    # DT_RUNPATH is NOT transitive. The executable's RUNPATH resolves its own
+    # direct dependencies and nothing else: liblinux-wallpaperengine-lib.so's
+    # own needs (libcef.so beside it, libkissfft-float.so from the /opt runtime)
+    # are searched using *that library's* RUNPATH, which is the builder's
+    # directory and exists nowhere. So repairing only the binary left the shell
+    # still unable to start unaided, and the LD_LIBRARY_PATH fallback - which IS
+    # transitive, and is exactly why it worked where the RUNPATH did not - stayed
+    # in the wrapper.
+    #
+    # $ORIGIN first so a library finds its siblings wherever the prebuilt tree
+    # is unpacked, then the /opt runtime for what is not bundled.
+    local so
+    for so in "$lib_dir"/*.so*; do
+      [[ -f "$so" ]] || continue
+      libs_resolve_standalone "$so" && continue
+      local so_rp; so_rp="$(patchelf --print-rpath "$so" 2>/dev/null || true)"
+      set_runpath "$so" "\$ORIGIN:$OPT_LIBS${so_rp:+:$so_rp}" \
+        || say "could not repair $(basename "$so")'s RUNPATH."
+    done
   else
     say "patchelf not present; cannot repair the binary's RUNPATH."
   fi
