@@ -63,6 +63,14 @@ ContentPage {
                 ConfigSelectionArray {
                     text: Translation.tr("Codec")
                     icon: "memory"
+                    // No _hdr entries: recording an HDR monitor already picks
+                    // the HDR variant of whichever of these is chosen, so
+                    // listing them would be a second way to say the same thing
+                    // - and one a user could get wrong by selecting HDR on an
+                    // SDR display. H.264 has no HDR variant, so choosing it on
+                    // an HDR monitor notifies at record time instead.
+                    // (ConfigSelectionArray has no `description`; that belongs
+                    // to ConfigSwitch. DesignSystemCompile catches the mix-up.)
                     currentValue: Config.options.screenRecord.codec
                     onSelected: value => { Config.options.screenRecord.codec = value }
                     options: [
