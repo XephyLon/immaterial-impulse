@@ -1408,10 +1408,19 @@ Singleton {
                     // is unsupported by the embedded renderer (needs CEF), so the
                     // background falls back to the static wallpaper for it.
                     property string activeType: ""
-                    // Full-scene still rendered from the active project, used as
-                    // the opaque texture for peel/lock transitions (the live
-                    // wallpaper surface itself can't be sampled).
-                    property string activeStill: ""
+                    // `activeStill` used to live here: a full-scene still rendered
+                    // from the active project. The selector-only refactor removed
+                    // the code that generated those stills and wrote the field, but
+                    // left the field and its readers, so it sat frozen at whatever
+                    // it held that day - and applying a preset restored that stale
+                    // value, which is how it spread (#103). Removed rather than
+                    // repaired: `activePreview` is maintained by
+                    // WallpaperEngine.apply() and always matches the active project.
+                    //
+                    // Deliberately not migrated away on disk. The JsonAdapter does
+                    // not expose keys it has no property for, so the leftover key is
+                    // inert - the same treatment the desktop-widget keys got above,
+                    // and it keeps a downgrade working.
                     property int fps: 30
                     property string scaling: "fill"
                     property bool silent: true

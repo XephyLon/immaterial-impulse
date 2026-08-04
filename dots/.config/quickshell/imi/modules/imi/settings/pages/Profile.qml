@@ -303,8 +303,19 @@ ContentPage {
                                     const stillWallpaper = isVideo
                                         ? (data?.background?.thumbnailPath ?? "")
                                         : rawWallpaper
+                                    // activePreview, NOT activeStill. The still was
+                                    // written by code the selector-only refactor
+                                    // removed, so every preset saved since carries a
+                                    // frozen value belonging to whatever project was
+                                    // active that day - which is why several cards
+                                    // rendered the same wallpaper as each other
+                                    // (#103). The preview is written by
+                                    // WallpaperEngine.apply() and always matches the
+                                    // project the preset actually names. Presets on
+                                    // disk still hold the stale key; reading the
+                                    // preview instead is what makes them harmless.
                                     presetDelegate.presetWallpaper = engine?.activeProject
-                                        ? (engine.activeStill || engine.activePreview || stillWallpaper || "")
+                                        ? (engine.activePreview || stillWallpaper || "")
                                         : stillWallpaper
                                     presetDelegate.presetDescription = data?._presetMeta?.description ?? ""
                                 } catch (e) {

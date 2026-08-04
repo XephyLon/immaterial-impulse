@@ -85,7 +85,7 @@ class DefaultConfigTest(unittest.TestCase):
         for key in ("wallpaperPath", "thumbnailPath", "lockWall", "lockWallEngine"):
             self.assertEqual(bg[key], "", f"background.{key} must ship empty")
         we = self.cfg["wallpaperSelector"]["wallpaperEngine"]
-        for key in ("activePath", "activePreview", "activeProject", "activeStill", "activeType", "libraryPath"):
+        for key in ("activePath", "activePreview", "activeProject", "activeType", "libraryPath"):
             self.assertEqual(we[key], "", f"wallpaperEngine.{key} must ship empty")
         for key in ("avatarPath", "avatarPicture", "displayName"):
             self.assertEqual(self.cfg["profile"][key], "", f"profile.{key} must ship empty")
