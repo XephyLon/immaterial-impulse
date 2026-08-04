@@ -17,7 +17,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y qt6-declarative-dev qml6-module-qttest qml6-module-qtquick qml6-module-qtqml qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtqml-workerscript qml6-module-qtquick-window
-      
+
+      # zstd builds the fixture release tarballs in
+      # test_wallpaperengine_prebuilt.py and extracts them in the installer under
+      # test. It is preinstalled on ubuntu-latest, so this is belt-and-braces -
+      # but that file spent its whole life reporting success without running
+      # anything, and it now refuses to pass when the tool is absent rather than
+      # quietly covering nothing. Naming the dependency keeps a future runner
+      # image change from turning that refusal into a mystery red build.
+      - name: Install release-fixture tooling
+        run: sudo apt-get install -y zstd
+
       - name: Run Tests
         env:
           QT_QPA_PLATFORM: offscreen
