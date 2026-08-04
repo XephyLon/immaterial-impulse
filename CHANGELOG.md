@@ -10,7 +10,7 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
-## [Unreleased]
+## [0.14.3] — 2026-08-04
 
 ### Fixed
 - **Install no longer aborts on the first package with "Cannot find the
@@ -1305,7 +1305,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.2...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.3...HEAD
+[0.14.3]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.2...v0.14.3
 [0.14.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.13.1...v0.14.0
