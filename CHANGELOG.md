@@ -10,6 +10,41 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.16.0] — 2026-08-04
+
+### Fixed
+- **Screen recordings on an HDR display were washed out.** `gpu-screen-recorder`
+  does not tonemap: handed an HDR surface with an SDR codec it encodes 8-bit and
+  labels the file bt709, so a PQ signal is decoded as if it were gamma — flat,
+  grey and desaturated. Nothing ever selected an HDR codec, and the Settings
+  list offers only H.264/HEVC/AV1, so there was no way to get a correct
+  recording at all. Recording an HDR monitor now picks the HDR variant
+  automatically: HEVC and AV1 become their `_hdr` forms. H.264 cannot carry HDR,
+  so choosing it explicitly is respected and explained rather than overridden.
+  Applies to instant replay as well as one-shot recordings.
+- **The installer could never repair the Wallpaper Engine binary's library
+  path.** `patchelf` rewrites in place and the kernel refuses to write to a
+  running executable — and the binary being repaired is the shell itself, while
+  Settings → Update Dots runs the installer *from* the shell. So on the only
+  path anyone takes, it always failed, silently, and then advised installing
+  `patchelf` on machines that already had it. Only a first install, with nothing
+  running yet, ever succeeded: the repair worked exactly when it was not needed.
+  It now patches a copy and renames it into place, which the running process is
+  unaffected by, and reports the real reason when something does go wrong.
+
+  This was the mechanism behind the `LD_LIBRARY_PATH` fallback, which leaks
+  CEF's bundled `libEGL`/`libGLESv2` into every application launched from the
+  shell — the cause of graphics failures that look like driver problems.
+- **`SDDM_REF` only pinned the installer, not the theme.** The pin selected
+  which `setup.sh` was fetched; that script then cloned the theme itself from
+  whatever the satellite's default branch happened to be, so an unmoved pin
+  still installed today's theme and nothing reported the discrepancy. The pin is
+  now passed through, so the installer and what it installs are one revision.
+
+### Changed
+- Pins imi-sddm-theme **v0.2.1**, the first revision that honours the
+  pass-through above.
+
 ## [0.15.0] — 2026-08-04
 
 ### Fixed
