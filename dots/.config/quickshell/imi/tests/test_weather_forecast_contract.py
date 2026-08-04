@@ -3,9 +3,10 @@
 
 `tst_weather_forecast.qml` proves the day-grouping arithmetic and
 `tst_weather_icons.qml` proves the provider-aware icon lookup, both against the
-real sources. Neither can see the service that has to call them or the second
-OpenWeatherMap request the forecast depends on, and each of those can break on
-its own without failing a single unit test.
+real sources. Neither can see the service that has to call them, the second
+OpenWeatherMap request the forecast depends on, or the popup that renders the
+result - and each of those can break on its own without failing a single unit
+test.
 
 The URL pins are the load-bearing ones. `city` comes from config and from
 shareable presets, and the existing calls carry a comment recording that they
@@ -24,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TESTS = ROOT / "tests"
 FORECAST_QML_TEST = TESTS / "tst_weather_forecast.qml"
 SERVICE = ROOT / "services/Weather.qml"
+POPUP = ROOT / "modules/imi/bar/WeatherPopup.qml"
 ICONS = ROOT / "modules/common/Icons.qml"
 FORECAST_JS = ROOT / "modules/common/functions/weatherForecast.js"
 
@@ -125,6 +127,50 @@ class WeatherServiceForecastTests(unittest.TestCase):
         self.assertIn("units=", body, "the forecast must be fetched in the "
                                       "configured unit system")
         self.assertIn("useUSCS", body)
+
+
+class WeatherPopupForecastTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.popup = POPUP.read_text(encoding="utf-8")
+
+    def test_the_popup_renders_the_forecast(self):
+        self.assertIn("Weather.forecast", self.popup,
+                      "nothing in the popup reads the forecast, so the service "
+                      "populates a property no one shows.")
+        self.assertRegex(self.popup, r"Repeater\s*\{[^}]*model:\s*Weather\.forecast",
+                         "the forecast should be repeated into one card per day.")
+
+    def test_an_empty_forecast_hides_the_row_rather_than_showing_blanks(self):
+        """OWM fetches the forecast separately, so it can be absent while
+        everything else on the popup is present."""
+        self.assertRegex(self.popup, r"visible:\s*Weather\.forecast\.length\s*>\s*0",
+                         "a row of blank cards reads as broken rather than as "
+                         "a provider that has no forecast yet.")
+
+    def test_the_popup_asks_for_provider_aware_icons(self):
+        """Both the current conditions and every forecast card.
+
+        `getWeatherIcon` is keyed on WWO codes only, so an OpenWeatherMap id
+        either misses it entirely and draws a clear sky, or collides with an
+        unrelated entry and draws the wrong condition confidently.
+        """
+        self.assertNotRegex(
+            self.popup, r"Icons\.getWeatherIcon\(",
+            "the popup still uses the WWO-only lookup, which is wrong for every "
+            "OpenWeatherMap condition.")
+        self.assertGreaterEqual(
+            self.popup.count("Icons.getProviderWeatherIcon("), 2,
+            "both the current-conditions symbol and the forecast cards need the "
+            "provider-aware lookup.")
+
+    def test_forecast_cards_never_take_the_night_variant(self):
+        """Thursday's card is not about what the sky looks like tonight."""
+        cards = re.findall(r"Icons\.getProviderWeatherIcon\(([^)]*)\)", self.popup, re.S)
+        night_flags = [call.rsplit(",", 1)[1].strip() for call in cards]
+        self.assertIn("false", night_flags,
+                      "no call passes a fixed day variant, so a forecast card "
+                      "shows tonight's icon for a daytime forecast.")
 
 
 class WeatherIconLookupTests(unittest.TestCase):
