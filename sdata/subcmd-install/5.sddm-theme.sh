@@ -56,7 +56,7 @@ fi
 
 SDDM_REPO_RAW="${SDDM_REPO_RAW:-https://raw.githubusercontent.com/XephyLon/imi-sddm-theme}"
 # Pin the installer for reproducibility. Bump this to adopt a newer imi-sddm-theme.
-SDDM_REF="${SDDM_REF:-ac2e7d47f0998442d7baebee7165b4cc28d217d4}"
+SDDM_REF="${SDDM_REF:-800a1c107226cba51475f086d808c0bbcbd75cf9}"
 SETUP_URL="${SDDM_REPO_RAW}/${SDDM_REF}/setup.sh"
 
 echo "[ImI] SDDM theme: fetching imi-sddm-theme installer (${SDDM_REF:0:12})..."
