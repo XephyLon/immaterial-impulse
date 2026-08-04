@@ -10,6 +10,39 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.14.8] — 2026-08-04
+
+### Security
+- **The SDDM theme no longer grants passwordless root on a file you can
+  rewrite.** Its matugen integration installs a sudoers rule for the script that
+  applies your colours to the login screen, and that script lived in your own
+  home directory. `sudo` matches a rule by *path*, not by owner — so anything
+  running as you could replace that script and run it as root with no password.
+  It is now installed root-owned outside `$HOME`, and the installer refuses to
+  write the rule at all unless the target and every parent directory is
+  root-owned and not group- or world-writable.
+
+  **If you have ever installed the SDDM theme, the old rule is still on your
+  system.** Installing this version replaces it, but until then
+  `/etc/sudoers.d/sddm-theme-<user>` still names the old path — `sudo -l` will
+  show it. Pins imi-sddm-theme v0.1.0, which also fixes the theme never actually
+  applying your wallpaper or colours, an uninstall that left SDDM pointing at a
+  deleted theme (a login loop after a correct password), and a config drop-in
+  that silently lost to KDE's.
+
+### Fixed
+- `repo-status` could report a stale pin as current. It compared against
+  whatever the local clone had last fetched, so a satellite that had moved on
+  looked up to date until someone remembered to fetch. It now asks GitHub for
+  the tip directly, tells "no release published" apart from "could not reach
+  GitHub", and no longer claims to be read-only while touching the git index.
+- The background suppression tests could not see a regression written as an
+  imperative assignment — the exact shape of the bug they exist to prevent,
+  which strobes the display on every fullscreen toggle. They also went red when
+  an unrelated comment was added nearby. They now parse the QML structurally
+  rather than matching text, so they catch every route to that property and are
+  indifferent to comments and indentation.
+
 ## [0.14.7] — 2026-08-04
 
 ### Changed
@@ -1388,7 +1421,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.7...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.8...HEAD
+[0.14.8]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.7...v0.14.8
 [0.14.7]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.6...v0.14.7
 [0.14.6]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.5...v0.14.6
 [0.14.5]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.4...v0.14.5
