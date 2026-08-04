@@ -372,6 +372,12 @@ if ! python3 "$SCRIPT_DIR/test_installer_greeting_traps.py"; then
     exit 1
 fi
 
+echo "Running uninstaller login-shell rescue tests..."
+if ! python3 "$SCRIPT_DIR/test_uninstall_login_shell.py"; then
+    echo "uninstaller login-shell rescue tests failed."
+    exit 1
+fi
+
 echo "Running updates service contract tests..."
 if ! python3 "$SCRIPT_DIR/test_updates_contract.py"; then
     echo "updates service contract tests failed."
