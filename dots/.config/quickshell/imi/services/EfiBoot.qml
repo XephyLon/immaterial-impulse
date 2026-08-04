@@ -75,17 +75,63 @@ Singleton {
         }
     }
 
+    function notify(title, body) {
+        Quickshell.execDetached(["notify-send", title, body, "-a", "Session"])
+    }
+
     Process {
         id: setNextProc
         command: ["pkexec", "efibootmgr", "-n", root.pendingNum]
         onExited: (exitCode, exitStatus) => {
             if (exitCode === 0) {
-                Session.reboot()
+                // BootNext is now armed in firmware. From here every exit path
+                // must either reboot or clear it again - see rebootProc.
+                rebootProc.running = true
             } else if (exitCode !== 126 && exitCode !== 127) {
                 // 126/127 = polkit dismissal/authorization failure: user's call,
                 // stay quiet. Anything else is a real failure worth surfacing.
-                Quickshell.execDetached(["notify-send", "Reboot cancelled",
-                    `efibootmgr failed to set BootNext (${exitCode})`, "-a", "Session"])
+                root.notify("Reboot cancelled",
+                    `efibootmgr failed to set BootNext (${exitCode})`)
+            }
+        }
+    }
+
+    // Deliberately a Process rather than Session.reboot(). Session.reboot() is
+    // execDetached, which reports nothing back - and once BootNext is armed,
+    // "the reboot silently did not happen" is precisely the state that must not
+    // go unnoticed, because it leaves the machine set to boot another OS at some
+    // unrelated future restart. An exit code is the whole point.
+    //
+    // Nothing tears down the UI first. The session screen has already hidden
+    // itself before rebootInto() is called, and a reboot that fails must leave
+    // the user's session exactly as it was.
+    Process {
+        id: rebootProc
+        command: ["bash", "-c", "reboot || loginctl reboot"]
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0) return // system is going down; nothing left to do
+            // The reboot definitively failed, so the armed BootNext is now a
+            // trap: the next restart, for whatever unrelated reason days later,
+            // would boot the other OS. Clear it. This needs privilege again and
+            // therefore a second polkit prompt - unavoidable, but it only
+            // happens on a path where something has already gone wrong.
+            disarmProc.running = true
+        }
+    }
+
+    Process {
+        id: disarmProc
+        command: ["pkexec", "efibootmgr", "-N"]
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0) {
+                root.notify("Reboot failed",
+                    `Could not reboot into ${root.pendingLabel}. BootNext was cleared, so this machine still boots as usual.`)
+            } else {
+                // Worst case: armed, could not reboot, could not disarm. The
+                // user has to know the exact command, because nothing on screen
+                // will hint that the next restart boots a different OS.
+                root.notify("Reboot failed - BootNext still set",
+                    `Could not reboot into ${root.pendingLabel}, and clearing BootNext failed (${exitCode}). The next restart will boot ${root.pendingLabel}. Run: sudo efibootmgr -N`)
             }
         }
     }
