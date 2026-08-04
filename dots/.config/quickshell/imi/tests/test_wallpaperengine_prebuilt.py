@@ -207,6 +207,27 @@ class WallpaperEnginePrebuiltTest(unittest.TestCase):
         self.assertTrue(pathlib.Path(lib).is_dir(),
                         f"stamp field 3 is not a directory on its own: {lib!r}")
 
+    def test_a_stamp_naming_a_missing_binary_does_not_skip(self):
+        # up_to_date tests `-x` on the recorded binary because a matching ref
+        # does not prove the build output survived: a cleared cache dir, a
+        # pruned tmpfs or a manual rm all leave a current-looking stamp pointing
+        # at nothing. Skip on that and the wrapper is rewritten to exec a file
+        # that is not there, so the install reports success and the breakage
+        # surfaces later, at shell start. Deleting the `-x` line passed every
+        # other case in this file.
+        make_release(self.rel)
+        self.assertEqual(self.run_installer().returncode, 0)
+        binary = pathlib.Path(self.stamp.read_text().split()[1])
+        self.assertTrue(binary.exists(), "nothing recorded to delete")
+        binary.unlink()
+        # The fixture stays put, unlike the skip tests above: this run is
+        # *supposed* to reinstall, so it needs something to reinstall from.
+        r = self.run_installer()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("skipping", self.out(r),
+                         "stamp ref matched but its binary was gone, and the install skipped anyway")
+        self.assertTrue(binary.exists(), "the missing binary was not reinstalled")
+
     def test_skip_path_still_refreshes_the_wrapper(self):
         # The skip guards the expensive fetch/build, NOT the wrapper. A
         # wrapper-only fix has to reach an existing install, and once did not:
