@@ -18,9 +18,24 @@
 # pin vs satellite HEAD, pin vs published release, and what is actually
 # installed vs what the pin asks for.
 #
-# Read-only. Network calls go through `gh`; without it, or offline, the local
-# sections still work and the remote ones say so.
+# Nothing here modifies a repository: no fetch, no checkout, no ref update. The
+# one write it used to make was not obvious - `git status --porcelain` refreshes
+# the index and rewrites `.git/index` when a file's mtime moved - so
+# GIT_OPTIONAL_LOCKS=0 stops even that, and the read-only claim above is true
+# rather than nearly true.
+#
+# Network calls go through `gh`; without it, or offline, the local sections still
+# work and the remote ones say what they could not establish rather than guessing.
 set -uo pipefail
+
+export GIT_OPTIONAL_LOCKS=0
+
+# Deliberately does NOT default GIT_SSH_COMMAND. git prefers the environment
+# variable over a repo's own `core.sshCommand`, and these clones use
+# `git@github.com:` remotes on a multi-account SSH setup - an exported default
+# silently breaks the key selection, and every git error here is swallowed by
+# `2>/dev/null`, so the repo would just read as permanently unreachable. The
+# ambient environment already works; leave it alone.
 
 HUB="${HUB:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 WE_DIR="${WE_DIR:-$HOME/dev/qs-wallpaperengine}"
