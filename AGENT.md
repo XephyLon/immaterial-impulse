@@ -404,6 +404,16 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   specific combination (see `modules/imi/bar/Bar.qml`'s `WlrLayershell.layer` binding and
   `modules/imi/screenCorners/ScreenCorners.qml`'s `fullscreen` property for the reference
   implementation).
+- **`visible: false` on a layer-shell `PanelWindow` does not hide it, it destroys it.** Window reuse
+  is forbidden under `WlrLayershell`, so the surface is torn down and a new one (with a new
+  scene-graph GL context) is built on the way back. `hideWhenFullscreen` was implemented this way
+  once and every fullscreen transition rebuilt the embedded Wallpaper Engine renderer against a
+  fresh context, leaving the desktop strobing at 30Hz - a photosensitive-seizure hazard, not a
+  cosmetic bug. Keep the window mapped and switch off an `Item` inside it instead
+  (`Background.qml`'s `suppressContents`). This applies to any route to that property, not just a
+  declarative binding: `bgRoot.visible = false` from a handler, or a `Binding` object aimed at it,
+  destroys exactly the same surface. `tests/test_background_fullscreen_suppression.py` fails on all
+  three.
 - **Same-layer surfaces resolve overlap by stacking order, not layer priority.** If two `PanelWindow`s
   end up on the same layer and physically overlap, whichever the compositor considers "on top" wins
   *all* input in the overlapping region - the other surface's mask in that area is simply unreachable.
