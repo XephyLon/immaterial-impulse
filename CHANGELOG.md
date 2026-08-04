@@ -10,6 +10,22 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [Unreleased]
+
+### Fixed
+- **Install no longer aborts on the first package with "Cannot find the
+  debugedit binary".** Nothing here builds debug packages, but that does not
+  matter: makepkg checks for `debugedit` as a *precondition*, gated only on
+  whether `debug` is set in `makepkg.conf`, so a missing `debugedit` killed the
+  very first `makepkg` call — before anything compiled, and even for the meta
+  packages that build nothing at all. `debugedit` is a `base-devel` member that
+  was added after `base-devel` stopped being a pacman *group*, and group members
+  are never pulled in retroactively, so long-lived Arch installs commonly lack
+  it. We only ensured `base-devel` inside `install-yay()`, which is skipped
+  whenever yay is already present — so the installs most likely to be missing a
+  latecomer were exactly the ones that never got it. `base-devel` is now ensured
+  unconditionally before the first build.
+
 ## [0.14.2] — 2026-08-03
 
 ### Fixed
@@ -1289,7 +1305,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.1...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.2...HEAD
+[0.14.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.13.0...v0.13.1

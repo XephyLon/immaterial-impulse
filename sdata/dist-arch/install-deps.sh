@@ -49,6 +49,31 @@ if [[ -z "${PACMAN_AUTH:-}" ]]; then
   export PACMAN_AUTH="sudo"
 fi
 
+# Every local PKGBUILD below is built with makepkg, so the full base-devel
+# toolchain has to be present *before* the first build - including the members
+# that are easy to be missing. `base-devel` used to be a pacman *group*: someone
+# who ran `pacman -S base-devel` years ago got a snapshot of its members at that
+# time and never received the ones added later, because group members are not
+# retroactively pulled in. `debugedit` is exactly such a latecomer.
+#
+# That bites even though nothing here builds debug packages. makepkg's
+# check_software() runs executable_debugedit() as a *precondition*, gated only on
+# `check_option "debug" "y"` - so on a makepkg.conf with `debug` enabled (not the
+# Arch default, but what a merged .pacnew or a hand-tuned config often ends up
+# with), a missing debugedit aborts the very first `makepkg` call with
+# "Cannot find the debugedit binary required for including source files in debug
+# packages" - before a single line is compiled, and even for the meta packages
+# that build nothing at all.
+#
+# We only ensured base-devel inside install-yay(), which is skipped entirely when
+# yay is already installed - so the users most likely to be missing a latecomer
+# (long-lived installs) were exactly the ones we never fixed it for.
+ensure_build_tools(){
+  x sudo pacman -S --needed --noconfirm base-devel
+}
+showfun ensure_build_tools
+v ensure_build_tools
+
 showfun remove_deprecated_dependencies
 v remove_deprecated_dependencies
 
