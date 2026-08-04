@@ -466,10 +466,94 @@ class BackgroundSuppressionTests(unittest.TestCase):
             if child.header.rstrip().endswith("onTriggered:"):
                 fired = self.qml.code[child.open_at:child.close_at]
         self.assertIsNotNone(fired, "the watchdog needs an onTriggered body.")
-        self.assertIn("weTransitioning = false", fired,
+        self.assertIn("weTransitioning = false", self._with_called_bodies(fired),
                       "the watchdog must clear the transition it is guarding, "
                       "or the peel shader never comes off screen.")
 
+    def test_the_transition_overlay_yields_to_the_static_fallback(self):
+        """The peel is drawn above the wallpaper `weFailed` falls back to (#94).
+
+        `weTransition` carries `z: 1`, which puts it over the static `wallpaper`
+        image, and its only visibility term was `weTransitioning`. The way
+        `failed` latches is by loading a project that cannot render, which is
+        exactly when a transition has just been armed - and the renderer reports
+        it from the early-return path before a texture is ever acquired, so
+        `rendered` goes true->false and never comes back. The transition is
+        armed, never starts, and nothing clears it until the watchdog's
+        `wallpaperTransitionDuration + 8000` = 9.2s budget runs out. For all of
+        that time a frozen still of the project the user switched *away from*
+        covers the static fallback that `weFailed` had just revealed underneath.
+
+        Dropping `weActive` mid-transition is the same hole: the surface the
+        peel samples as its destination is destroyed and the still is all that
+        is left to paint.
+
+        Same structural shape as 82f7b29b7 on the static path - never let a
+        shader be the only thing painting the desktop.
+        """
+        shader = None
+        for element in self.qml.elements("ShaderEffect"):
+            if self.qml.element_id(element) == "weTransition":
+                shader = element
+        self.assertIsNotNone(shader, "the WE transition shader should still exist")
+        visible = self.qml.member(shader, "visible") or ""
+        self.assertIn("weFailed", visible,
+                      "the peel stays up over a project the renderer gave up on, "
+                      "hiding the static fallback that failure reveals.")
+        self.assertIn("weLoader.item", visible,
+                      "the peel stays up with its destination surface destroyed, "
+                      "painting the frozen still of the outgoing project alone.")
+
+    def test_a_transition_that_can_never_finish_settles_without_the_watchdog(self):
+        """Both states are known the moment they happen; nothing should wait.
+
+        The watchdog does recover coherent state - the defect is that nothing
+        shortened the wait when the reason the transition will never finish is
+        already known.
+        """
+        for handler, why in (
+                ("onWeFailedChanged",
+                 "a project the renderer gave up on will never produce the "
+                 "first frame the peel is waiting for"),
+                ("onWeActiveChanged",
+                 "a destroyed WE layer takes the peel's destination surface "
+                 "with it")):
+            with self.subTest(handler=handler):
+                body = self.qml.member(self.window, handler)
+                self.assertIsNotNone(
+                    body, f"{handler} should settle the transition: {why}.")
+                self.assertIn(
+                    "weTransitioning = false", self._with_called_bodies(body),
+                    f"{handler} does not settle the transition, so it waits out "
+                    f"the ~9s watchdog instead: {why}.")
+
+    def _with_called_bodies(self, body):
+        """`body`, plus the body of any same-component function it calls.
+
+        The watchdog used to clear the transition inline; it and the two
+        handlers above now share one settle path. Following a call one level
+        deep keeps these pins aimed at what happens rather than at the syntax
+        it happened to be written in.
+        """
+        text = body
+        for name in set(re.findall(r"\b(?:bgRoot\.)?(\w+)\s*\(", body)):
+            called = self.qml.function_body(name)
+            if called:
+                text += called
+        return text
+
+    def test_fullscreen_test_ignores_maximized(self):
+        """Maximized is not fullscreen; only the polled int tells them apart."""
+        self.assertRegex(self.hyprland_data, r"\bfullscreen\s*>=\s*2",
+                         "HyprlandData must keep testing the fullscreen *mode*, "
+                         "not its truthiness - 1 is maximized.")
+        for name, source in (("Background", self.background),
+                             ("ScreenCorners", self.corners)):
+            self.assertIn("fullscreenByMonitorName", source,
+                          f"{name} should read the polled per-monitor map.")
+            self.assertNotIn("wayland?.fullscreen", source,
+                             f"{name} still uses the toplevel's own fullscreen "
+                             "flag, which is true for maximized windows too.")
 
     def _handler_body(self, handler):
         for child in self.window.children:
