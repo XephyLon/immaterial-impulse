@@ -276,6 +276,96 @@ class WallpaperEnginePrebuiltTest(unittest.TestCase):
         self.assertEqual(self.stamp.read_text().split()[0], "v0.0-test", "stamp not refreshed")
 
 
+
+@unittest.skipUnless(shutil.which("patchelf"), "patchelf not installed")
+class RunpathRepairTests(unittest.TestCase):
+    """ensure_standalone_libs must repair a binary that is currently running.
+
+    patchelf rewrites in place, and the kernel refuses to write to a running
+    executable (ETXTBSY). The shell *is* the binary being repaired, and
+    Settings > Update Dots runs the installer from the shell - so in the only
+    path a user actually takes, the target was always executing and the repair
+    always failed. It failed silently (stderr to /dev/null) and the caller then
+    advised installing patchelf, which was already installed.
+
+    These drive the real functions, lifted out of the script, against a real
+    ELF that is really executing.
+    """
+
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+        # A real ELF that needs a library only findable via RUNPATH: take a
+        # stock binary and give it a NEEDED entry nothing can resolve yet.
+        self.bin = self.tmp / "quickshell"
+        shutil.copy2(shutil.which("sleep"), self.bin)
+        self.lib_dir = self.tmp / "lib"
+        self.lib_dir.mkdir()
+        soname = "liblinux-wallpaperengine-lib.so"
+        # Any real shared object satisfies ldd under this name.
+        donor = subprocess.run(["bash", "-c", "ldd $(which sleep) | awk '/libc\\.so/{print $3}'"],
+                               capture_output=True, text=True).stdout.strip()
+        self.assertTrue(donor and os.path.exists(donor), "no donor .so found")
+        shutil.copy2(donor, self.lib_dir / soname)
+        subprocess.run(["patchelf", "--add-needed", soname, str(self.bin)], check=True)
+        self.assertIn("not found", self._ldd(), "fixture does not start unresolved")
+
+    def _ldd(self):
+        env = dict(os.environ)
+        env.pop("LD_LIBRARY_PATH", None)
+        return subprocess.run(["ldd", str(self.bin)], capture_output=True,
+                              text=True, env=env).stdout
+
+    def _run_ensure(self):
+        """Run the script's real ensure_standalone_libs against the fixture."""
+        src = SH.read_text()
+        start = src.index("libs_resolve_standalone(){")
+        end = src.index("# Install the wrapper", start)
+        harness = (
+            'set -o pipefail\n'
+            'OPT_LIBS="/opt/linux-wallpaperengine/lib:/opt/linux-wallpaperengine"\n'
+            'say(){ printf "%s\\n" "$*"; }\n'
+            + src[start:end] +
+            f'\nensure_standalone_libs "{self.bin}" "{self.lib_dir}"\n'
+        )
+        return subprocess.run(["bash", "-c", harness], capture_output=True, text=True)
+
+    def test_repairs_a_binary_that_is_not_running(self):
+        proc = self._run_ensure()
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertNotIn("not found", self._ldd())
+
+    def test_repairs_a_binary_that_IS_running(self):
+        # The reported case. In-place patchelf returns ETXTBSY here; the repair
+        # has to go through a copy and a rename.
+        running = subprocess.Popen([str(self.bin), "30"],
+                                   env={**os.environ, "LD_LIBRARY_PATH": str(self.lib_dir)})
+        self.addCleanup(running.kill)
+        proc = self._run_ensure()
+        self.assertEqual(proc.returncode, 0,
+                         "repair failed while the target was executing:\n"
+                         + proc.stdout + proc.stderr)
+        self.assertNotIn("not found", self._ldd())
+        self.assertIn("baked the WE runtime lib dirs", proc.stdout)
+
+    def test_the_running_process_survives_the_repair(self):
+        # rename(2) swaps the directory entry; the live process keeps the inode
+        # it already opened. Replacing the file in place would corrupt it.
+        running = subprocess.Popen([str(self.bin), "30"],
+                                   env={**os.environ, "LD_LIBRARY_PATH": str(self.lib_dir)})
+        self.addCleanup(running.kill)
+        self._run_ensure()
+        self.assertIsNone(running.poll(), "the running process died during the repair")
+
+    def test_failure_is_reported_not_swallowed(self):
+        # Silence is what made this look like a missing dependency for months.
+        os.chmod(self.tmp, 0o500)  # no new files beside the target -> mktemp fails
+        self.addCleanup(os.chmod, self.tmp, 0o700)
+        proc = self._run_ensure()
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("could not repair", proc.stdout)
+
 if __name__ == "__main__":
     # A missing zstd is a hard failure, not a skip. These tests exist because
     # this file spent its life reporting success without running; "quietly
