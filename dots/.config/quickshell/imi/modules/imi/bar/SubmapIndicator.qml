@@ -43,6 +43,11 @@ Item {
     Rectangle {
         id: pill
         anchors.centerIn: parent
+        // The badge belongs to the group pill's footprint, not the bar's, and
+        // those two only share a centre while the group pill's insets match.
+        // Shift onto the group pill's centre along the bar's thickness.
+        anchors.verticalCenterOffset: root.vertical ? 0 : Appearance.sizes.barStandalonePillOffset
+        anchors.horizontalCenterOffset: root.vertical ? Appearance.sizes.barStandalonePillOffset : 0
         radius: Appearance.rounding.full
         color: root.pillColor
         // Fade + scale with the show/hide so it eases in and out.
@@ -58,7 +63,7 @@ Item {
         implicitWidth: root.vertical
             ? verticalIcon.implicitWidth + Appearance.spacing.space50 * 2
             : pillRow.implicitWidth + Appearance.spacing.space150 * 2
-        // Match the M3 group pill height (bar height minus BarGroup's 4px insets).
+        // A badge inside the group pill, not a group pill of its own.
         implicitHeight: root.vertical
             ? verticalIcon.implicitHeight + Appearance.spacing.space50 * 2
             : Appearance.sizes.barStandalonePillHeight
