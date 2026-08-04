@@ -25,14 +25,19 @@
 # installer at a pinned commit and hand off — so the SDDM theme stays a thin,
 # opt-in bolt-on rather than code we carry and have to maintain.
 #
-# The pin covers the *installer logic*. The theme content is a separate clone
-# the fetched setup.sh performs itself, from the THEME_REPO baked into it — so
-# what lands in /usr/share/sddm/themes is decided by that variable, not by this
-# URL. Pointing this file at the fork while the fork's setup.sh still cloned
+# The theme content is a separate clone the fetched setup.sh performs itself,
+# from the THEME_REPO baked into it — so *which repo* lands in
+# /usr/share/sddm/themes is decided by that variable, not by this URL. Pointing
+# this file at the fork while the fork's setup.sh still cloned
 # 3d3f/ii-sddm-theme installed upstream's theme verbatim, silently undoing
 # every fork change to the theme (the immaterial-impulse config path, the
 # Wallpaper Engine resolution) on each install. Fixed in the fork at 81353f6.
 # If the login theme ever looks like upstream's again, check THEME_REPO first.
+#
+# *Which revision* of it used to be equally out of our hands: that clone had no
+# ref, so SDDM_REF pinned the installer while the theme came from whatever the
+# satellite's default branch was at that moment. IMI_SDDM_THEME_REF below hands
+# the pin through, so the two are one revision (imi-sddm-theme#5).
 #
 # Arch-only: the theme's setup.sh uses pacman. Skipped elsewhere.
 set -euo pipefail
