@@ -62,6 +62,44 @@ head_() { printf '\n%s%s%s\n' "$B" "$1" "$N"; }
 
 have_gh() { command -v gh >/dev/null 2>&1; }
 
+human_duration() { # $1=seconds
+  local s="$1"
+  if   (( s <    120 )); then printf '%ds ago'  "$s"
+  elif (( s <   7200 )); then printf '%dm ago' $(( s / 60 ))
+  elif (( s < 172800 )); then printf '%dh ago' $(( s / 3600 ))
+  else                        printf '%dd ago' $(( s / 86400 ))
+  fi
+}
+
+# How current the remote-tracking refs in a clone can possibly be. `FETCH_HEAD`
+# is written by `git fetch` and by nothing else, so its mtime is the honest
+# answer. A clone that has never fetched gets no invented date: the tip commit's
+# own committer date is not a fetch time, and printing it as one is how a fresh
+# clone of a repo last touched in 2019 announces it was "last fetched" in 2019.
+fetch_note() { # $1=dir
+  local gd f stamp
+  gd=$(git -C "$1" rev-parse --absolute-git-dir 2>/dev/null) || {
+    printf 'fetch age unknown'; return; }
+  f="$gd/FETCH_HEAD"
+  if [[ -f "$f" ]] && stamp=$(stat -c %Y "$f" 2>/dev/null); then
+    printf 'last fetched %s' "$(human_duration $(( $(date +%s) - stamp )))"
+  else
+    printf 'never fetched since clone'
+  fi
+}
+
+# The satellite's default-branch tip, over the network. Local remote-tracking
+# refs cannot answer this - see pin_status.
+remote_default_tip() { # $1=slug -> "branch<TAB>sha"
+  have_gh || return 1
+  local branch sha
+  branch=$(gh api "repos/$1" --jq .default_branch 2>/dev/null) || return 1
+  [[ -n "$branch" ]] || return 1
+  sha=$(gh api "repos/$1/commits/$branch" --jq .sha 2>/dev/null) || return 1
+  [[ -n "$sha" ]] || return 1
+  printf '%s\t%s' "$branch" "$sha"
+}
+
 # Extract a pin's value from a shell assignment like FOO="${FOO:-value}".
 pin_of() { # $1=file $2=varname
   [[ -r "$1" ]] || return 1
@@ -90,10 +128,12 @@ repo_state() { # $1=label $2=dir $3=slug
   local ab
   if ab=$(git -C "$dir" rev-list --left-right --count '@{u}...HEAD' 2>/dev/null); then
     local behind ahead; behind=${ab%%	*}; ahead=${ab##*	}
+    # `@{u}` is a local ref that only moves on fetch, so both verdicts are
+    # statements about the last fetch, not about the remote right now. Say which.
     if (( ahead > 0 || behind > 0 )); then
-      warn "local is ${ahead} ahead / ${behind} behind its remote"
+      warn "local is ${ahead} ahead / ${behind} behind its remote ($(fetch_note "$dir"))"
     else
-      ok "in sync with remote"
+      ok "in sync with remote as of the last fetch ($(fetch_note "$dir"))"
     fi
   else
     warn "no upstream tracking branch"
@@ -167,15 +207,55 @@ pin_status() { # $1=label $2=pin $3=satellite dir $4=slug
     return
   fi
 
-  local default_head behind
-  default_head=$(git -C "$dir" rev-parse --verify --quiet origin/HEAD 2>/dev/null) \
-    || default_head=$(git -C "$dir" rev-parse --verify --quiet origin/main 2>/dev/null)
-  if [[ -n "$default_head" ]]; then
-    behind=$(git -C "$dir" rev-list --count "$pin_sha..$default_head" 2>/dev/null)
-    if (( behind > 0 )); then
-      warn "  pin is $behind commit(s) behind the satellite's default branch"
+  # Whether the pin is still the satellite's tip is asked of GitHub, not of the
+  # local clone. `origin/HEAD` and `origin/main` are remote-tracking refs: they
+  # advance only on `git fetch`, and this script deliberately never fetches. On a
+  # clone that has not been fetched since the pin was set, those refs simply ARE
+  # the pin, `behind` is 0, and the old code printed "pin is current" - a
+  # confident green for the exact failure this tool exists to catch. A satellite
+  # nobody is actively working in is the normal case for a stale clone, and it is
+  # precisely the case where the pin drifts.
+  local tip branch tip_sha behind default_head
+  if tip=$(remote_default_tip "$slug"); then
+    IFS=$'\t' read -r branch tip_sha <<<"$tip"
+    if [[ "$pin_sha" == "$tip_sha" ]]; then
+      ok "  pin is the tip of $branch on GitHub (${tip_sha:0:7})"
+    elif behind=$(git -C "$dir" rev-list --count "$pin_sha..$tip_sha" 2>/dev/null) \
+         && [[ "$behind" =~ ^[0-9]+$ ]]; then
+      if (( behind > 0 )); then
+        bad "  pin is $behind commit(s) behind $branch on GitHub (tip ${tip_sha:0:7})"
+      else
+        warn "  pin differs from $branch's tip on GitHub (tip ${tip_sha:0:7}) without being behind it — ahead, or diverged"
+      fi
     else
-      ok "  pin is current with the satellite's default branch"
+      # The tip is not in this clone's object store, so the gap cannot be
+      # measured here - but "not the tip" is already established, and that is
+      # the finding that matters.
+      bad "  pin is not the tip of $branch on GitHub (tip ${tip_sha:0:7}); this clone cannot measure the gap — $(fetch_note "$dir")"
+    fi
+  else
+    # No answer from GitHub. Fall back to the local refs, and label what that is
+    # worth. "Behind" stays definitive - those commits exist and the pin does not
+    # include them - but "not behind" is only as good as the last fetch, so it
+    # never gets a ✓.
+    default_head=$(git -C "$dir" rev-parse --verify --quiet origin/HEAD 2>/dev/null) \
+      || default_head=$(git -C "$dir" rev-parse --verify --quiet origin/main 2>/dev/null)
+    if [[ -z "$default_head" ]]; then
+      # origin/HEAD is written by `git clone` and by `git remote set-head`, and
+      # by nothing else - absent after a --single-branch clone, dangling after a
+      # default-branch rename. This used to fall out of an `if` with no `else`
+      # and print nothing at all, which reads exactly like a pass.
+      warn "  GitHub unreachable and no origin/HEAD or origin/main in $dir — pin NOT checked against the satellite"
+    else
+      behind=$(git -C "$dir" rev-list --count "$pin_sha..$default_head" 2>/dev/null)
+      if [[ ! "$behind" =~ ^[0-9]+$ ]]; then
+        # An empty string here used to test as 0 and take the ok branch.
+        warn "  GitHub unreachable and the pin/branch comparison failed in $dir — pin NOT checked"
+      elif (( behind > 0 )); then
+        bad "  pin is $behind commit(s) behind origin's default branch in the local clone"
+      else
+        warn "  GitHub unreachable; pin matches the local origin default branch, which is only as current as the last fetch ($(fetch_note "$dir")) — unverified"
+      fi
     fi
   fi
 
