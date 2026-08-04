@@ -10,6 +10,78 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.15.0] — 2026-08-04
+
+### Fixed
+- **"Reboot Into" armed your firmware and then never rebooted.** Picking another
+  OS prompted for a password, succeeded, and did nothing visible — while leaving
+  `BootNext` set, so some unrelated restart days later would boot the other OS
+  with no warning. The handler called `Session.reboot()` without importing the
+  module that declares `Session`; QML imports are not transitive, so the call
+  threw and stopped the handler dead, and the "something failed" notification
+  only covered a *non-zero* exit while this path exited zero. The reboot is now
+  owned directly so its exit code is observable, and a reboot that fails clears
+  the `BootNext` it just armed — or, if even that fails, tells you which entry
+  will boot and the exact command to undo it.
+- **Greeter colours stopped regenerating after every update.** The dots sync
+  replaces `matugen/config.toml`, wiping the block the SDDM theme appends to it,
+  and the code meant to put it back restored only the hook — not the template
+  that generates the file the hook publishes. So the hook fired after *every*
+  matugen run, dragging a `sudo` call with it, and produced nothing. Worse, it
+  had been silently dead for a while: it keyed off a file that moved when the
+  apply script became root-owned, so on any current install it never ran at all.
+  The whole block is now restored, in the shape the theme's own installer writes.
+- **Uninstalling ImI could delete an SDDM theme ImI never installed.** Step 5
+  fired on a directory *name*, and `ii-sddm-theme` is also upstream's name — so
+  anyone who installed the upstream theme themselves and then installed ImI
+  without the SDDM extra lost their theme, config, fonts and sudoers rule to an
+  ImI uninstall. Losing that directory while SDDM still names it is the case that
+  costs you a login screen. Ownership is now proven by a marker written on a
+  successful hand-off, and an unowned pre-fork install is reported, never deleted.
+- **The bar sat 5px off the screen edge instead of 1px over it.** `||` binds
+  tighter than `?:`, so the dead-pixel workaround's `-1` was swallowed as a
+  ternary *condition* and every style came out `+5` — pushing the bar away from
+  the edge it was meant to overhang, and making Hyprland reserve the space too.
+- **Standalone bar badges (timer, privacy, submap) sat off-centre under Hug.**
+  They centre in the whole bar, which only matches the group pill they sit in
+  while its two margins are equal — and Hug drops its edge-side one, leaving each
+  badge flush against one edge of its pill with all the slack on the other.
+- **A failed Wallpaper Engine project hid the static fallback for ~9 seconds.**
+  The transition overlay waits for a first frame from the new surface; a project
+  the renderer gives up on never produces one, so a frozen still of the wallpaper
+  you just switched *away from* stayed painted over the fallback for the
+  watchdog's full budget. It now settles as soon as the project fails.
+- **Un-suppressing could restore a Wallpaper Engine project you had moved off.**
+  A switch requested while the wallpaper was covered was stashed for later, but
+  nothing invalidated that stash, so a superseded project could come back
+  silently while your config said otherwise.
+- **The empty-notification placeholder overflowed a cramped list**, showing a
+  shape with no room for it.
+- **The Wallpaper Engine installer rebuilt from scratch on every update.** The
+  "already up to date" check read a three-field stamp into two variables, so the
+  recorded binary path was never a path and the skip could never fire — meaning
+  every re-run paid the full fetch-and-build the stamp exists to avoid, up to 40
+  minutes, even for updates that did not move the pinned revision.
+
+### Changed
+- Reboot, power off and firmware-restart now issue the transition *before*
+  closing your windows. Previously a transition that failed — a denied
+  authorisation, an inhibitor — had already killed every application first,
+  leaving an empty desktop, still logged in, with nothing explaining why.
+- Pins imi-sddm-theme **v0.2.0**, which fixes `check.sh` reporting FAIL on a
+  correct install and teaches it to detect the failures it previously could not
+  see (colours that never reached the greeter, a config outranking ours, an
+  apply script whose path makes its sudoers rule an escalation).
+
+### Added
+- `test_wallpaperengine_prebuilt.py` now actually executes. It was written for
+  pytest and invoked as a plain script, so for its whole life it defined seven
+  test functions, called none of them, and reported success — which is how the
+  rebuild bug above survived. Making it run surfaced that bug immediately.
+- The QML import lint now covers every singleton, not just `Appearance`, and
+  scans `services/` as well as `modules/` — the two gaps that let the "Reboot
+  Into" defect through.
+
 ## [0.14.9] — 2026-08-04
 
 ### Fixed
