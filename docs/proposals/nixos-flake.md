@@ -83,12 +83,9 @@ Rough shape, not a design:
      in `install-setups`: services, polkit rules, greeter/SDDM theme, plymouth.
    - `devShells.default` — quickshell + Qt + the Python test deps, so
      `tests/run_tests.sh` runs under `nix develop`.
-2. **Decide what config is declarative vs mutable.** The shell writes to
-   `~/.config/immaterial-impulse/config.json` and `plugin-state.json` **at
-   runtime** — widget positions, plugin options, enabled plugins. Those cannot
-   be read-only store paths. The likely split: the QML tree is declarative and
-   immutable; the user state directory is seeded once and then mutable. This is
-   the central design question and should be settled before any code.
+2. **What is declarative vs mutable — settled, see the section below.** The
+   split is three-way, not two-way, and the third tier is the one that decides
+   whether a `home-manager switch` quietly destroys the user's colours.
 3. **Reconcile with the existing `sdata/dist-nix` tree** — either promote it to
    the root and delete the nested flake, or keep `--via-nix` as a legacy path and
    mark it superseded. Do not ship two flakes.
@@ -96,13 +93,79 @@ Rough shape, not a design:
    somewhere it is obviously a pin.
 5. **CI**: `nix flake check` on push is the only thing that keeps a flake honest.
 
+## Declarative vs mutable — settled
+
+Checked against the tree at `4b43790`, not assumed.
+
+### The QML tree can be a read-only store path
+
+Nothing writes into it. Every consumer of `writeAdapter` / `setText`
+(`modules/common/Config.qml`, `Persistent.qml`, `plugins/PluginState.qml`,
+`services/{Notifications,Cliphist,Todo,FirstRunExperience}.qml`) targets the
+config or state directory. The only `path: Quickshell.shellPath(...)` bindings
+in the tree are **reads** — the two bundled plugin `manifest.json` files, and
+`VERSION` from the About page and the plugin store.
+
+So `dots/.config/quickshell/imi` can be a store path, which is the whole premise
+of the flake, and no part of the shell has to be relaxed to allow it.
+
+### Three tiers, not two
+
+| tier | what | where it lives |
+|---|---|---|
+| immutable | the QML tree, `scripts/`, matugen **templates** | store path, symlinked |
+| seeded once | `config.json`, `plugin-state.json`, `plugins/<id>/` | real files under `~/.config/immaterial-impulse`, written by an activation script only when absent |
+| **never managed** | every matugen **output** | plain files, owned by the running shell |
+
+That third tier is the trap. `dots/.config/matugen/config.toml` declares 11
+output paths that matugen **rewrites on every wallpaper change**, and six of them
+are ordinary dotfiles a home-manager user would reasonably expect to be
+declarative:
+
+```
+~/.config/hypr/hyprland/colors.lua      ~/.config/gtk-3.0/gtk.css
+~/.config/hypr/hyprlock/colors.conf     ~/.config/gtk-4.0/gtk.css
+~/.config/kitty/colors-matugen.conf     ~/.config/fuzzel/fuzzel_theme.ini
+```
+
+plus five under `~/.local/state/quickshell/user/generated/` (`colors.json`,
+`color.txt`, `apps/cava.ini`, `apps/tmux.conf`, `wallpaper/path.txt`).
+
+If the module writes any of those with `home.file`, home-manager makes them
+symlinks into the store. Matugen then either fails against a read-only target or
+replaces the symlink with a regular file — and the next `home-manager switch`
+reverts the user's generated colours with no error. Both outcomes are silent.
+
+**Rule: manage the templates, never the outputs.** A user who wants their
+Hyprland colours declarative wants a different feature (a static palette with
+matugen off), not this one, and the module should make that an explicit option
+rather than an accident of which files it happened to link.
+
+### Consequence for the module
+
+`homeManagerModules.default` therefore owns the immutable tier outright, seeds
+the second tier idempotently, and must *refuse* to touch the third. Options that
+seed `config.json` need `lib.mkDefault` semantics — the file is the user's after
+first write, and a switch must not stamp on it.
+
+## Out of scope for the first flake
+
+The embedded Wallpaper Engine renderer. `qs-wallpaperengine` builds a patched
+Quickshell against `linux-wallpaperengine`, which is not in nixpkgs and pulls
+CEF, mpv and SDL; the installer's fast path is a prebuilt tarball made in an
+Arch container. A Nix user gets the shell with static wallpapers, and
+`wallpaperSelector.wallpaperEngine` stays inert. Packaging that dependency tree
+is its own proposal.
+
 ## Open questions
 
-- Does the plugin system work under Nix? Bundled plugins load by absolute path
-  through Quickshell's `qs:` URL scheme, and **installed** plugins live in
-  `~/.config/immaterial-impulse/plugins/<id>/` — a mutable directory by design.
-  Third-party plugin install is inherently imperative; the flake has to leave
-  room for it.
+- Does the plugin system work under Nix? Partly answered: **bundled** plugins are
+  read through `Quickshell.shellPath()` and are fine in a store path, and
+  **installed** plugins live in `~/.config/immaterial-impulse/plugins/<id>/`,
+  which the table above puts in the seeded-once tier. What is still open is
+  whether a plugin installed at runtime can load from a mutable directory while
+  the rest of the tree is immutable, and what `PluginState.qml` does when its
+  state file names a plugin the current generation no longer ships.
 - The installer's update path (`exp-update`, `exp-merge`) uses `git rebase`
   against a checkout. That has no meaning under a flake. What replaces
   Settings → Update Dots for a Nix user?
