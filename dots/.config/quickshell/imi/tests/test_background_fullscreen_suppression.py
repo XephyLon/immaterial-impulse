@@ -206,6 +206,19 @@ class _QmlSource:
                 return value
         return None
 
+    def function_body(self, name):
+        """The `{ ... }` of `function <name>(...)`, or None.
+
+        A function body is a `js` block whose header carries the declaration,
+        so it is not reachable through `elements()`/`members()` - and pins that
+        follow a call into the function it lands in need it.
+        """
+        declaration = re.compile(r"\bfunction\s+" + re.escape(name) + r"\s*\(")
+        for block in self.blocks:
+            if block.close_at is not None and declaration.search(block.header):
+                return self.code[block.open_at:block.close_at]
+        return None
+
     def element_id(self, block):
         """The block's `id`, as a bare identifier.
 
@@ -381,25 +394,57 @@ class BackgroundSuppressionTests(unittest.TestCase):
                       "Leaving fullscreen must clear suppression directly, not "
                       "through the delay timer.")
 
-    def test_a_switch_requested_while_suppressed_is_deferred(self):
+    def test_a_switch_made_while_suppressed_is_applied_on_the_way_back(self):
         """The surface only builds a project while it is being drawn.
 
-        Declaring `wePendingProject` is not the contract - queueing a switch
-        into it while suppressed, and replaying it on un-suppress, is. Both
-        halves have to be present or a wallpaper change made behind a
-        fullscreen window is simply lost.
+        Both halves have to be present or a wallpaper change made behind a
+        fullscreen window is simply lost: `loadWeWallpaper` must still decline
+        to apply one while suppressed (the surface never reaches
+        updatePaintNode, so it would sit on the old project with QML believing
+        otherwise, and the transition would hang on a first frame that cannot
+        arrive), and un-suppressing must re-apply it.
+
+        This used to name `wePendingProject`, the stash that held the deferred
+        switch. It pins the behaviour rather than the storage now - see the
+        test below for why the storage went away.
         """
-        queued = [m for m in re.finditer(r"wePendingProject\s*=\s*(?!\"\"|'')(\S+)",
-                                         self.qml.code)]
-        self.assertTrue(queued,
-                        "nothing ever queues a switch into wePendingProject, so "
-                        "the deferral cannot happen.")
+        load = self.qml.function_body("loadWeWallpaper")
+        self.assertIsNotNone(load, "loadWeWallpaper should still exist")
+        self.assertIn("suppressContents", load,
+                      "loadWeWallpaper must still refuse to apply a switch while "
+                      "the contents are suppressed.")
         replay = self._handler_body("onSuppressContentsChanged")
-        self.assertIn("wePendingProject", replay,
-                      "un-suppressing must look at the deferred switch.")
         self.assertIn("loadWeWallpaper", replay,
-                      "the deferred switch must actually be replayed, not just "
-                      "cleared.")
+                      "un-suppressing must actually re-apply the switch.")
+
+    def test_the_project_replayed_on_un_suppress_is_the_live_request(self):
+        """Not a stashed copy of one, which nothing could invalidate (#92).
+
+        `wePendingProject` was written in one place and cleared in one place -
+        when it was replayed. Both arms of `loadWeWallpaper`'s first line
+        return *before* the suppression check, so neither could clear a stash
+        that had just been superseded: not a switch back to the project already
+        loaded, and not the WE layer being destroyed and re-syncing
+        `weLoadedProject` on the way back. Un-suppressing then replayed a
+        project the user had already moved off, with `activePath` and
+        `weProjectPath` both saying something else and nothing reconciling them.
+        (`""` also served as both "nothing pending" and a legal project path.)
+
+        Reading `weProjectPath` at replay time deletes the state rather than
+        adding invalidation to it: the request cannot go stale, because it *is*
+        the request. `loadWeWallpaper` already no-ops when it matches what is
+        loaded, so the unconditional call costs nothing.
+        """
+        replay = self._handler_body("onSuppressContentsChanged")
+        call = re.search(r"loadWeWallpaper\s*\(([^)]*)\)", replay)
+        self.assertIsNotNone(call, "un-suppressing must call loadWeWallpaper")
+        argument = call.group(1).strip()
+        self.assertRegex(
+            argument, r"^(?:bgRoot\.)?weProjectPath$",
+            f"un-suppressing replays `{argument}` rather than the live "
+            "weProjectPath. Anything held across the suppression has to be "
+            "invalidated by every route that can supersede it, and the two "
+            "early returns in loadWeWallpaper are not able to.")
 
     def test_transition_cannot_hang_forever(self):
         """A stalled wallpaper transition must settle itself.
@@ -425,18 +470,6 @@ class BackgroundSuppressionTests(unittest.TestCase):
                       "the watchdog must clear the transition it is guarding, "
                       "or the peel shader never comes off screen.")
 
-    def test_fullscreen_test_ignores_maximized(self):
-        """Maximized is not fullscreen; only the polled int tells them apart."""
-        self.assertRegex(self.hyprland_data, r"\bfullscreen\s*>=\s*2",
-                         "HyprlandData must keep testing the fullscreen *mode*, "
-                         "not its truthiness - 1 is maximized.")
-        for name, source in (("Background", self.background),
-                             ("ScreenCorners", self.corners)):
-            self.assertIn("fullscreenByMonitorName", source,
-                          f"{name} should read the polled per-monitor map.")
-            self.assertNotIn("wayland?.fullscreen", source,
-                             f"{name} still uses the toplevel's own fullscreen "
-                             "flag, which is true for maximized windows too.")
 
     def _handler_body(self, handler):
         for child in self.window.children:

@@ -170,11 +170,18 @@ Variants {
             // A switch requested while suppressed could not be applied - the
             // surface only builds a project from updatePaintNode, which does not
             // run for an item that is not being drawn. Apply it now.
-            if (!bgRoot.suppressContents && bgRoot.wePendingProject !== "") {
-                const pending = bgRoot.wePendingProject;
-                bgRoot.wePendingProject = "";
-                bgRoot.loadWeWallpaper(pending);
-            }
+            //
+            // Re-read the request instead of replaying a stashed copy of one.
+            // A stash has to be invalidated by everything that can supersede it:
+            // a switch back to the project already loaded (which loadWeWallpaper
+            // returns on before it could clear anything) and the WE layer being
+            // destroyed and re-syncing on the way back. It was invalidated by
+            // neither, so un-suppressing could load a project the user had
+            // already moved off, silently, while the config said otherwise.
+            // weProjectPath *is* the request and cannot go stale, and
+            // loadWeWallpaper already no-ops when it matches what is loaded.
+            if (!bgRoot.suppressContents)
+                bgRoot.loadWeWallpaper(bgRoot.weProjectPath);
         }
 
         property HyprlandMonitor monitor: Hyprland.monitorFor(modelData)
@@ -260,7 +267,6 @@ Variants {
 
         // WE wallpaper switch transition state.
         property string weLoadedProject: ""     // project currently in the surface
-        property string wePendingProject: ""    // requested while suppressed, not applied yet
         property real weTransitionProgress: 1.0  // 0 = old still, 1 = new surface
         property bool weTransitioning: false
 
@@ -273,11 +279,9 @@ Variants {
             // Nothing draws this item while suppressed, so the surface would never
             // reach updatePaintNode to build the new project - it would sit on the
             // old one with QML believing otherwise, and the transition would hang
-            // waiting for a first frame that cannot arrive. Defer to un-suppress.
-            if (bgRoot.suppressContents) {
-                bgRoot.wePendingProject = path
-                return
-            }
+            // waiting for a first frame that cannot arrive. Drop it; un-suppressing
+            // re-reads weProjectPath and applies whatever it says then.
+            if (bgRoot.suppressContents) return
             const canTransition = bgRoot.weLoadedProject !== "" && weLoader.item.rendered
                 && bgRoot.wallpaperAnimation !== ""
             if (!canTransition) {
