@@ -182,16 +182,28 @@ pin_status() { # $1=label $2=pin $3=satellite dir $4=slug
   # If the pin looks like a release tag, confirm the release actually has assets.
   # v0.1.0 is why this check exists: tagged, built, never published.
   if have_gh && [[ "$pin" =~ ^v[0-9] ]]; then
-    local assets
-    assets=$(gh -R "$slug" release view "$pin" --json assets 2>/dev/null | python3 -c 'import json,sys
+    local release_out release_rc assets
+    # Merged stderr, because "release not found" and "could not reach GitHub"
+    # are different findings and only the message tells them apart. The previous
+    # shape mapped both onto -1 via the parser's `except`, so the unknown state
+    # was unreachable and an offline run reported a missing release.
+    release_out=$(gh -R "$slug" release view "$pin" --json assets 2>&1)
+    release_rc=$?
+    if (( release_rc == 0 )); then
+      assets=$(printf '%s' "$release_out" | python3 -c 'import json,sys
 try: print(len(json.load(sys.stdin)["assets"]))
-except Exception: print(-1)' 2>/dev/null)
-    if [[ "$assets" == "-1" ]]; then
+except Exception: print("?")' 2>/dev/null)
+      if [[ "$assets" == "0" ]]; then
+        bad "  release $pin exists but has no assets — prebuilt path cannot work"
+      elif [[ "$assets" =~ ^[0-9]+$ ]]; then
+        ok "  release $pin published with $assets asset(s) — prebuilt path live"
+      else
+        warn "  release $pin exists but its asset list did not parse — prebuilt path unverified"
+      fi
+    elif [[ "$release_out" == *"not found"* || "$release_out" == *"Not Found"* ]]; then
       bad "  no published release for $pin — installs silently fall back to a source build"
-    elif [[ "$assets" == "0" ]]; then
-      bad "  release $pin exists but has no assets — prebuilt path cannot work"
     else
-      ok "  release $pin published with $assets asset(s) — prebuilt path live"
+      warn "  could not query the release for $pin (${release_out%%$'\n'*}) — prebuilt path unverified"
     fi
   fi
 }
