@@ -462,6 +462,15 @@ if ! python3 "$SCRIPT_DIR/test_lyrics_widget_contract.py"; then
     exit 1
 fi
 
+# Re-runs tst_weather_forecast.qml under a far-east and a far-west timezone.
+# On a UTC runner - which is CI - a local date and a UTC one are the same
+# string, so the unit test cannot tell them apart on its own.
+echo "Running weather forecast contract tests..."
+if ! python3 "$SCRIPT_DIR/test_weather_forecast_contract.py"; then
+    echo "Weather forecast contract tests failed."
+    exit 1
+fi
+
 echo "Running currency service safety tests..."
 if ! python3 "$SCRIPT_DIR/test_currency_service_contract.py"; then
     echo "Currency service safety tests failed."
