@@ -124,6 +124,17 @@ class WiringTests(unittest.TestCase):
         self.assertRegex(self.service,
                          r"id:\s*rebootProc\s*\n\s*command:\s*\[[^\]]*reboot[^\]]*\]")
 
+    def test_arming_bootnext_is_followed_by_the_reboot(self):
+        # The one edge #104 actually broke. The cases either side of it pin that
+        # rebootProc exists and that it behaves correctly once it runs - but
+        # nothing pinned that anything *starts* it, which is precisely the state
+        # the bug left behind: pkexec returned 0, the success branch threw before
+        # reaching the reboot, and BootNext stayed armed. Replacing this
+        # assignment with a no-op keeps every other case in this file green.
+        body = handler_body(strip_comments(self.service), "setNextProc")
+        self.assertIn("rebootProc.running = true", body,
+                      "a successful pkexec must start the reboot it just armed BootNext for")
+
     def test_failed_reboot_clears_bootnext(self):
         # A failed action must not leave the machine armed to boot another OS.
         self.assertIn('["pkexec", "efibootmgr", "-N"]', self.service)
