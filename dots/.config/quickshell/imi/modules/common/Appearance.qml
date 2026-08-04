@@ -519,6 +519,36 @@ Singleton {
         // Standalone widget pills (Timer, Privacy) read as compact dynamic-island
         // badges: a touch shorter than the full group pill.
         property real barStandalonePillHeight: root.sizes.barPillHeight - root.sizes.barPillMargin
+        // The bar *surface's* own margins, as opposed to barMarginTop/Bottom
+        // above, which inset its body. Two terms, and they are alternatives
+        // rather than things to add up:
+        //
+        //   M3 (3) is the only style that detaches the whole surface from the
+        //   monitor edge, by the same gap Hyprland leaves around windows.
+        //
+        //   Hyprland leaves one untouchable pixel row on the right and bottom
+        //   screen edges. `interactions.deadPixelWorkaround` pulls the surface
+        //   1px *past* the edge so that row falls outside it - which replaces
+        //   the detach margin, since a surface already hanging over the edge
+        //   has no gap left to keep.
+        //
+        // Both used to be open-coded in Bar.qml as
+        //     (enable && anchors.bottom) * -1 || cornerStyle === 3 ? 5 : 0
+        // `||` binds tighter than `?:`, so the entire left-hand side was only
+        // the ternary's *condition*: with the workaround live that condition
+        // was truthy and the margin came out +5 for every style, pushing the
+        // bar away from the edge it was meant to overhang and making Hyprland
+        // reserve 5px more with it. They live here so the arithmetic is one
+        // expression a test can read rather than three inline ternaries.
+        property real barDetachMargin: Config?.options.bar.cornerStyle === 3
+            ? root.sizes.hyprlandGapsOut : 0
+        // One physical pixel, not a design token - it is the width of the row
+        // the compositor leaves out, so it does not scale with anything.
+        property real barDeadPixelOverhang: Config?.options.interactions.deadPixelWorkaround.enable
+            ? -1 : 0
+        property real barBottomMargin: (Config?.options.bar.bottom && root.sizes.barDeadPixelOverhang !== 0)
+            ? root.sizes.barDeadPixelOverhang
+            : root.sizes.barDetachMargin
         property real barCenterSideModuleWidth: Config.options?.bar.verbose ? 360 : 140
         property real barCenterSideModuleWidthShortened: 280
         property real barCenterSideModuleWidthHellaShortened: 190
