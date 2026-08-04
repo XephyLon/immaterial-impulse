@@ -114,8 +114,15 @@ write_stamp(){ # $1 = installed ref, $2 = qs binary path, $3 = WE lib dir
 up_to_date(){
   [[ "${WE_FORCE_REBUILD:-0}" == "1" ]] && return 1
   [[ -f "$STAMP_FILE" ]] || return 1
-  local ref bin
-  read -r ref bin < "$STAMP_FILE" || return 1
+  # Three variables for a three-field stamp. `read` puts every remaining field
+  # into the LAST name, so `read -r ref bin` left bin holding "<binary> <libdir>"
+  # once write_stamp started recording the lib dir - a string that is never an
+  # executable, so the -x below could not pass and this function could not return
+  # 0. The skip was dead: every re-run paid the full fetch+build it exists to
+  # avoid. The main block below already reads three, which is why the bug hid -
+  # the code after the gate was correct, the gate just never opened.
+  local ref bin lib
+  read -r ref bin lib < "$STAMP_FILE" || return 1
   [[ "$ref" == "$WE_REF" ]] || return 1
   [[ -x "$bin" ]] || return 1                    # build output still on disk
   [[ -x "$PREFIX/bin/quickshell" ]] || return 1  # wrapper still installed
