@@ -75,8 +75,24 @@ fi
 # back to asking rather than being forced into a state that cannot work.
 echo "[ImI] SDDM theme: handing off to the theme installer (unattended)..."
 # Optional extra - never let a decline/failure abort the whole install.
-IMI_SDDM_ASSUME_YES="${IMI_SDDM_ASSUME_YES:-1}" \
-IMI_SDDM_MODE="${IMI_SDDM_MODE:-ii-matugen}" \
-  bash "$TMP_SETUP" \
-  || echo "[ImI] SDDM theme: theme installer exited non-zero (declined or error)."
+if IMI_SDDM_ASSUME_YES="${IMI_SDDM_ASSUME_YES:-1}" \
+   IMI_SDDM_MODE="${IMI_SDDM_MODE:-ii-matugen}" \
+     bash "$TMP_SETUP"; then
+  # Record that WE installed the theme, so uninstall has evidence rather than
+  # an inference. A theme directory only proves *someone* installed one: the
+  # pre-fork name (ii-sddm-theme) is upstream 3d3f/ii-sddm-theme's install name,
+  # and a user who installed that on their own years ago would have had their
+  # working login screen handed to our uninstaller on the strength of a
+  # directory existing. See issue #100.
+  #
+  # State, not config: it describes what this machine had done to it, and it
+  # must survive the dots sync in step 3, which rsync --delete's ~/.config.
+  _sddm_marker_dir="${XDG_STATE_HOME:-$HOME/.local/state}/immaterial-impulse"
+  if mkdir -p "$_sddm_marker_dir" 2>/dev/null; then
+    printf 'ref=%s\ninstalled=%s\n' "$SDDM_REF" "$(date -Is)" \
+      > "$_sddm_marker_dir/sddm-theme-installed" 2>/dev/null || true
+  fi
+else
+  echo "[ImI] SDDM theme: theme installer exited non-zero (declined or error)."
+fi
 echo "[ImI] SDDM theme: done."

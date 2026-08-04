@@ -298,6 +298,15 @@ if ! python3 "$SCRIPT_DIR/test_sddm_matugen_hook_restore.py"; then
     exit 1
 fi
 
+# Uninstall step 5 hands the machine to the theme's uninstaller, which removes
+# the drop-in carrying Current= along with the theme. Firing it on a theme we
+# did not install is somebody else's login screen.
+echo "Running SDDM uninstall ownership tests..."
+if ! python3 "$SCRIPT_DIR/test_sddm_uninstall_ownership.py"; then
+    echo "SDDM uninstall ownership tests failed."
+    exit 1
+fi
+
 echo "Running SDDM theme source tests..."
 if ! python3 "$SCRIPT_DIR/test_sddm_theme_source.py"; then
     echo "SDDM theme source tests failed."

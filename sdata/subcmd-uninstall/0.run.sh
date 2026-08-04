@@ -18,9 +18,39 @@ pause
 
 # Step 5: the imi-sddm-theme SDDM login theme (if present). Hand off to the
 # theme's own uninstaller, pinned to the same commit our installer used - it
-# removes both the current and the pre-rename name. Detect either, since an
-# install that predates the rename has not been migrated yet.
-if [[ -d /usr/share/sddm/themes/imi-sddm-theme || -d /usr/share/sddm/themes/ii-sddm-theme ]]; then
+# removes both the current and the pre-rename name.
+#
+# Only when it is ours to remove. This used to fire on either directory
+# existing, and "ii-sddm-theme" is upstream 3d3f/ii-sddm-theme's install name -
+# so a user who installed upstream's theme themselves, years before ImI, then
+# installed ImI *without* the SDDM extra (INSTALL_SDDM=0, the default), had
+# their working login screen handed to our uninstaller by an ImI uninstall. It
+# removes the theme directory, the drop-in carrying their Current=, their
+# config dir, fonts, matugen block and sudoers rule - none of which we created.
+# Losing the directory while Current= still names it is the login-blocking case.
+# Step 4 below already models the right shape: prove ownership, don't infer it.
+# See issue #100.
+#
+# Two forms of evidence, in order of strength:
+#   - the marker install step 5 writes on a successful hand-off. Definitive,
+#     and the only thing that can authorise removing the legacy name.
+#   - /usr/share/sddm/themes/imi-sddm-theme. Installs predating the marker have
+#     nothing else, and this name is ours: only this fork installs under it.
+# A bare legacy directory is never enough, and is reported instead of acted on.
+_sddm_marker="${XDG_STATE_HOME:-$HOME/.local/state}/immaterial-impulse/sddm-theme-installed"
+_sddm_ours=false
+if [[ -d /usr/share/sddm/themes/imi-sddm-theme ]]; then
+  _sddm_ours=true
+elif [[ -f "$_sddm_marker" && -d /usr/share/sddm/themes/ii-sddm-theme ]]; then
+  # We installed it before the theme renamed itself, and its migration has not
+  # run since. Still ours.
+  _sddm_ours=true
+elif [[ -d /usr/share/sddm/themes/ii-sddm-theme ]]; then
+  printf "${STY_YELLOW}Found /usr/share/sddm/themes/ii-sddm-theme, the pre-fork name, with no record that we installed it.${STY_RST}\n"
+  printf "${STY_YELLOW}Leaving it alone - it is most likely upstream 3d3f/ii-sddm-theme, installed by you. To remove it, use its own uninstaller; deleting the directory while a Current= still names it will leave you with no graphical login.${STY_RST}\n"
+fi
+
+if [[ "$_sddm_ours" == true ]]; then
   printf "${STY_CYAN}Undo install step 5 (imi-sddm-theme SDDM login theme)...\n${STY_RST}"
   if command -v curl >/dev/null; then
     # Must match SDDM_REF in sdata/subcmd-install/5.sddm-theme.sh -
@@ -28,9 +58,16 @@ if [[ -d /usr/share/sddm/themes/imi-sddm-theme || -d /usr/share/sddm/themes/ii-s
     _sddm_ref="${SDDM_REF:-cd56fcdcd70a0800918262e6cba2ebcc5aa9b447}"
     _sddm_un="$(mktemp --suffix=-ii-sddm-uninstall.sh)"
     if curl -fsSL "https://raw.githubusercontent.com/XephyLon/imi-sddm-theme/${_sddm_ref}/uninstall.sh" -o "$_sddm_un"; then
-      bash "$_sddm_un" || printf "${STY_YELLOW}imi-sddm-theme uninstaller exited non-zero; remove it manually if needed.${STY_RST}\n"
+      # The theme's uninstaller exits non-zero when it removes nothing (a
+      # decline, or no terminal to ask on), so the marker only goes away when
+      # the thing it records is actually gone.
+      if bash "$_sddm_un"; then
+        rm -f "$_sddm_marker"
+      else
+        printf "${STY_YELLOW}imi-sddm-theme uninstaller exited non-zero; remove it manually if needed.${STY_RST}\n"
+      fi
     else
-      printf "${STY_YELLOW}Could not fetch the imi-sddm-theme uninstaller. Remove manually: /usr/share/sddm/themes/{imi,ii}-sddm-theme, /etc/sddm.conf.d/{imi,ii}-sddm-theme.conf, ~/.config/{imi,ii}-sddm-theme, its /etc/sudoers.d rule and its fonts.${STY_RST}\n"
+      printf "${STY_YELLOW}Could not fetch the imi-sddm-theme uninstaller. Remove manually: /usr/share/sddm/themes/imi-sddm-theme, /etc/sddm.conf.d/zz-imi-sddm-theme.conf, ~/.config/imi-sddm-theme, /usr/local/lib/imi-sddm-theme, its /etc/sudoers.d rule and its fonts.${STY_RST}\n"
     fi
     rm -f "$_sddm_un"
   else
