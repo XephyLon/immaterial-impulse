@@ -502,6 +502,12 @@ if ! python3 "$SCRIPT_DIR/test_screen_record.py"; then
     exit 1
 fi
 
+echo "Running Wallpaper Engine still tests..."
+if ! python3 "$SCRIPT_DIR/test_we_still.py"; then
+    echo "Wallpaper Engine still tests failed."
+    exit 1
+fi
+
 echo "Running drop shelf summon tests..."
 if ! python3 "$SCRIPT_DIR/test_dropshelf_summon.py"; then
     echo "Drop shelf summon tests failed."
