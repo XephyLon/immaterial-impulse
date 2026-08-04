@@ -41,7 +41,7 @@ set -euo pipefail
 [[ "${INSTALL_WE:-0}" == "1" ]] || { echo "[ImI] Wallpaper Engine: skipped."; exit 0; }
 
 WE_REPO="${WE_REPO:-https://github.com/XephyLon/qs-wallpaperengine}"
-WE_REF="${WE_REF:-v0.2.0}"                       # release tag, so installs take the PREBUILT fast path; any checksum /
+WE_REF="${WE_REF:-v0.2.1}"                       # release tag, so installs take the PREBUILT fast path; any checksum /
                                                  # arch / Qt-too-old / smoke-test failure falls back to a source build, as
                                                  # does a tag whose release has not published yet. Whatever this points at
                                                  # MUST be >= 40427cf, the commit that added
@@ -65,6 +65,11 @@ WE_REF="${WE_REF:-v0.2.0}"                       # release tag, so installs take
                                                  # actually published assets: v0.1.0 built for 34 minutes and then died on
                                                  # `gh release create`, so the prebuilt path silently fell back to a source
                                                  # compile on every install.
+                                                 # v0.2.1 stops a wallpaper that wedged inside WE's setup() from having
+                                                 # its WeThread freed while the detached thread is still running in it -
+                                                 # the replacement thread is allocated at the same size moments later and
+                                                 # lands on that address as often as not, at which point the dead
+                                                 # wallpaper publishes its texture and fence into the live one's state.
                                                  # Cutting the next release: qs-wallpaperengine/docs/cutting-a-release.md.
 BUILD_DIR="${BUILD_DIR:-$HOME/.cache/immaterial-impulse/qs-wallpaperengine-build}"
 PREBUILT_ROOT="${PREBUILT_ROOT:-$HOME/.cache/immaterial-impulse/prebuilt}"

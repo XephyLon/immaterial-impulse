@@ -10,6 +10,18 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.14.4] — 2026-08-04
+
+### Fixed
+- **A wallpaper that wedged on load could corrupt the next one.** The installer
+  pin moves to `qs-wallpaperengine` v0.2.1. When a wallpaper hangs inside
+  Wallpaper Engine's own `setup()`, its render thread never observes the stop
+  flag, so the shell detaches it rather than freezing — but it then freed the
+  object that thread is still running inside. A replacement of exactly that size
+  is allocated moments later and lands on the same address as often as not, at
+  which point the dead wallpaper publishes its texture and fence into the live
+  one's state. Existing installs need one *Update Dots* run to pick it up.
+
 ## [0.14.3] — 2026-08-04
 
 ### Fixed
@@ -1305,7 +1317,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.3...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.4...HEAD
+[0.14.4]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.3...v0.14.4
 [0.14.3]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.2...v0.14.3
 [0.14.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.0...v0.14.1
