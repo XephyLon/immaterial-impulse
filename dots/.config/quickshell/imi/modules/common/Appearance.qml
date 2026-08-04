@@ -516,9 +516,23 @@ Singleton {
         // Follows from the two margins rather than assuming a symmetric inset,
         // so Hug's body reclaims the space its missing top margin frees.
         property real barPillHeight: baseBarHeight - root.sizes.barMarginTop - root.sizes.barMarginBottom
-        // Standalone widget pills (Timer, Privacy) read as compact dynamic-island
-        // badges: a touch shorter than the full group pill.
-        property real barStandalonePillHeight: root.sizes.barPillHeight - root.sizes.barPillMargin
+        // Standalone widget pills (Timer, Privacy, Submap) read as compact
+        // dynamic-island badges: a touch shorter than the group pill they sit
+        // inside, inset from it evenly on every side.
+        property real barStandalonePillMargin: root.spacing.space25
+        property real barStandalonePillHeight: root.sizes.barPillHeight
+            - root.sizes.barStandalonePillMargin * 2
+        // The badges centre themselves in the whole bar, but the group pill they
+        // sit inside is only centred there while its own two margins match -
+        // which stopped being true when Hug dropped its edge-side one, leaving
+        // the badge flush against the pill's window-side edge with all the slack
+        // on the other. This is the group pill's centre relative to the bar's,
+        // and it applies along whichever axis the bar's thickness runs:
+        // vertically for a horizontal bar, horizontally for a vertical one.
+        // `bar.bottom` puts the edge margin on the far side, so it mirrors.
+        property real barStandalonePillOffset: Config?.options.bar.bottom
+            ? (root.sizes.barMarginBottom - root.sizes.barMarginTop) / 2
+            : (root.sizes.barMarginTop - root.sizes.barMarginBottom) / 2
         // The bar *surface's* own margins, as opposed to barMarginTop/Bottom
         // above, which inset its body. Two terms, and they are alternatives
         // rather than things to add up:
