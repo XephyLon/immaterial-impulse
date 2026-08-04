@@ -10,6 +10,27 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.14.9] — 2026-08-04
+
+### Fixed
+- **Preset thumbnails showed the wrong wallpaper, and so did the login screen.**
+  Both read a config field that nothing has written since July: the refactor that
+  reduced Wallpaper Engine to a selector removed the code that rendered those
+  stills, but left the field and its readers behind. It stayed frozen at whichever
+  project was active that day — and because applying a preset restores your whole
+  config, the stale value spread to every preset saved since and came back each
+  time one was applied. Several preset cards therefore rendered the *same* image
+  as each other, and the greeter served a months-old wallpaper indefinitely.
+
+  Both now read the project's own preview, which is written on every wallpaper
+  switch and always matches the active project. Presets already on disk keep the
+  dead key — it is inert now that nothing reads it — and their cards are correct
+  immediately. Pins imi-sddm-theme v0.1.1 for the greeter half.
+
+  One trade-off: a *scene* wallpaper has no full-resolution still, so the login
+  background is now a preview-sized image rather than a full render. Restoring
+  proper still generation is tracked in #103.
+
 ## [0.14.8] — 2026-08-04
 
 ### Security
@@ -1421,7 +1442,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.8...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.9...HEAD
+[0.14.9]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.8...v0.14.9
 [0.14.8]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.7...v0.14.8
 [0.14.7]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.6...v0.14.7
 [0.14.6]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.5...v0.14.6
