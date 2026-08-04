@@ -10,6 +10,23 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.16.1] — 2026-08-05
+
+### Fixed
+- **The library-path repair in 0.16.0 was incomplete.** It made the Wallpaper
+  Engine binary's own library path correct, and the shell still could not start
+  without help — so the wrapper kept exporting `LD_LIBRARY_PATH`, the very thing
+  the repair exists to remove. `DT_RUNPATH` is not transitive: the executable's
+  path resolves its own direct dependencies and nothing beyond them, while the
+  bundled `liblinux-wallpaperengine-lib.so` looks up *its* dependencies through
+  its own path — which was also the build machine's. `libcef.so` sat in the same
+  directory and was still reported missing.
+
+  `LD_LIBRARY_PATH` is transitive, which is exactly why the fallback worked
+  where the repair did not, and why this went unnoticed: the fallback was
+  quietly covering for it while being the leak it was meant to avoid. Every
+  bundled library that cannot resolve itself is now repaired too.
+
 ## [0.16.0] — 2026-08-04
 
 ### Fixed
