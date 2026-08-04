@@ -72,6 +72,55 @@ Singleton {
         // back to the static wallpaper instead of a blank screen.
         Config.options.wallpaperSelector.wallpaperEngine.activeType = project.type ?? "";
         if (project.preview) root.enqueueTheme(project, darkMode);
+        root.enqueueStill(project);
+    }
+
+    // Render a full-resolution still of the project for consumers that cannot
+    // run Wallpaper Engine - in practice the SDDM greeter, which was showing a
+    // ~1000px square Workshop thumbnail stretched across the display (#113).
+    //
+    // Only "scene" projects need this. A "video" project is a plain file the
+    // greeter can either play or have a frame cut from, and "web" falls back to
+    // the static wallpaper everywhere.
+    readonly property string stillDir: FileUtils.trimFileProtocol(`${Directories.cache}/wallpaperengine-stills`)
+
+    function enqueueStill(project) {
+        if (!project || (project.type ?? "") !== "scene" || !project.id) {
+            // Leave whatever the last scene produced alone rather than clearing
+            // it: the greeter prefers the still only when it matches the active
+            // project, and a half-written value is worse than an absent one.
+            return;
+        }
+        // The renderer holds a GPU context for a few seconds; queue rather than
+        // run concurrently, exactly as theme generation does above.
+        if (stillProcess.running) {
+            stillProcess.pendingProject = project;
+            return;
+        }
+        stillProcess.target = `${root.stillDir}/${project.id}.jpg`;
+        stillProcess.command = [`${Directories.scriptPath}/wallpapers/we_still.sh`,
+            `${project.id}`, stillProcess.target];
+        stillProcess.running = true;
+    }
+
+    Process {
+        id: stillProcess
+        property var pendingProject: null
+        property string target: ""
+        onExited: exitCode => {
+            const pending = stillProcess.pendingProject;
+            stillProcess.pendingProject = null;
+            if (exitCode === 0 && stillProcess.target !== "") {
+                Config.options.wallpaperSelector.wallpaperEngine.activeStill = stillProcess.target;
+            } else if (exitCode !== 0) {
+                // Not an error worth surfacing: the greeter falls back to the
+                // preview, which is what it used before this existed. Missing
+                // linux-wallpaperengine exits 3 and is the common case on a
+                // machine that never installed the Wallpaper Engine extra.
+                console.log("[WallpaperEngine] still render failed:", exitCode);
+            }
+            if (pending) Qt.callLater(() => root.enqueueStill(pending));
+        }
     }
 
     function enqueueTheme(project, darkMode = Appearance.m3colors.darkmode) {
@@ -93,6 +142,9 @@ Singleton {
         Config.options.wallpaperSelector.wallpaperEngine.activePath = "";
         Config.options.wallpaperSelector.wallpaperEngine.activeType = "";
         Config.options.wallpaperSelector.wallpaperEngine.activePreview = "";
+        // Cleared with the rest: a still naming a project no longer active is
+        // exactly the stale-field failure #103 was about.
+        Config.options.wallpaperSelector.wallpaperEngine.activeStill = "";
     }
 
     Process {

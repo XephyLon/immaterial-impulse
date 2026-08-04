@@ -1408,19 +1408,28 @@ Singleton {
                     // is unsupported by the embedded renderer (needs CEF), so the
                     // background falls back to the static wallpaper for it.
                     property string activeType: ""
-                    // `activeStill` used to live here: a full-scene still rendered
-                    // from the active project. The selector-only refactor removed
-                    // the code that generated those stills and wrote the field, but
-                    // left the field and its readers, so it sat frozen at whatever
-                    // it held that day - and applying a preset restored that stale
-                    // value, which is how it spread (#103). Removed rather than
-                    // repaired: `activePreview` is maintained by
-                    // WallpaperEngine.apply() and always matches the active project.
+                    // A full-resolution still of the active project, rendered at
+                    // the display's own size and cached under
+                    // ~/.cache/.../wallpaperengine-stills/<id>.jpg.
                     //
-                    // Deliberately not migrated away on disk. The JsonAdapter does
-                    // not expose keys it has no property for, so the leftover key is
-                    // inert - the same treatment the desktop-widget keys got above,
-                    // and it keeps a downgrade working.
+                    // This field existed before, was removed in #103, and is back
+                    // deliberately. It was removed because the selector-only
+                    // refactor deleted the code that generated the stills while
+                    // leaving the field and its readers, so it sat frozen at
+                    // whatever it held that day and preset-apply spread the stale
+                    // value. The field was never the problem - having no writer
+                    // was. It now has one: WallpaperEngine.apply() renders the
+                    // still through scripts/wallpapers/we_still.sh on every scene
+                    // switch, so it cannot go stale the way it did.
+                    //
+                    // It exists because `activePreview` is a Steam Workshop
+                    // thumbnail - often square and around 1000px - and the SDDM
+                    // greeter, which cannot run Wallpaper Engine, was showing that
+                    // upscaled across the whole display (#113). Readers must treat
+                    // an empty value as "not available yet" and fall back to
+                    // activePreview: rendering is asynchronous and a scene takes a
+                    // few seconds.
+                    property string activeStill: ""
                     property int fps: 30
                     property string scaling: "fill"
                     property bool silent: true
