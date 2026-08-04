@@ -5,51 +5,92 @@
 
 #####################################################################################
 # The loop above deploys dots/.config/* with rsync --delete, and the SDDM login
-# theme keeps its trigger *inside* one of those files: its installer appends a
-# `post_hook` to ~/.config/matugen/config.toml so the greeter's background and
-# colors are regenerated on every wallpaper change. We ship our own
-# config.toml without that line, so each update deleted the hook and the login
-# screen quietly froze at whatever it looked like when the theme was installed.
+# theme keeps its integration *inside* one of those files: its installer appends
+# a `[templates.iisddmtheme]` block to ~/.config/matugen/config.toml so the
+# greeter's colors are regenerated on every wallpaper change. We ship our own
+# config.toml without that block, so each update deleted it and the login screen
+# quietly froze at whatever it looked like when the theme was installed.
 #
-# Put it back if the theme is installed. Idempotent, and it re-derives the mode
-# rather than assuming: generate_settings.py is only present for the
-# ii+matugen mode, which additionally syncs the shell's own settings.
+# The block is one unit and has to be restored as one. An earlier version of
+# this function put back only the `post_hook`, under [config] rather than under
+# the template, which is worse than not restoring anything: the hook fires (now
+# after *every* matugen run, not just this template's) while the input_path /
+# output_path pair that actually regenerates Colors.qml is gone, so nothing is
+# produced for it to publish. The greeter's palette stayed frozen and the
+# function reported success. See issue #101.
+#
+# Idempotent, and it re-derives the mode rather than assuming:
+# generate_settings.py is only present for the ii+matugen mode, which
+# additionally syncs the shell's own settings.
 restore_sddm_matugen_hook(){
   local matugen_conf="${XDG_CONFIG_HOME}/matugen/config.toml"
 
   # The theme installs as imi-sddm-theme; installs from before that rename are
   # still under ii-sddm-theme until the theme's own installer migrates them, so
-  # restore the hook for whichever is actually there. Preferring the new name
-  # matters: during a migrating update both directories exist for a moment, and
-  # pointing the hook at the one about to be deleted would break it again.
+  # restore for whichever is actually there. Preferring the new name matters:
+  # during a migrating update both directories exist for a moment, and pointing
+  # at the one about to be deleted would break it again.
+  #
+  # SddmColors.qml is the marker rather than sddm-theme-apply.sh: the apply
+  # script no longer lives here. It is installed root-owned under
+  # /usr/local/lib because a NOPASSWD sudoers rule names it and sudo matches by
+  # path. SddmColors.qml is the template's input_path, so it is exactly the file
+  # whose absence would make the block pointless.
   local theme_name theme_dir=""
   for theme_name in imi-sddm-theme ii-sddm-theme; do
-    if [[ -f "${XDG_CONFIG_HOME}/${theme_name}/sddm-theme-apply.sh" ]]; then
+    if [[ -f "${XDG_CONFIG_HOME}/${theme_name}/SddmColors.qml" ]]; then
       theme_dir="${XDG_CONFIG_HOME}/${theme_name}"
       break
     fi
   done
 
   [[ -n "$theme_dir" && -f "$matugen_conf" ]] || return 0
-  grep -q '^post_hook' "$matugen_conf" && return 0
+
+  # Guard on the block, not on `^post_hook`. The old guard could not tell "the
+  # theme's block survived" from "only the bare hook I restored last time is
+  # here", so it never noticed - or corrected - the half-restored state it had
+  # created itself.
+  grep -q '^\[templates\.iisddmtheme\]' "$matugen_conf" && return 0
+
+  # The apply script's path is what the sudoers rule names, and sudo matches by
+  # path: a hook naming any other location prompts for a password from a
+  # backgrounded hook and never completes. Prefer the root-owned location, fall
+  # back to the in-config one for installs made before that move.
+  local apply_script=""
+  if [[ -f "/usr/local/lib/${theme_name}/sddm-theme-apply.sh" ]]; then
+    apply_script="/usr/local/lib/${theme_name}/sddm-theme-apply.sh"
+  elif [[ -f "${theme_dir}/sddm-theme-apply.sh" ]]; then
+    apply_script="~/.config/${theme_name}/sddm-theme-apply.sh"
+  else
+    return 0
+  fi
 
   local hook
   if [[ -f "${theme_dir}/generate_settings.py" ]]; then
-    hook="python3 ~/.config/${theme_name}/generate_settings.py && sudo ~/.config/${theme_name}/sddm-theme-apply.sh &"
+    hook="python3 ~/.config/${theme_name}/generate_settings.py && sudo ${apply_script} &"
   else
-    hook="sudo ~/.config/${theme_name}/sddm-theme-apply.sh &"
+    hook="sudo ${apply_script} &"
   fi
 
-  # Belongs under [config]; matugen reads it from there.
-  # The hook ends in `&` to background it, and `&` in a sed replacement means
-  # "the whole match" - unescaped it expands to the literal text [config].
-  local hook_sed="${hook//&/\\&}"
-  if grep -q '^\[config\]' "$matugen_conf"; then
-    sed -i "0,/^\[config\]/s|^\[config\]|[config]\npost_hook = '${hook_sed}'|" "$matugen_conf"
-  else
-    printf '[config]\npost_hook = %s\n' "'${hook}'" >> "$matugen_conf"
+  # Drop a stray global post_hook left by the earlier half-restore. Left in
+  # place it would keep running the apply script (and a sudo call) after every
+  # matugen invocation, on top of the template's own hook. Only ours is touched:
+  # the line has to name the theme's apply script.
+  if grep -qE "^post_hook[[:space:]]*=.*sddm-theme-apply\.sh" "$matugen_conf"; then
+    sed -i -E "/^post_hook[[:space:]]*=.*sddm-theme-apply\.sh/d" "$matugen_conf"
+    echo -e "${STY_BLUE}[$0]: removed a stray global matugen post_hook for the SDDM theme (it fired on every run and regenerated nothing).${STY_RST}"
   fi
-  echo -e "${STY_BLUE}[$0]: restored the SDDM theme's matugen post_hook (our config.toml sync removes it).${STY_RST}"
+
+  # Same shape the theme's own setup.sh writes, so a later re-run of the theme
+  # installer replaces this block rather than appending a second one.
+  cat >> "$matugen_conf" <<EOF
+
+[templates.iisddmtheme]
+input_path = '~/.config/${theme_name}/SddmColors.qml'
+output_path = '~/.config/${theme_name}/Colors.qml'
+post_hook = '${hook}'
+EOF
+  echo -e "${STY_BLUE}[$0]: restored the SDDM theme's [templates.iisddmtheme] matugen block (our config.toml sync removes it).${STY_RST}"
 }
 
 # MISC (For dots/.config/* but not quickshell, not fish, not Hyprland, not fontconfig)

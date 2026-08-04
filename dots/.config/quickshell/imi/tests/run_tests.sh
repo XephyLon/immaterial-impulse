@@ -294,9 +294,10 @@ if ! python3 "$SCRIPT_DIR/test_kboptions_migration_runtime.py"; then
     exit 1
 fi
 
-# The hook is a path into the theme's directory, and that directory was
-# renamed - a wrong path here means the login screen silently stops following
-# the wallpaper.
+# The block is a set of paths into the theme's directory and at the apply
+# script sudo will accept; the directory was renamed and the script moved. A
+# wrong path here means the login screen silently stops following the
+# wallpaper, and restoring only part of the block is how it stopped last time.
 echo "Running SDDM matugen hook restore tests..."
 if ! python3 "$SCRIPT_DIR/test_sddm_matugen_hook_restore.py"; then
     echo "SDDM matugen hook restore tests failed."
