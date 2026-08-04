@@ -270,6 +270,32 @@ Variants {
         property real weTransitionProgress: 1.0  // 0 = old still, 1 = new surface
         property bool weTransitioning: false
 
+        // Put the transition back to its resting state: no peel on screen, the
+        // snapshot released, progress at "new surface". Reached from the
+        // watchdog below, and from the two states that make the first frame the
+        // peel is waiting for impossible to ever get.
+        function settleWeTransition() {
+            weTransitionAnim.stop()
+            weTransitionDelay.stop()
+            bgRoot.weTransitionProgress = 1.0
+            bgRoot.weTransitioning = false
+            weOldStill.source = ""
+        }
+        // `failed` latches on a project the renderer cannot draw, and that is
+        // precisely a moment when a transition has just been armed: the switch
+        // snapshots the outgoing frame and then waits on a frame that will never
+        // arrive, since the failure is reported before a texture is ever
+        // acquired. Nothing in the transition's own state can see that, so the
+        // peel used to sit there for the watchdog's whole budget - about nine
+        // seconds of the wallpaper the user just switched *away from*, painted
+        // over the static fallback that weFailed had already revealed
+        // underneath. That fallback exists to avoid exactly this.
+        onWeFailedChanged: if (bgRoot.weFailed) bgRoot.settleWeTransition()
+        // Same hole, different trigger: dropping weActive destroys the surface
+        // the peel samples as its destination, so the frozen still is all that
+        // is left to paint.
+        onWeActiveChanged: if (!bgRoot.weActive) bgRoot.settleWeTransition()
+
         // Switch the WE surface to `path`, animating a shader transition from a
         // snapshot of the current frame into the newly-loaded surface. Called on
         // weProjectPath changes instead of a reactive binding so the old frame can
@@ -353,11 +379,7 @@ Variants {
             running: bgRoot.weTransitioning
             onTriggered: {
                 console.warn("[Background] Wallpaper Engine transition did not finish; settling")
-                weTransitionAnim.stop()
-                weTransitionDelay.stop()
-                bgRoot.weTransitionProgress = 1.0
-                bgRoot.weTransitioning = false
-                weOldStill.source = ""
+                bgRoot.settleWeTransition()
             }
         }
 
@@ -592,7 +614,15 @@ Variants {
                 id: weTransition
                 anchors.fill: parent
                 z: 1
-                visible: bgRoot.weTransitioning
+                // Above the static wallpaper, so its own visibility has to
+                // account for the states that reveal it. `weTransitioning` alone
+                // does not: a failed project and a destroyed WE layer both leave
+                // the peel painting a frozen still of the *previous* project
+                // full-screen over the fallback underneath. Settling on those
+                // two clears this as well, but the guard is what makes it a
+                // property of the shader rather than of getting the handler
+                // ordering right.
+                visible: bgRoot.weTransitioning && !bgRoot.weFailed && weLoader.item !== null
                 property var fromImage: weOldStill
                 property var toImage: weLiveSource
                 property real progress: bgRoot.weTransitionProgress
