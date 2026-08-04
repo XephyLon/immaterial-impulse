@@ -10,6 +10,29 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.14.5] — 2026-08-04
+
+### Fixed
+- **Uninstalling no longer deletes your login shell.** `fish` is a dependency of
+  the fonts-and-theming meta package, so removing Immaterial Impulse removed it
+  too. For anyone who logs in *with* fish that was a lockout, and a confusing
+  one: SDDM starts the session through the user's login shell, so the password
+  was accepted and the greeter came straight back, exactly as if it had been
+  rejected. The uninstaller now moves that shell to `/bin/bash` first — but only
+  when the shell is one it is about to delete and only when it is the reason it
+  goes, since a `fish` you installed yourself survives the uninstall untouched.
+  Other accounts on the same shell are reported with the command to fix them
+  rather than edited. Immaterial Impulse has never set anyone's login shell.
+- **The OSDs, the search bar and the overview no longer frost their own drop
+  shadow.** They were the last panels publishing no blur region, so the
+  compositor blurred the whole layer surface — including the translucent shadow
+  in the elevation margin — instead of just the painted body. They now follow
+  the bar, the sidebars and the dock. The "Niri Like" overview style paints no
+  body card, so its workspace rows trade backdrop blur for a crisp shadow
+  elsewhere; layer rules are per-namespace and cannot be made style-conditional.
+  A new lint pins the QML region and its Hyprland layer rule together, since
+  either half alone renders wrong without erroring.
+
 ## [0.14.4] — 2026-08-04
 
 ### Fixed
@@ -1317,7 +1340,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.4...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.5...HEAD
+[0.14.5]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.4...v0.14.5
 [0.14.4]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.3...v0.14.4
 [0.14.3]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.2...v0.14.3
 [0.14.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.1...v0.14.2
