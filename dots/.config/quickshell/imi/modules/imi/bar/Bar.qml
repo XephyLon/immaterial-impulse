@@ -146,10 +146,14 @@ Scope {
                     right: true
                 }
 
+                // The dead row is on the right and bottom screen edges only, so
+                // a top-anchored bar has nothing to overhang. See the tokens'
+                // own comment in Appearance for what these two terms are and
+                // why the bottom one used to come out +5 instead of -1.
                 margins {
-                    top: Config.options.bar.cornerStyle === 3 ? 5 : 0
-                    right: (Config.options.interactions.deadPixelWorkaround.enable && barRoot.anchors.right) * -1
-                    bottom: (Config.options.interactions.deadPixelWorkaround.enable && barRoot.anchors.bottom) * -1 || Config.options.bar.cornerStyle === 3 ? 5 : 0
+                    top: Appearance.sizes.barDetachMargin
+                    right: Appearance.sizes.barDeadPixelOverhang
+                    bottom: Appearance.sizes.barBottomMargin
                 }
 
                 // Include in focus grab
