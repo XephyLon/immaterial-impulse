@@ -43,6 +43,32 @@ def extract_function(name):
     return text[start:i]
 
 
+def strip_comments(text):
+    """Code only. Prose naming a symbol is not a use of it, and several checks
+    below assert a symbol is ABSENT - which a comment explaining its absence
+    would otherwise defeat."""
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    return re.sub(r"//.*", "", text)
+
+
+def handler_body(text, proc_id):
+    """The onExited body of the Process with `id: <proc_id>`, by brace matching.
+    Asserting against the whole file cannot tell 'disarm on failure' from
+    'disarm unconditionally' - the strings are identical, only the enclosing
+    handler differs."""
+    start = text.index(f"id: {proc_id}")
+    handler = text.index("onExited:", start)
+    brace = text.index("{", handler)
+    depth, i = 1, brace + 1
+    while depth:
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+        i += 1
+    return text[brace:i]
+
+
 class ParserTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -82,9 +108,50 @@ class WiringTests(unittest.TestCase):
         self.service = SERVICE.read_text()
         self.screen = (ROOT / "modules/imi/sessionScreen/SessionScreen.qml").read_text()
 
-    def test_bootnext_via_pkexec_then_reboot(self):
+    def test_bootnext_set_via_pkexec(self):
         self.assertIn('["pkexec", "efibootmgr", "-n", root.pendingNum]', self.service)
-        self.assertIn("Session.reboot()", self.service)
+
+    def test_reboot_is_observable_not_fire_and_forget(self):
+        # #104: this called Session.reboot(), which is execDetached - no exit
+        # code, so a reboot that never happened could not be detected and the
+        # BootNext just armed could not be rolled back. It was an unresolved
+        # identifier here as well (Session is declared in
+        # qs.modules.common.functions, which this file does not import), so it
+        # threw ReferenceError and did nothing whatsoever. Owning the reboot as
+        # a Process fixes both.
+        self.assertNotIn("Session.reboot()", strip_comments(self.service),
+                         "reboot must not be execDetached: rollback needs an exit code")
+        self.assertRegex(self.service,
+                         r"id:\s*rebootProc\s*\n\s*command:\s*\[[^\]]*reboot[^\]]*\]")
+
+    def test_failed_reboot_clears_bootnext(self):
+        # A failed action must not leave the machine armed to boot another OS.
+        self.assertIn('["pkexec", "efibootmgr", "-N"]', self.service)
+        body = handler_body(strip_comments(self.service), "rebootProc")
+        self.assertIn("disarmProc.running = true", body,
+                      "a non-zero reboot exit must trigger the disarm")
+        self.assertIn("if (exitCode === 0) return", body,
+                      "a successful reboot must not disarm the BootNext it just armed")
+
+    def test_disarm_failure_names_the_manual_command(self):
+        # Armed, could not reboot, could not disarm. Nothing else on screen
+        # would ever hint that the next restart boots a different OS.
+        self.assertIn("efibootmgr -N",
+                      handler_body(strip_comments(self.service), "disarmProc"))
+
+    def test_reboot_command_matches_the_plain_reboot_button(self):
+        # Drift guard. EfiBoot owns its reboot only because it needs the exit
+        # code, not because it wants different semantics from Session.reboot().
+        session = (ROOT / "modules/common/functions/Session.qml").read_text()
+        self.assertIn("reboot || loginctl reboot", self.service)
+        self.assertIn("reboot || loginctl reboot", session)
+
+    def test_import_lint_still_covers_session_and_services(self):
+        # The lint that should have caught #104 knew only about Appearance and
+        # walked only modules/. Narrowing it back reopens the hole silently.
+        lint = (ROOT / "tests/lint_qml_imports.sh").read_text()
+        self.assertIn("Session:qs.modules.common.functions", lint)
+        self.assertRegex(lint, r"SEARCH_DIRS=\([^)]*/services")
 
     def test_polkit_dismissal_stays_quiet(self):
         self.assertIn("exitCode !== 126 && exitCode !== 127", self.service)
@@ -97,6 +164,49 @@ class WiringTests(unittest.TestCase):
         # Session screen closes before pkexec so the polkit dialog gets focus.
         self.assertRegex(self.screen,
                          r"sessionRoot\.hide\(\);\s*\n\s*EfiBoot\.rebootInto")
+
+
+class SessionTransitionOrderTests(unittest.TestCase):
+    """The plain Reboot button does NOT share #104's ReferenceError -
+    SessionScreen.qml imports qs.modules.common.functions correctly - but it did
+    share the shape: closeAllWindows() ran BEFORE the transition was issued, so a
+    transition that never happened had already SIGTERMed every one of the user's
+    applications. Empty desktop, still logged in, nothing explaining why."""
+
+    ORDERED = ("reboot", "poweroff", "rebootToFirmware")
+
+    def setUp(self):
+        self.session = strip_comments(
+            (ROOT / "modules/common/functions/Session.qml").read_text())
+
+    def body(self, name):
+        start = self.session.index(f"function {name}(")
+        brace = self.session.index("{", start)
+        depth, i = 1, brace + 1
+        while depth:
+            if self.session[i] == "{":
+                depth += 1
+            elif self.session[i] == "}":
+                depth -= 1
+            i += 1
+        return self.session[brace:i]
+
+    def test_transition_is_issued_before_windows_are_closed(self):
+        for name in self.ORDERED:
+            with self.subTest(function=name):
+                body = self.body(name)
+                self.assertIn("closeAllWindows()", body)
+                self.assertIn("execDetached", body)
+                self.assertLess(
+                    body.index("execDetached"), body.index("closeAllWindows()"),
+                    f"{name}() must issue the transition before killing the user's windows")
+
+    def test_logout_is_deliberately_left_alone(self):
+        # pkill -i Hyprland does not fail the way a polkit-gated transition can,
+        # so there is no failure path here that could strand the user. Pinned so
+        # a later tidy-up does not "make it consistent" without that argument.
+        body = self.body("logout")
+        self.assertLess(body.index("closeAllWindows()"), body.index("execDetached"))
 
 
 if __name__ == "__main__":
