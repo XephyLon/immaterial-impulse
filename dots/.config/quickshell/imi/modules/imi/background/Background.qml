@@ -149,13 +149,23 @@ Variants {
         // its Wayland detector counts any fullscreen toplevel, and pauses mpv
         // with it. Nothing in QML can reach that.
         //
-        // So idling a live wallpaper is WE's job, not this file's. The embed
-        // passes --fullscreen-pause-only-active (qs-wallpaperengine 7e58913,
-        // pinned in sdata/subcmd-install/4.wallpaperengine.sh), which counts
-        // only *activated* fullscreen toplevels - a window holds activation
-        // exactly while it is focused, which is exactly while it covers the
-        // wallpaper. This file suppresses the drawing; WE pauses the animation.
-        // The two agree on when, by different routes.
+        // So idling a live wallpaper is not something `live` can do. Today the
+        // embed passes --fullscreen-pause-only-active (qs-wallpaperengine
+        // 7e58913, pinned in sdata/subcmd-install/4.wallpaperengine.sh), which
+        // counts only *activated* fullscreen toplevels - a window holds
+        // activation exactly while it is focused, which is exactly while it
+        // covers the wallpaper. This file suppresses the drawing; WE pauses the
+        // animation. The two agree on when, by different routes.
+        //
+        // That arrangement is on its way out, because WE's detector is
+        // output-blind: its toplevel output-enter/leave handlers are empty
+        // stubs, so its count is process-wide while this file runs one surface
+        // per monitor. A game fullscreened on one monitor pauses the wallpaper
+        // on all of them. The replacement is the `covered` binding on the loader
+        // below, which hands the decision to the side that knows which output is
+        // covered - this one. It is inert until the pin moves to a build with
+        // `occluded`; both halves have to ship together, or there is a window
+        // where neither side pauses anything.
         onSuppressContentsChanged: {
             // A switch requested while suppressed could not be applied - the
             // surface only builds a project from updatePaintNode, which does not
@@ -516,6 +526,26 @@ Variants {
                 onLoaded: if (item) {
                     bgRoot.weLoadedProject = bgRoot.weProjectPath
                     item.projectPath = bgRoot.weProjectPath
+                }
+                // Tell the renderer this output is covered, so it can idle the
+                // producer instead of drawing frames nobody sees. Suppressing
+                // the contents (above) only stops Qt asking for them; the WE
+                // thread keeps rendering, blitting and publishing regardless.
+                //
+                // Same condition as the suppression on purpose: one policy, and
+                // one the user controls. Turning hideWhenFullscreen off means
+                // "leave my wallpaper alone when something is fullscreen", so it
+                // should not silently idle the renderer either.
+                //
+                // Inert until the pin moves - the layer only forwards this to a
+                // surface that has an `occluded` property. Until then WE's own
+                // detector still does the pausing.
+                Binding {
+                    target: weLoader.item
+                    property: "covered"
+                    value: bgRoot.suppressContents
+                    when: weLoader.item !== null
+                    restoreMode: Binding.RestoreNone
                 }
                 // First rendered frame of a newly-loaded project: kick off the
                 // shader transition against the captured old frame.
