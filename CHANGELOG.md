@@ -10,6 +10,27 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.14.6] — 2026-08-04
+
+### Fixed
+- **The SDDM login theme actually applies now, and uninstalling it no longer
+  breaks login.** The installer pin moves to imi-sddm-theme `36f5c93`, which
+  carries three fixes. The scripts that copy your wallpaper and colours into the
+  installed theme were still using the theme's pre-fork name, so since the
+  rename *no* install had applied either — the greeter kept the stock background
+  and stock colours, and the matugen hook failed on every wallpaper change,
+  while the installer reported success. Uninstalling removed the theme directory
+  but left `Current=` and the greeter's import path naming it, which is a login
+  loop on the next boot: the password is accepted and the greeter returns. And
+  the config drop-in sorted before KDE's `kde_settings.conf` and lost to it, so
+  on any system where the KDE Login Screen module had been used the install
+  silently changed nothing.
+- **An M3 vertical bar is no longer completely unblurred.** Under that corner
+  style the bar's two blur regions both resolve to nothing, so it declared an
+  empty region while the whole-surface blur stayed switched off — the same
+  defect already fixed for the horizontal bar. Its three material pills are now
+  covered.
+
 ## [0.14.5] — 2026-08-04
 
 ### Fixed
@@ -1340,7 +1361,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.5...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.6...HEAD
+[0.14.6]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.5...v0.14.6
 [0.14.5]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.4...v0.14.5
 [0.14.4]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.3...v0.14.4
 [0.14.3]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.2...v0.14.3
