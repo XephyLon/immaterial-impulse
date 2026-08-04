@@ -61,6 +61,43 @@ MIC="$(cfg '.screenRecord.recordMic')"
 
 OUT="$SAVE_DIR/recording_$(date '+%Y-%m-%d_%H.%M.%S').mp4"
 
+# Resolved before the codec, so HDR detection has a monitor to ask about. A
+# region capture is attributed to the focused monitor: slurp can straddle
+# outputs, and short of asking gsr which one it settled on, "the monitor the
+# user was looking at" is the best available answer.
+TARGET_MONITOR="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused == true) | .name' 2>/dev/null)"
+
+# Hyprland's colorManagementPreset is the authoritative HDR signal - its HDR
+# presets are "hdr" and "hdredid". currentFormat is not: XBGR2101010 only says
+# the framebuffer is 10-bit, which is equally true of wide-gamut SDR.
+monitor_is_hdr() {
+    local name="$1"
+    [[ -n "$name" ]] || return 1
+    hyprctl monitors -j 2>/dev/null \
+        | jq -e --arg m "$name" \
+            'any(.[]; .name == $m and ((.colorManagementPreset // "") | startswith("hdr")))' \
+            >/dev/null 2>&1
+}
+
+# gpu-screen-recorder does not tonemap. Given an HDR surface and an SDR codec it
+# encodes 8-bit and tags the result bt709, so a PQ signal ends up labelled as
+# gamma - and decodes flat, grey and desaturated. The _hdr codec variants carry
+# the real transfer function and primaries, so the file is correct in anything
+# that reads them.
+if monitor_is_hdr "$TARGET_MONITOR"; then
+    case "$CODEC" in
+        ""|auto|hevc) CODEC="hevc_hdr" ;;
+        av1)          CODEC="av1_hdr" ;;
+        h264)
+            # H.264 has no HDR variant here. Silently swapping the codec someone
+            # explicitly chose is worse than saying why the file will look wrong.
+            notify-send "Recording SDR H.264 on an HDR display" \
+                "H.264 cannot carry HDR, so this recording will look washed out. Pick HEVC or AV1, or turn HDR off while recording." \
+                -a 'Recorder' & disown
+            ;;
+    esac
+fi
+
 ARGS=(gpu-screen-recorder -c mp4 -f "$FPS" -q "$QUALITY" -ac "$AUDIO_CODEC"
       -fm "$FRAMERATE_MODE" -sc "$SCRIPT_DIR/gsr-saved.sh" -o "$OUT")
 [[ "$CURSOR" == "false" ]] && ARGS+=(-cursor no)
@@ -74,8 +111,7 @@ if [[ $SOUND -eq 1 ]]; then
 fi
 
 if [[ $FULLSCREEN -eq 1 ]]; then
-    MONITOR="$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | .name')"
-    ARGS+=(-w "${MONITOR:-screen}")
+    ARGS+=(-w "${TARGET_MONITOR:-screen}")
 else
     if [[ -z "$REGION" ]]; then
         if ! REGION="$(slurp)"; then

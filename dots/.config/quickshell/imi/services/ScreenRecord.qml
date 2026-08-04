@@ -5,6 +5,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import qs.modules.common
 import qs.modules.common.functions
+import qs.services
 import qs
 
 /**
@@ -67,6 +68,29 @@ Singleton {
         return dir.startsWith("~") ? Directories.home.replace("file://", "") + dir.slice(1) : dir
     }
 
+    // gpu-screen-recorder does not tonemap. Given an HDR surface and an SDR
+    // codec it encodes 8-bit and tags the result bt709, so a PQ signal is
+    // labelled as gamma and decodes flat, grey and desaturated. The _hdr
+    // variants carry the real transfer function and primaries instead.
+    //
+    // colorManagementPreset is the authoritative signal - Hyprland's HDR
+    // presets are "hdr" and "hdredid". currentFormat is not: XBGR2101010 only
+    // means a 10-bit framebuffer, which wide-gamut SDR also has. Kept in step
+    // with scripts/videos/record.sh, which does the same for one-shot
+    // recordings; test_screen_record.py pins that the two agree.
+    function hdrCodecFor(codec, monitorName) {
+        const mons = HyprlandData.monitors ?? []
+        const mon = (monitorName && monitorName !== "screen")
+            ? mons.find(m => m.name === monitorName)
+            : mons.find(m => m.focused)
+        if (!(mon?.colorManagementPreset ?? "").startsWith("hdr")) return codec
+        if (codec === "auto" || codec === "hevc") return "hevc_hdr"
+        if (codec === "av1") return "av1_hdr"
+        // h264 has no HDR variant; leave the explicit choice alone rather than
+        // swapping the codec out from under whoever picked it.
+        return codec
+    }
+
     function replayArgs() {
         const o = root.opts
         let args = ["gpu-screen-recorder",
@@ -82,7 +106,8 @@ Singleton {
             "-cursor", o.showCursor ? "yes" : "no",
             "-sc", `${Directories.scriptPath}/videos/gsr-saved.sh`,
             "-o", root.replayDir]
-        if (o.codec !== "auto") args.push("-k", o.codec)
+        const codec = root.hdrCodecFor(o.codec, o.replay.monitor)
+        if (codec !== "auto") args.push("-k", codec)
         if (o.recordAudio) args.push("-a", o.recordMic ? "default_output|default_input" : "default_output")
         return args
     }
