@@ -97,10 +97,13 @@ Scope {
                 // compositor's blur can't frost them (#82) — same treatment as
                 // the sidebars. Pairs with rules.lua turning the whole-surface
                 // layerrule blur off for this namespace. The RoundCorner
-                // decorators and the islands/material pills are left out: a
-                // region is a plain rect, so covering their transparent parts
-                // would frost bare wallpaper; they are opaque by default and
-                // merely read as unblurred translucency under transparency mode.
+                // decorators and the Islands pills are left out: a region is a
+                // plain rect, so covering their transparent parts would frost
+                // bare wallpaper; they are opaque by default and merely read as
+                // unblurred translucency under transparency mode. The M3
+                // wrappers ARE covered (dc4e0662c) - under that style they are
+                // the only painted shapes, so leaving them out meant an empty
+                // region and no blur at all.
                 WindowBlurRegion {
                     targetWindow: barRoot
                     region: Region {
@@ -122,15 +125,15 @@ Scope {
                         // otherwise be squared off against the painted shape.
                         Region {
                             item: barContent.materialPillsPainted ? barContent.leftMaterialPillItem : null
-                            radius: Math.round(barContent.leftMaterialPillItem.height / 2)
+                            radius: Math.round(Math.min(barContent.leftMaterialPillItem.width, barContent.leftMaterialPillItem.height) / 2)
                         }
                         Region {
                             item: barContent.materialPillsPainted ? barContent.centerMaterialPillItem : null
-                            radius: Math.round(barContent.centerMaterialPillItem.height / 2)
+                            radius: Math.round(Math.min(barContent.centerMaterialPillItem.width, barContent.centerMaterialPillItem.height) / 2)
                         }
                         Region {
                             item: barContent.materialPillsPainted ? barContent.rightMaterialPillItem : null
-                            radius: Math.round(barContent.rightMaterialPillItem.height / 2)
+                            radius: Math.round(Math.min(barContent.rightMaterialPillItem.width, barContent.rightMaterialPillItem.height) / 2)
                         }
                     }
                 }

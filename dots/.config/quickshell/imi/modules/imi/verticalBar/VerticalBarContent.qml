@@ -83,6 +83,18 @@ Item {
     readonly property Item centerPillItem: centerPill
     readonly property bool centerPillPainted: centerPill.visible
 
+    // Under cornerStyle 3 (M3) both of the above resolve to null - backgroundPainted
+    // requires !isMaterial, and centerPill.visible requires centerOnly, which is
+    // itself !isMaterial - so the window declared an EMPTY blur region against a
+    // surface whose whole-surface layerrule blur is off (rules.lua). Nothing on an
+    // M3 vertical bar was frosted, pills included. Same defect dc4e0662c fixed for
+    // the horizontal bar; expose the three painted wrappers so the region can cover
+    // exactly them and leave the gaps between them clear.
+    readonly property Item topMaterialPillItem: topMaterialPill
+    readonly property Item centerMaterialPillItem: centerMaterialPill
+    readonly property Item bottomMaterialPillItem: bottomMaterialPill
+    readonly property bool materialPillsPainted: root.isMaterial
+
     // Optional soft drop shadow under the bar background (Config.options.bar.shadow).
     // Only rendered when the background itself is painted (mirrors barBackground's color condition).
     Loader {

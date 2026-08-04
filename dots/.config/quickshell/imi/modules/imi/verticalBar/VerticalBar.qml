@@ -79,6 +79,29 @@ Scope {
                             bottomLeftRadius: barContent.centerPillItem.bottomLeftRadius
                             bottomRightRadius: barContent.centerPillItem.bottomRightRadius
                         }
+                        // The M3 wrappers, which are the ONLY painted shapes in
+                        // that style - without these the region is empty and an
+                        // M3 vertical bar gets no blur at all (#93).
+                        //
+                        // Appearance.rounding.full (9999) is a "round me
+                        // completely" sentinel rather than a length, so it is
+                        // resolved here against the real shape. These wrappers
+                        // are taller than wide, unlike the horizontal bar's, so
+                        // it is min(w, h) / 2: height / 2 would declare a radius
+                        // far larger than the painted pill and square the region
+                        // off against it.
+                        Region {
+                            item: barContent.materialPillsPainted ? barContent.topMaterialPillItem : null
+                            radius: Math.round(Math.min(barContent.topMaterialPillItem.width, barContent.topMaterialPillItem.height) / 2)
+                        }
+                        Region {
+                            item: barContent.materialPillsPainted ? barContent.centerMaterialPillItem : null
+                            radius: Math.round(Math.min(barContent.centerMaterialPillItem.width, barContent.centerMaterialPillItem.height) / 2)
+                        }
+                        Region {
+                            item: barContent.materialPillsPainted ? barContent.bottomMaterialPillItem : null
+                            radius: Math.round(Math.min(barContent.bottomMaterialPillItem.width, barContent.bottomMaterialPillItem.height) / 2)
+                        }
                     }
                 }
 
