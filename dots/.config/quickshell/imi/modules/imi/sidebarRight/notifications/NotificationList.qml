@@ -30,13 +30,25 @@ Item {
         popup: false
     }
 
-    // Placeholder when list is empty
-    PagePlaceholder {
-        shown: Notifications.list.length === 0
-        icon: "notifications_active"
-        description: Translation.tr("Nothing")
-        shape: MaterialShape.Shape.Ghostish
-        descriptionHorizontalAlignment: Text.AlignHCenter
+    // Placeholder when list is empty. Given the list's area rather than the
+    // whole column: the status row along the bottom is not space the empty
+    // state can use, and the placeholder decides whether its shape fits from
+    // the height it is handed.
+    Item {
+        anchors.fill: listview
+
+        PagePlaceholder {
+            // This list shares the sidebar column with a bottom widget group of
+            // fixed height (see BottomWidgetGroup.expandedHeight), so on a short
+            // screen it is squeezed until the shape reaches past the top of the
+            // rounded container holding it - which does not clip (#87).
+            dropIconWhenCramped: true
+            shown: Notifications.list.length === 0
+            icon: "notifications_active"
+            description: Translation.tr("Nothing")
+            shape: MaterialShape.Shape.Ghostish
+            descriptionHorizontalAlignment: Text.AlignHCenter
+        }
     }
 
     ButtonGroup {
