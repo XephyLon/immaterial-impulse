@@ -151,8 +151,31 @@ ensure_standalone_libs(){
   libs_resolve_standalone "$qs_bin" && return 0
   if command -v patchelf >/dev/null 2>&1; then
     local rp; rp="$(patchelf --print-rpath "$qs_bin" 2>/dev/null || true)"
-    if patchelf --set-rpath "$lib_dir:$OPT_LIBS${rp:+:$rp}" "$qs_bin" 2>/dev/null; then
+    # patchelf rewrites in place, and the kernel refuses to write to a running
+    # executable (ETXTBSY). The shell IS this binary, and Settings > Update Dots
+    # runs the installer *from* the shell - so in the one path a user actually
+    # takes, the target was always executing and this always failed. It failed
+    # silently too: stderr went to /dev/null and the caller then advised
+    # installing patchelf, which was already installed. Only a first install,
+    # with nothing running yet, ever succeeded - so the repair worked exactly
+    # when it was not needed, and not when it was.
+    #
+    # Patch a copy and rename over the original instead. rename(2) swaps the
+    # directory entry; the running process keeps the inode it already opened
+    # and is unaffected, and the next launch picks up the repaired file. The
+    # temporary lives beside the target so the rename stays on one filesystem
+    # (mv across filesystems is copy-then-unlink, which is neither atomic nor
+    # safe against a concurrent exec).
+    local tmp; tmp="$(mktemp "${qs_bin}.patchelf.XXXXXX")" || tmp=""
+    if [[ -n "$tmp" ]] && cp -p "$qs_bin" "$tmp" \
+       && patchelf --set-rpath "$lib_dir:$OPT_LIBS${rp:+:$rp}" "$tmp" \
+       && mv -f "$tmp" "$qs_bin"; then
       say "baked the WE runtime lib dirs into the binary's RUNPATH."
+    else
+      # Surface the reason rather than discarding it - the previous silence is
+      # what made this look like a missing dependency for so long.
+      say "could not repair the binary's RUNPATH with patchelf."
+      [[ -n "$tmp" ]] && rm -f "$tmp"
     fi
   else
     say "patchelf not present; cannot repair the binary's RUNPATH."
@@ -169,7 +192,15 @@ install_wrapper(){
   else
     say "WARNING: binary still needs LD_LIBRARY_PATH. Exporting it as a fallback -"
     say "         apps launched from the shell may load CEF's libEGL/libGLESv2"
-    say "         instead of the system ones. Install patchelf and re-run to fix."
+    say "         instead of the system ones."
+    # Only advise installing patchelf when it is actually missing. Saying it
+    # unconditionally sent someone to install a package they already had, and
+    # then to re-run, which could not have helped either.
+    if command -v patchelf >/dev/null 2>&1; then
+      say "         patchelf is installed but could not repair the binary; see above."
+    else
+      say "         Install patchelf and re-run to fix."
+    fi
     ld_line="export LD_LIBRARY_PATH=\"$lib_dir:$OPT_LIBS\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}\""
   fi
   local tmp; tmp="$(mktemp)"
