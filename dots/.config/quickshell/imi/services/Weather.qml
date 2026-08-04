@@ -7,6 +7,7 @@ import QtQuick
 import QtPositioning
 
 import qs.modules.common
+import "../modules/common/functions/weatherForecast.js" as WeatherForecast
 
 Singleton {
     id: root
@@ -53,6 +54,14 @@ Singleton {
         tempLow: "",
         lastRefresh: ""
     })
+
+    // Day-by-day outlook, `[{ date, wCode, high, low }]` with `date` a local
+    // "YYYY-MM-DD" and the temperatures whole degrees in the configured unit
+    // system. Empty until a forecast has been parsed, which consumers must
+    // treat as "no forecast" rather than "no weather" - wttr.in carries one in
+    // the response the current conditions already come from, but OWM needs a
+    // second request that can fail on its own.
+    property var forecast: []
 
     function refineData(data) {
         let temp = {}
@@ -151,6 +160,9 @@ Singleton {
         temp.lastRefresh = DateTime.time + " • " + DateTime.date
 
         root.data = temp
+        // Already in the response the current conditions came from - wttr.in
+        // returns three days of it whether or not anything asks.
+        root.forecast = WeatherForecast.dailyFromWttr(data?.weather, root.useUSCS)
     }
 
     function getData() {
@@ -188,6 +200,37 @@ Singleton {
         // hole. curl receives the URL literally here, no shell parsing.
         fetcher.command = ["curl", "-s", url]
         fetcher.running = true
+
+        root.getForecastOwm()
+    }
+
+    // OpenWeatherMap's current-conditions endpoint carries no outlook at all,
+    // so the forecast is a second request against /data/2.5/forecast (free
+    // tier, five days at three-hour resolution). It doubles this provider's
+    // call rate - once per fetchInterval, so ~288/day at the 10 minute default
+    // against a 1M/month allowance. wttr.in needs no equivalent; its one
+    // response already carries both.
+    function getForecastOwm() {
+        let apiKey = root.apiKey !== "" ? root.apiKey : root.owmFallbackApiKey
+        if (apiKey === "")
+            return
+
+        let url = "https://api.openweathermap.org/data/2.5/forecast?"
+
+        if (root.gpsActive && root.location.valid) {
+            url += `lat=${root.location.lat}&lon=${root.location.lon}`
+        } else {
+            url += `q=${formatCityName(root.city)}`
+        }
+
+        url += `&units=${root.useUSCS ? "imperial" : "metric"}`
+        url += `&appid=${apiKey}`
+
+        // Same hardening as every other call here: the location comes from
+        // config (and shareable presets), so the URL is only ever a curl argv
+        // element and is never spliced into a shell string.
+        forecastFetcher.command = ["curl", "-s", url]
+        forecastFetcher.running = true
     }
 
     function getDataWttr() {
@@ -244,6 +287,31 @@ Singleton {
                     root.refineData(parsedData)
                 } catch (e) {
                     console.error("[WeatherService] JSON parse error:", e.message)
+                }
+            }
+        }
+    }
+
+    Process {
+        id: forecastFetcher
+        command: ["curl", "-s", ""]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (text.length === 0)
+                    return
+
+                try {
+                    const parsedData = JSON.parse(text)
+                    // OWM reports its errors in the body with HTTP 200, and
+                    // `cod` is a string on this endpoint where it is a number
+                    // on the current-conditions one.
+                    if (parsedData.cod && Number(parsedData.cod) !== 200) {
+                        console.error("[WeatherService] Forecast API error:", parsedData.message)
+                        return
+                    }
+                    root.forecast = WeatherForecast.dailyFromOwm(parsedData.list)
+                } catch (e) {
+                    console.error("[WeatherService] Forecast JSON parse error:", e.message)
                 }
             }
         }
