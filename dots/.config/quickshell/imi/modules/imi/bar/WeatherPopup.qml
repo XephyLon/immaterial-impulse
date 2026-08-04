@@ -8,6 +8,7 @@ import qs.modules.imi.bar
 StyledPopup {
     id: root
 
+
     ColumnLayout {
         id: mainLayout
         implicitWidth: 340 
@@ -75,7 +76,10 @@ StyledPopup {
                     anchors.top: parent.top
                     anchors.topMargin: -Appearance.spacing.space50
                     shape: MaterialShape.Shape.Sunny
-                    text: Icons.getWeatherIcon(Weather.data.wCode) ?? "cloud"
+                    // Provider-aware: OpenWeatherMap's condition ids are not the
+                    // WWO codes getWeatherIcon() is keyed on, so this drew a
+                    // clear sky through every storm for anyone on that provider.
+                    text: Icons.getProviderWeatherIcon(Weather.provider, Weather.data.wCode, Icons.isNight()) ?? "cloud"
                     iconSize: 40
                     implicitSize: 64
                     color: Qt.alpha(Appearance.colors.colOnLayer0, 0.15)
@@ -123,6 +127,7 @@ StyledPopup {
                 }
             }
         }
+
 
         GridLayout {
             id: gridLayout
