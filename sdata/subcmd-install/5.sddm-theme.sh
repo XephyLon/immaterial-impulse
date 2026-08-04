@@ -74,9 +74,18 @@ fi
 # the run can actually offer, so if the shell config is not there yet it falls
 # back to asking rather than being forced into a state that cannot work.
 echo "[ImI] SDDM theme: handing off to the theme installer (unattended)..."
+# IMI_SDDM_THEME_REF makes SDDM_REF an actual pin. Fetching setup.sh at a ref
+# only ever pinned the *installer*: it then cloned the theme content from
+# whatever the satellite's default branch was at that moment, so this pin could
+# sit unmoved for months while what landed in /usr/share/sddm/themes changed
+# underneath it (imi-sddm-theme#5). Handing the same ref through means the
+# installer and what it installs are one revision. Satellite versions before
+# v0.2.1 ignore this variable, which is why the pin must not be moved backwards
+# past that without also expecting the old behaviour.
 # Optional extra - never let a decline/failure abort the whole install.
 if IMI_SDDM_ASSUME_YES="${IMI_SDDM_ASSUME_YES:-1}" \
    IMI_SDDM_MODE="${IMI_SDDM_MODE:-ii-matugen}" \
+   IMI_SDDM_THEME_REF="${IMI_SDDM_THEME_REF:-$SDDM_REF}" \
      bash "$TMP_SETUP"; then
   # Record that WE installed the theme, so uninstall has evidence rather than
   # an inference. A theme directory only proves *someone* installed one: the
