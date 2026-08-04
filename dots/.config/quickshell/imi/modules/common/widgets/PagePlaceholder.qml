@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.modules.common
 import qs.modules.common.widgets
+import "../functions/placeholderFit.js" as PlaceholderFit
 
 Item {
     id: root
@@ -12,6 +13,24 @@ Item {
     property alias description: widgetDescriptionText.text
     property alias shape: shapeWidget.shape
     property alias descriptionHorizontalAlignment: widgetDescriptionText.horizontalAlignment
+
+    // Drop the shape rather than let it draw outside the page when the page is
+    // too short to hold the whole column - placeholderFit.js has the reasoning
+    // for why the shape is what gives way. Off by default: a page with room to
+    // spare wants it, since an empty state is mostly that shape. Only a page
+    // squeezed by a sibling of fixed height needs this.
+    property bool dropIconWhenCramped: false
+    readonly property var textHeights: {
+        const heights = [];
+        if (widgetNameText.visible)
+            heights.push(widgetNameText.implicitHeight);
+        if (widgetDescriptionText.visible)
+            heights.push(widgetDescriptionText.implicitHeight);
+        return heights;
+    }
+    readonly property bool iconShown: !root.dropIconWhenCramped
+        || PlaceholderFit.iconFits(root.height, shapeWidget.implicitHeight,
+                                   root.textHeights, column.spacing)
 
     opacity: shown ? 1 : 0
     visible: opacity > 0
@@ -26,11 +45,18 @@ Item {
     }
 
     ColumnLayout {
+        id: column
         anchors.centerIn: parent
         spacing: Appearance.spacing.space100
+        // Only while measuring. A description wraps to this column's width, so
+        // leaving that width to the children would let dropping the shape
+        // narrow the column, reflow the description, change the height being
+        // measured, and feed straight back into the decision that dropped it.
+        width: root.dropIconWhenCramped ? root.width : column.implicitWidth
 
         MaterialShapeWrappedMaterialSymbol {
             id: shapeWidget
+            visible: root.iconShown
             Layout.alignment: Qt.AlignHCenter
             padding: Appearance.spacing.space150
             iconSize: 56
