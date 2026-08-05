@@ -274,13 +274,16 @@ if __name__ == "__main__":
 
 
 class PortalSdrTests(unittest.TestCase):
-    """SDR delivery captures through the portal instead of converting.
+    """SDR delivery: portal for fullscreen, shell selector + convert for regions.
 
-    Hyprland tonemaps screencopy for capture clients - the reason a grim
-    screenshot of an HDR desktop looks right - so portal capture yields native
-    SDR at record time (verified live: bt709/yuv420p, correct colours), where
-    the KMS path hands the encoder raw PQ. Regions are covered too: the portal
-    picker has a Region tab and replaces slurp in this mode.
+    Hyprland tonemaps screencopy for capture clients, so portal capture yields
+    native SDR at record time (verified live: bt709/yuv420p) where the KMS
+    path hands the encoder raw PQ. Portal is FULLSCREEN ONLY: the recorder
+    overlay's "Record Region" runs the shell's own region selector first, and
+    the first version then routed the capture through the portal picker - the
+    user selected a region and was immediately prompted to select again.
+    Regions therefore never touch the portal: shell selector (or slurp), KMS
+    HDR capture, GPU-converted to SDR by the saved-hook seconds later.
     """
 
     @classmethod
@@ -289,26 +292,44 @@ class PortalSdrTests(unittest.TestCase):
         cls.code = "\n".join(l for l in cls.script.splitlines()
                              if not l.lstrip().startswith("#"))
 
-    def test_sdr_toggle_routes_to_portal_capture(self):
+    def test_sdr_toggle_routes_fullscreen_to_portal(self):
         self.assertIn("tonemapSdr", self.code)
         self.assertIn("-w portal", self.code)
-        self.assertIn("USE_PORTAL=1", self.code)
+        # The gate: portal only inside the FULLSCREEN branch of the toggle.
+        toggle = self.code[self.code.index("tonemapSdr"):]
+        toggle = toggle[:toggle.index("PORTAL_TOKEN=")]
+        self.assertRegex(toggle,
+                         r'if \[\[ \$FULLSCREEN -eq 1 \]\];[\s\S]*?USE_PORTAL=1')
 
-    def test_fullscreen_restores_a_session_token_region_does_not(self):
-        # Fullscreen: the picker should appear once, then the token pins the
-        # choice. Region: every capture is a fresh selection, exactly as slurp
-        # was, so restoring a stale region would be wrong.
+    def test_regions_never_prompt_twice(self):
+        # A region invocation must not reach the portal picker: the selection
+        # already happened in the shell's selector (or happens once in slurp).
+        # USE_PORTAL=1 appearing outside the FULLSCREEN guard would put the
+        # second prompt back.
+        self.assertEqual(self.code.count("USE_PORTAL=1"), 1)
+        portal_block = self.code[self.code.index("-w portal"):]
+        portal_block = portal_block[:portal_block.index("elif")]
+        self.assertNotIn("slurp", portal_block)
+        self.assertNotIn("REGION", portal_block)
+
+    def test_sdr_region_forces_an_hdr_codec_for_the_converter(self):
+        # Honouring an explicit H.264 choice at capture would bake the
+        # wash-out in before the converter ever saw the file - the converter
+        # re-encodes to H.264 anyway, so the capture codec must carry HDR.
+        toggle = self.code[self.code.index("tonemapSdr"):]
+        toggle = toggle[:toggle.index("PORTAL_TOKEN=")]
+        self.assertRegex(toggle, r'else\s*\n\s*CODEC="hevc_hdr"')
+
+    def test_fullscreen_portal_restores_a_session_token(self):
+        # The picker should appear exactly once, ever - and never mid-flow.
         portal_block = self.code[self.code.index("-w portal"):]
         portal_block = portal_block[:portal_block.index("elif")]
         self.assertIn("restore-portal-session", portal_block)
-        self.assertRegex(portal_block,
-                         r'if \[\[ \$FULLSCREEN -eq 1 \]\];[\s\S]*restore-portal-session')
 
     def test_hdr_codec_upgrade_only_when_keeping_hdr(self):
         # With portal capture the stream is SDR - forcing an _hdr codec onto it
-        # would tag an SDR stream as PQ, recreating the original wash-out in
-        # reverse. The upgrade lives in the else-branch of the toggle.
+        # would tag SDR pixels as PQ, recreating the original wash-out in
+        # reverse.
         idx_portal = self.code.index("USE_PORTAL=1")
-        idx_hdr = self.code.index('CODEC="hevc_hdr"')
+        idx_hdr = self.code.index('CODEC="hevc_hdr" ;;')
         self.assertLess(idx_portal, idx_hdr)
-        self.assertIn("else", self.code[idx_portal:idx_hdr])
