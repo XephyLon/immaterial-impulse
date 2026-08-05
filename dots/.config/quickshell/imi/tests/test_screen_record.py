@@ -271,3 +271,44 @@ class ConfigContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PortalSdrTests(unittest.TestCase):
+    """SDR delivery captures through the portal instead of converting.
+
+    Hyprland tonemaps screencopy for capture clients - the reason a grim
+    screenshot of an HDR desktop looks right - so portal capture yields native
+    SDR at record time (verified live: bt709/yuv420p, correct colours), where
+    the KMS path hands the encoder raw PQ. Regions are covered too: the portal
+    picker has a Region tab and replaces slurp in this mode.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.script = SCRIPT.read_text()
+        cls.code = "\n".join(l for l in cls.script.splitlines()
+                             if not l.lstrip().startswith("#"))
+
+    def test_sdr_toggle_routes_to_portal_capture(self):
+        self.assertIn("tonemapSdr", self.code)
+        self.assertIn("-w portal", self.code)
+        self.assertIn("USE_PORTAL=1", self.code)
+
+    def test_fullscreen_restores_a_session_token_region_does_not(self):
+        # Fullscreen: the picker should appear once, then the token pins the
+        # choice. Region: every capture is a fresh selection, exactly as slurp
+        # was, so restoring a stale region would be wrong.
+        portal_block = self.code[self.code.index("-w portal"):]
+        portal_block = portal_block[:portal_block.index("elif")]
+        self.assertIn("restore-portal-session", portal_block)
+        self.assertRegex(portal_block,
+                         r'if \[\[ \$FULLSCREEN -eq 1 \]\];[\s\S]*restore-portal-session')
+
+    def test_hdr_codec_upgrade_only_when_keeping_hdr(self):
+        # With portal capture the stream is SDR - forcing an _hdr codec onto it
+        # would tag an SDR stream as PQ, recreating the original wash-out in
+        # reverse. The upgrade lives in the else-branch of the toggle.
+        idx_portal = self.code.index("USE_PORTAL=1")
+        idx_hdr = self.code.index('CODEC="hevc_hdr"')
+        self.assertLess(idx_portal, idx_hdr)
+        self.assertIn("else", self.code[idx_portal:idx_hdr])
