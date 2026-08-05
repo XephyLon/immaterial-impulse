@@ -3,6 +3,13 @@
 This is a workflow guide for agents (Claude Code or similar) making changes in this repo. For what
 the project *is* and how it's structured, read `AGENT.md` first.
 
+**Both files are read sequentially, in full, top to bottom, before any work starts — and re-read
+after a context compaction.** Grepping for the section that looks relevant is not reading; the
+rules that get broken are the ones adjacent to the section someone jumped to. The regression that
+made this a rule: 5d4bfa773 ("feat(wallpaperEngine): reinstate activeStill, this time with a
+writer") — written by an agent that had both files available and the removal's issue one
+`gh issue view` away.
+
 ## Hard rule: the `superpowers` skill system is required, not optional
 
 Every agent working in this repo - Claude Code, Antigravity/`agy`, or otherwise - must have
@@ -172,8 +179,9 @@ the reasoning still holds, your problem needs a different answer; if it doesn't,
 message and handle whatever the removal was protecting against.
 
 See [AGENT.md → Before you restore something that was removed](AGENT.md#before-you-restore-something-that-was-removed)
-for the worked example: restoring one config field without reading its issue re-introduced the bug that
-issue was filed for, and rebuilt a subprocess renderer the embedded one exists to replace.
+for the worked example: 5d4bfa773 ("feat(wallpaperEngine): reinstate activeStill, this time with a
+writer") restored one config field without reading its issue, re-introduced the bug that issue was
+filed for, and rebuilt a subprocess renderer the embedded one exists to replace.
 
 ## Settings additions are two-sided
 
@@ -265,6 +273,34 @@ A feature that only adds a leaf-level setting or a new widget instance using exi
 usually doesn't need an `AGENT.md` update - use judgment, but when in doubt, a one-line addition to
 the relevant section costs little and saves the next agent from re-discovering what you just
 learned.
+
+**Every PR body must carry a `Docs:` receipt line, and CI rejects PRs without one**
+(`.github/workflows/docs-receipt.yml`). One of:
+
+- `Docs: updated AGENT.md §<section>` (and/or `CONTRIBUTING.md`)
+- `Docs: not needed — <reason>`
+
+This exists because the judgment call above was silently skipped four PRs running — the HDR codec
+work (307c8b4ae ("fix(record): pick the HDR codec when capturing an HDR monitor")) and the RUNPATH
+repairs (156b4703b ("fix(install): repair the RUNPATH via a rename, not in place"), 3e07c2a5d
+("fix(install): repair the bundled libraries' RUNPATH too, not just the binary")) all met the
+"non-obvious gotcha" criterion and none updated `AGENT.md` at the time. A receipt converts "did you
+consider the docs" (unverifiable) into "the line exists and the reason holds up" (ten seconds).
+
+**Every point added to `AGENT.md` or this file must cite the commit that motivated it** — the
+change it documents, or the mistake it guards against — kernel `Fixes:` style:
+
+```
+156b4703b ("fix(install): repair the RUNPATH via a rename, not in place")
+```
+
+A point with no commit behind it is unverifiable folklore; the citation is what lets the next
+agent judge whether the reasoning still applies, which is this repo's rule for restoring removed
+things applied to the docs themselves. `tests/lint_doc_citations.py` extracts every citation from
+both files and fails the suite if one resolves to nothing. It resolves by SHA **or** by exact
+subject line, because this repo merges with "Rebase and merge": a doc entry landing in the same PR
+as the commit it cites will have that SHA rewritten at merge, and the subject is the half that
+survives.
 
 ## Multi-agent / parallel workflows (git worktrees)
 
