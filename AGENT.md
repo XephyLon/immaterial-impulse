@@ -203,6 +203,23 @@ an extra field from a real recording's side data**, so a strict match on the tra
 silently classifies every real HDR file as SDR — synthetic fixtures have no side data, which is why
 only a live file catches it. Use value-only output (`-of default=nw=1:nk=1`) and trim delimiters.
 
+Three more from the same pipeline (4a33f970e ("feat(record): capture SDR through the portal when
+SDR delivery is on"), acb9b4906 ("perf(record): GPU encoder ladder, and the pipefail bug that hid
+the GPU")):
+
+- **Hyprland tonemaps screencopy for capture clients** — grim screenshots of an HDR desktop look
+  right, and gsr's *portal* capture rides the same compositor path, yielding native SDR. Its KMS
+  capture reads the scanout plane and gets raw PQ. If you need SDR frames from an HDR display,
+  capture through the portal; the picker's Region tab covers region selection.
+- **`cmd | grep -q` under `set -o pipefail` reads as failed on success**: grep -q exits at the
+  first match, the producer takes SIGPIPE, and the pipeline's status is the producer's 141. The
+  converter's GPU detection was invisible-broken this way from its first version — every tonemap
+  ran on the CPU, nothing logged. Capture to a variable and match on that.
+- **NVENC's H.264 tops out at 4096px wide** and rejects wider frames with a misleading "No capable
+  devices found" — at 5120x1440 the h264_nvenc rung can never succeed; use HEVC past 4096. And
+  ffmpeg's `-encoders` list advertises build capability, not working hardware — try encoders for
+  real, in a ladder with a CPU floor.
+
 ## Directory map
 
 ```
