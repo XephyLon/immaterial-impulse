@@ -83,25 +83,35 @@ monitor_is_hdr() {
 # encodes 8-bit and tags the result bt709, so a PQ signal ends up labelled as
 # gamma - and decodes flat, grey and desaturated. Two correct ways out:
 #
-# - PORTAL capture (-w portal): the stream comes through the compositor, and
-#   Hyprland tonemaps screencopy for capture clients - the same reason a grim
-#   screenshot of an HDR desktop looks right. The recording is native SDR at
+# - PORTAL capture (-w portal), FULLSCREEN ONLY: the stream comes through the
+#   compositor, and Hyprland tonemaps screencopy for capture clients - the
+#   same reason a grim screenshot of an HDR desktop looks right. Native SDR at
 #   capture time, no conversion ever - verified live: portal output probes
-#   bt709/yuv420p with correct colours, where the KMS path gives raw PQ. Used
-#   when the user asked for SDR delivery (screenRecord.tonemapSdr); the
-#   saved-hook tonemapper then sees an SDR file and skips itself. The portal
-#   picker replaces slurp in region mode - it has a Region tab - so regions
-#   are correctly toned too. Fullscreen restores the session from a token
-#   (picker appears once); region deliberately does NOT restore, because a
-#   region is a fresh selection every time anyway.
+#   bt709/yuv420p with correct colours, where the KMS path gives raw PQ. The
+#   session restores from a token, so the picker appears exactly once.
+#
+# - Regions NEVER go through the portal. The first version routed them to the
+#   portal picker's Region tab - and the recorder overlay's "Record Region"
+#   already runs the shell's own region selector first, so the user picked a
+#   region and was then prompted to pick again. One selection UX everywhere:
+#   regions always come from the shell's selector (or slurp), capture via KMS
+#   as real HDR, and the saved-hook converter delivers SDR a few seconds
+#   later on the GPU. The codec is forced to an HDR variant in that case even
+#   if the user chose H.264: the converter re-encodes to H.264 anyway, and
+#   honouring the choice at capture would bake the wash-out in before the
+#   converter ever saw the file.
 #
 # - The _hdr codec variants: real HDR10, correct in anything that tonemaps.
 #   Used when the user keeps the SDR toggle off.
 USE_PORTAL=0
 if monitor_is_hdr "$TARGET_MONITOR"; then
     if [[ "$(cfg '.screenRecord.tonemapSdr')" == "true" ]]; then
-        USE_PORTAL=1
-        # The stream is SDR, so the user's codec choice applies unchanged.
+        if [[ $FULLSCREEN -eq 1 ]]; then
+            USE_PORTAL=1
+            # The stream is SDR, so the user's codec choice applies unchanged.
+        else
+            CODEC="hevc_hdr"
+        fi
     else
         case "$CODEC" in
             ""|auto|hevc) CODEC="hevc_hdr" ;;
@@ -131,13 +141,11 @@ if [[ $SOUND -eq 1 ]]; then
 fi
 
 if [[ $USE_PORTAL -eq 1 ]]; then
+    # Fullscreen only (see the routing above) - the token means the picker
+    # appears once, ever, and never mid-flow.
     ARGS+=(-w portal)
-    if [[ $FULLSCREEN -eq 1 ]]; then
-        mkdir -p "$(dirname "$PORTAL_TOKEN")"
-        ARGS+=(-restore-portal-session yes -portal-session-token-filepath "$PORTAL_TOKEN")
-    fi
-    # Region under portal: no slurp and no token - the picker's Region tab IS
-    # the selection, fresh each invocation exactly as slurp was.
+    mkdir -p "$(dirname "$PORTAL_TOKEN")"
+    ARGS+=(-restore-portal-session yes -portal-session-token-filepath "$PORTAL_TOKEN")
 elif [[ $FULLSCREEN -eq 1 ]]; then
     ARGS+=(-w "${TARGET_MONITOR:-screen}")
 else
