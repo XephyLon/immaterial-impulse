@@ -58,8 +58,16 @@ log="$(mktemp --suffix=-tonemap.log)"
 # reads as failed - so libplacebo silently never got selected and every
 # tonemap ran on the CPU. That single line is why the first version took 13s
 # on a clip the GPU does in 5.
+# ...and having the filter compiled in still does not mean a Vulkan device
+# exists to run it - a machine without one dies at -init_hw_device before any
+# encoder rung gets a say, taking the CPU floor down with it. So the GPU chain
+# is smoke-tested for real on a one-frame nullsrc, the same
+# try-it-don't-infer-it rule the encoder ladder follows. (CI is exactly such a
+# machine, and the pipefail bug above had been accidentally protecting it.)
 filters="$(ffmpeg -hide_banner -filters 2>/dev/null || true)"
-if [[ "$filters" == *libplacebo* ]]; then
+if [[ "$filters" == *libplacebo* ]] \
+    && ffmpeg -v error -init_hw_device vulkan -f lavfi -i "nullsrc=s=64x64:d=0.1" \
+        -vf "libplacebo=format=yuv420p" -frames:v 1 -f null - >/dev/null 2>&1; then
     VF="libplacebo=tonemapping=auto:colorspace=bt709:color_primaries=bt709:color_trc=bt709:format=yuv420p"
     HW=(-init_hw_device vulkan)
 else
