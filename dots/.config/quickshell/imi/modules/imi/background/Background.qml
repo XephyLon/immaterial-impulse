@@ -328,7 +328,17 @@ Variants {
             // Failure is not worth surfacing: the greeter derives this same path,
             // finds nothing, and falls back to the preview - which is what it had
             // before any of this existed.
-            weLoader.item.grabToImage(result => result.saveToFile(target));
+            //
+            // On success, poke the greeter sync: the still is produced
+            // asynchronously, AFTER the config changes that announced the new
+            // wallpaper, so without this the theme apply can copy before the
+            // still exists and the login screen keeps the preview until the
+            // next unrelated color event. The grab's completion is the event
+            // the sync has to observe - see GreeterSync.
+            weLoader.item.grabToImage(result => {
+                if (result.saveToFile(target))
+                    GreeterSync.request();
+            });
         }
 
         // `rendered` flips on the FIRST frame, which can still be warmup or
