@@ -255,7 +255,18 @@ Scope {
                                     }
                                 }
                             }
-                            onClicked: GlobalStates.desktopMenuOpen = false
+                            // Hover opens the quick submenu; a CLICK goes to the
+                            // full Settings page. It used to just close the menu -
+                            // a dead click on a row drawn like a button.
+                            // settingsPage is matched by page NAME in
+                            // SettingsContent (an index here goes stale the day a
+                            // page is inserted - the plugin context menu shipped
+                            // that bug with a hardcoded index).
+                            onClicked: {
+                                GlobalStates.desktopMenuOpen = false
+                                GlobalStates.settingsOpen = true
+                                GlobalStates.settingsPage = "Wallpaper & Desktop"
+                            }
                         }
 
                         // Widgets
@@ -287,6 +298,13 @@ Scope {
                                         submenuCloseTimer.restart()
                                     }
                                 }
+                            }
+                            // Same pattern as Wallpaper & style: hover for the
+                            // quick submenu, click for the full Settings page.
+                            onClicked: {
+                                GlobalStates.desktopMenuOpen = false
+                                GlobalStates.settingsOpen = true
+                                GlobalStates.settingsPage = "Widgets"
                             }
                         }
 
@@ -323,25 +341,11 @@ Scope {
                             }
                         }
 
-                        RippleButton {
-                            implicitHeight: 40
-                            colBackground: "transparent"
-                            colBackgroundHover: Appearance.colors.colLayer2
-                            contentItem: RowLayout {
-                                anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }
-                                spacing: Appearance.spacing.space150
-                                MaterialSymbol { text: "animated_images"; iconSize: Appearance.font.pixelSize.larger; color: Appearance.colors.colOnLayer1 }
-                                StyledText { Layout.fillWidth: true; text: "Live Wallpaper"; font.pixelSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1 }
-                                MaterialSymbol { text: "chevron_right"; iconSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1; opacity: 0.4 }
-                            }
-                            onClicked: {
-                                GlobalStates.desktopMenuOpen = false
-                                Wallpapers.openFallbackPicker(
-                                    Appearance.m3colors.darkmode,
-                                    Config.options.wallpaperSelector.liveWallpapersPath ?? ""
-                                )
-                            }
-                        }
+                        // "Live Wallpaper" used to sit here, opening the fallback
+                        // picker at liveWallpapersPath. Removed: live wallpapers
+                        // are picked in the wallpaper selector like everything
+                        // else, and the row duplicated a path already covered by
+                        // Wallpaper & style.
 
                         RippleButton {
                             implicitHeight: 40
