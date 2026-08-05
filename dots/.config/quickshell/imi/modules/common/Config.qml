@@ -1340,6 +1340,15 @@ Singleton {
                 property bool recordMic: false // merge the mic into the audio track
                 property bool showCursor: true
                 property string framerateMode: "vfr" // cfr | vfr | content
+                // Recordings made on an HDR display are stored as real HDR10
+                // (the _hdr codec variants; see scripts/videos/record.sh). That
+                // is correct in HDR-aware players and washed out everywhere
+                // else - VLC's defaults, Discord embeds, browsers, editors,
+                // none of which tonemap. This switch trades the HDR away after
+                // the fact: when a save lands, the file is tonemapped to bt709
+                // SDR in the background and replaced. Default off - "preserve
+                // HDR" was the explicit choice when HDR recording was added.
+                property bool tonemapSdr: false
                 property JsonObject replay: JsonObject {
                     property bool enable: false // instant-replay ring buffer daemon
                     property int duration: 120 // seconds kept in the buffer
