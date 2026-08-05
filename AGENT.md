@@ -544,6 +544,30 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   racing surface creation. Because clearing the grab also empties its dismissable list, Settings
   must re-register itself when selection ends even though its own `visible` property never changed.
 
+## State propagation is reactive, or it is a bug waiting
+
+**"When X changes, refresh Y" must observe X — a property binding, a `Connections` handler, or an
+explicit completion poke — never piggyback on an unrelated trigger that happens to fire often
+enough.** The shell is an observer system end to end; a consumer wired as a callback of something
+else's event inherits two defect classes at once: it goes stale for every X-change that does not
+happen to fire the borrowed trigger, and it races every asynchronously-produced input it cannot
+wait for.
+
+The worked case is the SDDM greeter sync. Its inputs were refreshed only as a side effect of
+matugen's color generation, so WE scaling changes never reached the login screen, and the
+full-resolution still — grabbed a second *after* the config change that announced it — could be
+produced after the copy and miss the greeter until the next unrelated color event. The fix
+(a605450fd ("feat(greeterSync): observe the greeter's inputs instead of borrowing matugen's
+trigger"); `services/GreeterSync.qml`, spec in
+`docs/superpowers/specs/2026-08-05-reactive-greeter-sync-design.md`)
+observes the greeter-relevant leaves and is poked by the grab's completion, with the expensive side
+gated by an output diff so over-observation costs a hash, not a root copy. That gate is the general
+enabler: make firing cheap, then observe generously — under-observation is the staleness bug,
+over-observation is free.
+
+If you find yourself adding a second caller to an existing hook "because it also needs to run
+then", stop: name the input that actually changed, and observe it.
+
 ## Dynamic/data-driven QML gotchas
 
 Relevant to anything that instantiates QML components from external data (JSON manifests, config
