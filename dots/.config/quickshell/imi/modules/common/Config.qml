@@ -1408,9 +1408,9 @@ Singleton {
                     // is unsupported by the embedded renderer (needs CEF), so the
                     // background falls back to the static wallpaper for it.
                     property string activeType: ""
-                    // A full-resolution still of the active project, rendered at
-                    // the display's own size and cached under
-                    // ~/.cache/.../wallpaperengine-stills/<id>.jpg.
+                    // A full-resolution, lossless still of the active project,
+                    // grabbed at the display's own size and cached under
+                    // ~/.cache/.../wallpaperengine-stills/<id>.png.
                     //
                     // This field existed before, was removed in #103, and is back
                     // deliberately. It was removed because the selector-only
