@@ -81,22 +81,42 @@ monitor_is_hdr() {
 
 # gpu-screen-recorder does not tonemap. Given an HDR surface and an SDR codec it
 # encodes 8-bit and tags the result bt709, so a PQ signal ends up labelled as
-# gamma - and decodes flat, grey and desaturated. The _hdr codec variants carry
-# the real transfer function and primaries, so the file is correct in anything
-# that reads them.
+# gamma - and decodes flat, grey and desaturated. Two correct ways out:
+#
+# - PORTAL capture (-w portal): the stream comes through the compositor, and
+#   Hyprland tonemaps screencopy for capture clients - the same reason a grim
+#   screenshot of an HDR desktop looks right. The recording is native SDR at
+#   capture time, no conversion ever - verified live: portal output probes
+#   bt709/yuv420p with correct colours, where the KMS path gives raw PQ. Used
+#   when the user asked for SDR delivery (screenRecord.tonemapSdr); the
+#   saved-hook tonemapper then sees an SDR file and skips itself. The portal
+#   picker replaces slurp in region mode - it has a Region tab - so regions
+#   are correctly toned too. Fullscreen restores the session from a token
+#   (picker appears once); region deliberately does NOT restore, because a
+#   region is a fresh selection every time anyway.
+#
+# - The _hdr codec variants: real HDR10, correct in anything that tonemaps.
+#   Used when the user keeps the SDR toggle off.
+USE_PORTAL=0
 if monitor_is_hdr "$TARGET_MONITOR"; then
-    case "$CODEC" in
-        ""|auto|hevc) CODEC="hevc_hdr" ;;
-        av1)          CODEC="av1_hdr" ;;
-        h264)
-            # H.264 has no HDR variant here. Silently swapping the codec someone
-            # explicitly chose is worse than saying why the file will look wrong.
-            notify-send "Recording SDR H.264 on an HDR display" \
-                "H.264 cannot carry HDR, so this recording will look washed out. Pick HEVC or AV1, or turn HDR off while recording." \
-                -a 'Recorder' & disown
-            ;;
-    esac
+    if [[ "$(cfg '.screenRecord.tonemapSdr')" == "true" ]]; then
+        USE_PORTAL=1
+        # The stream is SDR, so the user's codec choice applies unchanged.
+    else
+        case "$CODEC" in
+            ""|auto|hevc) CODEC="hevc_hdr" ;;
+            av1)          CODEC="av1_hdr" ;;
+            h264)
+                # H.264 has no HDR variant here. Silently swapping the codec someone
+                # explicitly chose is worse than saying why the file will look wrong.
+                notify-send "Recording SDR H.264 on an HDR display" \
+                    "H.264 cannot carry HDR, so this recording will look washed out. Pick HEVC or AV1, enable 'Convert HDR recordings to SDR', or turn HDR off while recording." \
+                    -a 'Recorder' & disown
+                ;;
+        esac
+    fi
 fi
+PORTAL_TOKEN="$HOME/.local/state/quickshell/gsr-portal-token"
 
 ARGS=(gpu-screen-recorder -c mp4 -f "$FPS" -q "$QUALITY" -ac "$AUDIO_CODEC"
       -fm "$FRAMERATE_MODE" -sc "$SCRIPT_DIR/gsr-saved.sh" -o "$OUT")
@@ -110,7 +130,15 @@ if [[ $SOUND -eq 1 ]]; then
     fi
 fi
 
-if [[ $FULLSCREEN -eq 1 ]]; then
+if [[ $USE_PORTAL -eq 1 ]]; then
+    ARGS+=(-w portal)
+    if [[ $FULLSCREEN -eq 1 ]]; then
+        mkdir -p "$(dirname "$PORTAL_TOKEN")"
+        ARGS+=(-restore-portal-session yes -portal-session-token-filepath "$PORTAL_TOKEN")
+    fi
+    # Region under portal: no slurp and no token - the picker's Region tab IS
+    # the selection, fresh each invocation exactly as slurp was.
+elif [[ $FULLSCREEN -eq 1 ]]; then
     ARGS+=(-w "${TARGET_MONITOR:-screen}")
 else
     if [[ -z "$REGION" ]]; then
