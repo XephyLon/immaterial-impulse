@@ -209,8 +209,13 @@ the GPU")):
 
 - **Hyprland tonemaps screencopy for capture clients** — grim screenshots of an HDR desktop look
   right, and gsr's *portal* capture rides the same compositor path, yielding native SDR. Its KMS
-  capture reads the scanout plane and gets raw PQ. If you need SDR frames from an HDR display,
-  capture through the portal; the picker's Region tab covers region selection.
+  capture reads the scanout plane and gets raw PQ. **But do not route recording through the portal
+  on this stack**: `xdg-desktop-portal-hyprland` (1.4.1) returns an **empty restore token** — gsr
+  logs `saved restore token to cache ()` — so `-restore-portal-session` is a no-op and the picker
+  prompts on *every* recording. Shipped and reverted the same day ("fix(record): regions never
+  touch the portal - one selection, ever", then the removal citing this entry): SDR delivery lives
+  in the post-save GPU converter instead. Revisit portal capture only after verifying a **non-empty**
+  token actually round-trips on the installed xdph.
 - **`cmd | grep -q` under `set -o pipefail` reads as failed on success**: grep -q exits at the
   first match, the producer takes SIGPIPE, and the pipeline's status is the producer's 141. The
   converter's GPU detection was invisible-broken this way from its first version — every tonemap
