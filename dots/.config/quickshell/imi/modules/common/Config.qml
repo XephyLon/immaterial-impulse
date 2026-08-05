@@ -674,6 +674,16 @@ Singleton {
                         property int range: 4
                     }
                 }
+                property JsonObject cursor: JsonObject {
+                    // Defaults mirror the values execs.lua used to hardcode
+                    // (hyprctl setcursor Bibata-Modern-Classic 24) and the
+                    // compositor's own cursor defaults, so exposing them in
+                    // settings cannot change how the pointer looks on first open.
+                    property string theme: "Bibata-Modern-Classic"
+                    property int size: 24
+                    property real zoomFactor: 1.0
+                    property int inactiveTimeout: 0
+                }
                 property JsonObject general: JsonObject {
                     property int borderSize: 1
                     property int gapsIn: 2
