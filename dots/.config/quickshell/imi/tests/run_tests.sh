@@ -99,6 +99,12 @@ if ! python3 "$SCRIPT_DIR/lint_shell_name.py"; then
     exit 1
 fi
 
+echo "Running doc citation lint..."
+if ! python3 "$SCRIPT_DIR/lint_doc_citations.py"; then
+    echo "Doc citation lint failed."
+    exit 1
+fi
+
 echo "Running plugin process lifecycle lint..."
 if ! python3 "$SCRIPT_DIR/lint_plugin_processes.py"; then
     echo "Plugin process lifecycle lint failed."
