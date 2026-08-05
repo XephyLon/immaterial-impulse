@@ -10,6 +10,23 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.17.4] — 2026-08-05
+
+### Changed
+- **SDR recording on HDR displays is now instant instead of converted.** With "Record SDR on HDR
+  displays" on (renamed from "Convert HDR recordings to SDR"), recordings capture through the
+  screen-share portal, whose stream the compositor tonemaps — the same reason a screenshot of an
+  HDR desktop looks right. Native SDR at capture time, no conversion wait at all, for **regions as
+  well as fullscreen**: the portal picker's Region tab replaces the region selector, a fresh pick
+  each time. Fullscreen shows the picker once and remembers the choice. Replays still record HDR
+  and convert in the background.
+- **The background converter is ~2.6× faster** (12.9s → 4.9s on an 8-second 5120×1440 clip): the
+  GPU tonemap had silently never run — a `grep -q` under `pipefail` mis-read the ffmpeg filter
+  probe as a failure from the converter's first version — and encoding now uses a tried-for-real
+  GPU ladder (NVENC/VAAPI, CPU floor), switching to HEVC above 4096px width where NVENC's H.264
+  hard-caps. The GPU chain is smoke-tested before being chosen, so machines without a Vulkan
+  device keep the CPU path instead of failing outright.
+
 ## [0.17.3] — 2026-08-05
 
 ### Added
