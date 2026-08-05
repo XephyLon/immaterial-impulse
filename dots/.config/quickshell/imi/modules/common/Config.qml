@@ -1408,30 +1408,28 @@ Singleton {
                     // is unsupported by the embedded renderer (needs CEF), so the
                     // background falls back to the static wallpaper for it.
                     property string activeType: ""
-                    // A full-resolution, lossless still of the active project,
-                    // grabbed at the display's own size and cached under
-                    // ~/.cache/.../wallpaperengine-stills/<id>.png.
+                    // `activeStill` deliberately does NOT live here, and must not
+                    // be added back. There IS a full-resolution still - the
+                    // background grabs one off the live Wallpaper Engine surface
+                    // and caches it at
+                    // ~/.cache/quickshell/wallpaperengine-stills/<activeProject>.png
+                    // (see Background.captureGreeterStill) - but its path is
+                    // derived from `activeProject` by whoever needs it, not stored.
                     //
-                    // This field existed before, was removed in #103, and is back
-                    // deliberately. It was removed because the selector-only
-                    // refactor deleted the code that generated the stills while
-                    // leaving the field and its readers, so it sat frozen at
-                    // whatever it held that day and preset-apply spread the stale
-                    // value. The field was never the problem - having no writer
-                    // was. It now has one: the background grabs the frame off the
-                    // live Wallpaper Engine surface once it has settled (see
-                    // Background.captureGreeterStill), so it cannot go stale the
-                    // way it did.
+                    // Storing it is #103: the field had no writer once the
+                    // renderer moved in-process, so it froze at whatever project
+                    // was active that day, and the SDDM greeter served that
+                    // wallpaper for months. #117 answered that by giving it a
+                    // writer, which fixes the instance and keeps the mechanism -
+                    // a stored path is a second source of truth for something
+                    // `activeProject` already states, and the two can disagree.
                     //
-                    // It exists because `activePreview` is a Steam Workshop
-                    // thumbnail - often square and around 1000px - and the SDDM
-                    // greeter, which cannot run Wallpaper Engine, was showing that
-                    // upscaled across the whole display (#113). Readers must treat
-                    // an empty value as "not available yet" and fall back to
-                    // activePreview: the grab happens a beat after the surface
-                    // renders, and no still exists on a stock Quickshell build
-                    // without the Wallpaper Engine module.
-                    property string activeStill: ""
+                    // Re-declaring it is not harmless even with a writer. Presets
+                    // are separate files the JsonAdapter never rewrites, so the
+                    // stale values #103 documented are still in every saved preset
+                    // (Saber, Study and Sunken_Temple all name the wrong project).
+                    // While nothing declares the property they are unreachable;
+                    // declaring it re-arms them on the next preset apply.
                     property int fps: 30
                     property string scaling: "fill"
                     property bool silent: true
