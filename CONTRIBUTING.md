@@ -159,6 +159,22 @@ managed by the outer layout, triggering "Detected anchors on an item that is man
 and broken scroll/sizing behavior. Look at `GeneralConfig.qml`/`ServicesConfig.qml` for the plain
 pattern before adding a new settings page.
 
+## A missing thing is a decision until proven otherwise
+
+Same family as the greps above: don't infer *why* something isn't there. If a field, function or file
+is absent where you expected one, the removal has a commit and often an issue, and that reasoning is
+a requirement you are about to work against.
+
+`git log -S '<thing>' --all` for the removing commit, read the full message, and read any issue or PR
+it cites in full — `gh issue view N`, not the title. Note that a number can be an **issue** rather than
+a PR (`gh pr view 103` fails here; `gh issue view 103` is the one that matters). Only then decide. If
+the reasoning still holds, your problem needs a different answer; if it doesn't, say so in the commit
+message and handle whatever the removal was protecting against.
+
+See [AGENT.md → Before you restore something that was removed](AGENT.md#before-you-restore-something-that-was-removed)
+for the worked example: restoring one config field without reading its issue re-introduced the bug that
+issue was filed for, and rebuilt a subprocess renderer the embedded one exists to replace.
+
 ## Settings additions are two-sided
 
 A new persisted option needs both halves, or it silently does nothing:
