@@ -311,7 +311,14 @@ Variants {
             if (!bgRoot.ownsGreeterStill || !(weLoader.item?.rendered ?? false)) return
             const id = Config.options.wallpaperSelector.wallpaperEngine.activeProject
             if (!id) return
-            const target = `${Directories.wallpaperEngineStills}/${id}.jpg`
+            // PNG, not JPEG. saveToFile takes no quality argument, so a .jpg
+            // here is written at Qt's default q75 - measured at 35.0 dB PSNR
+            // against the lossless grab, where the old script produced q94.
+            // That is a visible step down on a full-screen login background,
+            // worst on the dark gradients these scenes are full of. Lossless
+            // costs ~7-13 MiB per project against ~0.3-0.8 MiB, which the
+            // greeter's own size cap is two orders of magnitude above.
+            const target = `${Directories.wallpaperEngineStills}/${id}.png`
             weLoader.item.grabToImage(result => {
                 // Failure is not worth surfacing: the greeter falls back to the
                 // preview, which is what it had before any of this existed.

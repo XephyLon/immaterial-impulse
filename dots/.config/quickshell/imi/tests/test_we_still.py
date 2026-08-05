@@ -110,7 +110,20 @@ class CaptureTests(unittest.TestCase):
 
     def test_the_still_is_named_for_the_project_it_shows(self):
         self.assertRegex(self.capture,
-                         r"\$\{Directories\.wallpaperEngineStills\}/\$\{id\}\.jpg")
+                         r"\$\{Directories\.wallpaperEngineStills\}/\$\{id\}\.png")
+
+    def test_the_still_is_written_losslessly(self):
+        # saveToFile takes no quality argument, so the extension IS the quality
+        # setting: .jpg gets Qt's default q75, measured at 35.0 dB PSNR against
+        # the lossless grab where the script it replaced produced q94. On a
+        # full-screen login background over dark gradients that shows.
+        #
+        # Comments stripped: the line explaining why .jpg is wrong contains
+        # ".jpg", so scanning the raw body fails on its own justification.
+        code = "\n".join(l for l in self.capture.splitlines()
+                         if not l.lstrip().startswith("//"))
+        self.assertNotIn(".jpg", code,
+                         "a lossy extension here silently drops the still to q75")
 
 
 class ConfigTests(unittest.TestCase):
