@@ -249,6 +249,13 @@ bug in anything that qualifies:
   three modules shipped as silent no-ops precisely because nobody checked that.
 - **Prove a new static check can fail.** These checks match source text; a pattern with baked-in
   indentation passes vacuously after any reformat.
+- **Plant mutations only in a clean tree.** Proving a check can fail means planting a bad input and
+  reverting it — and `git checkout -- <file>` reverts to HEAD, destroying every uncommitted edit in
+  that file along with the mutation. That exact trap has fired three times in two days, most
+  recently wiping the first draft of the doc rules themselves (01b07a731b8 ("docs: mechanize the
+  agent-doc rules - sequential read, citations, receipts") is the second draft). Commit first — a
+  `wip` commit is fine, the granular-history rule wants the journey anyway — or plant the mutation
+  in a scratch copy. Never plant-and-revert in a file that holds uncommitted work.
 - If the code you're touching depends on live compositor/audio state and genuinely can't be unit
   tested with the current harness (most `modules/imi/*` UI), that's fine - fall back to this file's
   "Verify against the live shell" workflow instead, but say so rather than silently skipping tests.
