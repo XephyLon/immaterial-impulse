@@ -12,6 +12,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Full history: lint_doc_citations.py resolves the commit citations
+          # in AGENT.md/CONTRIBUTING.md by SHA or subject, and a depth-1 clone
+          # would fail every one of them.
+          fetch-depth: 0
 
       - name: Install Qt6 Dependencies
         run: |
