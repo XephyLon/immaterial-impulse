@@ -157,6 +157,19 @@ if ! python3 "$SCRIPT_DIR/test_widget_grip_lock.py"; then
     exit 1
 fi
 
+echo "Running widget group selection tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_group_selection.py"; then
+    echo "Widget group selection tests failed."
+    exit 1
+fi
+
+# Brings its own headless weston, like the interaction runtime tests above.
+echo "Running widget group drag runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_group_drag_runtime.py"; then
+    echo "Widget group drag runtime tests failed."
+    exit 1
+fi
+
 echo "Running widget plugin migration tests..."
 if ! python3 "$SCRIPT_DIR/test_widget_plugin_migration.py"; then
     echo "Widget plugin migration tests failed."
