@@ -10,6 +10,18 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.17.6] — 2026-08-05
+
+### Fixed
+- **Fullscreen recording prompted the screen-share picker on every use with SDR recording on.**
+  The 0.17.4 portal design assumed session restore would make the picker a one-time approval;
+  `xdg-desktop-portal-hyprland` (1.4.1) returns an **empty** restore token, so restore is a no-op on
+  this stack and the picker appeared every single time. Portal capture is removed entirely: every
+  path records HDR via KMS with **zero prompts** (regions keep their single shell-selector pick),
+  and the SDR switch — honestly named "Convert HDR recordings to SDR" again — delivers via the GPU
+  converter a few seconds after each save. Guarded against regression: a test fails the suite on
+  any portal reintroduction until a non-empty restore token demonstrably round-trips.
+
 ## [0.17.5] — 2026-08-05
 
 ### Fixed
