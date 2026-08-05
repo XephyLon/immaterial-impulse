@@ -23,8 +23,6 @@ GEOMETRY="${3:-}"
 [[ -n "$PROJECT_ID" && -n "$OUT" ]] || { echo "usage: we_still.sh <project-id> <out.jpg> [WxH]" >&2; exit 2; }
 [[ "$PROJECT_ID" =~ ^[0-9]+$ ]] || { echo "we_still.sh: project id must be numeric" >&2; exit 2; }
 
-command -v linux-wallpaperengine >/dev/null || { echo "we_still.sh: linux-wallpaperengine not installed" >&2; exit 3; }
-
 # Default to the focused monitor: the greeter fills one screen, and rendering
 # at that size is what makes the result native rather than upscaled. The name
 # is wanted as well as the size - see the render mode below.
@@ -44,6 +42,30 @@ TIMEOUT="${WE_STILL_TIMEOUT:-45}"
 DELAY_FRAMES="${WE_STILL_DELAY_FRAMES:-20}"
 
 mkdir -p "$(dirname "$OUT")"
+
+# A project's render does not change, so render it once and keep it. Without
+# this the renderer runs on every single wallpaper switch - including switching
+# back to something seen a minute ago - which is several seconds of GPU for a
+# file that is already on disk and identical.
+#
+# The size is checked rather than just the existence: a still cached at the old
+# resolution is exactly the upscaled-thumbnail problem this script exists to
+# fix, so a monitor change has to invalidate it. WE_STILL_FORCE=1 re-renders
+# regardless, for a project whose content was updated in the Workshop.
+still_geometry() {
+    ffprobe -v error -select_streams v -show_entries stream=width,height \
+        -of csv=p=0:s=x "$1" 2>/dev/null || true
+}
+if [[ -z "${WE_STILL_FORCE:-}" && -s "$OUT" ]] \
+    && [[ "$(still_geometry "$OUT")" == "${WIDTH}x${HEIGHT}" ]]; then
+    echo "$OUT"
+    exit 0
+fi
+
+# Checked after the cache, not before: a usable still on disk needs no renderer,
+# and failing here would throw away a good file on a machine that has since
+# dropped the Wallpaper Engine extra.
+command -v linux-wallpaperengine >/dev/null || { echo "we_still.sh: linux-wallpaperengine not installed" >&2; exit 3; }
 
 raw="$(mktemp --suffix=-we-still.jpg)"
 cleanup() { rm -f "$raw"; }
