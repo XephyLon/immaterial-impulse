@@ -26,10 +26,16 @@ GEOMETRY="${3:-}"
 command -v linux-wallpaperengine >/dev/null || { echo "we_still.sh: linux-wallpaperengine not installed" >&2; exit 3; }
 
 # Default to the focused monitor: the greeter fills one screen, and rendering
-# at that size is what makes the result native rather than upscaled.
+# at that size is what makes the result native rather than upscaled. The name
+# is wanted as well as the size - see the render mode below.
+MONITOR_NAME=""
 if [[ -z "$GEOMETRY" ]]; then
-    GEOMETRY="$(hyprctl monitors -j 2>/dev/null \
-        | jq -r 'map(select(.focused)) | .[0] | "\(.width)x\(.height)"' 2>/dev/null || true)"
+    monitor_json="$(hyprctl monitors -j 2>/dev/null \
+        | jq -c 'map(select(.focused)) | .[0] // empty' 2>/dev/null || true)"
+    if [[ -n "$monitor_json" ]]; then
+        MONITOR_NAME="$(jq -r '.name // ""' <<<"$monitor_json" 2>/dev/null || true)"
+        GEOMETRY="$(jq -r '"\(.width)x\(.height)"' <<<"$monitor_json" 2>/dev/null || true)"
+    fi
 fi
 [[ "$GEOMETRY" =~ ^[0-9]+x[0-9]+$ ]] || GEOMETRY="1920x1080"
 WIDTH="${GEOMETRY%x*}"; HEIGHT="${GEOMETRY#*x}"
@@ -38,12 +44,37 @@ TIMEOUT="${WE_STILL_TIMEOUT:-45}"
 DELAY_FRAMES="${WE_STILL_DELAY_FRAMES:-20}"
 
 mkdir -p "$(dirname "$OUT")"
+
 raw="$(mktemp --suffix=-we-still.jpg)"
 cleanup() { rm -f "$raw"; }
 trap cleanup EXIT
 
-# --silent because this runs on every wallpaper switch and a burst of the
-# wallpaper's audio each time would be intolerable.
+# Render mode. --window opens an ordinary floating window: on a compositor it
+# takes focus and covers the screen for the seconds the render takes, which is
+# a visible interruption for a file the user never asked to see being made.
+#
+# --screen-root binds a wlr-layer-shell surface instead, and --layer background
+# puts it on the lowest layer - underneath the shell's own wallpaper, which is
+# opaque and covers it completely. Same frame, no window, no focus change,
+# nothing on screen. It also takes the output's real size, so the geometry is
+# the monitor's by construction rather than by being told.
+#
+# --no-fullscreen-pause is required with it: a background pauses by default
+# while a fullscreen window is active, and a paused renderer never reaches the
+# screenshot frame, so a render started over a fullscreen app would sit there
+# until the timeout and produce nothing.
+#
+# The window path stays for anything without a named output - a non-Hyprland
+# compositor, or an explicit geometry argument asking for a specific size.
+if [[ -n "$MONITOR_NAME" ]]; then
+    render_args=(--screen-root "$MONITOR_NAME" --layer background
+        --no-fullscreen-pause --bg "$PROJECT_ID")
+else
+    render_args=(--window "0x0x${WIDTH}x${HEIGHT}" "$PROJECT_ID")
+fi
+
+# --silent because a burst of the wallpaper's audio while nothing is visible on
+# screen would be worse than the window ever was.
 #
 # setsid + process-group kill because --screenshot does NOT exit once it has
 # written the file: it keeps rendering, so the caller has to notice the file
@@ -51,10 +82,9 @@ trap cleanup EXIT
 # spawns children and a bare `kill` leaves them holding the GPU.
 setsid linux-wallpaperengine \
     --silent \
-    --window "0x0x${WIDTH}x${HEIGHT}" \
     --screenshot "$raw" \
     --screenshot-delay "$DELAY_FRAMES" \
-    "$PROJECT_ID" >/dev/null 2>&1 &
+    "${render_args[@]}" >/dev/null 2>&1 &
 pgid=$!
 
 for _ in $(seq 1 "$TIMEOUT"); do
