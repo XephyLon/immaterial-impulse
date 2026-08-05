@@ -514,6 +514,12 @@ if ! python3 "$SCRIPT_DIR/test_we_still.py"; then
     exit 1
 fi
 
+echo "Running greeter sync tests..."
+if ! python3 "$SCRIPT_DIR/test_greeter_sync.py"; then
+    echo "Greeter sync tests failed."
+    exit 1
+fi
+
 echo "Running drop shelf summon tests..."
 if ! python3 "$SCRIPT_DIR/test_dropshelf_summon.py"; then
     echo "Drop shelf summon tests failed."
