@@ -4,6 +4,14 @@ Reference for coding agents (and humans) working in this repository. This file e
 project is, how it's put together, and where things live. See `CONTRIBUTING.md` for how to work in
 it day to day.
 
+> **Read this file and then `CONTRIBUTING.md` sequentially, in full, top to bottom, before any
+> work — and again after a context compaction.** Grep hits and section jumps are not reading:
+> the rules that get broken are the ones adjacent to the section someone jumped to, and that is
+> how 5d4bfa773 ("feat(wallpaperEngine): reinstate activeStill, this time with a writer") shipped
+> a regression this file had the material to prevent. Every point added to this file or
+> `CONTRIBUTING.md` must cite the commit that motivated it as `<sha> ("<subject>")` — format and
+> enforcement in `CONTRIBUTING.md` → "Keep AGENT.md in sync".
+
 > **Repository layout.** This repo bundles more than the shell. The Quickshell theme lives under
 > `dots/.config/quickshell/imi/`; the installer is `setup` + `sdata/`; project docs are in `docs/`.
 > **Unless a path is written repo-relative (e.g. `dots/...`, `sdata/...`, `docs/...`), file paths in
@@ -57,7 +65,9 @@ Concretely, before re-adding anything:
 
 The worked example, because it cost a full day and shipped a regression:
 
-`wallpaperSelector.wallpaperEngine.activeStill` was removed by
+`wallpaperSelector.wallpaperEngine.activeStill` (introduced by 6a0c19e45 ("feat(wallpapers):
+render and cache a full-scene still per live wallpaper"), orphaned a day later by ce7e90327
+("refactor(wallpaperEngine): gut runtime renderer to selector-only")) was removed by
 [#103](https://github.com/XephyLon/immaterial-impulse/issues/103) — a stored path to a rendered
 wallpaper still, with no writer after the Wallpaper Engine renderer moved in-process, frozen at
 whatever project was active that day, and served to the SDDM greeter for months.
@@ -65,9 +75,9 @@ whatever project was active that day, and served to the SDDM greeter for months.
 greeter background that #103 had **explicitly predicted and accepted** as the cost.
 
 [#117](https://github.com/XephyLon/immaterial-impulse/pull/117) "fixed" #113 by re-declaring the
-field and giving it a writer — a subprocess that launched a **second** `linux-wallpaperengine` to
-photograph a frame this shell was already rendering in-process. Nobody had read #103. Three things
-followed:
+field and giving it a writer (5d4bfa773 ("feat(wallpaperEngine): reinstate activeStill, this time
+with a writer")) — a subprocess that launched a **second** `linux-wallpaperengine` to photograph a
+frame this shell was already rendering in-process. Nobody had read #103. Three things followed:
 
 - the fix rebuilt the exact pre-embed mechanism the embedded renderer exists to eliminate;
 - re-declaring the property re-armed the stale values still sitting in every saved preset (see the
@@ -75,7 +85,9 @@ followed:
   presets are separate files it never rewrites), so #103's bug came back;
 - #103's actual fix direction ("derive it, don't store it") was sitting in the issue the whole time.
 
-The correct answer was in the removal's reasoning. Reading it first would have skipped all of it.
+The correct answer was in the removal's reasoning. Reading it first would have skipped all of it —
+the eventual fix (03b8b0298 ("fix(wallpaperEngine): derive the greeter's still path, do not store
+it")) is #103's own fix direction, implemented a day and two reverted mechanisms late.
 
 ## Runtime model — read this before assuming anything about "building" or "compiling"
 
@@ -170,7 +182,9 @@ patched, not just the binary. The `LD_LIBRARY_PATH` fallback appears to work pre
 *is* transitive — and it leaks into every process the shell spawns, shadowing system libraries for
 every application launched from the desktop. If you find yourself exporting it, the `RUNPATH` is
 still wrong. `patchelf` rewrites in place, so patching a **running** executable fails with `ETXTBSY`;
-copy, patch the copy, then `rename(2)` over the original.
+copy, patch the copy, then `rename(2)` over the original. Learned across 156b4703b ("fix(install):
+repair the RUNPATH via a rename, not in place") and 3e07c2a5d ("fix(install): repair the bundled
+libraries' RUNPATH too, not just the binary") — the first shipped believing it was the whole fix.
 
 **`gpu-screen-recorder` does not tonemap.** Handed an HDR surface with an SDR codec it encodes 8-bit
 and tags the file `bt709`, so a PQ signal is decoded as gamma — flat, grey, desaturated, with nothing
@@ -178,6 +192,7 @@ in the logs. `scripts/videos/record.sh` therefore detects HDR and selects the `_
 The authoritative signal is Hyprland's `colorManagementPreset` (`hdr`/`hdredid`), **not**
 `currentFormat`: a wide-gamut SDR monitor also reports `XBGR2101010`. H.264 cannot carry HDR at all,
 so an explicit H.264 choice is respected and explained rather than silently overridden.
+(307c8b4ae ("fix(record): pick the HDR codec when capturing an HDR monitor").)
 
 ## Directory map
 
@@ -314,14 +329,17 @@ Consequences for making changes:
   `~/.config/immaterial-impulse/presets/` are separate JSON the adapter never rewrites — whatever was
   in a preset when it was saved is still in it. So a key removed from the schema is gone from the live
   config but **preserved in every preset**, lying dormant. Re-declaring that key re-arms all of them on
-  the next preset apply. This is exactly how `activeStill` came back (see
-  [Before you restore something that was removed](#before-you-restore-something-that-was-removed));
-  three of the six presets on the author's machine still name the wrong project. Removing a key is
+  the next preset apply. This is exactly how `activeStill` came back — re-armed by 5d4bfa773
+  ("feat(wallpaperEngine): reinstate activeStill, this time with a writer"), disarmed by 03b8b0298
+  ("fix(wallpaperEngine): derive the greeter's still path, do not store it"); see
+  [Before you restore something that was removed](#before-you-restore-something-that-was-removed).
+  Three of the six presets on the author's machine still name the wrong project. Removing a key is
   therefore not reversible by simply putting it back — either migrate the presets or, better, do not
   store derivable state in the first place.
 - **Do not store a path that can be derived from state the config already holds.** Two fields that
   must agree will eventually disagree, and nothing reports it. The greeter's full-resolution Wallpaper
-  Engine still is the canonical case: the background grabs it off the live surface into
+  Engine still is the canonical case (aa0772773 ("feat(background): grab the greeter's still off the
+  live surface")): the background grabs it off the live surface into
   `~/.cache/quickshell/wallpaperengine-stills/<activeProject>.png` (`Background.captureGreeterStill`),
   and every consumer — including `imi-sddm-theme`, a separate process that cannot ask the shell
   anything — rebuilds that path from `activeProject`. A derived path cannot name a different project
