@@ -81,37 +81,29 @@ monitor_is_hdr() {
 
 # gpu-screen-recorder does not tonemap. Given an HDR surface and an SDR codec it
 # encodes 8-bit and tags the result bt709, so a PQ signal ends up labelled as
-# gamma - and decodes flat, grey and desaturated. Two correct ways out:
+# gamma - and decodes flat, grey and desaturated. So an HDR monitor is always
+# captured with an _hdr codec variant - real HDR10, correct in anything that
+# tonemaps - and SDR delivery (screenRecord.tonemapSdr) happens AFTER the
+# save: the saved-hook converter tonemaps on the GPU a few seconds later.
 #
-# - PORTAL capture (-w portal), FULLSCREEN ONLY: the stream comes through the
-#   compositor, and Hyprland tonemaps screencopy for capture clients - the
-#   same reason a grim screenshot of an HDR desktop looks right. Native SDR at
-#   capture time, no conversion ever - verified live: portal output probes
-#   bt709/yuv420p with correct colours, where the KMS path gives raw PQ. The
-#   session restores from a token, so the picker appears exactly once.
-#
-# - Regions NEVER go through the portal. The first version routed them to the
-#   portal picker's Region tab - and the recorder overlay's "Record Region"
-#   already runs the shell's own region selector first, so the user picked a
-#   region and was then prompted to pick again. One selection UX everywhere:
-#   regions always come from the shell's selector (or slurp), capture via KMS
-#   as real HDR, and the saved-hook converter delivers SDR a few seconds
-#   later on the GPU. The codec is forced to an HDR variant in that case even
-#   if the user chose H.264: the converter re-encodes to H.264 anyway, and
-#   honouring the choice at capture would bake the wash-out in before the
-#   converter ever saw the file.
-#
-# - The _hdr codec variants: real HDR10, correct in anything that tonemaps.
-#   Used when the user keeps the SDR toggle off.
-USE_PORTAL=0
+# Portal capture (-w portal) is deliberately NOT used, twice over. It would
+# give native SDR at capture time - the stream comes through the compositor,
+# which tonemaps screencopy for capture clients - but it prompts:
+#   - routed regions through the portal picker after the shell's own region
+#     selector had already run, so the user selected twice;
+#   - and for fullscreen, session restore turned out to be a no-op on this
+#     stack: gpu-screen-recorder requests persistence correctly, and
+#     xdg-desktop-portal-hyprland (1.4.1) returns an EMPTY restore token
+#     ("saved restore token to cache ()" in gsr's log), so the picker appears
+#     on every single recording. Zero prompts beats zero conversion.
+# If xdph ever returns real tokens, fullscreen portal capture becomes worth
+# revisiting - the compositor tonemap itself was verified working.
 if monitor_is_hdr "$TARGET_MONITOR"; then
     if [[ "$(cfg '.screenRecord.tonemapSdr')" == "true" ]]; then
-        if [[ $FULLSCREEN -eq 1 ]]; then
-            USE_PORTAL=1
-            # The stream is SDR, so the user's codec choice applies unchanged.
-        else
-            CODEC="hevc_hdr"
-        fi
+        # The converter re-encodes to H.264 anyway, so the capture codec must
+        # carry HDR even under an explicit H.264 choice - honouring it here
+        # would bake the wash-out in before the converter ever saw the file.
+        CODEC="hevc_hdr"
     else
         case "$CODEC" in
             ""|auto|hevc) CODEC="hevc_hdr" ;;
@@ -126,8 +118,6 @@ if monitor_is_hdr "$TARGET_MONITOR"; then
         esac
     fi
 fi
-PORTAL_TOKEN="$HOME/.local/state/quickshell/gsr-portal-token"
-
 ARGS=(gpu-screen-recorder -c mp4 -f "$FPS" -q "$QUALITY" -ac "$AUDIO_CODEC"
       -fm "$FRAMERATE_MODE" -sc "$SCRIPT_DIR/gsr-saved.sh" -o "$OUT")
 [[ "$CURSOR" == "false" ]] && ARGS+=(-cursor no)
@@ -140,13 +130,7 @@ if [[ $SOUND -eq 1 ]]; then
     fi
 fi
 
-if [[ $USE_PORTAL -eq 1 ]]; then
-    # Fullscreen only (see the routing above) - the token means the picker
-    # appears once, ever, and never mid-flow.
-    ARGS+=(-w portal)
-    mkdir -p "$(dirname "$PORTAL_TOKEN")"
-    ARGS+=(-restore-portal-session yes -portal-session-token-filepath "$PORTAL_TOKEN")
-elif [[ $FULLSCREEN -eq 1 ]]; then
+if [[ $FULLSCREEN -eq 1 ]]; then
     ARGS+=(-w "${TARGET_MONITOR:-screen}")
 else
     if [[ -z "$REGION" ]]; then
