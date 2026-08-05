@@ -119,6 +119,15 @@ if ! python3 "$SCRIPT_DIR/lint_blur_region_pairing.py"; then
     exit 1
 fi
 
+# Static lint: StyledText must default to PlainText and every rich-text opt-in
+# must be reviewed - manifest strings are attacker-controlled and the render
+# site is their only defence.
+echo "Running rich text opt-in lint..."
+if ! python3 "$SCRIPT_DIR/lint_rich_text_optin.py"; then
+    echo "Rich text opt-in lint failed."
+    exit 1
+fi
+
 echo "Running expandable panel contract tests..."
 if ! python3 "$SCRIPT_DIR/test_expandable_panel.py"; then
     echo "Expandable panel contract tests failed."
