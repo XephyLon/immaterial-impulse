@@ -10,6 +10,36 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.17.0] — 2026-08-05
+
+### Added
+- **The greeter now gets the wallpaper at the display's own resolution.** A
+  Wallpaper Engine project ships exactly one image — the Steam Workshop preview,
+  a thumbnail, often square and around 1000px — and that was the only thing the
+  login screen could show. On a wide display it is cropped to a narrow band and
+  upscaled several times over ([#113](https://github.com/XephyLon/immaterial-impulse/issues/113));
+  measured here as a 910x910 preview stretched across 5120x1440.
+
+  Applying a scene now renders a still of it through `linux-wallpaperengine`,
+  sized to the focused monitor, and records the path as `activeStill` for the
+  greeter to pick up. On this machine a scene lands at 5120x1440 in about three
+  seconds for 1.8 MiB. Renders are queued rather than run concurrently — the
+  renderer holds a GPU context — and only scenes are rendered: a video is a
+  plain file the greeter can play or cut a frame from, and web wallpapers fall
+  back to the static wallpaper everywhere. A failure is logged and nothing else:
+  the greeter keeps the preview, which is what it had before, and a machine
+  without the Wallpaper Engine extra never renders at all.
+
+  `activeStill` was removed in [#103](https://github.com/XephyLon/immaterial-impulse/pull/103)
+  for having no writer. It is back because it has one, and `stop()` clears it,
+  so it can never name a project that is no longer active.
+
+### Changed
+- **`SDDM_REF` moved to `imi-sddm-theme` v0.2.2** (`29f3c88`), which reads
+  `activeStill` and cuts a frame from an oversized video instead of falling back
+  to the thumbnail. Nothing above reaches the login screen until this pin moves,
+  so the two ship together.
+
 ## [0.16.1] — 2026-08-05
 
 ### Fixed
