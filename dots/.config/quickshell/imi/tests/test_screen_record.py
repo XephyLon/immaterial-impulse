@@ -274,14 +274,16 @@ if __name__ == "__main__":
 
 
 class SdrRoutingTests(unittest.TestCase):
-    """SDR delivery is post-save conversion; the portal is deliberately absent.
+    """SDR delivery: portal for fullscreen, shell selector + convert for regions.
 
-    Portal capture would give native SDR (the compositor tonemaps screencopy),
-    but it prompts: it double-prompted regions after the shell's own selector,
-    and for fullscreen xdg-desktop-portal-hyprland (1.4.1) returns an EMPTY
-    restore token - gsr logs `saved restore token to cache ()` - so the picker
-    appeared on every recording. Zero prompts beats zero conversion; delivery
-    lives in the saved-hook converter instead.
+    Hyprland tonemaps screencopy for capture clients, so portal capture yields
+    native SDR at record time (bt709/yuv420p, verified live) where KMS hands
+    the encoder raw PQ. Portal is FULLSCREEN ONLY: routing regions through the
+    picker double-prompted after the shell's own selector. And the fullscreen
+    token has a shipped precondition - xdph issues restore tokens only when
+    the picker's checkbox is ticked, which dots/.config/hypr/xdph.conf
+    pre-checks via allow_token_by_default. Without it the picker prompts on
+    EVERY recording (that shipped once, misdiagnosed as an xdph limitation).
     """
 
     @classmethod
@@ -290,22 +292,42 @@ class SdrRoutingTests(unittest.TestCase):
         cls.code = "\n".join(l for l in cls.script.splitlines()
                              if not l.lstrip().startswith("#"))
 
-    def test_nothing_routes_through_the_portal(self):
-        # Reintroducing -w portal reintroduces a picker prompt somewhere,
-        # until the day xdph returns real restore tokens.
-        self.assertNotIn("-w portal", self.code)
-        self.assertNotIn("restore-portal-session", self.code)
-
-    def test_sdr_mode_forces_an_hdr_capture_codec(self):
-        # The converter re-encodes to H.264 anyway; honouring an explicit
-        # H.264 choice at capture would bake the wash-out in before the
-        # converter ever saw the file.
+    def test_sdr_toggle_routes_fullscreen_to_portal(self):
+        self.assertIn("tonemapSdr", self.code)
+        self.assertIn("-w portal", self.code)
         toggle = self.code[self.code.index("tonemapSdr"):]
-        toggle = toggle[:toggle.index("ARGS=")]
-        self.assertRegex(toggle, r'CODEC="hevc_hdr"')
+        toggle = toggle[:toggle.index("PORTAL_TOKEN=")]
+        self.assertRegex(toggle,
+                         r'if \[\[ \$FULLSCREEN -eq 1 \]\];[\s\S]*?USE_PORTAL=1')
 
-    def test_selection_ux_is_untouched(self):
-        # Fullscreen: no prompt at all. Region: the shell selector or slurp,
-        # exactly once.
-        self.assertIn('-w "${TARGET_MONITOR:-screen}"', self.script)
-        self.assertIn("slurp", self.code)
+    def test_regions_never_prompt_twice(self):
+        # The overlay's Record Region runs the shell selector first; a portal
+        # picker after it is the double prompt this arrangement exists to end.
+        self.assertEqual(self.code.count("USE_PORTAL=1"), 1)
+        portal_block = self.code[self.code.index("-w portal"):]
+        portal_block = portal_block[:portal_block.index("elif")]
+        self.assertNotIn("slurp", portal_block)
+        self.assertNotIn("REGION", portal_block)
+
+    def test_fullscreen_portal_restores_a_session_token(self):
+        portal_block = self.code[self.code.index("-w portal"):]
+        portal_block = portal_block[:portal_block.index("elif")]
+        self.assertIn("restore-portal-session", portal_block)
+
+    def test_the_token_precondition_ships_with_the_dots(self):
+        # xdph only issues tokens when allow_token_by_default pre-checks the
+        # picker box. Portal fullscreen without this file regresses to a
+        # prompt per recording - the exact failure that got portal capture
+        # removed once already.
+        xdph = ROOT.parents[1] / "hypr/xdph.conf"
+        self.assertTrue(xdph.exists(), f"missing {xdph}")
+        conf = "\n".join(l for l in xdph.read_text().splitlines()
+                          if not l.lstrip().startswith("#"))
+        self.assertIn("allow_token_by_default = true", conf)
+
+    def test_sdr_region_forces_an_hdr_capture_codec(self):
+        # The converter re-encodes to H.264 anyway; honouring an explicit
+        # H.264 choice at capture would bake the wash-out in first.
+        toggle = self.code[self.code.index("tonemapSdr"):]
+        toggle = toggle[:toggle.index("PORTAL_TOKEN=")]
+        self.assertRegex(toggle, r'else\s*\n\s*CODEC="hevc_hdr"')
