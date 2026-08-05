@@ -32,8 +32,13 @@ KNOWN_PERMISSIONS = frozenset({
     "settings_read", "settings_write",
 })
 # Capabilities with a visual entry point: the store UI needs a screenshot to
-# show what the user is about to install.
-VISUAL_CAPABILITIES = frozenset({"desktop-widget", "bar-widget", "panel"})
+# show what the user is about to install. Keep in sync with
+# PluginManager.surfaceCapabilities (modules/common/plugins/PluginManager.qml),
+# the QML side of this vocabulary - `settings` alone stays non-visual there
+# and here.
+VISUAL_CAPABILITIES = frozenset({
+    "desktop-widget", "bar-widget", "overlay-widget", "panel",
+})
 
 
 def _https_origin(url):
