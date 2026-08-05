@@ -1,0 +1,26 @@
+# Every PR must state what happened to the agent docs - see CONTRIBUTING.md,
+# "Keep AGENT.md in sync". The sync rule existed as prose and was skipped four
+# PRs running (the HDR and RUNPATH work all met its "non-obvious gotcha"
+# criterion and none updated AGENT.md); a receipt the reviewer can check in
+# seconds is the mechanized form.
+name: docs-receipt
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  receipt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a Docs receipt in the PR body
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if printf '%s\n' "$BODY" | grep -qE '^Docs: (updated|not needed)'; then
+            echo "Docs receipt found:"
+            printf '%s\n' "$BODY" | grep -E '^Docs: (updated|not needed)'
+          else
+            echo '::error::PR body needs a Docs receipt line: either "Docs: updated <file> §<section>" or "Docs: not needed — <reason>". See CONTRIBUTING.md → "Keep AGENT.md in sync".'
+            exit 1
+          fi
