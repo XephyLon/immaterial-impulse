@@ -10,6 +10,20 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.17.3] — 2026-08-05
+
+### Added
+- **Optional SDR conversion for HDR recordings** (Settings → Capture → "Convert HDR recordings to
+  SDR", default off). Recording an HDR display stores real HDR10 since 0.16.0 — correct in
+  HDR-aware players, washed out in everything that cannot tonemap: VLC as Arch ships it (built
+  without libplacebo, so no setting fixes it), Discord embeds, browsers, editors. With the switch
+  on, every saved recording **and replay** is tonemapped to bt709 SDR in the background and
+  replaced, with notifications at start and finish. A failed conversion keeps the HDR original and
+  says so; already-SDR files are never touched, so double-tonemapping cannot happen. Measured at
+  5120×1440: an 8-second clip converts in ~13 seconds. Off by default because a true HDR file is
+  the better artifact when your players can handle it — this trades fidelity for universality,
+  which is a choice, not a default.
+
 ## [0.17.2] — 2026-08-05
 
 ### Added
