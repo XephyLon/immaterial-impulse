@@ -209,13 +209,19 @@ the GPU")):
 
 - **Hyprland tonemaps screencopy for capture clients** — grim screenshots of an HDR desktop look
   right, and gsr's *portal* capture rides the same compositor path, yielding native SDR. Its KMS
-  capture reads the scanout plane and gets raw PQ. **But do not route recording through the portal
-  on this stack**: `xdg-desktop-portal-hyprland` (1.4.1) returns an **empty restore token** — gsr
-  logs `saved restore token to cache ()` — so `-restore-portal-session` is a no-op and the picker
-  prompts on *every* recording. Shipped and reverted the same day ("fix(record): regions never
-  touch the portal - one selection, ever", then the removal citing this entry): SDR delivery lives
-  in the post-save GPU converter instead. Revisit portal capture only after verifying a **non-empty**
-  token actually round-trips on the installed xdph.
+  capture reads the scanout plane and gets raw PQ. **Portal restore tokens are opt-in and default
+  OFF**: xdph only issues one when the share picker's "Allow a restore token" checkbox is ticked
+  (`src/portals/Screencopy.cpp` gates `restore_data` on the picker's `r` flag), and
+  `screencopy:allow_token_by_default = true` — shipped in `dots/.config/hypr/xdph.conf` — is what
+  pre-checks it. Without that, `-restore-portal-session` is a silent no-op and the picker prompts
+  on **every** recording; gsr's log line `saved restore token to cache ()` in that state is gsr
+  echoing its own empty cache buffer, **not** an xdph response — an earlier version of this entry
+  misread it as "xdph returns an empty token" and portal capture was removed on that misdiagnosis
+  ("fix(record): drop portal capture - xdph returns an empty restore token"), then restored with
+  the shipped config once a 22-byte token was demonstrated round-tripping live: second recording
+  produced frames within one second, zero interaction. Lesson: a log line about a cache is
+  evidence about the cache, not about the peer — read the source of *both* sides before blaming
+  either.
 - **`cmd | grep -q` under `set -o pipefail` reads as failed on success**: grep -q exits at the
   first match, the producer takes SIGPIPE, and the pipeline's status is the producer's 141. The
   converter's GPU detection was invisible-broken this way from its first version — every tonemap
