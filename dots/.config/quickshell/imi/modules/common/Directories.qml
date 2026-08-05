@@ -44,6 +44,12 @@ Singleton {
     property string booruDownloads: FileUtils.trimFileProtocol(Directories.pictures  + "/homework")
     property string booruDownloadsNsfw: FileUtils.trimFileProtocol(Directories.pictures + "/homework/🌶️")
     property string latexOutput: FileUtils.trimFileProtocol(`${Directories.cache}/media/latex`)
+    // Stills of the active Wallpaper Engine project, grabbed off the live
+    // surface for the SDDM greeter (which cannot run Wallpaper Engine itself).
+    // Unlike the media caches below it is NOT wiped at startup: the greeter
+    // reads it while the shell is not running, and re-grabbing costs a frame
+    // only when a wallpaper is actually applied.
+    property string wallpaperEngineStills: FileUtils.trimFileProtocol(`${Directories.cache}/wallpaperengine-stills`)
     property string shellConfig: FileUtils.trimFileProtocol(`${Directories.config}/immaterial-impulse`)
     // The suite checkout get.sh installs/updates (same resolution as its DEST)
     property string suiteSrc: (Quickshell.env("XDG_DATA_HOME") || `${FileUtils.trimFileProtocol(Directories.home)}/.local/share`) + "/immaterial-impulse/src"
@@ -119,6 +125,9 @@ Singleton {
     Component.onCompleted: {
         configDirMigration.running = true
         Quickshell.execDetached(["mkdir", "-p", `${favicons}`])
+        // Created, never cleared - see the property. Without this the greeter's
+        // still has nowhere to land and saveToFile fails silently.
+        Quickshell.execDetached(["mkdir", "-p", `${wallpaperEngineStills}`])
         Quickshell.execDetached(["bash", "-c", `rm -rf '${coverArt}'; mkdir -p '${coverArt}'`])
         Quickshell.execDetached(["bash", "-c", `rm -rf '${booruPreviews}'; mkdir -p '${booruPreviews}'`])
         Quickshell.execDetached(["bash", "-c", `rm -rf '${latexOutput}'; mkdir -p '${latexOutput}'`])
