@@ -305,6 +305,12 @@ Variants {
         //
         // One output owns it: the greeter shows a single screen, and every
         // Background instance would otherwise race to write the same path.
+        //
+        // The path is never recorded in config. It is
+        // <cache>/wallpaperengine-stills/<activeProject>.png, so any consumer
+        // derives it from the project the config already names - see the note
+        // where `activeStill` used to be declared in Config.qml for why storing
+        // it is the bug (#103) rather than the convenience it looks like.
         readonly property bool ownsGreeterStill: bgRoot.modelData === Quickshell.screens[0]
 
         function captureGreeterStill() {
@@ -319,12 +325,10 @@ Variants {
             // costs ~7-13 MiB per project against ~0.3-0.8 MiB, which the
             // greeter's own size cap is two orders of magnitude above.
             const target = `${Directories.wallpaperEngineStills}/${id}.png`
-            weLoader.item.grabToImage(result => {
-                // Failure is not worth surfacing: the greeter falls back to the
-                // preview, which is what it had before any of this existed.
-                if (result.saveToFile(target))
-                    Config.options.wallpaperSelector.wallpaperEngine.activeStill = target;
-            });
+            // Failure is not worth surfacing: the greeter derives this same path,
+            // finds nothing, and falls back to the preview - which is what it had
+            // before any of this existed.
+            weLoader.item.grabToImage(result => result.saveToFile(target));
         }
 
         // `rendered` flips on the FIRST frame, which can still be warmup or

@@ -100,9 +100,10 @@ Singleton {
         Config.options.wallpaperSelector.wallpaperEngine.activePath = "";
         Config.options.wallpaperSelector.wallpaperEngine.activeType = "";
         Config.options.wallpaperSelector.wallpaperEngine.activePreview = "";
-        // Cleared with the rest: a still naming a project no longer active is
-        // exactly the stale-field failure #103 was about.
-        Config.options.wallpaperSelector.wallpaperEngine.activeStill = "";
+        // Nothing to clear for the greeter's still: its path is derived from
+        // activeProject, which this just emptied, so it stops resolving on its
+        // own. That is the point of deriving rather than storing (#103) - there
+        // is no second field that can be left behind pointing somewhere.
     }
 
     Process {

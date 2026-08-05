@@ -83,11 +83,13 @@ class CaptureTests(unittest.TestCase):
         self.assertIn("ownsGreeterStill", self.capture)
         self.assertRegex(self.bg, r"ownsGreeterStill:.*Quickshell\.screens\[0\]")
 
-    def test_the_still_is_recorded_only_when_the_write_succeeded(self):
-        # A path recorded for a file that was never written is worse than no
-        # path: the greeter would prefer it over the preview and find nothing.
-        self.assertRegex(self.capture,
-                         r"if \(result\.saveToFile\(target\)\)\s*\n\s*Config\.")
+    def test_the_capture_writes_no_config_field(self):
+        # The whole point of #103: a stored path is a second source of truth for
+        # something activeProject already states, and the two drift. Writing the
+        # path anywhere in config re-creates that, writer or no writer.
+        self.assertNotIn("activeStill", self.capture)
+        self.assertNotIn("Config.options", self.capture.split("grabToImage")[-1],
+                         "the grab callback writes to config")
 
     def test_the_grab_waits_for_a_settled_frame(self):
         # `rendered` flips on the FIRST frame, which can be warmup or black -
@@ -126,17 +128,49 @@ class CaptureTests(unittest.TestCase):
                          "a lossy extension here silently drops the still to q75")
 
 
-class ConfigTests(unittest.TestCase):
-    def test_stop_clears_the_still(self):
-        # A still naming a project that is no longer active is exactly the
-        # stale-field failure #103 was about.
+class NoStoredPathTests(unittest.TestCase):
+    """#103: the still's path is derived from activeProject, never stored.
+
+    A stored path has no way to stay in agreement with the project the config
+    names. It had no writer once the renderer moved in-process, froze at
+    whatever was active that day, and the greeter served that wallpaper for
+    months. Giving it a writer (#117) fixes the instance and keeps the
+    mechanism, so the field is gone instead.
+    """
+
+    def test_config_does_not_declare_the_field(self):
+        # Not cosmetic. Presets are separate files the JsonAdapter never
+        # rewrites, so the stale values #103 documented are still in every saved
+        # preset - Saber, Study and Sunken_Temple each name a different project
+        # than their activeStill does. While nothing DECLARES the property those
+        # values are unreachable; declaring it re-arms them on the next preset
+        # apply, which is what #117 did.
+        config = CONFIG.read_text()
+        declaration = re.search(r"^\s*property\s+\w+\s+activeStill\b",
+                                config, re.MULTILINE)
+        self.assertIsNone(declaration,
+                          "activeStill is declared again - see #103")
+
+    def test_nothing_in_the_shell_writes_it(self):
+        offenders = []
+        for path in ROOT.rglob("*.qml"):
+            if "tests/" in str(path.relative_to(ROOT)):
+                continue
+            code = "\n".join(l for l in path.read_text(errors="ignore").splitlines()
+                             if not l.lstrip().startswith("//"))
+            if "activeStill" in code:
+                offenders.append(str(path.relative_to(ROOT)))
+        self.assertEqual(offenders, [], f"activeStill written or read in: {offenders}")
+
+    def test_stop_has_no_still_field_to_clear(self):
+        # Emptying activeProject stops the derived path resolving on its own.
         service = SERVICE.read_text()
         stop = service[service.index("function stop()"):]
         stop = stop[:stop.index("\n    }")]
-        self.assertIn('activeStill = ""', stop)
-
-    def test_config_declares_the_field(self):
-        self.assertIn("property string activeStill:", CONFIG.read_text())
+        self.assertIn("activeProject", stop)
+        code = "\n".join(l for l in stop.splitlines()
+                         if not l.lstrip().startswith("//"))
+        self.assertNotIn("activeStill", code)
 
     def test_the_directory_is_created_and_never_wiped(self):
         # saveToFile fails silently on a missing directory, and the deleted
