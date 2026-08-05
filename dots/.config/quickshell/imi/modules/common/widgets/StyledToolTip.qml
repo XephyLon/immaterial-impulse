@@ -8,6 +8,9 @@ ToolTip {
     id: root
     property bool extraVisibleCondition: true
     property bool alternativeVisibleCondition: false
+    // Tooltips inherit StyledText's PlainText default; a tooltip whose text
+    // deliberately carries markup opts in with e.g. Text.StyledText.
+    property alias textFormat: contentItem.textFormat
 
     readonly property bool internalVisibleCondition: (extraVisibleCondition && (parent.hovered === undefined || parent?.hovered)) || alternativeVisibleCondition
     verticalPadding: Appearance.spacing.space75
