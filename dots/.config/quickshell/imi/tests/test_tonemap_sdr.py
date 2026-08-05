@@ -149,6 +149,26 @@ class HookWiringTests(unittest.TestCase):
         # or dies with it loses the conversion on every recorder exit.
         self.assertRegex(SAVED_HOOK, r"setsid -f .*tonemap-sdr\.sh")
 
+    def test_libplacebo_detection_survives_pipefail(self):
+        # `ffmpeg -filters | grep -q` under `set -o pipefail` reads as failed:
+        # grep -q exits at the first match, ffmpeg takes SIGPIPE, and the
+        # pipeline's status is ffmpeg's 141 - so libplacebo silently never got
+        # selected and every tonemap ran on the CPU. 13s instead of 5 on the
+        # same clip, with nothing logged. The detection must consume the whole
+        # stream (capture to a variable), never early-exit it.
+        script = SCRIPT.read_text()
+        self.assertNotIn("| grep -q libplacebo", script)
+        self.assertIn('filters="$(', script)
+
+    def test_the_encoder_ladder_is_width_aware(self):
+        # NVENC's H.264 tops out at 4096px and rejects wider frames with a
+        # misleading "No capable devices found" - at 5120x1440 the h264 rung
+        # can never succeed, so wider clips go straight to HEVC.
+        script = SCRIPT.read_text()
+        self.assertIn("width > 4096", script)
+        self.assertRegex(script, r"LADDER=\(hevc_nvenc")
+        self.assertRegex(script, r"LADDER=\(h264_nvenc")
+
     def test_the_temporary_keeps_a_video_extension(self):
         # ffmpeg infers the muxer from the output extension; a bare ".tmp"
         # fails. Same trap that shipped in we_still.sh once already.
