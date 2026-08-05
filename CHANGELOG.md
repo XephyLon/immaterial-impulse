@@ -10,6 +10,35 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.17.1] — 2026-08-05
+
+### Changed
+- **The greeter's still is grabbed off the live wallpaper surface instead of rendered by a second
+  process.** 0.17.0 produced it by launching another `linux-wallpaperengine` — an entire extra copy
+  of the renderer and libcef, several seconds of GPU, and a window that took focus while it worked —
+  to photograph a frame the shell was already drawing, because Wallpaper Engine runs *inside* this
+  shell's process. The still is now `grabToImage()` on that surface (the same grab the wallpaper
+  transition already uses), saved losslessly as PNG at the display's own size. Instant, invisible,
+  no subprocess. The render script, its queue and its cache are deleted rather than tuned.
+- **`activeStill` is out of the config schema again, this time by design rather than neglect.** Its
+  path is derived — `~/.cache/quickshell/wallpaperengine-stills/<activeProject>.png` — by every
+  consumer, so it cannot disagree with the project the config names. Re-declaring the field in
+  0.17.0 had silently re-armed the stale values still stored in saved presets
+  ([#103](https://github.com/XephyLon/immaterial-impulse/issues/103)); removing it makes them
+  unreachable again with no migration. `stop()` has nothing to clear — emptying `activeProject`
+  stops the path resolving by itself.
+- **`SDDM_REF` moved to `imi-sddm-theme` v0.2.3** (`797c1f4`), which derives that same path instead
+  of reading the stored field. The halves ship together; either half alone falls back to the
+  preview thumbnail.
+
+### Added
+- **Agent-doc governance.** `AGENT.md` and `CONTRIBUTING.md` are read sequentially in full before
+  any work (rule mirrored in a new repo-root `CLAUDE.md`); every point added to them must cite the
+  commit that motivated it (`tests/lint_doc_citations.py` fails the suite on citations resolving to
+  nothing, by SHA or exact subject); every PR body must carry a `Docs:` receipt line (new
+  `docs-receipt` workflow). Grown out of this release's own history: the 0.17.0 mechanism this
+  release deletes was built without reading the issue that had already rejected it.
+
 ## [0.17.0] — 2026-08-05
 
 ### Added
