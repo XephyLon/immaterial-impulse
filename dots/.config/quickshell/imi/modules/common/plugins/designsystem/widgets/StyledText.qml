@@ -10,6 +10,11 @@ Text {
 
     renderType: Text.NativeRendering
     verticalAlignment: Text.AlignVCenter
+    // Plain text unless a site opts in - same contract as the mainline
+    // qs.modules.common.widgets StyledText: Text.AutoText would render
+    // markup smuggled into untrusted strings (notification bodies, plugin
+    // manifests). Rich text is the reviewed exception, never the default.
+    textFormat: Text.PlainText
     property bool shouldUseNumberFont: root.text.match(/^\d+$/) !== null
     property var defaultFont: (Appearance.font && shouldUseNumberFont) ? Appearance.font.family.numbers : (Appearance.font ? Appearance.font.family.main : "sans-serif")
     

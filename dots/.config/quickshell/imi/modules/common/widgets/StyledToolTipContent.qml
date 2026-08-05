@@ -11,6 +11,7 @@ Item {
     property real horizontalPadding: Appearance.spacing.space125
     property real verticalPadding: Appearance.spacing.space50
     property alias font: tooltipTextObject.font
+    property alias textFormat: tooltipTextObject.textFormat
     implicitWidth: tooltipTextObject.implicitWidth + 2 * root.horizontalPadding
     implicitHeight: tooltipTextObject.implicitHeight + 2 * root.verticalPadding
 

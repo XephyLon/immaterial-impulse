@@ -110,6 +110,7 @@ WindowDialog {
                 else HyprlandAntiFlashbangShader.disable()
             }
             StyledToolTip {
+                textFormat: Text.StyledText
                 text: Translation.tr("<b>Dims screen content</b> as needed.<br><br>Pros: Immediately responsive<br>Cons: Expensive and can hurt color accuracy<br><br><i>Uses a Hyprland screen shader</i>")
             }
         }
@@ -127,6 +128,7 @@ WindowDialog {
                 Config.options.light.antiFlashbang.enable = checked;
             }
             StyledToolTip {
+                textFormat: Text.StyledText
                 text: Translation.tr("Adapts the <b>display (physical screen) brightness</b><br><br>Pros: Less expensive, retains colors<br>Cons: Not immediately responsive<br><br><i>Adjusts display brightness after each Hyprland IPC event</i>")
             }
         }
