@@ -14,6 +14,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import tempfile
 
 from contract_runner import run
@@ -194,13 +195,33 @@ def test_optional_fields_typed():
 
 
 def test_screenshot_required_for_visual_capabilities():
-    for capability in ("desktop-widget", "bar-widget", "panel"):
+    for capability in (
+            "desktop-widget", "bar-widget", "overlay-widget", "panel"):
         findings = VALIDATOR.validate_entry(
             make_entry(capabilities=[capability], screenshot=DROP))
         assert_error_mentions(findings, "screenshot")
     # Non-visual plugins need no screenshot.
     assert VALIDATOR.validate_entry(
         make_entry(capabilities=["service"], screenshot=DROP)) == []
+
+
+def test_visual_capabilities_match_the_qml_surface_vocabulary():
+    # scripts/plugins/registry_validate.py is vendored alone into the registry
+    # repo, so nothing imports the QML vocabulary at runtime - drift between
+    # the two lists is exactly how overlay-widget escaped the screenshot
+    # requirement. Pin the Python set to the surfaces PluginManager declares.
+    manager = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "..",
+        "modules", "common", "plugins", "PluginManager.qml")
+    with open(manager, encoding="utf-8") as handle:
+        source = handle.read()
+    block = re.search(
+        r"surfaceCapabilities:\s*\[(.*?)\]", source, re.DOTALL).group(1)
+    qml_surfaces = set(re.findall(r'value:\s*"([^"]+)"', block))
+    assert qml_surfaces, "failed to parse PluginManager.surfaceCapabilities"
+    assert VALIDATOR.VISUAL_CAPABILITIES == qml_surfaces, (
+        f"VISUAL_CAPABILITIES {sorted(VALIDATOR.VISUAL_CAPABILITIES)} has "
+        f"drifted from PluginManager.surfaceCapabilities {sorted(qml_surfaces)}")
 
 
 # --- validate_entry: warnings -----------------------------------------------
