@@ -10,6 +10,18 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.17.5] — 2026-08-05
+
+### Fixed
+- **Region recording prompted for a selection twice with SDR recording on.** The recorder overlay's
+  "Record Region" runs the shell's own region selector — and 0.17.4 then routed the capture through
+  the screen-share portal, whose picker asked again. Portal capture is now fullscreen-only, where
+  its one-time remembered approval never interrupts a flow; regions always use the shell's selector
+  (or slurp), record HDR via KMS, and convert to SDR on the GPU a few seconds after saving. One
+  selection, everywhere. SDR-mode regions force an HDR capture codec even under an explicit H.264
+  choice: the converter re-encodes to H.264 anyway, and honouring it at capture would bake the
+  wash-out in first.
+
 ## [0.17.4] — 2026-08-05
 
 ### Changed
