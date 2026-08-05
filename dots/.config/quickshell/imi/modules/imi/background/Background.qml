@@ -296,6 +296,39 @@ Variants {
         // is left to paint.
         onWeActiveChanged: if (!bgRoot.weActive) bgRoot.settleWeTransition()
 
+        // The SDDM greeter cannot run Wallpaper Engine, so it needs a still of
+        // the active project. That still used to be produced by launching a
+        // SECOND linux-wallpaperengine - an entire extra copy of the renderer
+        // and libcef, several seconds of GPU - to photograph what this surface
+        // is already drawing. The surface is a QQuickItem, and the transition
+        // below already grabs it, so the still is that same grab saved to a file.
+        //
+        // One output owns it: the greeter shows a single screen, and every
+        // Background instance would otherwise race to write the same path.
+        readonly property bool ownsGreeterStill: bgRoot.modelData === Quickshell.screens[0]
+
+        function captureGreeterStill() {
+            if (!bgRoot.ownsGreeterStill || !(weLoader.item?.rendered ?? false)) return
+            const id = Config.options.wallpaperSelector.wallpaperEngine.activeProject
+            if (!id) return
+            const target = `${Directories.wallpaperEngineStills}/${id}.jpg`
+            weLoader.item.grabToImage(result => {
+                // Failure is not worth surfacing: the greeter falls back to the
+                // preview, which is what it had before any of this existed.
+                if (result.saveToFile(target))
+                    Config.options.wallpaperSelector.wallpaperEngine.activeStill = target;
+            });
+        }
+
+        // `rendered` flips on the FIRST frame, which can still be warmup or
+        // black - the same reason the transition holds the outgoing still for a
+        // beat. Grab once the surface has settled, not the instant it exists.
+        Timer {
+            id: greeterStillDelay
+            interval: 600
+            onTriggered: bgRoot.captureGreeterStill()
+        }
+
         // Switch the WE surface to `path`, animating a shader transition from a
         // snapshot of the current frame into the newly-loaded surface. Called on
         // weProjectPath changes instead of a reactive binding so the old frame can
@@ -587,6 +620,11 @@ Variants {
                             weTransitionWatchdog.restart() // the load finished; re-budget
                             weTransitionDelay.restart()
                         }
+                        // Every load, transitioning or not - the first project of
+                        // the session takes the no-transition path above, and it
+                        // needs a still just as much as a switch does.
+                        if (weLoader.item?.rendered)
+                            greeterStillDelay.restart();
                     }
                 }
             }

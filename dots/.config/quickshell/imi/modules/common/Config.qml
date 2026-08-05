@@ -1418,17 +1418,19 @@ Singleton {
                     // leaving the field and its readers, so it sat frozen at
                     // whatever it held that day and preset-apply spread the stale
                     // value. The field was never the problem - having no writer
-                    // was. It now has one: WallpaperEngine.apply() renders the
-                    // still through scripts/wallpapers/we_still.sh on every scene
-                    // switch, so it cannot go stale the way it did.
+                    // was. It now has one: the background grabs the frame off the
+                    // live Wallpaper Engine surface once it has settled (see
+                    // Background.captureGreeterStill), so it cannot go stale the
+                    // way it did.
                     //
                     // It exists because `activePreview` is a Steam Workshop
                     // thumbnail - often square and around 1000px - and the SDDM
                     // greeter, which cannot run Wallpaper Engine, was showing that
                     // upscaled across the whole display (#113). Readers must treat
                     // an empty value as "not available yet" and fall back to
-                    // activePreview: rendering is asynchronous and a scene takes a
-                    // few seconds.
+                    // activePreview: the grab happens a beat after the surface
+                    // renders, and no still exists on a stock Quickshell build
+                    // without the Wallpaper Engine module.
                     property string activeStill: ""
                     property int fps: 30
                     property string scaling: "fill"
