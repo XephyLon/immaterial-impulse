@@ -193,6 +193,15 @@ The authoritative signal is Hyprland's `colorManagementPreset` (`hdr`/`hdredid`)
 `currentFormat`: a wide-gamut SDR monitor also reports `XBGR2101010`. H.264 cannot carry HDR at all,
 so an explicit H.264 choice is respected and explained rather than silently overridden.
 (307c8b4ae ("fix(record): pick the HDR codec when capturing an HDR monitor").)
+The capture fix only moves the wash-out to the consumer's machine — a correct HDR10 file still
+renders flat in anything that does not tonemap (VLC defaults, Discord, browsers). Delivery is the
+opt-in `screenRecord.tonemapSdr`: `scripts/videos/tonemap-sdr.sh`, invoked from the `gsr-saved.sh`
+hook on every save (recordings *and* replays — replays never pass through `record.sh`), probes and
+tonemaps to bt709 in the background, replacing the file atomically (d7113f84c ("feat(record):
+opt-in SDR tonemap after every save")). Probe trap from that commit: ffprobe's **CSV output grows
+an extra field from a real recording's side data**, so a strict match on the transfer value
+silently classifies every real HDR file as SDR — synthetic fixtures have no side data, which is why
+only a live file catches it. Use value-only output (`-of default=nw=1:nk=1`) and trim delimiters.
 
 ## Directory map
 
