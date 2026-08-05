@@ -130,6 +130,19 @@ RowLayout {
                     variableAxes: Appearance.font.variableAxes.main
                 }
 
+                // The Basic style (pinned by `pragma Env QT_QUICK_CONTROLS_STYLE=Basic`)
+                // draws placeholderText through its own PlaceholderText child - a Text
+                // subclass left at the inherited Text.AutoText, unreachable
+                // declaratively from here. PluginOptions feeds optionData.placeholder
+                // straight from attacker-controlled manifests, so force the style's
+                // placeholder to plain text once it exists.
+                Component.onCompleted: {
+                    for (const child of textArea.children) {
+                        if (child instanceof Text)
+                            child.textFormat = Text.PlainText;
+                    }
+                }
+
                 // A masked or single-line field is conceptually one line - swallow
                 // Enter/Return instead of letting TextArea insert a newline into
                 // the stored value.
