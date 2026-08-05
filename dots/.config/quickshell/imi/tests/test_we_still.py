@@ -33,6 +33,22 @@ DIRECTORIES = ROOT / "modules/common/Directories.qml"
 SCRIPT = ROOT / "scripts/wallpapers/we_still.sh"
 
 
+def code_only(text):
+    """`text` with comment lines removed. Assert against THIS, never raw text.
+
+    Any assertion about what code does or does not contain must strip comments
+    first: the comment explaining a rule necessarily names the thing it
+    forbids. Asserting on raw text produced a wrong result three separate
+    times in one day - "--silent" matched its own explanatory comment after
+    the flag was deleted, the no-second-renderer sweep reported the comments
+    explaining the renderer's removal as the offence, and the lossless check
+    failed on the very line saying why .jpg is wrong. Same trap each time;
+    this helper exists so the fourth test cannot hand-roll it wrong.
+    """
+    return "\n".join(line for line in text.splitlines()
+                     if not line.lstrip().startswith(("//", "#")))
+
+
 class NoSecondRendererTests(unittest.TestCase):
     """The point of the change: no second Wallpaper Engine, by any route."""
 
@@ -46,16 +62,11 @@ class NoSecondRendererTests(unittest.TestCase):
         # script wrapping it. Checked across the whole shell, not just the two
         # files this change touched.
         #
-        # Comment lines are dropped first. The code that explains why the second
-        # renderer is gone necessarily names it, so scanning raw text reports the
-        # explanation as the offence - which it did on the first run of this.
         offenders = []
         for path in list(ROOT.rglob("*.qml")) + list(ROOT.rglob("scripts/**/*.sh")):
             if "tests/" in str(path.relative_to(ROOT)):
                 continue
-            code = "\n".join(
-                line for line in path.read_text(errors="ignore").splitlines()
-                if not line.lstrip().startswith(("//", "#")))
+            code = code_only(path.read_text(errors="ignore"))
             if "linux-wallpaperengine" in code or "we_still" in code:
                 offenders.append(str(path.relative_to(ROOT)))
         self.assertEqual(offenders, [], f"a second renderer crept back in: {offenders}")
@@ -119,12 +130,7 @@ class CaptureTests(unittest.TestCase):
         # setting: .jpg gets Qt's default q75, measured at 35.0 dB PSNR against
         # the lossless grab where the script it replaced produced q94. On a
         # full-screen login background over dark gradients that shows.
-        #
-        # Comments stripped: the line explaining why .jpg is wrong contains
-        # ".jpg", so scanning the raw body fails on its own justification.
-        code = "\n".join(l for l in self.capture.splitlines()
-                         if not l.lstrip().startswith("//"))
-        self.assertNotIn(".jpg", code,
+        self.assertNotIn(".jpg", code_only(self.capture),
                          "a lossy extension here silently drops the still to q75")
 
 
@@ -156,8 +162,7 @@ class NoStoredPathTests(unittest.TestCase):
         for path in ROOT.rglob("*.qml"):
             if "tests/" in str(path.relative_to(ROOT)):
                 continue
-            code = "\n".join(l for l in path.read_text(errors="ignore").splitlines()
-                             if not l.lstrip().startswith("//"))
+            code = code_only(path.read_text(errors="ignore"))
             if "activeStill" in code:
                 offenders.append(str(path.relative_to(ROOT)))
         self.assertEqual(offenders, [], f"activeStill written or read in: {offenders}")
@@ -168,9 +173,7 @@ class NoStoredPathTests(unittest.TestCase):
         stop = service[service.index("function stop()"):]
         stop = stop[:stop.index("\n    }")]
         self.assertIn("activeProject", stop)
-        code = "\n".join(l for l in stop.splitlines()
-                         if not l.lstrip().startswith("//"))
-        self.assertNotIn("activeStill", code)
+        self.assertNotIn("activeStill", code_only(stop))
 
     def test_the_directory_is_created_and_never_wiped(self):
         # saveToFile fails silently on a missing directory, and the deleted
