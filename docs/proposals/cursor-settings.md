@@ -1,6 +1,6 @@
 # Proposal: cursor settings section
 
-> Draft / tracking proposal. Not scheduled.
+> Implemented. See "Resolution" at the end for how the open questions landed.
 
 ## Goal
 
@@ -61,3 +61,35 @@ the Hyprland config.
 
 - Shipping or bundling any cursor theme.
 - A cursor theme downloader or store.
+
+## Resolution
+
+Implemented as proposed, with the approach's pieces landing as:
+
+- Schema: `Config.options.hyprland.cursor.{theme,size,zoomFactor,inactiveTimeout}`
+  (defaults mirror the formerly hardcoded values, so first open changes nothing).
+- Page: `modules/imi/settings/pages/CursorConfig.qml`, registered as **Cursor**
+  after Appearance. Theme enumeration lives in
+  `scripts/cursor/scan-cursor-themes.py` behind the `CursorThemes` singleton
+  (the `IconThemes` pattern), unit-tested in `tests/test_scan_cursor_themes.py`.
+- `zoom_factor` / `inactive_timeout` write through `HyprlandConfig.set` →
+  `shellOverrides/main.lua` `hl.config(...)` lines, the keybinds precedent.
+- Theme/size apply through `scripts/cursor/apply-cursor-theme.sh`
+  (`hyprctl setcursor` + GTK 3/4 `settings.ini` + `~/.icons/default/index.theme`
+  `Inherits` + best-effort gsettings); config records only on success.
+- Startup: `execs.lua` now runs `scripts/apply_saved_cursor.sh`, which reads the
+  shell config (legacy dir as fallback) and falls back to the old literals —
+  the sticky hardcoded `setcursor` line is gone.
+  Tests: `tests/test_cursor_theme_apply.py`, against a fake `hyprctl`.
+
+Open questions resolved:
+
+- **XWayland/GTK:** GTK clients follow the `settings.ini`/gsettings writes;
+  X11/XWayland clients resolve the `~/.icons/default/index.theme` `Inherits`
+  stub, the standard XCursor default-theme mechanism, without env vars.
+  `XCURSOR_THEME`/`XCURSOR_SIZE` are still not exported — that would touch the
+  session startup path for little gain over the stub, and stays out of scope.
+- **hyprcursor vs XCursor:** listed together, not separately —
+  `hyprctl setcursor` accepts both (hyprcursor preferred, XCursor fallback), so
+  a split would leak an implementation detail into the picker. The scanner
+  reports `xcursor`/`hyprcursor` flags per theme should the UI ever want them.
