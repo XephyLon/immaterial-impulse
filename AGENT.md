@@ -40,6 +40,43 @@ a prior illogical-impulse install rather than coexisting with one: the companion
 lives alongside it in this repo (installed separately to `~/.config/hypr/`) and provides the
 keybinds, IPC event names, and layer-shell behavior assumptions this shell depends on.
 
+## Before you restore something that was removed
+
+**If code, a field, or a file is missing where you expected one, find out why it went before you put
+it back.** "It looks like an oversight" is not a finding. The removal has a commit, and usually an
+issue, and that reasoning is the requirement you are about to work against.
+
+Concretely, before re-adding anything:
+
+1. `git log -S '<the thing>' --all` for the commit that removed it, and read the **whole** message.
+2. If it cites an issue or PR, read that too — `gh issue view N` / `gh pr view N`, not the title.
+   These are separate: `gh pr view 103` fails on this repo because 103 is an **issue**.
+3. Only then decide. If the reasoning still holds, the gap is intentional and your problem needs a
+   different answer. If it no longer holds, say so explicitly in the commit message and address what
+   the original removal was protecting against.
+
+The worked example, because it cost a full day and shipped a regression:
+
+`wallpaperSelector.wallpaperEngine.activeStill` was removed by
+[#103](https://github.com/XephyLon/immaterial-impulse/issues/103) — a stored path to a rendered
+wallpaper still, with no writer after the Wallpaper Engine renderer moved in-process, frozen at
+whatever project was active that day, and served to the SDDM greeter for months.
+[#113](https://github.com/XephyLon/immaterial-impulse/issues/113) then reported the low-resolution
+greeter background that #103 had **explicitly predicted and accepted** as the cost.
+
+[#117](https://github.com/XephyLon/immaterial-impulse/pull/117) "fixed" #113 by re-declaring the
+field and giving it a writer — a subprocess that launched a **second** `linux-wallpaperengine` to
+photograph a frame this shell was already rendering in-process. Nobody had read #103. Three things
+followed:
+
+- the fix rebuilt the exact pre-embed mechanism the embedded renderer exists to eliminate;
+- re-declaring the property re-armed the stale values still sitting in every saved preset (see the
+  `JsonAdapter` note under [The Config system](#the-config-system-settings-page--persisted-json) —
+  presets are separate files it never rewrites), so #103's bug came back;
+- #103's actual fix direction ("derive it, don't store it") was sitting in the issue the whole time.
+
+The correct answer was in the removal's reasoning. Reading it first would have skipped all of it.
+
 ## Runtime model — read this before assuming anything about "building" or "compiling"
 
 There is no build step. Every `.qml` file is interpreted live by the `qs` process. When any `.qml`
@@ -119,6 +156,28 @@ restriction, which is why `property real padding` is fine in the many non-`Contr
 a print can sit unflushed for several seconds before showing up, sometimes interleaved with later
 events in a way that looks like a stale/wrong value at first glance. If a debug print looks wrong,
 wait and re-check before concluding the code is broken.
+
+## External binaries the shell drives
+
+Two non-obvious traps live here, both found the expensive way.
+
+**`DT_RUNPATH` is not transitive, and `LD_LIBRARY_PATH` is.** The Wallpaper Engine build the shell
+loads (`~/.cache/immaterial-impulse/prebuilt/<ver>/`) bundles its own libraries. Setting a correct
+`RUNPATH` on the *executable* resolves only that executable's **direct** dependencies — a bundled
+`liblinux-wallpaperengine-lib.so` looks up *its* dependencies (e.g. `libcef.so`, sitting in the same
+directory) through **its own** `RUNPATH`, which was the build machine's. Every bundled `.so` must be
+patched, not just the binary. The `LD_LIBRARY_PATH` fallback appears to work precisely because it
+*is* transitive — and it leaks into every process the shell spawns, shadowing system libraries for
+every application launched from the desktop. If you find yourself exporting it, the `RUNPATH` is
+still wrong. `patchelf` rewrites in place, so patching a **running** executable fails with `ETXTBSY`;
+copy, patch the copy, then `rename(2)` over the original.
+
+**`gpu-screen-recorder` does not tonemap.** Handed an HDR surface with an SDR codec it encodes 8-bit
+and tags the file `bt709`, so a PQ signal is decoded as gamma — flat, grey, desaturated, with nothing
+in the logs. `scripts/videos/record.sh` therefore detects HDR and selects the `_hdr` codec variant.
+The authoritative signal is Hyprland's `colorManagementPreset` (`hdr`/`hdredid`), **not**
+`currentFormat`: a wide-gamut SDR monitor also reports `XBGR2101010`. H.264 cannot carry HDR at all,
+so an explicit H.264 choice is respected and explained rather than silently overridden.
 
 ## Directory map
 
@@ -250,6 +309,24 @@ Consequences for making changes:
   (The desktop-widget migration's "old keys are deliberately left on disk" note is not a
   counterexample: `background.widgets.*` are still *declared* in `Config.qml`, which is precisely why
   they persist.)
+- **Presets are the exception to the rule above, and that makes re-declaring a removed key
+  dangerous.** `writeAdapter()` strips undeclared keys from `config.json`, but preset files under
+  `~/.config/immaterial-impulse/presets/` are separate JSON the adapter never rewrites — whatever was
+  in a preset when it was saved is still in it. So a key removed from the schema is gone from the live
+  config but **preserved in every preset**, lying dormant. Re-declaring that key re-arms all of them on
+  the next preset apply. This is exactly how `activeStill` came back (see
+  [Before you restore something that was removed](#before-you-restore-something-that-was-removed));
+  three of the six presets on the author's machine still name the wrong project. Removing a key is
+  therefore not reversible by simply putting it back — either migrate the presets or, better, do not
+  store derivable state in the first place.
+- **Do not store a path that can be derived from state the config already holds.** Two fields that
+  must agree will eventually disagree, and nothing reports it. The greeter's full-resolution Wallpaper
+  Engine still is the canonical case: the background grabs it off the live surface into
+  `~/.cache/quickshell/wallpaperengine-stills/<activeProject>.png` (`Background.captureGreeterStill`),
+  and every consumer — including `imi-sddm-theme`, a separate process that cannot ask the shell
+  anything — rebuilds that path from `activeProject`. A derived path cannot name a different project
+  than `activeProject` does, needs no clearing in `WallpaperEngine.stop()`, and cannot be carried
+  stale inside a preset.
 - **`Config.readWriteDelay`'s 50ms debounce only covers the disk write - it does nothing to stop
   every keystroke from firing whatever else reactively reads that option.** A `ConfigTextArea`
   bound as `onValueChanged: Config.options.x.y = value` re-triggers every consumer of
