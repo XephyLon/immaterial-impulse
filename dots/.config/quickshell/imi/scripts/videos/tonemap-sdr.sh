@@ -51,10 +51,15 @@ tmp="${FILE%.mp4}.sdr-tmp.mp4"
 log="$(mktemp --suffix=-tonemap.log)"
 
 # libplacebo (Vulkan, GPU tonemap - fast and gamut-aware) when this ffmpeg has
-# it, else the zscale/tonemap CPU chain. x264 veryfast for the encode: every
-# GPU encoder spells its ffmpeg name differently, and a background re-encode
-# being portable matters more than it being instant.
-if ffmpeg -hide_banner -filters 2>/dev/null | grep -q libplacebo; then
+# it, else the zscale/tonemap CPU chain.
+#
+# Captured to a variable, NOT `ffmpeg | grep -q`: grep -q exits at the first
+# match, ffmpeg takes SIGPIPE, and under `set -o pipefail` the whole pipeline
+# reads as failed - so libplacebo silently never got selected and every
+# tonemap ran on the CPU. That single line is why the first version took 13s
+# on a clip the GPU does in 5.
+filters="$(ffmpeg -hide_banner -filters 2>/dev/null || true)"
+if [[ "$filters" == *libplacebo* ]]; then
     VF="libplacebo=tonemapping=auto:colorspace=bt709:color_primaries=bt709:color_trc=bt709:format=yuv420p"
     HW=(-init_hw_device vulkan)
 else
@@ -62,11 +67,56 @@ else
     HW=()
 fi
 
-if ffmpeg -y -v error "${HW[@]}" -i "$FILE" \
-        -vf "$VF" \
-        -c:v libx264 -preset veryfast -crf 20 \
+# Encoder ladder: GPU first, CPU as the floor. NVENC turns a 0.6x-realtime
+# x264 job into a few seconds (measured: 12.9s -> 4.9s on an 8s 5120x1440
+# clip), but hardware encoders lie by omission - ffmpeg listing one does not
+# mean the silicon will take the job - so each rung is tried for real and the
+# first that produces output wins.
+#
+# H.264 preferred for the same reason the container is mp4: shareability. But
+# NVENC's H.264 tops out at 4096px wide and rejects wider frames with a
+# misleading "No capable devices found" (found the hard way at 5120x1440), so
+# past that the rung is HEVC - still fixes every non-tonemapping player, at
+# the cost of Discord-embed friendliness for ultrawide clips specifically.
+width="$(ffprobe -v error -select_streams v:0 -show_entries stream=width \
+    -of default=nw=1:nk=1 "$FILE" 2>/dev/null | head -n 1 || echo 0)"
+
+# The vaapi rung uses the CPU tonemap chain: mixing the Vulkan libplacebo
+# filter with a VAAPI hwupload made ffmpeg's format negotiation fall over.
+VF_CPU="zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p"
+
+try_encode() {
+    local enc="$1" vfarg="$VF" hw=("${HW[@]}") pre=() args=()
+    case "$enc" in
+        h264_nvenc) args=(-c:v h264_nvenc -preset p4 -cq 23) ;;
+        hevc_nvenc) args=(-c:v hevc_nvenc -preset p4 -cq 23) ;;
+        h264_vaapi)
+            pre=(-vaapi_device /dev/dri/renderD128)
+            hw=()
+            vfarg="$VF_CPU,format=nv12,hwupload"
+            args=(-c:v h264_vaapi -qp 23) ;;
+        libx264)    args=(-c:v libx264 -preset veryfast -crf 20) ;;
+    esac
+    echo "--- attempt: $enc" >>"$log"
+    ffmpeg -y -v error "${pre[@]}" "${hw[@]}" -i "$FILE" \
+        -vf "$vfarg" "${args[@]}" \
         -c:a copy -movflags +faststart \
-        "$tmp" >"$log" 2>&1 && [[ -s "$tmp" ]]; then
+        "$tmp" >>"$log" 2>&1 && [[ -s "$tmp" ]]
+}
+
+if [[ "$width" =~ ^[0-9]+$ ]] && (( width > 4096 )); then
+    LADDER=(hevc_nvenc libx264)
+else
+    LADDER=(h264_nvenc h264_vaapi libx264)
+fi
+
+ok=0
+for enc in "${LADDER[@]}"; do
+    if try_encode "$enc"; then ok=1; break; fi
+    rm -f "$tmp"
+done
+
+if [[ $ok -eq 1 ]]; then
     mv -f "$tmp" "$FILE"
     rm -f "$log"
     notify-send "SDR ready" "${FILE##*/}" -a 'Recorder' -i video-x-generic & disown
