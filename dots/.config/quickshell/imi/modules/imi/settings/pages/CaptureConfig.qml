@@ -109,8 +109,8 @@ ContentPage {
                 }
                 ConfigSwitch {
                     buttonIcon: "brightness_6"
-                    text: Translation.tr("Convert HDR recordings to SDR")
-                    description: Translation.tr("HDR recordings look washed out in players that can't tonemap (VLC, Discord, browsers). On: every recording and replay is converted to SDR on the GPU a few seconds after saving, with a notification when ready. Off = true HDR files for HDR-aware players.")
+                    text: Translation.tr("Record SDR on HDR displays")
+                    description: Translation.tr("HDR recordings look washed out in players that can't tonemap (VLC, Discord, browsers). On: fullscreen recordings capture through the screen-share portal — correctly toned SDR instantly, with a one-time approval it remembers. Region recordings and replays record HDR and convert to SDR in the background a few seconds after saving. Off = true HDR files.")
                     checked: Config.options.screenRecord.tonemapSdr
                     onCheckedChanged: { Config.options.screenRecord.tonemapSdr = checked }
                 }
