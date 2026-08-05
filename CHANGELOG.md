@@ -10,6 +10,26 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.17.2] — 2026-08-05
+
+### Added
+- **The login screen now follows the desktop reactively.** The SDDM greeter's inputs used to
+  refresh only as a side effect of color generation, so a Wallpaper Engine scaling change never
+  reached it, and the full-resolution still — grabbed a moment *after* the config change that
+  announced it — could miss the login screen until the next unrelated color event. A new
+  `GreeterSync` service observes the greeter-relevant settings directly and is poked when the still
+  finishes writing, firing the SDDM theme's new gated sync entry point, which escalates to the
+  privileged copy only when something the greeter consumes actually changed. A scaling change now
+  reaches the login screen in seconds, with no wallpaper switch. Design study in
+  `docs/superpowers/specs/2026-08-05-reactive-greeter-sync-design.md`.
+
+### Changed
+- **`SDDM_REF` moved to `imi-sddm-theme` v0.2.4** (`ed9ce03`): the greeter respects the fill / fit
+  / stretch scaling choice (it hardcoded crop; the video poster frame was additionally distorted by
+  a missing `fillMode`), and ships the gated sync wrapper above. The halves pair, but each is safe
+  alone — the shell no-ops while the wrapper is absent, and the theme works from matugen's hook
+  alone.
+
 ## [0.17.1] — 2026-08-05
 
 ### Changed
