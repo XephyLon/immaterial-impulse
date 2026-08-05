@@ -257,6 +257,18 @@ if ! python3 "$SCRIPT_DIR/test_icon_theme_apply.py"; then
     exit 1
 fi
 
+echo "Running cursor theme scanner tests..."
+if ! python3 "$SCRIPT_DIR/test_scan_cursor_themes.py"; then
+    echo "Cursor theme scanner tests failed."
+    exit 1
+fi
+
+echo "Running cursor theme apply tests..."
+if ! python3 "$SCRIPT_DIR/test_cursor_theme_apply.py"; then
+    echo "Cursor theme apply tests failed."
+    exit 1
+fi
+
 echo "Running default config tests..."
 if ! python3 "$SCRIPT_DIR/test_default_config.py"; then
     echo "Default config tests failed."

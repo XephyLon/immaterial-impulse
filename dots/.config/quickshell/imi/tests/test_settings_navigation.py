@@ -29,16 +29,16 @@ class SettingsNavigationTests(unittest.TestCase):
         )
         self.assertEqual(
             [name for name, _ in page_entries],
-            ["Quick", "Appearance", "Wallpaper & Desktop", "Bar & Dock", "Sidebars & Panels",
-             "Notifications", "Lock & Idle", "Capture", "General", "Services", "Widgets",
-             "Hyprland", "About"],
+            ["Quick", "Appearance", "Cursor", "Wallpaper & Desktop", "Bar & Dock",
+             "Sidebars & Panels", "Notifications", "Lock & Idle", "Capture", "General",
+             "Services", "Widgets", "Hyprland", "About"],
         )
         self.assertTrue(all(sections.strip() for name, sections in page_entries if name != "About"))
 
     def test_tree_uses_existing_page_scroll_contract(self):
         self.assertIn('typeof loader.item.goTo === "function"', self.source)
-        for page in ("QuickConfig", "AppearanceConfig", "BackgroundConfig", "BarConfig",
-                     "SidebarsPanelsConfig", "NotificationsConfig", "LockIdleConfig",
+        for page in ("QuickConfig", "AppearanceConfig", "CursorConfig", "BackgroundConfig",
+                     "BarConfig", "SidebarsPanelsConfig", "NotificationsConfig", "LockIdleConfig",
                      "CaptureConfig", "GeneralConfig", "ServicesConfig", "HyprlandConfig"):
             source = (ROOT / f"modules/imi/settings/pages/{page}.qml").read_text(encoding="utf-8")
             self.assertIn("function goTo(term)", source, page)
