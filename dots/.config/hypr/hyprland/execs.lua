@@ -24,6 +24,7 @@ hl.on("hyprland.start", function ()
     hl.exec_cmd("wl-paste --type text --watch bash -c 'cliphist store && qs -c $qsConfig ipc call cliphistService update'")
     hl.exec_cmd("wl-paste --type image --watch bash -c 'cliphist store && qs -c $qsConfig ipc call cliphistService update'")
 
-    -- Cursor
-    hl.exec_cmd("hyprctl setcursor Bibata-Modern-Classic 24")
+    -- Cursor: theme/size come from the shell config (Settings > Cursor); the
+    -- script's fallbacks match the values that used to be hardcoded here.
+    hl.exec_cmd("$HOME/.config/hypr/hyprland/scripts/apply_saved_cursor.sh")
 end)
