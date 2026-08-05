@@ -80,6 +80,8 @@ Singleton {
     property string aiTranslationScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/ai/gemini-translate.sh`)
     property string iconThemeScanScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/icons/scan-icon-themes.py`)
     property string iconThemeApplyScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/icons/apply-icon-theme.sh`)
+    property string cursorThemeScanScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/cursor/scan-cursor-themes.py`)
+    property string cursorThemeApplyScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/cursor/apply-cursor-theme.sh`)
     property string recordScriptPath: FileUtils.trimFileProtocol(`${Directories.scriptPath}/videos/record.sh`)
     property string userAvatarPathAccountsService: FileUtils.trimFileProtocol(`/var/lib/AccountsService/icons/${SystemInfo.username}`)
     property string userAvatarPathRicersAndWeirdSystems: FileUtils.trimFileProtocol(`${Directories.home}.face`)
