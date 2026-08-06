@@ -687,6 +687,17 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   `FadeLoader`, rather than repeating only the enabled ids. Removing a model delegate destroys it
   immediately and makes an M3 exit transition impossible; keep disabled loaders dormant until their
   fade-and-scale exit reaches zero opacity.
+- **`MouseArea.drag` cannot accurately drag a target the MouseArea itself follows.** QQuickDrag
+  rebases its press origin when the grab is established, silently swallowing the arming move's
+  delta — a few threshold pixels under a real pointer, invisible behind the widget lattice's 12px
+  snap, but measured as half the gesture under a sparse synthetic drag — and a live binding on the
+  drag target (the old `Item { x: root.x }` drag proxy) re-yanks the target after every internal
+  write, measured as +168 applied for a +96 eight-step gesture. Where a drag must be pixel-exact
+  (the desktop widgets' group drag preserves follower offsets), compute it by hand instead: map the
+  press point and each move through the (moving) item into its static parent frame — the current
+  transform, press scale included, cancels out — and set the target to pressStart + delta, as
+  `widgetCanvas/AbstractWidget.qml` now does. d2ebb5aeb ("fix(widgetCanvas): compute the drag by
+  hand - MouseArea.drag cannot track it").
 - **A `Process`'s `onExited` handler that ignores its `exitCode` argument will happily act on stale
   data.** `TempScreenshotProcess` writes to a deterministic path (`image-${screen.name}`), so a failed
   `grim` run used to leave the *previous* successful capture sitting there untouched - the region
