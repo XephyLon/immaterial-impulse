@@ -11,6 +11,9 @@ Item {
     required property string name
     property bool rotateIcon: false
     property bool scaleIcon: false
+    // Optional replacement for the percentage readout, for values whose unit
+    // is not % (e.g. a colour temperature's "4500K"). Empty keeps the default.
+    property string displayText: ""
     property alias from: valueProgressBar.from
     property alias to: valueProgressBar.to
 
@@ -80,18 +83,18 @@ Item {
                 id: valueTextBg
                 Layout.fillHeight: true
                 Layout.alignment: Qt.AlignVCenter
-                width: 46
+                width: Math.max(46, valueText.implicitWidth + Appearance.spacing.space200)
                 radius: height / 2
                 color: Appearance.colors.colTertiaryContainer
 
-                StyledText { 
+                StyledText {
                     id: valueText
                     anchors.centerIn: parent
                     color: Appearance.colors.colOnTertiaryContainer
                     font.pixelSize: Appearance.font.pixelSize.normal
                     font.features: { "tnum": 1 }
                     font.letterSpacing: 0.2
-                    text: Math.round(root.value * 100)
+                    text: root.displayText !== "" ? root.displayText : Math.round(root.value * 100)
                 }
             }
         }
