@@ -30,6 +30,10 @@ Scope {
             sourceUrl: "indicators/GammaIndicator.qml"
         },
         {
+            id: "clightTemperature",
+            sourceUrl: "indicators/ClightTemperatureIndicator.qml"
+        },
+        {
             id: "keyboardLayout",
             sourceUrl: "indicators/KeyboardLayoutIndicator.qml"
         },
@@ -81,6 +85,17 @@ Scope {
         function onGammaChangeAttempt() {
             root.protectionMessage = "";
             root.currentIndicator = "gamma";
+            root.triggerOsd();
+        }
+    }
+
+    Connections {
+        // Clight only signals a Temp change the daemon made after its first
+        // report (day/night transitions), so this cannot fire at startup.
+        target: Clight
+        function onTemperatureChangedByDaemon() {
+            root.protectionMessage = "";
+            root.currentIndicator = "clightTemperature";
             root.triggerOsd();
         }
     }
