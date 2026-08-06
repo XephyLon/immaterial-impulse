@@ -1,5 +1,6 @@
 pragma Singleton
 import qs.modules.common
+import qs.modules.common.functions
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -22,10 +23,16 @@ Singleton {
 
     signal refreshed()
 
+    // Where the scanner drops per-theme pointer previews - PNGs it extracts
+    // from each theme's own Xcursor file, since Qt cannot decode that
+    // container. The scanner creates the directory itself.
+    readonly property string previewDir: FileUtils.trimFileProtocol(`${Directories.cache}/cursor-previews`)
+
     function load() {
         if (scanProcess.running) return;
         root.loading = true;
-        scanProcess.command = ["python3", Directories.cursorThemeScanScriptPath];
+        scanProcess.command = ["python3", Directories.cursorThemeScanScriptPath,
+            "--preview-dir", root.previewDir];
         scanProcess.running = true;
     }
 
