@@ -38,9 +38,14 @@ STYLED_TEXT_DEFINITIONS = (
 
 PLACEHOLDER_GUARD_FILE = "modules/common/widgets/ConfigTextArea.qml"
 
-# `textFormat: <value>` property assignments; comparisons ("textFormat ===")
-# don't match. The value is everything up to an end-of-line comment.
-TEXT_FORMAT_ASSIGNMENT = re.compile(r"^\s*textFormat:\s*(.+?)\s*(?://.*)?$")
+# `textFormat: <value>` property assignments, wherever they sit on the line -
+# an inline component (`StyledText { textFormat: Text.StyledText }`) is one
+# too, and a line-anchored pattern was proved to miss it. The assignment must
+# follow start-of-line, `{` or `;` so alias declarations (`property alias
+# textFormat: item.textFormat`) stay excluded; comparisons ("textFormat ===")
+# don't match. The value runs to `;`, `}`, an end-of-line comment, or EOL.
+TEXT_FORMAT_ASSIGNMENT = re.compile(
+    r"(?:^|[{;])\s*textFormat:\s*([^;}]+?)\s*(?:[;}]|//|$)")
 PLAIN_VALUES = frozenset({"Text.PlainText", "TextEdit.PlainText"})
 
 # Reviewed rich-text opt-ins: file -> number of non-PlainText textFormat
@@ -53,6 +58,10 @@ PLAIN_VALUES = frozenset({"Text.PlainText", "TextEdit.PlainText"})
 REVIEWED_RICH_TEXT_SITES = {
     "modules/common/plugins/designsystem/widgets/NotificationItem.qml": 2,
     "modules/common/plugins/designsystem/widgets/NotificationPopupItem.qml": 1,
+    # Inline assignment (after `color: ...;` on one line); renders only the
+    # shell-authored "Updated ..." template - Weather.status is a dead
+    # reference, the qs.services Weather singleton declares no such property.
+    "modules/common/plugins/designsystem/widgets/WeatherCard.qml": 1,
     "modules/common/widgets/NotificationItem.qml": 2,
     "modules/imi/overview/SearchItem.qml": 1,
     "modules/imi/screenTranslator/ScreenTextOverlay.qml": 1,
@@ -72,9 +81,9 @@ def rich_optins_by_file():
         if rel.startswith("tests/"):
             continue
         for line in path.read_text(errors="ignore").splitlines():
-            match = TEXT_FORMAT_ASSIGNMENT.match(line)
-            if match and match.group(1) not in PLAIN_VALUES:
-                found[rel] = found.get(rel, 0) + 1
+            for match in TEXT_FORMAT_ASSIGNMENT.finditer(line):
+                if match.group(1) not in PLAIN_VALUES:
+                    found[rel] = found.get(rel, 0) + 1
     return found
 
 
