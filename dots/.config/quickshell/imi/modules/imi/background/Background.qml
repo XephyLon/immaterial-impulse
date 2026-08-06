@@ -1014,6 +1014,9 @@ Variants {
                 // Above the WE wallpaper-switch transition (weTransition, z 1) so the
                 // desktop widgets/plugins stay visible while wallpapers cross-fade.
                 z: 2
+                // The desktop is the canvas the marquee exists for: rubber-band
+                // several widgets, then drag any of them to move the cluster.
+                selectionEnabled: true
 
                 transitions: Transition {
                     PropertyAnimation {
