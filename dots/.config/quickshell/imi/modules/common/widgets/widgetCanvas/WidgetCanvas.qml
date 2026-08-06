@@ -180,13 +180,16 @@ MouseArea {
     }
 
     function widgetDragEnded(widget) {
+        // Detach the group before resetting the clamp bounds: the bounds feed
+        // the leader's drag Binding, and a re-evaluation mid-teardown must not
+        // reach the followers as one more (unclamped) sync.
+        const group = root.groupDrag
+        if (group && group.leader === widget) root.groupDrag = null
         widget.groupDragMinX = -Infinity
         widget.groupDragMaxX = Infinity
         widget.groupDragMinY = -Infinity
         widget.groupDragMaxY = Infinity
-        const group = root.groupDrag
         if (!group || group.leader !== widget) return
-        root.groupDrag = null
         for (const entry of group.followers) {
             entry.widget.groupDragging = false
             if (entry.widget.commitPosition) entry.widget.commitPosition()
