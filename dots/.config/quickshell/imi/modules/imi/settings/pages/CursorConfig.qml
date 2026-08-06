@@ -67,23 +67,70 @@ ContentPage {
                 color: Appearance.colors.colSubtext
             }
 
-            GroupedList {
-                ConfigSelectionArray {
-                    text: Translation.tr("Theme")
-                    icon: "mouse"
-                    visible: CursorThemes.available
-                    currentValue: CursorThemes.activeId
-                    onSelected: newValue => {
-                        if (newValue === CursorThemes.activeId) return
-                        CursorThemes.apply(newValue, Config.options.hyprland.cursor.size)
-                    }
-                    options: CursorThemes.themes.map(theme => ({
-                        displayName: theme.name,
-                        icon: "mouse",
-                        value: theme.id
-                    }))
-                }
+            // A wrapping card grid, NOT a ConfigSelectionArray: the chip strip
+            // is a single row, so with more than a handful of installed themes
+            // it ran off the right edge of the page and clipped its own label.
+            // Same shape as the icon-pack selector, minus the image previews -
+            // cursor themes ship Xcursor binaries Qt cannot decode, so the
+            // cards carry names only.
+            GridLayout {
+                Layout.fillWidth: true
+                visible: CursorThemes.available
+                columns: 3
+                columnSpacing: Appearance.spacing.space50
+                rowSpacing: Appearance.spacing.space50
 
+                Repeater {
+                    model: CursorThemes.themes
+                    delegate: Rectangle {
+                        id: themeCard
+                        required property var modelData
+                        readonly property bool isActive: modelData.id === CursorThemes.activeId
+                        Layout.fillWidth: true
+                        implicitHeight: cardRow.implicitHeight + Appearance.spacing.space100 * 2
+                        radius: Appearance.rounding.normal
+                        color: themeCardArea.containsMouse
+                            ? Appearance.colors.colLayer2Hover : Appearance.colors.colLayer2
+                        border.width: themeCard.isActive
+                            ? Appearance.borderWidth.emphasis : Appearance.borderWidth.standard
+                        border.color: themeCard.isActive
+                            ? Appearance.colors.colPrimary : "transparent"
+
+                        MouseArea {
+                            id: themeCardArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (themeCard.modelData.id === CursorThemes.activeId) return
+                                CursorThemes.apply(themeCard.modelData.id, Config.options.hyprland.cursor.size)
+                            }
+                        }
+
+                        RowLayout {
+                            id: cardRow
+                            anchors.centerIn: parent
+                            width: parent.width - Appearance.spacing.space100 * 2
+                            spacing: Appearance.spacing.space50
+                            MaterialSymbol {
+                                text: themeCard.isActive ? "check_circle" : "mouse"
+                                iconSize: Appearance.font.pixelSize.normal
+                                color: themeCard.isActive
+                                    ? Appearance.colors.colPrimary : Appearance.colors.colOnLayer2
+                            }
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: themeCard.modelData.name
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                color: Appearance.colors.colOnLayer2
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+                }
+            }
+
+            GroupedList {
                 ConfigSpinBox {
                     icon: "aspect_ratio"
                     text: Translation.tr("Size")
