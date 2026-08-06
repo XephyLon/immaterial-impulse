@@ -42,7 +42,10 @@ MouseArea {
     // registers as a keyboard-focus requester alongside the widgets above.
     focus: root.selectionEnabled
     Keys.onEscapePressed: root.clearSelection()
-    onSelectedWidgetsChanged: root.setKeyboardFocusRequest(root, root.selectedWidgets.length > 0)
+    onSelectedWidgetsChanged: {
+        root.setKeyboardFocusRequest(root, root.selectedWidgets.length > 0)
+        if (root.selectedWidgets.length > 0) root.forceActiveFocus()
+    }
 
     // A press that starts ON a widget is that widget's drag - it never reaches
     // this handler. A press on empty canvas (or over a click-through widget,
