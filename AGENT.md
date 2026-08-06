@@ -290,6 +290,12 @@ services/                  Singletons wrapping external state/processes - one pe
                               overlay notes editor both go through it rather than opening the file,
                               and it imports the legacy desktopnotes.txt array once
                               (Config.options.notes.importedLegacyStore) without ever writing to it
+  Clight.qml                   Clight daemon wrapper (busctl --json=short; the shell has no D-Bus
+                              binding). Feature-detected: a machine without the clight binary never
+                              spawns a busctl. While the daemon is up, Brightness.qml routes every
+                              backlight write through it (IncBl/DecBl) so the daemon's next
+                              recalculation does not revert the change; night-light ownership stays
+                              with Hyprsunset.qml. See docs/proposals/clight-integration.md
   Brightness.qml, Battery.qml, Hyprsunset.qml, Network.qml, BluetoothStatus.qml, TrayService.qml,
   MprisController.qml, Weather.qml, Docker.qml, ... (one per integration)
 

@@ -1,6 +1,12 @@
 # Proposal: Clight integration
 
-> Draft / tracking proposal. Not scheduled.
+> Implemented on PR #66: `services/Clight.qml` (busctl transport, two-staged
+> feature detection), backlight deferral in `services/Brightness.qml`, a
+> colour-temperature OSD indicator, and a daemon-gated Clight section on the
+> Services settings page. The daemon-absent path is stock behaviour, verified
+> end to end by `tests/test_clight_integration_runtime.py`. Night-light
+> ownership deliberately stays with `services/Hyprsunset.qml` - the settings
+> section warns about a temperature fight instead of silently resolving it.
 
 ## Goal
 
