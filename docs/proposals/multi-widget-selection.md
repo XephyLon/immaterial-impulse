@@ -2,6 +2,52 @@
 
 > Draft / tracking proposal. Not scheduled.
 
+## Outcome (implemented on this branch)
+
+The feature exists, built on the widget-canvas model that arrived after this
+proposal was written (`modules/common/widgets/widgetCanvas/`). What the
+implementation decided, including answers to the open questions below:
+
+- **Selection is canvas state and session state.** `WidgetCanvas` holds
+  `selectedWidgets`; widgets carry a `selected` flag the canvas writes and a
+  halo gated on it. Nothing is persisted — a reload deselects, and presets
+  cannot carry a selection.
+- **The marquee is opt-in per canvas** (`selectionEnabled`, default off). Only
+  the desktop background enables it; the overlay's canvas keeps its
+  dismiss-on-click behaviour.
+- **`draggable` is the entire selection filter.** It already folds in the
+  per-widget lock, click-through, the global lock and non-free placement — so
+  the full-bleed visualizer (which ships click-through) is never selected by a
+  marquee crossing it, answering that open question.
+- **Group drag is leader/follower.** The pressed widget's drag Binding keeps
+  moving it (snap first, then a group clamp the canvas computes at press);
+  followers are repositioned by the canvas with their position Behaviors gated
+  off, and are committed through the same `commitPosition()` a real release
+  runs — the two release paths were unified into that one function precisely
+  so a follower cannot end a gesture with a dead x/y binding.
+- **The group stops when its first member hits an edge** — the clamp lives in
+  the leader's drag Binding as leader-position bounds derived from every
+  member's extents.
+- **Multi-monitor:** a selection belongs to one canvas, and each monitor's
+  background owns its own canvas, so a selection cannot cross monitors.
+- **No `PluginState` batch write was needed:** each member commits via
+  `setPosition`, and the store's debounced write timer already coalesces the
+  burst into one file write.
+- **Deselection:** Escape (the canvas takes the layer surface's on-demand
+  keyboard focus while a selection exists), clicking empty desktop, grabbing
+  an unselected widget, or locking the desktop. Keyboard modifiers
+  (shift-add/ctrl-toggle) were not implemented; a marquee replaces the
+  selection.
+- A byproduct: driving the gesture with real events exposed `MouseArea.drag`
+  as inexact for a self-moving widget (its origin rebases at grab, and the old
+  drag-proxy binding fought its writes). The widget drag is now computed by
+  hand in the parent frame — see AGENT.md's gotcha entry.
+
+Pinned by `tests/test_widget_group_selection.py` (source contract) and
+`WidgetGroupDragRuntimeTest.qml` + `tests/test_widget_group_drag_runtime.py`
+(real events under headless weston). The sections below are the original
+proposal, kept for the reasoning.
+
 ## Goal
 
 Draw a marquee on the desktop to select several widgets at once, then drag the
