@@ -780,5 +780,8 @@
   "Off": "Off",
   "Tailscale daemon is not running": "Tailscale daemon is not running",
   "Tailscale is down": "Tailscale is down",
-  "No peer advertises itself as an exit node": "No peer advertises itself as an exit node"
+  "No peer advertises itself as an exit node": "No peer advertises itself as an exit node",
+  "Phone Connect": "Phone Connect",
+  "Phone Connect command failed": "Phone Connect command failed",
+  "Show your phone (via KDE Connect or Valent)": "Show your phone (via KDE Connect or Valent)"
 }

@@ -1140,6 +1140,12 @@ Singleton {
                     property bool enable: true
                     property int pollInterval: 5000 // ms
                 }
+                property JsonObject phoneConnect: JsonObject {
+                    property bool enable: true
+                    // Battery/reachability drift slowly, and each sweep is a
+                    // chain of busctl processes - poll gentler than the others.
+                    property int pollInterval: 10000 // ms
+                }
             }
 
             // Keep-awake. autoOnExternalMonitor (ported from end-4/dots-hyprland
