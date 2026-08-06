@@ -152,9 +152,16 @@ AbstractBackgroundWidget {
             : rootWidget.targetY);
     }
 
-    onReleased: {
+    // Overrides AbstractBackgroundWidget's release path, which calls this on a
+    // real release - and which WidgetCanvas calls on every group-drag follower,
+    // since a follower never gets a release event. One function on purpose:
+    // restoreXYBinding() keeps forceCenter and external position changes alive
+    // after the drag broke the x/y bindings, and setPosition is what makes the
+    // move survive a restart.
+    function commitPosition() {
         rootWidget.targetX = rootWidget.x;
         rootWidget.targetY = rootWidget.y;
+        rootWidget.restoreXYBinding();
         if (!manifest) return;
         PluginState.setPosition(manifest.id, screenName, {
             x: rootWidget.targetX,
