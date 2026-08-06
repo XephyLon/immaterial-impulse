@@ -254,6 +254,32 @@ ContentPage {
                     Config.options.networking.userAgent = text;
                 }
             }
+
+            ContentSubsection {
+                title: Translation.tr("Phone Connect")
+
+                GroupedList {
+                    ConfigSwitch {
+                        buttonIcon: "mobile"
+                        text: Translation.tr("Show your phone (via KDE Connect or Valent)")
+                        checked: Config.options.networking.phoneConnect.enable
+                        onCheckedChanged: {
+                            Config.options.networking.phoneConnect.enable = checked;
+                        }
+                    }
+                    ConfigSpinBox {
+                        icon: "av_timer"
+                        text: Translation.tr("Polling interval (s)")
+                        value: Config.options.networking.phoneConnect.pollInterval / 1000
+                        from: 2
+                        to: 120
+                        stepSize: 1
+                        onValueModified: {
+                            Config.options.networking.phoneConnect.pollInterval = newValue * 1000;
+                        }
+                    }
+                }
+            }
         }
 
         ContentSection {
