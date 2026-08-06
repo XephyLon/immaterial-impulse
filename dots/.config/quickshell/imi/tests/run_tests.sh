@@ -611,6 +611,14 @@ if ! python3 "$SCRIPT_DIR/test_openrgb_detector_sync.py"; then
     exit 1
 fi
 
+# The QML suite drives a logic-only double; this is the sync check that makes
+# its green transfer to the real service, plus the busctl argv/id-guard pins.
+echo "Running Phone Connect contract tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_connect_contract.py"; then
+    echo "Phone Connect contract tests failed."
+    exit 1
+fi
+
 echo "Running registry entry validator tests..."
 if ! python3 "$SCRIPT_DIR/test_registry_validate.py"; then
     echo "Registry entry validator tests failed."
