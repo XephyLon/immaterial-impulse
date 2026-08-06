@@ -91,21 +91,32 @@ Singleton {
         id: setProc
     }
 
+    // Keep the shell's idea of brightness in step with the daemon's
+    // recalibrations, silently: these are not user actions, so they must not
+    // pop the OSD the way a real change does. Inside the post-command grace
+    // window the daemon's report is just it catching up to what the shell
+    // sent - adopting it then would drag a fresh change back toward the old
+    // value - so adoption also re-runs when the window closes, covering a
+    // value that settled while it was open.
+    function adoptClightBacklight(): void {
+        if (!Clight.managesBacklight || Clight.recentCommand)
+            return;
+        for (const monitor of root.monitors) {
+            if (!monitor.ready)
+                continue;
+            if (Math.abs(monitor.brightness - Clight.backlight) <= 0.01)
+                continue;
+            monitor.updateFromExternal(Clight.backlight);
+        }
+    }
+
     Connections {
         target: Clight
         function onBacklightChanged() {
-            if (!Clight.managesBacklight)
-                return;
-            // Keep the shell's idea of brightness in step with the daemon's
-            // recalibrations, silently: these are not user actions, so they
-            // must not pop the OSD the way a real change does.
-            for (const monitor of root.monitors) {
-                if (!monitor.ready)
-                    continue;
-                if (Math.abs(monitor.brightness - Clight.backlight) <= 0.01)
-                    continue;
-                monitor.updateFromExternal(Clight.backlight);
-            }
+            root.adoptClightBacklight();
+        }
+        function onRecentCommandChanged() {
+            root.adoptClightBacklight();
         }
     }
 

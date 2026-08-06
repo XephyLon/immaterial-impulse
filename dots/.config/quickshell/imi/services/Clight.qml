@@ -95,10 +95,13 @@ Singleton {
         root.available = true;
         if (values.BlPct !== undefined) {
             root.backlight = values.BlPct;
-            // A poll that raced an in-flight or queued command reports the
-            // pre-command value; adopting it as the base would re-apply the
-            // delta. Only converge the base while the queue is idle.
-            if (!root.commandInFlight && Math.abs(root.pendingDelta) < 0.005)
+            // A poll that raced an in-flight or queued command - or one that
+            // merely reports the daemon still catching up to a command just
+            // sent - shows a pre-command value; adopting it as the base would
+            // re-apply the delta and drag a fresh change back down. Converge
+            // the base only once the queue is idle and the grace window after
+            // the last command has passed.
+            if (!root.commandInFlight && Math.abs(root.pendingDelta) < 0.005 && !root.recentCommand)
                 root.commandedBacklight = values.BlPct;
         }
         if (values.Temp !== undefined) {
@@ -147,6 +150,25 @@ Singleton {
 
     property real pendingDelta: 0
     property bool commandInFlight: false
+    // True from a backlight command until one full poll after it could have
+    // observed the result. A poll inside this window cannot distinguish "the
+    // daemon recalibrated" from "the daemon is catching up to what I just
+    // sent", so both the base rebase above and Brightness's external sync
+    // hold off until it closes.
+    property bool recentCommand: false
+
+    Timer {
+        id: commandGrace
+        interval: root.pollInterval + 500
+        onTriggered: {
+            // Rebase before announcing the window closed: consumers react to
+            // recentCommand flipping by reconciling against the daemon, and a
+            // stale base would turn that reconciliation into a real delta.
+            if (!root.commandInFlight && Math.abs(root.pendingDelta) < 0.005)
+                root.commandedBacklight = root.backlight;
+            root.recentCommand = false;
+        }
+    }
 
     function increaseBacklight(step = 0.05): void {
         root.queueBacklightDelta(step);
@@ -183,6 +205,8 @@ Singleton {
         root.pendingDelta = 0;
         root.commandedBacklight = Math.max(0, Math.min(1, root.commandedBacklight + delta));
         root.commandInFlight = true;
+        root.recentCommand = true;
+        commandGrace.restart();
         cmdProc.exec(["busctl", "--user", "call", root.busName, root.busPath,
             root.busName, delta > 0 ? "IncBl" : "DecBl", "d", String(Math.abs(delta))]);
     }
@@ -191,7 +215,7 @@ Singleton {
         if (!root.available)
             return;
         root.autoCalibration = enabled;
-        propProc.exec(["busctl", "--user", "set-property", root.busName,
+        root.queuePropertyWrite(["busctl", "--user", "set-property", root.busName,
             `${root.busPath}/Conf/Backlight`, `${root.busName}.Conf.Backlight`,
             "NoAutoCalib", "b", enabled ? "false" : "true"]);
     }
@@ -200,7 +224,7 @@ Singleton {
         if (!root.available)
             return;
         root.dayTemperature = value;
-        propProc.exec(["busctl", "--user", "set-property", root.busName,
+        root.queuePropertyWrite(["busctl", "--user", "set-property", root.busName,
             `${root.busPath}/Conf/Gamma`, `${root.busName}.Conf.Gamma`,
             "DayTemp", "i", String(value)]);
     }
@@ -209,9 +233,29 @@ Singleton {
         if (!root.available)
             return;
         root.nightTemperature = value;
-        propProc.exec(["busctl", "--user", "set-property", root.busName,
+        root.queuePropertyWrite(["busctl", "--user", "set-property", root.busName,
             `${root.busPath}/Conf/Gamma`, `${root.busName}.Conf.Gamma`,
             "NightTemp", "i", String(value)]);
+    }
+
+    // Same single-flight discipline as the backlight queue, FIFO because
+    // property writes are not mergeable the way deltas are: two settings
+    // interactions in quick succession would otherwise kill the first
+    // command mid-spawn and silently drop it.
+    property var pendingPropWrites: []
+    property bool propInFlight: false
+
+    function queuePropertyWrite(argv: var): void {
+        root.pendingPropWrites.push(argv);
+        root.drainPropertyQueue();
+    }
+
+    function drainPropertyQueue(): void {
+        if (root.propInFlight || root.pendingPropWrites.length === 0)
+            return;
+        const argv = root.pendingPropWrites.shift();
+        root.propInFlight = true;
+        propProc.exec(argv);
     }
 
     onEnableServiceChanged: {
@@ -240,7 +284,12 @@ Singleton {
     Process {
         id: propProc
         onExited: (exitCode, exitStatus) => {
-            root.refresh();
+            root.propInFlight = false;
+            if (root.pendingPropWrites.length > 0) {
+                root.drainPropertyQueue();
+            } else {
+                root.refresh();
+            }
         }
     }
 
