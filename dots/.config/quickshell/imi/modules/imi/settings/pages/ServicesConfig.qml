@@ -520,6 +520,77 @@ ContentPage {
         }
 
         ContentSection {
+            // Only for users who chose to install Clight; everyone else never
+            // sees this section (the daemon-detection gate from the proposal).
+            visible: Clight.installed
+            icon: "brightness_auto"
+            title: Translation.tr("Clight")
+
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "handshake"
+                    text: Translation.tr("Cooperate with the Clight daemon")
+                    checked: Config.options.light.clight.enable
+                    onCheckedChanged: {
+                        Config.options.light.clight.enable = checked;
+                    }
+                }
+                ConfigSwitch {
+                    visible: Clight.available
+                    buttonIcon: "brightness_auto"
+                    text: Translation.tr("Automatic brightness calibration")
+                    checked: Clight.autoCalibration
+                    onCheckedChanged: {
+                        // Daemon state round-trips through the poll, so the
+                        // binding refresh re-fires this handler; only a real
+                        // change may reach the daemon.
+                        if (checked !== Clight.autoCalibration)
+                            Clight.setAutoCalibration(checked);
+                    }
+                }
+                ConfigSpinBox {
+                    visible: Clight.available
+                    icon: "light_mode"
+                    text: Translation.tr("Day temperature (K)")
+                    value: Clight.dayTemperature
+                    from: 1000
+                    to: 10000
+                    stepSize: 100
+                    onValueModified: {
+                        Clight.setDayTemperature(newValue);
+                    }
+                }
+                ConfigSpinBox {
+                    visible: Clight.available
+                    icon: "bedtime"
+                    text: Translation.tr("Night temperature (K)")
+                    value: Clight.nightTemperature
+                    from: 1000
+                    to: 10000
+                    stepSize: 100
+                    onValueModified: {
+                        Clight.setNightTemperature(newValue);
+                    }
+                }
+            }
+            StyledText {
+                visible: Clight.available && Clight.sensorAvailable
+                color: Appearance.colors.colSubtext
+                text: Translation.tr("Ambient brightness: %1%").arg(Math.round(Clight.ambientBrightness * 100))
+            }
+            StyledText {
+                visible: Config.options.light.clight.enable && !Clight.available
+                color: Appearance.colors.colSubtext
+                text: Translation.tr("Clight is installed but not running.")
+            }
+            StyledText {
+                visible: Clight.available && Hyprsunset.temperatureActive
+                color: Appearance.colors.colSubtext
+                text: Translation.tr("Night light is also on — it and Clight may fight over screen temperature.")
+            }
+        }
+
+        ContentSection {
             icon: "weather_mix"
             shape: MaterialShape.Shape.Pill
             title: Translation.tr("Weather")
