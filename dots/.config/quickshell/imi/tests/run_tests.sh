@@ -439,6 +439,21 @@ if ! python3 "$SCRIPT_DIR/test_brightness_systeminfo_contract.py"; then
     exit 1
 fi
 
+echo "Running Clight integration contract tests..."
+if ! python3 "$SCRIPT_DIR/test_clight_contract.py"; then
+    echo "Clight integration contract tests failed."
+    exit 1
+fi
+
+# Brings its own headless weston and fake busctl/brightnessctl/clight (plus
+# the night-light trio) binaries, so it needs no display of its own - but it
+# does need weston, and skips without it.
+echo "Running Clight integration runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_clight_integration_runtime.py"; then
+    echo "Clight integration runtime tests failed."
+    exit 1
+fi
+
 echo "Running shared widget contract tests..."
 if ! python3 "$SCRIPT_DIR/test_shared_widget_contracts.py"; then
     echo "Shared widget contract tests failed."
