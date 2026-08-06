@@ -23,6 +23,7 @@ DelegateChooser {
     signal openNightLightDialog()
     signal openWifiDialog()
     signal openTailscaleDialog()
+    signal openPhoneConnectDialog()
 
     role: "type"
 
@@ -108,6 +109,23 @@ DelegateChooser {
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
         onOpenMenu: root.openTailscaleDialog()
+    } }
+
+    DelegateChoice { roleValue: "phoneConnect"; AndroidPhoneConnectToggle {
+        required property int index
+        required property var modelData
+        buttonIndex: root.startingIndex + index
+        buttonData: modelData
+        editMode: root.editMode
+        gridRef: root.gridRef
+        expandedSize: modelData.size > 1
+        baseCellWidth: root.baseCellWidth
+        baseCellHeight: root.baseCellHeight
+        cellSpacing: root.spacing
+        cellSize: modelData.size
+        dropIndicatorRef: root.dropIndicatorRef
+        isUnused: root.isUnused
+        onOpenMenu: root.openPhoneConnectDialog()
     } }
 
     DelegateChoice { roleValue: "vpn"; AndroidVpnToggle {

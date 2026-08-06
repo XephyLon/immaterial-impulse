@@ -41,6 +41,11 @@ AbstractQuickPanel {
                 root.openTailscaleDialog();
             }
         }
+        PhoneConnectToggle {
+            altAction: () => {
+                root.openPhoneConnectDialog();
+            }
+        }
         Repeater {
             model: Vpn.connections
             delegate: VpnToggle {

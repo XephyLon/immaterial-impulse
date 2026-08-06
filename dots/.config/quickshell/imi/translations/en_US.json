@@ -783,5 +783,22 @@
   "No peer advertises itself as an exit node": "No peer advertises itself as an exit node",
   "Phone Connect": "Phone Connect",
   "Phone Connect command failed": "Phone Connect command failed",
-  "Show your phone (via KDE Connect or Valent)": "Show your phone (via KDE Connect or Valent)"
+  "Show your phone (via KDE Connect or Valent)": "Show your phone (via KDE Connect or Valent)",
+  "Phone": "Phone",
+  "Disconnected": "Disconnected",
+  "Phone Connect | Click for devices": "Phone Connect | Click for devices",
+  "Phone Connect: %1 (%2%) | Click for devices": "Phone Connect: %1 (%2%) | Click for devices",
+  "Phone Connect: %1 | Click for devices": "Phone Connect: %1 | Click for devices",
+  "busctl was not found on PATH": "busctl was not found on PATH",
+  "Neither KDE Connect nor Valent is running": "Neither KDE Connect nor Valent is running",
+  "No devices yet — pair your phone from KDE Connect or Valent": "No devices yet — pair your phone from KDE Connect or Valent",
+  "Backend: KDE Connect": "Backend: KDE Connect",
+  "Backend: Valent": "Backend: Valent",
+  "Not paired": "Not paired",
+  "Paired • Offline": "Paired • Offline",
+  "%1% • Charging": "%1% • Charging",
+  "%1%": "%1%",
+  "Ring": "Ring",
+  "Ping": "Ping",
+  "Send clipboard": "Send clipboard"
 }
