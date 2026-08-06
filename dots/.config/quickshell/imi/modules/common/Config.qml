@@ -1089,6 +1089,9 @@ Singleton {
                 property JsonObject antiFlashbang: JsonObject {
                     property bool enable: false
                 }
+                property JsonObject clight: JsonObject {
+                    property bool enable: true // feature-detected; does nothing when the daemon is absent
+                }
             }
 
             property JsonObject lock: JsonObject {
