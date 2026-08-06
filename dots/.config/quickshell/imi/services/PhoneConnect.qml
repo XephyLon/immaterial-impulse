@@ -1,0 +1,354 @@
+pragma Singleton
+pragma ComponentBehavior: Bound
+
+import Quickshell
+import Quickshell.Io
+import QtQuick
+import qs.modules.common
+
+/**
+ * Paired-phone state via KDE Connect or Valent (docs/proposals/phone-connect.md).
+ *
+ * The shell has no D-Bus binding, so both daemons are driven through
+ * `busctl --json=short` Process calls - structured JSON replies, argv arrays,
+ * never shell strings. Backend detection reads the bus name list: whichever
+ * daemon owns its well-known name wins, KDE Connect first on a tie (running
+ * both daemons double-pairs phones anyway). No daemon at all is a clean
+ * degraded state: backend "none", no devices, UI hides.
+ *
+ * Updates are bounded polling like Tailscale.qml, not `busctl monitor`
+ * streaming - a persistent streaming Process needs backoff and a retry
+ * ceiling (see CONTRIBUTING.md) that this feature does not justify yet.
+ *
+ * Device ids and object paths get spliced into D-Bus object paths, so both
+ * are validated first (validDeviceId / validValentObjectPath); anything that
+ * fails the check is dropped rather than escaped.
+ *
+ * The parser/normalization functions between the sync markers are kept
+ * byte-for-byte in sync with the logic-only test double
+ * (tests/imports/testservices/PhoneConnect.qml);
+ * tests/test_phone_connect_contract.py enforces it.
+ */
+Singleton {
+    id: root
+
+    readonly property int pollInterval: Config.options.networking?.phoneConnect?.pollInterval ?? 10000
+    readonly property bool enableService: Config.options.networking?.phoneConnect?.enable ?? true
+
+    property bool installed: false // busctl found on PATH
+    property string backend: "none" // "kdeconnect" | "valent" | "none"
+    readonly property bool available: root.backend !== "none"
+    // [{ id, name, type, reachable, paired, batteryAvailable, batteryCharge, batteryCharging }]
+    property var devices: []
+
+    readonly property var activeDevice: root.devices.find(d => d.paired && d.reachable && d.type === "phone")
+        ?? root.devices.find(d => d.paired && d.reachable)
+        ?? null
+    readonly property string materialSymbol: (root.available && root.activeDevice) ? "mobile" : "mobile_off"
+
+    // Valent action names beyond findmyphone.ring were not verifiable against
+    // a live daemon, so only the verified surface is offered there.
+    readonly property bool canPing: root.backend === "kdeconnect"
+    readonly property bool canSendClipboard: root.backend === "kdeconnect"
+
+    // BEGIN phone-connect parser logic (synced with tests/imports/testservices/PhoneConnect.qml)
+    // Parses one `busctl --json=short` reply. Returns the payload ("data")
+    // array, or null when the text is not a busctl JSON document (empty
+    // output, "Call failed: ..." error text, malformed JSON).
+    function parseBusctlReply(text: string): var {
+        const trimmed = (text ?? "").trim();
+        if (trimmed.length === 0) return null;
+        let doc;
+        try {
+            doc = JSON.parse(trimmed);
+        } catch (e) {
+            return null;
+        }
+        if (!doc || typeof doc !== "object" || !Array.isArray(doc.data)) return null;
+        return doc.data;
+    }
+
+    // GetAll replies carry a{sv}: { key: { type, data } }. Flattens the
+    // variant cells to plain values.
+    function unwrapVariants(dict: var): var {
+        const out = {};
+        for (const key in (dict ?? {})) {
+            const cell = dict[key];
+            out[key] = (cell && typeof cell === "object" && "data" in cell) ? cell.data : cell;
+        }
+        return out;
+    }
+
+    // Maps a ListNames reply to the backend it implies. KDE Connect wins a
+    // tie: it is the incumbent, and running both daemons at once double-pairs
+    // phones anyway.
+    function backendFromNames(names: var): string {
+        const list = names ?? [];
+        if (list.includes("org.kde.kdeconnect.daemon")) return "kdeconnect";
+        if (list.includes("ca.andyholmes.Valent")) return "valent";
+        return "none";
+    }
+
+    // Normalizes one org.kde.kdeconnect.device GetAll reply (plus its
+    // battery GetAll, or null when the battery object does not exist - it is
+    // absent for unpaired devices) onto the shared device model.
+    function normalizeKdeconnectDevice(id: string, rawProps: var, rawBatteryProps: var): var {
+        const props = root.unwrapVariants(rawProps);
+        const battery = rawBatteryProps === null || rawBatteryProps === undefined
+            ? null : root.unwrapVariants(rawBatteryProps);
+        return {
+            id: id,
+            name: props.name ?? "",
+            type: props.type ?? "",
+            reachable: props.isReachable === true,
+            paired: props.isPaired === true,
+            batteryAvailable: battery !== null && typeof battery.charge === "number",
+            batteryCharge: (battery !== null && typeof battery.charge === "number") ? battery.charge : -1,
+            batteryCharging: battery !== null && battery.isCharging === true
+        };
+    }
+
+    // Valent device State flags (valent-device.h): 1 = connected, 2 = paired.
+    function normalizeValentObjects(managedObjects: var): var {
+        const objects = (managedObjects ?? [])[0] ?? {};
+        const devices = [];
+        for (const path in objects) {
+            const ifaces = objects[path];
+            const raw = ifaces?.["ca.andyholmes.Valent.Device"];
+            if (!raw) continue;
+            const props = root.unwrapVariants(raw);
+            const state = Number(props.State ?? 0);
+            devices.push({
+                id: props.Id ?? "",
+                name: props.Name ?? "",
+                type: props.Type ?? "",
+                reachable: (state & 1) !== 0,
+                paired: (state & 2) !== 0,
+                objectPath: path,
+                batteryAvailable: false,
+                batteryCharge: -1,
+                batteryCharging: false
+            });
+        }
+        return devices;
+    }
+
+    // Decodes an org.gtk.Actions DescribeAll reply (a{s(bgav)}) into battery
+    // state via the stateful `battery.state` action's vardict.
+    function decodeValentBattery(describeAllData: var): var {
+        const none = { available: false, charge: -1, charging: false };
+        const actions = (describeAllData ?? [])[0] ?? {};
+        const batteryAction = actions["battery.state"];
+        if (!Array.isArray(batteryAction) || batteryAction.length < 3) return none;
+        const stateCells = batteryAction[2];
+        if (!Array.isArray(stateCells) || stateCells.length === 0) return none;
+        const state = root.unwrapVariants(stateCells[0]?.data ?? null);
+        if (typeof state.percentage !== "number") return none;
+        return {
+            available: state["is-present"] !== false,
+            charge: Math.round(state.percentage),
+            charging: state.charging === true
+        };
+    }
+
+    // Reachable-and-paired devices first, then paired, then by name/id.
+    function sortDevices(list: var): var {
+        const rank = d => (d.paired && d.reachable) ? 0 : d.paired ? 1 : 2;
+        return [...(list ?? [])].sort((a, b) => rank(a) - rank(b)
+            || String(a.name || a.id).localeCompare(String(b.name || b.id)));
+    }
+
+    // Object paths and argv both splice the id in; keep it boring.
+    function validDeviceId(id: var): bool {
+        return typeof id === "string" && /^[A-Za-z0-9_-]+$/.test(id);
+    }
+    // END phone-connect parser logic
+
+    function applyBackend(newBackend: string): void {
+        root.backend = newBackend;
+        if (newBackend === "none") root.devices = [];
+    }
+
+    function applyDevices(list: var): void {
+        root.devices = root.sortDevices(list);
+    }
+
+    // Valent exports devices under /ca/andyholmes/Valent/Device/<n>; anything
+    // else coming back from ObjectManager is not a path worth calling into.
+    function validValentObjectPath(path: var): bool {
+        return typeof path === "string" && /^\/ca\/andyholmes\/Valent\/Device\/[A-Za-z0-9_]+$/.test(path);
+    }
+
+    function busctlCall(dest: string, path: string, iface: string, member: string, extra: var): var {
+        return ["busctl", "--user", "--json=short", "--timeout=5", "call", dest, path, iface, member, ...extra];
+    }
+
+    function refresh(): void {
+        if (!root.enableService || !root.installed) return;
+        if (busProc.running || root.callQueue.length > 0) return; // previous sweep still in flight
+        root.enqueue(root.busctlCall("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames", []), text => {
+            const data = root.parseBusctlReply(text);
+            const newBackend = data === null ? "none" : root.backendFromNames(data[0] ?? []);
+            root.applyBackend(newBackend);
+            if (newBackend === "kdeconnect") root.refreshKdeconnect();
+            else if (newBackend === "valent") root.refreshValent();
+        });
+    }
+
+    function refreshKdeconnect(): void {
+        root.enqueue(root.busctlCall("org.kde.kdeconnect.daemon", "/modules/kdeconnect", "org.kde.kdeconnect.daemon", "devices", ["bb", "false", "false"]), text => {
+            const data = root.parseBusctlReply(text);
+            if (data === null) { root.applyDevices([]); return; }
+            const ids = (data[0] ?? []).filter(id => root.validDeviceId(id));
+            if (ids.length === 0) { root.applyDevices([]); return; }
+            const collected = [];
+            for (const id of ids) root.collectKdeconnectDevice(id, collected, ids.length);
+        });
+    }
+
+    function collectKdeconnectDevice(id: string, collected: var, total: int): void {
+        const devicePath = `/modules/kdeconnect/devices/${id}`;
+        root.enqueue(root.busctlCall("org.kde.kdeconnect.daemon", devicePath, "org.freedesktop.DBus.Properties", "GetAll", ["s", "org.kde.kdeconnect.device"]), propsText => {
+            const propsData = root.parseBusctlReply(propsText);
+            // The battery object does not exist for unpaired devices; the
+            // failed GetAll parses to null and normalization degrades cleanly.
+            root.enqueue(root.busctlCall("org.kde.kdeconnect.daemon", devicePath + "/battery", "org.freedesktop.DBus.Properties", "GetAll", ["s", "org.kde.kdeconnect.device.battery"]), batteryText => {
+                const batteryData = root.parseBusctlReply(batteryText);
+                collected.push(root.normalizeKdeconnectDevice(id, propsData?.[0] ?? {}, batteryData?.[0] ?? null));
+                if (collected.length === total) root.applyDevices(collected);
+            });
+        });
+    }
+
+    function refreshValent(): void {
+        root.enqueue(root.busctlCall("ca.andyholmes.Valent", "/ca/andyholmes/Valent", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects", []), text => {
+            const data = root.parseBusctlReply(text);
+            if (data === null) { root.applyDevices([]); return; }
+            const found = root.normalizeValentObjects(data).filter(d => root.validValentObjectPath(d.objectPath));
+            if (found.length === 0) { root.applyDevices([]); return; }
+            let pending = found.length;
+            for (const device of found) {
+                root.enqueue(root.busctlCall("ca.andyholmes.Valent", device.objectPath, "org.gtk.Actions", "DescribeAll", []), describeText => {
+                    const battery = root.decodeValentBattery(root.parseBusctlReply(describeText));
+                    device.batteryAvailable = battery.available;
+                    device.batteryCharge = battery.charge;
+                    device.batteryCharging = battery.charging;
+                    if (--pending === 0) root.applyDevices(found);
+                });
+            }
+        });
+    }
+
+    // ---- actions ----
+
+    function ring(device: var): void {
+        const d = device ?? root.activeDevice;
+        if (!d) return;
+        if (root.backend === "kdeconnect" && root.validDeviceId(d.id))
+            root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/findmyphone`, "org.kde.kdeconnect.device.findmyphone", "ring", []));
+        else if (root.backend === "valent" && root.validValentObjectPath(d.objectPath))
+            root.runAction(root.busctlCall("ca.andyholmes.Valent", d.objectPath, "org.gtk.Actions", "Activate", ["sava{sv}", "findmyphone.ring", "0", "0"]));
+    }
+
+    function ping(device: var): void {
+        const d = device ?? root.activeDevice;
+        if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
+        root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/ping`, "org.kde.kdeconnect.device.ping", "sendPing", []));
+    }
+
+    function sendClipboard(device: var): void {
+        const d = device ?? root.activeDevice;
+        if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
+        root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/clipboard`, "org.kde.kdeconnect.device.clipboard", "sendClipboard", []));
+    }
+
+    function runAction(argv: var): void {
+        actionProc.exec(argv);
+    }
+
+    Process {
+        id: actionProc
+        environment: ({
+            LANG: "C",
+            LC_ALL: "C"
+        })
+        stderr: StdioCollector {
+            id: actionErr
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0) {
+                Quickshell.execDetached(["notify-send",
+                    Translation.tr("Phone Connect"),
+                    actionErr.text.trim() || Translation.tr("Phone Connect command failed"),
+                    "-a", "Shell"
+                ]);
+            }
+        }
+    }
+
+    // ---- serialized busctl queue ----
+
+    property var callQueue: []
+    property var activeCallback: null
+
+    function enqueue(argv: var, callback: var): void {
+        root.callQueue.push({ argv: argv, callback: callback });
+        root.pump();
+    }
+
+    function pump(): void {
+        if (busProc.running || root.callQueue.length === 0) return;
+        const next = root.callQueue.shift();
+        root.activeCallback = next.callback;
+        busProc.exec(next.argv);
+    }
+
+    Process {
+        id: busProc
+        environment: ({
+            LANG: "C",
+            LC_ALL: "C"
+        })
+        stdout: StdioCollector {
+            id: busOut
+        }
+        // "Call failed: ..." on stderr is expected for absent objects (e.g.
+        // the battery of an unpaired device); the empty stdout parses to null.
+        stderr: StdioCollector {}
+        onExited: (exitCode, exitStatus) => {
+            const callback = root.activeCallback;
+            root.activeCallback = null;
+            callback?.(busOut.text);
+            root.pump();
+        }
+    }
+
+    onEnableServiceChanged: {
+        if (!root.enableService) {
+            root.callQueue = [];
+            root.activeCallback = null;
+            root.applyBackend("none");
+        } else if (root.installed) {
+            root.refresh();
+        }
+    }
+
+    // One-shot presence check; everything else is gated on it.
+    Process {
+        id: whichProc
+        running: root.enableService
+        command: ["sh", "-c", "command -v busctl"]
+        onExited: (exitCode, exitStatus) => {
+            root.installed = (exitCode === 0);
+            if (root.installed) root.refresh();
+        }
+    }
+
+    Timer {
+        interval: root.pollInterval
+        running: root.enableService && root.installed
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root.refresh()
+    }
+}
