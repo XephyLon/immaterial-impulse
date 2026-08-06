@@ -629,6 +629,30 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   scoped renderer type, as `bundled/atAGlance/AtAGlance.qml` does for date formatting, timed quote
   rotation, and quote-file loading. Add that type to both the validator and renderer, and keep
   arbitrary processes or script evaluation out of manifests.
+- **`Text` inherits `Text.AutoText`, which sniffs HTML-ish content and renders it as markup — so
+  any widget displaying an attacker-controlled string is a rich-text injection site unless
+  something pins its `textFormat`.** Installed plugin manifests are exactly that:
+  `PluginValidator.js` type-checks `manifest.name` and nothing else, and manifest strings (name,
+  description, author, option labels, icons, placeholders) reach the screen through `StyledText`,
+  so `<img src=...>` in a manifest field rendered as an image. The per-site
+  `textFormat: Text.PlainText` fix had been applied five separate times and still kept missing
+  sites, so both `StyledText` definitions (mainline and the plugin design system's copy) now
+  default to `Text.PlainText`, and rich text is a per-site opt-in reviewed into
+  `tests/lint_rich_text_optin.py`'s allowlist — a new opt-in fails the suite until someone confirms
+  no untrusted string reaches it unescaped (d782c2170 ("fix(widgets): default StyledText to
+  PlainText, make rich text opt-in"), f224ec6b7 ("test(lint): pin the PlainText default and
+  reviewed rich-text opt-ins")). Two corners that default cannot reach: the Basic Controls style
+  (pinned by `pragma Env QT_QUICK_CONTROLS_STYLE=Basic`) draws `placeholderText` through its own
+  `PlaceholderText` child *inside Qt* — still `AutoText`, fed `optionData.placeholder` straight
+  from the manifest — so `ConfigTextArea` walks the field's children at completion and pins every
+  `Text` to `PlainText` (dce31aa98 ("fix(widgets): force ConfigTextArea's style placeholder to
+  plain text")); and the vendored `scripts/plugins/registry_validate.py` is a separate copy of the
+  QML surface vocabulary that had drifted, letting an overlay-widget-only registry entry skip the
+  screenshot requirement — `test_registry_validate.py` now pins its `VISUAL_CAPABILITIES` to
+  `PluginManager.surfaceCapabilities` (6a359273a ("fix(plugins): require a screenshot for
+  overlay-widget registry entries")). Do not "sanitise" manifest strings at parse time instead:
+  stripping markup on the way in corrupts legitimate text containing `<`; the render site is the
+  defence.
 - **`FileView` (`Quickshell.Io`) loads asynchronously - `.text()` right after calling `.reload()`
   is not guaranteed to return the new content.** The correct pattern (used throughout this codebase
   - `MaterialSymbolsSearch.qml`, `Notifications.qml`, `Emojis.qml`, `Profile.qml`) is to read
