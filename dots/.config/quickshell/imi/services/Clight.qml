@@ -95,7 +95,11 @@ Singleton {
         root.available = true;
         if (values.BlPct !== undefined) {
             root.backlight = values.BlPct;
-            root.commandedBacklight = values.BlPct;
+            // A poll that raced an in-flight or queued command reports the
+            // pre-command value; adopting it as the base would re-apply the
+            // delta. Only converge the base while the queue is idle.
+            if (!root.commandInFlight && Math.abs(root.pendingDelta) < 0.005)
+                root.commandedBacklight = values.BlPct;
         }
         if (values.Temp !== undefined) {
             const previous = root.temperature;
@@ -141,24 +145,44 @@ Singleton {
         }
     }
 
+    property real pendingDelta: 0
+    property bool commandInFlight: false
+
     function increaseBacklight(step = 0.05): void {
-        root.relativeBacklight(step);
+        root.queueBacklightDelta(step);
     }
 
     function decreaseBacklight(step = 0.05): void {
-        root.relativeBacklight(-step);
+        root.queueBacklightDelta(-step);
     }
 
     function setBacklight(target: real): void {
         // Same never-fully-black floor as Brightness.qml's own writers.
         target = Math.max(0.01, Math.min(1, target));
-        root.relativeBacklight(target - root.commandedBacklight);
+        if (!root.managesBacklight)
+            return;
+        // Absolute target: replaces whatever delta is still queued.
+        root.pendingDelta = target - root.commandedBacklight;
+        root.drainBacklightQueue();
     }
 
-    function relativeBacklight(delta: real): void {
-        if (!root.managesBacklight || Math.abs(delta) < 0.005)
+    function queueBacklightDelta(delta: real): void {
+        if (!root.managesBacklight)
             return;
+        root.pendingDelta += delta;
+        root.drainBacklightQueue();
+    }
+
+    // One busctl in flight at a time: Process.exec on a running process kills
+    // it, silently dropping that command's delta - an animated slider issues
+    // a change per frame, so queued deltas accumulate and follow on exit.
+    function drainBacklightQueue(): void {
+        if (root.commandInFlight || Math.abs(root.pendingDelta) < 0.005)
+            return;
+        const delta = root.pendingDelta;
+        root.pendingDelta = 0;
         root.commandedBacklight = Math.max(0, Math.min(1, root.commandedBacklight + delta));
+        root.commandInFlight = true;
         cmdProc.exec(["busctl", "--user", "call", root.busName, root.busPath,
             root.busName, delta > 0 ? "IncBl" : "DecBl", "d", String(Math.abs(delta))]);
     }
@@ -167,7 +191,7 @@ Singleton {
         if (!root.available)
             return;
         root.autoCalibration = enabled;
-        cmdProc.exec(["busctl", "--user", "set-property", root.busName,
+        propProc.exec(["busctl", "--user", "set-property", root.busName,
             `${root.busPath}/Conf/Backlight`, `${root.busName}.Conf.Backlight`,
             "NoAutoCalib", "b", enabled ? "false" : "true"]);
     }
@@ -176,7 +200,7 @@ Singleton {
         if (!root.available)
             return;
         root.dayTemperature = value;
-        cmdProc.exec(["busctl", "--user", "set-property", root.busName,
+        propProc.exec(["busctl", "--user", "set-property", root.busName,
             `${root.busPath}/Conf/Gamma`, `${root.busName}.Conf.Gamma`,
             "DayTemp", "i", String(value)]);
     }
@@ -185,7 +209,7 @@ Singleton {
         if (!root.available)
             return;
         root.nightTemperature = value;
-        cmdProc.exec(["busctl", "--user", "set-property", root.busName,
+        propProc.exec(["busctl", "--user", "set-property", root.busName,
             `${root.busPath}/Conf/Gamma`, `${root.busName}.Conf.Gamma`,
             "NightTemp", "i", String(value)]);
     }
@@ -201,6 +225,20 @@ Singleton {
 
     Process {
         id: cmdProc
+        onExited: (exitCode, exitStatus) => {
+            root.commandInFlight = false;
+            if (Math.abs(root.pendingDelta) >= 0.005) {
+                root.drainBacklightQueue();
+            } else {
+                root.refresh();
+            }
+        }
+    }
+
+    // Property writes get their own process so a settings interaction cannot
+    // kill an in-flight backlight command (and vice versa).
+    Process {
+        id: propProc
         onExited: (exitCode, exitStatus) => {
             root.refresh();
         }
