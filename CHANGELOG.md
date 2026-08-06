@@ -10,6 +10,16 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.18.1] — 2026-08-06
+
+### Fixed
+- **The cursor theme picker no longer runs off the page.** 0.18.0 shipped it as a horizontal chip
+  strip, which with fifteen installed themes overflowed the settings window and clipped its own
+  label. It is now a wrapping card grid in the icon-pack style — and each card shows the theme's
+  **actual pointer**, extracted from the theme's own Xcursor file by the scanner (the format is a
+  simple container Qt can't read but a few lines of stdlib can; no new dependencies). Unparseable
+  pointers fall back to an icon instead of failing.
+
 ## [0.18.0] — 2026-08-06
 
 ### Added
