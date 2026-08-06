@@ -112,11 +112,27 @@ ContentPage {
                             anchors.centerIn: parent
                             width: parent.width - Appearance.spacing.space100 * 2
                             spacing: Appearance.spacing.space50
+                            // The theme's own pointer, extracted to PNG by the
+                            // scanner (Qt cannot decode Xcursor files). Falls
+                            // back to an icon for themes whose pointer could
+                            // not be parsed.
+                            Image {
+                                visible: (themeCard.modelData.previewPath ?? "") !== ""
+                                source: (themeCard.modelData.previewPath ?? "") !== ""
+                                    ? "file://" + themeCard.modelData.previewPath : ""
+                                sourceSize.width: 28
+                                sourceSize.height: 28
+                                Layout.preferredWidth: 28
+                                Layout.preferredHeight: 28
+                                fillMode: Image.PreserveAspectFit
+                                asynchronous: true
+                                cache: false // regenerated on every scan; stale cache shows the old theme
+                            }
                             MaterialSymbol {
-                                text: themeCard.isActive ? "check_circle" : "mouse"
+                                visible: (themeCard.modelData.previewPath ?? "") === ""
+                                text: "mouse"
                                 iconSize: Appearance.font.pixelSize.normal
-                                color: themeCard.isActive
-                                    ? Appearance.colors.colPrimary : Appearance.colors.colOnLayer2
+                                color: Appearance.colors.colOnLayer2
                             }
                             StyledText {
                                 Layout.fillWidth: true
@@ -124,6 +140,12 @@ ContentPage {
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                                 color: Appearance.colors.colOnLayer2
                                 elide: Text.ElideRight
+                            }
+                            MaterialSymbol {
+                                visible: themeCard.isActive
+                                text: "check_circle"
+                                iconSize: Appearance.font.pixelSize.normal
+                                color: Appearance.colors.colPrimary
                             }
                         }
                     }
