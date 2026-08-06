@@ -98,7 +98,16 @@ AbstractWidget {
     function clampX(v) { return Math.max(0, Math.min(v, scaledScreenWidth - width)); }
     function clampY(v) { return Math.max(0, Math.min(v, scaledScreenHeight - height)); }
 
-    onReleased: {
+    onReleased: root.commitPosition()
+
+    // The one write-back path for a finished move. A real release runs it via
+    // the handler above; a group drag runs it on every follower through
+    // WidgetCanvas.widgetDragEnded, because a follower never gets a release
+    // event of its own. Keeping both routes on one function is what stops the
+    // released-drag path and the group path drifting apart (a clamp added to
+    // one but not the other); PluginWidget overrides this same function for
+    // its PluginState persistence.
+    function commitPosition() {
         // Write configEntry FIRST, then rebind targetX/targetY THROUGH it (the
         // binding reads the fresh value, so the widget doesn't snap back to the
         // pre-drag position). Binding through configEntry means an external
