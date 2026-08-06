@@ -10,6 +10,45 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.18.0] — 2026-08-06
+
+### Added
+- **Cursor settings** (Settings → Cursor): theme (scanned from the system), size, zoom factor and
+  inactive timeout. Applies system-wide — `hyprctl setcursor`, GTK 3/4, an `~/.icons/default`
+  `Inherits` stub for XWayland clients — and startup now applies the *configured* cursor instead of
+  a hardcoded `Bibata-Modern-Classic 24`.
+- **Phone Connect**: paired-phone battery and actions (ring; ping/send-clipboard where the backend
+  supports them) from **KDE Connect or Valent**, auto-detected over the session bus, surfaced as a
+  sidebar quick-tile with a device dialog. No daemon = the tile stays hidden; pairing remains in the
+  daemons' own UIs.
+- **Clight integration**: when the `clight` daemon is running, the shell's brightness controls
+  route through it so its next recalculation doesn't fight manual changes; daemon temperature
+  changes get their own OSD readout (`4500K`). Night-light ownership deliberately stays with the
+  built-in Hyprsunset path — Settings warns when both are active instead of silently picking one.
+- **Multi-widget selection**: in widget edit mode, drag a marquee over desktop widgets and move
+  them as a rigid group — lattice snapping, per-monitor persistence, Escape/click-away deselect.
+- **SDR fullscreen recording is instant again**: the screen-share portal path returns, now on a
+  proven footing — a shipped `~/.config/hypr/xdph.conf` (`allow_token_by_default = true`) makes the
+  portal issue a restore token, so the picker appears once ever. The earlier removal misdiagnosed
+  an empty token as an xdph limitation; it was an unchecked-by-default picker checkbox, and gsr's
+  `()` log line was it echoing its own empty cache. Regions and replays keep the background GPU
+  converter.
+
+### Fixed
+- **Every widget drag is now pixel-exact.** `MouseArea.drag` rebases its origin at grab and fought
+  the position binding — a +96px gesture applied +168px, hidden for months behind the 12px lattice
+  snap. The drag is now computed in the parent frame from the press point.
+- **Plugin-manifest strings can no longer inject rich text**: `StyledText` defaults to plain text
+  with reviewed opt-ins, pinned by a lint that also catches inline `textFormat` overrides;
+  overlay-widget registry entries now require a screenshot.
+- **Desktop right-click menu**: "Live Wallpaper" removed (duplicated the wallpaper selector);
+  clicking "Wallpaper & style" or "Widgets" now opens the matching Settings page instead of doing
+  nothing — hover submenus unchanged.
+
+### Changed
+- **`WE_REF` moved to qs-wallpaperengine v0.2.3** — the first prebuilt whose tarball ships correct
+  RUNPATHs, making the installer's patchelf repair a belt-and-braces no-op.
+
 ## [0.17.6] — 2026-08-05
 
 ### Fixed
