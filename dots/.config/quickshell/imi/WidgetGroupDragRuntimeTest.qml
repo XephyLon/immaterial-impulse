@@ -89,17 +89,21 @@ ShellRoot {
         harness.dragOnCanvas(12, 12, 432, 396);
     }
 
-    TestCase {
-        id: driver
-        when: false
-        name: "WidgetGroupDragDriver"
-    }
-
     FloatingWindow {
         visible: true
         implicitWidth: 1000
         implicitHeight: 560
         color: "black"
+
+        // Inside the window, unlike the sibling harnesses: keyClick has no
+        // item argument to resolve a window from, so a TestCase parked on the
+        // ShellRoot fails it with "window not shown". The mouse functions
+        // resolve their window from the item and work from either place.
+        TestCase {
+            id: driver
+            when: false
+            name: "WidgetGroupDragDriver"
+        }
 
         WidgetCanvas {
             id: canvas
@@ -410,9 +414,12 @@ ShellRoot {
         }
     }
 
+    // 900, not 400: unlike a drag step this move rides the position Behavior
+    // (elementMove, 500ms) - checking at 400ms reads the animation midpoint
+    // and fails a binding that is perfectly alive.
     Timer {
         id: step13
-        interval: 400
+        interval: 900
         onTriggered: {
             harness.check("a follower still follows external position changes",
                           harness.at(betaWidget, 480, 300));
