@@ -1,6 +1,6 @@
 # Proposal: Phone Connect (KDE Connect / Valent integration)
 
-> Draft / tracking proposal. Not scheduled.
+> Draft / tracking proposal. First slice implemented on this branch.
 
 ## Goal
 
@@ -10,7 +10,27 @@ whichever the user has installed.
 
 ## Current state
 
-Nothing exists. No service, no widget, no quick toggle. This is greenfield.
+The first slice exists on this branch:
+
+- `services/PhoneConnect.qml` — `busctl --json=short` transport (the
+  recommendation below), backend detection from the bus name list, one
+  normalized device/battery model for both daemons, ring/ping/clipboard
+  actions, clean degraded state when neither daemon runs. Bounded polling for
+  now; `busctl monitor` streaming remains open (see below).
+- Sidebar surface: a quick toggle (classic + android styles) and a device
+  dialog, following the Tailscale surface pattern rather than a bundled
+  plugin — the toggle hides when no daemon runs (classic) or is opt-in
+  (android), so the "dead widget for phoneless users" concern is answered
+  without plugin packaging. A bundled *desktop-widget* plugin remains a
+  possible follow-up, not a replacement.
+- Config (`networking.phoneConnect`) + settings rows, and a contract test
+  keeping the service's parser logic byte-for-byte in sync with the QML
+  suite's logic-only double.
+
+Still open: notification mirroring, media, file send, clipboard *receive*,
+`busctl monitor` streaming, and Valent action coverage beyond
+`findmyphone.ring` (its other action names were not verifiable without a live
+Valent daemon — ping/clipboard are KDE Connect-only for now).
 
 ## Transport constraint (read this first)
 

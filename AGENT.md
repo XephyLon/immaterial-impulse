@@ -296,6 +296,13 @@ services/                  Singletons wrapping external state/processes - one pe
                               backlight write through it (IncBl/DecBl) so the daemon's next
                               recalculation does not revert the change; night-light ownership stays
                               with Hyprsunset.qml. See docs/proposals/clight-integration.md
+  PhoneConnect.qml             Paired-phone state from KDE Connect or Valent, driven over
+                              `busctl --json=short` Process calls (the shell has no D-Bus
+                              binding) - backend detection from the bus name list, one
+                              normalized device/battery model for both daemons, ring/ping/
+                              clipboard actions. Its parser logic is kept byte-for-byte in
+                              sync with a logic-only test double
+                              (tests/test_phone_connect_contract.py enforces it)
   Brightness.qml, Battery.qml, Hyprsunset.qml, Network.qml, BluetoothStatus.qml, TrayService.qml,
   MprisController.qml, Weather.qml, Docker.qml, ... (one per integration)
 
