@@ -12,7 +12,19 @@ MouseArea {
     property bool draggable: true
     property int gridSize: 12
     property bool snapEnabled: true
-    readonly property bool dragging: drag.active
+    // The drag is computed by hand from parent-frame pointer positions instead
+    // of MouseArea.drag. QQuickDrag rebases its press origin when the grab is
+    // established, silently swallowing the arming move's delta - invisible
+    // under a real pointer (a few px, absorbed by the lattice snap) but wrong,
+    // and it compounds with the old `dragProxy { x: root.x }` binding fighting
+    // QQuickDrag's writes into overshoot. Mapping the pointer through this
+    // (moving) item into the static parent frame is exact on every event.
+    readonly property bool dragging: dragActive
+    property bool dragActive: false
+    property real dragPressParentX: 0
+    property real dragPressParentY: 0
+    property real dragStartX: 0
+    property real dragStartY: 0
     // Lets the canvas find widgets in its subtree without walking into them.
     readonly property bool isCanvasWidget: true
 
@@ -58,7 +70,6 @@ MouseArea {
     }
 
     acceptedButtons: Qt.LeftButton | Qt.RightButton
-    drag.target: draggable ? dragProxy : undefined
     cursorShape: (draggable && containsPress) ? Qt.ClosedHandCursor : draggable ? Qt.OpenHandCursor : Qt.ArrowCursor
 
     onClicked: (mouse) => {
@@ -68,20 +79,47 @@ MouseArea {
     }
 
     // The canvas cannot see this widget's press/drag on its own, so report it.
-    // Reported from the press, not from `dragging`: drag.active only flips
-    // once the threshold is crossed, by which point the drag Binding has
-    // already snapped this widget a step - offsets captured then would bake
-    // that jump into every follower. At press nothing has moved yet.
+    // Reported from the press, not from the threshold crossing: at press
+    // nothing has moved yet, so the follower offsets and clamp bounds the
+    // canvas captures cannot bake a first-step jump into the cluster.
     onPressed: (mouse) => {
         if (mouse.button !== Qt.LeftButton || !root.draggable) return
+        const p = root.mapToItem(root.parent, mouse.x, mouse.y)
+        root.dragPressParentX = p.x
+        root.dragPressParentY = p.y
+        root.dragStartX = root.x
+        root.dragStartY = root.y
+        dragProxy.x = root.x
+        dragProxy.y = root.y
         const canvas = findCanvas(root.parent)
         if (canvas && canvas.widgetDragStarted) canvas.widgetDragStarted(root)
     }
+    onPositionChanged: (mouse) => {
+        if (!root.draggable || !(root.pressedButtons & Qt.LeftButton)) return
+        // mouse.x/y are local to this moving item; mapping through it into the
+        // parent recovers the pointer's absolute parent-frame position (the
+        // current transform, press scale included, cancels itself out).
+        const p = root.mapToItem(root.parent, mouse.x, mouse.y)
+        const deltaX = p.x - root.dragPressParentX
+        const deltaY = p.y - root.dragPressParentY
+        if (!root.dragActive
+                && Math.abs(deltaX) < drag.threshold && Math.abs(deltaY) < drag.threshold)
+            return
+        root.dragActive = true
+        dragProxy.x = root.dragStartX + deltaX
+        dragProxy.y = root.dragStartY + deltaY
+    }
+    // dragActive drops BEFORE the canvas is told: widgetDragEnded resets the
+    // group clamp bounds, and doing that under a still-active drag Binding
+    // re-evaluates it without the clamp - the leader jumps past the edge for
+    // one frame and the followers commit the deformed cluster.
     onReleased: {
+        root.dragActive = false
         const canvas = findCanvas(root.parent)
         if (canvas && canvas.widgetDragEnded) canvas.widgetDragEnded(root)
     }
     onCanceled: {
+        root.dragActive = false
         const canvas = findCanvas(root.parent)
         if (canvas && canvas.widgetDragEnded) canvas.widgetDragEnded(root)
     }
@@ -115,16 +153,15 @@ MouseArea {
         canvas.setCenterActive(nearX, nearY)
     }
 
-
+    // Carries the unsnapped drag position, in the parent's frame. Deliberately
+    // no `x: root.x` binding: a live binding here re-yanks the proxy to the
+    // snapped widget position after every drag step; it is synced imperatively
+    // at press and at each drag end instead.
     Item {
         id: dragProxy
         parent: root.parent
-        x: root.x
-        y: root.y
 
-        onXChanged: {
-            if (root.dragging) root.updateCenterHighlight()
-        }
+        onXChanged: if (root.dragging) root.updateCenterHighlight()
         onYChanged: if (root.dragging) root.updateCenterHighlight()
     }
 
