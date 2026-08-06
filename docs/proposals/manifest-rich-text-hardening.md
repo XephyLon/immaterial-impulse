@@ -1,6 +1,28 @@
 # Proposal: close the remaining rich-text injection sites for plugin manifests
 
-> Draft / tracking proposal. Not scheduled.
+> **Implemented** (branch `proposal/manifest-rich-text-hardening`), taking the
+> recommended shape — flip the default rather than enumerate a sixth and
+> seventh site:
+>
+> - `StyledText` (both copies) now defaults `textFormat` to `Text.PlainText`;
+>   rich text is a per-site opt-in. The sweep for implicit `AutoText`
+>   dependents found exactly two, both now explicit
+>   (d782c2170, "fix(widgets): default StyledText to PlainText, make rich
+>   text opt-in").
+> - The "unverified lead" below verified real: the Basic Controls style draws
+>   `placeholderText` through its own `AutoText` `Text`, out of the default's
+>   reach, so `ConfigTextArea` pins it at completion (dce31aa98,
+>   "fix(widgets): force ConfigTextArea's style placeholder to plain text").
+> - The adjacent registry drift is fixed and the two vocabularies pinned
+>   together by the suite (6a359273a, "fix(plugins): require a screenshot for
+>   overlay-widget registry entries").
+> - The lint the recommendation asked for exists:
+>   `tests/lint_rich_text_optin.py` pins the PlainText default, a reviewed
+>   opt-in allowlist in both directions, and the placeholder guard
+>   (f224ec6b7, "test(lint): pin the PlainText default and reviewed rich-text
+>   opt-ins").
+>
+> The body below is the proposal as parked, kept for the reasoning.
 
 ## Goal
 
