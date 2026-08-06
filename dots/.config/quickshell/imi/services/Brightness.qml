@@ -91,6 +91,24 @@ Singleton {
         id: setProc
     }
 
+    Connections {
+        target: Clight
+        function onBacklightChanged() {
+            if (!Clight.managesBacklight)
+                return;
+            // Keep the shell's idea of brightness in step with the daemon's
+            // recalibrations, silently: these are not user actions, so they
+            // must not pop the OSD the way a real change does.
+            for (const monitor of root.monitors) {
+                if (!monitor.ready)
+                    continue;
+                if (Math.abs(monitor.brightness - Clight.backlight) <= 0.01)
+                    continue;
+                monitor.updateFromExternal(Clight.backlight);
+            }
+        }
+    }
+
     component BrightnessMonitor: QtObject {
         id: monitor
 
@@ -103,9 +121,10 @@ Singleton {
         property real multipliedBrightness: Math.max(0, Math.min(1, brightness * (Config.options.light.antiFlashbang.enable ? brightnessMultiplier : 1)))
         property bool ready: false
         property bool animateChanges: !monitor.isDdc
+        property bool externalSync: false
 
         onBrightnessChanged: {
-            if (!monitor.ready) return;
+            if (!monitor.ready || monitor.externalSync) return;
             root.brightnessChanged();
         }
 
@@ -156,6 +175,14 @@ Singleton {
 
         function syncBrightness() {
             const brightnessValue = Math.max(monitor.multipliedBrightness, 0);
+            if (Clight.managesBacklight) {
+                // Clight recalculates the backlight from its own curve on every
+                // capture, so a direct ddcutil/brightnessctl write is silently
+                // reverted moments later ("brightness keeps jumping back").
+                // Routing the change through the daemon makes it stick.
+                Clight.setBacklight(brightnessValue);
+                return;
+            }
             if (isDdc) {
                 const rawValueRounded = Math.max(Math.floor(brightnessValue * monitor.rawMaxBrightness), 1);
                 setProc.exec(["ddcutil", "-b", busNum, "setvcp", "10", rawValueRounded]);
@@ -170,6 +197,15 @@ Singleton {
         function setBrightness(value: real): void {
             value = Math.max(0, Math.min(1, value));
             monitor.brightness = value;
+        }
+
+        // A daemon-side recalibration, not a user action: track it without
+        // announcing it. The resulting syncBrightness call collapses to a
+        // no-op inside Clight.setBacklight (the delta is below its epsilon).
+        function updateFromExternal(value: real): void {
+            monitor.externalSync = true;
+            monitor.brightness = Math.max(0, Math.min(1, value));
+            monitor.externalSync = false;
         }
 
         function setBrightnessMultiplier(value: real): void {
