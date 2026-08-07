@@ -10,6 +10,23 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [Unreleased]
+
+### Fixed
+- **Video wallpapers no longer leak ~10 MB of memory per minute.** The shell
+  grew by roughly 14 GB/day with any Wallpaper Engine *video* wallpaper active
+  (scene wallpapers were fine) — an upstream mpv bug: its `vo=libmpv` render
+  path creates one GL fence per rendered frame and never deletes it, and each
+  one pins ~5 KB of driver memory for the life of the process
+  ([qs-wallpaperengine#16](https://github.com/XephyLon/qs-wallpaperengine/issues/16)).
+  The embedded engine is bumped to
+  [qs-wallpaperengine v0.2.4](https://github.com/XephyLon/qs-wallpaperengine/releases/tag/v0.2.4),
+  which caps the fences (measured: 10.2 MB/min → 0.6 MB/min, flat after
+  warm-up) and also stops a needless per-frame PulseAudio enumeration when
+  wallpaper audio is off. Run **Settings → Update Dots** and restart the shell
+  to pick up the new prebuilt; an already-bloated shell only returns the
+  memory on restart.
+
 ## [0.18.1] — 2026-08-06
 
 ### Fixed
