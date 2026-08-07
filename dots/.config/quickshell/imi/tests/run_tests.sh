@@ -231,6 +231,12 @@ if ! python3 "$SCRIPT_DIR/test_matugen_app_themes.py"; then
     exit 1
 fi
 
+echo "Running tmux dots tests..."
+if ! python3 "$SCRIPT_DIR/test_tmux_dots.py"; then
+    echo "tmux dots tests failed."
+    exit 1
+fi
+
 echo "Running wallpaper thumbnail fallback tests..."
 if ! python3 "$SCRIPT_DIR/test_thumbnail_fallback.py"; then
     echo "Wallpaper thumbnail fallback tests failed."
