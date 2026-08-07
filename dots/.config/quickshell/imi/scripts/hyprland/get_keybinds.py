@@ -7,8 +7,21 @@ from typing import Dict, List, Optional
 
 HIDE_MARKERS = ["[hidden]", "# [hidden]"]
 
+# Boolean options an hl.bind() call may carry besides `description`. The
+# keyboard-shortcuts editor re-emits these verbatim when it rebinds a default,
+# so a rebound `locked` bind keeps working on the lockscreen.
+KNOWN_BIND_FLAGS = {
+    "locked", "repeating", "mouse", "release", "non_consuming",
+    "ignore_mods", "transparent", "submap_universal", "click", "drag",
+}
+
 parser = argparse.ArgumentParser(description='Hyprland Lua keybind reader')
 parser.add_argument('--path', type=str, default="$HOME/.config/hypr/hyprland/keybinds.lua")
+parser.add_argument('--flat', action='store_true',
+                    help='Emit every statically parseable bind (hidden and '
+                         'undescribed included) as {"binds": [...]}, tagged '
+                         'with the submap it is defined in. Used for conflict '
+                         'detection, not for the cheatsheet.')
 args = parser.parse_args()
 
 content_lines = []
@@ -16,12 +29,14 @@ reading_line = 0
 
 
 class KeyBinding(dict):
-    def __init__(self, mods, key, dispatcher, params, comment):
+    def __init__(self, mods, key, dispatcher, params, comment, flags=None, submap=""):
         self["mods"]       = mods
         self["key"]        = key
         self["dispatcher"] = dispatcher
         self["params"]     = params
         self["comment"]    = comment
+        self["flags"]      = flags or {}
+        self["submap"]     = submap
 
 
 class Section(dict):
@@ -65,13 +80,61 @@ def is_hidden(line: str) -> bool:
     return False
 
 
-def parse_lua_bind(line: str, override_comment: str = "") -> Optional[KeyBinding]:
+def extract_bind_flags(rest: str) -> Dict[str, bool]:
+    """Pull known boolean options out of an hl.bind() call's trailing options
+    table. The naive approach (regex over the whole call) misreads dispatcher
+    params like `window.move({ follow = false })` as options, so this walks the
+    call's top-level arguments (escape-aware, depth-counted) and only reads the
+    trailing `{ ... }` argument."""
+    depth = 0
+    in_string = False
+    escaped = False
+    arg_start = 0
+    args = []
+    for i, ch in enumerate(rest):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch in "({[":
+            depth += 1
+        elif ch in ")}]":
+            depth -= 1
+            if depth < 0:
+                args.append(rest[arg_start:i])
+                break
+        elif ch == "," and depth == 0:
+            args.append(rest[arg_start:i])
+            arg_start = i + 1
+    else:
+        args.append(rest[arg_start:])
+
+    options = args[-1].strip() if len(args) >= 2 else ""
+    if not options.startswith("{"):
+        return {}
+    flags = {}
+    for m in re.finditer(r'([A-Za-z_]\w*)\s*=\s*(true|false)', options):
+        if m.group(1) in KNOWN_BIND_FLAGS:
+            flags[m.group(1)] = m.group(2) == "true"
+    return flags
+
+
+def parse_lua_bind(line: str, override_comment: str = "",
+                   include_all: bool = False, submap: str = "") -> Optional[KeyBinding]:
     """
     Handles:
       hl.bind("SUPER + Q", hl.dsp.window.close(), {description = "Close"})
       hl.bind("SUPER + Q", function() ... end, {description = "..."})
+
+    include_all keeps hidden and undescribed binds (for --flat conflict scans).
     """
-    if is_hidden(line):
+    if is_hidden(line) and not include_all:
         return None
 
     m = re.match(r'\s*hl\.bind\s*\(\s*"([^"]+)"\s*,\s*(.*)', line, re.DOTALL)
@@ -85,7 +148,7 @@ def parse_lua_bind(line: str, override_comment: str = "") -> Optional[KeyBinding
     desc_match = re.search(r'description\s*=\s*"([^"]+)"', rest)
     comment    = override_comment or (desc_match.group(1) if desc_match else "")
 
-    if is_hidden(rest) or is_hidden(comment):
+    if (is_hidden(rest) or is_hidden(comment)) and not include_all:
         return None
 
     # Extract dispatcher name
@@ -105,11 +168,12 @@ def parse_lua_bind(line: str, override_comment: str = "") -> Optional[KeyBinding
     if not comment:
         comment = autogenerate_comment(dispatcher, params)
 
-    if not comment:
+    if not comment and not include_all:
         return None  # Skip binds with no useful description
 
     mods, key = parse_key_string(key_str)
-    return KeyBinding(mods, key, dispatcher, params, comment)
+    return KeyBinding(mods, key, dispatcher, params, comment or "",
+                      flags=extract_bind_flags(rest), submap=submap)
 
 
 def get_binds_recursive(current_content: Section, scope: int) -> Section:
@@ -203,6 +267,56 @@ def parse_keys(path: str) -> Section:
     return get_binds_recursive(Section([], [], ""), 0)
 
 
+def parse_flat(path: str) -> Dict[str, List[KeyBinding]]:
+    """Every statically parseable hl.bind in the file, hidden and undescribed
+    included, tagged with the hl.define_submap block it sits in. Loop-generated
+    binds (chords built from Lua variables) are invisible to a static parse, so
+    a consumer must treat this as "conflicts detected", never "no conflicts"."""
+    raw = read_content(path)
+    if raw == "error":
+        return {"binds": [], "error": True}
+
+    lines = raw.splitlines()
+    binds: List[KeyBinding] = []
+    submap = ""
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        submap_match = re.match(r'\s*hl\.define_submap\s*\(\s*"([^"]+)"', line)
+        if submap_match:
+            submap = submap_match.group(1)
+            i += 1
+            continue
+        # define_submap blocks in this config close with `end)` at top level.
+        if submap and re.match(r'end\s*\)', line):
+            submap = ""
+            i += 1
+            continue
+
+        if re.match(r'\s*hl\.bind\s*\(', line):
+            full_line = line
+            depth = full_line.count("(") - full_line.count(")")
+            lookahead = i + 1
+            while depth > 0 and lookahead < len(lines):
+                next_line = lines[lookahead]
+                full_line += " " + next_line.strip()
+                depth += next_line.count("(") - next_line.count(")")
+                lookahead += 1
+            kb = parse_lua_bind(full_line, include_all=True, submap=submap)
+            if kb:
+                binds.append(kb)
+            i = lookahead
+            continue
+
+        i += 1
+
+    return {"binds": binds}
+
+
 if __name__ == "__main__":
-    result = parse_keys(args.path)
+    if args.flat:
+        result = parse_flat(args.path)
+    else:
+        result = parse_keys(args.path)
     print(json.dumps(result))
