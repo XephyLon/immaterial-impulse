@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import qs.modules.common
 import qs.modules.common.functions
+import "../modules/common/functions/keybindOverrides.js" as KeybindOverridesLogic
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -23,13 +24,24 @@ Singleton {
     // are merged by name and binds deduped by mods+key, with the custom file
     // winning. Without this, a bind copied into custom/keybinds.lua to override a
     // default one was listed twice in the cheatsheet. See issue #34.
+    //
+    // The merged tree is then rewritten through the keyboard-shortcuts editor's
+    // override map (services/HyprlandKeybindOverrides.qml), so the cheatsheet
+    // reflects a rebind or removal immediately, without waiting for Hyprland to
+    // reload the generated shim.
     property var keybinds: ({
-        children: root.mergeKeybindSections(defaultKeybinds.children ?? [],
-                                            userKeybinds.children ?? [])
+        children: KeybindOverridesLogic.applyOverrides(
+            root.mergeKeybindSections(defaultKeybinds.children ?? [],
+                                      userKeybinds.children ?? []),
+            HyprlandKeybindOverrides.state.overrides,
+            Translation.tr("Custom shortcuts"))
     })
 
+    // Sorted-mod identity, shared with the override sidecar's keys: the same
+    // chord written "SUPER + SHIFT" and "SHIFT + SUPER" must dedupe and match
+    // overrides identically.
     function bindIdentity(kb) {
-        return `${(kb.mods ?? []).join("+")}|${kb.key ?? ""}`;
+        return KeybindOverridesLogic.bindIdentity(kb);
     }
 
     // Concatenate two bind lists, dropping earlier duplicates so the later
