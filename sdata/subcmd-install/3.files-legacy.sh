@@ -93,11 +93,11 @@ EOF
   echo -e "${STY_BLUE}[$0]: restored the SDDM theme's [templates.iisddmtheme] matugen block (our config.toml sync removes it).${STY_RST}"
 }
 
-# MISC (For dots/.config/* but not quickshell, not fish, not Hyprland, not fontconfig)
+# MISC (For dots/.config/* but not quickshell, not fish, not Hyprland, not fontconfig, not tmux)
 case "${SKIP_MISCCONF}" in
   true) true;;
   *)
-    for i in $(find dots/.config/ -mindepth 1 -maxdepth 1 ! -name 'quickshell' ! -name 'fish' ! -name 'hypr' ! -name 'fontconfig' -exec basename {} \;); do
+    for i in $(find dots/.config/ -mindepth 1 -maxdepth 1 ! -name 'quickshell' ! -name 'fish' ! -name 'hypr' ! -name 'fontconfig' ! -name 'tmux' -exec basename {} \;); do
 #      i="dots/.config/$i"
       echo "[$0]: Found target: dots/.config/$i"
       if [ -d "dots/.config/$i" ];then install_dir__sync "dots/.config/$i" "$XDG_CONFIG_HOME/$i"
@@ -123,6 +123,16 @@ case "${SKIP_FISH}" in
   true) true;;
   *)
     install_dir__sync_exclude dots/.config/fish "$XDG_CONFIG_HOME"/fish "conf.d"
+    ;;
+esac
+
+# tmux gets its own gated step (not MISC) because MISC's sync would `--delete`
+# the two things the shipped config sources but never contains: plugins/ (tpm
+# and its installed plugins) and matugen.conf (regenerated from the palette).
+case "${SKIP_TMUX}" in
+  true) true;;
+  *)
+    install_dir__sync_exclude dots/.config/tmux "$XDG_CONFIG_HOME"/tmux "plugins" "matugen.conf"
     ;;
 esac
 

@@ -30,6 +30,13 @@ patterns:
     condition:
       type: "shell"
       value: "zsh"
+  # plugins/ (tpm state) and matugen.conf (palette-generated) are runtime
+  # artifacts the shipped config sources but never contains - sync must not
+  # delete them.
+  - from: "dots/.config/tmux"
+    to: "$XDG_CONFIG_HOME/tmux"
+    mode: "sync"
+    excludes: ["plugins", "matugen.conf"]
   - from: "dots/.config/foot"
     to: "$XDG_CONFIG_HOME/foot"
     mode: "sync"
