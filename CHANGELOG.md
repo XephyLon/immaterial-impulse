@@ -10,6 +10,31 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [0.20.1] — 2026-08-08
+
+### Fixed
+- **The Wallpaper Engine prebuilt survives Arch's ffmpeg 9 upgrade.** The
+  installer pin moves to qs-wallpaperengine v0.2.5, a rebuild-only release
+  against the ffmpeg 9 sonames. The v0.2.4 prebuilt's
+  `liblinux-wallpaperengine-lib.so` links the ffmpeg 8 libraries
+  (`libavcodec.so.62` et al.) that the `2:9.0` soname bump removes, and it is
+  a load-time dependency of the WE-capable quickshell — so after a system
+  update the shell failed to start at all with `libavcodec.so.62: cannot open
+  shared object file`.
+- **tmux is now a component in the installer's interactive menus.**
+  `--skip-tmux` existed only at flag level, so the TUIs — which is what
+  Update Dots actually runs — installed the tmux dots on every run with no
+  way to decline. Both front-ends now list a tmux toggle; it pre-selects when
+  the deployed `tmux.conf` is ours (detected by its matugen source line) or
+  when none exists, and defaults to unticked over a foreign `tmux.conf` so an
+  update never clobbers a user's own setup with the step's `rsync --delete`.
+- **The fzf installer menu keeps the cursor on the toggled row for real.**
+  The earlier fix bound `pos()` to fzf's `start` event, which fires before
+  the piped-in menu items are read — it no-op'd on an empty list and the
+  cursor still snapped to the top, timing-dependent. Rebound to `load`, which
+  fires once the input is complete (measured: `start:pos(3)` lands on row 1,
+  `load:pos(3)` on row 3).
+
 ## [0.20.0] — 2026-08-07
 
 ### Added
