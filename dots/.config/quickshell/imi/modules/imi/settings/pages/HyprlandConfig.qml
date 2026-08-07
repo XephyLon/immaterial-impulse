@@ -365,6 +365,242 @@ ContentPage {
             }
         }
 
+        // Keybinds
+        ContentSection {
+            id: keybindsSection
+            icon: "keyboard"
+            title: Translation.tr("Keybinds")
+
+            property var editingBinding: null
+            readonly property var overrideEntries: {
+                const overrides = HyprlandKeybindOverrides.state.overrides;
+                return Object.keys(overrides).sort().map(identity => ({
+                    identity: identity,
+                    entry: overrides[identity],
+                }));
+            }
+            readonly property var addConflicts: {
+                const flatDefault = HyprlandKeybindOverrides.flatDefaultBinds;
+                const flatUser = HyprlandKeybindOverrides.flatUserBinds;
+                const overrideState = HyprlandKeybindOverrides.state;
+                void flatDefault; void flatUser; void overrideState;
+                if (!addCapture.hasChord)
+                    return [];
+                return HyprlandKeybindOverrides.conflictsFor(addCapture.mods, addCapture.key, null);
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                text: Translation.tr("Rebind or remove existing shortcuts from the cheatsheet (Super+/) with the pencil on each row. Changes are written to a shell-owned override file; the shipped keybind config and your hypr/custom/keybinds.lua are never touched.")
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                wrapMode: Text.Wrap
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                visible: HyprlandKeybindOverrides.shimStatus === "foreign"
+                text: Translation.tr("The generated override file was edited by hand, so the shell refuses to change it. Delete %1 to edit shortcuts from here again.")
+                    .arg(HyprlandKeybindOverrides.shimPath)
+                color: Appearance.colors.colError
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                wrapMode: Text.Wrap
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                visible: HyprlandKeybindOverrides.shimStatus === "invalid"
+                    || HyprlandKeybindOverrides.shimStatus === "error"
+                text: Translation.tr("Applying shortcut overrides failed: %1")
+                    .arg(HyprlandKeybindOverrides.lastError)
+                color: Appearance.colors.colError
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                wrapMode: Text.Wrap
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                visible: keybindsSection.overrideEntries.length === 0
+                text: Translation.tr("No customized shortcuts yet.")
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.small
+            }
+
+            ColumnLayout {
+                visible: keybindsSection.overrideEntries.length > 0
+                Layout.fillWidth: true
+                spacing: Appearance.spacing.space25
+
+                Repeater {
+                    model: keybindsSection.overrideEntries
+                    delegate: RowLayout {
+                        id: overrideRow
+                        required property var modelData
+                        readonly property var chord: HyprlandKeybindOverrides.splitIdentity(modelData.identity)
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Appearance.spacing.space100
+                        Layout.rightMargin: Appearance.spacing.space100
+                        spacing: Appearance.spacing.space100
+
+                        Repeater {
+                            model: [...overrideRow.chord.mods, overrideRow.chord.key]
+                            delegate: KeyboardKey {
+                                required property var modelData
+                                key: modelData
+                            }
+                        }
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: {
+                                const entry = overrideRow.modelData.entry;
+                                if (entry.action === "remove")
+                                    return Translation.tr("Removed");
+                                if (entry.action === "rebind")
+                                    return Translation.tr("%1 → now %2")
+                                        .arg(entry.description)
+                                        .arg([...entry.mods, entry.key].join(" + "));
+                                return Translation.tr("Runs: %1").arg(entry.command);
+                            }
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            color: Appearance.colors.colOnSecondaryContainer
+                            elide: Text.ElideRight
+                        }
+
+                        RippleButton {
+                            id: overrideEditButton
+                            // findBinding is an invokable, not a property: the
+                            // binding cannot see the tree change through it, so
+                            // reference the tree explicitly to stay reactive.
+                            visible: {
+                                const tree = HyprlandKeybinds.keybinds;
+                                void tree;
+                                return HyprlandKeybinds.findBinding(overrideRow.modelData.identity) !== null;
+                            }
+                            implicitWidth: 30
+                            implicitHeight: 30
+                            buttonRadius: Appearance.rounding.full
+                            onClicked: {
+                                keybindsSection.editingBinding =
+                                    HyprlandKeybinds.findBinding(overrideRow.modelData.identity);
+                            }
+                            contentItem: MaterialSymbol {
+                                anchors.centerIn: parent
+                                horizontalAlignment: Text.AlignHCenter
+                                iconSize: Appearance.font.pixelSize.larger
+                                text: "edit"
+                            }
+                            StyledToolTip { text: Translation.tr("Edit") }
+                        }
+
+                        RippleButton {
+                            id: overrideResetButton
+                            enabled: HyprlandKeybindOverrides.shimStatus !== "foreign"
+                            implicitWidth: 30
+                            implicitHeight: 30
+                            buttonRadius: Appearance.rounding.full
+                            onClicked: HyprlandKeybindOverrides.reset(overrideRow.modelData.identity)
+                            contentItem: MaterialSymbol {
+                                anchors.centerIn: parent
+                                horizontalAlignment: Text.AlignHCenter
+                                iconSize: Appearance.font.pixelSize.larger
+                                text: "restart_alt"
+                                color: Appearance.colors.colError
+                            }
+                            StyledToolTip { text: Translation.tr("Reset to default") }
+                        }
+                    }
+                }
+            }
+
+            DialogButton {
+                visible: keybindsSection.overrideEntries.length > 0
+                enabled: HyprlandKeybindOverrides.shimStatus !== "foreign"
+                buttonText: Translation.tr("Reset all shortcuts to defaults")
+                colEnabled: Appearance.colors.colError
+                onClicked: HyprlandKeybindOverrides.resetAll()
+            }
+
+            Rectangle {
+                visible: keybindsSection.editingBinding !== null
+                Layout.fillWidth: true
+                Layout.topMargin: Appearance.spacing.space100
+                implicitHeight: settingsKeybindEditor.implicitHeight + Appearance.spacing.space300 * 2
+                color: Appearance.colors.colLayer1
+                radius: Appearance.rounding.normal
+
+                KeybindEditor {
+                    id: settingsKeybindEditor
+                    anchors {
+                        top: parent.top
+                        left: parent.left
+                        right: parent.right
+                        margins: Appearance.spacing.space300
+                    }
+                    bindingData: keybindsSection.editingBinding
+                    onDone: keybindsSection.editingBinding = null
+                }
+            }
+
+            ContentSubsection {
+                title: Translation.tr("Add a shortcut")
+
+                KeybindChordCapture {
+                    id: addCapture
+                    Layout.fillWidth: true
+                }
+
+                ConfigTextArea {
+                    id: addCommandField
+                    buttonIcon: "terminal"
+                    text: Translation.tr("Command")
+                    description: Translation.tr("Executed when the shortcut is pressed")
+                    singleLine: true
+                }
+
+                ConfigTextArea {
+                    id: addDescriptionField
+                    buttonIcon: "description"
+                    text: Translation.tr("Label")
+                    description: Translation.tr("Shown in the cheatsheet")
+                    singleLine: true
+                }
+
+                Repeater {
+                    model: keybindsSection.addConflicts
+                    delegate: StyledText {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        text: modelData.submap.length > 0
+                            ? Translation.tr("Conflicts with \"%1\" (submap %2)")
+                                .arg(modelData.description).arg(modelData.submap)
+                            : Translation.tr("Conflicts with \"%1\"").arg(modelData.description)
+                        color: Appearance.colors.colError
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        wrapMode: Text.Wrap
+                    }
+                }
+
+                DialogButton {
+                    id: addBindingButton
+                    enabled: addCapture.hasChord
+                        && addCommandField.value.trim().length > 0
+                        && keybindsSection.addConflicts.length === 0
+                        && HyprlandKeybindOverrides.shimStatus !== "foreign"
+                    buttonText: Translation.tr("Add shortcut")
+                    onClicked: {
+                        HyprlandKeybindOverrides.addBinding(
+                            addCapture.mods, addCapture.key,
+                            addCommandField.value.trim(),
+                            addDescriptionField.value.trim());
+                        addCapture.clear();
+                        addCommandField.value = "";
+                        addDescriptionField.value = "";
+                    }
+                }
+            }
+        }
+
         // Visual & Aesthetics
         ContentSection {
             icon: "deblur"
