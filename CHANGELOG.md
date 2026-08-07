@@ -10,6 +10,21 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [Unreleased]
+
+### Added
+- **tmux ships with the dots, styled like the suite's terminal.** A new
+  `~/.config/tmux/tmux.conf` (C-Space prefix, vim-style pane navigation,
+  vi copy mode, cwd-preserving splits) starts **fish** by default (guarded, so
+  a fishless machine falls back to the login shell), and the status line is
+  drawn as floating Material pills — rounded Nerd Font caps on a transparent
+  bar — with every color coming from the active matugen palette, regenerated
+  on each wallpaper/color switch. The install step is its own skippable unit
+  (`--skip-tmux`, included in `--core`) and deliberately preserves
+  `~/.config/tmux/plugins/` (tpm) and the palette-generated `matugen.conf` on
+  every sync. The pill styling appears after the next wallpaper or palette
+  switch regenerates the theme file.
+
 ## [0.18.2] — 2026-08-07
 
 ### Fixed
