@@ -15,6 +15,10 @@ against a fixture built in a tempdir and pin the exact JSON it emits:
   - --#/# synthetic comment binds
   - unreadable path => {"children": [], "keybinds": [], "name": "error"}
   - empty file      => {"children": [], "keybinds": [], "name": ""}
+  - boolean bind options (locked/repeating/...) land in "flags", and dispatcher
+    params like window.move({ follow = false }) are NOT misread as flags
+  - --flat emits every parseable bind (hidden and undescribed included) with a
+    submap tag for binds inside hl.define_submap blocks
 """
 import json
 import os
@@ -37,10 +41,10 @@ def check(name, cond, detail=""):
         failures.append(name)
 
 
-def run_script(path):
+def run_script(path, *extra_args):
     """Run get_keybinds.py --path <path>; return (exit_code, parsed_json)."""
     proc = subprocess.run(
-        [sys.executable, str(SCRIPT), "--path", str(path)],
+        [sys.executable, str(SCRIPT), "--path", str(path), *extra_args],
         capture_output=True,
         text=True,
         timeout=30,
@@ -78,6 +82,18 @@ hl.bind("SUPER + I", hl.dsp.exec_cmd(qsIpcCall .. " settings open"))
 hl.bind("CTRL + SUPER + E",
     hl.dsp.exec("nautilus"),
     { description = "File manager" })
+
+--##! Flags
+hl.bind("SUPER + SHIFT + L", hl.dsp.exec("systemctl suspend"), { locked = true, description = "Sleep" })
+hl.bind("SUPER + SHIFT + M", hl.dsp.window.move({ workspace = "r+1", follow = false }), { description = "Send right" })
+
+hl.define_submap("test-submap", function()
+    hl.bind("SUPER + ALT + F1", function()
+        hl.dispatch(hl.dsp.submap("reset"))
+    end, { submap_universal = true })
+end)
+
+hl.bind("SUPER + G", hl.dsp.window.pin(), { description = "After submap" })
 """
 
 
@@ -117,8 +133,8 @@ def main():
 
         check("root section unnamed", tree.get("name") == "")
         check(
-            "top-level sections are Window and Apps",
-            [c.get("name") for c in tree.get("children", [])] == ["Window", "Apps"],
+            "top-level sections are Window, Apps and Flags",
+            [c.get("name") for c in tree.get("children", [])] == ["Window", "Apps", "Flags"],
             f"got {[c.get('name') for c in tree.get('children', [])]}",
         )
 
@@ -203,6 +219,22 @@ def main():
                   and e_bind["comment"] == "File manager",
                   f"got {e_bind}")
 
+        # --- Flags section: bind options vs dispatcher params ---------------
+        flags_section = find_section(tree, "Flags")
+        check("Flags section exists", flags_section is not None)
+        if flags_section is not None:
+            l_bind = bind_by_key(flags_section, "L")
+            check("boolean bind option lands in flags",
+                  l_bind is not None and l_bind.get("flags") == {"locked": True},
+                  f"got {l_bind and l_bind.get('flags')}")
+            m_bind = bind_by_key(flags_section, "M")
+            check("dispatcher-param booleans are not misread as flags",
+                  m_bind is not None and m_bind.get("flags") == {},
+                  f"got {m_bind and m_bind.get('flags')}")
+            check("binds outside a submap carry an empty submap tag",
+                  l_bind is not None and l_bind.get("submap") == "",
+                  f"got {l_bind and l_bind.get('submap')!r}")
+
         # --- Regression canary: fixture must never parse to nothing ---------
         def count_binds(node):
             total = len(node.get("keybinds", []))
@@ -210,8 +242,39 @@ def main():
                 total += count_binds(child)
             return total
 
-        check("cheatsheet is not empty (canary)", count_binds(tree) == 8,
+        check("cheatsheet is not empty (canary)", count_binds(tree) == 11,
               f"got {count_binds(tree)} binds")
+
+        # --- Flat mode: full occupancy scan for conflict detection ----------
+        code, flat = run_script(fixture_path, "--flat")
+        check("--flat exits 0", code == 0, f"exit={code}")
+        check("--flat emits a binds array",
+              flat is not None and isinstance(flat.get("binds"), list))
+        if flat is not None and isinstance(flat.get("binds"), list):
+            binds = flat["binds"]
+            keys = [(tuple(b["mods"]), b["key"]) for b in binds]
+            check("--flat keeps hidden binds",
+                  (("SUPER",), "X") in keys and (("SUPER",), "Y") in keys,
+                  f"got {keys}")
+            check("--flat keeps undescribed binds",
+                  (("SUPER",), "Z") in keys and (("SUPER",), "I") in keys,
+                  f"got {keys}")
+            check("--flat excludes --#/# synthetic entries",
+                  not any(b["dispatcher"] == "comment" for b in binds))
+            submap_binds = [b for b in binds if b["submap"]]
+            check("--flat tags binds inside hl.define_submap",
+                  [(b["mods"], b["key"], b["submap"]) for b in submap_binds]
+                  == [(["SUPER", "ALT"], "F1", "test-submap")],
+                  f"got {[(b['mods'], b['key'], b['submap']) for b in submap_binds]}")
+            after = [b for b in binds if b["key"] == "G"]
+            check("--flat resets the submap tag after the block closes",
+                  after and after[0]["submap"] == "", f"got {after}")
+
+        # --- Flat mode: unreadable path --------------------------------------
+        code, flat = run_script(Path(tmp) / "does" / "not" / "exist.lua", "--flat")
+        check("--flat unreadable path exits 0 with error marker",
+              code == 0 and flat == {"binds": [], "error": True},
+              f"exit={code} got {flat}")
 
         # --- Unreadable path -------------------------------------------------
         code, tree = run_script(Path(tmp) / "does" / "not" / "exist.lua")
