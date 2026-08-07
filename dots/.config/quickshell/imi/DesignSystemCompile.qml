@@ -45,7 +45,12 @@ ShellRoot {
             const paths = designSystem.concat(packages).concat(settingsPages).concat([
                 Quickshell.shellPath("modules/common/plugins/PluginOptions.qml"),
                 Quickshell.shellPath("modules/common/widgets/AutostartApps.qml"),
-                Quickshell.shellPath("modules/common/widgets/WallpaperSubmenu.qml")
+                Quickshell.shellPath("modules/common/widgets/WallpaperSubmenu.qml"),
+                // The cheatsheet only compiles when the user presses Super+/,
+                // and the keybind editor only when a row's pencil is clicked.
+                Quickshell.shellPath("modules/imi/cheatsheet/CheatsheetKeybinds.qml"),
+                Quickshell.shellPath("modules/common/widgets/KeybindEditor.qml"),
+                Quickshell.shellPath("modules/common/widgets/KeybindChordCapture.qml")
             ]);
             for (const path of paths) {
                 const component = Qt.createComponent(`file://${path}`, Component.PreferSynchronous);
