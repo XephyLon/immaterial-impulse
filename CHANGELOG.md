@@ -10,7 +10,7 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
-## [Unreleased]
+## [0.20.0] — 2026-08-07
 
 ### Added
 - **Keyboard shortcuts are editable from the shell.** Every keybind row in the
