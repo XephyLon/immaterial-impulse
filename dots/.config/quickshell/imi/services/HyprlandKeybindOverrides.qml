@@ -54,6 +54,10 @@ Singleton {
         return KeybindOverridesLogic.identityFor(mods, key);
     }
 
+    function splitIdentity(identity) {
+        return KeybindOverridesLogic.splitIdentity(identity);
+    }
+
     function overrideFor(identity) {
         return root.state.overrides[identity] ?? null;
     }

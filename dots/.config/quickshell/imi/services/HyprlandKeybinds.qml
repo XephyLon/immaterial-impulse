@@ -44,6 +44,26 @@ Singleton {
         return KeybindOverridesLogic.bindIdentity(kb);
     }
 
+    // Locate a displayed binding by its identity in the annotated tree, for
+    // callers (the settings page) that start from a sidecar entry rather than
+    // a cheatsheet row. Removed bindings are not displayed, so they return
+    // null - reset is the only edit that applies to them.
+    function findBinding(identity) {
+        function walk(sections) {
+            for (const section of sections) {
+                for (const kb of section.keybinds ?? []) {
+                    if (kb.identity === identity)
+                        return kb;
+                }
+                const found = walk(section.children ?? []);
+                if (found)
+                    return found;
+            }
+            return null;
+        }
+        return walk(root.keybinds.children ?? []);
+    }
+
     // Concatenate two bind lists, dropping earlier duplicates so the later
     // (custom) definition of a given mods+key wins.
     function dedupKeybinds(binds) {
