@@ -112,6 +112,47 @@ class MatugenApplicationThemeTests(unittest.TestCase):
             self.assertTrue((app.CONFIG / "btop/themes/matugen.theme").is_file())
             self.assertTrue((app.CONFIG / "tmux/matugen.conf").is_file())
 
+    def test_apply_tmux_respects_existing_tilde_source_line(self):
+        # The shipped dots/.config/tmux/tmux.conf sources the theme by its ~
+        # path; appending the absolute variant on top would stack one duplicate
+        # source line per palette switch.
+        app = load_applicator()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            app.CONFIG = root / "config"
+            app.STATE = root / "state"
+            app.GENERATED = app.STATE / "quickshell/user/generated/apps"
+            app.GENERATED.mkdir(parents=True)
+            (app.GENERATED / "tmux.conf").write_text("set -g status on\n")
+            tmux = app.CONFIG / "tmux/tmux.conf"
+            tmux.parent.mkdir(parents=True)
+            shipped = "set -g mouse on\nsource-file -q ~/.config/tmux/matugen.conf\n"
+            tmux.write_text(shipped)
+
+            with mock.patch.object(app.subprocess, "run"):
+                app.apply_tmux()
+                app.apply_tmux()
+
+            content = tmux.read_text()
+            self.assertEqual(content, shipped)
+            self.assertEqual(content.count("matugen.conf"), 1)
+
+    def test_tmux_template_renders_material_pills(self):
+        template = ROOT / "scripts/colors/templates/tmux.conf"
+        content = template.read_text()
+        # The pill shape: rounded Nerd Font caps around every segment, drawn on
+        # the terminal's own background so they float like the shell's pills.
+        self.assertIn("", content)
+        self.assertIn("", content)
+        self.assertIn('set -g status-style "bg=default', content)
+        for key in ("status-left ", "status-right ", "window-status-format",
+                    "window-status-current-format"):
+            self.assertIn(key, content)
+        # Every color comes from the palette - a literal hex in the template
+        # would survive palette switches as a stale color.
+        self.assertNotRegex(content, r"(?:fg|bg)=#[0-9a-fA-F]{6}")
+        self.assertIn("{{colors.primary.default.hex}}", content)
+
     def test_switcher_installs_renders_and_applies_themes_in_order(self):
         switcher = (ROOT / "scripts/colors/switchwall.sh").read_text()
         install = switcher.index('"$SCRIPT_DIR/install_matugen_app_themes.sh"')
