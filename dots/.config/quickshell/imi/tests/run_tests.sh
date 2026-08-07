@@ -398,6 +398,14 @@ if ! python3 "$SCRIPT_DIR/test_keybind_overrides.py"; then
     exit 1
 fi
 
+# Brings its own headless weston, so it needs no display of its own - but it
+# does need weston, and skips without it.
+echo "Running keybind override runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_keybind_overrides_runtime.py"; then
+    echo "keybind override runtime tests failed."
+    exit 1
+fi
+
 echo "Running momentum scroll contract tests..."
 if ! python3 "$SCRIPT_DIR/test_momentum_scroll_contract.py"; then
     echo "momentum scroll contract tests failed."
