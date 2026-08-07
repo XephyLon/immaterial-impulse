@@ -10,6 +10,20 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [Unreleased]
+
+### Added
+- **Keyboard shortcuts are editable from the shell.** Every keybind row in the
+  cheatsheet (Super+/) gains a hover pencil that opens an editor: capture a new
+  chord, remove the binding, or reset it to default, with conflicts against
+  every statically known chord (submaps included) detected before anything is
+  written. A new Keybinds section on the Hyprland settings page lists the
+  current overrides, resets them per-row or all at once, and adds brand-new
+  command shortcuts. Changes live in a shell-owned sidecar rendered into
+  `hypr/hyprland/shellOverrides/keybinds.lua` — the shipped keybinds and
+  `hypr/custom/keybinds.lua` are never touched, the generated file survives
+  dots updates, and a hand-edited override file is detected and left alone.
+
 ## [0.19.0] — 2026-08-07
 
 ### Added
