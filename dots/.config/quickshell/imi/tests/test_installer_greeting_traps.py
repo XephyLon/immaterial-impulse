@@ -78,6 +78,17 @@ class TuiCancelMachineryTests(unittest.TestCase):
             r'"\$SETUP_BIN" install "\$\{INSTALL_FLAGS\[@\]\}" --force '
             r'</dev/null >"\$log" 2>&1 &')
 
+    def test_toggle_cursor_restore_binds_the_load_event(self):
+        # The toggle menu re-invokes fzf per toggle and restores the cursor
+        # with pos($pos). That bind must hang off `load`, not `start`: with
+        # piped input, `start` fires before the reader has delivered any
+        # items, so pos() acts on an empty list and silently no-ops — the
+        # cursor snaps back to the top on most toggles, timing-dependent
+        # (measured on fzf 0.74.2: start:pos(3) lands on row 1, load:pos(3)
+        # on row 3). This regressed once already; keep it pinned.
+        self.assertIn('--bind "load:pos($pos)"', TUI)
+        self.assertNotIn('--bind "start:pos', TUI)
+
     def test_esc_and_decline_paths_cancel_cleanly(self):
         self.assertIn("cancelled(){", TUI)
         # Both toggle menus and the fontset picker bail out through cancelled().

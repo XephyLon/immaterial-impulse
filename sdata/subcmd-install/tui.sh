@@ -145,10 +145,14 @@ fzf_toggle(){
     header="$(banner)"$'\n'"${C_DIM}  Enter = toggle · ESC = cancel${C_RST}"$'\n'"  ${C_BOLD}${title}${C_RST}"
     local pick
     # Re-invoking fzf per toggle otherwise snaps the cursor back to the top;
-    # start:pos($pos) restores it to the row that was just acted on.
+    # pos($pos) restores it to the row that was just acted on. It must hang off
+    # the `load` event, not `start`: with piped input, `start` fires before the
+    # reader has delivered any items, so pos() acts on an empty list and
+    # silently no-ops (measured on fzf 0.74.2 - start:pos(3) lands on row 1,
+    # load:pos(3) on row 3). `load` fires once the input stream is complete.
     pick=$(printf '%s\n' "${lines[@]}" \
       | fzf "${FZF_COMMON[@]}" --with-nth='2..' --delimiter=$'\t' \
-            --bind "start:pos($pos)" \
+            --bind "load:pos($pos)" \
             --header="$header" --prompt='select ▸ ')
     [[ $? -eq 0 ]] || return 130
     key=${pick%%$'\t'*}
