@@ -10,7 +10,7 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
-## [Unreleased]
+## [0.18.2] — 2026-08-07
 
 ### Fixed
 - **Video wallpapers no longer leak ~10 MB of memory per minute.** The shell
