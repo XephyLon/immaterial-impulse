@@ -69,9 +69,13 @@ def apply_tmux() -> None:
 
     config = CONFIG / "tmux/tmux.conf"
     current = config.read_text() if config.is_file() else ""
-    source_line = f"source-file -q '{theme}'"
-    if source_line not in current.splitlines():
-        atomic_write(config, current.rstrip() + "\n\n# Matugen colors\n" + source_line + "\n")
+    # The shipped config sources the theme by its ~ path; a hand-written one
+    # may use the absolute path this used to append. Both count - matching the
+    # exact absolute line only would stack a duplicate source line per palette
+    # switch on any config that already sources the file another way.
+    sourced = re.search(r"(?m)^\s*source-file\s+-q\s+'?[^'\n]*tmux/matugen\.conf'?\s*$", current)
+    if not sourced:
+        atomic_write(config, current.rstrip() + f"\n\n# Matugen colors\nsource-file -q '{theme}'\n")
     subprocess.run(["tmux", "source-file", str(theme)], check=False,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
