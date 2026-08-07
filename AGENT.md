@@ -284,6 +284,16 @@ services/                  Singletons wrapping external state/processes - one pe
                               since Quickshell's own Hyprland IPC bindings don't expose everything
                               (e.g. per-monitor special-workspace state)
   HyprlandXkb.qml              Tracks active keyboard layout via Hyprland's `activelayout` IPC event
+  HyprlandKeybinds.qml         Parses hyprland/keybinds.lua + custom/keybinds.lua (via
+                              scripts/hyprland/get_keybinds.py) into the cheatsheet's tree, then
+                              rewrites it through the keyboard-shortcuts editor's override map
+  HyprlandKeybindOverrides.qml Owns the keyboard-shortcuts editor's sidecar
+                              (~/.config/immaterial-impulse/keybind-overrides.json, raw FileView on
+                              the PluginState pattern) and regenerates the Lua shim
+                              hypr/hyprland/shellOverrides/keybinds.lua through
+                              scripts/hyprland/keybind_overrides.py. Never edits user keybind
+                              files; refuses to touch a hand-edited shim (content hash). See
+                              docs/proposals/keyboard-shortcuts-editor.md
   Notifications.qml            org.freedesktop.Notifications server + notification history
   Notes.qml                    The note store: a JSON array in Directories.notesPath. Sole owner -
                               the bundled `notes` desktop plugin (one instance per monitor) and the
@@ -527,6 +537,24 @@ this: it drops the managed line only while it still holds the stale value, so it
 every load and cannot clobber a value the user has since chosen. Hyprland watches these files and
 reloads on change, so no explicit `hyprctl reload` is needed - which is also why the writer must not
 rewrite a file whose content did not change.
+
+**Keybind overrides are another generated shellOverrides file, with one extra rule: a chord-level
+unbind exists but a bind-level one does not.** The keyboard-shortcuts editor renders its JSON sidecar
+into `~/.config/hypr/hyprland/shellOverrides/keybinds.lua` (sourced last by `hyprland.lua`, guarded
+by `is_file_exists`), following the same discipline as `main.lua` — atomic writes, no rewrite when
+content is unchanged — plus a content hash in the header: a shim that does not hash-match was
+hand-edited and the generator refuses to write *or delete* it, surfacing `shimStatus: "foreign"`
+instead of clobbering. Overriding a default works because `hl.bind()` returns a keybind object whose
+`:unbind()` removes **every** bind matching that chord's modmask+key (`CKeybindManager::
+removeKeybind`), so binding a throwaway function and unbinding it clears a chord *including its
+hidden sibling binds* — there is no way to remove just one of several binds on a chord from the shim,
+which is why a rebind re-emits the parsed primary action and the `qsIsAlive`-style fallbacks on that
+chord are gone with it. Re-emission is gated by a literal-only params grammar; `function` binds and
+params referencing `keybinds.lua` locals are remove-only. An updated shim is picked up by Hyprland's
+own config watch, but a *created* one was not sourced at the last load (nothing watches it), so the
+service issues `hyprctl reload` only for created/deleted results.
+(cd6296659 ("feat(hypr): source the shell's keybind override shim last"), 08d11dd83
+("feat(keybinds): sidecar-to-Lua override generator with hand-edit protection").)
 
 **Markers on such migrations are a trap of their own.** A persisted "already migrated" flag records
 that the check *ran*, not that the value was ever *seen*, and the two come apart whenever the config

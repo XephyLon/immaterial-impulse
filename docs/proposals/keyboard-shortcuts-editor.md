@@ -1,68 +1,110 @@
 # Proposal: keyboard shortcuts editor
 
-> Draft / tracking proposal. Not scheduled.
+> Implemented on this branch. This document records the design as built and
+> the reasoning behind the decisions the draft left open.
 
 ## Goal
 
 Make the cheatsheet's keybind list **editable**: rebind, add, and remove
-shortcuts from the settings UI, writing to the user override file instead of
+shortcuts from the settings UI, writing to shell-owned state instead of
 requiring the user to hand-edit Lua.
 
 ## Current state
 
-Most of the hard part already exists.
+Implemented:
 
-- `services/HyprlandKeybinds.qml` parses keybinds and already understands the
-  two-file model:
-  - `defaultKeybindConfigPath` → `~/.config/hypr/hyprland/keybinds.lua`
-  - `userKeybindConfigPath` → `~/.config/hypr/custom/keybinds.lua`
-- `modules/imi/cheatsheet/CheatsheetKeybinds.qml:11` renders
-  `HyprlandKeybinds.keybinds` — **read-only**.
-- Keybinds carry a `description` field (see `keybinds.lua:38`), so the list is
-  already human-readable rather than raw dispatcher strings.
+- `services/HyprlandKeybindOverrides.qml` owns a declarative JSON sidecar
+  (`~/.config/immaterial-impulse/keybind-overrides.json`, raw `FileView` on the
+  `PluginState.qml` pattern) and regenerates a Lua shim from it through
+  `scripts/hyprland/keybind_overrides.py`.
+- The shim (`~/.config/hypr/hyprland/shellOverrides/keybinds.lua`) is sourced
+  last by `hyprland.lua`, guarded by `is_file_exists`. The installer already
+  excludes `shellOverrides/` from its overwrite-sync, so it survives updates.
+- `modules/common/widgets/KeybindEditor.qml` is the single editing surface,
+  reached from a hover pencil on every cheatsheet row and from the new
+  Keybinds section on the Hyprland settings page (which also hosts the
+  add-a-shortcut form and the override list with per-row/global reset).
+- `modules/common/functions/keybindOverrides.js` holds the pure logic
+  (identity, tree rewriting, rebindability, conflicts), unit-tested in
+  `tests/tst_keybind_overrides_logic.qml`; the generator is contract-tested in
+  `tests/test_keybind_overrides.py`; the full write path runs against a real
+  Quickshell in `tests/test_keybind_overrides_runtime.py`.
 
-So this is largely "add a writer and an edit UI to an existing parser", not a
-new subsystem.
+## Decisions (formerly open questions)
 
-## Why
+### Write a declarative sidecar, not Lua
 
-- Rebinding is the single most common reason a user has to open a config file
-  by hand. Everything else the shell exposes through settings.
-- The read-only cheatsheet already trains users to look there for shortcuts,
-  which makes the absence of editing feel like a missing feature rather than a
-  design choice.
-- The user override file (`hypr/custom/keybinds.lua`) already exists as the
-  supported customization point, so writes have a safe destination that survives
-  updates — unlike editing the shipped defaults, which the updater overwrites.
+The draft weighed emitting Lua that round-trips the existing file against a
+sidecar the shell owns. The sidecar won, decisively:
 
-## Approach
+- Round-tripping hand-written Lua (comments, loops, locals) is not tractable;
+  a generator over plain data is. The shipped `hyprland/keybinds.lua` and the
+  user's `hypr/custom/keybinds.lua` are **never modified**.
+- The generated-file discipline is modelled on
+  `scripts/hyprland/hyprconfigurator.py` / `shellOverrides/main.lua`: the
+  shell owns the file completely, writes atomically, and never rewrites
+  unchanged content (Hyprland reloads on file change, so a no-op rewrite is
+  reload churn).
 
-- Extend `services/HyprlandKeybinds.qml` with a writer that emits only to
-  `userKeybindConfigPath`. Never write to the shipped defaults file.
-- Represent an override as a full replacement entry keyed on the default's
-  identity, so the shipped file can change across updates without silently
-  discarding user overrides or resurrecting rebound defaults.
-- Capture new bindings with a key-capture control that reads modifiers plus one
-  key and renders them in the same notation the parser already produces.
-- Detect conflicts before writing: two bindings on the same chord, and bindings
-  that collide with a Hyprland submap (`services/HyprlandSubmap.qml`).
-- Offer a per-binding "reset to default" and a global "reset all", both of which
-  just remove entries from the override file.
-- Surface it from both the cheatsheet (an edit affordance on each row) and a
-  settings page, sharing one component.
+The override mechanism rides Hyprland's Lua config API: `hl.bind()` returns a
+keybind object whose `:unbind()` removes **every** bind matching that chord's
+modmask+key (`CKeybindManager::removeKeybind`), so the shim's
+`unbind_chord(c)` helper — bind a throwaway function, unbind it — clears a
+chord including all its hidden sibling binds. A rebind is that unbind plus a
+re-emitted `hl.bind` carrying the parsed dispatcher, params, flags and
+description; an add is an `exec_cmd` bind.
 
-## Open questions
+Re-emission is gated by a literal-only params grammar (strings, numbers,
+tables, `..`, plus identifiers naming `variables.lua` globals, which resolve
+because the shim loads after both variables files). Binds whose action is a
+Lua closure (`function`) or whose params reference `keybinds.lua` locals
+(`qsIsAlive`, …) cannot be re-emitted; the UI offers remove-only for those and
+says why. No parentheses in params means no function calls can be smuggled
+into the generated file.
 
-- Whether to write Lua (matching the existing file format, but meaning the
-  writer has to emit valid Lua and round-trip comments) or to write a
-  declarative sidecar that the Lua file sources. The sidecar is safer to
-  generate but adds a file to the config surface.
-- What to do when the user has already hand-edited `hypr/custom/keybinds.lua`.
-  Overwriting it would destroy their work; merging into arbitrary Lua is not
-  tractable. Likely answer: detect hand-editing and refuse to write, with a
-  clear message.
+### Hand-edited override file: detect and refuse
 
-## Out of scope
+The shim carries a content hash in its header. If the file on disk does not
+hash-match, someone edited it by hand; the generator refuses to write **or
+delete** it (exit 4), the service surfaces `shimStatus: "foreign"`, and both
+UI surfaces show a banner naming the file to delete to hand control back.
+Never clobbered, exactly as the draft leaned.
+
+### Overrides are full replacement entries keyed on the default's identity
+
+Sidecar keys are the default binding's identity — sorted mods + key
+(`SHIFT+SUPER|C`), so modifier order never splits an identity. Each entry
+stores everything needed to emit the replacement (dispatcher, params, flags,
+description). A dots update changing the shipped file neither discards
+overrides (the entry doesn't depend on the shipped definition surviving) nor
+resurrects rebound defaults (the unbind targets the chord, which Hyprland
+matches by modmask+key regardless of spelling). The service regenerates on
+every startup as reconciliation, and the generator's unchanged-content check
+makes that free.
+
+### Conflict detection before write
+
+`get_keybinds.py --flat` scans both keybind files for **every** statically
+parseable bind — hidden and undescribed included — tagged with the
+`hl.define_submap` block it sits in. The editor and the add form check a
+captured chord against those scans plus the chords other overrides claim and
+release, list every hit (submap collisions named as such — the
+virtual-machine escape bind is `submap_universal` and fires everywhere), and
+block Apply while any exist. Loop-generated binds (chords built from Lua
+variables at load time, e.g. `SUPER + 1..0`) are invisible to a static parse,
+so the clean state is worded "no conflicts detected", never "no conflicts".
+
+### Reset
+
+Per-binding reset and reset-all remove entries from the sidecar. An empty
+sidecar deletes the shim (if still hash-managed), returning the system to its
+pre-feature state.
+
+## Out of scope (unchanged)
 
 - Editing non-keybind Hyprland config through the same mechanism.
 - Rebinding shell-internal shortcuts that are not Hyprland keybinds.
+- Making top-level `--##!` sections with direct binds (Utilities, Screen,
+  Media) visible in the cheatsheet — they are parsed but the renderer only
+  displays second-level sections, a pre-existing gap this feature inherits:
+  those binds are editable only once they render.
