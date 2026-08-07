@@ -54,6 +54,16 @@ sddm_state=OFF
 [[ -d /usr/share/sddm/themes/imi-sddm-theme || -d /usr/share/sddm/themes/ii-sddm-theme ]] && sddm_state=ON
 plymouth_state=OFF
 [[ -d /usr/share/plymouth/themes/immaterial-impulse ]] && plymouth_state=ON
+# tmux pre-selects when the deployed config is ours (it sources the matugen
+# theme) or when the machine has no tmux config at all (matching the install
+# pipeline's install-by-default). A tmux.conf WITHOUT that line is the user's
+# own config: its step syncs with rsync --delete, so it defaults to unticked
+# rather than silently clobbering their setup on an update.
+tmux_state=ON
+tmux_conf="${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf"
+if [[ -f "$tmux_conf" ]] && ! grep -q 'tmux/matugen\.conf' "$tmux_conf"; then
+  tmux_state=OFF
+fi
 
 COMPONENTS=$(whiptail --title "Immaterial Impulse Installer" \
   --checklist "Select components (space to toggle, enter to confirm).\nAlready-installed components are pre-selected so updates reach them:" 18 74 6 \
@@ -62,6 +72,7 @@ COMPONENTS=$(whiptail --title "Immaterial Impulse Installer" \
   "WE" "Wallpaper Engine (builds a custom quickshell)" "$we_state" \
   "SDDM" "SDDM login theme - imi-sddm-theme (Arch only)" "$sddm_state" \
   "PLYMOUTH" "Plymouth boot splash (Arch only)" "$plymouth_state" \
+  "TMUX" "tmux config (themed status bar, fish default)" "$tmux_state" \
   3>&1 1>&2 2>&3)
 ret=$?
 [[ $ret -eq 0 ]] || cancelled
@@ -115,6 +126,11 @@ case "$COMPONENTS" in
   *) INSTALL_FLAGS+=(--skip-alldeps) ;;
 esac
 
+case "$COMPONENTS" in
+  *TMUX*) : ;;
+  *) INSTALL_FLAGS+=(--skip-tmux) ;;
+esac
+
 if [[ "$FONTSET_CHOICE" != "none" ]]; then
   INSTALL_FLAGS+=(--fontset "$FONTSET_CHOICE")
 fi
@@ -125,6 +141,7 @@ Dependencies: $(case "$COMPONENTS" in *DEPS*) echo "yes";; *) echo "no (--skip-a
 Wallpaper Engine: $(case "$COMPONENTS" in *WE*) echo "yes (INSTALL_WE=1)";; *) echo "no";; esac)
 SDDM login theme: $(case "$COMPONENTS" in *SDDM*) echo "yes (INSTALL_SDDM=1)";; *) echo "no";; esac)
 Plymouth splash: $(case "$COMPONENTS" in *PLYMOUTH*) echo "yes (INSTALL_PLYMOUTH=1)";; *) echo "no";; esac)
+tmux config: $(case "$COMPONENTS" in *TMUX*) echo "yes";; *) echo "no (--skip-tmux)";; esac)
 Fontset: ${FONTSET_CHOICE}
 fcitx5 IME: $(case "$EXTRAS" in *FCITX5*) echo "yes";; *) echo "no";; esac)
 

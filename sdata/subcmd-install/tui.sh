@@ -178,17 +178,28 @@ build_sysinfo
 
 # --- 1. Component toggles ----------------------------------------------------
 # Core config is always installed (never --skip-allfiles), so it is not a toggle.
-declare -A STATE=( [DEPS]=on [WE]=off [SDDM]=off )
+# tmux pre-selects when the deployed config is ours (it sources the matugen
+# theme) or when the machine has no tmux config at all (matching the install
+# pipeline's install-by-default). A tmux.conf WITHOUT that line is the user's
+# own config: its step syncs with rsync --delete, so it defaults to off rather
+# than silently clobbering their setup on an update.
+tmux_state=on
+tmux_conf="${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf"
+if [[ -f "$tmux_conf" ]] && ! grep -q 'tmux/matugen\.conf' "$tmux_conf"; then
+  tmux_state=off
+fi
+declare -A STATE=( [DEPS]=on [WE]=off [SDDM]=off [TMUX]="$tmux_state" )
 declare -A LABELS=(
   [DEPS]="Dependencies"
   [WE]="Wallpaper Engine  ${C_DIM}(builds a custom quickshell)${C_RST}"
   [SDDM]="SDDM login theme  ${C_DIM}(imi-sddm-theme · Arch only)${C_RST}"
+  [TMUX]="tmux config  ${C_DIM}(themed status bar, fish default)${C_RST}"
 )
-ORDER=(DEPS WE SDDM)
+ORDER=(DEPS WE SDDM TMUX)
 fzf_toggle "Components  (Core config is always installed)" || cancelled
 # Snapshot immediately: fzf_toggle works on the shared STATE global, which the
 # extras step reuses, so read the component decisions out now.
-DEPS_ON="${STATE[DEPS]}"; WE_ON="${STATE[WE]}"; SDDM_ON="${STATE[SDDM]}"
+DEPS_ON="${STATE[DEPS]}"; WE_ON="${STATE[WE]}"; SDDM_ON="${STATE[SDDM]}"; TMUX_ON="${STATE[TMUX]}"
 
 # --- 2. Fontset picker over dots-extra/fontsets ------------------------------
 fontset_lines(){
@@ -222,6 +233,7 @@ INSTALL_FLAGS=()
 # first prompt and silently abort, installing nothing. So SDDM is handled as a
 # post-install step below (mirroring the fcitx5 extra), on the clean terminal.
 [[ "$DEPS_ON" == on ]] || INSTALL_FLAGS+=(--skip-alldeps)
+[[ "$TMUX_ON" == on ]] || INSTALL_FLAGS+=(--skip-tmux)
 [[ "$FONTSET_CHOICE" != "none" ]] && INSTALL_FLAGS+=(--fontset "$FONTSET_CHOICE")
 
 # --- Quiet-mode install runner (fancy ASCII progress bar) --------------------
@@ -397,6 +409,7 @@ ${C_DIM}  ───────────────────────�
   Dependencies     $(yn "$DEPS_ON")$([[ "$DEPS_ON" == on ]] || echo "  ${C_DIM}(--skip-alldeps)${C_RST}")
   Wallpaper Engine $(yn "$WE_ON")$([[ "$WE_ON" == on ]] && echo "  ${C_DIM}(INSTALL_WE=1)${C_RST}")
   SDDM login theme $(yn "$SDDM_ON")$([[ "$SDDM_ON" == on ]] && echo "  ${C_DIM}(INSTALL_SDDM=1)${C_RST}")
+  tmux config      $(yn "$TMUX_ON")$([[ "$TMUX_ON" == on ]] || echo "  ${C_DIM}(--skip-tmux)${C_RST}")
   Fontset          ${FONTSET_CHOICE}
   fcitx5 IME       $(yn "$FCITX5_ON")
   Output           $([[ "$VERBOSE_ON" == on ]] && echo "verbose ${C_DIM}(raw stream)${C_RST}" || echo "quiet ${C_DIM}(progress bar)${C_RST}")

@@ -22,6 +22,8 @@ TMUX_CONF = ROOT / "dots/.config/tmux/tmux.conf"
 LEGACY = ROOT / "sdata/subcmd-install/3.files-legacy.sh"
 OPTIONS = ROOT / "sdata/subcmd-install/options.sh"
 EXP_YAML = ROOT / "sdata/subcmd-install/3.files-exp.yaml"
+TUI_FZF = ROOT / "sdata/subcmd-install/tui.sh"
+TUI_WHIPTAIL = ROOT / "sdata/subcmd-install/tui-whiptail.sh"
 
 
 def code_only(text):
@@ -88,6 +90,42 @@ class TmuxInstallWiringTests(unittest.TestCase):
         self.assertIsNotNone(match, "tmux entry missing from 3.files-exp.yaml")
         self.assertIn('"plugins"', match.group(1))
         self.assertIn('"matugen.conf"', match.group(1))
+
+
+class TuiTmuxToggleTests(unittest.TestCase):
+    """Both interactive front-ends must surface the tmux component.
+
+    --skip-tmux existing only at flag level is invisible: Update Dots runs the
+    TUI, and a component absent from its menus cannot be chosen or declined
+    there at all.
+    """
+
+    def test_fzf_tui_offers_tmux_and_maps_to_skip_flag(self):
+        tui = code_only(TUI_FZF.read_text())
+        self.assertRegex(tui, r"\[TMUX\]=", "TMUX missing from the fzf STATE/LABELS globals")
+        order_lines = [l for l in tui.splitlines() if re.match(r"\s*ORDER=\(", l)]
+        self.assertTrue(any("TMUX" in l for l in order_lines),
+                        "TMUX not in any fzf toggle ORDER")
+        self.assertRegex(tui, r'"\$TMUX_ON" == on \]\] \|\| INSTALL_FLAGS\+=\(--skip-tmux\)')
+
+    def test_whiptail_tui_offers_tmux_and_maps_to_skip_flag(self):
+        tui = code_only(TUI_WHIPTAIL.read_text())
+        self.assertRegex(tui, r'"TMUX"\s+".*"\s+"\$tmux_state"',
+                         "TMUX row missing from the whiptail checklist")
+        self.assertRegex(
+            tui,
+            r'case "\$COMPONENTS" in\s*\n\s*\*TMUX\*\) : ;;\s*\n\s*\*\) INSTALL_FLAGS\+=\(--skip-tmux\) ;;')
+
+    def test_both_tuis_precheck_ours_but_not_a_foreign_config(self):
+        # The whiptail header's own rule: already-installed components
+        # pre-select so updates reach them. For tmux "installed" means the
+        # deployed config is ours (it sources the matugen theme); a tmux.conf
+        # without that line is the user's own and must default to unticked
+        # rather than being clobbered by rsync --delete.
+        for path in (TUI_FZF, TUI_WHIPTAIL):
+            tui = code_only(path.read_text())
+            self.assertRegex(tui, r"grep -q 'tmux/matugen\\?\.conf'",
+                             f"{path.name}: no ours-vs-foreign detection on tmux.conf")
 
 
 if __name__ == "__main__":
