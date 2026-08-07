@@ -392,6 +392,12 @@ if ! python3 "$SCRIPT_DIR/test_get_keybinds.py"; then
     exit 1
 fi
 
+echo "Running keybind override generator tests..."
+if ! python3 "$SCRIPT_DIR/test_keybind_overrides.py"; then
+    echo "keybind override generator tests failed."
+    exit 1
+fi
+
 echo "Running momentum scroll contract tests..."
 if ! python3 "$SCRIPT_DIR/test_momentum_scroll_contract.py"; then
     echo "momentum scroll contract tests failed."
