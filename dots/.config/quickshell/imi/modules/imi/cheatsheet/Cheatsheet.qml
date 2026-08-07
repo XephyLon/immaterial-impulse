@@ -39,6 +39,10 @@ Scope { // Scope
                 right: true
             }
 
+            // The binding currently open in the keybind editor overlay, null
+            // when the overlay is closed.
+            property var editingBinding: null
+
             function hide() {
                 cheatsheetLoader.active = false;
             }
@@ -84,6 +88,13 @@ Scope { // Scope
 
                 Keys.onPressed: event => { // Esc to close
                     if (event.key === Qt.Key_Escape) {
+                        // Peel the editor overlay first; only a second Esc
+                        // closes the cheatsheet itself.
+                        if (cheatsheetRoot.editingBinding !== null) {
+                            cheatsheetRoot.editingBinding = null;
+                            event.accepted = true;
+                            return;
+                        }
                         cheatsheetRoot.hide();
                     }
                     if (event.modifiers === Qt.ControlModifier) {
@@ -170,8 +181,59 @@ Scope { // Scope
                             }
                         }
 
-                        CheatsheetKeybinds {}
+                        CheatsheetKeybinds {
+                            onEditRequested: bindingData => {
+                                cheatsheetRoot.editingBinding = bindingData;
+                            }
+                        }
                         CheatsheetPeriodicTable {}
+                    }
+                }
+
+                Rectangle { // Keybind editor overlay
+                    id: keybindEditorScrim
+                    anchors.fill: parent
+                    radius: cheatsheetBackground.radius
+                    color: Appearance.colors.colScrim
+                    visible: cheatsheetRoot.editingBinding !== null
+                    z: 10
+
+                    MouseArea { // Click outside the card to dismiss
+                        anchors.fill: parent
+                        onClicked: cheatsheetRoot.editingBinding = null
+                    }
+
+                    Rectangle {
+                        id: keybindEditorCard
+                        anchors.centerIn: parent
+                        property real padding: Appearance.spacing.space300
+                        width: Math.min(560, keybindEditorScrim.width - Appearance.spacing.space800)
+                        height: keybindEditorContent.implicitHeight + padding * 2
+                        color: Appearance.colors.colLayer1
+                        border.width: 1
+                        border.color: Appearance.colors.colLayer0Border
+                        radius: Appearance.rounding.normal
+
+                        MouseArea { // Swallow clicks inside the card
+                            anchors.fill: parent
+                        }
+
+                        KeybindEditor {
+                            id: keybindEditorContent
+                            anchors {
+                                top: parent.top
+                                left: parent.left
+                                right: parent.right
+                                margins: keybindEditorCard.padding
+                            }
+                            bindingData: cheatsheetRoot.editingBinding
+                            onDone: cheatsheetRoot.editingBinding = null
+                        }
+                    }
+
+                    onVisibleChanged: {
+                        if (visible)
+                            keybindEditorContent.focusCapture();
                     }
                 }
             }
