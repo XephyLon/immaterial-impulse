@@ -156,7 +156,7 @@ Item {
             { name: Translation.tr("General"), icon: "browse", component: Qt.resolvedUrl("pages/GeneralConfig.qml"), sections: [Translation.tr("Time"), Translation.tr("Battery"), Translation.tr("Audio"), Translation.tr("Sounds"), Translation.tr("Language")] },
             { name: Translation.tr("Services"), icon: "cloud", component: Qt.resolvedUrl("pages/ServicesConfig.qml"), sections: [Translation.tr("AI"), Translation.tr("Networking"), Translation.tr("Music Recognition"), Translation.tr("Search"), Translation.tr("System updates (Arch only)"), Translation.tr("Clight"), Translation.tr("Weather")] },
             { name: Translation.tr("Widgets"), icon: "widgets", component: Qt.resolvedUrl("pages/PluginsPage.qml"), sections: [Translation.tr("Widget settings"), Translation.tr("Available Widgets")] },
-            { name: Translation.tr("Hyprland"), icon: "select_window_2", component: Qt.resolvedUrl("pages/HyprlandConfig.qml"), sections: [Translation.tr("Displays"), Translation.tr("Layout"), Translation.tr("Input"), Translation.tr("Visual & Aesthetics"), Translation.tr("Blur"), Translation.tr("Autostart Apps"), Translation.tr("Animations")] },
+            { name: Translation.tr("Hyprland"), icon: "select_window_2", component: Qt.resolvedUrl("pages/HyprlandConfig.qml"), sections: [Translation.tr("Displays"), Translation.tr("Layout"), Translation.tr("Input"), Translation.tr("Keybinds"), Translation.tr("Visual & Aesthetics"), Translation.tr("Blur"), Translation.tr("Autostart Apps"), Translation.tr("Animations")] },
             { name: Translation.tr("About"), icon: "info", component: Qt.resolvedUrl("pages/About.qml"), sections: [] }
         ]
         return list
