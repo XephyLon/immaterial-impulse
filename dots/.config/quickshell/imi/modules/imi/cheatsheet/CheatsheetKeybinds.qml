@@ -9,6 +9,10 @@ import QtQuick.Layouts
 Item {
     id: root
     readonly property var keybinds: HyprlandKeybinds.keybinds
+    // Raised with the annotated binding (identity, chord, editability) when a
+    // row's edit affordance is clicked; Cheatsheet.qml opens the shared
+    // KeybindEditor on it.
+    signal editRequested(var bindingData)
     property real spacing: Appearance.spacing.space250
     property real titleSpacing: Appearance.spacing.space100
     property real padding: Appearance.spacing.space50
@@ -124,7 +128,12 @@ Item {
                                     model: {
                                         var result = [];
                                         for (var i = 0; i < keybindSection.modelData.keybinds.length; i++) {
-                                            const keybind = keybindSection.modelData.keybinds[i];
+                                            const binding = keybindSection.modelData.keybinds[i];
+                                            // Substitutions below are display-only; mutate a copy so
+                                            // the annotated tree entry keeps the real chord for the
+                                            // editor (and for the next model rebuild).
+                                            const keybind = Object.assign({}, binding);
+                                            keybind.mods = (binding.mods ?? []).slice();
 
                                             if (!Config.options.cheatsheet.splitButtons) {
                                                 for (var j = 0; j < keybind.mods.length; j++) {
@@ -133,12 +142,13 @@ Item {
                                                 keybind.mods = [keybind.mods.join(' ') ]
                                                 keybind.mods[0] += !keyBlacklist.includes(keybind.key) && keybind.mods[0].length ? ' ' : ''
                                                 keybind.mods[0] += !keyBlacklist.includes(keybind.key) ? (keySubstitutions[keybind.key] || keybind.key) : ''
-                                            } 
+                                            }
 
                                             result.push({
                                                 "type": "keys",
                                                 "mods": keybind.mods,
                                                 "key": keybind.key,
+                                                "binding": binding,
                                             });
                                             result.push({
                                                 "type": "comment",
@@ -160,7 +170,13 @@ Item {
                                         Component {
                                             id: keysComponent
                                             Row {
+                                                id: keysRow
                                                 spacing: Appearance.spacing.space50
+
+                                                HoverHandler {
+                                                    id: keysRowHover
+                                                }
+
                                                 Repeater {
                                                     model: modelData.mods
                                                     delegate: KeyboardKey {
@@ -180,6 +196,33 @@ Item {
                                                     key: keySubstitutions[modelData.key] || modelData.key
                                                     pixelSize: Config.options.cheatsheet.fontSize.key
                                                     color: Appearance.colors.colOnLayer0
+                                                }
+                                                RippleButton {
+                                                    id: editBindingButton
+                                                    // Space is always reserved so hovering cannot
+                                                    // reflow the grid; only the icon fades in.
+                                                    visible: modelData.binding?.removable ?? false
+                                                    opacity: (keysRowHover.hovered || editBindingButton.hovered) ? 1 : 0
+                                                    enabled: opacity > 0
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    implicitWidth: 22
+                                                    implicitHeight: 22
+                                                    buttonRadius: Appearance.rounding.full
+                                                    onClicked: root.editRequested(modelData.binding)
+
+                                                    Behavior on opacity {
+                                                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                                    }
+
+                                                    contentItem: MaterialSymbol {
+                                                        anchors.centerIn: parent
+                                                        horizontalAlignment: Text.AlignHCenter
+                                                        iconSize: Appearance.font.pixelSize.normal
+                                                        text: "edit"
+                                                        color: modelData.binding?.overridden
+                                                            ? Appearance.colors.colPrimary
+                                                            : Appearance.colors.colOnLayer0
+                                                    }
                                                 }
                                             }
                                         }
