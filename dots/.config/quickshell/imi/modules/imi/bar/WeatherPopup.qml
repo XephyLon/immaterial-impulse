@@ -4,9 +4,18 @@ import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Layouts
 import qs.modules.imi.bar
+import "../../common/functions/weatherForecast.js" as WeatherForecast
 
 StyledPopup {
     id: root
+
+    // Recomputed whenever the forecast is, which is often enough: a row that
+    // labelled the wrong card would need the popup to stay open across
+    // midnight, and a refresh lands every fetchInterval.
+    readonly property string todayIso: {
+        Weather.forecast;
+        return WeatherForecast.localIsoDate(new Date());
+    }
 
     ColumnLayout {
         id: mainLayout
@@ -75,7 +84,10 @@ StyledPopup {
                     anchors.top: parent.top
                     anchors.topMargin: -Appearance.spacing.space50
                     shape: MaterialShape.Shape.Sunny
-                    text: Icons.getWeatherIcon(Weather.data.wCode) ?? "cloud"
+                    // Provider-aware: OpenWeatherMap's condition ids are not the
+                    // WWO codes getWeatherIcon() is keyed on, so this drew a
+                    // clear sky through every storm for anyone on that provider.
+                    text: Icons.getProviderWeatherIcon(Weather.provider, Weather.data.wCode, Icons.isNight()) ?? "cloud"
                     iconSize: 40
                     implicitSize: 64
                     color: Qt.alpha(Appearance.colors.colOnLayer0, 0.15)
@@ -118,6 +130,79 @@ StyledPopup {
                             font.pixelSize: Appearance.font.pixelSize.smallest
                             color: Appearance.colors.colOnLayer0
                             opacity: 0.8
+                        }
+                    }
+                }
+            }
+        }
+
+        // Day-by-day outlook. Hidden rather than shown empty when there is no
+        // forecast: OpenWeatherMap fetches it separately from the current
+        // conditions, so it can legitimately be missing while everything above
+        // is present, and a row of blank cards reads as broken rather than as
+        // pending.
+        RowLayout {
+            id: forecastRow
+            visible: Weather.forecast.length > 0
+            spacing: Appearance.spacing.space50
+
+            Layout.leftMargin: Appearance.spacing.space25
+            Layout.rightMargin: Appearance.spacing.space25
+            Layout.fillWidth: true
+
+            Repeater {
+                model: Weather.forecast
+
+                delegate: Rectangle {
+                    id: forecastCard
+                    required property var modelData
+
+                    Layout.fillWidth: true
+                    implicitHeight: forecastColumn.implicitHeight + Appearance.spacing.space150 * 2
+                    radius: Appearance.rounding.small
+                    color: Appearance.colors.colSurfaceContainerHigh
+
+                    ColumnLayout {
+                        id: forecastColumn
+                        anchors.centerIn: parent
+                        spacing: Appearance.spacing.space25
+
+                        StyledText {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: WeatherForecast.isToday(forecastCard.modelData.date, root.todayIso)
+                                ? Translation.tr("Today")
+                                : WeatherForecast.shortDayName(forecastCard.modelData.date)
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            font.weight: Font.DemiBold
+                            color: Appearance.colors.colOnSurfaceVariant
+                        }
+
+                        MaterialSymbol {
+                            Layout.alignment: Qt.AlignHCenter
+                            // Always the day variant - a card for Thursday is
+                            // not about what the sky looks like tonight.
+                            text: Icons.getProviderWeatherIcon(Weather.provider,
+                                                               forecastCard.modelData.wCode, false)
+                            iconSize: Appearance.font.pixelSize.huge
+                            color: Appearance.colors.colPrimary
+                        }
+
+                        StyledText {
+                            Layout.alignment: Qt.AlignHCenter
+                            // An absent reading is not 0°, so say nothing.
+                            text: forecastCard.modelData.high === null ? "—"
+                                : `${forecastCard.modelData.high}°`
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            color: Appearance.colors.colOnSurfaceVariant
+                        }
+
+                        StyledText {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: forecastCard.modelData.low === null ? "—"
+                                : `${forecastCard.modelData.low}°`
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            color: Appearance.colors.colOnSurfaceVariant
+                            opacity: 0.6
                         }
                     }
                 }
