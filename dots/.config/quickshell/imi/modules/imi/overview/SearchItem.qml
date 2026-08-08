@@ -147,6 +147,8 @@ RippleButton {
                     return bigTextComponent
                 case LauncherSearchResult.IconType.System:
                     return iconImageComponent
+                case LauncherSearchResult.IconType.File:
+                    return fileImageComponent
                 case LauncherSearchResult.IconType.None:
                     return null
                 default:
@@ -160,6 +162,23 @@ RippleButton {
                 source: Quickshell.iconPath(root.iconName, "image-missing")
                 width: 35
                 height: 35
+            }
+        }
+
+        Component {
+            id: fileImageComponent
+            Image {
+                source: root.iconName.length > 0 ? Qt.resolvedUrl("file://" + root.iconName) : ""
+                width: 35
+                height: 35
+                // Modpack art is arbitrary user-supplied PNG/WebP at whatever
+                // resolution the pack shipped, so it is scaled down rather
+                // than trusted to fit, and sourceSize keeps the decode at
+                // display size instead of holding a 512px image per result.
+                fillMode: Image.PreserveAspectFit
+                sourceSize.width: 35
+                sourceSize.height: 35
+                asynchronous: true
             }
         }
 
