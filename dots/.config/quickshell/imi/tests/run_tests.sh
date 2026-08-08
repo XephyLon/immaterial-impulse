@@ -237,6 +237,12 @@ if ! python3 "$SCRIPT_DIR/test_tmux_dots.py"; then
     exit 1
 fi
 
+echo "Running Prism Launcher instance tests..."
+if ! python3 "$SCRIPT_DIR/test_prism_instances.py"; then
+    echo "Prism Launcher instance tests failed."
+    exit 1
+fi
+
 echo "Running wallpaper thumbnail fallback tests..."
 if ! python3 "$SCRIPT_DIR/test_thumbnail_fallback.py"; then
     echo "Wallpaper thumbnail fallback tests failed."
