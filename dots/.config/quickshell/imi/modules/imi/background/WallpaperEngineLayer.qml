@@ -35,13 +35,15 @@ WallpaperEngineSurface {
         // is the half QML cannot otherwise reach: suppressing the contents stops
         // Qt drawing the surface, but the WE thread keeps producing frames
         // behind it. Same dynamic-binding treatment as audioEnabled, and for the
-        // same reason - it only exists on qs-wallpaperengine builds newer than
-        // the one currently pinned, so on today's binary this is a no-op and the
-        // pause still comes from WE's own detector.
+        // same reason - the property only exists on WE-capable builds, so a
+        // stock binary degrades to no pause instead of a load error.
         //
-        // Scope: this does not reach mpv. A video wallpaper keeps decoding,
-        // because only WE's private setPause() stops that. What it drops is the
-        // blit, the fence, the publish, the repaint and the surface commit.
+        // Since qs-wallpaperengine v0.2.6 it reaches mpv too: the renderer
+        // forwards the flag into WE's own pause machinery, so video decode
+        // stops while the output is covered (qs-wallpaperengine#19 - before
+        // that, a 7680x2160 software-decoded video kept ~180% CPU behind a
+        // fullscreen game). On v0.2.2-v0.2.5 the same binding only drops the
+        // blit, fence, publish, repaint and surface commit.
         if ("occluded" in root) {
             root.occluded = Qt.binding(() => root.covered);
         }
