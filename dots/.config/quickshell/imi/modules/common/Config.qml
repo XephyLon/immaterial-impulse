@@ -1271,6 +1271,7 @@ Singleton {
                     property string shellCommand: "$"
                     property string webSearch: "?"
                     property string file: "~" // File/folder search
+                    property string prism: "%" // Prism Launcher modpacks; inert without Prism installed
                 }
                 property JsonObject fileSearch: JsonObject {
                     property bool enable: true

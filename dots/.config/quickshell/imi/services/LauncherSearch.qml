@@ -26,6 +26,29 @@ Singleton {
             FileSearch.reset();
     }
 
+    // One shape for a modpack result, built in both places that need it: the
+    // prefix branch (which lists every instance) and the default results
+    // (which mixes matching instances in with apps, so Super + a pack name is
+    // enough - the prefix is for browsing, not a requirement).
+    function makePrismResult(instance) {
+        const versionLine = [instance.minecraftVersion, instance.loader].filter(part => part.length > 0).join(" · ");
+        return resultComp.createObject(null, {
+            id: instance.id,
+            name: instance.name,
+            comment: versionLine,
+            verb: Translation.tr("Play"),
+            type: Translation.tr("Modpack"),
+            // Prism writes instance icons as files, so the icon is a path, not
+            // an icon-theme name; empty means the pack uses a Prism built-in
+            // with nothing on disk, and the Material fallback covers it.
+            iconName: instance.icon.length > 0 ? instance.icon : "stadia_controller",
+            iconType: instance.icon.length > 0 ? LauncherSearchResult.IconType.File : LauncherSearchResult.IconType.Material,
+            execute: () => {
+                PrismLauncher.launch(instance);
+            }
+        });
+    }
+
     function ensurePrefix(prefix) {
         if ([Config.options.search.prefix.action, Config.options.search.prefix.app, Config.options.search.prefix.clipboard, Config.options.search.prefix.emojis, Config.options.search.prefix.symbols, Config.options.search.prefix.math, Config.options.search.prefix.shellCommand, Config.options.search.prefix.webSearch,].some(i => root.query.startsWith(i))) {
             root.query = prefix + root.query.slice(1);
@@ -78,6 +101,9 @@ Singleton {
 
     Component.onCompleted: {
         keywordHarvester.startHarvesting();
+        // Constructs the Prism service so its detection runs now rather than
+        // on the user's first keystroke - see the note on reload().
+        PrismLauncher.reload();
     }
 
 
@@ -411,6 +437,13 @@ Singleton {
                         })]
                 });
             }).filter(Boolean);
+        } else if (PrismLauncher.available && root.query.startsWith(Config.options.search.prefix.prism ?? "%")) {
+            // Prism Launcher modpacks. Gated on `available` rather than only on
+            // the prefix: without Prism installed the prefix is a normal
+            // character again, so typing it still reaches the default results
+            // instead of dead-ending in an empty branch.
+            const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.prism ?? "%");
+            return PrismLauncher.fuzzyQuery(searchString).map(instance => root.makePrismResult(instance)).filter(Boolean);
         } else if (root.query.startsWith(Config.options.search.prefix.symbols)) {
             // Material Symbols
             const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.symbols);
@@ -482,6 +515,13 @@ Singleton {
                 })
             });
         });
+        // Matching modpacks, mixed into the default results so the prefix is
+        // optional. Unprefixed only - a query carrying some other source's
+        // prefix is not asking for packs.
+        const prismResultObjects = PrismLauncher.available
+            ? PrismLauncher.fuzzyQuery(StringUtils.cleanPrefix(root.query, Config.options.search.prefix.app)).map(instance => root.makePrismResult(instance)).filter(Boolean)
+            : [];
+
         ////////////////// Settings search //////////////////
         const settingsQuery = root.query.toLowerCase().trim();
 
@@ -573,6 +613,11 @@ Singleton {
 
         //////////////// Apps //////////////////
         result = result.concat(appResultObjects);
+        //////////////// Modpacks //////////////
+        // Ahead of settings and actions, behind apps: launching a pack is the
+        // same kind of intent as launching an app, and a pack name is specific
+        // enough that a match is rarely accidental. Inert without Prism.
+        result = result.concat(prismResultObjects);
         ////////////// Settings ////////////////
         result = result.concat(settingsResults);
         ////////// Launcher actions ////////////
