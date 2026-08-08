@@ -2,7 +2,10 @@ import QtQuick
 import Quickshell
 
 QtObject {
-    enum IconType { Material, Text, System, None }
+    // System looks `iconName` up in the icon theme; File treats it as a path on
+    // disk, for sources that ship their own artwork rather than a themed icon
+    // (Prism modpack icons live under the launcher's own data directory).
+    enum IconType { Material, Text, System, None, File }
     enum FontType { Normal, Monospace }
 
     // General stuff
