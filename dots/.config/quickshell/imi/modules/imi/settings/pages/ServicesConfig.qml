@@ -453,6 +453,29 @@ ContentPage {
                             }
                         }
                     }
+
+                    // Only shown where Prism Launcher exists: the prefix does
+                    // nothing without it, and a dead setting reads as a broken
+                    // one. PrismLauncher.available comes from that service's
+                    // own startup detection, so this row appears on machines
+                    // that can use it and nowhere else.
+                    ConfigRow {
+                        uniform: true
+                        visible: PrismLauncher.available
+                        ConfigTextArea {
+                            Layout.fillWidth: true
+                            buttonIcon: "stadia_controller"
+                            fieldWidth: 100
+                            text: Translation.tr("Modpacks")
+                            value: Config.options.search.prefix.prism
+                            onValueChanged: {
+                                Config.options.search.prefix.prism = value;
+                            }
+                        }
+                        Item {
+                            Layout.fillWidth: true
+                        }
+                    }
                 }
             }
             ContentSubsection {
