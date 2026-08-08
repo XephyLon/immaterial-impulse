@@ -112,6 +112,17 @@ or use a worktree, validate headlessly, then perform one controlled live load.
   recreated the same way scene components are — don't assume editing a singleton always produces
   an immediately-visible fresh instance; when in doubt, verify with a temporary `console.log` in an
   `onXChanged` handler (see CONTRIBUTING.md's verification workflow).
+- **A singleton is constructed on first use, so a service whose only caller is a lazily-evaluated
+  binding does not start when you think it does.** Anything a singleton kicks off at construction
+  — a detection `Process`, a poll timer, a file read — is deferred until something actually reads
+  one of its properties. `PrismLauncher` is reached only from `LauncherSearch`'s `results` binding,
+  which does not evaluate until the user types, so its "run at startup" detection had in fact not
+  started when the first query was answered: measured, the first search came back with no modpacks
+  and only the second had them. If a service must be warm before its first consumer runs, construct
+  it explicitly from a `Component.onCompleted` that does run early — reading any property is what
+  constructs it. This is separate from the reactive-observation rule below: the binding was correctly
+  reactive, it just had nothing to observe yet. (feat(search): launch Minecraft modpacks from the
+  search bar.)
 
 ### Where to look when something goes wrong
 
@@ -294,6 +305,11 @@ services/                  Singletons wrapping external state/processes - one pe
                               scripts/hyprland/keybind_overrides.py. Never edits user keybind
                               files; refuses to touch a hand-edited shim (content hash). See
                               docs/proposals/keyboard-shortcuts-editor.md
+  PrismLauncher.qml            Prism Launcher modpacks for the launcher search, enumerated by
+                              scripts/prism/list_instances.py. Feature-detected (native binary or
+                              flatpak): without Prism the script never runs, `available` stays
+                              false, and the '%' prefix plus its settings row disappear. Launches
+                              by instance FOLDER name, which is not the display name
   Notifications.qml            org.freedesktop.Notifications server + notification history
   Notes.qml                    The note store: a JSON array in Directories.notesPath. Sole owner -
                               the bundled `notes` desktop plugin (one instance per monitor) and the

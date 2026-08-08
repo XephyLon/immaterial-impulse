@@ -10,6 +10,17 @@ The version is stored in `VERSION` (a symlink to the shell's
 About page can read it). The companion `qs-wallpaperengine` is versioned in its
 own repo; the installer pins which revision it builds.
 
+## [Unreleased]
+
+### Added
+- **Launch Minecraft modpacks from the search bar.** Press Super, type a pack
+  name and hit Enter: Prism Launcher instances now appear in the launcher
+  results alongside apps, each with its own pack icon, Minecraft version and
+  mod loader. A `%` prefix lists every instance for browsing, configurable
+  under Settings → Services → Prefixes. Feature-detected end to end — on a
+  machine without Prism Launcher nothing runs, the prefix stays an ordinary
+  character, and the settings row is hidden.
+
 ## [0.20.1] — 2026-08-08
 
 ### Fixed
