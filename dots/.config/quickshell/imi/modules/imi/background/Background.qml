@@ -6,6 +6,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.widgets.widgetCanvas
 import qs.modules.common.functions as CF
+import "../../common/functions/parallax.js" as ParallaxMath
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
@@ -185,6 +186,67 @@ Variants {
         }
 
         property HyprlandMonitor monitor: Hyprland.monitorFor(modelData)
+
+        // ---- Wallpaper parallax -------------------------------------------
+        //
+        // The wallpaper is drawn into a container larger than the screen and
+        // that container is slid around underneath it. Doing it with ONE
+        // container, rather than teaching each layer to offset itself, is what
+        // makes this work for Wallpaper Engine as well as stills: the WE
+        // surface, the frozen stills and the transition shaders all stay
+        // `anchors.fill: parent` inside it, so they pan together and the
+        // cross-fade keeps lining up mid-pan.
+        //
+        // The container is sized off the SCREEN rather than off the wallpaper's
+        // own pixels. A live WE project has no intrinsic size to scale from, and
+        // for stills `PreserveAspectCrop` already covers whatever it is given -
+        // so one rule serves both, and the zoom means the same thing either way.
+        readonly property bool parallaxEnabled: (Config.options.background.parallax.enable ?? true)
+            && !GlobalStates.screenLocked
+        // Locked: the lock screen has its own framing (and its own blur zoom),
+        // and a wallpaper that slides while the session is locked reads as the
+        // session still being live.
+        readonly property real parallaxZoom: bgRoot.parallaxEnabled
+            ? Math.max(1, Config.options.background.parallax.workspaceZoom ?? 1)
+            : 1
+        readonly property real parallaxWidth: bgRoot.width * bgRoot.parallaxZoom
+        readonly property real parallaxHeight: bgRoot.height * bgRoot.parallaxZoom
+
+        // Portrait wallpapers have vertical room to spare and no horizontal
+        // story to tell, so they pan down the picture instead of across it.
+        // Only stills can be measured this way - a WE project reports nothing -
+        // so a live wallpaper follows the explicit switch alone.
+        readonly property bool parallaxVertical: {
+            if (Config.options.background.parallax.vertical) return true;
+            if (!(Config.options.background.parallax.autoVertical ?? false)) return false;
+            if (bgRoot.weActive) return false;
+            return bgRoot.wallpaperIsPortrait;
+        }
+        // Written by the wallpaper Image as it loads, rather than read off it by
+        // id: the still's intrinsic size is only known once the source resolves,
+        // and a binding reaching forward into a layer declared further down the
+        // file resolves to nothing at all - it did, silently, and only a live
+        // load surfaced the ReferenceError.
+        property bool wallpaperIsPortrait: false
+
+        readonly property int parallaxWorkspaceChunk: Config.options?.bar.workspaces.shown ?? 10
+        readonly property var parallaxState: ({
+            workspaceIndex: (bgRoot.monitor?.activeWorkspace?.id ?? 1) - 1,
+            totalWorkspaces: bgRoot.parallaxWorkspaceChunk,
+            vertical: bgRoot.parallaxVertical,
+            enableWorkspace: Config.options.background.parallax.enableWorkspace ?? true,
+            enableSidebar: Config.options.background.parallax.enableSidebar ?? true,
+            sidebarLeftOpen: GlobalStates.sidebarLeftOpen,
+            sidebarRightOpen: GlobalStates.sidebarRightOpen,
+            // A sidebar is worth about half a workspace step, so opening one
+            // reads as a nudge rather than as a workspace change.
+            sidebarFraction: 0.5 / Math.max(1, bgRoot.parallaxWorkspaceChunk - 1),
+            overflowX: Math.max(0, bgRoot.parallaxWidth - bgRoot.width),
+            overflowY: Math.max(0, bgRoot.parallaxHeight - bgRoot.height)
+        })
+        readonly property var parallaxOffsets: bgRoot.parallaxEnabled
+            ? ParallaxMath.offsets(bgRoot.parallaxState)
+            : ({ x: 0, y: 0 })
 
         property string effectiveWallpaperPath: {
             if (GlobalStates.screenLocked && Config.options.background.lockWall !== "")
@@ -586,11 +648,39 @@ Variants {
             }
         }
 
+        // The wallpaper layers, and the parallax viewport they live in. It is
+        // deliberately NOT anchored: it is drawn larger than the screen and its
+        // x/y ARE the effect (see parallaxOffsets). At zoom 1 it is exactly
+        // screen-sized at 0,0, so the feature collapses back to the old
+        // geometry rather than to a special case.
+        //
+        // One viewport for every layer is what makes Wallpaper Engine parallax
+        // for free: the WE surface, the frozen stills and the peel shaders all
+        // stay `anchors.fill: parent` inside it, so they pan together and the
+        // cross-fade keeps lining up mid-pan.
         Item {
-            anchors.fill: parent
+            id: parallaxViewport
+            width: bgRoot.parallaxWidth
+            height: bgRoot.parallaxHeight
+            x: bgRoot.parallaxOffsets.x
+            y: bgRoot.parallaxOffsets.y
             // Everything the background draws hangs off here, so this is what
             // `hideWhenFullscreen` switches off - see suppressContents above.
             visible: !bgRoot.suppressContents
+
+            // Slower than a workspace switch on purpose: the wallpaper trails
+            // the workspace animation rather than racing it, which is what reads
+            // as distance instead of as a second window sliding. Not an
+            // Appearance token - those are tuned for UI elements and made the
+            // wallpaper snap.
+            Behavior on x {
+                enabled: bgRoot.parallaxEnabled
+                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+            }
+            Behavior on y {
+                enabled: bgRoot.parallaxEnabled
+                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+            }
 
             // Live Wallpaper Engine layer - bottom of the stack. When active it
             // is the wallpaper; the static-image layers below are hidden. Loaded
@@ -725,6 +815,12 @@ Variants {
                 onStatusChanged: {
                     if (status === Image.Ready && bgRoot.transitionProgress === 0.0) {
                         transitionAnim.restart()
+                    }
+                    // Feeds parallax.autoVertical. Both dimensions read 0 until
+                    // the source resolves, so the guard keeps a not-yet-loaded
+                    // image from looking square and flipping the pan axis.
+                    if (status === Image.Ready && implicitWidth > 0 && implicitHeight > 0) {
+                        bgRoot.wallpaperIsPortrait = implicitHeight > implicitWidth
                     }
                 }
             }
@@ -1008,85 +1104,120 @@ Variants {
                 }
             }
 
-            WidgetCanvas {
-                id: widgetCanvas
-                anchors.fill: parent
-                // Above the WE wallpaper-switch transition (weTransition, z 1) so the
-                // desktop widgets/plugins stay visible while wallpapers cross-fade.
-                z: 2
-                // The desktop is the canvas the marquee exists for: rubber-band
-                // several widgets, then drag any of them to move the cluster.
-                selectionEnabled: true
+        } // parallaxViewport
 
-                transitions: Transition {
-                    PropertyAnimation {
-                        properties: "width,height"
-                        duration: Appearance.animation.elementMove.duration
-                        easing.type: Appearance.animation.elementMove.type
-                        easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
-                    }
-                    AnchorAnimation {
-                        duration: Appearance.animation.elementMove.duration
-                        easing.type: Appearance.animation.elementMove.type
-                        easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
-                    }
+        WidgetCanvas {
+            id: widgetCanvas
+            width: bgRoot.width
+            height: bgRoot.height
+            // Moved out of the viewport, so it needs its own copy of the
+            // fullscreen gate the viewport carries - without this the
+            // desktop widgets would stay on screen under a fullscreen
+            // window while the wallpaper behind them vanished.
+            visible: !bgRoot.suppressContents
+            // Widget parallax. The canvas is a SIBLING of the wallpaper
+            // viewport, not a child, so it cannot inherit the pan - and it
+            // must not: matching the wallpaper exactly would glue the
+            // widgets to the picture and there would be no effect to see.
+            // Travelling further than the wallpaper (factor > 1) is what
+            // reads as the widgets sitting in front of it.
+            //
+            // Screen-sized regardless of the zoom, so a widget dragged to a
+            // corner stays where the user put it rather than being placed
+            // against an overscanned canvas they cannot see the edges of.
+            x: (Config.options.background.parallax.enableWidgets ?? true)
+                ? ParallaxMath.widgetOffset(bgRoot.parallaxOffsets.x, Config.options.background.parallax.widgetsFactor ?? 0)
+                : 0
+            y: (Config.options.background.parallax.enableWidgets ?? true)
+                ? ParallaxMath.widgetOffset(bgRoot.parallaxOffsets.y, Config.options.background.parallax.widgetsFactor ?? 0)
+                : 0
+            Behavior on x {
+                enabled: bgRoot.parallaxEnabled
+                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+            }
+            Behavior on y {
+                enabled: bgRoot.parallaxEnabled
+                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+            }
+            // Above the WE wallpaper-switch transition (weTransition, z 1) so the
+            // desktop widgets/plugins stay visible while wallpapers cross-fade.
+            z: 2
+            // The desktop is the canvas the marquee exists for: rubber-band
+            // several widgets, then drag any of them to move the cluster.
+            selectionEnabled: true
+
+            transitions: Transition {
+                PropertyAnimation {
+                    properties: "width,height"
+                    duration: Appearance.animation.elementMove.duration
+                    easing.type: Appearance.animation.elementMove.type
+                    easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
                 }
-                Repeater {
-                    model: PluginManager.availablePlugins
+                AnchorAnimation {
+                    duration: Appearance.animation.elementMove.duration
+                    easing.type: Appearance.animation.elementMove.type
+                    easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                }
+            }
+            Repeater {
+                model: PluginManager.availablePlugins
 
-                    FadeLoader {
-                        id: pluginLoader
+                FadeLoader {
+                    id: pluginLoader
 
-                        required property var modelData
-                        shown: modelData.desktopWidget !== undefined
-                            && modelData.startupSafe !== false
-                            && Config.options.plugins.enabled.includes(modelData.id)
-                        // Keep the loader untransformed. Hyprland derives live
-                        // background blur from this surface's alpha map; wrapping
-                        // plugin widgets in a Scale transform offsets that map
-                        // from the live Wallpaper Engine layer beneath it.
-                        enterDuration: Appearance.animation.elementMoveEnter.duration
-                        enterEasingCurve: Appearance.animation.elementMoveEnter.bezierCurve
-                        exitDuration: Appearance.animation.elementMoveExit.duration
-                        exitEasingCurve: Appearance.animation.elementMoveExit.bezierCurve
+                    required property var modelData
+                    shown: modelData.desktopWidget !== undefined
+                        && modelData.startupSafe !== false
+                        && Config.options.plugins.enabled.includes(modelData.id)
+                    // Keep the loader untransformed. Hyprland derives live
+                    // background blur from this surface's alpha map; wrapping
+                    // plugin widgets in a Scale transform offsets that map
+                    // from the live Wallpaper Engine layer beneath it.
+                    enterDuration: Appearance.animation.elementMoveEnter.duration
+                    enterEasingCurve: Appearance.animation.elementMoveEnter.bezierCurve
+                    exitDuration: Appearance.animation.elementMoveExit.duration
+                    exitEasingCurve: Appearance.animation.elementMoveExit.bezierCurve
 
-                        sourceComponent: PluginWidget {
-                            manifest: pluginLoader.modelData
-                            screenName: bgRoot.screen.name
-                            screenWidth: bgRoot.screen.width
-                            screenHeight: bgRoot.screen.height
-                            scaledScreenWidth: bgRoot.screen.width
-                            scaledScreenHeight: bgRoot.screen.height
-                            wallpaperScale: 1
-                            // Use the exact source resolved by this background,
-                            // including lock wallpaper and video thumbnails.
-                            wallpaperPath: bgRoot.wallpaperPath
-                            wallpaperSafetyTriggered: bgRoot.wallpaperSafetyTriggered
-                            // Live surface for in-shell "blur" frost. During lock
-                            // and the lock<->WE peel, frost against the peel itself
-                            // so it tracks the exact lock background (avoids the WE
-                            // flashing through the frost before the unlock peel
-                            // catches up). Otherwise the live WE, or null (=> static
-                            // image path) when no WE is active.
-                            weSurfaceItem: (bgRoot.lockWallShown || lockPeelTimer.running)
-                                ? lockPeel
-                                : (bgRoot.weShown ? weLoader.item : null)
-                        }
+                    sourceComponent: PluginWidget {
+                        manifest: pluginLoader.modelData
+                        screenName: bgRoot.screen.name
+                        screenWidth: bgRoot.screen.width
+                        screenHeight: bgRoot.screen.height
+                        scaledScreenWidth: bgRoot.screen.width
+                        scaledScreenHeight: bgRoot.screen.height
+                        wallpaperScale: 1
+                        // Use the exact source resolved by this background,
+                        // including lock wallpaper and video thumbnails.
+                        wallpaperPath: bgRoot.wallpaperPath
+                        wallpaperSafetyTriggered: bgRoot.wallpaperSafetyTriggered
+                        // Live surface for in-shell "blur" frost. During lock
+                        // and the lock<->WE peel, frost against the peel itself
+                        // so it tracks the exact lock background (avoids the WE
+                        // flashing through the frost before the unlock peel
+                        // catches up). Otherwise the live WE, or null (=> static
+                        // image path) when no WE is active.
+                        weSurfaceItem: (bgRoot.lockWallShown || lockPeelTimer.running)
+                            ? lockPeel
+                            : (bgRoot.weShown ? weLoader.item : null)
                     }
                 }
             }
+        }
 
-            MouseArea {
-                id: desktopRightClickArea
-                anchors.fill: parent
-                z: -2
-                acceptedButtons: Qt.RightButton
-                onClicked: (mouse) => {
-                    GlobalStates.desktopMenuScreen = bgRoot.screen
-                    GlobalStates.desktopMenuX = mouse.x
-                    GlobalStates.desktopMenuY = mouse.y
-                    GlobalStates.desktopMenuOpen = true
-                }
+        MouseArea {
+            id: desktopRightClickArea
+            // Kept off while the contents are suppressed, which the removed
+            // wrapper used to do for it: a right-click desktop menu opening
+            // behind a fullscreen window is not a desktop the user can see.
+            visible: !bgRoot.suppressContents
+            anchors.fill: parent
+            z: -2
+            acceptedButtons: Qt.RightButton
+            onClicked: (mouse) => {
+                GlobalStates.desktopMenuScreen = bgRoot.screen
+                GlobalStates.desktopMenuX = mouse.x
+                GlobalStates.desktopMenuY = mouse.y
+                GlobalStates.desktopMenuOpen = true
             }
         }
     }
