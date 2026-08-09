@@ -224,6 +224,89 @@ ContentPage {
             }
         
             ContentSubsection {
+                title: Translation.tr("Parallax")
+                Layout.fillWidth: true
+
+                GroupedList {
+                    ConfigSwitch {
+                        Layout.fillWidth: true
+                        buttonIcon: "animation"
+                        text: Translation.tr("Enable")
+                        checked: Config.options.background.parallax.enable
+                        onClicked: {
+                            Config.options.background.parallax.enable = !Config.options.background.parallax.enable;
+                        }
+                    }
+                    ConfigSpinBox {
+                        Layout.fillWidth: true
+                        enabled: Config.options.background.parallax.enable
+                        text: Translation.tr("Zoom (%)")
+                        // The zoom IS the room the pan happens in: at 100% the
+                        // wallpaper is exactly screen-sized and every switch
+                        // below it does nothing, so the floor is 100 rather
+                        // than something that silently disables the feature.
+                        from: 100
+                        to: 150
+                        stepSize: 1
+                        value: Math.round(Config.options.background.parallax.workspaceZoom * 100)
+                        onValueModified: newValue => {
+                            Config.options.background.parallax.workspaceZoom = newValue / 100;
+                        }
+                    }
+                    ConfigSwitch {
+                        Layout.fillWidth: true
+                        buttonIcon: "view_carousel"
+                        enabled: Config.options.background.parallax.enable
+                        text: Translation.tr("Follow workspaces")
+                        checked: Config.options.background.parallax.enableWorkspace
+                        onClicked: {
+                            Config.options.background.parallax.enableWorkspace = !Config.options.background.parallax.enableWorkspace;
+                        }
+                    }
+                    ConfigSwitch {
+                        Layout.fillWidth: true
+                        buttonIcon: "dock_to_right"
+                        enabled: Config.options.background.parallax.enable
+                        text: Translation.tr("Follow sidebars")
+                        checked: Config.options.background.parallax.enableSidebar
+                        onClicked: {
+                            Config.options.background.parallax.enableSidebar = !Config.options.background.parallax.enableSidebar;
+                        }
+                    }
+                    ConfigSwitch {
+                        Layout.fillWidth: true
+                        buttonIcon: "widgets"
+                        enabled: Config.options.background.parallax.enable
+                        text: Translation.tr("Move desktop widgets")
+                        checked: Config.options.background.parallax.enableWidgets
+                        onClicked: {
+                            Config.options.background.parallax.enableWidgets = !Config.options.background.parallax.enableWidgets;
+                        }
+                    }
+                    ConfigSwitch {
+                        Layout.fillWidth: true
+                        buttonIcon: "swap_vert"
+                        enabled: Config.options.background.parallax.enable
+                        text: Translation.tr("Pan vertically")
+                        checked: Config.options.background.parallax.vertical
+                        onClicked: {
+                            Config.options.background.parallax.vertical = !Config.options.background.parallax.vertical;
+                        }
+                    }
+                    ConfigSwitch {
+                        Layout.fillWidth: true
+                        buttonIcon: "auto_awesome"
+                        enabled: Config.options.background.parallax.enable && !Config.options.background.parallax.vertical
+                        text: Translation.tr("Pan vertically on portrait wallpapers")
+                        checked: Config.options.background.parallax.autoVertical
+                        onClicked: {
+                            Config.options.background.parallax.autoVertical = !Config.options.background.parallax.autoVertical;
+                        }
+                    }
+                }
+            }
+
+            ContentSubsection {
                 title: Translation.tr("Centered wallpaper")
                 Layout.fillWidth: true
 
