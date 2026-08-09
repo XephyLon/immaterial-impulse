@@ -12,6 +12,19 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Wallpaper parallax is back, and it works with live wallpapers too.** The
+  wallpaper drifts as you move between workspaces, nudges when a sidebar opens,
+  and the desktop widgets travel a little further than it does so they read as
+  sitting in front of it. Portrait wallpapers pan down instead of across, and
+  vertical panning can be forced for any wallpaper. Wallpaper Engine projects
+  parallax exactly like stills, cross-fades included. Controls live under
+  Settings → Desktop → Parallax; the zoom there is the room the effect has to
+  move in.
+- Existing configs are migrated once: the knobs had been carried since
+  dots-hyprland with nothing reading them, so whatever they held was a leftover
+  rather than a preference and would have left the revived effect switched off.
+
 ## [0.21.0] — 2026-08-09
 
 ### Added
