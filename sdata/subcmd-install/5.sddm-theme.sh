@@ -56,7 +56,17 @@ fi
 
 SDDM_REPO_RAW="${SDDM_REPO_RAW:-https://raw.githubusercontent.com/XephyLon/imi-sddm-theme}"
 # Pin the installer for reproducibility. Bump this to adopt a newer imi-sddm-theme.
-SDDM_REF="${SDDM_REF:-bde1f15885293cc6edc96c769eea0b583d4fbb6d}"
+# This is the SHA of a RELEASE COMMIT (currently v0.3.0). The satellite tags its
+# releases, but the pin stays a SHA because test_sddm_theme_source.py requires
+# one - a moving ref could change the theme under a pinned release.
+#
+# Read that SHA off imi-sddm-theme's **main** after merging, never off the
+# branch you merged: that repo merges with rebase, so the head you tested is
+# rewritten and survives only on the merged branch ref. A pin naming such a
+# commit fetches fine today and 404s the day the branch is deleted. That is not
+# hypothetical - it happened on this pin's previous bump, which is why
+# test_sddm_pin_reachable.py now fails on a pin that is not an ancestor of main.
+SDDM_REF="${SDDM_REF:-3e961a74db4a6b0407c8065f0b133bc18bb451cc}"
 SETUP_URL="${SDDM_REPO_RAW}/${SDDM_REF}/setup.sh"
 
 echo "[ImI] SDDM theme: fetching imi-sddm-theme installer (${SDDM_REF:0:12})..."
