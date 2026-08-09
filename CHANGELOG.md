@@ -12,6 +12,17 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- **The login greeter no longer refreshes through root.** The SDDM theme pin
+  moves to imi-sddm-theme v0.3.1, which publishes the greeter's colours,
+  settings and wallpaper into a staging directory owned by you and readable by
+  the `sddm` group, reached from the installed theme through symlinks. Every
+  wallpaper switch used to end in a root script that parsed your config and ran
+  **ffmpeg as root over your wallpaper video**; none of that escalates now, and
+  the passwordless sudo rule it needed is removed on the next install.
+- Existing installs migrate in place on Update Dots, seeded from the greeter
+  currently on screen so nothing about it visibly changes.
+
 ## [0.22.0] — 2026-08-09
 
 ### Added
