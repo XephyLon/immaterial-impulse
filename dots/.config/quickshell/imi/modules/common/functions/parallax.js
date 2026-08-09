@@ -1,0 +1,87 @@
+.pragma library
+
+// Wallpaper parallax maths.
+//
+// The whole effect is one idea: draw the wallpaper larger than the screen, then
+// choose which part of that overflow is visible. Everything here works in
+// fractions of the overflow - 0 is the left/top edge of the picture, 1 the
+// right/bottom edge, 0.5 dead centre - and only the last step turns them into
+// pixels. Background.qml feeds live state in and applies the result; it makes
+// no positioning decisions of its own, which is what lets this be tested
+// without a compositor.
+//
+// Nothing here may return NaN. Background.qml binds these straight to x/y, and
+// a NaN there does not misplace the wallpaper, it stops the item rendering
+// entirely - so every input is defaulted rather than trusted.
+
+const CENTRE = 0.5;
+
+function clamp01(value) {
+    if (!isFinite(value)) return CENTRE;
+    return Math.max(0, Math.min(1, value));
+}
+
+function number(value, fallback) {
+    return (typeof value === "number" && isFinite(value)) ? value : fallback;
+}
+
+// Where this workspace sits along the pan, 0..1.
+//
+// Divided by (total - 1) rather than by total: the pan runs between the first
+// and last workspace, so the last one reaches the far edge of the picture
+// instead of stopping one step short. One workspace has nowhere to pan and
+// stays centred - which is also the divide-by-zero guard.
+function workspaceFraction(workspaceIndex, totalWorkspaces) {
+    const total = number(totalWorkspaces, 1);
+    if (total <= 1) return CENTRE;
+    return clamp01(number(workspaceIndex, 0) / (total - 1));
+}
+
+// Fractions for both axes, given the full parallax state.
+//
+// Sidebars always act on X even in vertical mode: they are horizontal surfaces
+// sliding in from the left and right edges whichever way the workspaces pan, so
+// moving the wallpaper vertically for them would not read as the same effect.
+function fractions(state) {
+    state = state || {};
+    const vertical = !!state.vertical;
+    const workspace = state.enableWorkspace === false
+        ? CENTRE
+        : workspaceFraction(state.workspaceIndex, state.totalWorkspaces);
+
+    let x = vertical ? CENTRE : workspace;
+    let y = vertical ? workspace : CENTRE;
+
+    if (state.enableSidebar !== false) {
+        const nudge = number(state.sidebarFraction, 0);
+        if (state.sidebarRightOpen) x += nudge;
+        if (state.sidebarLeftOpen) x -= nudge;
+    }
+
+    return { x: clamp01(x), y: clamp01(y) };
+}
+
+// Fractions turned into the pixel offsets the wallpaper container is placed at.
+//
+// Negative: the container is bigger than the screen and slides underneath it,
+// so showing the right-hand end of the picture means moving the container left.
+function offsets(state) {
+    state = state || {};
+    const f = fractions(state);
+    const overflowX = Math.max(0, number(state.overflowX, 0));
+    const overflowY = Math.max(0, number(state.overflowY, 0));
+    return {
+        x: -overflowX * f.x,
+        y: -overflowY * f.y
+    };
+}
+
+// How far the desktop widgets travel for a given wallpaper offset.
+//
+// A factor above 1 moves the widgets further than the wallpaper, which is what
+// reads as depth; equal factors would glue them to the picture and the effect
+// disappears. Kept as its own function because the widget layer is a sibling of
+// the wallpaper container, not a child, so it cannot inherit the offset.
+function widgetOffset(wallpaperOffset, factor) {
+    return number(wallpaperOffset, 0) * number(factor, 0);
+}
