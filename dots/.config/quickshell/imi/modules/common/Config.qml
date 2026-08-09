@@ -51,6 +51,29 @@ Singleton {
             "notes": "notes"
         })
 
+    // Wallpaper parallax was config-only for the whole life of this shell: the
+    // knobs were carried over from dots-hyprland but the code that read them
+    // went with the ii->pC theme swap, so nothing has consumed them since.
+    // Whatever an existing config.json holds for them is therefore a leftover,
+    // not a preference - it was never possible to see what it did. Reviving the
+    // feature against those values ships it switched off for everyone who has
+    // ever written a config, which is everyone.
+    //
+    // So the stored block is cleared exactly once, letting the QML defaults
+    // apply, and the marker keeps a later deliberate "off" from being undone.
+    // Only the switches are reset: workspaceZoom and widgetsFactor are numbers
+    // a user could plausibly have tuned, and neither of them can turn the
+    // effect off on its own.
+    function migrateDeadParallaxSwitches() {
+        if (root.options.background.parallax.migratedFromDeadCode)
+            return;
+        root.setNestedValue("background.parallax.enable", true);
+        root.setNestedValue("background.parallax.enableWorkspace", true);
+        root.setNestedValue("background.parallax.enableSidebar", true);
+        root.setNestedValue("background.parallax.enableWidgets", true);
+        root.setNestedValue("background.parallax.migratedFromDeadCode", true);
+    }
+
     function migrateDesktopWidgetsToPlugins() {
         if (root.options.plugins.migratedDesktopWidgets)
             return;
@@ -402,6 +425,7 @@ Singleton {
             root.migrateUpstreamKeys(text());
             root.ready = true;
             root.clearStaleKbOptions();
+            root.migrateDeadParallaxSwitches();
             root.migrateDesktopWidgetsToPlugins();
             root.migrateDesktopWidgetOptionsToPlugins();
         }
@@ -883,12 +907,22 @@ Singleton {
                 property string thumbnailPath: ""
                 property bool hideWhenFullscreen: true
                 property JsonObject parallax: JsonObject {
+                    property bool enable: true
                     property bool vertical: false
-                    property bool autoVertical: false
+                    property bool autoVertical: true // Pan vertically on a portrait wallpaper
                     property bool enableWorkspace: true
-                    property real workspaceZoom: 1.0 // Relative to wallpaper size
+                    // How much larger than the screen the wallpaper is drawn.
+                    // This IS the effect's headroom: at 1.0 there is no overflow
+                    // to pan across and every other knob here does nothing, which
+                    // is why the revived default overscans. It also costs - the
+                    // Wallpaper Engine surface renders at this size - so it is
+                    // deliberately modest.
+                    property real workspaceZoom: 1.1
                     property bool enableSidebar: true
+                    property bool enableWidgets: true
                     property real widgetsFactor: 1.2
+                    // Set once by migrateDeadParallaxSwitches; see there.
+                    property bool migratedFromDeadCode: false
                 }
             }
 
