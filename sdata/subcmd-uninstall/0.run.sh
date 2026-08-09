@@ -55,7 +55,7 @@ if [[ "$_sddm_ours" == true ]]; then
   if command -v curl >/dev/null; then
     # Must match SDDM_REF in sdata/subcmd-install/5.sddm-theme.sh -
     # tests/test_sddm_theme_source.py pins that they agree.
-    _sddm_ref="${SDDM_REF:-3e961a74db4a6b0407c8065f0b133bc18bb451cc}"
+    _sddm_ref="${SDDM_REF:-1b0ac8bb647cb9089a13746bf904296c170fb74f}"
     _sddm_un="$(mktemp --suffix=-ii-sddm-uninstall.sh)"
     if curl -fsSL "https://raw.githubusercontent.com/XephyLon/imi-sddm-theme/${_sddm_ref}/uninstall.sh" -o "$_sddm_un"; then
       # The theme's uninstaller exits non-zero when it removes nothing (a
