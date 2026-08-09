@@ -829,6 +829,30 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   binding to track it - and prefer extracting it into a reusable, testable component over
   re-inlining the same fix at each call site.
 
+**Wallpaper parallax is one oversized viewport, not a per-layer effect.**
+`Background.qml` draws every wallpaper layer inside `parallaxViewport`, an item sized to
+`screen * parallax.workspaceZoom` whose `x`/`y` are the effect; the maths lives in
+`modules/common/functions/parallax.js` so it can be tested without a compositor. Keep new wallpaper
+layers **inside** that viewport and `anchors.fill: parent` - that is the only reason Wallpaper
+Engine parallaxes at all, since the WE surface, the frozen switch stills and the peel shaders are
+all sized to the same item and therefore pan together. Anything that must stay screen-sized (the
+widget canvas, the desktop right-click area) is a *sibling* of the viewport and needs its own copy
+of the `suppressContents` fullscreen gate, which the viewport carries for its own children.
+Sizing is deliberately screen-derived rather than wallpaper-derived: a live WE project reports no
+intrinsic size, and `PreserveAspectCrop` already covers a still, so one rule serves both.
+(feat(background): revive wallpaper parallax, for stills and Wallpaper Engine.)
+
+**A feature that was config-only cannot be revived on its stored values.** The parallax knobs
+shipped for the whole life of this shell with nothing reading them, so every `config.json` holds
+values that predate the feature doing anything - on the author's machine every switch was `false`.
+Turning the code back on against those values ships the feature dead for everyone who has ever
+written a config, which is everyone, and no unit test sees it: the QML default says `true`, the
+stored config says `false`, and the adapter's answer is the one that runs. Reviving dead config
+therefore needs a one-shot migration with a marker (`migrateDeadParallaxSwitches`), and a runtime
+test that seeds a real config directory. Reset only the switches - a tuned number is a plausible
+preference and usually cannot disable the feature by itself.
+(fix(config): revive the parallax switches every stored config turned off.)
+
 **Treat repeated binding exceptions as potential resource runaways, not harmless log noise.** A
 sidebar media-player binding called `filterDuplicatePlayers()` without defining the helper in that
 component. The visible log only gained an occasional `ReferenceError` when MPRIS state changed, but
