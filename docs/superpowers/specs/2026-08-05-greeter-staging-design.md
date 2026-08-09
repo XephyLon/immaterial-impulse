@@ -1,6 +1,12 @@
 # Greeter staging dir — root out of the hot path (Option B)
 
-**Status:** proposal — spec only, no implementation
+**Status:** implemented — imi-sddm-theme#15, pinned by this PR
+**Decisions:** the recommendations below were taken as written, except Q8
+(simplify: `set -e` plus the stamp as the last statement, no separate
+stamp-after-success bookkeeping). Q4 followed from Q2 — the sudoers rule cannot
+retire while matugen-only still escalates, so all three modes converted together.
+Q6 (allowlisting the flattened keys) was deferred as orthogonal; staging already
+moves Settings.qml from world-readable to 0640.
 **Repos:** immaterial-impulse (hub), imi-sddm-theme (satellite)
 **Parent:** `docs/superpowers/specs/2026-08-05-reactive-greeter-sync-design.md` (Option B
 section is the seed; Option A is shipped and working)
