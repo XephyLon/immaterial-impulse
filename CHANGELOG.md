@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-08-09
+
 ### Added
 - **Launch Minecraft modpacks from the search bar.** Press Super, type a pack
   name and hit Enter: Prism Launcher instances now appear in the launcher
