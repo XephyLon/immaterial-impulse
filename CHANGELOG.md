@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-08-09
+
 ### Added
 - **Wallpaper parallax is back, and it works with live wallpapers too.** The
   wallpaper drifts as you move between workspaces, nudges when a sidebar opens,
