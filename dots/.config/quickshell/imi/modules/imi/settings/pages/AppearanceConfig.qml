@@ -277,8 +277,8 @@ ContentPage {
                     text: Translation.tr("Background pattern")
                     description: Translation.tr("Show an image behind Kitty terminal content")
                     checked: Config.options.appearance.terminal.background.enabled
-                    onCheckedChanged: {
-                        Config.options.appearance.terminal.background.enabled = checked
+                    onToggleRequested: {
+                        Config.options.appearance.terminal.background.enabled = !Config.options.appearance.terminal.background.enabled
                         page.scheduleTerminalBackgroundApply()
                     }
                 }
@@ -371,19 +371,19 @@ ContentPage {
                     buttonIcon: "hardware"
                     text: Translation.tr("Shell & utilities")
                     checked: Config.options.appearance.wallpaperTheming.enableAppsAndShell
-                    onCheckedChanged: { Config.options.appearance.wallpaperTheming.enableAppsAndShell = checked }
+                    onToggleRequested: Config.options.appearance.wallpaperTheming.enableAppsAndShell = !Config.options.appearance.wallpaperTheming.enableAppsAndShell
                 }
                 ConfigSwitch {
                     buttonIcon: "tv_options_input_settings"
                     text: Translation.tr("Qt apps")
                     checked: Config.options.appearance.wallpaperTheming.enableQtApps
-                    onCheckedChanged: { Config.options.appearance.wallpaperTheming.enableQtApps = checked }
+                    onToggleRequested: Config.options.appearance.wallpaperTheming.enableQtApps = !Config.options.appearance.wallpaperTheming.enableQtApps
                 }
                 ConfigSwitch {
                     buttonIcon: "terminal"
                     text: Translation.tr("Terminal")
                     checked: Config.options.appearance.wallpaperTheming.enableTerminal
-                    onCheckedChanged: { Config.options.appearance.wallpaperTheming.enableTerminal = checked }
+                    onToggleRequested: Config.options.appearance.wallpaperTheming.enableTerminal = !Config.options.appearance.wallpaperTheming.enableTerminal
                 }
                 ConfigRow {
                     uniform: true
@@ -391,7 +391,7 @@ ContentPage {
                         buttonIcon: "dark_mode"
                         text: Translation.tr("Force dark mode in terminal")
                         checked: Config.options.appearance.wallpaperTheming.terminalGenerationProps.forceDarkMode
-                        onCheckedChanged: { Config.options.appearance.wallpaperTheming.terminalGenerationProps.forceDarkMode = checked }
+                        onToggleRequested: Config.options.appearance.wallpaperTheming.terminalGenerationProps.forceDarkMode = !Config.options.appearance.wallpaperTheming.terminalGenerationProps.forceDarkMode
                     }
                 }
                 ConfigSpinBox {

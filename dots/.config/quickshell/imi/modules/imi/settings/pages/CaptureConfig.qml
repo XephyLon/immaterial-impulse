@@ -93,26 +93,26 @@ ContentPage {
                     buttonIcon: "volume_up"
                     text: Translation.tr("Record desktop audio")
                     checked: Config.options.screenRecord.recordAudio
-                    onCheckedChanged: { Config.options.screenRecord.recordAudio = checked }
+                    onToggleRequested: Config.options.screenRecord.recordAudio = !Config.options.screenRecord.recordAudio
                 }
                 ConfigSwitch {
                     buttonIcon: "mic"
                     text: Translation.tr("Merge microphone into the audio track")
                     checked: Config.options.screenRecord.recordMic
-                    onCheckedChanged: { Config.options.screenRecord.recordMic = checked }
+                    onToggleRequested: Config.options.screenRecord.recordMic = !Config.options.screenRecord.recordMic
                 }
                 ConfigSwitch {
                     buttonIcon: "point_scan"
                     text: Translation.tr("Show cursor")
                     checked: Config.options.screenRecord.showCursor
-                    onCheckedChanged: { Config.options.screenRecord.showCursor = checked }
+                    onToggleRequested: Config.options.screenRecord.showCursor = !Config.options.screenRecord.showCursor
                 }
                 ConfigSwitch {
                     buttonIcon: "brightness_6"
                     text: Translation.tr("Record SDR on HDR displays")
                     description: Translation.tr("HDR recordings look washed out in players that can't tonemap (VLC, Discord, browsers). On: fullscreen recordings capture through the screen-share portal — correctly toned SDR instantly, with a one-time approval it remembers. Region recordings and replays record HDR and convert to SDR in the background a few seconds after saving. Off = true HDR files.")
                     checked: Config.options.screenRecord.tonemapSdr
-                    onCheckedChanged: { Config.options.screenRecord.tonemapSdr = checked }
+                    onToggleRequested: Config.options.screenRecord.tonemapSdr = !Config.options.screenRecord.tonemapSdr
                 }
             }
 
@@ -123,7 +123,7 @@ ContentPage {
                         buttonIcon: "replay"
                         text: Translation.tr("Enable (keep the last moments in a buffer)")
                         checked: Config.options.screenRecord.replay.enable
-                        onCheckedChanged: { Config.options.screenRecord.replay.enable = checked }
+                        onToggleRequested: Config.options.screenRecord.replay.enable = !Config.options.screenRecord.replay.enable
                     }
                     ConfigSpinBox {
                         icon: "history"
@@ -138,7 +138,7 @@ ContentPage {
                         buttonIcon: "save"
                         text: Translation.tr("Buffer on disk instead of RAM")
                         checked: Config.options.screenRecord.replay.storage === "disk"
-                        onCheckedChanged: { Config.options.screenRecord.replay.storage = checked ? "disk" : "ram" }
+                        onToggleRequested: Config.options.screenRecord.replay.storage = Config.options.screenRecord.replay.storage === "disk" ? "ram" : "disk"
                     }
                     ConfigTextArea {
                         id: replayPathField
@@ -178,7 +178,7 @@ ContentPage {
                     text: Translation.tr("Show result popup")
                     description: Translation.tr("Preview with save/edit/discard after every screenshot")
                     checked: Config.options.screenshotResult.enable
-                    onCheckedChanged: Config.options.screenshotResult.enable = checked
+                    onToggleRequested: Config.options.screenshotResult.enable = !Config.options.screenshotResult.enable
                 }
                 ConfigSpinBox {
                     enabled: Config.options.screenshotResult.enable
@@ -205,25 +205,19 @@ ContentPage {
                         buttonIcon: "select_window"
                         text: Translation.tr('Windows')
                         checked: Config.options.regionSelector.targetRegions.windows
-                        onCheckedChanged: {
-                            Config.options.regionSelector.targetRegions.windows = checked;
-                        }
+                        onToggleRequested: Config.options.regionSelector.targetRegions.windows = !Config.options.regionSelector.targetRegions.windows
                     }
                     ConfigSwitch {
                         buttonIcon: "right_panel_open"
                         text: Translation.tr('Layers')
                         checked: Config.options.regionSelector.targetRegions.layers
-                        onCheckedChanged: {
-                            Config.options.regionSelector.targetRegions.layers = checked;
-                        }
+                        onToggleRequested: Config.options.regionSelector.targetRegions.layers = !Config.options.regionSelector.targetRegions.layers
                     }
                     ConfigSwitch {
                         buttonIcon: "nearby"
                         text: Translation.tr('Content')
                         checked: Config.options.regionSelector.targetRegions.content
-                        onCheckedChanged: {
-                            Config.options.regionSelector.targetRegions.content = checked;
-                        }
+                        onToggleRequested: Config.options.regionSelector.targetRegions.content = !Config.options.regionSelector.targetRegions.content
                     }
                 }
             }
@@ -254,9 +248,7 @@ ContentPage {
                         buttonIcon: "point_scan"
                         text: Translation.tr("Show aim lines")
                         checked: Config.options.regionSelector.rect.showAimLines
-                        onCheckedChanged: {
-                            Config.options.regionSelector.rect.showAimLines = checked;
-                        }
+                        onToggleRequested: Config.options.regionSelector.rect.showAimLines = !Config.options.regionSelector.rect.showAimLines
                     }
                 }
             }
