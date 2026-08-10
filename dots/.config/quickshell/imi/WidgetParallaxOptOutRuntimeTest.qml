@@ -25,10 +25,13 @@ import qs.modules.common.widgets.widgetCanvas
  * The following widget is the control throughout: three "it did not move"
  * checks prove nothing if the harness stopped delivering events.
  *
- * Position Behaviors are switched off (`animateXPos`/`animateYPos`) so a score
- * reads a settled coordinate rather than a frame of an animation. The
- * cancellation is a binding, not a transition - the animation is the same one
- * every widget already has.
+ * The follower's position Behaviors are switched off (`animateXPos`/
+ * `animateYPos`) so a score reads a settled coordinate rather than a frame of
+ * an animation. The opted-out widget's are deliberately left alone: the host
+ * turns them off itself (`animatePosition: followParallax`), and that IS the
+ * fix the last block scores. Setting them here would hide it - which is what
+ * the first version of this harness did, on both widgets, and it is why the
+ * opt-out shipped doing nothing at all on a real desktop.
  *
  * Run it against a throwaway config:
  *   XDG_CONFIG_HOME=$(mktemp -d) XDG_STATE_HOME=$(mktemp -d) qs -p WidgetParallaxOptOutRuntimeTest.qml
@@ -79,6 +82,21 @@ ShellRoot {
             width: 1200
             height: 700
 
+            // Background.qml animates the pan, and that turns out to be the
+            // whole difference between an opt-out that works and one that does
+            // not - so the harness can offer both. Off for the settled checks,
+            // which want an instant pan; on for the last block, which is about
+            // what happens *during* one.
+            property bool animatePan: false
+            Behavior on x {
+                enabled: canvas.animatePan
+                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+            }
+            Behavior on y {
+                enabled: canvas.animatePan
+                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+            }
+
             PluginWidget {
                 id: followWidget
                 manifest: harness.followManifest
@@ -101,8 +119,6 @@ ShellRoot {
                 scaledScreenWidth: 1200
                 scaledScreenHeight: 700
                 wallpaperScale: 1
-                animateXPos: false
-                animateYPos: false
             }
         }
     }
@@ -138,6 +154,17 @@ ShellRoot {
         driver.mouseMove(canvas, x + dx / 2, y + dy / 2, 20, Qt.LeftButton);
         driver.mouseMove(canvas, x + dx, y + dy, 20, Qt.LeftButton);
         driver.mouseRelease(canvas, x + dx, y + dy, Qt.LeftButton);
+    }
+
+    // A press and release that never moves. It runs the same commitPosition
+    // path a drag does - `onReleased` does not ask whether anything was
+    // dragged - so it must be a no-op on the store.
+    function clickWidget(widget) {
+        const x = widget.x + widget.width / 2;
+        const y = widget.y + widget.height / 2;
+        driver.mouseMove(canvas, x, y);
+        driver.mousePress(canvas, x, y, Qt.LeftButton);
+        driver.mouseRelease(canvas, x, y, Qt.LeftButton);
     }
 
     readonly property var steps: [
@@ -184,10 +211,42 @@ ShellRoot {
                           && harness.storedY("hold-probe") === 408);
         },
 
+        // The same round trip for the widget that does follow, because the
+        // store has to mean one thing for both. A follower's drag needs no
+        // conversion at all, so the two land on the same number from opposite
+        // directions - which is the property, not a coincidence.
+        () => harness.dragWidget(followWidget, 48, 24),
+        () => {
+            harness.check("follower dragged while panned: stores its placement too",
+                          harness.storedX("follow-probe") === 168
+                          && harness.storedY("follow-probe") === 144);
+            harness.check("follower dragged while panned: lands where the pointer left it",
+                          harness.screenX(followWidget) === -12
+                          && harness.screenY(followWidget) === 84);
+        },
+
+        // Reload, with the pan still on. `applyPersistedPosition` is what runs
+        // when the shell comes back up (and on every external state change), so
+        // driving it directly is the closest a live harness gets to a restart -
+        // and it is where the clamp lives, which is the half that decides
+        // whether a stored coordinate is honoured or quietly replaced.
+        () => {
+            followWidget.applyPersistedPosition();
+            holdWidget.applyPersistedPosition();
+        },
+        () => {
+            harness.check("reloaded while panned: the follower is where it was dropped",
+                          harness.screenX(followWidget) === -12
+                          && harness.screenY(followWidget) === 84);
+            harness.check("reloaded while panned: the opted-out widget is where it was dropped",
+                          harness.screenX(holdWidget) === 696
+                          && harness.screenY(holdWidget) === 408);
+        },
+
         () => harness.pan(0, 0),
         () => {
             harness.check("pan released: the follower comes back",
-                          harness.screenX(followWidget) === 120 && harness.screenY(followWidget) === 120);
+                          harness.screenX(followWidget) === 168 && harness.screenY(followWidget) === 144);
             harness.check("pan released: the opted-out widget has not moved at all",
                           harness.screenX(holdWidget) === 696 && harness.screenY(holdWidget) === 408);
         },
@@ -202,6 +261,54 @@ ShellRoot {
             harness.check("opt-in again: its stored position is untouched",
                           harness.storedX("hold-probe") === 696
                           && harness.storedY("hold-probe") === 408);
+        },
+
+        // --- The pan takes 600ms, and that is where the opt-out died --------
+        //
+        // Everything above pans by assignment, which settles the canvas within
+        // one frame. Background.qml animates it, so an opted-out widget's x/y
+        // binding re-evaluates on every frame of a 600ms transition - and a
+        // Behavior handed a target that moves every frame restarts every frame
+        // and never ticks. The widget then holds its OLD canvas coordinate for
+        // the whole pan, which is to say it travels the full pan on screen,
+        // and any release taken during it saves that stale coordinate.
+        () => { PluginState.setOption("hold-probe", "followParallax", false); },
+        () => harness.pan(0, 0),
+        () => {
+            harness.check("re-opted-out at rest: still where it was left",
+                          harness.screenX(holdWidget) === 696 && harness.screenY(holdWidget) === 408);
+            canvas.animatePan = true;
+            harness.pan(-240, -120);
+        },
+        () => {
+            // The instrument first: every check under it would also pass
+            // against a canvas that had already finished panning.
+            harness.check("mid-pan: the pan is genuinely in flight",
+                          canvas.x < -1 && canvas.x > -239
+                          && canvas.y < -1 && canvas.y > -119);
+            harness.check("mid-pan: the follower is travelling",
+                          harness.screenX(followWidget) === Math.round(canvas.x) + 168
+                          && harness.screenX(followWidget) !== 168);
+            harness.check("mid-pan: the opted-out widget has not moved on screen",
+                          harness.screenX(holdWidget) === 696
+                          && harness.screenY(holdWidget) === 408);
+            // Not a drag. `onReleased` commits regardless, so a click landing
+            // in this window used to walk the stored position by one pan -
+            // repeatedly, which is how a real store reached x: -852.
+            harness.clickWidget(holdWidget);
+            harness.check("mid-pan: a click does not rewrite the placement",
+                          harness.storedX("hold-probe") === 696
+                          && harness.storedY("hold-probe") === 408);
+        },
+        () => {},
+        () => {},
+        () => {
+            harness.check("pan settled: the opted-out widget never moved at all",
+                          harness.screenX(holdWidget) === 696
+                          && harness.screenY(holdWidget) === 408);
+            harness.check("pan settled: the follower arrived",
+                          harness.screenX(followWidget) === -72
+                          && harness.screenY(followWidget) === 24);
         }
     ]
 

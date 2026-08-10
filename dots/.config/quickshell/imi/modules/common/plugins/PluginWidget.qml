@@ -241,16 +241,29 @@ AbstractBackgroundWidget {
     readonly property real parallaxCancelY: ParallaxMath.parallaxCancel(
         rootWidget.parallaxCanvas ? rootWidget.parallaxCanvas.y : 0, rootWidget.followParallax)
 
+    // The cancellation is not a move, and it must not go through the position
+    // Behaviors: the canvas pans over 600ms, so an opted-out widget's x/y
+    // binding re-evaluates on every frame of it, and a Behavior whose target
+    // moves every frame restarts every frame and never ticks. Measured, not
+    // reasoned about - with the Behaviors on, x sat at its pre-pan value for
+    // the whole 600ms while the canvas travelled under it, so the widget moved
+    // the *full* pan on screen and only slid back afterwards. The animation is
+    // what an opted-out widget gives up for holding still; the drag is
+    // unaffected, since the Behaviors are already off while dragging.
+    animatePosition: rootWidget.followParallax
+
     // Dragging assigns x/y directly and so breaks these bindings;
     // AbstractBackgroundWidget calls restoreXYBinding() on release for exactly
     // this case, so the override has to be restored there too or a single drag
     // disables centring for the rest of the session.
-    x: rootWidget.placedX + rootWidget.parallaxCancelX
-    y: rootWidget.placedY + rootWidget.parallaxCancelY
+    x: ParallaxMath.drawnFromPlacement(rootWidget.placedX, rootWidget.parallaxCancelX)
+    y: ParallaxMath.drawnFromPlacement(rootWidget.placedY, rootWidget.parallaxCancelY)
 
     function restoreXYBinding() {
-        rootWidget.x = Qt.binding(() => rootWidget.placedX + rootWidget.parallaxCancelX);
-        rootWidget.y = Qt.binding(() => rootWidget.placedY + rootWidget.parallaxCancelY);
+        rootWidget.x = Qt.binding(() => ParallaxMath.drawnFromPlacement(
+            rootWidget.placedX, rootWidget.parallaxCancelX));
+        rootWidget.y = Qt.binding(() => ParallaxMath.drawnFromPlacement(
+            rootWidget.placedY, rootWidget.parallaxCancelY));
     }
 
     // Overrides AbstractBackgroundWidget's release path, which calls this on a
@@ -260,13 +273,15 @@ AbstractBackgroundWidget {
     // after the drag broke the x/y bindings, and setPosition is what makes the
     // move survive a restart.
     function commitPosition() {
-        // The cancellation is subtracted back out: `x` is where the widget is
-        // on the canvas, the persisted position is where it was PLACED. Storing
-        // the drawn coordinate would fold the current pan into the saved
-        // position, so an opted-out widget would walk by one pan's worth every
-        // time it was dragged.
-        rootWidget.targetX = rootWidget.x - rootWidget.parallaxCancelX;
-        rootWidget.targetY = rootWidget.y - rootWidget.parallaxCancelY;
+        // The cancellation is taken back out: `x` is where the widget is drawn
+        // on the canvas, the persisted position is where it was PLACED (see
+        // ParallaxMath). Storing the drawn coordinate would fold the current
+        // pan into the saved position, so an opted-out widget would walk by one
+        // pan's worth every time it was dragged.
+        rootWidget.targetX = ParallaxMath.placementFromDrawn(
+            rootWidget.x, rootWidget.parallaxCancelX);
+        rootWidget.targetY = ParallaxMath.placementFromDrawn(
+            rootWidget.y, rootWidget.parallaxCancelY);
         rootWidget.restoreXYBinding();
         if (!manifest) return;
         PluginState.setPosition(manifest.id, screenName, {
