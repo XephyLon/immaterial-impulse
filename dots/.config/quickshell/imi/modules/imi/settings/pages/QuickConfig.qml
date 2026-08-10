@@ -2,11 +2,9 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
-import Quickshell.Io
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
-import qs.modules.common.functions
 
 ContentPage {
     id: page
@@ -30,48 +28,12 @@ ContentPage {
         Quickshell.execDetached(themeArguments(extraArguments))
     }
 
-    // Per-scheme swatches for the picker chips, computed from the current
-    // wallpaper (one quantize, every variant) in the color venv.
-    property var schemeSwatches: ({})
-    readonly property string swatchSource: /\.(mp4|webm|mkv|avi|mov)$/i.test(WallpaperEngine.activeArtwork)
-        ? Config.options.background.thumbnailPath
-        : WallpaperEngine.activeArtwork
-    onSwatchSourceChanged: schemePreviewRestart.restart()
-    Connections {
-        target: Appearance.m3colors
-        function onDarkmodeChanged() { schemePreviewRestart.restart() }
-    }
-    Component.onCompleted: schemePreviewRestart.restart()
-    Timer {
-        // Debounce: wallpaper switches change source and darkmode together.
-        id: schemePreviewRestart
-        interval: 200
-        onTriggered: {
-            schemePreviewProc.running = false
-            schemePreviewProc.running = page.swatchSource.length > 0
-        }
-    }
-    Process {
-        id: schemePreviewProc
-        command: ["bash", "-c",
-            // The \${...} escape stops QML's own template substitution from
-            // eating bash's parameter expansion.
-            `source "\${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV}/bin/activate" && ` +
-            `python3 '${Directories.scriptPath}/colors/scheme_preview.py' ` +
-            `--path '${StringUtils.shellSingleQuoteEscape(page.swatchSource)}' ` +
-            `--mode ${Appearance.m3colors.darkmode ? "dark" : "light"}`]
-        stdout: StdioCollector {
-            id: schemePreviewCollector
-            onStreamFinished: {
-                try {
-                    const parsed = JSON.parse(schemePreviewCollector.text)
-                    page.schemeSwatches = parsed.error ? {} : parsed
-                } catch (e) {
-                    page.schemeSwatches = {}
-                }
-            }
-        }
-    }
+    // Per-scheme swatches for the picker chips. SchemePreview owns the venv run
+    // and caches it; this page is one of two consumers now, so it observes the
+    // inputs and pokes rather than driving a process of its own.
+    readonly property string swatchInputs: SchemePreview.inputs
+    onSwatchInputsChanged: SchemePreview.refresh()
+    Component.onCompleted: SchemePreview.refresh()
 
     function goTo(term) {
         const t = term.toLowerCase().trim()
@@ -234,8 +196,7 @@ ContentPage {
 
                                 property bool isSelected: Config.options.appearance.palette.type === modelData.value
                                 property bool hovered: hoverArea.containsMouse
-                                property var swatches: page.schemeSwatches[modelData.value] ?? []
-                                onSwatchesChanged: paletteCircle.requestPaint()
+                                property var swatches: SchemePreview.swatches[modelData.value] ?? []
 
                                 radius: Appearance.rounding.normal
                                 color: hovered ? Appearance.colors.colSecondaryContainerHover
@@ -248,45 +209,15 @@ ContentPage {
                                     anchors.centerIn: parent
                                     spacing: Appearance.spacing.space25
 
-                                    // Android 12-style palette circle: top half primary,
-                                    // bottom quarters secondary/tertiary - the palette IS
-                                    // the button. Falls back to the scheme icon when the
-                                    // color venv can't supply swatches.
                                     Item {
                                         Layout.alignment: Qt.AlignHCenter
                                         implicitWidth: 34
                                         implicitHeight: 34
 
-                                        Canvas {
-                                            id: paletteCircle
+                                        SchemePaletteCircle {
                                             anchors.centerIn: parent
-                                            width: 30
-                                            height: 30
-                                            visible: schemeChip.swatches.length >= 3
-                                            onPaint: {
-                                                const ctx = getContext("2d")
-                                                ctx.reset()
-                                                const c = schemeChip.swatches
-                                                if (c.length < 3) return
-                                                const r = width / 2
-                                                ctx.beginPath(); ctx.moveTo(r, r)
-                                                ctx.arc(r, r, r, Math.PI, 2 * Math.PI); ctx.closePath()
-                                                ctx.fillStyle = c[0]; ctx.fill()
-                                                ctx.beginPath(); ctx.moveTo(r, r)
-                                                ctx.arc(r, r, r, Math.PI / 2, Math.PI); ctx.closePath()
-                                                ctx.fillStyle = c[1]; ctx.fill()
-                                                ctx.beginPath(); ctx.moveTo(r, r)
-                                                ctx.arc(r, r, r, 0, Math.PI / 2); ctx.closePath()
-                                                ctx.fillStyle = c[2]; ctx.fill()
-                                            }
-                                        }
-
-                                        MaterialSymbol {
-                                            anchors.centerIn: parent
-                                            visible: schemeChip.swatches.length < 3
-                                            text: schemeChip.modelData.icon
-                                            iconSize: Appearance.font.pixelSize.huge
-                                            color: Appearance.colors.colOnSecondaryContainer
+                                            swatches: schemeChip.swatches
+                                            fallbackIcon: schemeChip.modelData.icon
                                         }
 
                                         // Selection ring + center check badge
