@@ -190,7 +190,7 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             self.assertIn("readonly property var blurRegions: content.blurRegions", wrapper_text)
             self.assertIn("readonly property bool managesBlurTint: content.managesBlurTint", wrapper_text)
             self.assertIn("useBlurBackground: PluginState.option", wrapper_text)
-            self.assertIn("backgroundOpacity: Config.options.plugins.blurOpacity", wrapper_text)
+            self.assertIn("backgroundOpacity: PluginState.effectiveBackgroundOpacity(", wrapper_text)
 
         currency = (DESIGN_SYSTEM / "widgets" / "DesktopCurrencyWidget.qml").read_text(
             encoding="utf-8"

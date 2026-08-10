@@ -1,4 +1,5 @@
 import qs.modules.common
+import qs.modules.common.plugins
 import qs.modules.common.functions as Functions
 import qs.services
 import "."
@@ -14,7 +15,10 @@ Item {
     property string sizeMode: cfg ? cfg.sizeMode : "3x1"
     property bool interactive: true
     property bool useBlurBackground: false
-    property real backgroundOpacity: 0.1
+    // The host wrapper overrides this with its own plugin id; the fallback keeps
+    // the toggle honoured for a component instantiated without one.
+
+    property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("", 0.1)
     signal sizeModeRequested(string value)
     readonly property bool managesBlurTint: true
     readonly property var blurRegions: [{

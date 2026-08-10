@@ -16,7 +16,7 @@ Rectangle {
     readonly property string participantBackground: PluginState.option("discord_voice", "participantBackground", "none")
     readonly property real participantBackgroundOpacity: PluginState.option("discord_voice", "participantBackgroundOpacity", 0.72)
     readonly property bool blurEnabled: PluginState.option("discord_voice", "blurEnabled", true)
-    readonly property real backgroundOpacity: Config.options.plugins.blurOpacity
+    readonly property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("discord_voice")
     readonly property string layoutMode: PluginState.option("discord_voice", "overlayLayout", "row")
     readonly property bool columnMode: layoutMode === "column"
     property bool namesOnLeft: false

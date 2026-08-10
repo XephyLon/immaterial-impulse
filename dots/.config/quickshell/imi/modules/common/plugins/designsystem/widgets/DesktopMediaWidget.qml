@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import QtQuick.Controls
 import qs.modules.common
+import qs.modules.common.plugins
 import qs.modules.common.functions as Functions
 import qs.services
 import "."
@@ -16,7 +17,10 @@ Item {
     property bool useRomaji: Config.options.appearance.lyrics.lyricsUseRomaji
     property bool viewLyrics: false
     property bool useBlurBackground: false
-    property real backgroundOpacity: 0.1
+    // The host wrapper overrides this with its own plugin id; the fallback keeps
+    // the toggle honoured for a component instantiated without one.
+
+    property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("", 0.1)
     readonly property bool managesBlurTint: true
     readonly property var blurRegions: [{
         x: bgCard.x, y: bgCard.y, width: bgCard.width, height: bgCard.height, radius: bgCard.radius

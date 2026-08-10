@@ -19,7 +19,7 @@ Item {
     // Naming both surfaces keeps the host's frost off the empty corners and off
     // the name text.
     readonly property bool blurEnabled: PluginState.option("user-card", "blurEnabled", false)
-    readonly property real backgroundOpacity: Config.options.plugins.blurOpacity
+    readonly property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("user-card")
     readonly property bool managesBlurTint: true
     readonly property var blurRegions: [
         { x: contentBox.x, y: contentBox.y, width: contentBox.width,

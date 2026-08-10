@@ -455,7 +455,7 @@ class DiscordVoicePluginSafetyTests(unittest.TestCase):
         self.assertIn("root.maxNameWidth", avatar)
         self.assertIn("root.backgroundMode === \"name\" ? Appearance.spacing.space200 : 0", avatar)
         self.assertIn("columnSpacing: root.columnMode ? Appearance.spacing.space75 : Appearance.spacing.space200", widget)
-        self.assertIn("Config.options.plugins.blurOpacity", widget)
+        self.assertIn('PluginState.effectiveBackgroundOpacity("discord_voice")', widget)
         self.assertIn("ColorUtils.transparentize", widget)
         self.assertIn(': "transparent"', widget)
         overlay = (ROOT / "modules/imi/overlay/discordVoice/DiscordVoiceOverlay.qml").read_text()
