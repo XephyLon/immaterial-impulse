@@ -12,6 +12,8 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-08-10
+
 ### Added
 - **The cheatsheet lists every keybind, in columns.** It used to draw only the
   groups that had sub-groups, silently dropping 28 of the 61 binds on this
@@ -23,6 +25,21 @@ own repo; the installer pins which revision it builds.
   keys held together rather than one key with a long name. Existing configs are
   migrated once, since the old value was the shipped default and there is no
   setting for it to have been chosen from.
+- **Bar popups are one card that moves.** Hovering from the clock to the weather
+  used to destroy one popup and reveal another, with nothing connecting them —
+  eleven separate surfaces, eleven shadows, eleven compositor animations. There
+  is now a single card that travels and resizes along the bar while its contents
+  cross-fade, and shrinks back toward the widget it belonged to on the way out.
+  Clicking a widget that stays open — the tray overflow, Docker, Discord voice —
+  parks the card there and holds it until you dismiss it; while it is held,
+  hovering another widget deliberately does nothing.
+- **The desktop right-click menu shows the colour schemes as colours.** Each of
+  the nine scheme presets draws the palette it actually produces, instead of an
+  icon that read as an animation. The wallpaper transitions submenu now offers
+  every transition except the one already running.
+- Desktop widgets can be excused from going opaque. A per-widget **Stay
+  translucent** switch keeps a widget see-through when you turn transparency off
+  for everything else, and keeps its frost with it.
 
 ### Fixed
 - **Drop shadows are no longer frosted by the compositor's blur.** The
@@ -41,6 +58,26 @@ own repo; the installer pins which revision it builds.
   blur region was only published on a settle timer.
 - The desktop right-click menu and its submenu gained a card to sit on, which is
   what lets them carry a shadow at all.
+- **Turning transparency off now actually makes things opaque.** The switch
+  removed every desktop widget's blur while their panel alpha carried on coming
+  from settings that ignored it — so fourteen widgets sat at roughly a tenth
+  opacity over a newly *sharp* wallpaper, which looked worse than leaving
+  transparency on. The bar's own opacity and the drop shelf ignored the switch
+  the same way; the shelf shipped 50% see-through with transparency off, in the
+  default config. Settings rows that govern nothing while the switch is off are
+  greyed out rather than left live.
+- **The Settings window keeps its frost when you toggle transparency off and back
+  on.** It used to come back translucent but unblurred and stay that way until
+  the shell was reloaded, because a window whose clear colour reaches full opacity
+  even once tells the compositor it is opaque and never takes that back.
+- **Desktop widget frost comes back all at once.** After anything that rebuilt it
+  — the transparency toggle is the easy one — widgets re-frosted one at a time,
+  about 0.6s apart, taking some 3.6 seconds to finish on eight widgets. Each
+  widget was decoding its own private copy of the same wallpaper, twice, and they
+  queued; they now share one decode. Dragging a frosted widget no longer
+  re-decodes the wallpaper on every pixel of travel either.
+- A disabled switch in Settings dimmed twice, once for the row and once for
+  itself, so it read as darker than the rest of the disabled row.
 
 ### Changed
 - **The login greeter no longer refreshes through root.** The SDDM theme pin
