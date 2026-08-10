@@ -9,7 +9,6 @@ import qs.modules.common.widgets
 import qs.modules.imi.background.widgets
 import "../functions/parallax.js" as ParallaxMath
 import "gridSizes.js" as GridSizes
-import "../functions/parallax.js" as ParallaxMath
 
 AbstractBackgroundWidget {
     id: rootWidget

@@ -114,6 +114,12 @@ if ! python3 "$SCRIPT_DIR/lint_shell_name.py"; then
     exit 1
 fi
 
+echo "Running duplicate import lint..."
+if ! python3 "$SCRIPT_DIR/lint_duplicate_imports.py"; then
+    echo "Duplicate import lint failed."
+    exit 1
+fi
+
 echo "Running process pattern lint..."
 if ! python3 "$SCRIPT_DIR/lint_self_matching_process_patterns.py"; then
     echo "Process pattern lint failed."
