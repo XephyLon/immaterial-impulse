@@ -30,6 +30,19 @@ RippleButton {
     // switch is the last thing in this component, so anything a call site
     // appends to its own row can only land beyond it.
     property alias trailingContent: trailingRow.data
+    // A click is an intent to flip, not a state change of its own. Assigning to
+    // `checked` from a handler destroys the call site's `checked:` binding on
+    // the very first click, after which nothing external - a preset, a
+    // hand-edited config, a migration - can move the switch again, while the
+    // row's own write-back keeps working: the setting changes and the switch
+    // lies (#158). The call site owns the value and flips it at the source;
+    // `checked` here only ever follows it back.
+    //
+    // A signal of its own rather than AbstractButton's inherited `toggled()`:
+    // RippleButton declares `property bool toggled` (its "draw me as active"
+    // flag), which shadows that signal, so `onToggled` at a call site would be
+    // the property's change handler rather than this.
+    signal toggleRequested()
     colBackgroundHover: "transparent"
 
     // Nothing in here dims itself on `enabled`. RippleButton already applies the
@@ -43,7 +56,7 @@ RippleButton {
     implicitHeight: contentItem.implicitHeight + 8 
     font.pixelSize: Appearance.font.pixelSize.small
 
-    onClicked: checked = !checked
+    onClicked: root.toggleRequested()
 
     contentItem: ColumnLayout {
         spacing: 0
@@ -103,6 +116,12 @@ RippleButton {
                 id: switchWidget
                 down: root.down
                 Layout.fillWidth: false
+                // A Switch is checkable by default and moves its own `checked`
+                // on a click or a thumb drag, so it would show the flip even
+                // where the call site declines the intent - and stay wrong
+                // until the config next changed. Non-checkable it still emits
+                // `clicked`, and its `checked` stays a picture of the row's.
+                checkable: false
                 checked: root.checked
                 onClicked: root.clicked()
             }
