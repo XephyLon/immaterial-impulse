@@ -5,6 +5,7 @@ import QtQuick
 
 StyledPopup {
     id: root
+    morph: true
     property var today: new Date()
     // The calendar fills its surface edge to edge, so it needs more breathing
     // room than the default popup inset gives.
