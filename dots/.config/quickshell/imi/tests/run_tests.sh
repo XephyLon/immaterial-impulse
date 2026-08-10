@@ -99,6 +99,15 @@ if ! python3 "$SCRIPT_DIR/lint_disabled_opacity.py"; then
     exit 1
 fi
 
+# Static lint: a ConfigSwitch click is an intent. Assigning to `checked` - in
+# the widget or at a call site - destroys the binding every settings page hangs
+# on it, and the switch silently detaches from the config it is showing.
+echo "Running ConfigSwitch intent lint..."
+if ! python3 "$SCRIPT_DIR/lint_config_switch_intent.py"; then
+    echo "ConfigSwitch intent lint failed."
+    exit 1
+fi
+
 echo "Running shell name lint..."
 if ! python3 "$SCRIPT_DIR/lint_shell_name.py"; then
     echo "Shell name lint failed."
