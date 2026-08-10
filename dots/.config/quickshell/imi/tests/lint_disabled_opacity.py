@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+#
+# Regression guard: the disabled-state dim is applied ONCE, at one layer.
+#
+# `opacity` composites multiplicatively down the scene graph, so two components
+# in the same subtree each expressing "disabled" as `opacity: enabled ? 1 : 0.4`
+# do not agree on 0.4 - they produce 0.16. `ConfigSwitch` shipped exactly that:
+# its root is a `RippleButton`, which dims the whole control (the switch track
+# included, since `StyledSwitch` has no dim of its own), and it then repeated the
+# same binding on the icon, the label, the description and all three content
+# slots. Disabled rows rendered at roughly a sixth opacity instead of two fifths,
+# and the slots disagreed with each other: `trailingContent` had no second
+# binding and so landed at 0.4 while `titleContent` and `detailContent` landed at
+# 0.16.
+#
+# The rule: if a component's ROOT type already dims itself on `enabled`, nothing
+# inside that component may dim on `enabled` again - not a nested binding, and
+# not a nested instance of another self-dimming type.
+#
+# Exits non-zero listing offenders. Wired into run_tests.sh / CI.
+
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+MODULES = ROOT / "modules"
+
+# A property of the root object: the repo indents QML with four spaces, so a
+# root-level binding sits at one level and anything nested sits deeper.
+ROOT_DIM = re.compile(r"^ {1,4}opacity:.*\benabled\b.*\?")
+NESTED_DIM = re.compile(r"^ {5,}opacity:.*\benabled\b.*\?")
+ROOT_TYPE = re.compile(r"^([A-Z]\w*)\s*\{")
+NESTED_TYPE = re.compile(r"^ {5,}([A-Z]\w*)\s*\{")
+
+
+def qml_files():
+    return sorted(MODULES.rglob("*.qml"))
+
+
+def root_type(lines):
+    for line in lines:
+        match = ROOT_TYPE.match(line)
+        if match:
+            return match.group(1)
+    return None
+
+
+def main():
+    files = qml_files()
+    sources = {path: path.read_text(encoding="utf-8").splitlines() for path in files}
+
+    # A type dims itself if its own declaration file binds opacity to `enabled`
+    # on the root object. The type name is the file's basename.
+    dimming_files = {
+        path
+        for path, lines in sources.items()
+        if any(ROOT_DIM.match(line) for line in lines)
+    }
+    self_dimming = {path.stem for path in dimming_files}
+
+    # The check matches source text, so it would pass vacuously after a reformat
+    # that moved these bindings. Pin what it is supposed to have found - by FILE,
+    # not by type name: the plugin design system ships its own RippleButton, so a
+    # name-level guard stays satisfied by the copy while the mainline one loses
+    # its dim, which is the state in which flagging inner bindings is actively
+    # wrong (they would be the only dim left).
+    expected = {
+        "common/widgets/RippleButton.qml",
+        "common/widgets/StyledSpinBox.qml",
+        "common/plugins/designsystem/widgets/RippleButton.qml",
+    }
+    found = {str(path.relative_to(MODULES)) for path in dimming_files}
+    missing = expected - found
+    if missing:
+        print("Disabled-opacity lint FAILED: the scan found no root-level "
+              f"disabled dim in {sorted(missing)} - the indentation assumption "
+              "or those files' shape changed, and the check below is now "
+              "vacuous.", file=sys.stderr)
+        return 1
+
+    violations = []
+    for path, lines in sources.items():
+        if root_type(lines) not in self_dimming:
+            continue
+        rel = path.relative_to(MODULES)
+        for number, line in enumerate(lines, 1):
+            if NESTED_DIM.match(line):
+                violations.append((rel, number, line.strip()))
+                continue
+            nested = NESTED_TYPE.match(line)
+            if nested and nested.group(1) in self_dimming:
+                violations.append((rel, number,
+                                   f"nested self-dimming {nested.group(1)}"))
+
+    if violations:
+        print("Disabled-opacity lint FAILED: opacity composites, so a second "
+              "`enabled ? 1 : x` inside a component whose root already dims "
+              "renders at x*x, not x. Delete the inner one - the root covers "
+              "the whole control:", file=sys.stderr)
+        for rel, number, detail in violations:
+            print(f"  {rel}:{number}: {detail}", file=sys.stderr)
+        return 1
+
+    print(f"Disabled-opacity lint passed ({len(files)} QML files, "
+          f"{len(self_dimming)} self-dimming types)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
