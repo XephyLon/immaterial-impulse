@@ -83,10 +83,12 @@ class TheTwoGroupsStaySeparate(unittest.TestCase):
                         "the widget's own options must render above the shared "
                         "section - they are what the page was opened for")
 
-    def test_one_delegate_serves_both_repeaters(self):
+    def test_one_delegate_serves_every_repeater(self):
         """Two copies of the row delegate is how the groups drift apart."""
-        self.assertEqual(self.source.count("delegate: optionRow"), 2)
         self.assertEqual(self.source.count("id: optionRow"), 1)
+        self.assertEqual(self.source.count("delegate: optionRow"),
+                         self.source.count("Repeater {"),
+                         "every group of rows draws through the one delegate")
 
 
 if __name__ == "__main__":
