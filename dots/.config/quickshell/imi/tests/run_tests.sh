@@ -105,6 +105,12 @@ if ! python3 "$SCRIPT_DIR/lint_shell_name.py"; then
     exit 1
 fi
 
+echo "Running process pattern lint..."
+if ! python3 "$SCRIPT_DIR/lint_self_matching_process_patterns.py"; then
+    echo "Process pattern lint failed."
+    exit 1
+fi
+
 echo "Running doc citation lint..."
 if ! python3 "$SCRIPT_DIR/lint_doc_citations.py"; then
     echo "Doc citation lint failed."
