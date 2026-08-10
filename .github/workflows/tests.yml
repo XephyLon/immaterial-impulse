@@ -24,7 +24,9 @@ jobs:
           # ffmpeg: test_tonemap_sdr.py builds a real HDR10 fixture (libx265)
           # and drives the actual tonemap script; without ffmpeg those tests
           # skip and the SDR delivery path ships unexercised.
-          sudo apt-get install -y qt6-declarative-dev qml6-module-qttest qml6-module-qtquick qml6-module-qtqml qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtqml-workerscript qml6-module-qtquick-window ffmpeg
+          # qt5compat supplies FastBlur, which WallpaperBlurSurface imports; without
+          # it that type is simply "unavailable" and its test fails to compile.
+          sudo apt-get install -y qt6-declarative-dev qml6-module-qttest qml6-module-qtquick qml6-module-qtqml qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtqml-workerscript qml6-module-qtquick-window qml6-module-qt5compat-graphicaleffects ffmpeg
 
       # zstd builds the fixture release tarballs in
       # test_wallpaperengine_prebuilt.py and extracts them in the installer under
