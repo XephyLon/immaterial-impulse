@@ -85,3 +85,31 @@ function offsets(state) {
 function widgetOffset(wallpaperOffset, factor) {
     return number(wallpaperOffset, 0) * number(factor, 0);
 }
+
+// The same travel, measured from the centre rather than from the edge.
+//
+// `offsets()` is written for the wallpaper container, which is genuinely larger
+// than the screen: parking an axis at CENTRE shows the middle of the picture,
+// which is what you want. The widget canvas is *screen-sized*, so the identical
+// arithmetic means something else entirely - half the overflow of static shift,
+// pushing the canvas off the screen and taking that strip of desktop with it.
+//
+// It is worst on the axis that does not travel at all. `vertical: false` sends
+// workspace movement to x and parks y at CENTRE, so with the shipped 107% zoom
+// and 1.2 factor a 1440-tall screen loses its bottom 60px permanently, to buy
+// motion that never happens.
+//
+// Subtracting CENTRE makes the resting position 0 on both axes: the canvas
+// covers the screen exactly when nothing is panned, and swings symmetrically
+// either side of that when something is. A parked axis contributes nothing.
+function widgetOffsets(state, factor) {
+    state = state || {};
+    const f = fractions(state);
+    const scale = number(factor, 0);
+    const overflowX = Math.max(0, number(state.overflowX, 0));
+    const overflowY = Math.max(0, number(state.overflowY, 0));
+    return {
+        x: -overflowX * (f.x - CENTRE) * scale,
+        y: -overflowY * (f.y - CENTRE) * scale
+    };
+}
