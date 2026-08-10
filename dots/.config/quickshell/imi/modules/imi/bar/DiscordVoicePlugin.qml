@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Hyprland
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -21,10 +20,6 @@ MouseArea {
     hoverEnabled: false
     cursorShape: Qt.PointingHandCursor
     onClicked: root.popupOpen = !root.popupOpen
-    onPopupOpenChanged: {
-        if (popupOpen) focusArm.restart();
-        else { focusArm.stop(); popupFocus.active = false; popupFocus.windows = []; }
-    }
 
     RowLayout {
         id: content
@@ -69,28 +64,9 @@ MouseArea {
         sourceComponent: DiscordPackage.DiscordVoicePopup {
             pinnedOpen: true
             hoverTarget: root
+            // The overlay owns the surface, so it owns the outside-click grab.
+            onDismissRequested: root.popupOpen = false
             onPinnedOpenChanged: if (!pinnedOpen) root.popupOpen = false
         }
-    }
-    Timer {
-        id: focusArm
-        interval: 16
-        repeat: true
-        property int attempts: 0
-        onTriggered: {
-            const window = popupLoader.item?.surfaceWindow;
-            if (!root.popupOpen || attempts++ > 30) { stop(); return; }
-            if (!window) return;
-            popupFocus.windows = [root.QsWindow?.window, window].filter(item => item);
-            popupFocus.active = true;
-            stop();
-        }
-        onRunningChanged: if (running) attempts = 0
-    }
-    HyprlandFocusGrab {
-        id: popupFocus
-        active: false
-        windows: []
-        onCleared: root.popupOpen = false
     }
 }

@@ -39,10 +39,34 @@ class DockerMemorySafetyTests(unittest.TestCase):
         self.assertIn("horizontalPadding: Appearance.spacing.space100", adapter)
         self.assertRegex(adapter, r"Loader\s*\{[\s\S]*?active\s*:\s*root\.popupOpen")
         self.assertIn("hoverTarget: root", adapter)
-        self.assertIn("property bool useOutsideClickGrab: true", adapter)
-        self.assertIn("HyprlandFocusGrab {", adapter)
-        self.assertIn("popupFocus.windows = []", adapter)
-        self.assertNotIn("windows: [root.QsWindow", adapter)
+        self.assertIn("onDismissRequested: root.popupOpen = false", adapter)
+
+    def test_no_bar_popup_host_grabs_the_shared_surface(self):
+        # Hyprland classifies an outside click by the surface's input region,
+        # and the shared overlay's region is the card. A grab armed by a widget
+        # while the card is still parked at 2*elevationMargin therefore treats
+        # the next click anywhere as outside, closes the popup and destroys it -
+        # which is why the Docker popup took several clicks to open. The grab
+        # belongs to the overlay that owns the surface and knows when the card
+        # has settled; a widget's job is to answer dismissRequested.
+        for path in (
+            "modules/imi/bar/DockerPlugin.qml",
+            "modules/common/plugins/bundled/docker/DockerWidget.qml",
+            "modules/imi/bar/DiscordVoicePlugin.qml",
+        ):
+            source = self.text(path)
+            self.assertNotIn("HyprlandFocusGrab", source, path)
+            self.assertNotIn("surfaceWindow", source, path)
+            self.assertIn("onDismissRequested", source, path)
+
+        systray = self.text("modules/imi/bar/SysTray.qml")
+        self.assertNotIn("trayOverflowLayout.QsWindow", systray)
+        self.assertIn("onDismissRequested: root.trayOverflowOpen = false", systray)
+
+        overlay = self.text("modules/imi/bar/BarPopupOverlay.qml")
+        self.assertIn("HyprlandFocusGrab {", overlay)
+        self.assertIn("!overlayWindow.morphing", overlay)
+        self.assertIn("onCleared: overlayWindow.current?.dismissRequested()", overlay)
 
     def test_popup_does_not_animate_layout_geometry(self):
         popup = self.text("modules/common/plugins/bundled/docker/DockerPopup.qml")
@@ -93,7 +117,10 @@ class DockerMemorySafetyTests(unittest.TestCase):
         harness = self.text("DockerRuntimeTest.qml")
         self.assertGreaterEqual(harness.count("popupOpen = true"), 2)
         self.assertGreaterEqual(harness.count("popupOpen = false"), 2)
-        self.assertIn("useOutsideClickGrab: false", harness)
+        # The adapter no longer arms a grab at all, so the harness has
+        # nothing to switch off - it must also not reintroduce one, since a
+        # focus grab needs a compositor this test does not have.
+        self.assertNotIn("FocusGrab", harness)
         self.assertIn("Qt.exit(41)", harness)
         self.assertIn("Qt.exit(42)", harness)
         self.assertIn("onTriggered: Qt.exit(0)", harness)

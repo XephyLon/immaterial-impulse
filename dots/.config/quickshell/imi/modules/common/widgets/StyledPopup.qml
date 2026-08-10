@@ -22,10 +22,16 @@ QtObject {
     readonly property bool popupVisible: pinnedOpen || hoverHeld
 
     // Written by the overlay that is showing this popup, for consumers that need
-    // a window to hand to a HyprlandFocusGrab. A grab over the full-screen,
-    // input-masked overlay still clears on an outside click: the mask lets the
-    // click through to the compositor, which still classifies it as outside.
+    // to know whether this popup currently holds the card.
     property var surfaceWindow: null
+
+    // Raised by the overlay's focus grab when a click lands outside the card.
+    // A pinned popup handles this by clearing whatever flag pins it.
+    //
+    // A signal rather than the overlay writing `pinnedOpen = false`: SysTray
+    // *binds* pinnedOpen to its own state, and assigning to it would break the
+    // binding rather than close the popup.
+    signal dismissRequested()
 
     onPopupVisibleChanged: {
         // A click-toggled popup's widget never reports hover (a RippleButton has
