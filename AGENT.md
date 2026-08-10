@@ -995,6 +995,25 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   3088bbaed ("fix(plugins): route every widget panel opacity through the derivation"),
   e4f3a095e ("fix(appearance): gate the bar's own opacity on the transparency switch"),
   b47935a65 ("fix(dropShelf): gate the shelf's frost on the transparency switch").
+- **N widgets each asking the image reader for the same wallpaper is N serialized decodes, not
+  one.** Qt runs a single pixmap-reader thread, so per-widget image loads queue behind each other —
+  which is why the desktop widgets' frost came back one widget at a time, ~0.6s apart, after
+  anything that rebuilt the blur surfaces
+  ([#147](https://github.com/XephyLon/immaterial-impulse/issues/147)). Note the asymmetry that
+  names the cause: losing the frost was atomic because it is a property change, getting it back was
+  serial because it waits on a decode. What decides whether two `Image`s share one decode is the
+  whole **request**, and more of it than is obvious: url, `sourceSize`, `sourceClipRect`, *and* the
+  aspect flags a `PreserveAspectCrop`/`Fit` fill mode puts in the request — an otherwise identical
+  `Stretch` image of the same file is a different request and decodes again (measured; it is what
+  made a correct fix look broken from a test). `cache: false` opts out of sharing entirely. So a
+  per-widget `sourceClipRect`, which is the natural way to write "the slice of wallpaper behind
+  this widget", is exactly what makes every widget pay for its own full-resolution decode — and it
+  re-pays on every pixel of a drag, since the rect tracks the widget's position. Take the slice
+  with a `ShaderEffectSource`'s `sourceRect` over a shared, unclipped, cached `Image` instead: the
+  rect is free to move, and matching the request Background's own wallpaper `Image` makes means a
+  surface built while that wallpaper is on screen needs no decode at all.
+  33139b688 ("fix(widgets): give every desktop widget's frost one shared wallpaper decode"),
+  e15b9f166 ("test(widgets): pin the desktop frost to one shared wallpaper request").
 - Desktop plugin delegates are retained for every available manifest and gated through an animated
   `FadeLoader`, rather than repeating only the enabled ids. Removing a model delegate destroys it
   immediately and makes an M3 exit transition impossible; keep disabled loaders dormant until their
