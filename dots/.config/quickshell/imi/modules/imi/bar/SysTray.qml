@@ -29,7 +29,18 @@ Item {
         if (unpinnedItems.length == 0) root.closeOverflowMenu()
     }
 
-    function grabFocus() { focusGrab.active = true }
+    function grabFocus() {
+        // Only one focus grab can be held at a time. While the overflow's
+        // content sits on the shared card, the overlay is already holding one
+        // that covers the bar, the card and this menu (it publishes the menu
+        // through extraGrabWindows) - arming a second makes the compositor drop
+        // one of the two, and whichever loses raises cleared, which closed a
+        // tray menu about half a second after it opened. The overlay's grab
+        // dismisses the menu and the overflow together in that case.
+        if (overflowPopup.surfaceWindow)
+            return;
+        focusGrab.active = true
+    }
     function setExtraWindowAndGrabFocus(window) {
         if (root.activeMenu && root.activeMenu !== window) {
             if (typeof root.activeMenu.close === "function")
