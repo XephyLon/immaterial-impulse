@@ -1,4 +1,5 @@
 module qs.modules.common.plugins.designsystem.services
+CavaRef 1.0 CavaRef.qml
 singleton CavaService 1.0 CavaService.qml
 singleton CurrencyService 1.0 CurrencyService.qml
 singleton ScheduleService 1.0 ScheduleService.qml
