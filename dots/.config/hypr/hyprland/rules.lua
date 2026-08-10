@@ -185,6 +185,42 @@ hl.layer_rule({ match = { namespace = "quickshell:dock" }, blur = false})
 -- overview itself). See WindowBlurRegion in OnScreenDisplay.qml / Overview.qml.
 hl.layer_rule({ match = { namespace = "quickshell:onScreenDisplay" }, blur = false})
 hl.layer_rule({ match = { namespace = "quickshell:overview" }, blur = false})
+-- The cheatsheet has drawn a StyledRectangularShadow all along; the
+-- whole-surface blur was frosting it, which is why the card read as having no
+-- shadow at all. See WindowBlurRegion in Cheatsheet.qml.
+hl.layer_rule({ match = { namespace = "quickshell:cheatsheet" }, blur = false})
+-- Notification popups: each card carries its own shadow, so the whole-surface
+-- blur frosted every one of them. The shell publishes a region per card
+-- instead, leaving the gaps between them unblurred. See WindowBlurRegion in
+-- NotificationPopup.qml.
+hl.layer_rule({ match = { namespace = "quickshell:notificationPopup" }, blur = false})
+-- The popups those surfaces open (the tray menu, the dock's context menu, the
+-- drag-apps sheet, every tooltip) draw shadows too, and blur_popups above
+-- frosts them the same way. The fix above does not reach them: an
+-- ext-background-effect region belongs to a layer surface, and a popup is an
+-- xdg-popup, so a region published from one is accepted and does nothing.
+-- Popups carry no namespace of their own either - they inherit their parent
+-- surface's rules, which is why this is keyed on the parents.
+--
+-- So threshold by alpha instead: below `ignore_alpha` a pixel is left
+-- unblurred, and the shadow and the body sit at different alphas. Where the
+-- line falls depends on the user's transparency setting, which a layerrule
+-- cannot read, so the shell computes it and writes it out - see
+-- services/PopupBlurThreshold.qml. The fallback covers the first run, before
+-- the shell has ever written the file.
+local ok, generated = pcall(dofile, os.getenv("HOME") .. "/.config/hypr/hyprland/shellOverrides/popupBlur.lua")
+local popup_blur_threshold = (ok and type(generated) == "number") and generated or 0.6
+
+-- Keyed on the parent surfaces. Their own bodies are blurred through a
+-- region, and a region is subject to ignore_alpha too, so the threshold has
+-- to stay below the faintest body among them as well as above the shadow -
+-- which is what PopupBlurThreshold computes. Getting that backwards unblurs
+-- the panels themselves.
+for _, ns in ipairs({ "quickshell:bar", "quickshell:verticalBar", "quickshell:dock",
+                      "quickshell:sidebarLeft", "quickshell:sidebarRight" }) do
+    hl.layer_rule({ match = { namespace = ns }, ignore_alpha = popup_blur_threshold })
+end
+
 hl.layer_rule({ match = { namespace = "quickshell:verticalBar" }, animation = "slide"})
 hl.layer_rule({ match = { namespace = "quickshell:osk" }, order = -1})
 -- Quickshell: waffles

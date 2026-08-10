@@ -57,6 +57,7 @@ ShellRoot {
         WallpaperEngine.load()
         Updates.load()
         OpenRgb.load()
+        PopupBlurThreshold.load() // writes the popup blur threshold rules.lua reads
         LyricsService.restartLyrics()
     }
     

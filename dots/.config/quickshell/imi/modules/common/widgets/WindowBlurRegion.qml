@@ -33,6 +33,56 @@ Item {
         radius: root.regionRadius
     }
 
+    // A body whose rects are not known until runtime: the notification stack
+    // paints one card per app and they come and go. A declared Region cannot
+    // express that - `regions` is a default list filled at construction, and
+    // Repeater only produces Items - so build the children here and assign the
+    // list, which Quickshell's Region does accept.
+    //
+    // Callers use either this or regionItem/region, not both.
+    property var regionItems: []
+    property int regionItemsRadius: 0
+
+    Component {
+        id: subRegionComponent
+        Region {}
+    }
+
+    property var subRegions: []
+
+    function rebuildFromItems() {
+        // regionItems defaults to [], so this handler fires once at
+        // construction for EVERY instance, including the great majority that
+        // use regionItem and never touch the dynamic path. Assigning an empty
+        // list to their region's children wipes the declared region and the
+        // panel loses its blur entirely - which is what happened to the bar,
+        // the overview and the sidebars. Leave the declared region alone
+        // unless this instance is actually using regionItems.
+        if (root.subRegions.length === 0 && (root.regionItems?.length ?? 0) === 0)
+            return;
+
+        // Nothing else owns these, so they have to be torn down explicitly or
+        // every card that ever appeared leaks a Region.
+        for (const stale of root.subRegions)
+            if (stale)
+                stale.destroy();
+
+        let built = [];
+        for (const item of (root.regionItems ?? [])) {
+            if (!item)
+                continue;
+            built.push(subRegionComponent.createObject(root, {
+                item: item,
+                radius: root.regionItemsRadius
+            }));
+        }
+        root.subRegions = built;
+        root.region.regions = built;
+        root.republish();
+    }
+
+    onRegionItemsChanged: root.rebuildFromItems()
+
     function republish() {
         if (!root.targetWindow)
             return;
@@ -40,7 +90,7 @@ Item {
         root.targetWindow.BackgroundEffect.blurRegion = root.region;
     }
 
-    onRegionChanged: settleTimer.restart()
+    onRegionChanged: root.publishNow()
 
     Timer {
         id: settleTimer
@@ -49,18 +99,29 @@ Item {
         onTriggered: root.republish()
     }
 
+    // Publish at once and schedule the settle as well, rather than only
+    // scheduling it. The timer exists for a region dropped mid-(re)configure,
+    // which is a race worth re-covering - but waiting on it is a guaranteed
+    // 96ms of surface-up-and-unblurred, which on a panel that opens on demand
+    // is a visible flash of sharp wallpaper before the blur lands. Measured at
+    // 7 frames of a 60fps capture on the overview and the search bar.
+    function publishNow(): void {
+        root.republish();
+        settleTimer.restart();
+    }
+
     Connections {
         target: root.targetWindow ?? null
         ignoreUnknownSignals: true
         function onVisibleChanged() {
             if (root.targetWindow.visible)
-                settleTimer.restart();
+                root.publishNow();
         }
         function onWidthChanged() {
-            settleTimer.restart();
+            root.publishNow();
         }
         function onHeightChanged() {
-            settleTimer.restart();
+            root.publishNow();
         }
     }
 
