@@ -169,7 +169,8 @@ def test_clight_enable_setting_has_both_halves():
 
     page = SERVICES_PAGE.read_text()
     assert "checked: Config.options.light.clight.enable" in page
-    assert "Config.options.light.clight.enable = checked;" in page
+    assert ("onToggleRequested: Config.options.light.clight.enable = "
+            "!Config.options.light.clight.enable" in page)
 
 
 def test_settings_temperature_spinboxes_write_from_value_modified():
@@ -179,10 +180,19 @@ def test_settings_temperature_spinboxes_write_from_value_modified():
             r"onValueModified: \{\s*\n\s*Clight\." + setter + r"\(newValue\);", page
         ), f"{setter} must be driven from onValueModified(newValue)"
     # The daemon-state switch must not echo poll refreshes back at the daemon.
+    # It used to need an `if (checked !== Clight.autoCalibration)` guard for
+    # that, because the write came back through the binding and re-fired the
+    # handler. A ConfigSwitch click is an intent now (#158) - it fires once per
+    # click and never on a state change - so the guard has nothing to suppress
+    # and is gone. What has to hold instead: the daemon call reads the daemon's
+    # own state rather than the widget's, and hangs off the intent.
     assert re.search(
-        r"if \(checked !== Clight\.autoCalibration\)\s*\n\s*Clight\.setAutoCalibration\(checked\);",
-        page,
-    ), "auto-calibration switch would loop daemon state through onCheckedChanged"
+        r"onToggleRequested: Clight\.setAutoCalibration\(!Clight\.autoCalibration\)", page
+    ), "auto-calibration must ask the daemon for the opposite of what it reports"
+    assert "onCheckedChanged" not in page, (
+        "a ConfigSwitch write-back on onCheckedChanged is a dead switch now - "
+        "`checked` no longer moves on a click"
+    )
 
 
 if __name__ == "__main__":
