@@ -50,9 +50,13 @@ class DockerMemorySafetyTests(unittest.TestCase):
         self.assertNotRegex(popup, r'property\s*:\s*["\'](?:width|height|implicitWidth|implicitHeight)["\']')
         # Non-Item objects declared at the popup root would be assigned to
         # StyledPopup's Item-only default property and invalidate the type, so
-        # every animation has to sit inside the content tree.
+        # any animation has to sit inside the content tree. Stated over every
+        # animation rather than over one named object, since the popup's own
+        # enter animation went away when the shared card took the enter over.
         content_index = popup.index("id: panelContent")
-        self.assertGreater(popup.index("id: popupEnter"), content_index)
+        for match in re.finditer(r"\b\w*Animation\s*\{", popup):
+            self.assertGreater(match.start(), content_index,
+                               "animations belong inside the content tree, not at the popup root")
 
     def test_popup_uses_shared_components_not_its_own(self):
         """The plugin renders with the shell's M3E widgets rather than

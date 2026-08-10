@@ -9,7 +9,6 @@ import qs.services
 // device (e.g. two apps recording the mic) all show cleanly.
 StyledPopup {
     id: root
-    morph: true
     contentPadding: Appearance.spacing.space150
 
     // A section per active device: an icon + device header, then one line per

@@ -77,7 +77,7 @@ Scope {
 
             readonly property var requested: {
                 const popup = GlobalStates.activeBarPopup;
-                if (!popup || !popup.morph || !popup.popupVisible) return null;
+                if (!popup || !popup.popupVisible) return null;
                 if (popup.hoverTarget?.QsWindow?.window?.screen !== overlayWindow.modelData) return null;
                 return popup;
             }
@@ -133,7 +133,7 @@ Scope {
                     contentEnter.item = arriving;
                     contentEnter.restart();
                 }
-                popup.overlayWindow = overlayWindow;
+                popup.surfaceWindow = overlayWindow;
                 popup.popupHovered = cardHover.hovered;
 
                 // Coming from idle there is no geometry to morph from, so put
@@ -287,7 +287,7 @@ Scope {
                     content.enabled = true;
                 }
                 popup.popupHovered = false;
-                if (popup.overlayWindow === overlayWindow) popup.overlayWindow = null;
+                if (popup.surfaceWindow === overlayWindow) popup.surfaceWindow = null;
             }
 
             function updateHover() {

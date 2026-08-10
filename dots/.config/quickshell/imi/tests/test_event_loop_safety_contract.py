@@ -39,29 +39,33 @@ def test_keyboard_indicator_honors_container_theme_color():
     assert "color: Appearance.colors.colOnLayer0" not in source
 
 
-def test_popups_wait_for_target_window_before_mapping():
+def test_popups_own_no_surface_and_share_one_static_overlay():
     source = Path("modules/common/widgets/StyledPopup.qml").read_text()
-    # The window must outlive hover transitions: it is created on first show
-    # and then only its visibility changes, so the pointer crossing the bar-to-
-    # popup gap cannot destroy and recreate a layer-shell surface.
-    assert "active: everShown" in source
-    assert "everShown = true" in source
+    # No bar popup owns a layer-shell surface any more. Ten surfaces that were
+    # destroyed and mapped on every hover transition became one always-mapped
+    # window per screen with one card morphing inside it, so the pointer
+    # crossing from one bar widget to the next reconfigures nothing at all.
+    assert "PanelWindow" not in source
+    assert "LazyLoader" not in source
+    assert "targetHovered: hoverTarget?.containsMouse" in source
     # A click-toggled popup's widget never reports hover, so becoming visible is
     # the only moment it can claim the shared card.
     assert "claimSlot()" in source
-    assert "visible: root.popupVisible" in source
-    assert "targetHovered: hoverTarget?.containsMouse" in source
-    # Map through the target's window, never the popup's own, and assign the
-    # result imperatively so margins never feed back into their own input.
-    assert "root.hoverTarget.QsWindow.mapFromItem(" in source
-    assert "root.QsWindow?.mapFromItem(" not in source
-    assert "readonly property real centerOffsetX" not in source
-    assert "function schedulePosition() { positionTimer.restart() }" in source
-    assert "onVisibleChanged: if (visible) schedulePosition()" in source
     assert "interval: 180" in source
-    assert "onHoveredChanged: root.popupHovered = hovered" in source
     assert "property Timer hoverCloseTimer: Timer" in source
     assert "onTriggered: root.hoverHeld = false" in source
+
+    overlay = Path("modules/imi/bar/BarPopupOverlay.qml").read_text()
+    # Map through the target's window, never the overlay's own, and assign the
+    # result imperatively so the card's geometry never feeds its own input.
+    assert "target.QsWindow.mapFromItem(" in overlay
+    assert "overlayWindow.QsWindow" not in overlay
+    assert "card.x = cardX" in overlay and "card.width = cardWidth" in overlay
+    assert re.search(r"Behavior\s+on\s+width", overlay)
+    # An unparented content tree does not polish, so its implicit size is not
+    # readable until it is in a window: measure one frame after the reparent.
+    assert "id: retargetTimer" in overlay
+    assert re.search(r"id: retargetTimer\s*\n\s*interval: 0", overlay)
 
 
 def test_calendar_popup_avoids_layout_and_filter_binding_loops():
