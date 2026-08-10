@@ -47,6 +47,19 @@ TestCase {
         compare(GridSizes.resizable({ cols: 2, rows: 2 }), false);
     }
 
+    function test_todays_grid_manifests_keep_the_span_they_have() {
+        // notes, user-card and image-converter are the three manifests that
+        // ship a `grid`, all `{ "cols": 2, "rows": 2 }` with no `sizes`. Every
+        // resolution path has to land back on 2x2 for them - including one
+        // carrying a stored span, which a widget that was never resizable
+        // should never have, but which a preset or a hand-edited state file
+        // can still hand over.
+        const grid = { cols: 2, rows: 2 };
+        compare(GridSizes.formatSize(GridSizes.resolveSize(grid, undefined)), "2x2");
+        compare(GridSizes.formatSize(GridSizes.resolveSize(grid, "3x2")), "2x2");
+        compare(GridSizes.resizable(grid), false);
+    }
+
     function test_each_axis_defaults_to_one_cell() {
         const offered = GridSizes.offeredSizes({ cols: 3 });
         compare(offered.length, 1);

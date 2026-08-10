@@ -8,6 +8,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.imi.background.widgets
 import "../functions/parallax.js" as ParallaxMath
+import "gridSizes.js" as GridSizes
 
 AbstractBackgroundWidget {
     id: rootWidget
@@ -117,11 +118,27 @@ AbstractBackgroundWidget {
     // whole multiple of 12 (cell 132/108, gap 12), so a grid widget still lands
     // flush against its neighbours without a coarse snap that makes it jump.
     // See docs/widget-grid.md.
+    //
+    // A manifest may offer several spans (`grid.sizes`), in which case the one
+    // in use is the user's stored choice. `__gridSize` is host state, not a
+    // plugin setting: the double underscore keeps it out of the manifest's own
+    // options namespace (PluginValidator rejects a manifest key starting with
+    // it) so it never surfaces as a control in Settings > Widgets.
     readonly property var gridSpec: (manifest && manifest.grid) ? manifest.grid : null
-    readonly property int gridCols: gridSpec ? (gridSpec.cols || 1) : 0
-    readonly property int gridRows: gridSpec ? (gridSpec.rows || 1) : 0
-    readonly property real gridSpanWidth: gridSpec ? Appearance.sizes.widgetGridSpanX(gridCols) : 0
-    readonly property real gridSpanHeight: gridSpec ? Appearance.sizes.widgetGridSpanY(gridRows) : 0
+    readonly property var offeredGridSizes: GridSizes.offeredSizes(rootWidget.gridSpec)
+    readonly property bool gridResizable: rootWidget.offeredGridSizes.length > 1
+    // Stored -> manifest default -> null, which is the content-sized path.
+    readonly property var gridSize: GridSizes.resolveSize(rootWidget.gridSpec,
+        manifest ? PluginState.option(manifest.id, "__gridSize") : undefined)
+    readonly property int gridCols: gridSize ? gridSize.cols : 0
+    readonly property int gridRows: gridSize ? gridSize.rows : 0
+    readonly property real gridSpanWidth: gridSize ? Appearance.sizes.widgetGridSpanX(gridCols) : 0
+    readonly property real gridSpanHeight: gridSize ? Appearance.sizes.widgetGridSpanY(gridRows) : 0
+
+    function commitGridSize(size) {
+        if (!manifest || !size) return;
+        PluginState.setOption(manifest.id, "__gridSize", GridSizes.formatSize(size));
+    }
 
     configEntryName: manifest ? "plugin_" + manifest.id : "plugin_unknown"
 
@@ -200,9 +217,9 @@ AbstractBackgroundWidget {
 
     // A declared grid span drives the pixel size directly; otherwise the widget
     // is sized to its content (with any legacy defaultWidth/Height as a floor).
-    width: gridSpec ? gridSpanWidth
+    width: gridSize ? gridSpanWidth
         : Math.max(manifest ? (manifest.defaultWidth || 0) : 0, pluginNode.width)
-    height: gridSpec ? gridSpanHeight
+    height: gridSize ? gridSpanHeight
         : Math.max(manifest ? (manifest.defaultHeight || 0) : 0, pluginNode.height)
 
     // In-shell frost: sample + blur the wallpaper region behind each blur region.
