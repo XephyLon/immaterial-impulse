@@ -149,7 +149,7 @@ Item {
                     buttonIcon: "check"
                     text: Translation.tr("Centered wallpaper")
                     checked: Config.options.background.centeredWallpaper
-                    onCheckedChanged: Config.options.background.centeredWallpaper = checked
+                    onToggleRequested: Config.options.background.centeredWallpaper = !Config.options.background.centeredWallpaper
                 }
 
                 ConfigSwitch {
@@ -158,7 +158,7 @@ Item {
                     text: Translation.tr("Only when locked")
                     checked: Config.options.background.centeredWallpaperOnlyWhenLocked
                     enabled: Config.options.background.centeredWallpaper
-                    onCheckedChanged: Config.options.background.centeredWallpaperOnlyWhenLocked = checked
+                    onToggleRequested: Config.options.background.centeredWallpaperOnlyWhenLocked = !Config.options.background.centeredWallpaperOnlyWhenLocked
                 }
 
                 ConfigSelectionShapeArray {

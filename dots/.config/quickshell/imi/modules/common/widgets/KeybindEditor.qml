@@ -181,7 +181,7 @@ ColumnLayout {
             buttonIcon: "warning"
             text: Translation.tr("Assign it anyway — both shortcuts will fire on this chord")
             checked: root.acknowledgedChord === root.capturedIdentity
-            onClicked: {
+            onToggleRequested: {
                 root.acknowledgedChord = (root.acknowledgedChord === root.capturedIdentity)
                     ? "" : root.capturedIdentity;
             }
