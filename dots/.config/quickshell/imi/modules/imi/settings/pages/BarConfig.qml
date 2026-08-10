@@ -292,7 +292,10 @@ ContentPage {
                 ConfigSlider {
                     text: Translation.tr("Background opacity")
                     buttonIcon: "opacity"
+                    // Appearance.barBackgroundTransparency zeroes this amount with
+                    // transparency off, so the slider then moves nothing at all.
                     enabled: Config.options.bar.showBackground
+                        && Config.options.appearance.transparency.enable
                     value: Config.options.bar.backgroundOpacity
                     from: 0
                     to: 1

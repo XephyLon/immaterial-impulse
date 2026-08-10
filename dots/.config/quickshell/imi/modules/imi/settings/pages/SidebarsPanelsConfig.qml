@@ -700,12 +700,17 @@ ContentPage {
                 }
                 ConfigSwitch {
                     buttonIcon: "blur_on"
+                    // Both this and the opacity below are inert with transparency
+                    // off - the shelf is painted opaque either way - so leaving
+                    // them live would only let the user set values nothing reads.
+                    enabled: Config.options.appearance.transparency.enable
                     text: Translation.tr("Blur background")
                     checked: Config.options.dropShelf.blurBackground
                     onCheckedChanged: { Config.options.dropShelf.blurBackground = checked }
                 }
                 ConfigSpinBox {
                     enabled: Config.options.dropShelf.blurBackground
+                        && Config.options.appearance.transparency.enable
                     icon: "opacity"
                     text: Translation.tr("Background opacity (%)")
                     value: Math.round(Config.options.dropShelf.backgroundOpacity * 100)
