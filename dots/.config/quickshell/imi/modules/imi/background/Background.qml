@@ -1125,12 +1125,16 @@ Variants {
             // Screen-sized regardless of the zoom, so a widget dragged to a
             // corner stays where the user put it rather than being placed
             // against an overscanned canvas they cannot see the edges of.
-            x: (Config.options.background.parallax.enableWidgets ?? true)
-                ? ParallaxMath.widgetOffset(bgRoot.parallaxOffsets.x, Config.options.background.parallax.widgetsFactor ?? 0)
-                : 0
-            y: (Config.options.background.parallax.enableWidgets ?? true)
-                ? ParallaxMath.widgetOffset(bgRoot.parallaxOffsets.y, Config.options.background.parallax.widgetsFactor ?? 0)
-                : 0
+            // Centre-relative, not edge-relative: this canvas is screen-sized,
+            // so the wallpaper's own offsets would shift it off the screen by
+            // half the zoom overflow and make that strip of desktop
+            // unreachable - permanently on whichever axis is not travelling.
+            // See ParallaxMath.widgetOffsets.
+            readonly property var widgetParallax: (Config.options.background.parallax.enableWidgets ?? true)
+                ? ParallaxMath.widgetOffsets(bgRoot.parallaxState, Config.options.background.parallax.widgetsFactor ?? 0)
+                : ({ x: 0, y: 0 })
+            x: widgetParallax.x
+            y: widgetParallax.y
             Behavior on x {
                 enabled: bgRoot.parallaxEnabled
                 NumberAnimation { duration: 600; easing.type: Easing.OutCubic }

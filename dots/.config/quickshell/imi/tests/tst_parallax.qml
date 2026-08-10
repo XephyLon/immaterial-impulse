@@ -176,4 +176,51 @@ TestCase {
         compare(o.x, 0);
         compare(o.y, 0);
     }
+
+    // The widget canvas is screen-sized, so the wallpaper's edge-relative
+    // offsets mean something different there: half the zoom overflow of static
+    // shift, which pushes the canvas off the screen and makes that strip of
+    // desktop unreachable. Worst on the axis that never travels - with
+    // vertical: false, y parks at CENTRE and the bottom of the screen is lost
+    // permanently to motion that does not happen.
+    function test_widgetOffsetsRestAtZeroOnAParkedAxis() {
+        const state = {
+            vertical: false, enableWorkspace: true, enableSidebar: false,
+            workspaceIndex: 1, totalWorkspaces: 5,
+            overflowX: 358, overflowY: 100.8
+        };
+        const widget = Parallax.widgetOffsets(state, 1.2);
+        compare(widget.y, 0,
+                "a parked axis must not shift the canvas at all");
+        verify(widget.x !== 0, "the travelling axis must still travel");
+    }
+
+    function test_widgetOffsetsAreSymmetricAboutTheCentre() {
+        const base = {
+            vertical: false, enableWorkspace: true, enableSidebar: false,
+            totalWorkspaces: 5, overflowX: 358, overflowY: 100.8
+        };
+        const first = Parallax.widgetOffsets(
+            Object.assign({}, base, { workspaceIndex: 0 }), 1.2);
+        const last = Parallax.widgetOffsets(
+            Object.assign({}, base, { workspaceIndex: 4 }), 1.2);
+        const middle = Parallax.widgetOffsets(
+            Object.assign({}, base, { workspaceIndex: 2 }), 1.2);
+        compare(middle.x, 0, "the middle workspace is the resting position");
+        fuzzyCompare(first.x, -last.x, 0.001,
+                     "the swing must be even either side, or one edge loses more "
+                     + "desktop than the other");
+    }
+
+    // The wallpaper container is genuinely larger than the screen and *wants*
+    // its middle shown, so its own offsets keep the CENTRE parking.
+    function test_wallpaperOffsetsStillParkAtCentre() {
+        const state = {
+            vertical: false, enableWorkspace: true, enableSidebar: false,
+            workspaceIndex: 1, totalWorkspaces: 5,
+            overflowX: 358, overflowY: 100.8
+        };
+        compare(Parallax.offsets(state).y, -50.4,
+                "the wallpaper must still be centred on its parked axis");
+    }
 }
