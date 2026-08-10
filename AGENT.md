@@ -828,6 +828,31 @@ unconditionally and pays only when it would have been wrong. That is the same "m
 then observe generously" gate as above, applied to a producer rather than a consumer.
 (2b5ea4ce5 ("refactor(settings): make the scheme preview reusable outside the settings page").)
 
+- **A `Connections` on a per-instance property fires on that instance's *first* binding
+  evaluation, and you cannot tell that apart from a real change.** The bar popup overlay watched
+  `barEdge` on whichever `StyledPopup` currently held the card, to idle the card when the bar flips
+  orientation. Every popup derives `barEdge` from the same global `Config.options.bar.*`, so the
+  per-popup signal carried nothing the overlay could not compute itself - but a popup that a
+  `Loader` rebuilds on every open evaluates its own `barEdge` binding *after* the `Connections`
+  targeting it attaches, and the handler ran `finishExit()` in the middle of the takeover that was
+  building the card. The popup opened as a 20x20 dot, and only rendered when the race fell the
+  other way: it took several clicks. The long-lived hover popups never showed it, because they are
+  constructed once at startup and settled `barEdge` long before any `Connections` attached - so the
+  bug looked like "the Docker popup is broken" rather than "the orientation guard is wrong". When
+  the value comes from global config, derive it where you consume it;
+  `tests/lint_bar_popup_overlay_static.py` fails on a per-popup watcher. 867dd811a ("fix(bar):
+  watch the bar edge on the config, not on the popup holding the card").
+- **A `HyprlandFocusGrab` is scoped by the surface's *input region*, not its extent, so a grab on a
+  shared masked surface is not the grab a per-popup window used to give you.** Three bar widgets
+  armed their own grab on the window holding their popup, which was correct while each popup owned
+  a window sized to itself. Pointed at the one masked overlay, whose region is the card, a grab
+  armed on the usual 16ms timer catches the card while it is still parked at
+  `2 * elevationMargin` - so the next click anywhere reads as outside, closes the popup and
+  destroys it. Outside-click dismissal belongs to whatever owns the surface and knows when the card
+  settled; consumers get a `dismissRequested()` signal. A signal, not a write to `pinnedOpen`:
+  SysTray *binds* that property, and assigning would break the binding rather than close the popup.
+  0cec47e6f ("fix(bar): give the outside-click grab to the surface that owns the card").
+
 ## Dynamic/data-driven QML gotchas
 
 Relevant to anything that instantiates QML components from external data (JSON manifests, config
