@@ -632,6 +632,56 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   rather than reached into. Both halves are silent when only one lands: a region without the layer
   rule changes nothing at all, and the layer rule without a region leaves that panel with no blur
   whatsoever. `tests/lint_blur_region_pairing.py` pins the two together.
+- **That whole mechanism applies to layer surfaces only, and a `PopupWindow` is not one.** An
+  `ext-background-effect` region is attached to a layer surface; the tray menu, the dock context
+  menu, the drag-apps popup and the tooltips are xdg-popups, so a `WindowBlurRegion` published from
+  one is accepted and silently does nothing. Popups also carry no namespace of their own - they
+  inherit the rules of the surface they belong to, so the only knob addressed at them is
+  `blur_popups` on the parent's namespace, and turning that off costs the body its blur along with
+  the shadow. Threshold by `ignore_alpha` instead: `colShadow` tops out at 0.3 and fades outward
+  while a panel body sits at `1 - appearance.transparency.backgroundTransparency`, so a value
+  between them blurs one and not the other. Note the failure direction - too high a threshold
+  unblurs the *body*, which looks flat but harmless; too low re-frosts the shadow. Motivated by
+  4a1b4f850 ("fix(blur): stop the compositor frosting drop shadows"), where a region
+  was written, deployed and only shown to be inert by looking at it on screen; a region on a
+  `PopupWindow` now fails `tests/lint_blur_region_pairing.py`. The threshold itself is *generated*,
+  because where it falls moves with the user's transparency setting and a layerrule cannot read
+  one: `services/PopupBlurThreshold.qml` writes
+  `hypr/hyprland/shellOverrides/popupBlur.lua` and `rules.lua` `dofile`s it behind a `pcall` with a
+  fallback for the first run. That rule is applied only to namespaces whose own `blur` is already
+  off, so it reaches their popups and nothing else. Watch which way it fails: too high a threshold
+  unblurs the *body*, which is flat but harmless; too low re-frosts the shadow.
+- **`ignore_alpha` is one value per namespace, shared between a panel and its popups.** It is
+  tempting to raise it on a namespace whose own `blur` is off, on the reasoning that only its popups
+  can be affected. That is wrong: the panel's body is blurred *through the region*, and the region
+  is subject to `ignore_alpha` too, so raising it above the body's alpha unblurs the panel itself.
+  Doing exactly that took the blur off the bar, the dock and both sidebars at once. The threshold
+  has to clear the faintest *panel* body as well as sit above the shadow, and the bar is usually the
+  faintest because it thins `colLayer0` again by `bar.backgroundOpacity`. Motivated by 4a1b4f850
+  ("fix(blur): stop the compositor frosting drop shadows").
+- **`quickshell:popup` is already handled, and adding `blur = false` to it breaks it.** Its two
+  surfaces (`StyledPopupMenu`, `StyledPopup` - `PanelWindow`s despite the name) paint opaque bodies,
+  and the namespace carries `ignore_alpha = 1` from an older tooltip fix. That blurs the opaque body
+  and skips the translucent shadow, which is the whole split the region mechanism exists to produce.
+  Set `blur = false` there and the region becomes the only source of blur, which nothing reaches at
+  alpha 1, so those surfaces go flat.
+- **A blur region is published on the *timer* for panels built by a `LazyLoader`.**
+  `Component.onCompleted` publishes, but there is no layer surface yet at that moment, so the first
+  publish that takes effect is the settle timer's - which is a guaranteed ~96ms of surface-up-and-
+  unblurred on every open. Publish immediately *and* keep the timer. Motivated by 4a1b4f850
+  ("fix(blur): stop the compositor frosting drop shadows").
+- **This whole area is invisible to the test suite.** Quickshell's plugin does not load in
+  `qmltestrunner`, so `Region` cannot be constructed there and no test can see whether a region is
+  empty, published, or ignored. Every bug in this section was found by looking at the screen, and
+  two of them were misattributed first. Deploy, look, and prefer a frame-by-frame capture
+  (`ffmpeg -fps_mode passthrough`) over an impression for anything that lasts under ~200ms.
+- **A stored config value beats the QML default, so changing a default is invisible without a
+  migration.** `Config.qml` defaults only apply to keys that are absent from the user's
+  `config.json`, and every key the shell has ever written is present. Flipping a default therefore
+  changes nothing for anyone who has run the shell - which is a silent no-op, not an error. Pair it
+  with a one-shot migration guarded by its own `migrated*` flag, as `migrateDeadParallaxSwitches`
+  and `migrateSplitCheatsheetButtons` do. Motivated by 65bd7696a ("feat(cheatsheet): draw a chord as
+  one keycap per key").
 - **The region selector intentionally takes exclusive focus.** Dismissable panels normally close
   when `GlobalFocusGrab` is cleared, but the selector first sets
   `GlobalStates.settingsHeldForRegionSelector` so Settings can remain visible in screenshots without
