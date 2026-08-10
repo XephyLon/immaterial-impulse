@@ -115,12 +115,12 @@ ContentPage {
                                         ? Translation.tr("Enable %1").arg(Config.options.ai.customProviders[index].name)
                                         : Translation.tr("Enable provider %1").arg(index + 1)
                                     checked: Config.options.ai.customProviders[index].enabled
-                                    onCheckedChanged: {
+                                    onToggleRequested: {
+                                        // Whole-list assignment: JsonAdapter
+                                        // lists only persist when replaced.
                                         let providers = [...Config.options.ai.customProviders];
-                                        if (providers[index].enabled !== checked) {
-                                            providers[index].enabled = checked;
-                                            Config.options.ai.customProviders = providers;
-                                        }
+                                        providers[index].enabled = !providers[index].enabled;
+                                        Config.options.ai.customProviders = providers;
                                     }
                                 }
 
@@ -263,9 +263,7 @@ ContentPage {
                         buttonIcon: "mobile"
                         text: Translation.tr("Show your phone (via KDE Connect or Valent)")
                         checked: Config.options.networking.phoneConnect.enable
-                        onCheckedChanged: {
-                            Config.options.networking.phoneConnect.enable = checked;
-                        }
+                        onToggleRequested: Config.options.networking.phoneConnect.enable = !Config.options.networking.phoneConnect.enable
                     }
                     ConfigSpinBox {
                         icon: "av_timer"
@@ -324,9 +322,7 @@ ContentPage {
                 ConfigSwitch {
                     text: Translation.tr("Use Levenshtein distance-based algorithm instead of fuzzy")
                     checked: Config.options.search.sloppy
-                    onCheckedChanged: {
-                        Config.options.search.sloppy = checked;
-                    }
+                    onToggleRequested: Config.options.search.sloppy = !Config.options.search.sloppy
                 }
             }
 
@@ -486,9 +482,7 @@ ContentPage {
                         buttonIcon: "folder_open"
                         text: Translation.tr("Enable file/folder search")
                         checked: Config.options.search.fileSearch.enable
-                        onCheckedChanged: {
-                            Config.options.search.fileSearch.enable = checked;
-                        }
+                        onToggleRequested: Config.options.search.fileSearch.enable = !Config.options.search.fileSearch.enable
                     }
                     ConfigTextArea {
                         id: fileSearchRootField
@@ -549,9 +543,7 @@ ContentPage {
                     buttonIcon: "update"
                     text: Translation.tr("Enable update checks")
                     checked: Config.options.updates.enableCheck
-                    onCheckedChanged: {
-                        Config.options.updates.enableCheck = checked;
-                    }
+                    onToggleRequested: Config.options.updates.enableCheck = !Config.options.updates.enableCheck
                 }
 
                 ConfigSpinBox {
@@ -580,22 +572,14 @@ ContentPage {
                     buttonIcon: "handshake"
                     text: Translation.tr("Cooperate with the Clight daemon")
                     checked: Config.options.light.clight.enable
-                    onCheckedChanged: {
-                        Config.options.light.clight.enable = checked;
-                    }
+                    onToggleRequested: Config.options.light.clight.enable = !Config.options.light.clight.enable
                 }
                 ConfigSwitch {
                     visible: Clight.available
                     buttonIcon: "brightness_auto"
                     text: Translation.tr("Automatic brightness calibration")
                     checked: Clight.autoCalibration
-                    onCheckedChanged: {
-                        // Daemon state round-trips through the poll, so the
-                        // binding refresh re-fires this handler; only a real
-                        // change may reach the daemon.
-                        if (checked !== Clight.autoCalibration)
-                            Clight.setAutoCalibration(checked);
-                    }
+                    onToggleRequested: Clight.setAutoCalibration(!Clight.autoCalibration)
                 }
                 ConfigSpinBox {
                     visible: Clight.available
@@ -675,17 +659,13 @@ ContentPage {
                     buttonIcon: "assistant_navigation"
                     text: Translation.tr("Enable GPS based location")
                     checked: Config.options.bar.weather.enableGPS
-                    onCheckedChanged: {
-                        Config.options.bar.weather.enableGPS = checked;
-                    }
+                    onToggleRequested: Config.options.bar.weather.enableGPS = !Config.options.bar.weather.enableGPS
                 }
                 ConfigSwitch {
                     buttonIcon: "thermometer"
                     text: Translation.tr("Fahrenheit unit")
                     checked: Config.options.bar.weather.useUSCS
-                    onCheckedChanged: {
-                        Config.options.bar.weather.useUSCS = checked;
-                    }
+                    onToggleRequested: Config.options.bar.weather.useUSCS = !Config.options.bar.weather.useUSCS
                 }
                 ConfigSpinBox {
                     icon: "av_timer"
