@@ -78,6 +78,20 @@ if "WindowBlurRegion" in code:
         "publishes a WindowBlurRegion; quickshell:popup already blurs an opaque body through "
         "ignore_alpha = 1 and a region there would be the only source of blur")
 
+# A per-popup barEdge watcher fires on a freshly built popup's first binding
+# evaluation, which is indistinguishable from an orientation flip: it ran
+# finishExit() during the takeover that was building the card and left the popup
+# as a 20x20 dot, so whether the popup opened at all came down to a race. Every
+# popup derives barEdge from the same global config, so the overlay derives it
+# once itself.
+if "function onBarEdgeChanged" in code:
+    failures.append(
+        "watches barEdge on the current popup; a popup rebuilt per open evaluates that binding "
+        "after the Connections attaches and the initial evaluation tears the card down mid-takeover")
+
+if "readonly property string barEdge:" not in code:
+    failures.append("does not derive barEdge from the config itself")
+
 if failures:
     for failure in failures:
         print(f"modules/imi/bar/BarPopupOverlay.qml: {failure}", file=sys.stderr)
