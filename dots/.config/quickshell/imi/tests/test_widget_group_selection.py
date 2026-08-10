@@ -166,8 +166,12 @@ class GroupDragIsRigid(unittest.TestCase):
         self.assertIn("function commitPosition()", uncommented(BASE))
         host = uncommented(HOST)
         self.assertIn("function commitPosition()", host)
-        self.assertNotIn("onReleased:", host,
-                         "PluginWidget must not keep a second release path")
+        # Anchored to the host's own scope. A nested MouseArea - the grid
+        # resize grip - releases a gesture of its own that never touches the
+        # widget's position; what must not come back is a handler on the host
+        # itself, shadowing the base class's.
+        self.assertNotRegex(host, r"(?m)^    onReleased:",
+                            "PluginWidget must not keep a second release path")
 
     def test_the_plugin_commit_still_restores_the_binding_and_persists(self):
         """Dropping `restoreXYBinding()` leaves every group member frozen at

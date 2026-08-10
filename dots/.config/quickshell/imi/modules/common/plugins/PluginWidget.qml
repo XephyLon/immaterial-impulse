@@ -400,8 +400,20 @@ AbstractBackgroundWidget {
             }
             // A release after Escape commits nothing: the cancel already
             // cleared the preview, and endGridResize has nothing to store.
-            onReleased: rootWidget.endGridResize()
-            onCanceled: rootWidget.cancelGridResize()
+            //
+            // The focus the press took for Escape is handed back at the end of
+            // the gesture. Qt would drop it anyway once the grip fades out and
+            // goes invisible, but until then `keyboardFocusRequested` reads a
+            // decorative corner as an editing widget and keeps the whole
+            // background surface asking the compositor for keyboard focus.
+            onReleased: {
+                rootWidget.endGridResize();
+                resizeHandle.focus = false;
+            }
+            onCanceled: {
+                rootWidget.cancelGridResize();
+                resizeHandle.focus = false;
+            }
         }
     }
 
