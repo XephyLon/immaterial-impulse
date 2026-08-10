@@ -865,10 +865,10 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   `Appearance.qml` already had — a transparency *amount* declared beside `backgroundTransparency`
   / `contentTransparency` that collapses to `0` when the switch is off. Keep new amounts there,
   where "is every one of them gated?" is answerable by looking.
-  13d8a0abe ("feat(plugins): derive desktop-widget opacity from the transparency toggle"),
-  3ed184642 ("fix(plugins): route every widget panel opacity through the derivation"),
-  5ce649746 ("fix(appearance): gate the bar's own opacity on the transparency switch"),
-  535c3b191 ("fix(dropShelf): gate the shelf's frost on the transparency switch").
+  b259288b2 ("feat(plugins): derive desktop-widget opacity from the transparency toggle"),
+  3088bbaed ("fix(plugins): route every widget panel opacity through the derivation"),
+  e4f3a095e ("fix(appearance): gate the bar's own opacity on the transparency switch"),
+  b47935a65 ("fix(dropShelf): gate the shelf's frost on the transparency switch").
 - Desktop plugin delegates are retained for every available manifest and gated through an animated
   `FadeLoader`, rather than repeating only the enabled ids. Removing a model delegate destroys it
   immediately and makes an M3 exit transition impossible; keep disabled loaders dormant until their
