@@ -7,6 +7,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.imi.background.widgets
+import "../functions/parallax.js" as ParallaxMath
 
 AbstractBackgroundWidget {
     id: rootWidget
@@ -42,6 +43,23 @@ AbstractBackgroundWidget {
     // Background so "blur" frost can sample the animated wallpaper behind each
     // widget. Null when no WE wallpaper is active (static image path).
     property Item weSurfaceItem: null
+
+    // Where the widget canvas and the wallpaper actually are on this monitor,
+    // fed live by Background. Two different positions: the canvas travels at
+    // `parallax.widgetsFactor` and the wallpaper at 1, which is the parallax.
+    // These are the containers' animating x/y rather than the parallax targets,
+    // so the frost stays aligned during a pan and not only once it settles.
+    property real canvasOffsetX: 0
+    property real canvasOffsetY: 0
+    property rect wallpaperRect: Qt.rect(0, 0, 0, 0)
+
+    // This widget's top-left in the wallpaper's own coordinates - the space the
+    // frost samples in. Sampling at the widget's canvas position instead is
+    // issue #157: it happens to be right only where neither pan has moved.
+    readonly property var frostSampleOrigin: ParallaxMath.sampleOrigin(
+        { x: rootWidget.canvasOffsetX, y: rootWidget.canvasOffsetY },
+        { x: rootWidget.x, y: rootWidget.y },
+        { x: rootWidget.wallpaperRect.x, y: rootWidget.wallpaperRect.y })
 
     readonly property bool blurEnabled: manifest
         ? PluginState.option(manifest.id, "blurEnabled", manifest.desktopWidget?.blur === true)
@@ -219,10 +237,10 @@ AbstractBackgroundWidget {
             liveWallpaperActive: rootWidget.liveWallpaperActive
             weSurfaceItem: rootWidget.weSurfaceItem
             cornerRadius: Number(modelData.radius ?? rootWidget.widgetRounding)
-            screenWidth: rootWidget.scaledScreenWidth
-            screenHeight: rootWidget.scaledScreenHeight
-            surfaceX: rootWidget.x + x
-            surfaceY: rootWidget.y + y
+            wallpaperWidth: rootWidget.wallpaperRect.width
+            wallpaperHeight: rootWidget.wallpaperRect.height
+            surfaceX: rootWidget.frostSampleOrigin.x + x
+            surfaceY: rootWidget.frostSampleOrigin.y + y
         }
     }
 

@@ -6,15 +6,20 @@ import qs.modules.common
 // the wallpaper region directly behind this surface and blurs it, so the widget
 // reads as frosted glass over the wallpaper.
 //
-// Both wallpaper paths are one shape: a whole-screen item, sampled at this
-// surface's screen rect through a ShaderEffectSource.
+// Both wallpaper paths are one shape: an item covering the whole wallpaper,
+// sampled at this surface's rect through a ShaderEffectSource.
 //
 // - Live Wallpaper Engine wallpaper: the in-shell WallpaperEngineSurface
 //   (weSurfaceItem). WE is now drawn on the background surface itself, so the
 //   old compositor-blur handoff no longer applies - we blur the live frame
 //   ourselves.
-// - Static image wallpaper: a screen-sized Image of the wallpaper, cover-fitted
-//   exactly as the desktop draws it (see wallpaperImage).
+// - Static image wallpaper: an Image of the wallpaper, cover-fitted exactly as
+//   the desktop draws it (see wallpaperImage).
+//
+// The rect and the item it is handed to must be in the SAME space, and that
+// space is the wallpaper's, not the screen's - see surfaceX/surfaceY. The
+// caller owns that conversion (ParallaxMath.sampleOrigin); this component only
+// promises to sample where it is told, in an item of the size it is given.
 Item {
     id: root
 
@@ -26,10 +31,14 @@ Item {
     property real cornerRadius: Appearance.rounding?.verylarge ?? 30
     property int blurRadius: 48
 
-    // Monitor size and this surface's absolute top-left on that monitor, used to
-    // sample exactly the wallpaper slice sitting behind the surface.
-    property real screenWidth: 0
-    property real screenHeight: 0
+    // The size of the wallpaper the frost samples, and this surface's top-left
+    // WITHIN it - not on the monitor. With parallax the wallpaper is drawn in a
+    // container larger than the screen and slid underneath it, so the two are
+    // different by both pans; the static reconstruction below has to be the
+    // same size as that container, or it is a different crop of the same file
+    // than the one on screen. ParallaxMath.sampleOrigin does the conversion.
+    property real wallpaperWidth: 0
+    property real wallpaperHeight: 0
     property real surfaceX: 0
     property real surfaceY: 0
 
@@ -66,8 +75,8 @@ Item {
     // only the sample rect below moves now.
     Image {
         id: wallpaperImage
-        width: root.screenWidth
-        height: root.screenHeight
+        width: root.wallpaperWidth
+        height: root.wallpaperHeight
         source: root.liveWallpaperActive ? "" : root.wallpaperUrl
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
@@ -75,8 +84,8 @@ Item {
         visible: false
     }
 
-    // One sampler for both paths: the source is whole-screen either way, and
-    // the rect is where this surface sits on the monitor.
+    // One sampler for both paths: the source covers the whole wallpaper either
+    // way, and the rect is where this surface sits within it.
     ShaderEffectSource {
         id: wallpaperSample
         anchors.fill: parent

@@ -44,8 +44,14 @@ TestCase {
     function buildSurface(index) {
         return createTemporaryObject(surfaceComponent, this, {
             wallpaperSource: wallpaperPath,
-            screenWidth: 5120,
-            screenHeight: 1440,
+            // The wallpaper's size, not the monitor's: with parallax the
+            // wallpaper is drawn `zoom` times the screen (5120x1440 at 107%),
+            // and the reconstruction has to occupy that same space or it is a
+            // different crop of the same file than the one on screen. The
+            // request is unchanged by it - the item's size is not part of a
+            // pixmap cache key, which is what keeps #147 fixed.
+            wallpaperWidth: 5478,
+            wallpaperHeight: 1541,
             surfaceX: 100 + index * 400,
             surfaceY: 220,
             width: 320,
