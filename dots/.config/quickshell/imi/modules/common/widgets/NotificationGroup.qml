@@ -131,6 +131,11 @@ MouseArea { // Notification group area
         }
     }
 
+    // The painted card, published so the popup window can scope the
+    // compositor's blur to the cards and leave the gaps - and the shadow
+    // below - alone. See WindowBlurRegion in NotificationPopup.qml.
+    readonly property Item blurItem: background
+
     StyledRectangularShadow {
         target: background
         visible: popup

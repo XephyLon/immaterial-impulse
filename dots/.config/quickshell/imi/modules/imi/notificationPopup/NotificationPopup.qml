@@ -43,6 +43,18 @@ Scope {
             item: listview.contentItem
         }
 
+        // Every popup card already draws a StyledRectangularShadow; the
+        // catch-all whole-surface blur was frosting all of them (#82, #89).
+        // Scope the blur to the cards themselves - not the list's bounding
+        // box, which would take in the gaps between cards and frost bare
+        // wallpaper right where each shadow falls. Pairs with rules.lua
+        // turning the layerrule blur off for this namespace.
+        WindowBlurRegion {
+            targetWindow: root
+            regionItems: listview.cardItems
+            regionItemsRadius: Appearance.rounding.normal
+        }
+
         color: "transparent"
         implicitWidth: Appearance.sizes.notificationPopupWidth
 

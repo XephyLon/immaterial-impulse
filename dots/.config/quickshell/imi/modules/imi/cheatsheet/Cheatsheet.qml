@@ -71,6 +71,16 @@ Scope { // Scope
                 }
             }
 
+            // Scope the compositor's blur to the painted card so the drop
+            // shadow below stays crisp instead of being frosted along with it
+            // (#82, #89); pairs with rules.lua turning the layerrule blur off
+            // for this namespace.
+            WindowBlurRegion {
+                targetWindow: cheatsheetRoot
+                regionItem: cheatsheetBackground
+                regionRadius: cheatsheetBackground.radius
+            }
+
             // Background
             StyledRectangularShadow {
                 target: cheatsheetBackground
