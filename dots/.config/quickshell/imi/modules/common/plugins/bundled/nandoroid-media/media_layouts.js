@@ -13,7 +13,8 @@
 // default one, squeezed into a box it was never designed for.
 var SIZES = [
     { size: "3x2", cols: 3, rows: 2, layout: "LayoutLarge.qml" },
-    { size: "2x2", cols: 2, rows: 2, layout: "LayoutCookie.qml" }
+    { size: "2x2", cols: 2, rows: 2, layout: "LayoutCookie.qml" },
+    { size: "2x1", cols: 2, rows: 1, layout: "LayoutCompact.qml" }
 ];
 
 // Anything unrecognised resolves to the first entry rather than to nothing:

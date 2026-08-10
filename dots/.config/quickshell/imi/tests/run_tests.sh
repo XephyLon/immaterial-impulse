@@ -769,6 +769,12 @@ if ! python3 "$SCRIPT_DIR/test_plugin_store_contract.py"; then
     exit 1
 fi
 
+echo "Running media layout contract tests..."
+if ! python3 "$SCRIPT_DIR/test_media_layouts_contract.py"; then
+    echo "Media layout contract tests failed."
+    exit 1
+fi
+
 if [[ "${RUN_DOCKER_RUNTIME_MEMORY_TEST:-0}" == "1" ]]; then
     echo "Running capped Docker runtime memory test..."
     bash "$SCRIPT_DIR/run_docker_memory_test.sh"

@@ -25,6 +25,12 @@ TestCase {
         compare(MediaLayouts.spanFor("2x2").rows, 2);
     }
 
+    function test_the_two_by_one_span_draws_the_compact_layout() {
+        compare(MediaLayouts.layoutFor("2x1"), "LayoutCompact.qml");
+        compare(MediaLayouts.spanFor("2x1").cols, 2);
+        compare(MediaLayouts.spanFor("2x1").rows, 1);
+    }
+
     function test_an_unanswered_host_draws_the_default_layout() {
         compare(MediaLayouts.layoutFor(""), "LayoutLarge.qml");
         compare(MediaLayouts.layoutFor(undefined), "LayoutLarge.qml");
