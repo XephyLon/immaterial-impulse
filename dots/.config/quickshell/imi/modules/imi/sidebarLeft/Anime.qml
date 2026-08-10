@@ -509,8 +509,12 @@ Item {
 
                     hoverEnabled: true
                     PointingHandInteraction {}
+                    // The switch is disabled on zerochan but this area is not,
+                    // so it carries the same gate rather than relying on a
+                    // handler that would have run after the visual moved.
                     onPressed: {
-                        nsfwSwitch.checked = !nsfwSwitch.checked
+                        if (Booru.currentProvider === "zerochan") return;
+                        Persistent.states.booru.allowNsfw = !Persistent.states.booru.allowNsfw;
                     }
 
                     RowLayout {
@@ -532,10 +536,11 @@ Item {
                             scale: 0.6
                             Layout.alignment: Qt.AlignVCenter
                             checked: (Persistent.states.booru.allowNsfw && Booru.currentProvider !== "zerochan")
-                            onCheckedChanged: {
-                                if (!nsfwSwitch.enabled) return;
-                                Persistent.states.booru.allowNsfw = checked;
-                            }
+                            // Same rule as ConfigSwitch: `checked` is a binding
+                            // on the stored value and only follows it. A Switch
+                            // moving its own `checked` would destroy that.
+                            checkable: false
+                            onClicked: Persistent.states.booru.allowNsfw = !Persistent.states.booru.allowNsfw
                         }
                     }
 
