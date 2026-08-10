@@ -136,7 +136,7 @@ MouseArea {
         interval: 16
         repeat: true
         onTriggered: {
-            const popupWindow = popupLoader.item?.item;
+            const popupWindow = popupLoader.item?.surfaceWindow;
             if (!root.popupOpen || !root.useOutsideClickGrab || attempts++ >= 30) {
                 stop();
                 return;

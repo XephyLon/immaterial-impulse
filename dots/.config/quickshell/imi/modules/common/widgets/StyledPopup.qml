@@ -26,8 +26,28 @@ LazyLoader {
     // pointer transitions only flip visibility instead of destroying and
     // recreating layer-shell surfaces.
     property bool everShown: false
-    active: everShown
+    // Opt in to the shared morphing card (BarPopupOverlay). The two paths
+    // coexist by construction while the popups are migrated one at a time:
+    // GlobalStates.activeBarPopup already coordinates across both, so a legacy
+    // popup still closes when the slot changes and the overlay releases the
+    // card whenever the slot holds a popup that has not opted in.
+    property bool morph: false
+    active: everShown && !morph
     onPopupVisibleChanged: if (popupVisible) everShown = true
+
+    // The overlay publishes its own PanelWindow here for whichever popup it is
+    // currently showing. Consumers that need a window to hand to a focus grab
+    // read `surfaceWindow` and do not care which path produced it.
+    property var overlayWindow: null
+    readonly property var surfaceWindow: morph ? overlayWindow : root.item
+
+    // A bar widget can be dropped from the layout while its card is up (the
+    // tray empties, a plugin is disabled), and that destroys this popup and its
+    // content out from under the overlay. Vacate the slot so the card exits
+    // instead of stranding at its last size with a live input mask.
+    Component.onDestruction: {
+        if (GlobalStates.activeBarPopup === root) GlobalStates.activeBarPopup = null;
+    }
 
     function updateHoverHold() {
         if (targetHovered || popupHovered) {
