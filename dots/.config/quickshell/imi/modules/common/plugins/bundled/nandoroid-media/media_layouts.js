@@ -12,7 +12,8 @@
 // span the manifest offers with no layout of its own would silently draw the
 // default one, squeezed into a box it was never designed for.
 var SIZES = [
-    { size: "3x2", cols: 3, rows: 2, layout: "LayoutLarge.qml" }
+    { size: "3x2", cols: 3, rows: 2, layout: "LayoutLarge.qml" },
+    { size: "2x2", cols: 2, rows: 2, layout: "LayoutCookie.qml" }
 ];
 
 // Anything unrecognised resolves to the first entry rather than to nothing:

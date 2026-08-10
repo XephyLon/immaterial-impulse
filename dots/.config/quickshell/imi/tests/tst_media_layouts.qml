@@ -19,6 +19,12 @@ TestCase {
         compare(MediaLayouts.spanFor("3x2").rows, 2);
     }
 
+    function test_the_two_by_two_span_draws_the_cookie_layout() {
+        compare(MediaLayouts.layoutFor("2x2"), "LayoutCookie.qml");
+        compare(MediaLayouts.spanFor("2x2").cols, 2);
+        compare(MediaLayouts.spanFor("2x2").rows, 2);
+    }
+
     function test_an_unanswered_host_draws_the_default_layout() {
         compare(MediaLayouts.layoutFor(""), "LayoutLarge.qml");
         compare(MediaLayouts.layoutFor(undefined), "LayoutLarge.qml");
