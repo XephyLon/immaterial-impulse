@@ -42,6 +42,14 @@ Singleton {
     property real autoContentTransparency: 0.9
     property real backgroundTransparency: Config?.options.appearance.transparency.enable ? Config?.options.appearance.transparency.automatic ? autoBackgroundTransparency : Config?.options.appearance.transparency.backgroundTransparency : 0
     property real contentTransparency: Config?.options.appearance.transparency.enable ? Config?.options.appearance.transparency.automatic ? autoContentTransparency : Config?.options.appearance.transparency.contentTransparency : 0
+    // The bar's own opacity is a third gated amount, declared here beside the
+    // other two rather than inlined at colBarBackground: thinning an already
+    // opaque colLayer0 by an ungated `bar.backgroundOpacity` left the bar, the
+    // vertical bar, the pills and the hug corners see-through with transparency
+    // *off* - for everyone who had ever moved that slider and for nobody else,
+    // which is why a default of 1 hid it completely.
+    property real barBackgroundTransparency: Config?.options.appearance.transparency.enable
+        ? 1 - (Config?.options.bar.backgroundOpacity ?? 1) : 0
 
     m3colors: QtObject {
         property bool darkmode: true
@@ -129,9 +137,10 @@ Singleton {
         // The bar's own background chrome (bar/pill fills, hug corners) thins
         // colLayer0 by the user's bar opacity (Config.options.bar.backgroundOpacity,
         // 1 = fully opaque = unchanged). Kept separate from colLayer0 so only the
-        // bar goes translucent, composing with — not overriding — the global
-        // transparency setting colLayer0 already carries.
-        property color colBarBackground: ColorUtils.transparentize(colLayer0, 1 - (Config?.options.bar.backgroundOpacity ?? 1))
+        // bar goes translucent. The amount comes from root.barBackgroundTransparency
+        // rather than from the raw setting, so it genuinely composes with — instead
+        // of reintroducing the translucency colLayer0 has just been made to drop.
+        property color colBarBackground: ColorUtils.transparentize(colLayer0, root.barBackgroundTransparency)
         // Layer 1
         property color colLayer1Base: m3colors.m3surfaceContainerLow
         property color colLayer1: ColorUtils.solveOverlayColor(colLayer0Base, colLayer1Base, 1 - root.contentTransparency);
