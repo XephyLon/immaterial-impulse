@@ -7,7 +7,6 @@ import qs.modules.imi.bar
 
 StyledPopup {
     id: root
-    morph: true
 
     ColumnLayout {
         id: mainLayout

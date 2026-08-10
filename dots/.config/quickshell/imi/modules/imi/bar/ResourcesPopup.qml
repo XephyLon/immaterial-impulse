@@ -6,7 +6,6 @@ import Quickshell.Io
 
 StyledPopup {
     id: root
-    morph: true
 
     function formatKB(kb) {
         return (kb / (1024 * 1024)).toFixed(1) + " GB"

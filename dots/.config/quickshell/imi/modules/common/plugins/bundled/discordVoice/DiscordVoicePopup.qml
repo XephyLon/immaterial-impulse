@@ -8,7 +8,6 @@ import qs.modules.common.widgets
 
 StyledPopup {
     id: root
-    morph: true
     contentPadding: Appearance.spacing.space200
 
     function beginAuthorization() {
@@ -16,23 +15,10 @@ StyledPopup {
         DiscordVoice.authorizeAfterFocusRelease();
     }
 
-    onActiveChanged: if (active) {
-        panel.opacity = 0;
-        panel.scale = 0.94;
-        enter.restart();
-    }
-
     ColumnLayout {
         id: panel
         implicitWidth: 384
         spacing: Appearance.spacing.space200
-        transformOrigin: Item.Top
-
-        ParallelAnimation {
-            id: enter
-            NumberAnimation { target: panel; property: "opacity"; to: 1; duration: Appearance.animation.elementMoveEnter.duration; easing.type: Easing.OutCubic }
-            NumberAnimation { target: panel; property: "scale"; to: 1; duration: Appearance.animation.elementMoveEnter.duration; easing.type: Easing.OutBack }
-        }
 
         RowLayout {
             Layout.fillWidth: true

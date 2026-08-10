@@ -10,16 +10,8 @@ import "."
 
 StyledPopup {
     id: root
-    morph: true
 
     readonly property bool showPorts: PluginState.option("docker_plugin", "showPorts", true)
-
-    onActiveChanged: {
-        if (!active) return;
-        panelContent.opacity = 0;
-        panelContent.scale = 0.92;
-        Qt.callLater(() => popupEnter.restart());
-    }
 
     function containerActions(container) {
         return [
@@ -40,26 +32,6 @@ StyledPopup {
     ColumnLayout {
         id: panelContent
         spacing: Appearance.spacing.space150
-        transformOrigin: Item.Top
-
-        // StyledPopup's default property only accepts visual items. Keep the
-        // animation objects in this Item-derived content tree so they do not
-        // invalidate the entire popup type at load time.
-        ParallelAnimation {
-            id: popupEnter
-            NumberAnimation {
-                target: panelContent; property: "opacity"; from: 0; to: 1
-                duration: Appearance.animation.elementMoveEnter.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animationCurves.expressiveEffects
-            }
-            NumberAnimation {
-                target: panelContent; property: "scale"; from: 0.92; to: 1
-                duration: Appearance.animation.elementMoveEnter.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
-            }
-        }
 
         RowLayout {
             Layout.fillWidth: true

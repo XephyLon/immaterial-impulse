@@ -50,7 +50,25 @@ ShellRoot {
                 // and the keybind editor only when a row's pencil is clicked.
                 Quickshell.shellPath("modules/imi/cheatsheet/CheatsheetKeybinds.qml"),
                 Quickshell.shellPath("modules/common/widgets/KeybindEditor.qml"),
-                Quickshell.shellPath("modules/common/widgets/KeybindChordCapture.qml")
+                Quickshell.shellPath("modules/common/widgets/KeybindChordCapture.qml"),
+                // Every bar popup and the one surface they now share. A popup
+                // only compiles when its widget is in the user's bar layout,
+                // and the plugin ones only when that plugin is enabled, so a
+                // bad property on any of them stays invisible until a hover.
+                Quickshell.shellPath("modules/common/widgets/StyledPopup.qml"),
+                Quickshell.shellPath("modules/imi/bar/BarPopupOverlay.qml"),
+                Quickshell.shellPath("modules/imi/bar/ClockWidgetPopup.qml"),
+                Quickshell.shellPath("modules/imi/bar/WeatherPopup.qml"),
+                Quickshell.shellPath("modules/imi/bar/BatteryPopup.qml"),
+                Quickshell.shellPath("modules/imi/bar/ResourcesPopup.qml"),
+                Quickshell.shellPath("modules/imi/bar/NetworkSpeedPopup.qml"),
+                Quickshell.shellPath("modules/imi/bar/PrivacyIndicatorPopup.qml"),
+                Quickshell.shellPath("modules/imi/bar/SysTray.qml"),
+                Quickshell.shellPath("modules/imi/bar/DockerPlugin.qml"),
+                Quickshell.shellPath("modules/imi/bar/DiscordVoicePlugin.qml"),
+                Quickshell.shellPath("modules/common/plugins/bundled/docker/DockerPopup.qml"),
+                Quickshell.shellPath("modules/common/plugins/bundled/docker/DockerWidget.qml"),
+                Quickshell.shellPath("modules/common/plugins/bundled/discordVoice/DiscordVoicePopup.qml")
             ]);
             for (const path of paths) {
                 const component = Qt.createComponent(`file://${path}`, Component.PreferSynchronous);

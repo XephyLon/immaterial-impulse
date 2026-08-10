@@ -6,7 +6,6 @@ import QtQuick.Layouts
 
 StyledPopup {
     id: root
-    morph: true
 
     function formatTime(seconds) {
         var h = Math.floor(seconds / 3600)
