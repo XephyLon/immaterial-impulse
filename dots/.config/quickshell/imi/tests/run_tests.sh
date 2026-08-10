@@ -152,6 +152,12 @@ if ! python3 "$SCRIPT_DIR/test_widget_grid_lattice.py"; then
     exit 1
 fi
 
+echo "Running widget transparency opacity tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_transparency_opacity.py"; then
+    echo "Widget transparency opacity tests failed."
+    exit 1
+fi
+
 echo "Running widget interaction mode tests..."
 if ! python3 "$SCRIPT_DIR/test_widget_interaction_modes.py"; then
     echo "Widget interaction mode tests failed."
