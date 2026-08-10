@@ -24,20 +24,10 @@ Rectangle {
     property bool showVisualizer: true
     readonly property var player: MprisController.activePlayer
 
-    // --- Cava Lifecycle Management ---
-    property bool _cavaActive: false
     readonly property bool shouldVisualize: root.visible && MprisController.isPlaying && root.showVisualizer
-    onShouldVisualizeChanged: {
-        if (shouldVisualize && !_cavaActive) {
-            CavaService.refCount++;
-            _cavaActive = true;
-        } else if (!shouldVisualize && _cavaActive) {
-            CavaService.refCount--;
-            _cavaActive = false;
-        }
-    }
-    Component.onDestruction: {
-        if (_cavaActive) CavaService.refCount--;
+
+    CavaRef {
+        active: root.shouldVisualize
     }
 
     // Background Art (Blurred)
