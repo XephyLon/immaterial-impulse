@@ -1,21 +1,23 @@
 import QtQuick
-import qs.modules.common.plugins
-import "../../designsystem/widgets" as Expressive
 
+// A shell around one layout file. The widget is content-sized, so the Loader is
+// deliberately unanchored and takes its size from this item instead: anchoring
+// it to a parent whose own implicit size is derived from the loaded item is the
+// binding loop AGENT.md warns about.
 Item {
-    readonly property var blurRegions: content.blurRegions
-    readonly property bool managesBlurTint: content.managesBlurTint
-    implicitWidth: content.implicitWidth
-    implicitHeight: content.implicitHeight
+    id: root
+
+    readonly property var blurRegions: layout.item ? layout.item.blurRegions : []
+    readonly property bool managesBlurTint: layout.item ? layout.item.managesBlurTint === true : false
+    implicitWidth: layout.item ? layout.item.implicitWidth : 0
+    implicitHeight: layout.item ? layout.item.implicitHeight : 0
     width: implicitWidth
     height: implicitHeight
-    Expressive.DesktopMediaWidget {
-        id: content
-        width: implicitWidth
-        height: implicitHeight
-        showLyrics: PluginState.option("nandoroid_media", "showLyrics", false)
-        useRomaji: PluginState.option("nandoroid_media", "useRomaji", false)
-        useBlurBackground: PluginState.option("nandoroid_media", "blurEnabled", false)
-        backgroundOpacity: PluginState.effectiveBackgroundOpacity("nandoroid_media")
+
+    Loader {
+        id: layout
+        width: root.width
+        height: root.height
+        source: "LayoutLarge.qml"
     }
 }
