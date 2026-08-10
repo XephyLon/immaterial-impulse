@@ -137,15 +137,30 @@ The running `qs` process writes two logs per instance, found under
 
 Find the current instance's log with:
 ```bash
-ls -la /proc/$(pgrep -f 'qs -c imi')/fd | grep log.log
+ls -la /proc/$(pgrep -x quickshell)/fd | grep log.log
 ```
 
-The process is named **`qs`**, not `quickshell` — `pgrep quickshell` returns nothing even while the
-shell is running, which reads as "the shell is down" and leads to launching a second instance on top
-of the user's. Always match on `qs`:
+**Match the process by exact name, never with `pgrep -f`/`pkill -f`.** `-f` matches against whole
+command lines — *including the command line of the shell running the `pgrep`*. So
+`pkill -f "quickshell -c imi"` kills the shell and the tool process that invoked it; it has
+truncated a file copy mid-deploy here and left a half-written config behind. `-x` matches the
+executable name and cannot match its own caller:
 ```bash
-pgrep -af 'qs -c imi'
+pgrep -x quickshell        # the running shell's pid
+pgrep -a quickshell        # ...with its full command line
 ```
+`qs` and `quickshell` are both fine to *launch* with — `qs` resolves to
+`/usr/local/bin/quickshell`, and the prebuilt the installer pins runs from
+`~/.cache/immaterial-impulse/prebuilt/<ref>/bin/quickshell`. But whichever you type, the process
+name is `quickshell`, so that is what `-x` has to match: `pgrep -x qs` returns nothing even while
+the shell is up, which reads as "the shell is down" and leads to launching a second instance on top
+of the user's.
+
+When `-f` is genuinely required — matching on an argument rather than a name — use the bracket
+trick so the pattern cannot match its own literal text: `pkill -f '[m]pvpaper'`.
+`tests/lint_self_matching_process_patterns.py` fails the suite on a bare `-f`. It is a check rather
+than a note because the note existed: two plan documents already warned about this trap, and it was
+hit anyway. d1ac2da36 ("test(lint): fail on a pgrep/pkill pattern that matches its own caller").
 
 Do not leave the primary shell running through a rapid multi-file patch series. Each source change
 hot-reloads QML and rebuilds the desktop-entry registry; large Wine/Steam application collections
