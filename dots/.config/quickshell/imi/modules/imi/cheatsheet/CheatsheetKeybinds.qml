@@ -29,6 +29,11 @@ Item {
     // Set by the cheatsheet to the height it may use before growing past the
     // screen; 0 means "unknown", which falls back to a sane budget.
     property real maxContentHeight: 0
+    // The width the card may use before it runs off the screen. Columns trade
+    // height for width, so the row budget alone can ask for more columns than
+    // there is room for - on a small display that pushed the card past both
+    // screen edges and simply cut the outer columns off.
+    property real maxContentWidth: 0
     // Deliberately budgets less height than there is. Filling the screen
     // vertically is what the single column already did; the point of columns is
     // to trade height for width on a display that has width to spare. Two
@@ -37,8 +42,33 @@ Item {
     readonly property real rowHeight: 30
     readonly property int availableRows: Math.max(
         8, Math.floor((root.maxContentHeight > 0 ? root.maxContentHeight : 900) * 0.66 / root.rowHeight))
+    // Ceiling on the column count, lowered until the laid-out row fits the
+    // width budget. Measured rather than predicted: a column is as wide as its
+    // widest section, which is not known until the text has been shaped.
+    readonly property int maxColumns: 4
+    property int columnCap: root.maxColumns
     readonly property var columns: CheatsheetLayout.balance(
-        root.sections, CheatsheetLayout.columnCount(root.sections, root.availableRows, 4))
+        root.sections, CheatsheetLayout.columnCount(root.sections, root.availableRows, root.columnCap))
+
+    function fitToWidth() {
+        if (root.maxContentWidth <= 0 || root.columnCap <= 1)
+            return;
+        if (root.implicitWidth > root.maxContentWidth)
+            root.columnCap -= 1;
+    }
+
+    // Only ever shrinks, so this settles: each drop narrows the row, and the
+    // guard stops at a single column. Anything that changes what is being laid
+    // out starts the search again from the top.
+    onImplicitWidthChanged: Qt.callLater(root.fitToWidth)
+    onMaxContentWidthChanged: {
+        root.columnCap = root.maxColumns;
+        Qt.callLater(root.fitToWidth);
+    }
+    onSectionsChanged: {
+        root.columnCap = root.maxColumns;
+        Qt.callLater(root.fitToWidth);
+    }
     implicitWidth: row.implicitWidth + padding * 2
     implicitHeight: row.implicitHeight + padding * 2
     // Excellent symbol explaination and source :
