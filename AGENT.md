@@ -868,6 +868,47 @@ then observe generously" gate as above, applied to a producer rather than a cons
   SysTray *binds* that property, and assigning would break the binding rather than close the popup.
   0cec47e6f ("fix(bar): give the outside-click grab to the surface that owns the card").
 
+**A service with a `refCount` and no producer reads as the live API and is a hole. Before writing
+against any service, find the line that assigns the property you are about to read.** A reference
+count is a strong claim - it says this resource is expensive, shared, and started and stopped for
+you - and it is the part of a service a reviewer checks least, because counting looks like
+plumbing rather than behaviour. `CavaService` declared `refCount`, `barCount: 32` and `values: []`,
+and nothing in the tree ever assigned `values` or ran cava. Three widgets read it, three
+incremented the count, and all three rendered nothing: no error, no warning, no log line, and a
+green suite, because the QML tests never build them. The bands the shell actually drew came from a
+`Process` inside `MediaControls` publishing to `GlobalStates.visualizerPoints` at 50 bands where
+the service said 32 - so a fourth consumer written against the service, correctly, per its own
+spec, was inert for the same reason
+([#155](https://github.com/XephyLon/immaterial-impulse/issues/155)).
+
+The failure is not "someone forgot the producer". It is that **two names for one thing let one of
+them rot silently**, and the one that rots is whichever is not on screen. There is one band source
+now: `modules/common/plugins/designsystem/services/CavaService.qml` owns the process, states the
+contract (`barCount` = the `bars` in `scripts/cava/raw_output_config.txt`, `maxValue` = its ascii
+range) and `GlobalStates.visualizerPoints` is gone rather than kept as a mirror. Consumers reshape
+through `modules/common/functions/cavaBands.js` instead of each carrying a copy of both numbers,
+and claim the process with a `CavaRef` - a declared claim rather than a hand-written
+`refCount++`/`--` pair, because three hand-written copies existed and did not agree. Note the
+import direction this creates: mainline modules (the bar, the right sidebar, media controls) now
+`import qs.modules.common.plugins.designsystem.services`, which is core reaching into the vendored
+design system. That is deliberate - the service is where the issue decided the process belongs -
+but do not read it as licence for mainline code to reach into the design system generally.
+`tests/test_cava_contract.py` fails the suite on a `refCount` declared in a file that starts no
+`Process`, on a band count that disagrees with the cava config, on a consumer carrying its own copy
+of the range, and on `visualizerPoints` coming back.
+ce41c4f9c ("feat(cava): give CavaService the producer it always implied"),
+bcf5f9ca1 ("refactor(cava): move every band consumer onto the one service"),
+004a17745 ("test(cava): pin the producer, the gate and the band contract").
+
+**Resampling a spectrum by picking one index per bar drops most of it.**
+`Math.floor(i * source.length / barCount)` reads like the obvious way to fit 50 bands into 20 dots
+and reaches exactly 20 of them; the other 30 are unreachable on screen no matter how loud they are,
+and a peak landing between two picked indices simply does not appear. It was written that way in
+two places. `cavaBands.js` averages the source bands falling in each output band when downsampling
+and interpolates when upsampling, and returns zeros at the requested length for an absent spectrum
+so a consumer's bar model keeps its shape while cava is not running.
+bcf5f9ca1 ("refactor(cava): move every band consumer onto the one service").
+
 ## Dynamic/data-driven QML gotchas
 
 Relevant to anything that instantiates QML components from external data (JSON manifests, config
