@@ -267,6 +267,12 @@ if ! python3 "$SCRIPT_DIR/test_background_fullscreen_suppression.py"; then
     exit 1
 fi
 
+echo "Running wallpaper transition catalogue tests..."
+if ! python3 "$SCRIPT_DIR/test_wallpaper_transitions.py"; then
+    echo "Wallpaper transition catalogue tests failed."
+    exit 1
+fi
+
 echo "Running Wallpaper Engine integration tests..."
 if ! python3 "$SCRIPT_DIR/test_wallpaper_engine.py"; then
     echo "Wallpaper Engine integration tests failed."
