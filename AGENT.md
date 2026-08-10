@@ -1029,8 +1029,12 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   override it. Do not make `PluginWidget` blur every plugin unconditionally.
 - **A manifest's option keys and the host's own per-plugin state are one namespace, so `__` is
   reserved.** Both land in `pluginOptions[pluginId][key]` in `plugin-state.json`: the manifest's
-  declared options *and* the host's `blurEnabled`/`positionLocked`/`clickThrough`/`keepTranslucent`
-  seeds, plus `__gridSize` (the span a user resized a grid widget to). A manifest declaring a
+  declared options *and* the host's `blurEnabled`/`positionLocked`/`clickThrough`/
+  `keepTranslucent`/`followParallax` seeds, plus `__gridSize` (the span a user resized a grid
+  widget to) and a `migrations` map beside them for one-shot store migrations. Note the five
+  behaviour seeds are deliberately *unprefixed*: the prefix earns its place on `__gridSize`
+  because that key is not a row a plugin could plausibly declare, while the toggles are, and
+  renaming five live keys would need its own migration for no user-visible gain. A manifest declaring a
   `__`-prefixed key would therefore ship a settings control in Settings > Widgets that writes
   straight over host state. `PluginValidator.js` rejects it - which is the only defence against an
   installed third-party plugin, and silent for a bundled one, since a rejected manifest simply does
@@ -1049,6 +1053,51 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   screen. See `docs/widget-grid.md`. 9c4adcc5f ("feat(plugins): resolve a widget's grid span
   through a testable module"), 494580b65 ("feat(plugins): resolve a placed widget's span from its
   stored choice").
+- **`Array.isArray` is false for an array that has crossed a QML `model`, and the length is
+  still right.** A JS array reaching a delegate through a `Repeater`'s `model` goes into
+  QVariant and comes back as a list wrapper: indices and `length` survive, the `Array.isArray`
+  brand does not. `gridSizes.js` gated a manifest's whole `grid.sizes` list on that check, and
+  `Background.qml` builds *every* desktop widget from such a model — so a manifest declaring
+  three spans reached the host offering one, with no grip, no size row and nothing in the log.
+  The runtime harness passed throughout because it declares its synthetic manifests inline on
+  the harness root, which never crosses a model; it now builds one widget through a `Repeater`
+  as well. When validating data that arrives through a delegate, test for array-*likeness*
+  (`typeof value.length === "number"`), and get one test onto the path that actually ships.
+  109e6d897 ("fix(plugins): a manifest's grid.sizes survives the model boundary").
+- **A widget's settings page shows the plugin's own options first and the host's in a
+  "Widget behaviour" `ContentSubsection` below.** `PluginOptions.qml` used to concatenate its
+  synthesized host rows in *front* of `manifest.options`, so every widget's page opened with
+  four identical switches and the settings the user came for sat below them, reading as if the
+  plugin had declared the switches too. The two groups share one delegate and must not be
+  rejoined into one model (`tests/test_plugin_options_sections.py`). A host row that cannot
+  apply is **omitted, not disabled** — `hasBlurSurface` for a bar-only plugin, and the Size row
+  for a manifest offering a single span; the greying-out in that file is for a row that is
+  *temporarily* inert (`enabledWhen`), which is a different thing.
+  a03f1b266 ("feat(plugins): show a widget's own options above the host's"),
+  008e51dc9 ("feat(plugins): offer a resizable widget's span as a settings row").
+- **A desktop widget opts out of the parallax pan by cancelling it, not by being offset less.**
+  The widget canvas is one item whose `x`/`y` *are* the widget parallax (`Background.qml`), so
+  every widget on it travels because its parent does. `followParallax: false` therefore adds
+  `-canvas.x` to the widget's placement — `ParallaxMath.parallaxCancel`, beside `widgetOffset`
+  so it is testable — and the two summing to zero is what holds the widget still. The half that
+  is not on screen: the drag runs in canvas coordinates while `PluginState` holds *placement*
+  coordinates, and the gap between them is exactly the cancellation, so `commitPosition`
+  subtracts it back out. Storing the drawn coordinate walks an opted-out widget by a whole pan
+  on every drag, silently, because it looks right until the pan next changes. Anything else
+  that reads a widget's `x` and means "where the user put it" has the same subtraction to do.
+  95f851c28 ("feat(plugins): let a widget opt out of the desktop's parallax pan").
+- **A per-plugin key can be a retired manifest option for one widget and a live setting for
+  another, so migrate on what the manifest says, not on the key name.** `sizeMode` was a
+  manifest *option* on weather and currency, which `__gridSize` took over; `world-clock` and
+  `calendar` declare no `grid` and drive a `sizeMode` of their own from their own toggles. A
+  pass keyed on the name emptied those two widgets' options and reset them - the migration's
+  own failure mode aimed at the wrong widgets, found by running it against a seeded
+  `plugin-state.json` rather than by reading it. It now acts only where the manifest offers
+  more than one span. The marker (`migrations.migratedSizeMode`) is subject to AGENT.md's usual
+  warning - it records that the pass *ran*, not that it saw the user's data - so `PluginManager`
+  drives it on a settle timer rather than on the first non-empty manifest list, and the pass
+  returns without marking on an empty one. See `docs/widget-grid.md`.
+  db3a7d009 ("refactor(plugins): retire sizeMode in favour of the host's __gridSize").
 - **What claims a press from a desktop widget's drag-to-move is the nesting, not
   `preventStealing`.** The resize grip is a `MouseArea` inside `PluginWidget`, which *is* a
   `MouseArea` (`AbstractWidget`), and a nested area takes the press - the root only ever sees what
