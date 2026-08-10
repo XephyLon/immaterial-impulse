@@ -501,15 +501,17 @@ Item {
 
                                     property bool isEnabled: Config.options.plugins.enabled.includes(modelData.id)
                                     checked: isEnabled
-                                    onCheckedChanged: {
+                                    onToggleRequested: {
+                                        // Whole-list assignment: JsonAdapter
+                                        // lists only persist when replaced.
                                         let newList = [];
                                         for (let i = 0; i < Config.options.plugins.enabled.length; i++) {
                                             newList.push(Config.options.plugins.enabled[i]);
                                         }
-                                        if (checked && !isEnabled) {
-                                            newList.push(modelData.id);
-                                        } else if (!checked && isEnabled) {
-                                            newList = newList.filter(id => id !== modelData.id);
+                                        if (configSwitch.isEnabled) {
+                                            newList = newList.filter(id => id !== configSwitch.modelData.id);
+                                        } else {
+                                            newList.push(configSwitch.modelData.id);
                                         }
                                         Config.setNestedValue("plugins.enabled", newList);
                                     }
