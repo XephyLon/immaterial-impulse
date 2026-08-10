@@ -34,7 +34,7 @@ Item {
             buttonIcon: "lock"
             text: Translation.tr("Lock widget positions")
             checked: Config.options.background.widgetsLocked
-            onCheckedChanged: Config.options.background.widgetsLocked = checked
+            onToggleRequested: Config.options.background.widgetsLocked = !Config.options.background.widgetsLocked
         }
 
         Rectangle {
@@ -55,7 +55,7 @@ Item {
                 buttonIcon: modelData.icon
                 text: modelData.name
                 checked: Config.options.background.widgets[modelData.key].enable
-                onCheckedChanged: Config.options.background.widgets[modelData.key].enable = checked
+                onToggleRequested: Config.options.background.widgets[modelData.key].enable = !Config.options.background.widgets[modelData.key].enable
             }
         }
     }

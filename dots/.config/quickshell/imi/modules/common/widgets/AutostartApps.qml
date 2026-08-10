@@ -54,9 +54,7 @@ ColumnLayout {
                 buttonIcon: "check"
                 text: Translation.tr("Enable")
                 checked: Config.options.hyprland.autostartApps.enable
-                onCheckedChanged: {
-                    Config.options.hyprland.autostartApps.enable = checked
-                }
+                onToggleRequested: Config.options.hyprland.autostartApps.enable = !Config.options.hyprland.autostartApps.enable
             }
         }
 
