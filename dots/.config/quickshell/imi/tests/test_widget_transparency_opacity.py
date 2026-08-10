@@ -15,6 +15,13 @@ widget left reading `blurOpacity` directly is invisible to that test and stays
 see-through on screen. These are the greppable pins for that, plus the two
 settings-side halves the fix would silently do nothing without.
 
+The last class widens the file past the plugin widgets. The same shape - a
+surface applying its own alpha on top of an already-gated token - turned up in
+two more places while auditing this one, and they belong in the same file
+rather than a sibling: what a future agent greps for is "who is gated on
+`transparency.enable`", and splitting that answer in two is how a two-sided
+contract drifts apart (AGENT.md, on the validator/renderer whitelists).
+
 Each assertion names the edit it exists to redden.
 """
 from pathlib import Path
@@ -27,6 +34,10 @@ HOST = ROOT / "modules/common/plugins/PluginWidget.qml"
 OPTIONS = ROOT / "modules/common/plugins/PluginOptions.qml"
 VALIDATOR = ROOT / "modules/common/plugins/PluginValidator.js"
 PAGE = ROOT / "modules/imi/settings/pages/PluginsPage.qml"
+APPEARANCE = ROOT / "modules/common/Appearance.qml"
+DROP_SHELF = ROOT / "modules/imi/dropShelf/DropShelfPanel.qml"
+BAR_PAGE = ROOT / "modules/imi/settings/pages/BarConfig.qml"
+PANELS_PAGE = ROOT / "modules/imi/settings/pages/SidebarsPanelsConfig.qml"
 BUNDLED = ROOT / "modules/common/plugins/bundled"
 DESIGN_WIDGETS = ROOT / "modules/common/plugins/designsystem/widgets"
 
@@ -178,6 +189,84 @@ class TheInertControlsSaySo(unittest.TestCase):
         dead for the same reason - looking live right next to it.
         """
         self.assertEqual(self.src.count("enabled: root.widgetTranslucencyApplies"), 2)
+
+
+class TheToggleReachesTheOtherPaintedSurfaces(unittest.TestCase):
+    """Two non-plugin surfaces had the identical defect: their own alpha,
+    applied on top of a token that already drops to opaque, so the toggle
+    removed the blur and left the translucency behind.
+
+    Neither routes through `PluginState.effectiveBackgroundOpacity`. That
+    function's whole signature is `(pluginId, base, manifestSeed)` and its value
+    is resolving a *per-plugin* opt-out; a panel has no plugin id and no
+    manifest, so it would pass `""` forever and take a dependency on the plugin
+    state store to get back a one-line conditional. The abstraction that
+    generalises here is the one `Appearance.qml` already had - a transparency
+    amount gated on the switch.
+    """
+
+    def test_the_bar_amount_is_gated_beside_the_other_two(self):
+        """`bar.backgroundOpacity` used to be inlined raw at colBarBackground.
+        Declaring it with backgroundTransparency/contentTransparency is what
+        makes "every transparency amount is gated, in one place" greppable.
+        """
+        src = squashed(APPEARANCE)
+        self.assertIn("property real barBackgroundTransparency:", src)
+        amount = src[src.index("property real barBackgroundTransparency:"):]
+        amount = amount[:amount.index("m3colors:")]
+        self.assertIn("Config?.options.appearance.transparency.enable", amount)
+        self.assertIn("Config?.options.bar.backgroundOpacity", amount)
+        self.assertIn(": 0", amount)
+
+    def test_col_bar_background_reads_the_gated_amount(self):
+        """Gating the amount and leaving the token on the raw setting is the
+        silent half-fix: the new property would be dead and the bar, vertical
+        bar, pills and hug corners would stay see-through exactly as before.
+        """
+        src = squashed(APPEARANCE)
+        self.assertIn(
+            "property color colBarBackground: ColorUtils.transparentize(colLayer0, "
+            "root.barBackgroundTransparency)", src)
+        self.assertNotIn(
+            "transparentize(colLayer0, 1 - (Config?.options.bar.backgroundOpacity", src)
+
+    def test_the_drop_shelf_frost_is_gated(self):
+        """Frost *is* the translucency in that file - the compositor blurs
+        behind the layer, so the only thing "blur" does there is thin the tint.
+        Ungated, the shelf shipped 50% see-through onto a sharp wallpaper.
+        """
+        src = squashed(DROP_SHELF)
+        self.assertIn(
+            "readonly property bool blurBackground: Config.options.dropShelf.blurBackground "
+            "&& Config.options.appearance.transparency.enable", src)
+
+    def test_the_drop_shelf_paint_still_reads_that_property(self):
+        """Gating the property matters only if the fill still branches on it -
+        an inlined `Config.options.dropShelf.blurBackground` at the Rectangle
+        would leave the gate correct and unreachable.
+        """
+        src = squashed(DROP_SHELF)
+        self.assertIn("color: root.blurBackground ? ColorUtils.transparentize("
+                      "Appearance.colors.colLayer0, 1 - root.backgroundOpacity) "
+                      ": Appearance.colors.colLayer0", src)
+
+    def test_the_now_inert_rows_say_so(self):
+        """Same rule as the plugin frost rows: with transparency off none of
+        these three move anything, and a live control that does nothing is the
+        next bug report.
+        """
+        bar = squashed(BAR_PAGE)
+        self.assertIn("enabled: Config.options.bar.showBackground "
+                      "&& Config.options.appearance.transparency.enable", bar)
+        panels = squashed(PANELS_PAGE)
+        self.assertIn("enabled: Config.options.dropShelf.blurBackground "
+                      "&& Config.options.appearance.transparency.enable", panels)
+        # The switch's own row, delimited by its icon and its write-back, so the
+        # slice cannot drift onto a neighbouring control's `enabled:`.
+        start = panels.index('buttonIcon: "blur_on"')
+        end = panels.index("Config.options.dropShelf.blurBackground = checked", start)
+        self.assertIn("enabled: Config.options.appearance.transparency.enable",
+                      panels[start:end])
 
 
 if __name__ == "__main__":
