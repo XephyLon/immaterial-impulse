@@ -195,24 +195,20 @@ Item {
                 anchors { fill: parent; margins: Appearance.spacing.space100 }
 
                 Repeater {
-                    model: [
-                        { displayName: Translation.tr("Disable"),    icon: "block",        value: "" },
-                        { displayName: Translation.tr("Magic"),   icon: "auto_awesome", value: "magic" },
-                        { displayName: Translation.tr("Stripes"), icon: "texture_minus", value: "stripes" },
-                        { displayName: Translation.tr("Random"),  icon: "shuffle",      value: "random" },
-                    ]
+                    // Every transition the shell ships except the one already
+                    // running: this menu exists to change the transition, and
+                    // the only row it used to mark as selected was the one row
+                    // clicking on which did nothing.
+                    model: WallpaperTransitions.options.filter(option =>
+                        option.value !== Config.options.background.wallpaperAnimation)
                     delegate: RippleButton {
                         id: transRow
                         required property var modelData
                         Layout.fillWidth: true
                         implicitHeight: 40
-                        toggled: Config.options.background.wallpaperAnimation === transRow.modelData.value
                         colBackground: "transparent"
                         buttonRadius: Appearance.rounding.verylarge
                         colBackgroundHover: Appearance.colors.colLayer2
-                        colBackgroundToggled: Appearance.colors.colSecondaryContainer
-                        colBackgroundToggledHover: Appearance.colors.colSecondaryContainerHover
-                        colRippleToggled: Appearance.colors.colSecondaryContainerActive
                         onClicked: Config.options.background.wallpaperAnimation = transRow.modelData.value
                         contentItem: RowLayout {
                             anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }
@@ -220,20 +216,13 @@ Item {
                             MaterialSymbol {
                                 text: transRow.modelData.icon
                                 iconSize: Appearance.font.pixelSize.larger
-                                color: transRow.toggled ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer1
-                                fill: transRow.toggled ? 1 : 0
+                                color: Appearance.colors.colOnLayer1
                             }
                             StyledText {
                                 Layout.fillWidth: true
                                 text: transRow.modelData.displayName
                                 font.pixelSize: Appearance.font.pixelSize.normal
-                                color: transRow.toggled ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer1
-                            }
-                            MaterialSymbol {
-                                visible: transRow.toggled
-                                text: "check"
-                                iconSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colOnSecondaryContainer
+                                color: Appearance.colors.colOnLayer1
                             }
                         }
                     }
