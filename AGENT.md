@@ -854,8 +854,21 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   conditional; `tests/test_widget_transparency_opacity.py` reddens on a call site that reads
   `plugins.blurOpacity` directly. The exemption gates the frost too — a widget excused from the
   opaque default but still denied its blur is exactly the hole this removed.
-  ead4ba6f7 ("feat(plugins): derive desktop-widget opacity from the transparency toggle"),
-  2edab686a ("fix(plugins): route every widget panel opacity through the derivation").
+  **The plugins were not the only ones**, and the audit that found the other two is the point:
+  `Appearance.colors.colBarBackground` thinned the (already gated) `colLayer0` by an ungated
+  `bar.backgroundOpacity`, and `DropShelfPanel` painted an ungated `dropShelf.backgroundOpacity`
+  — the shelf shipped 50% see-through with transparency off, in the default config. Both defaults
+  (`1`, and a panel most people never open) are why nobody reported them. Neither routes through
+  `PluginState`: that function resolves a *per-plugin* opt-out from a manifest seed, so a panel
+  would pass an empty id forever and drag the plugin state store into an unrelated module for a
+  one-line conditional. The generalising abstraction for a non-plugin surface is the one
+  `Appearance.qml` already had — a transparency *amount* declared beside `backgroundTransparency`
+  / `contentTransparency` that collapses to `0` when the switch is off. Keep new amounts there,
+  where "is every one of them gated?" is answerable by looking.
+  13d8a0abe ("feat(plugins): derive desktop-widget opacity from the transparency toggle"),
+  3ed184642 ("fix(plugins): route every widget panel opacity through the derivation"),
+  5ce649746 ("fix(appearance): gate the bar's own opacity on the transparency switch"),
+  535c3b191 ("fix(dropShelf): gate the shelf's frost on the transparency switch").
 - Desktop plugin delegates are retained for every available manifest and gated through an animated
   `FadeLoader`, rather than repeating only the enabled ids. Removing a model delegate destroys it
   immediately and makes an M3 exit transition impossible; keep disabled loaders dormant until their
