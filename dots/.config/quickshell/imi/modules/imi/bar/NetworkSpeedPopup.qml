@@ -6,6 +6,7 @@ import qs.services
 
 StyledPopup {
     id: root
+    morph: true
 
     property real downloadSpeed: 0
     property real uploadSpeed: 0
