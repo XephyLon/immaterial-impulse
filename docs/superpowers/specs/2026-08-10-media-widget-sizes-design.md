@@ -26,8 +26,9 @@ one-size limitation.
   one span gets it.
 - **2x2 is cookie-as-artwork**: album art inside the cookie, visualizer lobes around it, title and
   artist below.
-- **2x1 is exactly the reference**: prev, cookie-shaped play/pause, next. No text, no art, no
-  progress.
+- **2x1 is exactly the reference**: prev, cookie-shaped play/pause, next. No text and no artwork —
+  but progress *is* shown, stroked around the centre button's own outline rather than as a separate
+  track. See §5.
 
 ---
 
@@ -141,8 +142,20 @@ The existing content moves to `LayoutLarge.qml` unchanged, so the current widget
 - **2x2 `LayoutCookie.qml`** — 276x228. `VisualizerCookie` with album art clipped inside it, title
   and artist beneath. Tap the cookie to play/pause.
 - **2x1 `LayoutCompact.qml`** — 276x108. Prev pill, cookie-shaped play/pause, next pill, centred.
-  The cookie here is a static `MaterialCookie`, not the visualizer — at this size a rippling
-  outline behind an icon is noise.
+
+  **The centre button's border is the seek bar.** Playback progress is stroked around the cookie's
+  own outline rather than drawn as a separate track, which is what makes this layout read as one
+  object instead of three controls with a line under them. There is still no text and no artwork.
+
+  That changes what the shape has to support. A cookie outline is a run of cubic Beziers, so a
+  partial stroke needs the path's arc length: sample the cubics once per geometry change to get the
+  cumulative length, then stroke with `setLineDash([progress * total, total])`. Length only has to
+  be recomputed when the shape changes, which for a static cookie is once.
+
+  The cookie here is a static `MaterialCookie`-shaped path, not the visualizer — at this size a
+  rippling outline would fight the progress it is also carrying, and the two would be
+  indistinguishable. Both nonetheless stroke a rounded polygon, so the arc-length helper belongs
+  beside `rounded-polygon.js` where `VisualizerCookie` can reach it if a future layout wants both.
 
 All three read the same media state, so no new service work.
 
