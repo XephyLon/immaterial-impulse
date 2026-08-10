@@ -47,11 +47,27 @@ class BarHoverRegionTests(unittest.TestCase):
         self.assertRegex(self.block, r"height:\s*Math\.max\(0,",
                          "a negative height is not a small region, it is an invalid one")
 
+    def test_the_strip_covers_the_detach_inset_in_both_states(self):
+        """Otherwise revealing the bar moves the strip out from under the pointer.
+
+        With auto-hide on, a detached style's gap is carried by the content, so
+        a *shown* bar sits `barDetachInset` down from the surface edge. Compute
+        the strip from `barContent.y` alone and it then starts below row 0 - so
+        a pointer resting on the screen edge reveals the bar, is immediately
+        outside the strip, and hides it again. Reveal, hide, reveal: the stutter
+        was that loop running as fast as the animation allowed.
+
+        The inset is the bar's own space, not a gap outside it, so the strip has
+        to span it in both states.
+        """
+        self.assertIn("barContent.y - reveal - Appearance.sizes.barDetachInset", self.block,
+                      "the strip must reach the surface edge while the bar is shown, "
+                      "or revealing it takes the strip out from under the pointer")
+
     def test_the_strip_still_covers_the_reveal_width_either_side(self):
         # Clamping must not quietly drop the overshoot that makes the strip
         # reachable before the bar has finished sliding in.
         self.assertIn("hoverRegionWidth", self.block)
-        self.assertIn("barContent.y - reveal", self.block)
         self.assertIn("barContent.y + barContent.height + reveal", self.block)
 
 
