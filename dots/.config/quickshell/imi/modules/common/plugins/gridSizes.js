@@ -1,0 +1,130 @@
+.pragma library
+
+// Resolving which component-grid span a placed widget occupies.
+//
+// A manifest's `grid` used to be one constant span (docs/widget-grid.md). It
+// may now also carry a `sizes` array - the spans the widget offers - with
+// `cols`/`rows` staying as the default. Everything here is pure data so it can
+// be driven from a TestCase; the host (PluginWidget) supplies the pixel
+// measurements and does the persisting.
+//
+// The rules that are not obvious:
+//   - a `sizes` list the manifest got wrong is rejected whole, never repaired.
+//     Dropping the bad entry and keeping the rest would silently offer a
+//     different set of spans than the author wrote, and the widget the user
+//     already placed would change size on upgrade for reasons nothing reports.
+//   - a stored span that the manifest no longer offers falls back to the
+//     default rather than being honoured, for the same reason: a widget laid
+//     out into a span its content no longer fills looks broken and is not
+//     traceable to the manifest edit that caused it.
+
+const MIN_CELLS = 1;
+const MAX_CELLS = 12;
+
+function isCellCount(value) {
+    return typeof value === "number" && isFinite(value) && value === Math.floor(value)
+        && value >= MIN_CELLS && value <= MAX_CELLS;
+}
+
+// A span entry, with each axis defaulting to 1 exactly as `grid` itself does.
+// Returns null for anything that is not a usable span, so a caller never has to
+// distinguish "absent" from "malformed" - both mean "do not offer this".
+function normalizeSize(entry) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+    const cols = entry.cols === undefined ? 1 : entry.cols;
+    const rows = entry.rows === undefined ? 1 : entry.rows;
+    if (!isCellCount(cols) || !isCellCount(rows)) return null;
+    return { cols: cols, rows: rows };
+}
+
+// The manifest's declared span. Null means the manifest declares no grid at
+// all, which is the legacy content-sized path and not an error.
+function defaultSize(grid) {
+    return normalizeSize(grid);
+}
+
+function sameSize(a, b) {
+    return !!a && !!b && a.cols === b.cols && a.rows === b.rows;
+}
+
+function containsSize(list, size) {
+    for (const entry of list) {
+        if (sameSize(entry, size)) return true;
+    }
+    return false;
+}
+
+// Every span this widget offers, in the manifest's order (which is the resize
+// order). Always at least the default, so a caller can treat the result as the
+// complete answer; a list of one means the widget has a single size and gets no
+// resize handle.
+function offeredSizes(grid) {
+    const fallback = defaultSize(grid);
+    if (!fallback) return [];
+
+    const declared = grid.sizes;
+    if (!Array.isArray(declared)) return [fallback];
+
+    const out = [];
+    for (const entry of declared) {
+        const size = normalizeSize(entry);
+        if (!size) return [fallback];
+        if (!containsSize(out, size)) out.push(size);
+    }
+    if (!containsSize(out, fallback)) return [fallback];
+    return out;
+}
+
+function resizable(grid) {
+    return offeredSizes(grid).length > 1;
+}
+
+// The persisted form, "<cols>x<rows>".
+function formatSize(size) {
+    const normalized = normalizeSize(size);
+    return normalized ? normalized.cols + "x" + normalized.rows : "";
+}
+
+function parseSize(text) {
+    if (typeof text !== "string") return null;
+    const match = /^\s*(\d+)\s*x\s*(\d+)\s*$/.exec(text);
+    if (!match) return null;
+    return normalizeSize({ cols: parseInt(match[1], 10), rows: parseInt(match[2], 10) });
+}
+
+// Stored -> manifest default -> content-sized (null), which is the order
+// PluginWidget applies.
+function resolveSize(grid, stored) {
+    const fallback = defaultSize(grid);
+    if (!fallback) return null;
+
+    const wanted = parseSize(stored);
+    if (wanted && containsSize(offeredSizes(grid), wanted)) return wanted;
+    return fallback;
+}
+
+// The drag snap. `candidates` carry their own pixel measurements because the
+// span-to-pixel conversion is Appearance's (widgetGridSpanX/Y, which also
+// applies effectiveScale) and copying that formula here would be a second one
+// to keep in step: [{ cols, rows, width, height }].
+//
+// Nearest by plain distance in pixels, so both axes count. A tie goes to the
+// earlier candidate, which makes the widget under a pointer sitting exactly
+// between two spans stable rather than flickering between them. A target that
+// is not a real number yields null - the caller keeps whatever it had.
+function nearestSize(candidates, targetWidth, targetHeight) {
+    if (!Array.isArray(candidates)) return null;
+
+    let best = null;
+    let bestDistance = Infinity;
+    for (const candidate of candidates) {
+        const dx = candidate.width - targetWidth;
+        const dy = candidate.height - targetHeight;
+        const distance = dx * dx + dy * dy;
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            best = candidate;
+        }
+    }
+    return best;
+}
