@@ -74,6 +74,18 @@ Singleton {
         root.setNestedValue("background.parallax.migratedFromDeadCode", true);
     }
 
+    // splitButtons shipped as false, so every existing config has a stored
+    // false that would beat the new default and leave chords drawn as one wide
+    // keycap. Nobody chose that value - there is no setting for it in the UI,
+    // so the only way to have set it deliberately is by hand, and this runs
+    // once either way.
+    function migrateSplitCheatsheetButtons() {
+        if (root.options.cheatsheet.migratedSplitButtons)
+            return;
+        root.setNestedValue("cheatsheet.splitButtons", true);
+        root.setNestedValue("cheatsheet.migratedSplitButtons", true);
+    }
+
     function migrateDesktopWidgetsToPlugins() {
         if (root.options.plugins.migratedDesktopWidgets)
             return;
@@ -426,6 +438,7 @@ Singleton {
             root.ready = true;
             root.clearStaleKbOptions();
             root.migrateDeadParallaxSwitches();
+            root.migrateSplitCheatsheetButtons();
             root.migrateDesktopWidgetsToPlugins();
             root.migrateDesktopWidgetOptionsToPlugins();
         }
@@ -749,7 +762,14 @@ Singleton {
                 // 10:  | 11:  | 12:  | 13:  | 14: 󱄛
                 property string superKey: ""
                 property bool useMacSymbol: false
-                property bool splitButtons: false
+                // One keycap per key. Off, a chord is drawn as a single wide
+                // keycap reading "SUPER SHIFT ALT R", which looks like one key
+                // with a long name rather than four keys held together.
+                property bool splitButtons: true
+                // Whether the stored config has been moved off the old default.
+                // Without this the change above is invisible to anyone who has
+                // ever run the shell, because a stored value beats a QML one.
+                property bool migratedSplitButtons: false
                 property bool useMouseSymbol: false
                 property bool useFnSymbol: false
                 property JsonObject fontSize: JsonObject {
