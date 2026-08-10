@@ -12,6 +12,13 @@ ColumnLayout {
     required property var manifest
     spacing: Appearance.spacing.space25
 
+    // The widget's own options come first, because they are what the user
+    // opened this page for. The host's rows used to be concatenated in FRONT of
+    // them - four identical switches before a widget's two or three real
+    // settings, pushing them below the fold and reading as if the plugin had
+    // declared them. They live in their own section below instead.
+    readonly property var widgetOptions: manifest.options || []
+
     // Host blur is a desktop-widget mechanism (PluginWidget frost); bar/
     // overlay-only plugins were getting a dead "Blur background" toggle.
     readonly property bool hasBlurSurface: manifest.desktopWidget !== undefined
@@ -20,7 +27,12 @@ ColumnLayout {
     // blur row instead of being declared in a manifest `options` array. Their
     // manifest fields - `desktopWidget.locked` / `desktopWidget.clickThrough` -
     // only seed the default, which is what keeps a shipped default reversible.
-    readonly property var optionRows: (hasBlurSurface ? [{
+    //
+    // A row that cannot apply is omitted, not disabled: a control that can
+    // never be enabled is noise. The greying-out this file does elsewhere is
+    // for a row that is *temporarily* inert (`enabledWhen`), which is a
+    // different thing.
+    readonly property var behaviourRows: hasBlurSurface ? [{
         key: "blurEnabled",
         type: "boolean",
         label: "Blur background",
@@ -48,25 +60,45 @@ ColumnLayout {
         label: "Stay translucent",
         icon: "opacity",
         default: manifest.desktopWidget?.keepTranslucent === true
-    }] : []).concat(manifest.options || [])
+    }] : []
 
-    // Not a pluginOption on purpose: preset application replaces those, and
-    // this flag decides whether they get replaced (see presets.sh --apply).
-    ConfigSwitch {
-        Layout.fillWidth: true
-        leftPadding: 0
-        rightPadding: 0
-        buttonIcon: "push_pin"
-        text: Translation.tr("Keep settings across presets")
-        checked: PluginState.presetPersisted(root.manifest.id)
-        onCheckedChanged: {
-            if (checked !== PluginState.presetPersisted(root.manifest.id))
-                PluginState.setPresetPersist(root.manifest.id, checked);
+    Repeater {
+        model: root.widgetOptions
+        delegate: optionRow
+    }
+
+    // Every host row reads as one group rather than as more of the widget's own
+    // settings. The same rows appear for every widget - that is the point, and
+    // it is exactly why they should not sit among the plugin's.
+    ContentSubsection {
+        title: Translation.tr("Widget behaviour")
+
+        // Not a pluginOption on purpose: preset application replaces those, and
+        // this flag decides whether they get replaced (see presets.sh --apply).
+        ConfigSwitch {
+            id: presetPersistSwitch
+            Layout.fillWidth: true
+            leftPadding: 0
+            rightPadding: 0
+            buttonIcon: "push_pin"
+            text: Translation.tr("Keep settings across presets")
+            checked: PluginState.presetPersisted(root.manifest.id)
+            onCheckedChanged: {
+                if (checked !== PluginState.presetPersisted(root.manifest.id))
+                    PluginState.setPresetPersist(root.manifest.id, checked);
+            }
+        }
+
+        Repeater {
+            model: root.behaviourRows
+            delegate: optionRow
         }
     }
 
-    Repeater {
-        model: root.optionRows
+    // One delegate for both groups: they differ in where they come from and
+    // where they are drawn, never in how a row of a given type behaves.
+    Component {
+        id: optionRow
 
         Loader {
             id: optionLoader

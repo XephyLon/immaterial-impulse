@@ -218,14 +218,14 @@ class TheSettingsSideExists(unittest.TestCase):
         self.src = squashed(OPTIONS)
 
     def _rows(self):
-        """The `optionRows` list literal alone.
+        """The `behaviourRows` list literal alone.
 
         Reading to end-of-file instead would swallow the Repeater's own
         `PluginState.option(...)` calls, and every assertion about which rows
         are synthesized here would pass on the generic delegate code.
         """
-        start = self.src.index("readonly property var optionRows")
-        return self.src[start:self.src.index(".concat(manifest.options", start)]
+        start = self.src.index("readonly property var behaviourRows")
+        return self.src[start:self.src.index("Repeater {", start)]
 
     def test_both_rows_are_offered(self):
         for key in ("positionLocked", "clickThrough"):
@@ -243,8 +243,7 @@ class TheSettingsSideExists(unittest.TestCase):
         """`boolean` is already in PluginValidator's type whitelist and
         PluginOptions' switch. An unlisted type renders no row at all.
         """
-        rows = self.src[self.src.index("readonly property var optionRows"):]
-        rows = rows[:rows.index("Not a pluginOption on purpose")]
+        rows = self._rows()
         self.assertEqual(rows.count('type: "boolean"'), 4,
                          "blur, lock, click-through and stay-translucent are "
                          "all boolean rows")
