@@ -77,9 +77,7 @@ WindowDialog {
             buttonIcon: "colors"
             text: Translation.tr("Colorize")
             checked: Config.options.custom.colorizeIcon
-            onCheckedChanged: {
-                Config.options.custom.colorizeIcon = checked
-            }
+            onToggleRequested: Config.options.custom.colorizeIcon = !Config.options.custom.colorizeIcon
         }
 
         Item {
