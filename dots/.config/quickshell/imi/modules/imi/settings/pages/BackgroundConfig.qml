@@ -199,18 +199,6 @@ ContentPage {
                 }
             }
 
-            Connections {
-                target: Config.options.background
-                function onLockWallChanged() {
-                    syncWallpaperSwitch.checked = Qt.binding(() => Config.options.background.lockWall === ""
-                        && Config.options.background.lockWallEngine === "")
-                }
-                function onLockWallEngineChanged() {
-                    syncWallpaperSwitch.checked = Qt.binding(() => Config.options.background.lockWall === ""
-                        && Config.options.background.lockWallEngine === "")
-                }
-            }
-        
             ContentSubsection {
                 title: Translation.tr("Parallax")
                 Layout.fillWidth: true
