@@ -93,6 +93,12 @@ if ! python3 "$SCRIPT_DIR/lint_spacing.py"; then
     exit 1
 fi
 
+echo "Running disabled-opacity lint..."
+if ! python3 "$SCRIPT_DIR/lint_disabled_opacity.py"; then
+    echo "Disabled-opacity lint failed."
+    exit 1
+fi
+
 echo "Running shell name lint..."
 if ! python3 "$SCRIPT_DIR/lint_shell_name.py"; then
     echo "Shell name lint failed."
