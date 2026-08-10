@@ -148,9 +148,7 @@ ContentPage {
                     buttonIcon: "pace"
                     text: Translation.tr("Second precision")
                     checked: Config.options.time.secondPrecision
-                    onCheckedChanged: {
-                        Config.options.time.secondPrecision = checked;
-                    }
+                    onToggleRequested: Config.options.time.secondPrecision = !Config.options.time.secondPrecision
                 }
                 ConfigSelectionArray {
                     text: Translation.tr("First day of week")
@@ -227,9 +225,7 @@ ContentPage {
                         buttonIcon: "pause"
                         text: Translation.tr("Automatic suspend")
                         checked: Config.options.battery.automaticSuspend
-                        onCheckedChanged: {
-                            Config.options.battery.automaticSuspend = checked;
-                        }
+                        onToggleRequested: Config.options.battery.automaticSuspend = !Config.options.battery.automaticSuspend
                     }
                     ConfigSpinBox {
                         enabled: Config.options.battery.automaticSuspend
@@ -269,9 +265,7 @@ ContentPage {
                     buttonIcon: "hearing"
                     text: Translation.tr("Earbang protection")
                     checked: Config.options.audio.protection.enable
-                    onCheckedChanged: {
-                        Config.options.audio.protection.enable = checked;
-                    }
+                    onToggleRequested: Config.options.audio.protection.enable = !Config.options.audio.protection.enable
                 }
                 ConfigRow {
                     enabled: Config.options.audio.protection.enable
@@ -311,17 +305,13 @@ ContentPage {
                     text: Translation.tr("Battery")
                     enabled: Battery.available
                     checked: Config.options.sounds.battery
-                    onCheckedChanged: {
-                        Config.options.sounds.battery = checked;
-                    }
+                    onToggleRequested: Config.options.sounds.battery = !Config.options.sounds.battery
                 }
                 ConfigSwitch {
                     buttonIcon: "av_timer"
                     text: Translation.tr("Pomodoro")
                     checked: Config.options.sounds.pomodoro
-                    onCheckedChanged: {
-                        Config.options.sounds.pomodoro = checked;
-                    }
+                    onToggleRequested: Config.options.sounds.pomodoro = !Config.options.sounds.pomodoro
                 }
             }
         }

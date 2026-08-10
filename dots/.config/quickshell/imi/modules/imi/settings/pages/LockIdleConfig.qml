@@ -52,32 +52,32 @@ ContentPage {
                     buttonIcon: "water_drop"
                     text: Translation.tr("Use Hyprlock (instead of Quickshell)")
                     checked: Config.options.lock.useHyprlock
-                    onCheckedChanged: { Config.options.lock.useHyprlock = checked }
+                    onToggleRequested: Config.options.lock.useHyprlock = !Config.options.lock.useHyprlock
                 }
                 ConfigSwitch {
                     buttonIcon: "account_circle"
                     text: Translation.tr("Launch on startup")
                     checked: Config.options.lock.launchOnStartup
-                    onCheckedChanged: { Config.options.lock.launchOnStartup = checked }
+                    onToggleRequested: Config.options.lock.launchOnStartup = !Config.options.lock.launchOnStartup
                 }
                 ConfigSwitch {
                     buttonIcon: "widgets"
                     text: Translation.tr("Show Widgets")
                     checked: Config.options.lock.showWidgets
-                    onCheckedChanged: { Config.options.lock.showWidgets = checked }
+                    onToggleRequested: Config.options.lock.showWidgets = !Config.options.lock.showWidgets
                 }
                 ConfigSwitch {
                     buttonIcon: "tools_installation_kit"
                     text: Translation.tr("Show Toolbars")
                     checked: Config.options.lock.showToolbars
-                    onCheckedChanged: { Config.options.lock.showToolbars = checked }
+                    onToggleRequested: Config.options.lock.showToolbars = !Config.options.lock.showToolbars
                 }
                 ConfigSwitch {
                     buttonIcon: "music_note"
                     enabled: Config.options.lock.showToolbars
                     text: Translation.tr("Show media player info")
                     checked: Config.options.lock.showMedia
-                    onCheckedChanged: { Config.options.lock.showMedia = checked }
+                    onToggleRequested: Config.options.lock.showMedia = !Config.options.lock.showMedia
                 }
             }
 
@@ -88,13 +88,13 @@ ContentPage {
                         buttonIcon: "settings_power"
                         text: Translation.tr("Require password to power off/restart")
                         checked: Config.options.lock.security.requirePasswordToPower
-                        onCheckedChanged: { Config.options.lock.security.requirePasswordToPower = checked }
+                        onToggleRequested: Config.options.lock.security.requirePasswordToPower = !Config.options.lock.security.requirePasswordToPower
                     }
                     ConfigSwitch {
                         buttonIcon: "key_vertical"
                         text: Translation.tr("Also unlock keyring")
                         checked: Config.options.lock.security.unlockKeyring
-                        onCheckedChanged: { Config.options.lock.security.unlockKeyring = checked }
+                        onToggleRequested: Config.options.lock.security.unlockKeyring = !Config.options.lock.security.unlockKeyring
                     }
                 }
             }
@@ -106,19 +106,19 @@ ContentPage {
                         buttonIcon: "center_focus_weak"
                         text: Translation.tr("Center clock")
                         checked: Config.options.lock.centerClock
-                        onCheckedChanged: { Config.options.lock.centerClock = checked }
+                        onToggleRequested: Config.options.lock.centerClock = !Config.options.lock.centerClock
                     }
                     ConfigSwitch {
                         buttonIcon: "info"
                         text: Translation.tr('Show "Locked" text')
                         checked: Config.options.lock.showLockedText
-                        onCheckedChanged: { Config.options.lock.showLockedText = checked }
+                        onToggleRequested: Config.options.lock.showLockedText = !Config.options.lock.showLockedText
                     }
                     ConfigSwitch {
                         buttonIcon: "shapes"
                         text: Translation.tr("Use varying shapes for password characters")
                         checked: Config.options.lock.materialShapeChars
-                        onCheckedChanged: { Config.options.lock.materialShapeChars = checked }
+                        onToggleRequested: Config.options.lock.materialShapeChars = !Config.options.lock.materialShapeChars
                     }
                 }
             }
@@ -130,7 +130,7 @@ ContentPage {
                         buttonIcon: "blur_on"
                         text: Translation.tr("Enable blur")
                         checked: Config.options.lock.blur.enable
-                        onCheckedChanged: { Config.options.lock.blur.enable = checked }
+                        onToggleRequested: Config.options.lock.blur.enable = !Config.options.lock.blur.enable
                     }
                     ConfigSpinBox {
                         icon: "deblur"
@@ -161,7 +161,7 @@ ContentPage {
                     text: Translation.tr("Keep awake while an external monitor is connected")
                     description: Translation.tr("Combines with the \"Keep awake\" quick toggle: the system stays awake while either is active")
                     checked: Config.options.idleInhibitor.autoOnExternalMonitor
-                    onCheckedChanged: { Config.options.idleInhibitor.autoOnExternalMonitor = checked }
+                    onToggleRequested: Config.options.idleInhibitor.autoOnExternalMonitor = !Config.options.idleInhibitor.autoOnExternalMonitor
                 }
             }
         }
@@ -176,7 +176,7 @@ ContentPage {
                     buttonIcon: "bedtime"
                     text: Translation.tr("Enable OLED screensaver")
                     checked: Config.options.screensaver.enable
-                    onCheckedChanged: { Config.options.screensaver.enable = checked }
+                    onToggleRequested: Config.options.screensaver.enable = !Config.options.screensaver.enable
                 }
                 ConfigSelectionArray {
                     text: Translation.tr("Mode")
@@ -200,17 +200,13 @@ ContentPage {
                     buttonIcon: "assignment"
                     text: Translation.tr("Hide clipboard images copied from sussy sources")
                     checked: Config.options.workSafety.enable.clipboard
-                    onCheckedChanged: {
-                        Config.options.workSafety.enable.clipboard = checked;
-                    }
+                    onToggleRequested: Config.options.workSafety.enable.clipboard = !Config.options.workSafety.enable.clipboard
                 }
                 ConfigSwitch {
                     buttonIcon: "wallpaper"
                     text: Translation.tr("Hide sussy/anime wallpapers")
                     checked: Config.options.workSafety.enable.wallpaper
-                    onCheckedChanged: {
-                        Config.options.workSafety.enable.wallpaper = checked;
-                    }
+                    onToggleRequested: Config.options.workSafety.enable.wallpaper = !Config.options.workSafety.enable.wallpaper
                 }
             }
         }

@@ -84,13 +84,13 @@ ContentPage {
                                 buttonIcon: "check"
                                 text: Translation.tr("Enable")
                                 checked: Config.options.sidebar.media.enable
-                                onCheckedChanged: { Config.options.sidebar.media.enable = checked }
+                                onToggleRequested: Config.options.sidebar.media.enable = !Config.options.sidebar.media.enable
                             }
                             ConfigSwitch {
                                 buttonIcon: "radio_button_partial"
                                 text: Translation.tr("Follow Album Colors")
                                 checked: Config.options.sidebar.media.artColors
-                                onCheckedChanged: { Config.options.sidebar.media.artColors = checked }
+                                onToggleRequested: Config.options.sidebar.media.artColors = !Config.options.sidebar.media.artColors
                             }
                         }
                     }
@@ -198,7 +198,7 @@ ContentPage {
                             buttonIcon: "translate"
                             text: Translation.tr("Enable Translator")
                             checked: Config.options.sidebar.translator.enable
-                            onCheckedChanged: { Config.options.sidebar.translator.enable = checked }
+                            onToggleRequested: Config.options.sidebar.translator.enable = !Config.options.sidebar.translator.enable
                         }
                     }
                 }
@@ -215,27 +215,21 @@ ContentPage {
                     buttonIcon: "planner_banner_ad_pt"
                     text: Translation.tr('Banner')
                     checked: Config.options.sidebar.banner
-                    onCheckedChanged: {
-                        Config.options.sidebar.banner = checked;
-                    }
+                    onToggleRequested: Config.options.sidebar.banner = !Config.options.sidebar.banner
                 }
 
                 ConfigSwitch {
                     buttonIcon: "music_note"
                     text: Translation.tr('Media Player')
                     checked: Config.options.sidebar.mediaPlayer
-                    onCheckedChanged: {
-                        Config.options.sidebar.mediaPlayer = checked;
-                    }
+                    onToggleRequested: Config.options.sidebar.mediaPlayer = !Config.options.sidebar.mediaPlayer
                 }
 
                 ConfigSwitch {
                     buttonIcon: "memory"
                     text: Translation.tr('Keep right sidebar loaded')
                     checked: Config.options.sidebar.keepRightSidebarLoaded
-                    onCheckedChanged: {
-                        Config.options.sidebar.keepRightSidebarLoaded = checked;
-                    }
+                    onToggleRequested: Config.options.sidebar.keepRightSidebarLoaded = !Config.options.sidebar.keepRightSidebarLoaded
                 }
             }
 
@@ -285,9 +279,7 @@ ContentPage {
                         buttonIcon: "check"
                         text: Translation.tr("Enable")
                         checked: Config.options.sidebar.quickSliders.enable
-                        onCheckedChanged: {
-                            Config.options.sidebar.quickSliders.enable = checked;
-                        }
+                        onToggleRequested: Config.options.sidebar.quickSliders.enable = !Config.options.sidebar.quickSliders.enable
                     }
 
                     ConfigSwitch {
@@ -295,9 +287,7 @@ ContentPage {
                         text: Translation.tr("Brightness")
                         enabled: Config.options.sidebar.quickSliders.enable
                         checked: Config.options.sidebar.quickSliders.showBrightness
-                        onCheckedChanged: {
-                            Config.options.sidebar.quickSliders.showBrightness = checked;
-                        }
+                        onToggleRequested: Config.options.sidebar.quickSliders.showBrightness = !Config.options.sidebar.quickSliders.showBrightness
                     }
 
                     ConfigSwitch {
@@ -305,9 +295,7 @@ ContentPage {
                         text: Translation.tr("Volume")
                         enabled: Config.options.sidebar.quickSliders.enable
                         checked: Config.options.sidebar.quickSliders.showVolume
-                        onCheckedChanged: {
-                            Config.options.sidebar.quickSliders.showVolume = checked;
-                        }
+                        onToggleRequested: Config.options.sidebar.quickSliders.showVolume = !Config.options.sidebar.quickSliders.showVolume
                     }
 
                     ConfigSwitch {
@@ -315,9 +303,7 @@ ContentPage {
                         text: Translation.tr("Microphone")
                         enabled: Config.options.sidebar.quickSliders.enable
                         checked: Config.options.sidebar.quickSliders.showMic
-                        onCheckedChanged: {
-                            Config.options.sidebar.quickSliders.showMic = checked;
-                        }
+                        onToggleRequested: Config.options.sidebar.quickSliders.showMic = !Config.options.sidebar.quickSliders.showMic
                     }
                 }
             }
@@ -330,38 +316,38 @@ ContentPage {
                         buttonIcon: "check"
                         text: Translation.tr("Enable")
                         checked: Config.options.sidebar.cornerOpen.enable
-                        onCheckedChanged: { Config.options.sidebar.cornerOpen.enable = checked }
+                        onToggleRequested: Config.options.sidebar.cornerOpen.enable = !Config.options.sidebar.cornerOpen.enable
                     }
                     ConfigSwitch {
                         buttonIcon: "highlight_mouse_cursor"
                         text: Translation.tr("Hover to trigger")
                         checked: Config.options.sidebar.cornerOpen.clickless
-                        onCheckedChanged: { Config.options.sidebar.cornerOpen.clickless = checked }
+                        onToggleRequested: Config.options.sidebar.cornerOpen.clickless = !Config.options.sidebar.cornerOpen.clickless
                     }
                     ConfigSwitch {
                         buttonIcon: "vertical_align_bottom"
                         text: Translation.tr("Place at bottom")
                         checked: Config.options.sidebar.cornerOpen.bottom
-                        onCheckedChanged: { Config.options.sidebar.cornerOpen.bottom = checked }
+                        onToggleRequested: Config.options.sidebar.cornerOpen.bottom = !Config.options.sidebar.cornerOpen.bottom
                     }
                     ConfigSwitch {
                         buttonIcon: "unfold_more_double"
                         text: Translation.tr("Value scroll")
                         checked: Config.options.sidebar.cornerOpen.valueScroll
-                        onCheckedChanged: { Config.options.sidebar.cornerOpen.valueScroll = checked }
+                        onToggleRequested: Config.options.sidebar.cornerOpen.valueScroll = !Config.options.sidebar.cornerOpen.valueScroll
                     }
                     ConfigSwitch {
                         buttonIcon: "visibility"
                         text: Translation.tr("Visualize region")
                         checked: Config.options.sidebar.cornerOpen.visualize
-                        onCheckedChanged: { Config.options.sidebar.cornerOpen.visualize = checked }
+                        onToggleRequested: Config.options.sidebar.cornerOpen.visualize = !Config.options.sidebar.cornerOpen.visualize
                     }
                     ConfigSwitch {
                         enabled: Config.options.sidebar.cornerOpen.clickless
                         buttonIcon: "ads_click"
                         text: Translation.tr("Force hover at absolute corner")
                         checked: Config.options.sidebar.cornerOpen.clicklessCornerEnd
-                        onCheckedChanged: { Config.options.sidebar.cornerOpen.clicklessCornerEnd = checked }
+                        onToggleRequested: Config.options.sidebar.cornerOpen.clicklessCornerEnd = !Config.options.sidebar.cornerOpen.clicklessCornerEnd
                     }
                     ConfigSpinBox {
                         enabled: Config.options.sidebar.cornerOpen.clickless
@@ -399,17 +385,13 @@ ContentPage {
                     buttonIcon: "check"
                     text: Translation.tr("Enable")
                     checked: Config.options.overview.enable
-                    onCheckedChanged: {
-                        Config.options.overview.enable = checked;
-                    }
+                    onToggleRequested: Config.options.overview.enable = !Config.options.overview.enable
                 }
                 ConfigSwitch {
                     buttonIcon: "center_focus_strong"
                     text: Translation.tr("Center icons")
                     checked: Config.options.overview.centerIcons
-                    onCheckedChanged: {
-                        Config.options.overview.centerIcons = checked;
-                    }
+                    onToggleRequested: Config.options.overview.centerIcons = !Config.options.overview.centerIcons
                 }
                 ConfigSpinBox {
                     icon: "loupe"
@@ -535,17 +517,13 @@ ContentPage {
                     buttonIcon: "high_density"
                     text: Translation.tr("Enable opening zoom animation")
                     checked: Config.options.overlay.openingZoomAnimation
-                    onCheckedChanged: {
-                        Config.options.overlay.openingZoomAnimation = checked;
-                    }
+                    onToggleRequested: Config.options.overlay.openingZoomAnimation = !Config.options.overlay.openingZoomAnimation
                 }
                 ConfigSwitch {
                     buttonIcon: "texture"
                     text: Translation.tr("Darken screen")
                     checked: Config.options.overlay.darkenScreen
-                    onCheckedChanged: {
-                        Config.options.overlay.darkenScreen = checked;
-                    }
+                    onToggleRequested: Config.options.overlay.darkenScreen = !Config.options.overlay.darkenScreen
                 }
             }
 
@@ -671,13 +649,13 @@ ContentPage {
                     buttonIcon: "swipe_up"
                     text: Translation.tr("Reveal when dragging files onto the bar")
                     checked: Config.options.dropShelf.dragToBarReveal
-                    onCheckedChanged: { Config.options.dropShelf.dragToBarReveal = checked }
+                    onToggleRequested: Config.options.dropShelf.dragToBarReveal = !Config.options.dropShelf.dragToBarReveal
                 }
                 ConfigSwitch {
                     buttonIcon: "gesture"
                     text: Translation.tr("Shake cursor (while dragging) to summon")
                     checked: Config.options.dropShelf.shakeToSummon
-                    onCheckedChanged: { Config.options.dropShelf.shakeToSummon = checked }
+                    onToggleRequested: Config.options.dropShelf.shakeToSummon = !Config.options.dropShelf.shakeToSummon
                 }
                 ConfigSpinBox {
                     enabled: Config.options.dropShelf.shakeToSummon
@@ -706,7 +684,7 @@ ContentPage {
                     enabled: Config.options.appearance.transparency.enable
                     text: Translation.tr("Blur background")
                     checked: Config.options.dropShelf.blurBackground
-                    onCheckedChanged: { Config.options.dropShelf.blurBackground = checked }
+                    onToggleRequested: Config.options.dropShelf.blurBackground = !Config.options.dropShelf.blurBackground
                 }
                 ConfigSpinBox {
                     enabled: Config.options.dropShelf.blurBackground
