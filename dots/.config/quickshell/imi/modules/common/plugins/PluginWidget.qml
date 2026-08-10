@@ -361,10 +361,16 @@ AbstractBackgroundWidget {
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton
             cursorShape: Qt.SizeFDiagCursor
-            // AbstractWidget's drag-to-move lives on this widget's own root
-            // MouseArea. A nested area takes the press first, and this keeps
-            // the root from stealing the grab back once the pointer moves -
-            // without it, dragging the corner walks the widget instead.
+            // What claims the press from AbstractWidget's drag-to-move - which
+            // is this widget's own root MouseArea - is the nesting: an area
+            // inside another takes the press, and the root only sees what no
+            // child accepted. `preventStealing` is not carrying that, and
+            // removing it changes nothing measurable (the runtime harness
+            // passes either way): a MouseArea steals a child's grab through its
+            // `drag` target, and AbstractWidget deliberately has none, having
+            // computed its drag by hand since d2ebb5aeb. It stays because the
+            // bundled grips set it and because that is one binding away from
+            // being untrue again.
             preventStealing: true
 
             // The pointer is tracked in scene coordinates against its position
