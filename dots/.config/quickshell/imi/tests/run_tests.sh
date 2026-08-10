@@ -125,6 +125,15 @@ if ! python3 "$SCRIPT_DIR/lint_blur_region_pairing.py"; then
     exit 1
 fi
 
+# Static lint: a window's clear colour must be a literal. One that reaches alpha
+# 255 makes Qt declare the Wayland surface opaque, and nothing ever retracts
+# that, so the window loses its compositor blur for the rest of the process.
+echo "Running window clear colour lint..."
+if ! python3 "$SCRIPT_DIR/lint_window_clear_color.py"; then
+    echo "Window clear colour lint failed."
+    exit 1
+fi
+
 # Static lint: StyledText must default to PlainText and every rich-text opt-in
 # must be reviewed - manifest strings are attacker-controlled and the render
 # site is their only defence.
