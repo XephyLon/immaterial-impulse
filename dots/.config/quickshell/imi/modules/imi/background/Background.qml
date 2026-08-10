@@ -1212,10 +1212,24 @@ Variants {
                         // sibling that travels further. Read off the items and
                         // not off parallaxOffsets/widgetParallax so the two
                         // 600ms pans are followed frame by frame.
+                        //
+                        // A video wallpaper is the exception, and it is one of
+                        // ownership rather than of maths: mpvpaper paints it on
+                        // its own layer surface, which this viewport does not
+                        // move, so on screen it neither pans nor zooms. While
+                        // it owns the screen the wallpaper IS the screen, and
+                        // handing the frost the viewport would give it a pan
+                        // the wallpaper never had. videoRevealed is exactly
+                        // "mpvpaper is showing" - the shell's own layers are
+                        // hidden then, and during a switch cross-fade or on the
+                        // lock screen it is false and the viewport is right
+                        // again, so the branch follows whoever is painting.
                         canvasOffsetX: widgetCanvas.x
                         canvasOffsetY: widgetCanvas.y
-                        wallpaperRect: Qt.rect(parallaxViewport.x, parallaxViewport.y,
-                            parallaxViewport.width, parallaxViewport.height)
+                        wallpaperRect: bgRoot.videoRevealed
+                            ? Qt.rect(0, 0, bgRoot.width, bgRoot.height)
+                            : Qt.rect(parallaxViewport.x, parallaxViewport.y,
+                                parallaxViewport.width, parallaxViewport.height)
                     }
                 }
             }
