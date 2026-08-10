@@ -12,6 +12,36 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **The cheatsheet lists every keybind, in columns.** It used to draw only the
+  groups that had sub-groups, silently dropping 28 of the 61 binds on this
+  machine's config, and stacked what was left into one tall column beside an
+  empty screen. Click any shortcut to reassign it: the editor warns before
+  taking a chord that is already in use, and closes itself after five seconds if
+  you opened it by accident.
+- Chords are drawn as one keycap per key, so `SUPER SHIFT ALT R` reads as four
+  keys held together rather than one key with a long name. Existing configs are
+  migrated once, since the old value was the shipped default and there is no
+  setting for it to have been chosen from.
+
+### Fixed
+- **Drop shadows are no longer frosted by the compositor's blur.** The
+  cheatsheet, notification popups, the desktop right-click menu and the tray
+  menu all drew a shadow that the whole-surface blur smeared into a band along
+  their edge — on the cheatsheet this read as having no shadow at all. Each now
+  scopes its blur to the painted body. Notification cards are handled one card
+  at a time so the gaps between them stay sharp. Popups — the tray menu, the
+  dock's context menu, the drag-apps sheet — cannot scope their blur that way at
+  all, so they threshold it by alpha instead, at a point the shell works out
+  from your transparency and bar-opacity settings and keeps up to date as you
+  change them.
+- **Panels no longer flash unblurred as they open.** Anything that opens on
+  demand — the overview, the search bar, the sidebars, the OSDs — showed about
+  a tenth of a second of sharp wallpaper before its blur arrived, because the
+  blur region was only published on a settle timer.
+- The desktop right-click menu and its submenu gained a card to sit on, which is
+  what lets them carry a shadow at all.
+
 ### Changed
 - **The login greeter no longer refreshes through root.** The SDDM theme pin
   moves to imi-sddm-theme v0.3.1, which publishes the greeter's colours,
