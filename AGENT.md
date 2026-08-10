@@ -394,7 +394,34 @@ Consequences for making changes:
 - The settings UI (`modules/imi/settings/pages/*.qml`) is hand-written QML, not generated from the
   schema — every setting needs a corresponding `ConfigSwitch`/`ConfigSpinBox`/`ConfigSelectionArray`/
   etc. row added manually in the relevant page, bound with `checked: Config.options.x.y` /
-  `onCheckedChanged: Config.options.x.y = checked`.
+  `onToggleRequested: Config.options.x.y = !Config.options.x.y` — see the next two points for why
+  the write-back is not hung on the control's own `changed` signal.
+- **A control writes back by changing the config, never by assigning to its own bound property.**
+  Assigning to a property that carries a binding *destroys the binding*, and in this codebase that
+  is how a settings toggle silently detaches from the config it is showing. `ConfigSwitch` answered
+  its own click with `onClicked: checked = !checked` while all 159 call sites bound
+  `checked: Config.options.x.y`. From the first click onward the switch showed local state: nothing
+  external could move it again — not a preset, not a hand-edited `config.json`, not a migration —
+  while the page's own `onCheckedChanged` kept writing through, so the *setting* changed and the
+  *switch* lied about it, and the next click on a switch that looked on wrote `!off` = on.
+  Restarting rebuilt the component and with it the binding, which is exactly why it read as a
+  refresh bug rather than a broken control
+  ([#158](https://github.com/XephyLon/immaterial-impulse/issues/158)). The click is now an intent —
+  `toggleRequested()` — and the call site flips the value at its source. A rewritten call site must
+  not read the widget's own state: reading `checked` to decide what to write puts the coupling
+  straight back. Three things fell out of it, all of them evidence of the same bug being routed
+  around locally: the `if (checked === Config.options.x.y) return` echo guards a dozen handlers
+  carried existed only because the write came back through the binding and re-fired the handler, and
+  an intent fires once per click, so they are gone; the four
+  `Binding { property: "checked"; restoreMode: RestoreBinding }` blocks were four call sites
+  restoring the binding the click had destroyed, so they are gone too; and the inner `StyledSwitch`
+  is now `checkable: false`, because a QQC2 `Switch` moves its own `checked` on a click or a thumb
+  drag and would show a flip the call site declined. `tests/lint_config_switch_intent.py` fails the
+  suite on an assignment to `checked` in the widget or at any call site (and on an
+  `onCheckedChanged` write-back, which is now a dead switch), and
+  `tests/tst_config_switch_binding.qml` delivers a real click to a model of the shape and writes the
+  source externally afterwards. 69c15279a ("fix(widgets): make a ConfigSwitch click an intent, not a
+  write to `checked`").
 - **A ranged control writes back from `onValueModified`, never `onValueChanged`.** `ConfigSpinBox`
   and `ConfigSlider` are the two controls with a `from`/`to`, and their `value` changes for reasons
   that are not edits: QQC2 bounds `SpinBox.value` to `[from, to]` when the component completes,

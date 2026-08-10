@@ -188,8 +188,18 @@ filed for, and rebuilt a subprocess renderer the embedded one exists to replace.
 A new persisted option needs both halves, or it silently does nothing:
 1. The schema property in `Config.qml` (inside the correct nested `JsonObject`).
 2. A corresponding row in the relevant `modules/imi/settings/pages/*.qml` file, wired with
-   `checked`/`value`/`currentValue` reading from `Config.options....` and an `on*Changed` handler
-   writing back to it.
+   `checked`/`value`/`currentValue` reading from `Config.options....` and a handler writing back to
+   it — but read both exceptions below before picking which handler.
+
+**Exception — `ConfigSwitch` writes back from `onToggleRequested`, never `onCheckedChanged`.**
+`checked` is a pure binding on the config value and only ever follows it; a click raises an intent
+instead, and the call site flips the value at its source
+(`onToggleRequested: Config.options.x.y = !Config.options.x.y`). The handler must not read the
+widget's own `checked` to decide what to write — that is the coupling this removed. The old shape
+(`onClicked: checked = !checked` in the widget, `onCheckedChanged` write-back at the call site)
+destroyed the binding on the first click, so the switch detached from the config and then lied
+about it for the rest of the session (#158). `tests/lint_config_switch_intent.py` fails the suite on
+either half of it. See AGENT.md's Config section.
 
 **Exception — `ConfigSpinBox` and `ConfigSlider` write back from `onValueModified`, not
 `onValueChanged`.** Their `value` also changes when the control is merely built (QQC2 clamps it to
