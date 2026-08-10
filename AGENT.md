@@ -1122,6 +1122,49 @@ Sizing is deliberately screen-derived rather than wallpaper-derived: a live WE p
 intrinsic size, and `PreserveAspectCrop` already covers a still, so one rule serves both.
 (feat(background): revive wallpaper parallax, for stills and Wallpaper Engine.)
 
+**A sample rect and the item it samples must be in the same coordinate space —
+and "it samples the real thing" is not evidence that they are.** The desktop
+widgets' frost hands a `sourceRect` to a `ShaderEffectSource` over the wallpaper.
+Every wallpaper layer is declared inside `parallaxViewport`, so all of them are
+viewport-sized and viewport-positioned, while a widget's own x/y are measured
+inside the widget canvas — a screen-sized *sibling* that travels at
+`parallax.widgetsFactor` while the wallpaper travels at 1. That difference is the
+whole effect, so the two frames never agree except at rest, and the frost showed
+the wrong slice of wallpaper on every workspace but the middle one
+([#157](https://github.com/XephyLon/immaterial-impulse/issues/157)). Note which
+half the reasoning got wrong first: the live Wallpaper Engine path samples the
+genuine, already-transformed surface and was assumed immune for that reason — it
+misaligned identically, because sampling a real item fixes nothing when the rect
+handed to it is measured from somewhere else. A reconstruction has the same rule
+plus one more: it must also be the *size* of the thing it stands in for
+(`parallaxWidth x parallaxHeight`, not the screen), or it is a different crop of
+the same file. Both corrections are one function,
+`ParallaxMath.sampleOrigin(canvasOffset, widgetPos, wallpaperOffset)`, kept pure
+beside `widgetOffsets` because nothing about the rendered frost is reachable from
+a test — `qmltestrunner` cannot construct Quickshell types and the software scene
+graph draws no `ShaderEffect`. Feed it the containers' live animating x/y, not the
+parallax targets, or the frost only agrees once the two 600ms pans settle.
+e4ff7abbb ("feat(parallax): work out where a widget's frost must sample the
+wallpaper"), ca667957a ("fix(widgets): sample the desktop frost in the
+wallpaper's own space").
+
+**And ask who is painting the wallpaper before applying any of that.** A video
+wallpaper is drawn by `mpvpaper`, a separate Wayland client on its own layer
+surface, which `parallaxViewport` does not move — so a video neither pans nor
+zooms on screen, and giving its frost the viewport's offset adds travel the
+wallpaper never had, breaking the one case that was right at rest. While
+mpvpaper owns the screen the wallpaper *is* the screen. Two things that look
+like problems there are not: sampling the real player surface is not merely
+declined but unavailable (a `ShaderEffectSource` reaches items in this scene
+graph, and another client's surface is not one), and the still it samples
+instead is not a broken `Image` — `wallpaperPath` already resolves to
+`background.thumbnailPath`, the JPEG first frame `switchwall.sh` extracts with
+ffmpeg. Branch on `videoRevealed` rather than on `wallpaperIsVideo`: during a
+switch cross-fade and on the lock screen the shell draws that thumbnail inside
+the viewport itself, and there the viewport is right again. 918592d33
+("fix(background): frost a video wallpaper against the screen, not the
+viewport").
+
 **A feature that was config-only cannot be revived on its stored values.** The parallax knobs
 shipped for the whole life of this shell with nothing reading them, so every `config.json` holds
 values that predate the feature doing anything - on the author's machine every switch was `false`.
