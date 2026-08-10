@@ -37,6 +37,12 @@ Item {
         ? "file://" + root.wallpaperSource.split('/').map(s => encodeURIComponent(s)).join('/')
         : ""
 
+    // Load state of the static sample. The cascade this component exists to
+    // avoid is only observable as *when* each surface's wallpaper arrives, and
+    // nothing else about the frost is reachable from a test - see
+    // tests/tst_wallpaper_blur_sharing.qml.
+    readonly property int sampleStatus: wallpaperImage.status
+
     readonly property Rectangle _mask: Rectangle {
         width: root.width
         height: root.height
