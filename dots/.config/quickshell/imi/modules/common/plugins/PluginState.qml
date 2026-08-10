@@ -74,6 +74,37 @@ Singleton {
         return value === undefined ? fallback : value;
     }
 
+    // Desktop-widget panel opacity, resolved against the global transparency
+    // switch. Frost and opacity were two independent settings and only frost
+    // knew about the toggle: PluginWidget's blur Repeater is gated on
+    // `appearance.transparency.enable`, but every widget's panel alpha came
+    // from `plugins.blurOpacity` (or a hardcoded literal), which is not. With
+    // transparency off that combination removed the blur and kept the 10%
+    // panel, leaving each widget a hole onto the sharp wallpaper.
+    //
+    // Lives here rather than in each widget because it is the same derivation
+    // everywhere, and here is the only place that can do both halves of it:
+    // PluginState already reads Config (for the toggle and the configured
+    // opacity) and already owns the per-plugin option the opt-out needs. The
+    // generic designsystem widgets have no PluginWidget root in scope, so a
+    // host-side property could not have reached them; a singleton call can,
+    // with an empty id for a component that has no plugin identity.
+    //
+    // `keepTranslucent` is that opt-out, for a widget whose whole point is to
+    // be see-through. Same shape as blurEnabled/positionLocked/clickThrough:
+    // the manifest seeds the default, PluginState carries the user's override,
+    // so a shipped default stays reversible from Settings > Widgets.
+    function resolveBackgroundOpacity(baseOpacity, transparencyEnabled, keepTranslucent) {
+        return (transparencyEnabled || keepTranslucent) ? baseOpacity : 1;
+    }
+
+    function effectiveBackgroundOpacity(pluginId, baseOpacity, keepTranslucentDefault) {
+        return root.resolveBackgroundOpacity(
+            baseOpacity === undefined ? Config.options.plugins.blurOpacity : baseOpacity,
+            Config.options.appearance.transparency.enable,
+            root.option(pluginId, "keepTranslucent", keepTranslucentDefault === true));
+    }
+
     function presetPersisted(pluginId) {
         return root.state?.presetPersist?.[pluginId] === true;
     }
