@@ -117,6 +117,14 @@ if ! python3 "$SCRIPT_DIR/lint_doc_citations.py"; then
     exit 1
 fi
 
+# Static lint: a manifest's option keys and the host's own per-plugin state
+# share one PluginState namespace, so the `__` prefix is the host's alone.
+echo "Running plugin option key lint..."
+if ! python3 "$SCRIPT_DIR/lint_plugin_option_keys.py"; then
+    echo "Plugin option key lint failed."
+    exit 1
+fi
+
 echo "Running plugin process lifecycle lint..."
 if ! python3 "$SCRIPT_DIR/lint_plugin_processes.py"; then
     echo "Plugin process lifecycle lint failed."
