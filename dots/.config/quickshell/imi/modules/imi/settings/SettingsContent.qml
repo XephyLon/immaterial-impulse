@@ -91,6 +91,16 @@ Item {
                 navigateTo(pageIndex, matchingSection)
                 return
             }
+            // A subsection heading is searchable but is not a navigation
+            // anchor - `sections` is the sidebar's tree and subsections are
+            // deliberately not in it - so the best available landing is the
+            // page that contains it. Without this the sidebar filtered to the
+            // right page and the content pane stayed wherever it already was,
+            // which reads as the search having done nothing.
+            if ((page.searchTerms || []).some(term => normalized(term).includes(query))) {
+                navigateTo(pageIndex, "")
+                return
+            }
             if (normalized(page.name).includes(query)) {
                 navigateTo(pageIndex, "")
                 return
