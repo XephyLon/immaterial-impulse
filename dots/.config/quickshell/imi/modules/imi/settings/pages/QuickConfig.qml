@@ -293,14 +293,14 @@ ContentPage {
                     buttonIcon: "motion_mode"
                     text: Translation.tr("Transparency")
                     checked: Config.options.appearance.transparency.enable
-                    onCheckedChanged: { Config.options.appearance.transparency.enable = checked; }
+                    onToggleRequested: Config.options.appearance.transparency.enable = !Config.options.appearance.transparency.enable
                 }
                 ConfigSwitch {
                     buttonIcon: "autofps_select"
                     enabled: Config.options.appearance.transparency.enable
                     text: Translation.tr("Automatic")
                     checked: Config.options.appearance.transparency.automatic
-                    onCheckedChanged: { Config.options.appearance.transparency.automatic = checked; }
+                    onToggleRequested: Config.options.appearance.transparency.automatic = !Config.options.appearance.transparency.automatic
                 }
             }
 
@@ -352,9 +352,7 @@ ContentPage {
                     ? Translation.tr("Applies the accent color to your RGB hardware whenever the palette changes")
                     : Translation.tr("The openrgb command was not found — install OpenRGB to use this")
                 checked: Config.options.appearance.openrgb.enable
-                onCheckedChanged: {
-                    Config.options.appearance.openrgb.enable = checked;
-                }
+                onToggleRequested: Config.options.appearance.openrgb.enable = !Config.options.appearance.openrgb.enable
             }
 
             ConfigSelectionArray {
@@ -382,9 +380,7 @@ ContentPage {
                         ? Translation.tr("Follow the screen only while a fullscreen app runs; otherwise use the accent")
                         : Translation.tr("The grim command was not found — install grim to sample the monitor")
                     checked: Config.options.appearance.openrgb.monitorFullscreenOnly
-                    onCheckedChanged: {
-                        Config.options.appearance.openrgb.monitorFullscreenOnly = checked;
-                    }
+                    onToggleRequested: Config.options.appearance.openrgb.monitorFullscreenOnly = !Config.options.appearance.openrgb.monitorFullscreenOnly
                 }
 
                 ConfigSwitch {
@@ -392,9 +388,7 @@ ContentPage {
                     text: Translation.tr("Smooth transitions")
                     description: Translation.tr("Blend toward the sampled color instead of snapping on scene cuts")
                     checked: Config.options.appearance.openrgb.monitorSmooth
-                    onCheckedChanged: {
-                        Config.options.appearance.openrgb.monitorSmooth = checked;
-                    }
+                    onToggleRequested: Config.options.appearance.openrgb.monitorSmooth = !Config.options.appearance.openrgb.monitorSmooth
                 }
 
                 ConfigSwitch {
@@ -404,22 +398,13 @@ ContentPage {
                     text: Translation.tr("Include GPU lighting")
                     description: Translation.tr("GPU RGB writes ride the graphics i2c bus and can stutter games — off is safer")
                     checked: gpuIncluded
-                    onCheckedChanged: {
-                        if (checked === gpuIncluded)
-                            return;
+                    onToggleRequested: {
                         // Whole-list assignment: JsonAdapter lists only
                         // persist when replaced, never when mutated.
                         let types = (Config.options.appearance.openrgb.monitorExcludedTypes ?? []).filter(t => t !== "GPU");
-                        if (!checked)
+                        if (gpuAmbientSwitch.gpuIncluded)
                             types = types.concat(["GPU"]);
                         Config.options.appearance.openrgb.monitorExcludedTypes = types;
-                    }
-
-                    Binding {
-                        target: gpuAmbientSwitch
-                        property: "checked"
-                        value: gpuAmbientSwitch.gpuIncluded
-                        restoreMode: Binding.RestoreBinding
                     }
                 }
 
@@ -500,24 +485,13 @@ ContentPage {
                             ? Translation.tr("%1 — %2 devices").arg(modelData.type).arg(modelData.count)
                             : modelData.type
                         checked: syncedNow
-                        onCheckedChanged: {
-                            if (checked === syncedNow)
-                                return;
+                        onToggleRequested: {
                             // Whole-list assignment: JsonAdapter lists only
                             // persist when replaced, never when mutated.
-                            let excluded = (Config.options.appearance.openrgb.excludedDevices ?? []).filter(n => n !== modelData.name);
-                            if (!checked)
-                                excluded = excluded.concat([modelData.name]);
+                            let excluded = (Config.options.appearance.openrgb.excludedDevices ?? []).filter(n => n !== deviceSwitch.modelData.name);
+                            if (deviceSwitch.syncedNow)
+                                excluded = excluded.concat([deviceSwitch.modelData.name]);
                             Config.options.appearance.openrgb.excludedDevices = excluded;
-                        }
-
-                        // Re-sync the switch with config after external edits
-                        // without losing the binding on manual toggles.
-                        Binding {
-                            target: deviceSwitch
-                            property: "checked"
-                            value: deviceSwitch.syncedNow
-                            restoreMode: Binding.RestoreBinding
                         }
                     }
                 }
