@@ -77,3 +77,18 @@ function dashForProgress(total, progress) {
     const fraction = isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0;
     return [length * fraction, length];
 }
+
+// The same pattern in the units a QML `Canvas` actually reads.
+//
+// HTML's `setLineDash` takes path-length units. Qt's implementation of it does
+// not: it hands the array to `QPen::setDashPattern`, which is specified in
+// multiples of the pen width. Handing it path units therefore produces a
+// pattern the wrong size by a factor of the line width - and because the "off"
+// run shrinks by the same factor, the pattern *repeats*, so a progress ring
+// comes out as a ring of evenly spaced dashes that all grow together as
+// progress rises. It looks like a deliberate dashed border rather than like a
+// bug, which is why it needs naming rather than a comment at the call site.
+function dashInPenWidths(total, progress, lineWidth) {
+    const width = isFinite(lineWidth) && lineWidth > 0 ? lineWidth : 1;
+    return dashForProgress(total, progress).map(value => value / width);
+}

@@ -108,4 +108,22 @@ TestCase {
         compare(PathLength.dashForProgress(0, 0.5), [0, 0]);
         compare(PathLength.dashForProgress(NaN, 0.5), [0, 0]);
     }
+
+    function test_the_painter_wants_the_pattern_in_line_widths() {
+        // Qt's setLineDash is QPen::setDashPattern, which is specified in
+        // multiples of the pen width - not in path length the way HTML's is.
+        // Both runs scale, so getting this wrong shrinks the *period* too and
+        // the ring comes out as a repeating dashed border instead of one arc.
+        compare(PathLength.dashInPenWidths(40, 0.5, 2), [10, 20]);
+        compare(PathLength.dashInPenWidths(40, 1, 4), [10, 10]);
+        compare(PathLength.dashInPenWidths(40, 0, 4), [0, 10]);
+    }
+
+    function test_a_pen_with_no_width_leaves_the_pattern_in_path_units() {
+        // A cosmetic pen is one device pixel wide whatever the transform says,
+        // so there is no factor to divide by - and dividing by zero would hand
+        // the painter an infinite dash.
+        compare(PathLength.dashInPenWidths(40, 0.5, 0), [20, 40]);
+        compare(PathLength.dashInPenWidths(40, 0.5, NaN), [20, 40]);
+    }
 }
