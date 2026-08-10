@@ -153,6 +153,27 @@ Singleton {
         }
         root.availablePlugins = loaded.sort((a, b) => a.name.localeCompare(b.name));
         root.manifestsMap = map;
+        sizeModeMigrationTimer.restart();
+    }
+
+    // The `sizeMode` -> `__gridSize` retirement needs the manifests - they are
+    // what say which spans are on offer - which is why it is driven from here
+    // rather than from the store it rewrites. It waits for the manifest loads
+    // to settle: every manifest FileView triggers its own rebuild, so a pass
+    // fired on the first non-empty list would run, and burn its marker, before
+    // the two widgets that stored a `sizeMode` had been read - losing exactly
+    // the size this exists to keep. Long enough to cover the bundled sweep and
+    // the installed scan behind it.
+    Timer {
+        id: sizeModeMigrationTimer
+        interval: 1500
+        repeat: false
+        onTriggered: PluginState.migrateSizeModes(root.availablePlugins)
+    }
+
+    Connections {
+        target: PluginState
+        function onReadyChanged() { sizeModeMigrationTimer.restart() }
     }
 
     function scanInstalledPlugins() {

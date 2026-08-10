@@ -52,6 +52,12 @@ Item {
     property real gridWidth: 0
     property real gridHeight: 0
     readonly property bool hasGrid: gridWidth > 0 && gridHeight > 0
+    // The same span as a "<cols>x<rows>" string, for a widget that has a
+    // different LAYOUT per size rather than one layout that stretches. The host
+    // owns which size; the widget owns what that size looks like. Empty when the
+    // manifest declares no grid. It tracks the resize grip's live preview, so a
+    // drag reshapes the content as it goes instead of on release.
+    property string gridSize: ""
 
     readonly property string effectiveBasePath: manifestNode?._basePath || basePath
     readonly property string componentPath: manifestNode?.component && effectiveBasePath
@@ -153,6 +159,8 @@ Item {
                     item.wallpaperSafetyTriggered = Qt.binding(() => rootNode.hostWallpaperSafetyTriggered);
                 if (item.hostInteractionLocked !== undefined)
                     item.hostInteractionLocked = Qt.binding(() => rootNode.hostInteractionLocked);
+                if (item.hostGridSize !== undefined)
+                    item.hostGridSize = Qt.binding(() => rootNode.gridSize);
                 return;
             }
             if (manifestNode.props) {

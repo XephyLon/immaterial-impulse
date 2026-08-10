@@ -124,6 +124,48 @@ function resolveSize(grid, stored) {
     return fallback;
 }
 
+// Folding a legacy `sizeMode` option into the host's `__gridSize`.
+//
+// `sizeMode` was a plugin-*declared* choice option on two bundled widgets, in
+// this module's own "<cols>x<rows>" format: a second mechanism for the concept
+// `__gridSize` owns, which is why it is retired rather than kept in step.
+// Takes a plugin's stored options and its manifest grid; returns the options
+// with the old key gone, or null when there is nothing to change.
+//
+// Deleting the old key rather than merely shadowing it is what makes this
+// idempotent - a second pass finds no `sizeMode` and answers null. Four rules
+// beyond the obvious mapping, each one a refusal to invent or destroy a size:
+//   - **a manifest that does not offer several spans is left alone entirely.**
+//     `sizeMode` is not only a retired manifest option: `world-clock` and
+//     `calendar` declare no `grid` and manage a `sizeMode` of their own through
+//     their own toggles, so it is a live setting for them. Migrating on the key
+//     name alone deletes it and resets both widgets - the exact loss this
+//     function exists to prevent, aimed at the wrong widgets.
+//   - a stored mode the manifest does not offer is dropped without being
+//     written, exactly as resolveSize refuses to honour a stored span that is
+//     no longer offered. The widget falls back to its default rather than
+//     being laid out into a size its content does not fill.
+//   - an existing `__gridSize` wins. It can only have come from the resize
+//     grip, which is the more recent choice.
+//   - a plugin with no stored options at all is left alone, so the migration
+//     never creates state for a widget the user has never placed.
+function migrateSizeMode(options, grid) {
+    if (!options || typeof options !== "object" || Array.isArray(options)) return null;
+    if (options.sizeMode === undefined) return null;
+    if (offeredSizes(grid).length <= 1) return null;
+
+    const next = {};
+    for (const key in options) {
+        if (key !== "sizeMode") next[key] = options[key];
+    }
+    if (next.__gridSize === undefined) {
+        const wanted = parseSize(options.sizeMode);
+        if (wanted && containsSize(offeredSizes(grid), wanted))
+            next.__gridSize = formatSize(wanted);
+    }
+    return next;
+}
+
 // The drag snap. `candidates` carry their own pixel measurements because the
 // span-to-pixel conversion is Appearance's (widgetGridSpanX/Y, which also
 // applies effectiveScale) and copying that formula here would be a second one

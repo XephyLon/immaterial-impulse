@@ -19,8 +19,10 @@ PLUGIN_DIRS = (
 EXPECTED_OPTIONS = {
     "nandoroid-media": {"showLyrics", "useRomaji"},
     "nandoroid-system-monitor": {"vertical", "showBattery"},
-    "nandoroid-weather": {"sizeMode"},
-    "nandoroid-currency": {"sizeMode", "baseCurrency", "quote1", "quote2", "quote3", "quote4"},
+    # Both widgets declared a `sizeMode` choice option until the host's
+    # `__gridSize` took the concept over; their spans are `grid.sizes` now.
+    "nandoroid-weather": set(),
+    "nandoroid-currency": {"baseCurrency", "quote1", "quote2", "quote3", "quote4"},
 }
 EXPECTED_ENTRY_TYPES = {
     "nandoroid-media": "Expressive.DesktopMediaWidget",
@@ -133,7 +135,6 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         self.assertNotIn("Config.options.appearance.currencyWidget.quote", currency_widget)
         self.assertIn("signal baseCurrencyRequested", currency_widget)
         self.assertIn("signal quoteCurrencyRequested", currency_widget)
-        self.assertIn("signal sizeModeRequested", currency_widget)
 
     def test_imported_service_compatibility_is_explicit(self):
         date_time = (ROOT / "services" / "DateTime.qml").read_text(encoding="utf-8")
@@ -147,20 +148,44 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         self.assertNotIn("Weather.todayHigh", weather)
         self.assertNotIn("Weather.todayLow", weather)
 
-    def test_weather_resize_is_visible_and_persisted_by_the_plugin(self):
-        weather = (DESIGN_SYSTEM / "widgets" / "DesktopWeatherWidget.qml").read_text(
-            encoding="utf-8"
-        )
-        wrapper = (PLUGIN_ROOT / "nandoroid-weather" / "Widget.qml").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("signal sizeModeRequested(string value)", weather)
-        self.assertIn("root.sizeModeRequested(targetMode)", weather)
-        self.assertNotIn("margins: -8 * Appearance.effectiveScale", weather)
-        self.assertIn(
-            'onSizeModeRequested: value => PluginState.setOption("nandoroid_weather", "sizeMode", value)',
-            wrapper,
-        )
+    def test_weather_and_currency_resize_through_the_host_not_their_own_grip(self):
+        """Both widgets used to draw a `swap_horiz` grip in their bottom-right
+        corner, writing a plugin-declared `sizeMode` option. The host now draws
+        its own grip in that exact corner for any manifest offering several
+        spans, so keeping theirs would stack two controls on one spot - and
+        theirs gated on a legacy `cfg.locked` rather than the host's resolved
+        lock, so it stayed live on a pinned widget.
+        """
+        for directory, component, default in (
+                ("nandoroid-weather", "DesktopWeatherWidget", "3x1"),
+                ("nandoroid-currency", "DesktopCurrencyWidget", "2x1")):
+            widget = (DESIGN_SYSTEM / "widgets" / f"{component}.qml").read_text(
+                encoding="utf-8")
+            wrapper = (PLUGIN_ROOT / directory / "Widget.qml").read_text(
+                encoding="utf-8")
+            manifest = json.loads(
+                (PLUGIN_ROOT / directory / "manifest.json").read_text(encoding="utf-8"))
+
+            self.assertNotIn("sizeModeRequested", widget,
+                             f"{component} still asks to change its own size")
+            self.assertNotIn("id: resizeHandle", widget,
+                             f"{component} still draws a second resize grip")
+            self.assertNotIn('"sizeMode"', wrapper,
+                             f"{directory} still reads the retired option "
+                             "out of PluginState")
+
+            # The host owns which size; the widget owns what that size looks
+            # like, which is why the span still arrives as a name.
+            self.assertIn(f'sizeMode: root.hostGridSize || "{default}"', wrapper)
+            self.assertIn("property string hostGridSize", wrapper)
+
+            # ...and the manifest is where the spans on offer are declared now.
+            self.assertNotIn(
+                "sizeMode",
+                json.dumps(manifest.get("options", []) or []),
+                f"{directory} still declares a sizeMode option")
+            self.assertGreater(len(manifest["grid"]["sizes"]), 1,
+                               f"{directory} must offer the spans it has layouts for")
 
     def test_plugin_blur_supports_tint_and_widget_regions(self):
         options = (ROOT / "modules/common/plugins/PluginOptions.qml").read_text(encoding="utf-8")
@@ -196,7 +221,6 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertNotIn("anchors.margins: -8 * Appearance.effectiveScale", currency)
-        self.assertIn("anchors.margins: 6 * Appearance.effectiveScale", currency)
         self.assertIn("signal verticalRequested(bool value)", monitor)
         self.assertIn("root.verticalRequested(!root.isVertical)", monitor)
         self.assertNotIn("margins: -8 * Appearance.effectiveScale", monitor)

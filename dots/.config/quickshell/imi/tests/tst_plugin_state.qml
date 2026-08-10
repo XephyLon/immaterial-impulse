@@ -196,4 +196,72 @@ TestCase {
         PluginState.loadText("[1, 2, 3]");
         compare(Object.keys(PluginState.state.desktopPositions).length, 0);
     }
+
+    // --- retiring the plugin-declared `sizeMode` ----------------------------
+    //
+    // Driven through the pure half rather than the live singleton: the pass is
+    // one-shot by design, so a test that ran it against `PluginState.state`
+    // could only ever exercise the first case and would burn the marker for
+    // every test after it.
+
+    function weatherManifest() {
+        return {
+            id: "nandoroid_weather",
+            grid: { cols: 3, rows: 1,
+                    sizes: [{ cols: 1, rows: 1 }, { cols: 2, rows: 1 }, { cols: 3, rows: 1 }] }
+        };
+    }
+
+    function migratedState(pluginOptions) {
+        return PluginState.stateWithSizeModesMigrated(
+            { pluginOptions: pluginOptions, desktopPositions: {}, presetPersist: {}, migrations: {} },
+            [weatherManifest()]);
+    }
+
+    function test_sizeModeMigrationKeepsTheChosenSize() {
+        // The whole reason this exists: without it, upgrading resets the widget
+        // to its manifest default and the user's chosen size is gone.
+        const next = migratedState({ nandoroid_weather: { sizeMode: "1x1", blurEnabled: true } });
+        compare(next.pluginOptions.nandoroid_weather.__gridSize, "1x1");
+        compare(next.pluginOptions.nandoroid_weather.sizeMode, undefined);
+        compare(next.pluginOptions.nandoroid_weather.blurEnabled, true);
+    }
+
+    function test_sizeModeMigrationMarksItselfDone() {
+        const next = migratedState({});
+        compare(next.migrations[PluginState.sizeModeMarker], true);
+    }
+
+    function test_sizeModeMigrationLeavesAWidgetOwnedSizeModeAlone() {
+        // world-clock declares no `grid` and drives its own sizeMode from its
+        // own toggle, so for it the key is a live setting. Measured against a
+        // real shell before it was guarded: a pass keyed on the name alone
+        // emptied its options and reset the widget.
+        const next = PluginState.stateWithSizeModesMigrated(
+            { pluginOptions: { nandoroid_weather: { sizeMode: "2x1" },
+                               "world-clock": { sizeMode: "3x1" } },
+              desktopPositions: {}, presetPersist: {}, migrations: {} },
+            [weatherManifest(), { id: "world-clock" }]);
+        compare(next.pluginOptions["world-clock"].sizeMode, "3x1");
+        compare(next.pluginOptions.nandoroid_weather.__gridSize, "2x1");
+    }
+
+    function test_sizeModeMigrationRunTwiceIsANoOp() {
+        const once = migratedState({ nandoroid_weather: { sizeMode: "2x1" } });
+        const twice = PluginState.stateWithSizeModesMigrated(once, [weatherManifest()]);
+        compare(twice.pluginOptions.nandoroid_weather.__gridSize, "2x1");
+        compare(twice.pluginOptions.nandoroid_weather.sizeMode, undefined);
+    }
+
+    function test_sizeModeMigrationDoesNotDisturbPositions() {
+        const state = {
+            pluginOptions: { nandoroid_weather: { sizeMode: "1x1" } },
+            desktopPositions: { "DP-1": { nandoroid_weather: { x: 12, y: 34, placementStrategy: "free" } } },
+            presetPersist: { nandoroid_weather: true },
+            migrations: {}
+        };
+        const next = PluginState.stateWithSizeModesMigrated(state, [weatherManifest()]);
+        compare(next.desktopPositions["DP-1"].nandoroid_weather.x, 12);
+        compare(next.presetPersist.nandoroid_weather, true);
+    }
 }

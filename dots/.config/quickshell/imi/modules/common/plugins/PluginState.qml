@@ -5,6 +5,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.modules.common
+import "gridSizes.js" as GridSizes
 
 Singleton {
     id: root
@@ -21,7 +22,11 @@ Singleton {
             pluginOptions: {},
             // Plugin ids whose options/positions/enabled state survive preset
             // application (never captured INTO presets - see presets.sh).
-            presetPersist: {}
+            presetPersist: {},
+            // One-shot store migrations that have already run, by name. Same
+            // shape as Config's `migrated*` flags, kept here because this is
+            // the file being migrated.
+            migrations: {}
         };
     }
 
@@ -103,6 +108,63 @@ Singleton {
             baseOpacity === undefined ? Config.options.plugins.blurOpacity : baseOpacity,
             Config.options.appearance.transparency.enable,
             root.option(pluginId, "keepTranslucent", keepTranslucentDefault === true));
+    }
+
+    readonly property string sizeModeMarker: "migratedSizeMode"
+
+    function migrationRan(name) {
+        return root.state?.migrations?.[name] === true;
+    }
+
+    // Retires the plugin-declared `sizeMode` option in favour of the host's
+    // `__gridSize`: same concept, same "<cols>x<rows>" format, two mechanisms.
+    // Without this, upgrading resets the two widgets that declared it to their
+    // default size - a visible change to a setting the user chose, with
+    // nothing reporting why.
+    //
+    // Driven by PluginManager rather than run from here, because the manifests
+    // are what say which spans are on offer, and they load asynchronously. The
+    // marker is the trap AGENT.md names: it records that the pass *ran*, not
+    // that it saw the user's data, so burning it against a half-loaded
+    // manifest list would lose exactly the size this exists to keep. Hence
+    // both guards - the empty list returns without marking, and the caller
+    // waits for the manifest loads to settle before calling at all.
+    //
+    // The per-plugin work itself deletes the old key (gridSizes.migrateSizeMode),
+    // so the pass is idempotent on its own and the marker only saves the walk.
+    //
+    // Split in two so the substance can be driven from a TestCase: the whole
+    // point of the pass is which options come out the other side, and a
+    // function that reads and writes the live singleton can only be tested by
+    // mutating it.
+    function stateWithSizeModesMigrated(state, manifests) {
+        const nextOptions = Object.assign({}, state?.pluginOptions || {});
+        for (const manifest of manifests) {
+            if (!manifest || !manifest.id) continue;
+            const migrated = GridSizes.migrateSizeMode(nextOptions[manifest.id], manifest.grid);
+            if (!migrated) continue;
+            nextOptions[manifest.id] = migrated;
+        }
+
+        const nextMigrations = Object.assign({}, state?.migrations || {});
+        nextMigrations[root.sizeModeMarker] = true;
+
+        const nextState = Object.assign({}, state);
+        nextState.version = root.schemaVersion;
+        nextState.pluginOptions = nextOptions;
+        nextState.migrations = nextMigrations;
+        return nextState;
+    }
+
+    function migrateSizeModes(manifests) {
+        if (!root.ready) return;
+        if (root.migrationRan(root.sizeModeMarker)) return;
+        // Returning without marking is the whole guard: a pass over an empty
+        // manifest list would burn the marker having read nothing.
+        if (!Array.isArray(manifests) || manifests.length === 0) return;
+
+        root.state = root.stateWithSizeModesMigrated(root.state, manifests);
+        writeTimer.restart();
     }
 
     function presetPersisted(pluginId) {
@@ -264,6 +326,11 @@ Singleton {
                     && typeof parsed.presetPersist === "object"
                     && !Array.isArray(parsed.presetPersist)
                     ? parsed.presetPersist
+                    : {},
+                migrations: parsed.migrations
+                    && typeof parsed.migrations === "object"
+                    && !Array.isArray(parsed.migrations)
+                    ? parsed.migrations
                     : {}
             };
         } catch (error) {
