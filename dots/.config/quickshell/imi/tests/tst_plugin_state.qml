@@ -1,9 +1,20 @@
 import QtQuick
 import QtTest
+import qs.modules.common
 import qs.modules.common.plugins
 
 TestCase {
     name: "PluginStateTest"
+
+    property bool savedTransparency: false
+
+    function init() {
+        savedTransparency = Config.options.appearance.transparency.enable;
+    }
+
+    function cleanup() {
+        Config.options.appearance.transparency.enable = savedTransparency;
+    }
 
     function test_positionDefaultsWhenUnset() {
         var pos = PluginState.position("nonexistent_plugin", "DP-1");
@@ -88,6 +99,62 @@ TestCase {
     function test_manifestDefaultAppliesUntilTheUserDecides() {
         compare(PluginState.option("never_configured_widget", "clickThrough", true), true);
         compare(PluginState.option("never_configured_widget", "clickThrough", false), false);
+    }
+
+    // Turning transparency off removes a widget's frost - PluginWidget gates
+    // its blur Repeater on the same flag - but the panel's own alpha came from
+    // `plugins.blurOpacity`, which does not consult it. Blur gone plus a 10%
+    // panel is a hole onto the sharp wallpaper, which is the bug: opacity has
+    // to follow the toggle too.
+    function test_backgroundOpacityGoesOpaqueWithTransparencyOff() {
+        compare(PluginState.resolveBackgroundOpacity(0.1, false, false), 1);
+    }
+
+    function test_backgroundOpacityKeepsItsValueWithTransparencyOn() {
+        compare(PluginState.resolveBackgroundOpacity(0.1, true, false), 0.1);
+    }
+
+    // The escape hatch, for a widget whose whole point is to be see-through.
+    function test_keepTranslucentExemptsAWidgetFromTheForcedOpacity() {
+        compare(PluginState.resolveBackgroundOpacity(0.1, false, true), 0.1);
+    }
+
+    function test_effectiveBackgroundOpacityFollowsTheTransparencyToggle() {
+        Config.options.appearance.transparency.enable = true;
+        compare(PluginState.effectiveBackgroundOpacity("notes"),
+            Config.options.plugins.blurOpacity);
+        Config.options.appearance.transparency.enable = false;
+        compare(PluginState.effectiveBackgroundOpacity("notes"), 1);
+    }
+
+    // The opt-out is a stored PluginState option, so it survives a restart and
+    // stays reversible from Settings > Widgets - and it must not leak to the
+    // widgets that did not ask for it.
+    function test_effectiveBackgroundOpacityHonoursAStoredOptOut() {
+        Config.options.appearance.transparency.enable = false;
+        PluginState.setOption("see_through_widget", "keepTranslucent", true);
+        compare(PluginState.effectiveBackgroundOpacity("see_through_widget"),
+            Config.options.plugins.blurOpacity);
+        compare(PluginState.effectiveBackgroundOpacity("opaque_widget"), 1);
+    }
+
+    // Same seed-then-override rule as clickThrough above: a manifest can ship
+    // the opt-out on, and a stored `false` has to win over that seed.
+    function test_keepTranslucentTakesTheManifestSeedUntilTheUserDecides() {
+        Config.options.appearance.transparency.enable = false;
+        compare(PluginState.effectiveBackgroundOpacity("seeded_widget", 0.1, true), 0.1);
+        PluginState.setOption("seeded_widget", "keepTranslucent", false);
+        compare(PluginState.effectiveBackgroundOpacity("seeded_widget", 0.1, true), 1);
+    }
+
+    // The generic designsystem widgets have no plugin identity, so they pass an
+    // empty id and their own default alpha: the toggle still applies, there is
+    // just nothing to opt out.
+    function test_anUnidentifiedWidgetStillFollowsTheToggle() {
+        Config.options.appearance.transparency.enable = false;
+        compare(PluginState.effectiveBackgroundOpacity("", 0.1), 1);
+        Config.options.appearance.transparency.enable = true;
+        compare(PluginState.effectiveBackgroundOpacity("", 0.1), 0.1);
     }
 
     // The world clock keeps its four timezones here, and it is the only plugin
