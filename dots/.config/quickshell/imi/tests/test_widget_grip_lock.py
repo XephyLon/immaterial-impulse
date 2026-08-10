@@ -37,6 +37,26 @@ def source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def handle_blocks(text: str):
+    """Every `id: *Handle` block in a file, keyed by id.
+
+    A grip is a `Rectangle` whose `id` ends in `Handle`, holding the `MouseArea`
+    that does the resizing; the block is every line indented at least as far as
+    that `id:`.
+    """
+    blocks = {}
+    for found in re.finditer(r"^(\s*)id: (\w*Handle)$", text, re.M):
+        start = found.end()
+        indent = len(found.group(1))
+        body = []
+        for line in text[start:].splitlines()[1:]:
+            if line.strip() and len(line) - len(line.lstrip()) < indent:
+                break
+            body.append(line)
+        blocks[found.group(2)] = "\n".join(body)
+    return blocks
+
+
 def uncommented(path: Path) -> str:
     """Source with `//` comments stripped.
 
@@ -103,18 +123,7 @@ class EveryGripGatesOnIt(unittest.TestCase):
     invisible item, so hiding the rectangle disarms the area inside it."""
 
     def _handles(self, widget_id):
-        text = source(BUNDLED / widget_id / "Widget.qml")
-        blocks = {}
-        for found in re.finditer(r"^(\s*)id: (\w*Handle)$", text, re.M):
-            start = found.end()
-            indent = len(found.group(1))
-            body = []
-            for line in text[start:].splitlines()[1:]:
-                if line.strip() and len(line) - len(line.lstrip()) < indent:
-                    break
-                body.append(line)
-            blocks[found.group(2)] = "\n".join(body)
-        return blocks
+        return handle_blocks(source(BUNDLED / widget_id / "Widget.qml"))
 
     def test_every_widget_with_a_grip_declares_the_property(self):
         for widget_id in GRIP_WIDGETS:
@@ -159,6 +168,68 @@ class EveryGripGatesOnIt(unittest.TestCase):
             self.assertNotRegex(uncommented(manifest),
                                 r"hostInteractionLocked\s*=[^=]",
                                 manifest.parent.name)
+
+
+class TheHostsOwnResizeGrip(unittest.TestCase):
+    """The grid resize grip is drawn by `PluginWidget` itself, so a manifest
+    opts into it by declaring `grid.sizes` and writes no QML - which also means
+    the sweep over bundled widgets above cannot see it. It is the same gesture
+    under the same lock, so it is pinned here rather than somewhere new."""
+
+    def _grip(self):
+        return handle_blocks(source(HOST))["resizeHandle"]
+
+    def test_the_grip_is_where_this_thinks_it_is(self):
+        """Guards every assertion below: rename it and they all pass on
+        nothing."""
+        self.assertEqual(sorted(handle_blocks(source(HOST))), ["resizeHandle"])
+        self.assertIn("MouseArea", self._grip())
+
+    def test_it_honours_the_hosts_resolved_lock(self):
+        """A resize changes the widget's geometry exactly as a drag does, so
+        every reason the host is locked has to disarm it too."""
+        self.assertIn("!rootWidget.interactionLocked", self._grip())
+
+    def test_it_only_exists_for_a_widget_that_offers_more_than_one_span(self):
+        """Otherwise every grid widget grows a grip that can only ever pick the
+        span it already has."""
+        self.assertIn("rootWidget.gridResizable", self._grip())
+
+    def test_the_gate_is_on_visible_so_the_grip_is_dead_and_not_just_hidden(self):
+        self.assertRegex(self._grip(), r"visible:[^\n]*rootWidget\.gridResizable")
+
+    def test_it_claims_the_press_from_drag_to_move(self):
+        """`AbstractWidget`'s drag-to-move is this widget's own root MouseArea.
+        The nested area takes the press, but without `preventStealing` the root
+        takes the grab back on the first move and the corner walks the widget
+        instead of resizing it.
+        """
+        self.assertIn("preventStealing: true", self._grip())
+
+    def test_the_drag_is_measured_in_scene_coordinates(self):
+        """The grip is anchored to a widget that resizes underneath it while
+        the drag is live, so a delta read from the grip's own frame folds the
+        resize back into the gesture (AGENT.md: a drag cannot be tracked
+        through the item it moves).
+        """
+        self.assertIn("resizeArea.mapToItem(null,", self._grip())
+
+    def test_escape_cancels_the_resize(self):
+        grip = self._grip()
+        self.assertIn("Keys.onEscapePressed", grip)
+        self.assertIn("rootWidget.cancelGridResize()", grip)
+
+    def test_a_release_commits_whatever_the_preview_settled_on(self):
+        """Which is also what makes a release after Escape commit nothing: the
+        cancel cleared the preview, so there is no span left to store. Committing
+        `storedGridSize`, or reading the preview back after clearing it, both
+        read fine and both throw the drag's result away.
+        """
+        body = re.search(r"function endGridResize\(\) \{(.*?)\n    \}",
+                         uncommented(HOST), re.S).group(1)
+        self.assertLess(body.index("previewGridSize = null"),
+                        body.index("commitGridSize("), body)
+        self.assertIn("commitGridSize(chosen)", body)
 
 
 if __name__ == "__main__":
