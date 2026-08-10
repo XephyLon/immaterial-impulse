@@ -190,6 +190,12 @@ must not declare `horizontalPadding`, `verticalPadding`, `padding`, `spacing`, `
 distinct name (`labelInset`, not `horizontalPadding`). A plain `Item`/`Rectangle` has no such
 restriction, which is why `property real padding` is fine in the many non-`Control` widgets here.
 
+**A `qml6` probe's `console.log` goes to the journal, not to your terminal.** Qt is built with
+journald support here, so `qml6 probe.qml` prints *nothing at all* — which reads as "the probe never
+ran" and invites rewriting a probe that was working. Export `QT_FORCE_STDERR_LOGGING=1` alongside
+`QT_QPA_PLATFORM=offscreen` whenever a probe is supposed to tell you something.
+f6a7e251e ("feat(designsystem): VisualizerCookie, a cookie driven by one level per lobe").
+
 **Known quirk:** `console.log` output to `log.log` can appear noticeably delayed (stdio buffering) —
 a print can sit unflushed for several seconds before showing up, sometimes interleaved with later
 events in a way that looks like a stale/wrong value at first glance. If a debug print looks wrong,
@@ -1149,6 +1155,39 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   add an explicit `Connections` re-fetch on the relevant `*Changed` signal instead of trusting the
   binding to track it - and prefer extracting it into a reusable, testable component over
   re-inlining the same fix at each call site.
+- **A cookie's lobes all share one radius, and the sibling that gives them their own takes the
+  *inner* one.** `RoundedPolygon.star(sides, radius, innerRadius, rounding)` hands every lobe the
+  same inner radius, so animating it makes the whole shape breathe and nothing else;
+  `RoundedPolygon.starPerLobe()` takes one radius per lobe instead. `star()`'s signature is left
+  alone deliberately - `MaterialCookie` and the whole Material shape catalogue in
+  `material-shapes.js` are built on it. Two non-obvious things about the array. It is the **inner**
+  radius that varies because the outer vertices are what set the shape's bounds: move those and
+  `normalized()` (or any other refit) rescales the entire cookie every frame, so a lobe pushing out
+  shrinks the other eleven instead of standing out. And the scalar fallback is chosen on
+  `typeof === "number"`, **not** `Array.isArray`, because a QML `list<real>` arrives in JS as a
+  sequence object for which `Array.isArray` is `false` - taking the scalar branch on one multiplies
+  a radius by an object and feeds NaN vertices into geometry QtQuick's relayout never converges on.
+  be9a07c84 ("feat(shapes): a star whose lobes can each have their own inner radius").
+- **`ShapeCanvas` is for a shape that changes occasionally, not one regenerated per frame.** It
+  builds a `Morph` and starts a 350ms transition on *every* `roundedPolygon` change - measured at
+  ~1.3ms per `Morph` for a 12-lobe cookie, on top of ~0.6ms to build the polygon itself - so a
+  per-frame shape pays feature-matching it never uses and never arrives at the shape it is morphing
+  to. Walk the polygon's `cubics` onto a plain `Canvas` instead, as `VisualizerCookie` does.
+  Regenerating the geometry itself is affordable and needs no fixed-rate-plus-interpolation
+  fallback: 0.77ms per cookie per frame at 240px, and four animating at once still held 62fps
+  offscreen. f6a7e251e ("feat(designsystem): VisualizerCookie, a cookie driven by one level per
+  lobe").
+- **Nothing writes `CavaService.values`, so a widget wired to it is silent.**
+  `modules/common/plugins/designsystem/services/CavaService.qml` looks like a service - `barCount`,
+  `values`, and a `refCount` that `CavaWidget`, `MediaCard` and `VisualizerCookie` all take and
+  release - but no code in this tree ever assigns `values` or starts a cava process when the
+  refcount rises. The live band source is `GlobalStates.visualizerPoints`, filled by the `cavaProc`
+  `Process` in `modules/imi/mediaControls/MediaControls.qml` (50 bars, 0..1000, running only while
+  a sidebar, the media controls or a visualizer widget wants it), and that is what the bar
+  visualizer and the bundled `visualizer` plugin read. Don't read the refcount as evidence of a
+  producer behind it; either give `CavaService` one or point the consumer's band input at
+  `GlobalStates.visualizerPoints`. 66da530c4 ("feat(designsystem): drive the visualizer cookie from
+  cava").
 
 **Wallpaper parallax is one oversized viewport, not a per-layer effect.**
 `Background.qml` draws every wallpaper layer inside `parallaxViewport`, an item sized to
