@@ -43,18 +43,22 @@ Item {
     function closeOverflowMenu() { focusGrab.active = false }
 
     onTrayOverflowOpenChanged: {
-        if (root.trayOverflowOpen) root.grabFocus()
+        // No grab is armed for the overflow popup any more: it lives on the
+        // shared card, whose surface the overlay owns and grabs for. Arming one
+        // here would grab a surface whose input region is the card, and while
+        // the card is still growing that closes the popup on the next click.
         // Keep the bar from auto-hiding while the overflow popup is open, so it
         // isn't orphaned above a hidden bar (issue #31).
         GlobalStates.sysTrayOverflowOpen = root.trayOverflowOpen
     }
 
+    // Tray *context menus* are still real windows of their own, so they keep a
+    // grab - it just no longer covers the overflow popup's surface.
     HyprlandFocusGrab {
         id: focusGrab
         active: false
-        windows: [trayOverflowLayout.QsWindow?.window, root.activeMenu]
+        windows: [root.QsWindow?.window, root.activeMenu].filter(window => window)
         onCleared: {
-            root.trayOverflowOpen = false
             if (root.activeMenu) {
                 root.activeMenu.close()
                 root.activeMenu = null
@@ -112,6 +116,9 @@ Item {
                 // hover path reads containsMouse, which a QQC2-derived
                 // RippleButton does not expose.
                 pinnedOpen: root.trayOverflowOpen && root.unpinnedItems.length > 0
+                // Bound, not assignable - so the overlay's grab asks rather
+                // than writes, and this clears the flag the binding reads.
+                onDismissRequested: root.trayOverflowOpen = false
 
                 GridLayout {
                     id: trayOverflowLayout

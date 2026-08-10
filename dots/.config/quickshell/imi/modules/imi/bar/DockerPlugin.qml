@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Hyprland
 import qs.modules.common
 import qs.modules.common.widgets
 import "../../common/plugins/bundled/docker" as DockerPackage
@@ -15,7 +14,6 @@ MouseArea {
 
     property bool vertical: Config.options.bar.vertical
     property bool popupOpen: false
-    property bool useOutsideClickGrab: true
     readonly property real horizontalPadding: Appearance.spacing.space100
 
     implicitWidth: root.vertical
@@ -31,16 +29,6 @@ MouseArea {
     onClicked: {
         root.popupOpen = !root.popupOpen;
         if (root.popupOpen) DockerPackage.DockerService.refresh();
-    }
-    onPopupOpenChanged: {
-        if (root.popupOpen) {
-            focusArm.attempts = 0;
-            focusArm.restart();
-        } else {
-            focusArm.stop();
-            popupFocus.active = false;
-            popupFocus.windows = [];
-        }
     }
 
     Loader {
@@ -124,35 +112,14 @@ MouseArea {
             // StyledPopup uses its target for screen-relative positioning.
             // Hover remains disabled on the MouseArea, so this is click-only.
             hoverTarget: root
+            // The overlay owns the surface, so it owns the outside-click grab.
+            onDismissRequested: root.popupOpen = false
             onPinnedOpenChanged: {
                 if (!pinnedOpen) root.popupOpen = false;
             }
         }
     }
 
-    Timer {
-        id: focusArm
-        property int attempts: 0
-        interval: 16
-        repeat: true
-        onTriggered: {
-            const popupWindow = popupLoader.item?.surfaceWindow;
-            if (!root.popupOpen || !root.useOutsideClickGrab || attempts++ >= 30) {
-                stop();
-                return;
-            }
-            if (!popupWindow) return;
-            popupFocus.windows = [root.QsWindow?.window, popupWindow].filter(window => window);
-            popupFocus.active = true;
-            stop();
-        }
-    }
 
-    HyprlandFocusGrab {
-        id: popupFocus
-        active: false
-        windows: []
-        onCleared: root.popupOpen = false
-    }
 
 }

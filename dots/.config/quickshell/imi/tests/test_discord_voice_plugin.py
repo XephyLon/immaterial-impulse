@@ -371,7 +371,11 @@ class DiscordVoicePluginSafetyTests(unittest.TestCase):
         adapter = (ROOT / "modules/imi/bar/DiscordVoicePlugin.qml").read_text()
         self.assertIn("hoverEnabled: false", adapter)
         self.assertIn("cursorShape: Qt.PointingHandCursor", adapter)
-        self.assertIn("HyprlandFocusGrab", adapter)
+        # Closing on focus loss is still the contract; the grab that enforces it
+        # moved to the overlay that owns the shared surface, so the adapter's
+        # half is answering the dismissal rather than arming a grab of its own.
+        self.assertNotIn("HyprlandFocusGrab", adapter)
+        self.assertIn("onDismissRequested: root.popupOpen = false", adapter)
         popup = (PLUGIN / "DiscordVoicePopup.qml").read_text()
         self.assertIn("root.pinnedOpen = false", popup)
         self.assertIn("DiscordVoice.authorizeAfterFocusRelease()", popup)

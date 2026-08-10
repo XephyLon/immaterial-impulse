@@ -12,7 +12,6 @@ ShellRoot {
         DockerPlugin {
             id: dockerWidget
             anchors.centerIn: parent
-            useOutsideClickGrab: false
         }
     }
 

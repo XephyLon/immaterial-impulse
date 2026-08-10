@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs
 import qs.modules.common
@@ -313,6 +314,30 @@ Scope {
                 id: exitFadeTimer
                 interval: Appearance.animation.elementMoveFast.duration
                 onTriggered: overlayWindow.finishExit()
+            }
+
+            // Outside-click dismissal belongs to whoever owns the surface, and
+            // that is now this overlay rather than the individual widgets.
+            //
+            // The widgets used to arm their own grabs on their own popup window,
+            // which was sized to the popup, so a click anywhere in the popup was
+            // inside the grab. Pointed at the shared surface those grabs break:
+            // Hyprland classifies a click by the surface's *input region*, and
+            // this surface's region is the card. A grab armed while the card is
+            // still the parked 2*elevationMargin square treats the next click
+            // anywhere as outside and closes the popup. So arm only once the
+            // card has stopped moving and is showing content at full size.
+            HyprlandFocusGrab {
+                id: cardGrab
+                active: !!overlayWindow.current?.pinnedOpen
+                    && !overlayWindow.exiting
+                    && !overlayWindow.morphing
+                    && card.width > Appearance.sizes.elevationMargin * 2
+                windows: [
+                    overlayWindow,
+                    overlayWindow.current?.hoverTarget?.QsWindow?.window
+                ].filter(window => window)
+                onCleared: overlayWindow.current?.dismissRequested()
             }
 
             // Whatever is on the card can change size while it is shown - the
