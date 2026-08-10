@@ -839,6 +839,23 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   values. Desktop backdrop blur is also per-plugin state: a manifest opts into its default with
   `desktopWidget.blur: true`, while the generated **Blur background** option always lets the user
   override it. Do not make `PluginWidget` blur every plugin unconditionally.
+- **"The frost is gated on the toggle" is not "the surface is gated on the toggle."**
+  `appearance.transparency.enable` removed every desktop widget's blur — `PluginWidget`'s blur
+  `Repeater` reads the flag — while the widgets' panel alpha kept coming from
+  `plugins.blurOpacity` and four hardcoded `0.1` literals, which do not. Turning transparency
+  **off** therefore left fourteen widgets ~10% opaque over a now-**sharp** wallpaper: a worse
+  result than leaving it on, while the dock and the settings window correctly went opaque. Opacity
+  and blur were two settings and only one knew about the switch. The derivation now lives in
+  `PluginState.effectiveBackgroundOpacity(pluginId, base)` — the only place that can see both the
+  toggle and the per-plugin opt-out (`keepTranslucent`), since the generic
+  `designsystem/widgets/Desktop*Widget.qml` have no `PluginWidget` root in scope and a host-side
+  property could never have reached them. When adding anything that paints its own alpha, ask what
+  it looks like with the toggle off, and route it through the derivation rather than repeating the
+  conditional; `tests/test_widget_transparency_opacity.py` reddens on a call site that reads
+  `plugins.blurOpacity` directly. The exemption gates the frost too — a widget excused from the
+  opaque default but still denied its blur is exactly the hole this removed.
+  ead4ba6f7 ("feat(plugins): derive desktop-widget opacity from the transparency toggle"),
+  2edab686a ("fix(plugins): route every widget panel opacity through the derivation").
 - Desktop plugin delegates are retained for every available manifest and gated through an animated
   `FadeLoader`, rather than repeating only the enabled ids. Removing a model delegate destroys it
   immediately and makes an M3 exit transition impossible; keep disabled loaders dormant until their
