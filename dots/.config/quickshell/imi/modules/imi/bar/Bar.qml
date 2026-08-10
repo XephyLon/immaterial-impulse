@@ -235,7 +235,14 @@ Scope {
                     Item {
                         id: hoverMaskRegion
                         readonly property real reveal: Config.options.bar.autoHide.hoverRegionWidth
-                        readonly property real rawTop: barContent.y - reveal
+                        // The detach inset counts as the bar's own space, not a
+                        // gap outside it. Leaving it out made the strip start
+                        // below the edge whenever the bar was *shown*, so a
+                        // pointer resting on row 0 revealed the bar, fell
+                        // outside the strip the moment it appeared, and hid it
+                        // again - a reveal/hide oscillation for as long as the
+                        // pointer stayed on the edge.
+                        readonly property real rawTop: barContent.y - reveal - Appearance.sizes.barDetachInset
                         readonly property real rawBottom: barContent.y + barContent.height + reveal
 
                         x: 0
