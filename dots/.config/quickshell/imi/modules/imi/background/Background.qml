@@ -1203,6 +1203,19 @@ Variants {
                         weSurfaceItem: (bgRoot.lockWallShown || lockPeelTimer.running)
                             ? lockPeel
                             : (bgRoot.weShown ? weLoader.item : null)
+                        // The frost samples the wallpaper item, so it needs
+                        // both containers' real positions rather than this
+                        // widget's canvas coordinates. Every wallpaper layer -
+                        // the WE surface, the peel, the still - is declared
+                        // inside parallaxViewport and is therefore viewport-
+                        // sized and viewport-positioned; the canvas is a
+                        // sibling that travels further. Read off the items and
+                        // not off parallaxOffsets/widgetParallax so the two
+                        // 600ms pans are followed frame by frame.
+                        canvasOffsetX: widgetCanvas.x
+                        canvasOffsetY: widgetCanvas.y
+                        wallpaperRect: Qt.rect(parallaxViewport.x, parallaxViewport.y,
+                            parallaxViewport.width, parallaxViewport.height)
                     }
                 }
             }
