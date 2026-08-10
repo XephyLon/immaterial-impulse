@@ -28,7 +28,17 @@ Item {
         const query = normalized(navigationQuery)
         if (query.length === 0) return true
         if (normalized(page.name).includes(query)) return true
-        return page.sections.some(section => sectionAvailable(pageIndex, section) && normalized(section).includes(query))
+        if (page.sections.some(section => sectionAvailable(pageIndex, section) && normalized(section).includes(query)))
+            return true
+        // Subsections render on the page but are not tree branches, so they are
+        // not in `sections` - that list is the sidebar's navigation metadata and
+        // a test pins it to the top-level sections exactly. Without a second
+        // index they were unsearchable: every subsection in the whole settings
+        // tree, 32 of them, including Parallax, Keyboard, Security and Web
+        // search. A user searching for a heading they can see got nothing back,
+        // and silently: no page matches, so the sidebar empties and the content
+        // pane keeps showing whatever was already open.
+        return (page.searchTerms || []).some(term => normalized(term).includes(query))
     }
 
     function sectionAvailable(pageIndex, section) {
@@ -147,16 +157,16 @@ Item {
             { name: Translation.tr("Quick"), icon: "instant_mix", component: Qt.resolvedUrl("pages/QuickConfig.qml"), sections: [Translation.tr("Wallpaper & Colors"), Translation.tr("Bar & Screen")] },
             { name: Translation.tr("Appearance"), icon: "palette", component: Qt.resolvedUrl("pages/AppearanceConfig.qml"), sections: [Translation.tr("Icon pack"), Translation.tr("Fonts"), Translation.tr("Terminal"), Translation.tr("Color generation")] },
             { name: Translation.tr("Cursor"), icon: "arrow_selector_tool", component: Qt.resolvedUrl("pages/CursorConfig.qml"), sections: [Translation.tr("Pointer"), Translation.tr("Pointer behavior")] },
-            { name: Translation.tr("Wallpaper & Desktop"), icon: "texture", component: Qt.resolvedUrl("pages/BackgroundConfig.qml"), sections: [Translation.tr("Wallpaper"), Translation.tr("Widgets"), Translation.tr("Wallpaper selector")] },
-            { name: Translation.tr("Bar & Dock"), icon: "toast", iconRotation: 180, component: Qt.resolvedUrl("pages/BarConfig.qml"), sections: [Translation.tr("Screens"), Translation.tr("Bar layout"), Translation.tr("Positioning & Styles"), Translation.tr("Tray"), Translation.tr("Divider"), Translation.tr("Utility buttons"), Translation.tr("Workspaces"), Translation.tr("Resources"), Translation.tr("Media"), Translation.tr("Tooltips"), Translation.tr("Dock")] },
-            { name: Translation.tr("Sidebars & Panels"), icon: "side_navigation", component: Qt.resolvedUrl("pages/SidebarsPanelsConfig.qml"), sections: [Translation.tr("Left Sidebar"), Translation.tr("Right Sidebar"), Translation.tr("Overview"), Translation.tr("Overlay"), Translation.tr("On-screen display"), Translation.tr("Drop shelf")] },
+            { name: Translation.tr("Wallpaper & Desktop"), icon: "texture", component: Qt.resolvedUrl("pages/BackgroundConfig.qml"), sections: [Translation.tr("Wallpaper"), Translation.tr("Widgets"), Translation.tr("Wallpaper selector")], searchTerms: [Translation.tr("Parallax"), Translation.tr("Centered wallpaper"), Translation.tr("Show widgets on"), Translation.tr("Canvas")] },
+            { name: Translation.tr("Bar & Dock"), icon: "toast", iconRotation: 180, component: Qt.resolvedUrl("pages/BarConfig.qml"), sections: [Translation.tr("Screens"), Translation.tr("Bar layout"), Translation.tr("Positioning & Styles"), Translation.tr("Tray"), Translation.tr("Divider"), Translation.tr("Utility buttons"), Translation.tr("Workspaces"), Translation.tr("Resources"), Translation.tr("Media"), Translation.tr("Tooltips"), Translation.tr("Dock")], searchTerms: [Translation.tr("Show bar on"), Translation.tr("Buttons & Media")] },
+            { name: Translation.tr("Sidebars & Panels"), icon: "side_navigation", component: Qt.resolvedUrl("pages/SidebarsPanelsConfig.qml"), sections: [Translation.tr("Left Sidebar"), Translation.tr("Right Sidebar"), Translation.tr("Overview"), Translation.tr("Overlay"), Translation.tr("On-screen display"), Translation.tr("Drop shelf")], searchTerms: [Translation.tr("Quick toggles"), Translation.tr("Sliders"), Translation.tr("Corner open"), Translation.tr("Default Settings"), Translation.tr("Floating Image"), Translation.tr("Crosshair")] },
             { name: Translation.tr("Notifications"), icon: "notifications", component: Qt.resolvedUrl("pages/NotificationsConfig.qml"), sections: [Translation.tr("Notifications")] },
-            { name: Translation.tr("Lock & Idle"), icon: "lock", component: Qt.resolvedUrl("pages/LockIdleConfig.qml"), sections: [Translation.tr("Lock screen"), Translation.tr("Keep awake"), Translation.tr("Screensaver"), Translation.tr("Work safety")] },
-            { name: Translation.tr("Capture"), icon: "screen_record", component: Qt.resolvedUrl("pages/CaptureConfig.qml"), sections: [Translation.tr("Screen recorder"), Translation.tr("Screenshot popup"), Translation.tr("Region selector (screen snipping/Google Lens)"), Translation.tr("Save paths")] },
+            { name: Translation.tr("Lock & Idle"), icon: "lock", component: Qt.resolvedUrl("pages/LockIdleConfig.qml"), sections: [Translation.tr("Lock screen"), Translation.tr("Keep awake"), Translation.tr("Screensaver"), Translation.tr("Work safety")], searchTerms: [Translation.tr("Security"), Translation.tr("Style: General"), Translation.tr("Style: Blurred")] },
+            { name: Translation.tr("Capture"), icon: "screen_record", component: Qt.resolvedUrl("pages/CaptureConfig.qml"), sections: [Translation.tr("Screen recorder"), Translation.tr("Screenshot popup"), Translation.tr("Region selector (screen snipping/Google Lens)"), Translation.tr("Save paths")], searchTerms: [Translation.tr("Instant replay"), Translation.tr("Hint target regions"), Translation.tr("Google Lens"), Translation.tr("Rectangular selection"), Translation.tr("Circle selection")] },
             { name: Translation.tr("General"), icon: "browse", component: Qt.resolvedUrl("pages/GeneralConfig.qml"), sections: [Translation.tr("Time"), Translation.tr("Battery"), Translation.tr("Audio"), Translation.tr("Sounds"), Translation.tr("Language")] },
-            { name: Translation.tr("Services"), icon: "cloud", component: Qt.resolvedUrl("pages/ServicesConfig.qml"), sections: [Translation.tr("AI"), Translation.tr("Networking"), Translation.tr("Music Recognition"), Translation.tr("Search"), Translation.tr("System updates (Arch only)"), Translation.tr("Clight"), Translation.tr("Weather")] },
+            { name: Translation.tr("Services"), icon: "cloud", component: Qt.resolvedUrl("pages/ServicesConfig.qml"), sections: [Translation.tr("AI"), Translation.tr("Networking"), Translation.tr("Music Recognition"), Translation.tr("Search"), Translation.tr("System updates (Arch only)"), Translation.tr("Clight"), Translation.tr("Weather")], searchTerms: [Translation.tr("Custom OpenAI-compatible Providers"), Translation.tr("Phone Connect"), Translation.tr("Prefixes"), Translation.tr("File search"), Translation.tr("Web search")] },
             { name: Translation.tr("Widgets"), icon: "widgets", component: Qt.resolvedUrl("pages/PluginsPage.qml"), sections: [Translation.tr("Widget settings"), Translation.tr("Available Widgets")] },
-            { name: Translation.tr("Hyprland"), icon: "select_window_2", component: Qt.resolvedUrl("pages/HyprlandConfig.qml"), sections: [Translation.tr("Displays"), Translation.tr("Layout"), Translation.tr("Input"), Translation.tr("Keybinds"), Translation.tr("Visual & Aesthetics"), Translation.tr("Blur"), Translation.tr("Autostart Apps"), Translation.tr("Animations")] },
+            { name: Translation.tr("Hyprland"), icon: "select_window_2", component: Qt.resolvedUrl("pages/HyprlandConfig.qml"), sections: [Translation.tr("Displays"), Translation.tr("Layout"), Translation.tr("Input"), Translation.tr("Keybinds"), Translation.tr("Visual & Aesthetics"), Translation.tr("Blur"), Translation.tr("Autostart Apps"), Translation.tr("Animations")], searchTerms: [Translation.tr("Keyboard"), Translation.tr("Touchpad"), Translation.tr("Add a shortcut")] },
             { name: Translation.tr("About"), icon: "info", component: Qt.resolvedUrl("pages/About.qml"), sections: [] }
         ]
         return list
