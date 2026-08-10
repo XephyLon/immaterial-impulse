@@ -122,15 +122,14 @@ ContentPage {
                             anchors { fill: parent; margins: Appearance.spacing.space100 }
                             buttonIcon: "tv_displays"
                             text: Translation.tr("All")
-                            onCheckedChanged: {
-                                if (checked) Config.options.bar.screenList = []
-                            }
-
-                            Binding {
-                                target: allSwitchItem
-                                property: "checked"
-                                value: Config.options.bar.screenList.length === 0
-                                restoreMode: Binding.RestoreBinding
+                            checked: Config.options.bar.screenList.length === 0
+                            // One-way: an empty list *is* "every screen", so a
+                            // click while it is already on has nothing to mean -
+                            // "no screens" is the state ScreenSelection refuses
+                            // to represent.
+                            onToggleRequested: {
+                                if (Config.options.bar.screenList.length > 0)
+                                    Config.options.bar.screenList = []
                             }
                         }
                     }
@@ -157,27 +156,21 @@ ContentPage {
                                 anchors { fill: parent; margins: Appearance.spacing.space100 }
                                 buttonIcon: "monitor"
                                 text: monitorRow.modelData.name
-                                onCheckedChanged: {
+                                checked: ScreenSelection.includes(Config.options.bar.screenList, monitorRow.modelData.name)
+                                onToggleRequested: {
                                     const allNames = Hyprland.monitors.values.map(m => m.name)
+                                    const shown = ScreenSelection.includes(
+                                        Config.options.bar.screenList, monitorRow.modelData.name)
                                     const result = ScreenSelection.toggle(
                                         Config.options.bar.screenList, allNames,
-                                        monitorRow.modelData.name, checked)
-                                    if (!result.accepted) {
-                                        // Unchecking the last screen would empty the
-                                        // list, which means "every screen" - the bar
-                                        // would come back on everywhere. Put the
-                                        // switch back rather than bounce it.
-                                        checked = true
-                                        return
-                                    }
+                                        monitorRow.modelData.name, !shown)
+                                    // Unchecking the last screen would empty the
+                                    // list, which means "every screen" - the bar
+                                    // would come back on everywhere. Leaving the
+                                    // config alone leaves the switch on, since
+                                    // that is what it is bound to.
+                                    if (!result.accepted) return
                                     Config.options.bar.screenList = result.list
-                                }
-
-                                Binding {
-                                    target: switchItem
-                                    property: "checked"
-                                    value: Config.options.bar.screenList.length === 0 || Config.options.bar.screenList.includes(monitorRow.modelData.name)
-                                    restoreMode: Binding.RestoreBinding
                                 }
                             }
                         }
@@ -268,7 +261,7 @@ ContentPage {
                         text: Translation.tr("Show Background")
                         enabled: Config.options.bar.cornerStyle === 0 || Config.options.bar.cornerStyle === 1
                         checked: Config.options.bar.showBackground
-                        onCheckedChanged: { Config.options.bar.showBackground = checked; }
+                        onToggleRequested: Config.options.bar.showBackground = !Config.options.bar.showBackground
                     }
                     ConfigSelectionArray {
                         text: Translation.tr("Autohide")
@@ -287,7 +280,7 @@ ContentPage {
                     enabled: Config.options.bar.showBackground
                         && (Config.options.bar.cornerStyle === 0 || Config.options.bar.cornerStyle === 1)
                     checked: Config.options.bar.shadow
-                    onCheckedChanged: { Config.options.bar.shadow = checked; }
+                    onToggleRequested: Config.options.bar.shadow = !Config.options.bar.shadow
                 }
                 ConfigSlider {
                     text: Translation.tr("Background opacity")
@@ -309,7 +302,7 @@ ContentPage {
                     text: Translation.tr("Auto-dismiss popups on hide")
                     enabled: Config.options.bar.autoHide.enable
                     checked: Config.options.bar.autoHide.dismissPopups
-                    onCheckedChanged: { Config.options.bar.autoHide.dismissPopups = checked; }
+                    onToggleRequested: Config.options.bar.autoHide.dismissPopups = !Config.options.bar.autoHide.dismissPopups
                 }
             }
         }
@@ -323,12 +316,12 @@ ContentPage {
                 ConfigSwitch {
                     buttonIcon: "keep"; text: Translation.tr("Make icons pinned by default")
                     checked: Config.options.tray.invertPinnedItems
-                    onCheckedChanged: { Config.options.tray.invertPinnedItems = checked; }
+                    onToggleRequested: Config.options.tray.invertPinnedItems = !Config.options.tray.invertPinnedItems
                 }
                 ConfigSwitch {
                     buttonIcon: "colors"; text: Translation.tr("Tint icons")
                     checked: Config.options.tray.monochromeIcons
-                    onCheckedChanged: { Config.options.tray.monochromeIcons = checked; }
+                    onToggleRequested: Config.options.tray.monochromeIcons = !Config.options.tray.monochromeIcons
                 }
             }
         }
@@ -377,13 +370,13 @@ ContentPage {
                         buttonIcon: "screenshot_region"
                         text: Translation.tr("Screen snip")
                         checked: Config.options.bar.utilButtons.showScreenSnip
-                        onCheckedChanged: { Config.options.bar.utilButtons.showScreenSnip = checked }
+                        onToggleRequested: Config.options.bar.utilButtons.showScreenSnip = !Config.options.bar.utilButtons.showScreenSnip
                     }
                     ConfigSwitch {
                         buttonIcon: "colorize"
                         text: Translation.tr("Color picker")
                         checked: Config.options.bar.utilButtons.showColorPicker
-                        onCheckedChanged: { Config.options.bar.utilButtons.showColorPicker = checked }
+                        onToggleRequested: Config.options.bar.utilButtons.showColorPicker = !Config.options.bar.utilButtons.showColorPicker
                     }
                 }
                 ConfigRow {
@@ -392,13 +385,13 @@ ContentPage {
                         buttonIcon: "keyboard"
                         text: Translation.tr("Keyboard toggle")
                         checked: Config.options.bar.utilButtons.showKeyboardToggle
-                        onCheckedChanged: { Config.options.bar.utilButtons.showKeyboardToggle = checked }
+                        onToggleRequested: Config.options.bar.utilButtons.showKeyboardToggle = !Config.options.bar.utilButtons.showKeyboardToggle
                     }
                     ConfigSwitch {
                         buttonIcon: "mic"
                         text: Translation.tr("Mic toggle")
                         checked: Config.options.bar.utilButtons.showMicToggle
-                        onCheckedChanged: { Config.options.bar.utilButtons.showMicToggle = checked }
+                        onToggleRequested: Config.options.bar.utilButtons.showMicToggle = !Config.options.bar.utilButtons.showMicToggle
                     }
                 }
                 ConfigRow {
@@ -407,13 +400,13 @@ ContentPage {
                         buttonIcon: "dark_mode"
                         text: Translation.tr("Dark/Light toggle")
                         checked: Config.options.bar.utilButtons.showDarkModeToggle
-                        onCheckedChanged: { Config.options.bar.utilButtons.showDarkModeToggle = checked }
+                        onToggleRequested: Config.options.bar.utilButtons.showDarkModeToggle = !Config.options.bar.utilButtons.showDarkModeToggle
                     }
                     ConfigSwitch {
                         buttonIcon: "speed"
                         text: Translation.tr("Performance Profile")
                         checked: Config.options.bar.utilButtons.showPerformanceProfileToggle
-                        onCheckedChanged: { Config.options.bar.utilButtons.showPerformanceProfileToggle = checked }
+                        onToggleRequested: Config.options.bar.utilButtons.showPerformanceProfileToggle = !Config.options.bar.utilButtons.showPerformanceProfileToggle
                     }
                 }
                 ConfigRow {
@@ -422,13 +415,13 @@ ContentPage {
                         buttonIcon: "screen_record"
                         text: Translation.tr("Record Screen")
                         checked: Config.options.bar.utilButtons.showScreenRecord
-                        onCheckedChanged: { Config.options.bar.utilButtons.showScreenRecord = checked }
+                        onToggleRequested: Config.options.bar.utilButtons.showScreenRecord = !Config.options.bar.utilButtons.showScreenRecord
                     }
                     ConfigSwitch {
                         buttonIcon: "imagesmode"
                         text: Translation.tr("Wallpapers Toggle")
                         checked: Config.options.bar.utilButtons.showWallpaperToggle
-                        onCheckedChanged: { Config.options.bar.utilButtons.showWallpaperToggle = checked }
+                        onToggleRequested: Config.options.bar.utilButtons.showWallpaperToggle = !Config.options.bar.utilButtons.showWallpaperToggle
                     }
                 }
             }
@@ -441,7 +434,7 @@ ContentPage {
                 ConfigSwitch {
                     buttonIcon: "counter_1"; text: Translation.tr("Always show numbers")
                     checked: Config.options.bar.workspaces.alwaysShowNumbers
-                    onCheckedChanged: { Config.options.bar.workspaces.alwaysShowNumbers = checked; }
+                    onToggleRequested: Config.options.bar.workspaces.alwaysShowNumbers = !Config.options.bar.workspaces.alwaysShowNumbers
                 }
                 ConfigSelectionArray {
                     text: Translation.tr("Numbers style")
@@ -459,12 +452,12 @@ ContentPage {
                 ConfigSwitch {
                     buttonIcon: "award_star"; text: Translation.tr("Show app icons")
                     checked: Config.options.bar.workspaces.showAppIcons
-                    onCheckedChanged: { Config.options.bar.workspaces.showAppIcons = checked; }
+                    onToggleRequested: Config.options.bar.workspaces.showAppIcons = !Config.options.bar.workspaces.showAppIcons
                 }
                 ConfigSwitch {
                     buttonIcon: "monitor"; text: Translation.tr("Show workspaces from all monitors")
                     checked: Config.options.bar.workspaces.showAllMonitors
-                    onCheckedChanged: { Config.options.bar.workspaces.showAllMonitors = checked; }
+                    onToggleRequested: Config.options.bar.workspaces.showAllMonitors = !Config.options.bar.workspaces.showAllMonitors
                 }
                 ConfigSpinBox {
                     icon: "view_column"; text: Translation.tr("Workspaces shown")
@@ -499,13 +492,13 @@ ContentPage {
                         buttonIcon: "planner_review"
                         text: Translation.tr("CPU")
                         checked: Config.options.bar.resources.alwaysShowCpu
-                        onCheckedChanged: { Config.options.bar.resources.alwaysShowCpu = checked }
+                        onToggleRequested: Config.options.bar.resources.alwaysShowCpu = !Config.options.bar.resources.alwaysShowCpu
                     }
                     ConfigSwitch {
                         buttonIcon: "thermostat"
                         text: Translation.tr("CPU Temperature")
                         checked: Config.options.bar.resources.alwaysShowCpuTemp
-                        onCheckedChanged: { Config.options.bar.resources.alwaysShowCpuTemp = checked }
+                        onToggleRequested: Config.options.bar.resources.alwaysShowCpuTemp = !Config.options.bar.resources.alwaysShowCpuTemp
                     }
                 }
                 ConfigRow {
@@ -514,13 +507,13 @@ ContentPage {
                         buttonIcon: "memory"
                         text: Translation.tr("RAM")
                         checked: Config.options.bar.resources.alwaysShowRam
-                        onCheckedChanged: { Config.options.bar.resources.alwaysShowRam = checked }
+                        onToggleRequested: Config.options.bar.resources.alwaysShowRam = !Config.options.bar.resources.alwaysShowRam
                     }
                     ConfigSwitch {
                         buttonIcon: "monitor"
                         text: Translation.tr("GPU")
                         checked: Config.options.bar.resources.alwaysShowGpu
-                        onCheckedChanged: { Config.options.bar.resources.alwaysShowGpu = checked }
+                        onToggleRequested: Config.options.bar.resources.alwaysShowGpu = !Config.options.bar.resources.alwaysShowGpu
                     }
                 }
                 ConfigRow {
@@ -529,7 +522,7 @@ ContentPage {
                         buttonIcon: "storage"
                         text: Translation.tr("Disk")
                         checked: Config.options.bar.resources.alwaysShowDisk
-                        onCheckedChanged: { Config.options.bar.resources.alwaysShowDisk = checked }
+                        onToggleRequested: Config.options.bar.resources.alwaysShowDisk = !Config.options.bar.resources.alwaysShowDisk
                     }
                 }
                 ConfigRow {
@@ -538,19 +531,19 @@ ContentPage {
                         buttonIcon: "swap_horiz"
                         text: Translation.tr("Swap")
                         checked: Config.options.bar.resources.alwaysShowSwap
-                        onCheckedChanged: { Config.options.bar.resources.alwaysShowSwap = checked }
+                        onToggleRequested: Config.options.bar.resources.alwaysShowSwap = !Config.options.bar.resources.alwaysShowSwap
                     }
                     ConfigSwitch {
                         buttonIcon: "thermostat"
                         text: Translation.tr("GPU Temperature")
                         checked: Config.options.bar.resources.alwaysShowGpuTemp
-                        onCheckedChanged: { Config.options.bar.resources.alwaysShowGpuTemp = checked }
+                        onToggleRequested: Config.options.bar.resources.alwaysShowGpuTemp = !Config.options.bar.resources.alwaysShowGpuTemp
                     }
                     ConfigSwitch {
                         buttonIcon: "memory"
                         text: Translation.tr("VRAM")
                         checked: Config.options.bar.resources.alwaysShowVram
-                        onCheckedChanged: { Config.options.bar.resources.alwaysShowVram = checked }
+                        onToggleRequested: Config.options.bar.resources.alwaysShowVram = !Config.options.bar.resources.alwaysShowVram
                     }
                 }
                 ConfigSelectionArray {
@@ -566,7 +559,7 @@ ContentPage {
                 ConfigSwitch {
                     buttonIcon: "decimal_increase"; text: Translation.tr("Show Percentage")
                     checked: Config.options.bar.resources.showValue
-                    onCheckedChanged: { Config.options.bar.resources.showValue = checked; }
+                    onToggleRequested: Config.options.bar.resources.showValue = !Config.options.bar.resources.showValue
                 }
                 ConfigSpinBox {
                     icon: "av_timer"
@@ -611,12 +604,12 @@ ContentPage {
                 ConfigSwitch {
                     buttonIcon: "keep"; text: Translation.tr("Pin media controls")
                     checked: Config.options.bar.media.alwaysVisible
-                    onCheckedChanged: { Config.options.bar.media.alwaysVisible = checked; }
+                    onToggleRequested: Config.options.bar.media.alwaysVisible = !Config.options.bar.media.alwaysVisible
                 }
                 ConfigSwitch {
                     buttonIcon: "titlecase"; text: Translation.tr("Show only title")
                     checked: Config.options.bar.media.onlyTitle
-                    onCheckedChanged: { Config.options.bar.media.onlyTitle = checked; }
+                    onToggleRequested: Config.options.bar.media.onlyTitle = !Config.options.bar.media.onlyTitle
                 }
                 ConfigSpinBox {
                     icon: "width"
@@ -639,7 +632,7 @@ ContentPage {
                 ConfigSwitch {
                     buttonIcon: "ads_click"; text: Translation.tr("Click to show")
                     checked: Config.options.bar.tooltips.clickToShow
-                    onCheckedChanged: { Config.options.bar.tooltips.clickToShow = checked; }
+                    onToggleRequested: Config.options.bar.tooltips.clickToShow = !Config.options.bar.tooltips.clickToShow
                 }
             }
         }
@@ -654,25 +647,25 @@ ContentPage {
                     buttonIcon: "check"
                     text: Translation.tr("Enable")
                     checked: Config.options.dock.enable
-                    onCheckedChanged: { Config.options.dock.enable = checked }
+                    onToggleRequested: Config.options.dock.enable = !Config.options.dock.enable
                 }
                 ConfigSwitch {
                     buttonIcon: "background_dot_small"
                     text: Translation.tr("Background")
                     checked: Config.options.dock.showBackground
-                    onCheckedChanged: { Config.options.dock.showBackground = checked }
+                    onToggleRequested: Config.options.dock.showBackground = !Config.options.dock.showBackground
                 }
                 ConfigSwitch {
                     buttonIcon: "highlight_mouse_cursor"
                     text: Translation.tr("Hover to reveal")
                     checked: Config.options.dock.hoverToReveal
-                    onCheckedChanged: { Config.options.dock.hoverToReveal = checked }
+                    onToggleRequested: Config.options.dock.hoverToReveal = !Config.options.dock.hoverToReveal
                 }
                 ConfigSwitch {
                     buttonIcon: "push_pin"
                     text: Translation.tr("Pinned on startup")
                     checked: Config.options.dock.pinnedOnStartup
-                    onCheckedChanged: { Config.options.dock.pinnedOnStartup = checked }
+                    onToggleRequested: Config.options.dock.pinnedOnStartup = !Config.options.dock.pinnedOnStartup
                 }
             }
 
@@ -684,25 +677,25 @@ ContentPage {
                         buttonIcon: "music_note"
                         text: Translation.tr("Media Player")
                         checked: Config.options.dock.showMedia
-                        onCheckedChanged: { Config.options.dock.showMedia = checked }
+                        onToggleRequested: Config.options.dock.showMedia = !Config.options.dock.showMedia
                     }
                     ConfigSwitch {
                         buttonIcon: "keep"
                         text: Translation.tr("Show Pin Button")
                         checked: Config.options.dock.showPinButton
-                        onCheckedChanged: { Config.options.dock.showPinButton = checked }
+                        onToggleRequested: Config.options.dock.showPinButton = !Config.options.dock.showPinButton
                     }
                     ConfigSwitch {
                         buttonIcon: "apps"
                         text: Translation.tr("Show Apps Button")
                         checked: Config.options.dock.showAppsButton
-                        onCheckedChanged: { Config.options.dock.showAppsButton = checked }
+                        onToggleRequested: Config.options.dock.showAppsButton = !Config.options.dock.showAppsButton
                     }
                     ConfigSwitch {
                         buttonIcon: "colors"
                         text: Translation.tr("Tint app icons")
                         checked: Config.options.dock.monochromeIcons
-                        onCheckedChanged: { Config.options.dock.monochromeIcons = checked }
+                        onToggleRequested: Config.options.dock.monochromeIcons = !Config.options.dock.monochromeIcons
                     }
                 }
             }
