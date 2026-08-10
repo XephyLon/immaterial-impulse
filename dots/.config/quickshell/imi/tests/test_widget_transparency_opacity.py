@@ -265,7 +265,7 @@ class TheToggleReachesTheOtherPaintedSurfaces(unittest.TestCase):
         # The switch's own row, delimited by its icon and its write-back, so the
         # slice cannot drift onto a neighbouring control's `enabled:`.
         start = panels.index('buttonIcon: "blur_on"')
-        end = panels.index("Config.options.dropShelf.blurBackground = checked", start)
+        end = panels.index("onToggleRequested: Config.options.dropShelf.blurBackground", start)
         self.assertIn("enabled: Config.options.appearance.transparency.enable",
                       panels[start:end])
 
