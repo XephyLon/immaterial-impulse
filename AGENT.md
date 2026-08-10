@@ -883,6 +883,21 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   cannot reintroduce the `Loader` binding loop above. Both gates are needed; neither covers the
   other. Whenever the disabled thing is a `MouseArea`, `Control`, or anything else that redeclares
   `enabled`, check what you actually disabled with a probe rather than assuming the cascade.
+- **The disabled dim is expressed at exactly one layer, because `opacity` composites.** The
+  sibling trap to the one above: `enabled` cascading correctly is what makes it *easy* for two
+  components in the same subtree to each write `opacity: enabled ? 1 : 0.4` and produce 0.16.
+  `ConfigSwitch` is rooted on a `RippleButton`, which dims the whole control, and then repeated
+  the binding on its icon, label, description and two of its three content slots — so every
+  disabled settings row rendered at roughly a sixth opacity, and `trailingContent` (which never
+  had the second binding) sat at 0.4 half a row away from `titleContent` at 0.16. Keep the dim on
+  the layer that covers the whole control: it is the only one reaching a child with no dim of its
+  own (`StyledSwitch`'s track), and on `RippleButton` it is the binding `ExpandablePanel`'s
+  stagger is built around — the stagger animates `appear` rather than `opacity` precisely so it
+  cannot destroy it. The other settings controls (`ConfigSpinBox`, `ConfigComboBox`,
+  `ConfigTextArea`, `ConfigSelectionArray`) are rooted on a plain `RowLayout` and were already
+  correct; `ConfigSwitch` was the only doubled one. `tests/lint_disabled_opacity.py` fails any
+  `enabled`-conditioned opacity nested inside a component whose root type already dims.
+  (8f83b2e16 ("fix(widgets): a disabled ConfigSwitch dims once, not twice").)
 - **A QML property binding that calls a C++ invokable method (not a property read) will not
   re-evaluate when that method's underlying data changes.** `DesktopEntries.applications` takes a
   few seconds to populate after `qs` starts. `DragApps.qml`'s pinned-app launcher bound
