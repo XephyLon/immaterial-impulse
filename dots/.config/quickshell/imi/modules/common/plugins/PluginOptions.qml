@@ -5,6 +5,7 @@ import qs.services
 import QtQuick.Layouts
 import qs.modules.common
 import qs.modules.common.widgets
+import "gridSizes.js" as GridSizes
 
 ColumnLayout {
     id: root
@@ -71,6 +72,26 @@ ColumnLayout {
         default: manifest.desktopWidget?.followParallax !== false
     }] : []
 
+    // The size row and the drag grip are two faces of one value: both read and
+    // write the host's `__gridSize`. The grip is what makes a resize quick; the
+    // row is what makes it discoverable and reachable from the keyboard.
+    //
+    // Not every widget is resizable, and offering a size where the widget has
+    // no layout for it is worse than offering nothing - so this is omitted
+    // rather than disabled unless the manifest names more than one span.
+    readonly property var offeredSizes: GridSizes.offeredSizes(manifest.grid)
+    readonly property var sizeRows: root.offeredSizes.length > 1 ? [{
+        key: "__gridSize",
+        type: "choice",
+        label: "Size",
+        icon: "aspect_ratio",
+        default: GridSizes.formatSize(GridSizes.defaultSize(manifest.grid)),
+        choices: root.offeredSizes.map(size => ({
+            displayName: `${size.cols} × ${size.rows}`,
+            value: GridSizes.formatSize(size)
+        }))
+    }] : []
+
     Repeater {
         model: root.widgetOptions
         delegate: optionRow
@@ -96,6 +117,11 @@ ColumnLayout {
                 if (checked !== PluginState.presetPersisted(root.manifest.id))
                     PluginState.setPresetPersist(root.manifest.id, checked);
             }
+        }
+
+        Repeater {
+            model: root.sizeRows
+            delegate: optionRow
         }
 
         Repeater {

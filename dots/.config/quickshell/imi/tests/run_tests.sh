@@ -185,6 +185,12 @@ if ! python3 "$SCRIPT_DIR/test_plugin_options_sections.py"; then
     exit 1
 fi
 
+echo "Running widget size row tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_size_row.py"; then
+    echo "Widget size row tests failed."
+    exit 1
+fi
+
 echo "Running widget grid lattice tests..."
 if ! python3 "$SCRIPT_DIR/test_widget_grid_lattice.py"; then
     echo "Widget grid lattice tests failed."
