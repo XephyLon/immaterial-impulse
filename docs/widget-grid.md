@@ -130,9 +130,10 @@ covered by `tests/tst_grid_sizes.qml`):
   positions" each disarm it — the same resolved `interactionLocked` the bundled
   widgets' own grips read.
 
-Growing past the screen edge is not a new rule: the existing position clamp
-(`PluginWidget.applyPersistedPosition`) pulls the widget back inside on the next
-load, exactly as it does for a widget dragged past the edge.
+Growing past the screen edge needs no new rule: committing a span writes plugin state,
+which re-evaluates the widget's persisted position, so the existing clamp
+(`PluginWidget.applyPersistedPosition`) pulls it back inside against its *new* width -
+the same clamp that catches a widget dragged past the edge.
 
 ## Position snapping
 
