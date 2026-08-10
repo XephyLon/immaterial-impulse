@@ -179,6 +179,12 @@ if ! python3 "$SCRIPT_DIR/test_widgets_page_filters.py"; then
     exit 1
 fi
 
+echo "Running plugin options section tests..."
+if ! python3 "$SCRIPT_DIR/test_plugin_options_sections.py"; then
+    echo "Plugin options section tests failed."
+    exit 1
+fi
+
 echo "Running widget grid lattice tests..."
 if ! python3 "$SCRIPT_DIR/test_widget_grid_lattice.py"; then
     echo "Widget grid lattice tests failed."
