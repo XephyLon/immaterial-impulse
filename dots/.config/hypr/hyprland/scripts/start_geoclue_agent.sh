@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Check if GeoClue agent is already running
-if pgrep -f 'geoclue-2.0/demos/agent' > /dev/null; then
+if pgrep -f 'geoclue-2.0/demos/[a]gent' > /dev/null; then
     echo "GeoClue agent is already running."
     exit 0
 fi
