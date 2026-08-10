@@ -88,6 +88,52 @@ A desktop-widget plugin declares its span with a top-level, optional `grid` fiel
   `Widget.qml` to fill it. When `grid` is absent, the widget keeps the legacy content-sized
   behaviour (its own implicit size).
 
+## Offering more than one size
+
+A manifest may offer several spans instead of one. `cols`/`rows` stay, and become
+the **default**; the spans on offer go in an optional `sizes` array:
+
+```json
+"grid": {
+  "cols": 3, "rows": 2,
+  "sizes": [ { "cols": 3, "rows": 2 }, { "cols": 2, "rows": 2 }, { "cols": 2, "rows": 1 } ]
+}
+```
+
+The host then draws a **resize grip** in the widget's bottom-right corner, visible on
+hover: dragging it previews the nearest offered span live, releasing stores it, and
+Escape cancels back to the span the drag started from. None of that is the plugin's
+code — a manifest opts in by declaring `sizes` and writes no QML for it.
+
+The rules, all of them refusals to guess (`modules/common/plugins/gridSizes.js`,
+covered by `tests/tst_grid_sizes.qml`):
+
+- **`sizes` absent, or offering a single span, means one size and no grip.** That is
+  every plugin shipping today, which is why none of them changed.
+- **`cols`/`rows` must appear in `sizes`.** A default that is not on offer is a
+  manifest bug, and the whole list is rejected rather than honoured — honouring it
+  would resize a widget the user already placed, on upgrade, with nothing reporting
+  why. One unusable entry (a zero, a fraction, an axis above 12) rejects the list the
+  same way, for the same reason: repairing it silently offers a set of spans the
+  author never wrote.
+- **Order is the resize order**, so write them smallest-to-largest or the reverse.
+- **The chosen span is per placed widget**, stored by the host as `"<cols>x<rows>"`
+  under the reserved `__gridSize` key in `plugin-state.json`. A stored span the
+  manifest no longer offers falls back to the default rather than being honoured.
+- **`__` is the host's option-key prefix.** A manifest's `options` and the host's own
+  per-plugin state are one PluginState namespace, so a manifest declaring a
+  `__`-prefixed key would ship a settings control writing over host state. The
+  validator rejects such a manifest and `tests/lint_plugin_option_keys.py` fails the
+  suite on a bundled one.
+- **The grip honours the widget's lock.** A resize changes geometry exactly as a drag
+  does, so a pinned widget, a click-through one, and the global "Lock widget
+  positions" each disarm it — the same resolved `interactionLocked` the bundled
+  widgets' own grips read.
+
+Growing past the screen edge is not a new rule: the existing position clamp
+(`PluginWidget.applyPersistedPosition`) pulls the widget back inside on the next
+load, exactly as it does for a widget dragged past the edge.
+
 ## Position snapping
 
 Grid widgets use the **same fine 12px drag snap** every desktop widget uses (`AbstractWidget`,
@@ -117,6 +163,10 @@ The only test is `size === widgetGridSpanX(cols)` / `widgetGridSpanY(rows)`.
   cell/gap rhythm; do not fight the grid with fractional or off-rhythm sizes.
 - **Cells are wider than tall.** A "2x2" tile is 276x228, not a square. Size for the real
   cell aspect rather than assuming equal width and height.
+- **A widget offering several spans has to fill each of them.** The host swaps the pixel
+  size and nothing else, so a layout that only reads well at the largest span looks
+  broken at the smallest. Switch on the resolved span if the content needs to differ,
+  rather than scaling one layout down.
 - **The `nandoroid-*` widgets already conform.** They define this grid (media = 3x2,
   system monitor = 3x1 / 1x3, currency = 1x1 / 2x1 via their internal `sizeMode`). They are
   content-sized rather than declaring `grid`, but their pixel sizes are exactly on it, so new
@@ -139,9 +189,10 @@ implicitWidth: widgetScreen ? widgetScreen.width : Screen.width
 The manifest's `defaultWidth`/`defaultHeight` then act only as a floor (the host takes
 `Math.max(defaultWidth, content width)`). The bundled `visualizer` is the reference case.
 
-**User-resizable widgets are the other exception.** A `grid` span is a fixed pixel size the host
-assigns, so a widget the user resizes with a drag handle cannot declare one — the span would
-overwrite the dragged size on every load. Such a widget omits `grid` too, keeps its own
+**Freely-resizable widgets are the other exception.** A widget the user resizes to *any* size
+cannot declare a `grid` — the span would overwrite the dragged size on every load. (A widget
+resizing between a fixed set of spans is not this case: that is what `sizes` above is for, and
+the host stores the choice for it.) Such a widget omits `grid` too, keeps its own
 `implicitWidth`/`implicitHeight` bound to a persisted option, and writes the new value back with
 `PluginState.setOption(...)` when the drag ends. The bundled `custom-image` is the reference case:
 it also stays square, which no span can be (the cell is 132x108), and its manifest sets

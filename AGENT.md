@@ -1027,6 +1027,48 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   values. Desktop backdrop blur is also per-plugin state: a manifest opts into its default with
   `desktopWidget.blur: true`, while the generated **Blur background** option always lets the user
   override it. Do not make `PluginWidget` blur every plugin unconditionally.
+- **A manifest's option keys and the host's own per-plugin state are one namespace, so `__` is
+  reserved.** Both land in `pluginOptions[pluginId][key]` in `plugin-state.json`: the manifest's
+  declared options *and* the host's `blurEnabled`/`positionLocked`/`clickThrough`/`keepTranslucent`
+  seeds, plus `__gridSize` (the span a user resized a grid widget to). A manifest declaring a
+  `__`-prefixed key would therefore ship a settings control in Settings > Widgets that writes
+  straight over host state. `PluginValidator.js` rejects it - which is the only defence against an
+  installed third-party plugin, and silent for a bundled one, since a rejected manifest simply does
+  not appear - so `tests/lint_plugin_option_keys.py` is the half that names the file. Anything the
+  host stores per plugin from now on goes under that prefix; anything a manifest may set does not.
+  66c022fbe ("feat(plugins): reserve the `__` option-key prefix for host state").
+- **A widget's grid span is resolved, not read.** `manifest.grid` may offer several spans
+  (`grid.sizes`) with `cols`/`rows` as the default, and the resolution - stored choice, then
+  manifest default, then content-sized - lives in `modules/common/plugins/gridSizes.js` precisely
+  because it is the one testable part (`tests/tst_grid_sizes.qml`; `qmltestrunner` reaches no
+  further into this area). Two of its rules are refusals to repair a manifest, and both exist
+  because the failure is silent and lands on a widget the user already placed: a `sizes` list whose
+  entries disagree with the default, or that holds an unusable entry, is rejected whole, and a
+  stored span the manifest no longer offers falls back to the default. Read the span through
+  `PluginWidget.gridSize`, never `manifest.grid.cols` - the latter is the default, not the size on
+  screen. See `docs/widget-grid.md`. 9c4adcc5f ("feat(plugins): resolve a widget's grid span
+  through a testable module"), 494580b65 ("feat(plugins): resolve a placed widget's span from its
+  stored choice").
+- **What claims a press from a desktop widget's drag-to-move is the nesting, not
+  `preventStealing`.** The resize grip is a `MouseArea` inside `PluginWidget`, which *is* a
+  `MouseArea` (`AbstractWidget`), and a nested area takes the press - the root only ever sees what
+  no child accepted. The flag reads like the load-bearing part and is not: a `MouseArea` steals a
+  child's grab through its `drag` target, and `AbstractWidget` has had none since d2ebb5aeb
+  ("fix(widgetCanvas): compute the drag by hand - MouseArea.drag cannot track it") computed the
+  drag by hand. Measured by planting the removal and re-running the harness, not reasoned about;
+  it stays because it is one `drag.target` binding away from mattering. The corollary for a *new*
+  gesture on a widget: put it in a child area, and score the widget's position as well as its
+  effect, because "it resized" and "it resized without walking" are different results.
+  9c70ac62e ("docs(plugins): say what actually claims the grip's press").
+- **The desktop-widget host is now reachable from a test.** `WidgetResizeGripRuntimeTest.qml`
+  (driven by `tests/test_widget_resize_grip_runtime.py`, headless weston, in `run_tests.sh`) builds
+  real `PluginWidget`s on a real `WidgetCanvas` from synthetic manifests over an inert
+  `{ "type": "Item" }` node and drives them with real mouse events - the same shape as
+  `WidgetInteractionRuntimeTest.qml`. A key event, unlike a mouse event, has no explicit target:
+  `TestCase` sends it to the focused item of *its own* window, so a driver parented outside any
+  window cannot deliver one. What no such harness can answer is the background *layer surface's*
+  keyboard focus, since weston gives it no wlr-layer-shell. 2c8ccae70 ("test(widgets): drive the
+  resize grip with real mouse events").
 - **"The frost is gated on the toggle" is not "the surface is gated on the toggle."**
   `appearance.transparency.enable` removed every desktop widget's blur — `PluginWidget`'s blur
   `Repeater` reads the flag — while the widgets' panel alpha kept coming from

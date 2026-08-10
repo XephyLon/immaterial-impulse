@@ -240,8 +240,10 @@ bug in anything that qualifies:
   for `ERROR:` - not just `WARN` - before calling the change verified. See AGENT.md's "Where to look
   when something goes wrong" for the cascade format and the `pgrep -af 'qs -c imi'` caveat.
   `DesignSystemCompile.qml` (run by `run_tests.sh`, skipped without `WAYLAND_DISPLAY`) narrows this
-  for the design system, the bundled packages and every settings page - it compiles them, so a bad
-  property on a page nobody opened is caught. Everything else still needs the live load.
+  for the design system, the bundled packages, every settings page and the desktop-widget host
+  (`PluginWidget.qml`, which only compiles once a plugin is enabled on some monitor) - it compiles
+  them, so a bad property on a page nobody opened is caught. Everything else still needs the live
+  load. 494580b65 ("feat(plugins): resolve a placed widget's span from its stored choice").
 - **A new Python check must actually run.** `run_tests.sh` invokes each one as `python3 <file>`, so
   a module of bare `test_*` functions exits zero without executing anything. Either subclass
   `unittest.TestCase` with `unittest.main()`, or end the file with the `contract_runner` block
