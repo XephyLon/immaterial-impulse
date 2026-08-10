@@ -107,9 +107,9 @@ ContentPage {
                         buttonIcon: "tv_off"
                         text: Translation.tr("Enabled")
                         checked: !(monitorConfig.monitors[monitorCanvas.selectedIndex]?.disabled ?? false)
-                        onCheckedChanged: {
-                            if (checked === !(monitorConfig.monitors[monitorCanvas.selectedIndex]?.disabled ?? false)) return
-                            monitorConfig.updateMonitor(monitorCanvas.selectedIndex, { disabled: !checked })
+                        onToggleRequested: {
+                            const disabled = monitorConfig.monitors[monitorCanvas.selectedIndex]?.disabled ?? false
+                            monitorConfig.updateMonitor(monitorCanvas.selectedIndex, { disabled: !disabled })
                             monitorConfig.applyAndSave(monitorCanvas.selectedIndex)
                         }
                     }
@@ -265,10 +265,10 @@ ContentPage {
                         buttonIcon: "numbers"
                         text: Translation.tr("Numlock by default")
                         checked: Config.options.hyprland.input.numlock
-                        onCheckedChanged: {
-                            if (checked === Config.options.hyprland.input.numlock) return
-                            Config.options.hyprland.input.numlock = checked
-                            HyprlandConfig.set("input:numlock_by_default", checked ? 1 : 0)
+                        onToggleRequested: {
+                            const next = !Config.options.hyprland.input.numlock
+                            Config.options.hyprland.input.numlock = next
+                            HyprlandConfig.set("input:numlock_by_default", next ? 1 : 0)
                         }
                     }
 
@@ -320,10 +320,10 @@ ContentPage {
                         buttonIcon: "swap_vert"
                         text: Translation.tr("Natural scroll")
                         checked: Config.options.hyprland.input.touchpad.naturalScroll
-                        onCheckedChanged: {
-                            if (checked === Config.options.hyprland.input.touchpad.naturalScroll) return
-                            Config.options.hyprland.input.touchpad.naturalScroll = checked
-                            HyprlandConfig.set("input:touchpad:natural_scroll", checked ? 1 : 0)
+                        onToggleRequested: {
+                            const next = !Config.options.hyprland.input.touchpad.naturalScroll
+                            Config.options.hyprland.input.touchpad.naturalScroll = next
+                            HyprlandConfig.set("input:touchpad:natural_scroll", next ? 1 : 0)
                         }
                     }
 
@@ -331,10 +331,10 @@ ContentPage {
                         buttonIcon: "keyboard_hide"
                         text: Translation.tr("Disable while typing")
                         checked: Config.options.hyprland.input.touchpad.disableWhileTyping
-                        onCheckedChanged: {
-                            if (checked === Config.options.hyprland.input.touchpad.disableWhileTyping) return
-                            Config.options.hyprland.input.touchpad.disableWhileTyping = checked
-                            HyprlandConfig.set("input:touchpad:disable_while_typing", checked ? 1 : 0)
+                        onToggleRequested: {
+                            const next = !Config.options.hyprland.input.touchpad.disableWhileTyping
+                            Config.options.hyprland.input.touchpad.disableWhileTyping = next
+                            HyprlandConfig.set("input:touchpad:disable_while_typing", next ? 1 : 0)
                         }
                     }
 
@@ -342,10 +342,10 @@ ContentPage {
                         buttonIcon: "touch_app"
                         text: Translation.tr("Clickfinger behavior")
                         checked: Config.options.hyprland.input.touchpad.clickfingerBehavior
-                        onCheckedChanged: {
-                            if (checked === Config.options.hyprland.input.touchpad.clickfingerBehavior) return
-                            Config.options.hyprland.input.touchpad.clickfingerBehavior = checked
-                            HyprlandConfig.set("input:touchpad:clickfinger_behavior", checked ? 1 : 0)
+                        onToggleRequested: {
+                            const next = !Config.options.hyprland.input.touchpad.clickfingerBehavior
+                            Config.options.hyprland.input.touchpad.clickfingerBehavior = next
+                            HyprlandConfig.set("input:touchpad:clickfinger_behavior", next ? 1 : 0)
                         }
                     }
 
@@ -696,10 +696,10 @@ ContentPage {
                     text: Translation.tr("Blur")
                     infoText: Translation.tr("Enable kawase window background blur.")
                     checked: Config.options.hyprland.decoration.blur.enabled
-                    onCheckedChanged: {
-                        if (checked === Config.options.hyprland.decoration.blur.enabled) return
-                        Config.options.hyprland.decoration.blur.enabled = checked
-                        HyprlandConfig.set("decoration:blur:enabled", checked ? 1 : 0)
+                    onToggleRequested: {
+                        const next = !Config.options.hyprland.decoration.blur.enabled
+                        Config.options.hyprland.decoration.blur.enabled = next
+                        HyprlandConfig.set("decoration:blur:enabled", next ? 1 : 0)
                     }
                 }
 
@@ -734,10 +734,10 @@ ContentPage {
                     text: Translation.tr("Ignore Window Opacity")
                     infoText: Translation.tr("Blur behind a window even where the window itself is translucent.")
                     checked: Config.options.hyprland.decoration.blur.ignoreOpacity
-                    onCheckedChanged: {
-                        if (checked === Config.options.hyprland.decoration.blur.ignoreOpacity) return
-                        Config.options.hyprland.decoration.blur.ignoreOpacity = checked
-                        HyprlandConfig.set("decoration:blur:ignore_opacity", checked ? 1 : 0)
+                    onToggleRequested: {
+                        const next = !Config.options.hyprland.decoration.blur.ignoreOpacity
+                        Config.options.hyprland.decoration.blur.ignoreOpacity = next
+                        HyprlandConfig.set("decoration:blur:ignore_opacity", next ? 1 : 0)
                     }
                 }
 
@@ -746,10 +746,10 @@ ContentPage {
                     text: Translation.tr("Extra Optimizations")
                     infoText: Translation.tr("Enable further optimizations to the blur. Recommended.")
                     checked: Config.options.hyprland.decoration.blur.newOptimizations
-                    onCheckedChanged: {
-                        if (checked === Config.options.hyprland.decoration.blur.newOptimizations) return
-                        Config.options.hyprland.decoration.blur.newOptimizations = checked
-                        HyprlandConfig.set("decoration:blur:new_optimizations", checked ? 1 : 0)
+                    onToggleRequested: {
+                        const next = !Config.options.hyprland.decoration.blur.newOptimizations
+                        Config.options.hyprland.decoration.blur.newOptimizations = next
+                        HyprlandConfig.set("decoration:blur:new_optimizations", next ? 1 : 0)
                     }
                 }
 
@@ -758,10 +758,10 @@ ContentPage {
                     text: Translation.tr("X-Ray (Skip Tiled Windows)")
                     infoText: Translation.tr("Floating windows ignore tiled windows in their blur, so they blur the wallpaper instead.")
                     checked: Config.options.hyprland.decoration.blur.xray
-                    onCheckedChanged: {
-                        if (checked === Config.options.hyprland.decoration.blur.xray) return
-                        Config.options.hyprland.decoration.blur.xray = checked
-                        HyprlandConfig.set("decoration:blur:xray", checked ? 1 : 0)
+                    onToggleRequested: {
+                        const next = !Config.options.hyprland.decoration.blur.xray
+                        Config.options.hyprland.decoration.blur.xray = next
+                        HyprlandConfig.set("decoration:blur:xray", next ? 1 : 0)
                     }
                 }
 
@@ -840,10 +840,10 @@ ContentPage {
                     text: Translation.tr("Blur Special Workspace")
                     infoText: Translation.tr("Blur behind the special workspace. Expensive.")
                     checked: Config.options.hyprland.decoration.blur.special
-                    onCheckedChanged: {
-                        if (checked === Config.options.hyprland.decoration.blur.special) return
-                        Config.options.hyprland.decoration.blur.special = checked
-                        HyprlandConfig.set("decoration:blur:special", checked ? 1 : 0)
+                    onToggleRequested: {
+                        const next = !Config.options.hyprland.decoration.blur.special
+                        Config.options.hyprland.decoration.blur.special = next
+                        HyprlandConfig.set("decoration:blur:special", next ? 1 : 0)
                     }
                 }
 
@@ -852,10 +852,10 @@ ContentPage {
                     text: Translation.tr("Blur Popups")
                     infoText: Translation.tr("Blur popups such as right-click menus.")
                     checked: Config.options.hyprland.decoration.blur.popups
-                    onCheckedChanged: {
-                        if (checked === Config.options.hyprland.decoration.blur.popups) return
-                        Config.options.hyprland.decoration.blur.popups = checked
-                        HyprlandConfig.set("decoration:blur:popups", checked ? 1 : 0)
+                    onToggleRequested: {
+                        const next = !Config.options.hyprland.decoration.blur.popups
+                        Config.options.hyprland.decoration.blur.popups = next
+                        HyprlandConfig.set("decoration:blur:popups", next ? 1 : 0)
                     }
                 }
 
@@ -878,10 +878,10 @@ ContentPage {
                     text: Translation.tr("Blur Input Methods")
                     infoText: Translation.tr("Blur input methods, such as fcitx5.")
                     checked: Config.options.hyprland.decoration.blur.inputMethods
-                    onCheckedChanged: {
-                        if (checked === Config.options.hyprland.decoration.blur.inputMethods) return
-                        Config.options.hyprland.decoration.blur.inputMethods = checked
-                        HyprlandConfig.set("decoration:blur:input_methods", checked ? 1 : 0)
+                    onToggleRequested: {
+                        const next = !Config.options.hyprland.decoration.blur.inputMethods
+                        Config.options.hyprland.decoration.blur.inputMethods = next
+                        HyprlandConfig.set("decoration:blur:input_methods", next ? 1 : 0)
                     }
                 }
 
@@ -921,10 +921,10 @@ ContentPage {
                     buttonIcon: "check"
                     text: Translation.tr("Enable")
                     checked: Config.options.hyprland.animations.enable
-                    onCheckedChanged: {
-                        if (checked === Config.options.hyprland.animations.enable) return
-                        Config.options.hyprland.animations.enable = checked
-                        HyprlandConfig.set("animations:enabled", checked ? 1 : 0)
+                    onToggleRequested: {
+                        const next = !Config.options.hyprland.animations.enable
+                        Config.options.hyprland.animations.enable = next
+                        HyprlandConfig.set("animations:enabled", next ? 1 : 0)
                     }
                 }
                 ConfigSelectionArray {
