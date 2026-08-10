@@ -30,6 +30,9 @@ import qs.modules.imi.screenshotResult
 
 Scope {
     PanelLoader { extraCondition: !Config.options.bar.vertical; component: Bar {} }
+    // No extraCondition: the vertical bar loads the same widget files, so one
+    // overlay serves whichever bar is up.
+    PanelLoader { component: BarPopupOverlay {} }
     PanelLoader { component: Background {} }
     PanelLoader { component: Cheatsheet {} }
     PanelLoader { extraCondition: Config.options.dock.enable; component: Dock {} }

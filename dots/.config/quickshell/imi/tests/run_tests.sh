@@ -134,6 +134,16 @@ if ! python3 "$SCRIPT_DIR/lint_window_clear_color.py"; then
     exit 1
 fi
 
+# Static lint: the bar popup overlay's layer surface must keep constant
+# geometry. A bound margin or implicit size there reconfigures the surface on
+# every frame of a morph, which is the create-map-destroy loop the design exists
+# to avoid; its mask also cannot follow a transform.
+echo "Running bar popup overlay lint..."
+if ! python3 "$SCRIPT_DIR/lint_bar_popup_overlay_static.py"; then
+    echo "Bar popup overlay lint failed."
+    exit 1
+fi
+
 # Static lint: StyledText must default to PlainText and every rich-text opt-in
 # must be reviewed - manifest strings are attacker-controlled and the render
 # site is their only defence.
