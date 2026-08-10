@@ -128,8 +128,15 @@ AbstractBackgroundWidget {
     readonly property var offeredGridSizes: GridSizes.offeredSizes(rootWidget.gridSpec)
     readonly property bool gridResizable: rootWidget.offeredGridSizes.length > 1
     // Stored -> manifest default -> null, which is the content-sized path.
-    readonly property var gridSize: GridSizes.resolveSize(rootWidget.gridSpec,
+    readonly property var storedGridSize: GridSizes.resolveSize(rootWidget.gridSpec,
         manifest ? PluginState.option(manifest.id, "__gridSize") : undefined)
+    // The span the grip's drag is currently previewing, null when no resize is
+    // in flight. The widget resizes as the pointer moves, so the size on screen
+    // is the size a release commits - and Escape cancels by clearing this, with
+    // the widget falling straight back to its stored span.
+    property var previewGridSize: null
+    readonly property bool resizingGrid: previewGridSize !== null
+    readonly property var gridSize: previewGridSize ?? storedGridSize
     readonly property int gridCols: gridSize ? gridSize.cols : 0
     readonly property int gridRows: gridSize ? gridSize.rows : 0
     readonly property real gridSpanWidth: gridSize ? Appearance.sizes.widgetGridSpanX(gridCols) : 0
@@ -138,6 +145,34 @@ AbstractBackgroundWidget {
     function commitGridSize(size) {
         if (!manifest || !size) return;
         PluginState.setOption(manifest.id, "__gridSize", GridSizes.formatSize(size));
+    }
+
+    function beginGridResize() {
+        rootWidget.previewGridSize = rootWidget.storedGridSize;
+    }
+
+    // The offered spans measured in pixels, which is where Appearance's
+    // effectiveScale enters: the snap compares the dragged rectangle against
+    // what each span would actually be on this screen, not against cell counts.
+    function previewGridResize(targetWidth, targetHeight) {
+        if (!rootWidget.resizingGrid) return;
+        const nearest = GridSizes.nearestSize(rootWidget.offeredGridSizes.map(size => ({
+            cols: size.cols,
+            rows: size.rows,
+            width: Appearance.sizes.widgetGridSpanX(size.cols),
+            height: Appearance.sizes.widgetGridSpanY(size.rows)
+        })), targetWidth, targetHeight);
+        if (nearest) rootWidget.previewGridSize = nearest;
+    }
+
+    function endGridResize() {
+        const chosen = rootWidget.previewGridSize;
+        rootWidget.previewGridSize = null;
+        rootWidget.commitGridSize(chosen);
+    }
+
+    function cancelGridResize() {
+        rootWidget.previewGridSize = null;
     }
 
     configEntryName: manifest ? "plugin_" + manifest.id : "plugin_unknown"
@@ -284,6 +319,84 @@ AbstractBackgroundWidget {
         gridWidth: rootWidget.gridSpanWidth
         gridHeight: rootWidget.gridSpanHeight
         anchors.centerIn: parent
+    }
+
+    // Resize grip, for a widget whose manifest offers more than one span. It
+    // sits in the host rather than in each plugin, so a manifest opts in by
+    // declaring `grid.sizes` and writes no QML for it.
+    //
+    // Gated on the resolved lock, like the bundled widgets' own grips: a resize
+    // changes the widget's geometry exactly as a drag does, so a widget the
+    // user pinned - or the global "Lock widget positions" - must disarm both.
+    // `visible` is what disarms it, not just what hides it: Qt routes no mouse
+    // events into an invisible item (tests/test_widget_grip_lock.py).
+    Rectangle {
+        id: resizeHandle
+        z: 2
+        implicitWidth: 16
+        implicitHeight: 16
+        radius: Appearance.rounding.unsharpenslight
+        color: Appearance.colors.colOnPrimaryContainer
+        anchors {
+            right: parent.right
+            bottom: parent.bottom
+            margins: Appearance.spacing.space100
+        }
+        opacity: (rootWidget.containsMouse || resizeArea.containsMouse || rootWidget.resizingGrid)
+            ? 0.5 : 0
+        visible: opacity > 0 && rootWidget.gridResizable && !rootWidget.interactionLocked
+
+        Behavior on opacity {
+            NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration }
+        }
+
+        Keys.onEscapePressed: event => {
+            rootWidget.cancelGridResize();
+            event.accepted = true;
+        }
+
+        MouseArea {
+            id: resizeArea
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton
+            cursorShape: Qt.SizeFDiagCursor
+            // AbstractWidget's drag-to-move lives on this widget's own root
+            // MouseArea. A nested area takes the press first, and this keeps
+            // the root from stealing the grab back once the pointer moves -
+            // without it, dragging the corner walks the widget instead.
+            preventStealing: true
+
+            // The pointer is tracked in scene coordinates against its position
+            // at the press, because the grip is anchored to a widget that
+            // resizes underneath it: a delta read from this moving item would
+            // fold the resize back into the gesture.
+            property real pressSceneX: 0
+            property real pressSceneY: 0
+            property real pressWidth: 0
+            property real pressHeight: 0
+
+            onPressed: mouse => {
+                const scenePoint = resizeArea.mapToItem(null, mouse.x, mouse.y);
+                resizeArea.pressSceneX = scenePoint.x;
+                resizeArea.pressSceneY = scenePoint.y;
+                resizeArea.pressWidth = rootWidget.width;
+                resizeArea.pressHeight = rootWidget.height;
+                rootWidget.beginGridResize();
+                resizeHandle.forceActiveFocus();
+            }
+            onPositionChanged: mouse => {
+                if (!rootWidget.resizingGrid) return;
+                const scenePoint = resizeArea.mapToItem(null, mouse.x, mouse.y);
+                rootWidget.previewGridResize(
+                    resizeArea.pressWidth + scenePoint.x - resizeArea.pressSceneX,
+                    resizeArea.pressHeight + scenePoint.y - resizeArea.pressSceneY);
+            }
+            // A release after Escape commits nothing: the cancel already
+            // cleared the preview, and endGridResize has nothing to store.
+            onReleased: rootWidget.endGridResize()
+            onCanceled: rootWidget.cancelGridResize()
+        }
     }
 
 }
