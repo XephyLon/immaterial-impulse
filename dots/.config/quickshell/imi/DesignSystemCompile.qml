@@ -44,6 +44,10 @@ ShellRoot {
 
             const paths = designSystem.concat(packages).concat(settingsPages).concat([
                 Quickshell.shellPath("modules/common/plugins/PluginOptions.qml"),
+                // The desktop-widget host. It only compiles once a plugin is
+                // enabled on some monitor, so a bad property on it is invisible
+                // to a shell whose widgets are all off.
+                Quickshell.shellPath("modules/common/plugins/PluginWidget.qml"),
                 Quickshell.shellPath("modules/common/widgets/AutostartApps.qml"),
                 Quickshell.shellPath("modules/common/widgets/WallpaperSubmenu.qml"),
                 // The cheatsheet only compiles when the user presses Super+/,
