@@ -682,6 +682,26 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   publish that takes effect is the settle timer's - which is a guaranteed ~96ms of surface-up-and-
   unblurred on every open. Publish immediately *and* keep the timer. Motivated by 4a1b4f850
   ("fix(blur): stop the compositor frosting drop shadows").
+- **A window's `color` is not just a colour: an alpha of 255 permanently costs that surface its
+  blur.** `QQuickWindow::setColor()` rewrites the window's *requested surface format* whenever the
+  new colour's alpha crosses the 255 boundary - `fmt.setAlphaBufferSize(alpha < 255 ? 8 : -1)` then
+  `QWindow::setFormat(fmt)`, which still mutates `requestedFormat()` long after `create()`.
+  `QWaylandWindow::isOpaque()` is literally `window()->requestedFormat().alphaBufferSize() <= 0`,
+  and the next `setGeometry()`/`setMask()` on an opaque window publishes
+  `wl_surface.set_opaque_region` over the whole surface. **Nothing retracts it** - `setOpaqueArea()`
+  has no caller outside those two `isOpaque()` branches - and Hyprland skips blur behind a
+  client-declared opaque region. So a window colour bound to a transparency-derived token
+  (`colLayer0`) goes opaque once when `appearance.transparency.enable` is switched off and is still
+  declared opaque after it is switched back on: translucent, unblurred, until the shell is reloaded
+  and the window is rebuilt on a fresh surface. That is
+  [#143](https://github.com/XephyLon/immaterial-impulse/issues/143), and note where the fault is not
+  - the QML is fully reactive, the colour really does come back, and no log line mentions any of it.
+  Keep a window's clear colour a **literal** and paint the backdrop with a child `Rectangle`, which
+  is what every other window here already did; `tests/lint_window_clear_color.py` fails the suite on
+  a bound one. The trigger for the latching configure is easy to under-estimate: the transparency
+  toggle makes `PopupBlurThreshold` rewrite `popupBlur.lua` and `hyprctl reload` 400ms later, which
+  reconfigures every window. deba3e3f6 ("fix(settings): keep the window's clear colour constant so
+  the frost survives"), 4a99f2a8b ("test(lint): pin every window's clear colour to a literal").
 - **This whole area is invisible to the test suite.** Quickshell's plugin does not load in
   `qmltestrunner`, so `Region` cannot be constructed there and no test can see whether a region is
   empty, published, or ignored. Every bug in this section was found by looking at the screen, and
