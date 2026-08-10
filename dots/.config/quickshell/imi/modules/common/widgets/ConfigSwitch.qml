@@ -32,6 +32,13 @@ RippleButton {
     property alias trailingContent: trailingRow.data
     colBackgroundHover: "transparent"
 
+    // Nothing in here dims itself on `enabled`. RippleButton already applies the
+    // disabled opacity to this whole control - including the switch track, which
+    // has none of its own - so a second binding on the icon, the label or a
+    // content slot multiplies rather than replaces it, and the row landed at
+    // 0.4 * 0.4 = 0.16 instead of 0.4. tests/lint_disabled_opacity.py holds the
+    // line.
+
     Layout.fillWidth: true
     implicitHeight: contentItem.implicitHeight + 8 
     font.pixelSize: Appearance.font.pixelSize.small
@@ -47,7 +54,6 @@ RippleButton {
             OptionalMaterialSymbol {
                 id: iconWidget
                 icon: root.buttonIcon
-                opacity: root.enabled ? 1 : 0.4
                 iconSize: Appearance.font.pixelSize.larger
             }
             ColumnLayout {
@@ -63,13 +69,11 @@ RippleButton {
                         textFormat: Text.PlainText
                         font: root.font
                         color: Appearance.colors.colOnSecondaryContainer
-                        opacity: root.enabled ? 1 : 0.4
                     }
                     RowLayout {
                         id: titleRow
                         Layout.alignment: Qt.AlignBaseline
                         spacing: Appearance.spacing.space50
-                        opacity: root.enabled ? 1 : 0.4
                     }
                     // Keeps the label left-aligned now that it no longer fills
                     // the row itself.
@@ -83,12 +87,10 @@ RippleButton {
                     font.pixelSize: Appearance.font.pixelSize.smaller
                     color: Appearance.colors.colSubtext
                     wrapMode: Text.Wrap
-                    opacity: root.enabled ? 1 : 0.4
                 }
             }
             InfoTooltipIcon {
                 tooltipText: root.infoText
-                opacity: root.enabled ? 1 : 0.4
             }
 
             RowLayout {
@@ -114,7 +116,6 @@ RippleButton {
             Layout.topMargin: detailRow.children.length > 0
                 ? Appearance.spacing.space100 : 0
             spacing: Appearance.spacing.space50
-            opacity: root.enabled ? 1 : 0.4
         }
     }
 }
