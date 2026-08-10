@@ -10,6 +10,7 @@ import "."
 
 StyledPopup {
     id: root
+    morph: true
 
     readonly property bool showPorts: PluginState.option("docker_plugin", "showPorts", true)
 

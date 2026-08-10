@@ -45,7 +45,10 @@ def test_popups_wait_for_target_window_before_mapping():
     # and then only its visibility changes, so the pointer crossing the bar-to-
     # popup gap cannot destroy and recreate a layer-shell surface.
     assert "active: everShown" in source
-    assert "onPopupVisibleChanged: if (popupVisible) everShown = true" in source
+    assert "everShown = true" in source
+    # A click-toggled popup's widget never reports hover, so becoming visible is
+    # the only moment it can claim the shared card.
+    assert "claimSlot()" in source
     assert "visible: root.popupVisible" in source
     assert "targetHovered: hoverTarget?.containsMouse" in source
     # Map through the target's window, never the popup's own, and assign the
