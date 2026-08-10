@@ -6,11 +6,15 @@ import qs.modules.common
 // the wallpaper region directly behind this surface and blurs it, so the widget
 // reads as frosted glass over the wallpaper.
 //
-// - Static image wallpaper: load + clip the image region behind the surface.
-// - Live Wallpaper Engine wallpaper: sample the in-shell WallpaperEngineSurface
-//   (weSurfaceItem) at this surface's screen rect. WE is now drawn on the
-//   background surface itself, so the old compositor-blur handoff no longer
-//   applies - we blur the live frame ourselves.
+// Both wallpaper paths are one shape: a whole-screen item, sampled at this
+// surface's screen rect through a ShaderEffectSource.
+//
+// - Live Wallpaper Engine wallpaper: the in-shell WallpaperEngineSurface
+//   (weSurfaceItem). WE is now drawn on the background surface itself, so the
+//   old compositor-blur handoff no longer applies - we blur the live frame
+//   ourselves.
+// - Static image wallpaper: a screen-sized Image of the wallpaper, cover-fitted
+//   exactly as the desktop draws it (see wallpaperImage).
 Item {
     id: root
 
@@ -23,7 +27,7 @@ Item {
     property int blurRadius: 48
 
     // Monitor size and this surface's absolute top-left on that monitor, used to
-    // clip out exactly the wallpaper slice sitting behind the surface.
+    // sample exactly the wallpaper slice sitting behind the surface.
     property real screenWidth: 0
     property real screenHeight: 0
     property real surfaceX: 0
@@ -39,55 +43,48 @@ Item {
         radius: root.cornerRadius
     }
 
-    // ---- Live Wallpaper Engine path: sample the WE surface at our screen rect.
+    // ---- Static image path: the whole wallpaper, laid out exactly as the
+    // desktop draws it, so the slice behind this surface is just a sub-rect.
+    //
+    // Asking for the plain file - no sourceSize, no sourceClipRect, cache on -
+    // is the fix for #147, not an oversight. Those are the request parameters a
+    // QQuickPixmap cache key is built from, so the per-surface clip rect this
+    // used to carry gave every surface a key of its own, and `cache: false`
+    // stopped even identical requests from being shared: eight widgets meant
+    // sixteen full-resolution decodes of one file queued on Qt's single
+    // pixmap-reader thread, and the frost came back one widget at a time, ~0.6s
+    // apart. Sharing the key means every surface - and Background's own
+    // wallpaper Image, which asks for it the same way - waits on one decode, and
+    // a surface created after that decode is Ready in the frame it is built. It
+    // also stops a drag re-requesting the wallpaper on every pixel of travel:
+    // only the sample rect below moves now.
+    Image {
+        id: wallpaperImage
+        width: root.screenWidth
+        height: root.screenHeight
+        source: root.liveWallpaperActive ? "" : root.wallpaperUrl
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        cache: true
+        visible: false
+    }
+
+    // One sampler for both paths: the source is whole-screen either way, and
+    // the rect is where this surface sits on the monitor.
     ShaderEffectSource {
-        id: liveSample
+        id: wallpaperSample
         anchors.fill: parent
         visible: false
         live: true
         hideSource: false
-        sourceItem: root.liveWallpaperActive ? root.weSurfaceItem : null
-        sourceRect: root.liveWallpaperActive
-            ? Qt.rect(root.surfaceX, root.surfaceY, Math.max(1, root.width), Math.max(1, root.height))
-            : Qt.rect(0, 0, 0, 0)
-    }
-
-    // ---- Static image path: natural size probe + clipped cover sample.
-    Image {
-        id: wallpaperMetadata
-        source: root.liveWallpaperActive ? "" : root.wallpaperUrl
-        asynchronous: true
-        cache: false
-        visible: false
-    }
-
-    Image {
-        id: wallpaperSample
-        anchors.fill: parent
-        source: root.liveWallpaperActive ? "" : root.wallpaperUrl
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: true
-        cache: false
-        visible: false
-
-        readonly property real srcW: wallpaperMetadata.sourceSize.width
-        readonly property real srcH: wallpaperMetadata.sourceSize.height
-        readonly property real coverScale: (srcW > 0 && srcH > 0
-                && root.screenWidth > 0 && root.screenHeight > 0)
-            ? Math.max(root.screenWidth / srcW, root.screenHeight / srcH)
-            : 0
-        sourceClipRect: coverScale > 0
-            ? Qt.rect(
-                (srcW - root.screenWidth / coverScale) / 2 + root.surfaceX / coverScale,
-                (srcH - root.screenHeight / coverScale) / 2 + root.surfaceY / coverScale,
-                Math.max(1, root.width / coverScale),
-                Math.max(1, root.height / coverScale))
-            : Qt.rect(0, 0, 0, 0)
+        sourceItem: root.liveWallpaperActive ? root.weSurfaceItem : wallpaperImage
+        sourceRect: Qt.rect(root.surfaceX, root.surfaceY,
+            Math.max(1, root.width), Math.max(1, root.height))
     }
 
     FastBlur {
         anchors.fill: parent
-        source: root.liveWallpaperActive ? liveSample : wallpaperSample
+        source: wallpaperSample
         radius: root.blurRadius
         layer.enabled: true
         layer.effect: OpacityMask {
