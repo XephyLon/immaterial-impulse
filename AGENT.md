@@ -257,6 +257,12 @@ modules/common/             Shared, feature-agnostic building blocks
   Directories.qml            Singleton: XDG paths + shell-specific cache/state paths
   Icons.qml, Images.qml       Icon/image lookup helpers
   Persistent.qml              Helper for persisting fixed-schema values outside Config's JSON
+  WallpaperTransitions.qml   Singleton: the wallpaper switch transitions the shell ships, one
+                              entry per shader in modules/imi/background/shaders. The random
+                              pool, the settings combo and the desktop menu all read this
+                              rather than each keeping a copy - which is how the menu ended up
+                              offering four of eight
+                              (f5fba110c ("refactor(background): give the wallpaper transitions one catalogue"))
   plugins/                    Declarative + package-QML plugin renderer/validator/manager. It scans
                               bundled and user-installed manifests; PluginState.qml keeps dynamic
                               per-plugin, per-monitor layout in raw plugin-state.json.
@@ -266,7 +272,8 @@ modules/common/             Shared, feature-agnostic building blocks
                               StyledToolTip(+Content), RippleButton, MaterialSymbol, ResourceCard,
                               PopupToolTip, StyledPopup, GroupedList, ConfigSwitch/ConfigSpinBox/
                               ConfigSelectionArray (settings-page form controls), DockIconMotion
-                              (M3E feedback-motion wrapper for dock icons), etc.
+                              (M3E feedback-motion wrapper for dock icons), SchemePaletteCircle
+                              (a colour scheme drawn as its own palette), etc.
   functions/, models/, utils/, panels/   Supporting JS logic, list models, window-panel base classes
 
 modules/imi/                 The "imi" (Immaterial Impulse) panel family - one directory per feature:
@@ -329,6 +336,11 @@ services/                  Singletons wrapping external state/processes - one pe
                               clipboard actions. Its parser logic is kept byte-for-byte in
                               sync with a logic-only test double
                               (tests/test_phone_connect_contract.py enforces it)
+  SchemePreview.qml            Per-scheme swatches for the scheme pickers: one venv run of
+                              scripts/colors/scheme_preview.py quantizes the wallpaper once and
+                              builds every Material variant from it. Cached against the wallpaper
+                              and the dark/light mode, so refresh() is free while those hold and
+                              nothing recomputes while no picker is on screen
   Brightness.qml, Battery.qml, Hyprsunset.qml, Network.qml, BluetoothStatus.qml, TrayService.qml,
   MprisController.qml, Weather.qml, Docker.qml, ... (one per integration)
 
@@ -712,6 +724,19 @@ over-observation is free.
 If you find yourself adding a second caller to an existing hook "because it also needs to run
 then", stop: name the input that actually changed, and observe it.
 
+**A transient consumer observes by poking a cache, not by owning the producer.** The scheme
+swatch preview was a `Process` plus a debounce living inside the settings page, which is fine
+for a surface that exists for as long as the user keeps it open. Its second consumer is the
+desktop menu's Wallpaper & style submenu — created and destroyed on every hover — so neither
+option was available: copying the producer in re-quantizes a wallpaper per hover, and making
+the producer a freely-running singleton burns a venv quantize on every wallpaper change for the
+rest of the session whether or not anything is showing. `services/SchemePreview.qml` caches
+against the inputs that produced the result (`sourcePath + mode`) and exposes a `refresh()` that
+returns immediately while that key is unchanged, so a consumer coming on screen calls it
+unconditionally and pays only when it would have been wrong. That is the same "make firing cheap,
+then observe generously" gate as above, applied to a producer rather than a consumer.
+(2b5ea4ce5 ("refactor(settings): make the scheme preview reusable outside the settings page").)
+
 ## Dynamic/data-driven QML gotchas
 
 Relevant to anything that instantiates QML components from external data (JSON manifests, config
@@ -987,8 +1012,18 @@ Shared building blocks to reach for before writing something from scratch: `Styl
 `RippleButton`, `MaterialSymbol`, `ResourceCard`, `GroupedList` + `ConfigSwitch`/`ConfigSpinBox`/
 `ConfigSelectionArray`/`ConfigComboBox`/`ConfigTextArea` (settings rows), `StyledPopup`,
 `StyledRectangularShadow`, `DockIconMotion` (wraps a dock icon's visuals with hover-lift /
-press-squish / launch-bounce / appear-pop feedback, driven by `services/DockLaunchTracker`).
-All in `modules/common/widgets/`.
+press-squish / launch-bounce / appear-pop feedback, driven by `services/DockLaunchTracker`),
+`SchemePaletteCircle` (an Android 12-style palette circle for a colour scheme, fed from
+`services/SchemePreview`, with the scheme's glyph as the fallback while the colour venv has not
+answered). All in `modules/common/widgets/`.
+
+**A colour scheme is shown as its colours, not as a glyph.** The desktop menu's nine scheme
+presets were nine abstract Material Symbols sitting directly above a list of transition
+animations drawn the same way, so the grid read as more animations
+([#142](https://github.com/XephyLon/immaterial-impulse/issues/142)). A preset's colours cannot be
+known without running the quantize — that is what `SchemePreview` is for — so the glyph stays as
+the fallback rather than as the design.
+(782be8329 ("feat(desktopMenu): draw each scheme preset as the palette it produces").)
 
 `ConfigTextArea` is the text-entry counterpart to `ConfigSwitch` (icon + label/description on the
 left, a bordered `TextArea` field on the right) and is the standard single-line settings field -
