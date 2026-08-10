@@ -105,6 +105,27 @@ hover: dragging it previews the nearest offered span live, releasing stores it, 
 Escape cancels back to the span the drag started from. None of that is the plugin's
 code — a manifest opts in by declaring `sizes` and writes no QML for it.
 
+It also draws a **Size row** in Settings > Widgets, under "Widget behaviour". The row
+and the grip are two faces of one value, not two settings: both read and write
+`__gridSize`, and the row's chips are spelled by `gridSizes.formatSize` so there is one
+string format rather than two. The grip is what makes a resize quick; the row is what
+makes it discoverable and reachable from the keyboard. The row is **omitted** — not
+shown disabled — for a manifest naming a single span.
+
+**Only declare `sizes` for a widget that has a design per size.** Most widgets have one
+layout, and the host swaps the pixel size and nothing else: offering a span a widget has
+no layout for is worse than offering no choice at all. `nandoroid-weather` (1x1 / 2x1 /
+3x1) and `nandoroid-currency` (1x1 / 2x1) qualify because each span is a different
+layout inside the widget; nothing else bundled does.
+
+Such a widget reads the resolved span back from the host as `hostGridSize`
+(`"<cols>x<rows>"`, declared as a `property string` on its `Widget.qml` root and bound
+by `PluginNode`), and switches its layout on it. **The host owns which size a widget is;
+the widget owns what that size looks like.** It tracks the grip's live preview, so a
+drag reshapes the content as it goes rather than on release. A widget must not persist a
+size of its own alongside this — that is what `sizeMode` was, and it is retired
+(db3a7d009 ("refactor(plugins): retire sizeMode in favour of the host's __gridSize")).
+
 The rules, all of them refusals to guess (`modules/common/plugins/gridSizes.js`,
 covered by `tests/tst_grid_sizes.qml`):
 
@@ -129,6 +150,17 @@ covered by `tests/tst_grid_sizes.qml`):
   does, so a pinned widget, a click-through one, and the global "Lock widget
   positions" each disarm it — the same resolved `interactionLocked` the bundled
   widgets' own grips read.
+- **`Array.isArray(manifest.grid.sizes)` is not the test, and assuming it was made
+  this whole feature inert.** A JS array reaching a delegate through a `Repeater`'s
+  `model` has crossed into QVariant and back: its indices and `length` survive,
+  `Array.isArray` does not. `Background.qml` builds every desktop widget from exactly
+  such a model, so a manifest declaring three spans arrived at the host offering one —
+  no grip, no row, no error. `gridSizes.asSizeList` accepts anything array-*like* (and
+  still rejects a number, a string or a plain object, so a malformed `sizes` cannot be
+  read as an empty list of spans). The reason nobody saw it: the runtime harness
+  declared its synthetic manifests inline on the harness root, a path that never
+  crosses a model, so it now also builds one widget through a `Repeater`.
+  109e6d897 ("fix(plugins): a manifest's grid.sizes survives the model boundary").
 
 Growing past the screen edge needs no new rule: committing a span writes plugin state,
 which re-evaluates the widget's persisted position, so the existing clamp
@@ -169,10 +201,12 @@ The only test is `size === widgetGridSpanX(cols)` / `widgetGridSpanY(rows)`.
   broken at the smallest. Switch on the resolved span if the content needs to differ,
   rather than scaling one layout down.
 - **The `nandoroid-*` widgets already conform.** They define this grid (media = 3x2,
-  system monitor = 3x1 / 1x3, currency = 1x1 / 2x1 via their internal `sizeMode`). They are
-  content-sized rather than declaring `grid`, but their pixel sizes are exactly on it, so new
-  `grid` widgets tile flush beside them. `clock` is exempt by decision: its shape places neatly
-  without a span, so it stays content-sized behind `defaultWidth`/`defaultHeight`.
+  system monitor = 3x1 / 1x3). Media and the system monitor are content-sized rather than
+  declaring `grid`, but their pixel sizes are exactly on it, so new `grid` widgets tile
+  flush beside them; weather (1x1 / 2x1 / 3x1) and currency (1x1 / 2x1) declare
+  `grid.sizes` and take their size from the host. `clock` is exempt by decision: its shape
+  places neatly without a span, so it stays content-sized behind
+  `defaultWidth`/`defaultHeight`.
 
 ## Widgets that cannot use the grid
 
@@ -210,6 +244,22 @@ literal, and `tests/test_widget_grid_lattice.py` enforces exactly that, with the
 named in one place. A manifest's `defaultWidth`/`defaultHeight` floor is a size too: make it
 the smallest span the widget can actually take, or the floor pins the widget off-grid no
 matter what the QML says.
+
+**A widget-owned `sizeMode` is not the same thing as the retired manifest option, and a
+migration keyed on the name alone destroys it.** `world-clock` and `calendar` declare no
+`grid` and drive a `sizeMode` of their own from their own toggles, so for them the key is
+a live setting; weather and currency declared one as a manifest *option*, which is what
+`__gridSize` took over. The `sizeMode` → `__gridSize` migration therefore acts only where
+the manifest offers more than one span — measured against a real shell, a pass keyed on
+the key name emptied world-clock's and calendar's options and reset both widgets, which is
+the migration's own failure mode aimed at the wrong widgets. The migration maps the stored
+value onto `__gridSize` (dropping a mode the manifest does not offer, exactly as
+`resolveSize` refuses a stored span no longer on offer), deletes the old key so it is
+idempotent on its own, and is marked done under `migrations.migratedSizeMode` in
+`plugin-state.json`. It is driven by `PluginManager` on a settle timer rather than fired
+on the first non-empty manifest list, because a marker records that a pass *ran*, not
+that it saw anything, and manifests load one FileView at a time.
+db3a7d009 ("refactor(plugins): retire sizeMode in favour of the host's __gridSize").
 
 **Name a size mode after the shape it really is.** `world-clock`'s wide mode was called `"4x1"`
 while being 420px — which is `spanX(3)`, three columns — and `calendar`'s was `"1x2"` while
