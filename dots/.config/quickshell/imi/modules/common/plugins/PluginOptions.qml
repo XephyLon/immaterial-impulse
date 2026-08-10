@@ -38,6 +38,16 @@ ColumnLayout {
         label: "Click through",
         icon: "do_not_touch",
         default: manifest.desktopWidget?.clickThrough === true
+    }, {
+        // Turning transparency off makes every desktop widget's panel fully
+        // opaque (PluginState.effectiveBackgroundOpacity). This is the escape
+        // hatch for a widget whose whole point is to be see-through, and it is
+        // the only way to undo a manifest that ships the exemption on.
+        key: "keepTranslucent",
+        type: "boolean",
+        label: "Stay translucent",
+        icon: "opacity",
+        default: manifest.desktopWidget?.keepTranslucent === true
     }] : []).concat(manifest.options || [])
 
     // Not a pluginOption on purpose: preset application replaces those, and

@@ -245,8 +245,9 @@ class TheSettingsSideExists(unittest.TestCase):
         """
         rows = self.src[self.src.index("readonly property var optionRows"):]
         rows = rows[:rows.index("Not a pluginOption on purpose")]
-        self.assertEqual(rows.count('type: "boolean"'), 3,
-                         "blur, lock and click-through are all boolean rows")
+        self.assertEqual(rows.count('type: "boolean"'), 4,
+                         "blur, lock, click-through and stay-translucent are "
+                         "all boolean rows")
 
     def test_the_rows_are_desktop_widget_only(self):
         """A bar-only plugin has no draggable surface, so these are as dead
@@ -265,7 +266,7 @@ class TheManifestFieldsAreValidated(unittest.TestCase):
         line - so the check has to name the field it rejected.
         """
         src = VALIDATOR.read_text(encoding="utf-8")
-        self.assertIn('const desktopFlags = ["blur", "locked", "clickThrough"]', src)
+        self.assertIn('const desktopFlags = ["blur", "locked", "clickThrough",', src)
         self.assertIn('" must be a boolean"', src)
 
 
