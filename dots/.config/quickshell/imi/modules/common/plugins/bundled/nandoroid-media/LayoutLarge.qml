@@ -12,8 +12,7 @@ Item {
 
     Expressive.DesktopMediaWidget {
         id: content
-        width: implicitWidth
-        height: implicitHeight
+        anchors.fill: parent
         showLyrics: PluginState.option("nandoroid_media", "showLyrics", false)
         useRomaji: PluginState.option("nandoroid_media", "useRomaji", false)
         useBlurBackground: PluginState.option("nandoroid_media", "blurEnabled", false)

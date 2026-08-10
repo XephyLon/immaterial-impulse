@@ -6,5 +6,9 @@
     { "key": "showLyrics", "type": "boolean", "label": "Enable lyrics view", "icon": "lyrics", "default": false },
     { "key": "useRomaji", "type": "boolean", "label": "Prefer romaji lyrics", "icon": "translate", "default": false }
   ],
+  "grid": {
+    "cols": 3, "rows": 2,
+    "sizes": [ { "cols": 3, "rows": 2 }, { "cols": 2, "rows": 2 }, { "cols": 2, "rows": 1 } ]
+  },
   "desktopWidget": { "component": "Widget.qml", "blur": false }
 }
