@@ -174,18 +174,3 @@ function drawnFromPlacement(placement, cancel) {
 function placementFromDrawn(drawn, cancel) {
     return number(drawn, 0) - number(cancel, 0);
 }
-
-// The drag's snap lattice, applied in the frame the position is stored in.
-//
-// The lattice exists so widgets line up with each other, and they line up at
-// rest - so it belongs to the placement frame. Snapping the drawn coordinate
-// instead leaves an opted-out widget's *placement* off the lattice by whatever
-// fraction the pan happened to be holding, which is how an x of
-// 95.04000000000033 reached disk: 0.04 is the tail of a live canvas offset.
-// Returns a drawn coordinate, because that is what the drag writes.
-function snapPlacement(drawn, cancel, gridSize) {
-    const grid = number(gridSize, 0);
-    if (grid <= 0) return number(drawn, 0);
-    const placement = placementFromDrawn(drawn, cancel);
-    return drawnFromPlacement(Math.round(placement / grid) * grid, cancel);
-}

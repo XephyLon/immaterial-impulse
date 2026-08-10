@@ -135,6 +135,35 @@ class TheHostCancelsRatherThanOffsets(unittest.TestCase):
             2, base.count("enabled: root.animatePosition && !root.dragging"),
             "both position Behaviors have to honour it, or one axis still freezes")
 
+    def test_the_drag_lattice_is_applied_in_the_frame_the_position_is_stored_in(self):
+        """Snapping the drawn coordinate leaves the *placement* off the
+        lattice by the pan's own fraction - a real store holds 95.04000000000033.
+        """
+        self.assertIn("snapOffsetX: rootWidget.parallaxCancelX", self.host)
+        self.assertIn("snapOffsetY: rootWidget.parallaxCancelY", self.host)
+        base = squashed(BASE_WIDGET)
+        self.assertIn("root.snapEnabled ? root.snapX(dragProxy.x)", base)
+        self.assertIn("root.snapEnabled ? root.snapY(dragProxy.y)", base)
+        self.assertIn(
+            "function snapX(value) { return root.snap(value - root.snapOffsetX) "
+            "+ root.snapOffsetX }", base)
+
+    def test_the_lattice_itself_stays_inside_the_base(self):
+        """The host hands in an offset and never does the snap itself.
+
+        `gridSize` is shadowed here - PluginWidget declares its own, the
+        component-grid span a manifest offers - so a snap written in this file
+        reads `{"cols": 2, "rows": 1}` where it wants 12, produces no lattice
+        at all, and nothing warns. That shipped for one commit.
+        """
+        self.assertNotRegex(self.host, r"function snap[XY]\s*\(")
+        self.assertNotRegex(self.host, r"Math\.round\([^)]*rootWidget\.gridSize")
+        base = squashed(BASE_WIDGET)
+        self.assertIn("property bool animatePosition: true", base)
+        self.assertEqual(
+            2, base.count("enabled: root.animatePosition && !root.dragging"),
+            "both position Behaviors have to honour it, or one axis still freezes")
+
 
 class TheSettingsSideExists(unittest.TestCase):
     """A persisted option with no UI silently does nothing (CONTRIBUTING:

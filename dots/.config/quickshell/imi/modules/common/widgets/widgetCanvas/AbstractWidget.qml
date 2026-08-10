@@ -143,6 +143,24 @@ MouseArea {
         return Math.round(value / root.gridSize) * root.gridSize
     }
 
+    // The drag snaps through these, so a subclass whose x/y are not the
+    // coordinate it stores can move the lattice into the frame it means
+    // something in. Per axis because that offset is per axis (PluginWidget:
+    // the desktop pans x and y by different amounts, and usually only one of
+    // them at all).
+    //
+    // The subclass hands in an offset rather than doing the snap itself,
+    // because the lattice is not reachable from a subclass: `gridSize` is
+    // shadowed - PluginWidget declares its own, the component-grid span a
+    // manifest offers - so a snap written there reads `{"cols":2,"rows":1}`
+    // where it wants 12 and silently produces no lattice at all. Measured:
+    // `snap(100)` is 96 from in here and the same widget's `gridSize` is that
+    // object from out there. Nothing warns.
+    property real snapOffsetX: 0
+    property real snapOffsetY: 0
+    function snapX(value) { return root.snap(value - root.snapOffsetX) + root.snapOffsetX }
+    function snapY(value) { return root.snap(value - root.snapOffsetY) + root.snapOffsetY }
+
     function findCanvas(item) {
         var p = item
         while (p) {
@@ -182,7 +200,7 @@ MouseArea {
         target: root
         property: "x"
         value: Math.max(root.groupDragMinX, Math.min(root.groupDragMaxX,
-            root.snapEnabled ? root.snap(dragProxy.x) : dragProxy.x))
+            root.snapEnabled ? root.snapX(dragProxy.x) : dragProxy.x))
         when: root.dragging
         restoreMode: Binding.RestoreNone
     }
@@ -190,7 +208,7 @@ MouseArea {
         target: root
         property: "y"
         value: Math.max(root.groupDragMinY, Math.min(root.groupDragMaxY,
-            root.snapEnabled ? root.snap(dragProxy.y) : dragProxy.y))
+            root.snapEnabled ? root.snapY(dragProxy.y) : dragProxy.y))
         when: root.dragging
         restoreMode: Binding.RestoreNone
     }
