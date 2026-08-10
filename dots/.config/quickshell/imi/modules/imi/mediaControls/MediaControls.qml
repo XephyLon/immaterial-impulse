@@ -4,6 +4,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
+import qs.modules.common.plugins.designsystem.services
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -77,27 +78,14 @@ Scope {
         return filtered;
     }
 
-    Process {
-        id: cavaProc
-        running: (GlobalStates.mediaControlsOpen ||
-            GlobalStates.sidebarRightOpen || 
-            Config.options.bar.layouts.leftLayout.includes("visualizer") ||
-            Config.options.bar.layouts.middleLayout.includes("visualizer") ||
-            Config.options.bar.layouts.rightLayout.includes("visualizer") ||
-            Config.options.plugins.enabled.includes("visualizer"))
-            && MprisController.activePlayer !== null
-        onRunningChanged: {
-            if (!cavaProc.running) {
-                GlobalStates.visualizerPoints = [];
-            }
-        }
-        command: ["cava", "-p", `${FileUtils.trimFileProtocol(Directories.scriptPath)}/cava/raw_output_config.txt`]
-        stdout: SplitParser {
-            onRead: data => {
-                let points = data.split(";").map(p => parseFloat(p.trim())).filter(p => !isNaN(p));
-                GlobalStates.visualizerPoints = points;
-            }
-        }
+    // The cava process used to live here, gated on an expression naming every
+    // surface that might want bands - this popup, the right sidebar, a bar
+    // layout entry, a desktop plugin - which is how a widget written against
+    // CavaService could increment a reference count nothing consulted. The
+    // process is CavaService's now and each of those surfaces holds its own
+    // claim; this one is the media popup's.
+    CavaRef {
+        active: GlobalStates.mediaControlsOpen
     }
 
     Loader {
@@ -195,7 +183,8 @@ Scope {
                     delegate: Player {
                         required property MprisPlayer modelData
                         player: modelData
-                        visualizerPoints: GlobalStates.visualizerPoints  
+                        visualizerPoints: CavaService.values
+                        maxVisualizerValue: CavaService.maxValue
                         implicitWidth: root.widgetWidth
                         implicitHeight: showLyrics ? 290 : Appearance.sizes.mediaControlsHeight
                         radius: root.popupRounding

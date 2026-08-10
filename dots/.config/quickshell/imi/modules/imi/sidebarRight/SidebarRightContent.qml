@@ -3,6 +3,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
+import qs.modules.common.plugins.designsystem.services
 import Quickshell.Services.Mpris
 import Qt5Compat.GraphicalEffects
 import QtQuick
@@ -357,6 +358,7 @@ Item {
             }
 
             Loader {
+                id: mediaPlayerLoader
                 active: root.activePlayer !== null && GlobalStates.sidebarRightOpen && Config.options.sidebar.mediaPlayer
                 visible: active
                 Layout.fillWidth: true
@@ -366,10 +368,19 @@ Item {
                 Layout.rightMargin: -Appearance.spacing.space150
                 sourceComponent: Player {
                     player: root.activePlayer
-                    visualizerPoints: GlobalStates.visualizerPoints
+                    visualizerPoints: CavaService.values
+                    maxVisualizerValue: CavaService.maxValue
                     implicitHeight: 160
                     radius: Appearance.rounding.normal
                 }
+            }
+
+            // The sidebar's claim on cava. Narrower than the "sidebar is open"
+            // term it replaces: with the media player row switched off, or no
+            // player at all, this panel shows no bands and does not ask for
+            // any.
+            CavaRef {
+                active: mediaPlayerLoader.active
             }
 
             CenterWidgetGroup {
