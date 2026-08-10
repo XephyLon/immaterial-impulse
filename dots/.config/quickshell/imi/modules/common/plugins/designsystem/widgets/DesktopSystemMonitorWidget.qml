@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import qs.modules.common
+import qs.modules.common.plugins
 import qs.modules.common.functions as Functions
 import qs.services
 import "../services"
@@ -13,7 +14,10 @@ Item {
     // Read orientation from config
     property bool isVertical: Config.ready ? Config.options.appearance.systemMonitor.vertical : false
     property bool useBlurBackground: false
-    property real backgroundOpacity: 0.1
+    // The host wrapper overrides this with its own plugin id; the fallback keeps
+    // the toggle honoured for a component instantiated without one.
+
+    property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("", 0.1)
     property bool interactive: true
     // Injected by the plugin wrapper. False keeps the upstream nandoroid
     // rendering, so a host that knows nothing about this flag is unchanged.

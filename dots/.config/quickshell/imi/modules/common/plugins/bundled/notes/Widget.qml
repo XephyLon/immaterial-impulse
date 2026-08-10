@@ -17,7 +17,7 @@ Rectangle {
     // blurs the wallpaper region behind us, and this card supplies the tint on
     // top. With no custom blurRegions the host frosts the whole card.
     readonly property bool blurEnabled: PluginState.option("notes", "blurEnabled", false)
-    readonly property real backgroundOpacity: Config.options.plugins.blurOpacity
+    readonly property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("notes")
     readonly property bool managesBlurTint: true
 
     // "list" | "edit". The card flips between the two rather than growing a

@@ -24,7 +24,7 @@ Item {
     // `verylarge`), which would leave blurred slivers outside the four corners.
     // Naming the card is the only way to hand the host the radius it has.
     readonly property bool blurEnabled: PluginState.option("calendar", "blurEnabled", false)
-    readonly property real backgroundOpacity: Config.options.plugins.blurOpacity
+    readonly property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("calendar")
     readonly property bool managesBlurTint: true
     readonly property var blurRegions: [
         {

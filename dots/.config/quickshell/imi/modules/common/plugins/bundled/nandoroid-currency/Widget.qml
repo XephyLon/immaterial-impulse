@@ -1,5 +1,4 @@
 import QtQuick
-import qs.modules.common
 import qs.modules.common.plugins
 import "../../designsystem/widgets" as Expressive
 import "../../designsystem/services" as ExpressiveServices
@@ -30,7 +29,7 @@ Item {
         height: implicitHeight
         sizeMode: PluginState.option("nandoroid_currency", "sizeMode", "2x1")
         useBlurBackground: PluginState.option("nandoroid_currency", "blurEnabled", false)
-        backgroundOpacity: Config.options.plugins.blurOpacity
+        backgroundOpacity: PluginState.effectiveBackgroundOpacity("nandoroid_currency")
         onBaseCurrencyRequested: value => PluginState.setOption("nandoroid_currency", "baseCurrency", value)
         onQuoteCurrencyRequested: (index, value) => PluginState.setOption("nandoroid_currency", `quote${index}`, value)
         onSizeModeRequested: value => PluginState.setOption("nandoroid_currency", "sizeMode", value)

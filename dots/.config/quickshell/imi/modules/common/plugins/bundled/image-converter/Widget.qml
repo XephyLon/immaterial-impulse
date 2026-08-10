@@ -15,7 +15,7 @@ Rectangle {
     // blurs the wallpaper region behind us, and this card supplies the tint on
     // top. With no custom blurRegions the host frosts the whole card.
     readonly property bool blurEnabled: PluginState.option("image-converter", "blurEnabled", false)
-    readonly property real backgroundOpacity: Config.options.plugins.blurOpacity
+    readonly property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("image-converter")
     readonly property bool managesBlurTint: true
 
     property list<var> formatOptions: [

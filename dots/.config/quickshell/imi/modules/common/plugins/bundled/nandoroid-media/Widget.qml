@@ -1,5 +1,4 @@
 import QtQuick
-import qs.modules.common
 import qs.modules.common.plugins
 import "../../designsystem/widgets" as Expressive
 
@@ -17,6 +16,6 @@ Item {
         showLyrics: PluginState.option("nandoroid_media", "showLyrics", false)
         useRomaji: PluginState.option("nandoroid_media", "useRomaji", false)
         useBlurBackground: PluginState.option("nandoroid_media", "blurEnabled", false)
-        backgroundOpacity: Config.options.plugins.blurOpacity
+        backgroundOpacity: PluginState.effectiveBackgroundOpacity("nandoroid_media")
     }
 }

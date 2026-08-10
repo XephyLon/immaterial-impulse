@@ -24,7 +24,7 @@ Item {
     // which would leave frosted slivers outside the four corners. Naming the
     // card is the only way to hand the host its actual radius.
     readonly property bool blurEnabled: PluginState.option("world-clock", "blurEnabled", false)
-    readonly property real backgroundOpacity: Config.options.plugins.blurOpacity
+    readonly property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("world-clock")
     readonly property bool managesBlurTint: true
     readonly property var blurRegions: [
         { x: contentRect.x, y: contentRect.y, width: contentRect.width,
