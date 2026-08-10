@@ -65,7 +65,20 @@ Scope {
                 // Overlay layer only while special workspace sits on top of a fullscreen window on this monitor,
                 // else Top layer so fullscreen apps cover the bar as normal (Hyprland buries Top layer under fullscreen+special).
                 WlrLayershell.layer: (monitorHasFullscreen && monitorHasSpecialOpen) ? WlrLayer.Overlay : WlrLayer.Top
-                implicitHeight: Appearance.sizes.barHeight + Appearance.rounding.screenRounding
+                // A detached bar style (cornerStyle 3) holds the surface off the
+                // screen edge by barDetachMargin. That gap is not part of the
+                // surface, so with auto-hide on it is a band the pointer can
+                // never reach: the reveal strip lives *inside* the window, and
+                // hovering the gap reaches whatever is behind it instead. It
+                // also made hiding look wrong - the bar slid up inside a
+                // surface that already started below the edge, so the gap above
+                // it never moved.
+                //
+                // While auto-hide is on the surface takes the edge and the
+                // content carries the gap instead, which looks identical and
+                // costs no surface reconfiguration.
+                readonly property real detachInset: Appearance.sizes.barDetachInset
+                implicitHeight: Appearance.sizes.barHeight + Appearance.rounding.screenRounding + detachInset
                 // When Overlay-layer, bar shares a layer with the screen-corner click zones (ScreenCorners.qml)
                 // and same-layer overlap is resolved by stacking, not layer priority - bar was winning and
                 // swallowing the tiny corner-open hit rects. Carve them out of the bar's own mask so clicks
@@ -268,7 +281,8 @@ Scope {
                             left: parent.left
                             top: parent.top
                             bottom: undefined
-                            topMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -Appearance.sizes.barHeight : 0
+                            topMargin: (Config?.options.bar.autoHide.enable && !mustShow)
+                                ? -Appearance.sizes.barHeight : barRoot.detachInset
                             bottomMargin: (Config.options.interactions.deadPixelWorkaround.enable && barRoot.anchors.bottom) * -1
                             rightMargin: (Config.options.interactions.deadPixelWorkaround.enable && barRoot.anchors.right) * -1
                         }
@@ -294,7 +308,8 @@ Scope {
                             PropertyChanges {
                                 target: barContent
                                 anchors.topMargin: 0
-                                anchors.bottomMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -Appearance.sizes.barHeight : 0
+                                anchors.bottomMargin: (Config?.options.bar.autoHide.enable && !mustShow)
+                                    ? -Appearance.sizes.barHeight : barRoot.detachInset
                             }
                         }
                     }

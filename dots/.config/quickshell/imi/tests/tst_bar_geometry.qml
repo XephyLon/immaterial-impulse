@@ -15,17 +15,20 @@ TestCase {
     property int savedCornerStyle: 0
     property bool savedBottom: false
     property bool savedDeadPixel: false
+    property bool savedAutoHide: false
 
     function initTestCase() {
         savedCornerStyle = Config.options.bar.cornerStyle;
         savedBottom = Config.options.bar.bottom;
         savedDeadPixel = Config.options.interactions.deadPixelWorkaround.enable;
+        savedAutoHide = Config.options.bar.autoHide.enable;
     }
 
     function cleanupTestCase() {
         Config.options.bar.cornerStyle = savedCornerStyle;
         Config.options.bar.bottom = savedBottom;
         Config.options.interactions.deadPixelWorkaround.enable = savedDeadPixel;
+        Config.options.bar.autoHide.enable = savedAutoHide;
     }
 
     // BarGroup.qml paints its background inset by the edge-side margin at the
@@ -103,6 +106,59 @@ TestCase {
         Config.options.bar.bottom = true;
         compare(Appearance.sizes.barStandalonePillOffset, -top,
                 "the shift must follow the bar to the other monitor edge");
+    }
+
+    // A detached bar style holds the surface off the screen edge. With auto-hide
+    // on that gap is not a gap - it is a band of the screen the bar's surface
+    // does not cover, and the reveal strip lives inside the surface. Hovering it
+    // reached whatever was behind the bar, so an auto-hidden detached bar could
+    // not be brought back from the very edge at all; and hiding looked wrong,
+    // because the bar slid up inside a surface that already began below the
+    // edge, leaving the band above it untouched.
+    //
+    // The gap has to survive - it is the style - so it moves from the surface's
+    // margin to an inset on the content. These two therefore always sum to the
+    // gap, whichever side is carrying it.
+    function test_autoHideMovesTheDetachGapOffTheSurface() {
+        Config.options.bar.bottom = false;
+        Config.options.interactions.deadPixelWorkaround.enable = false;
+        for (const style of cornerStyles) {
+            Config.options.bar.cornerStyle = style;
+            const gap = Appearance.sizes.barDetachGap;
+
+            Config.options.bar.autoHide.enable = false;
+            compare(Appearance.sizes.barDetachInset, 0,
+                    "nothing is inset while the surface keeps the gap, cornerStyle " + style);
+            compare(Appearance.sizes.barDetachMargin, gap,
+                    "the surface carries the whole gap, cornerStyle " + style);
+
+            Config.options.bar.autoHide.enable = true;
+            compare(Appearance.sizes.barDetachMargin, 0,
+                    "an auto-hidden bar's surface must reach the edge, cornerStyle " + style);
+            compare(Appearance.sizes.barDetachInset, gap,
+                    "the content must take on the gap the surface gave up, cornerStyle " + style);
+            compare(Appearance.sizes.barDetachMargin + Appearance.sizes.barDetachInset, gap,
+                    "the gap changed size instead of moving, cornerStyle " + style);
+
+            // Every later test in this case reads these same tokens, and
+            // auto-hide changes what they mean.
+            Config.options.bar.autoHide.enable = false;
+        }
+    }
+
+    // The bottom margin falls through to the detach margin on a top bar, so it
+    // inherits the move rather than needing its own rule - and must not go
+    // negative doing it.
+    function test_theBottomMarginFollowsTheDetachMargin() {
+        Config.options.bar.bottom = false;
+        Config.options.interactions.deadPixelWorkaround.enable = false;
+        Config.options.bar.cornerStyle = m3CornerStyle;
+        Config.options.bar.autoHide.enable = true;
+        compare(Appearance.sizes.barBottomMargin, Appearance.sizes.barDetachMargin,
+                "a top bar's bottom margin must still track the detach margin");
+        verify(Appearance.sizes.barBottomMargin >= 0,
+               "the surface must not be pulled off the opposite edge");
+        Config.options.bar.autoHide.enable = false;
     }
 
     // Bar.qml's `margins.bottom` used to read
