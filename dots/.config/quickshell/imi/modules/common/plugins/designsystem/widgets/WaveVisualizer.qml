@@ -6,8 +6,8 @@ import "../services"
 Canvas {
     id: root
 
-    property list<int> points: CavaService.values
-    property real maxVisualizerValue: 1000
+    property list<real> points: CavaService.values
+    property real maxVisualizerValue: CavaService.maxValue
     property int smoothing: 3
     property color color: Appearance.colors.colPrimary
     property real opacityMultiplier: 0.25

@@ -1,6 +1,7 @@
 import QtQuick
 import qs.services
 import "../services"
+import "../../../functions/cavaBands.js" as CavaBands
 import qs.modules.common
 
 Canvas {
@@ -27,26 +28,27 @@ Canvas {
 
     onBarCountChanged: root._initArrays(barCount)
 
-    Component.onCompleted: {
-        CavaService.refCount++
-        root._initArrays(barCount)
-    }
-    Component.onDestruction: CavaService.refCount--
+    Component.onCompleted: root._initArrays(barCount)
+
+    CavaRef {}
 
     Connections {
         target: CavaService
         function onValuesChanged() {
-            var vals = CavaService.values
+            // The producer's band count is not this widget's: reshape rather
+            // than reading the first `barCount` of them, which left every bar
+            // past the producer's count frozen and, at a lower count, hid the
+            // top of the spectrum entirely.
+            var levels = CavaBands.bands(CavaService.values, root.barCount, CavaService.maxValue)
             var t = root._targets
-            var n = Math.min(vals.length, root.barCount)
-            for (var i = 0; i < n; i++)
-                t[i] = Math.min(root.maxHeight, Math.max(1.5 * Appearance.effectiveScale, (vals[i] / 1000) * root.maxHeight))
+            for (var i = 0; i < root.barCount; i++)
+                t[i] = Math.min(root.maxHeight, Math.max(1.5 * Appearance.effectiveScale, levels[i] * root.maxHeight))
         }
     }
 
     Timer {
         interval: 16
-        running: root.visible && CavaService.refCount > 0
+        running: root.visible && CavaService.active
         repeat: true
         onTriggered: {
             var h = root._heights
