@@ -2,10 +2,11 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell.Io
 import Quickshell.Services.Mpris
-import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.common.plugins.designsystem.services
+import "../../common/functions/cavaBands.js" as CavaBands
 
 Item {
     id: root
@@ -14,14 +15,23 @@ Item {
     property bool mirrored: false
     readonly property MprisPlayer activePlayer: MprisController.activePlayer
     readonly property bool isPlaying: activePlayer?.isPlaying ?? false
-    readonly property list<real> points: GlobalStates.visualizerPoints
+    readonly property list<real> points: CavaService.values
     property int barCount: 20
     property real dotSize: 3
     property real dotSpacing: Appearance.spacing.space50
     property real maxBarHeight: (vertical
         ? Appearance.sizes.verticalBarWidth
         : Appearance.sizes.barHeight) * 0.7
-    property real maxVisualizerValue: 1000
+    property real maxVisualizerValue: CavaService.maxValue
+
+    // One reshape per spectrum rather than a nearest-index lookup per dot: the
+    // producer emits more bands than this widget has dots, and picking one
+    // index per dot threw away the ones in between.
+    readonly property var levels: CavaBands.bands(root.points, root.barCount, root.maxVisualizerValue)
+
+    // This widget only exists while "visualizer" sits in a bar layout, which is
+    // the layout term the old process gate spelled out by reading the config.
+    CavaRef {}
 
     implicitWidth: vertical
         ? Appearance.sizes.verticalBarWidth
@@ -53,9 +63,7 @@ Item {
                 width: root.dotSize
                 property real pointValue: {
                     if (!root.isPlaying || root.points.length === 0) return root.dotSize
-                    const idx = Math.floor(index * root.points.length / root.barCount)
-                    const v = root.points[idx] ?? 0
-                    return Math.max(root.dotSize, (v / root.maxVisualizerValue) * root.maxBarHeight)
+                    return Math.max(root.dotSize, (root.levels[index] ?? 0) * root.maxBarHeight)
                 }
                 height: pointValue
                 radius: width / 2
@@ -82,9 +90,7 @@ Item {
                 property real pointValue: {
                     if (!root.isPlaying || root.points.length === 0) return root.dotSize
                     const rawIndex = root.mirrored ? (root.barCount - 1 - index) : index
-                    const idx = Math.floor(rawIndex * root.points.length / root.barCount)
-                    const v = root.points[idx] ?? 0
-                    return Math.max(root.dotSize, (v / root.maxVisualizerValue) * root.maxBarHeight)
+                    return Math.max(root.dotSize, (root.levels[rawIndex] ?? 0) * root.maxBarHeight)
                 }
                 width: pointValue
                 radius: height / 2

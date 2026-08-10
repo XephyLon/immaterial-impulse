@@ -3,11 +3,18 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Window
 import Quickshell
-import qs
 import qs.modules.common
+import qs.modules.common.plugins.designsystem.services
+import "../../../functions/cavaBands.js" as CavaBands
 
 Item {
     id: root
+
+    // This widget is only built while the plugin is enabled (its host loader
+    // follows the enabled list), so existing is the claim on cava - which is
+    // the `plugins.enabled.includes("visualizer")` term the old process gate
+    // read straight out of the config.
+    CavaRef {}
 
     // The visualiser draws bars straight onto the wallpaper - it has no panel,
     // card or tint of its own - so it opts out of the host's frost entirely by
@@ -35,32 +42,20 @@ Item {
     implicitWidth: Math.max(1, root.targetScreenWidth)
     implicitHeight: root.maxBarHeight + 20
 
-    readonly property list<real> points: GlobalStates.visualizerPoints
+    readonly property list<real> points: CavaService.values
 
     property real barWidth: 4
     property real barSpacing: Appearance.spacing.space100
     property real maxBarHeight: 220
-    property real maxVisualizerValue: 1000
+    property real maxVisualizerValue: CavaService.maxValue
     property real smoothingDuration: 150
 
     // Bars span the whole monitor again, at the built-in's density.
     readonly property int barCount: Math.max(1, Math.floor(root.targetScreenWidth / (barWidth + barSpacing)))
 
     readonly property var smoothedPoints: {
-        let raw = points
-        if (!raw || raw.length === 0) return Array(barCount).fill(0)
         let count = barCount
-        let mapped = new Array(count)
-        let rawLenM1 = raw.length - 1
-
-        for (let i = 0; i < count; i++) {
-            let progress = i / (count - 1 || 1)
-            let relPos = progress * rawLenM1
-            let low = Math.floor(relPos)
-            let high = Math.ceil(relPos)
-            let mix = relPos - low
-            mapped[i] = (raw[low] * (1 - mix)) + (raw[high] * (high < raw.length ? mix : 0))
-        }
+        let mapped = CavaBands.resample(root.points, count)
 
         let smoothed = new Array(count)
         let sW = 0.2
