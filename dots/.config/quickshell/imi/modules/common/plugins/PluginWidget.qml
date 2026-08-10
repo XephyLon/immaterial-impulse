@@ -345,6 +345,9 @@ AbstractBackgroundWidget {
         // Widget.qml) to the span size instead of the content's implicit size.
         gridWidth: rootWidget.gridSpanWidth
         gridHeight: rootWidget.gridSpanHeight
+        // ...and hand the span down by name too, for a widget that has a
+        // different layout per size rather than one that stretches.
+        gridSize: GridSizes.formatSize(rootWidget.gridSize)
         anchors.centerIn: parent
     }
 

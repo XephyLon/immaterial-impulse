@@ -13,21 +13,15 @@ Item {
     // Config configuration linkage
     property var cfg: Config.ready ? Config.options.appearance.weatherWidget : null
     property string sizeMode: cfg ? cfg.sizeMode : "3x1"
-    property bool interactive: true
     property bool useBlurBackground: false
     // The host wrapper overrides this with its own plugin id; the fallback keeps
     // the toggle honoured for a component instantiated without one.
 
     property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("", 0.1)
-    signal sizeModeRequested(string value)
     readonly property bool managesBlurTint: true
     readonly property var blurRegions: [{
         x: card.x, y: card.y, width: card.width, height: card.height, radius: card.radius
     }]
-    
-    HoverHandler {
-        id: widgetHoverHandler
-    }
     
     // Choice A Grid System Specs
     readonly property real baseWidth: 132 * Appearance.effectiveScale
@@ -80,14 +74,7 @@ Item {
         return "cloudy"
     }
 
-    // Helper logic to convert dragged width into matching size modes
-    function getModeForWidth(targetWidth) {
-        let mid1 = (width1x1 + width2x1) / 2;
-        let mid2 = (width2x1 + width3x1) / 2;
-        if (targetWidth < mid1) return "1x1";
-        if (targetWidth < mid2) return "2x1";
-        return "3x1";
-    }
+
 
     // Flat Material 3 container (No shadows for clean widget look)
     Rectangle {
@@ -392,68 +379,5 @@ Item {
             }
         }
 
-    }
-
-    // ──────────────────────────────
-    // Drag Handle to Resize (Horizontal) - Placed outside card to prevent OpacityMask clipping
-    // ──────────────────────────────
-    Rectangle {
-        id: resizeHandle
-        z: 10
-        width: 28 * Appearance.effectiveScale
-        height: 28 * Appearance.effectiveScale
-        radius: 10 * Appearance.effectiveScale
-        
-        // Restore dynamic colors matching AtAGlance/SystemMonitor
-        color: Appearance.m3colors.darkmode ? Appearance.colors.colOnTertiaryContainer : Appearance.colors.colSecondaryContainer
-        
-        anchors {
-            right: root.right
-            bottom: root.bottom
-            margins: 6 * Appearance.effectiveScale
-        }
-        
-        opacity: root.interactive && (cfg && !cfg.locked) && (widgetHoverHandler.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.9 : 0
-        visible: opacity > 0
-
-        Behavior on opacity {
-            NumberAnimation { duration: 150 }
-        }
-
-        MaterialSymbol {
-            anchors.centerIn: parent
-            text: "swap_horiz"
-            iconSize: 15 * Appearance.effectiveScale
-            color: Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colOnSecondaryContainer
-        }
-
-        MouseArea {
-            id: resizeArea
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.SizeHorCursor
-            preventStealing: true
-
-            property real startWidth: 0
-            property real startGlobalX: 0
-
-            onPressed: (mouse) => {
-                startWidth = root.width;
-                let p = mapToItem(null, mouse.x, mouse.y);
-                startGlobalX = p.x;
-            }
-
-            onPositionChanged: (mouse) => {
-                if (!pressed) return;
-                let p = mapToItem(null, mouse.x, mouse.y);
-                let deltaX = p.x - startGlobalX;
-                let targetWidth = startWidth + deltaX;
-                
-                let targetMode = root.getModeForWidth(targetWidth);
-                if (targetMode !== root.sizeMode) {
-                    root.sizeModeRequested(targetMode)
-                }
-            }
-        }
     }
 }

@@ -192,6 +192,75 @@ TestCase {
         compare(GridSizes.nearestSize(candidates(), NaN, NaN), null);
     }
 
+    // --- retiring the plugin-declared `sizeMode` -----------------------------
+
+    function weatherGrid() {
+        return { cols: 3, rows: 1,
+                 sizes: [{ cols: 1, rows: 1 }, { cols: 2, rows: 1 }, { cols: 3, rows: 1 }] };
+    }
+
+    function test_a_stored_sizeMode_becomes_the_same_span_under_the_host_key() {
+        const migrated = GridSizes.migrateSizeMode(
+            { sizeMode: "2x1", blurEnabled: true }, weatherGrid());
+        compare(migrated.__gridSize, "2x1");
+        compare(migrated.sizeMode, undefined);
+        // Every other option the user set survives untouched.
+        compare(migrated.blurEnabled, true);
+    }
+
+    function test_a_mode_the_manifest_does_not_offer_is_dropped_not_honoured() {
+        // Same refusal resolveSize makes for a stored span no longer on offer:
+        // the widget falls back to its manifest default rather than being laid
+        // out into a size its content does not fill.
+        const migrated = GridSizes.migrateSizeMode({ sizeMode: "1x3" }, weatherGrid());
+        compare(migrated.__gridSize, undefined);
+        compare(migrated.sizeMode, undefined);
+    }
+
+    function test_an_unparseable_mode_is_dropped_the_same_way() {
+        const migrated = GridSizes.migrateSizeMode({ sizeMode: "wide" }, weatherGrid());
+        compare(migrated.__gridSize, undefined);
+        compare(migrated.sizeMode, undefined);
+    }
+
+    function test_running_it_twice_changes_nothing_the_second_time() {
+        // The old key is deleted, not shadowed, so the second pass has nothing
+        // to act on - and answering null is how the caller knows not to write.
+        const once = GridSizes.migrateSizeMode({ sizeMode: "1x1" }, weatherGrid());
+        compare(once.__gridSize, "1x1");
+        compare(GridSizes.migrateSizeMode(once, weatherGrid()), null);
+    }
+
+    function test_a_span_already_chosen_with_the_grip_wins() {
+        const migrated = GridSizes.migrateSizeMode(
+            { sizeMode: "1x1", __gridSize: "3x1" }, weatherGrid());
+        compare(migrated.__gridSize, "3x1");
+        compare(migrated.sizeMode, undefined);
+    }
+
+    function test_a_plugin_with_no_sizeMode_is_left_alone() {
+        // Answering null rather than a copy is what keeps the store from being
+        // rewritten for every plugin on every launch.
+        compare(GridSizes.migrateSizeMode({ blurEnabled: true }, weatherGrid()), null);
+        compare(GridSizes.migrateSizeMode({}, weatherGrid()), null);
+        compare(GridSizes.migrateSizeMode(undefined, weatherGrid()), null);
+        compare(GridSizes.migrateSizeMode(null, weatherGrid()), null);
+    }
+
+    function test_a_widget_that_owns_its_own_sizeMode_is_left_alone() {
+        // `sizeMode` is not only a retired manifest option. world-clock and
+        // calendar declare no `grid` and drive a `sizeMode` of their own from
+        // their own toggles, so for them it is a live setting - migrating on
+        // the key name alone would delete it and reset both widgets, which is
+        // this migration's own failure mode aimed at the wrong widgets.
+        compare(GridSizes.migrateSizeMode({ sizeMode: "2x1" }, undefined), null);
+        compare(GridSizes.migrateSizeMode({ sizeMode: "2x1" }, {}), null);
+        // A single-span grid is the same case: the host does not offer a
+        // choice, so it has no size of its own to take over.
+        compare(GridSizes.migrateSizeMode({ sizeMode: "2x1" }, { cols: 2, rows: 1 }), null);
+    }
+
+
     // --- a `sizes` list that has crossed a QML model boundary ---------------
 
     // What a JS array looks like after a round trip through a Repeater's

@@ -14,7 +14,6 @@ Item {
     
     property var cfg: Config.ready ? Config.options.appearance.currencyWidget : null
     property string sizeMode: cfg ? cfg.sizeMode : "2x1"
-    property bool interactive: true
     property bool useBlurBackground: false
     // The host wrapper overrides this with its own plugin id; the fallback keeps
     // the toggle honoured for a component instantiated without one.
@@ -26,7 +25,6 @@ Item {
     }]
     signal baseCurrencyRequested(string value)
     signal quoteCurrencyRequested(int index, string value)
-    signal sizeModeRequested(string value)
 
     HoverHandler {
         id: widgetHoverHandler
@@ -52,11 +50,7 @@ Item {
         }
     }
 
-    function getModeForWidth(targetWidth) {
-        let mid = (width1x1 + width2x1) / 2;
-        if (targetWidth < mid) return "1x1";
-        return "2x1";
-    }
+
 
     property bool showingSettings: false
     
@@ -546,62 +540,6 @@ Item {
                             if (text.trim() !== "") root.quoteCurrencyRequested(4, text.toUpperCase().trim())
                         }
                     }
-                }
-            }
-        }
-    }
-
-    // Resize Handle (supports dragging between 1x1 and 2x1)
-    Rectangle {
-        id: resizeHandle
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.margins: 6 * Appearance.effectiveScale
-        width: 28 * Appearance.effectiveScale
-        height: 28 * Appearance.effectiveScale
-        radius: 10 * Appearance.effectiveScale
-        color: Appearance.m3colors.darkmode ? Appearance.colors.colOnTertiaryContainer : Appearance.colors.colSecondaryContainer
-        z: 100
-
-        opacity: root.interactive && (cfg && !cfg.locked) && (widgetHoverHandler.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.9 : 0
-        visible: opacity > 0
-
-        Behavior on opacity {
-            NumberAnimation { duration: 150 }
-        }
-
-        MaterialSymbol {
-            anchors.centerIn: parent
-            text: "swap_horiz"
-            iconSize: 15 * Appearance.effectiveScale
-            color: Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colOnSecondaryContainer
-        }
-
-        MouseArea {
-            id: resizeArea
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.SizeHorCursor
-            preventStealing: true
-
-            property real startWidth: 0
-            property real startGlobalX: 0
-
-            onPressed: (mouse) => {
-                startWidth = root.width;
-                let p = mapToItem(null, mouse.x, mouse.y);
-                startGlobalX = p.x;
-            }
-
-            onPositionChanged: (mouse) => {
-                if (!pressed) return;
-                let p = mapToItem(null, mouse.x, mouse.y);
-                let deltaX = p.x - startGlobalX;
-                let targetWidth = startWidth + deltaX;
-                
-                let targetMode = root.getModeForWidth(targetWidth);
-                if (targetMode !== root.sizeMode) {
-                    root.sizeModeRequested(targetMode)
                 }
             }
         }

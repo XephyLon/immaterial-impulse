@@ -3,10 +3,11 @@
   "author": "na-ive / nandoroid-shell", "license": "AGPL-3.0", "sourceUrl": "https://github.com/na-ive/nandoroid-shell", "upstreamRevision": "4994e2d2a264a015d5a6dac4786c60cfe94e5d8a",
   "startupSafe": true,
   "capabilities": ["desktop-widget"], "permissions": ["network", "settings_read", "settings_write"],
+  "grid": {
+    "cols": 2, "rows": 1,
+    "sizes": [ { "cols": 1, "rows": 1 }, { "cols": 2, "rows": 1 } ]
+  },
   "options": [
-    { "key": "sizeMode", "type": "choice", "label": "Widget size", "icon": "aspect_ratio", "default": "2x1", "choices": [
-      { "displayName": "Compact (1×1)", "value": "1x1" }, { "displayName": "Wide (2×1)", "value": "2x1" }
-    ]},
     { "key": "baseCurrency", "type": "text", "label": "Base currency", "icon": "payments", "default": "USD", "placeholder": "USD", "uppercase": true, "maxLength": 8 },
     { "key": "quote1", "type": "text", "label": "Quote currency 1", "icon": "currency_exchange", "default": "EUR", "placeholder": "EUR", "uppercase": true, "maxLength": 8 },
     { "key": "quote2", "type": "text", "label": "Quote currency 2", "icon": "currency_exchange", "default": "GBP", "placeholder": "GBP", "uppercase": true, "maxLength": 8 },
