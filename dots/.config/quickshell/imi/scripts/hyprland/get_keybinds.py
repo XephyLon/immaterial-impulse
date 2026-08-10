@@ -28,6 +28,45 @@ content_lines = []
 reading_line = 0
 
 
+def parse_pseudo_bind(text):
+    """Split a hand-written cheatsheet bind line into (mods, key).
+
+    These are documentation rows, not real binds: `--#/#` marks one conceptual
+    shortcut standing in for a family of real ones that cannot be listed
+    individually (Hash for workspaces 1-9, the four arrows, both Page keys).
+    They are written in Hyprland's own config syntax:
+
+        bind = SUPER, Hash,,          -> (["SUPER"], "Hash")
+        bind = SUPER+ALT, Hash,,      -> (["SUPER", "ALT"], "Hash")
+        bind = SUPER + <arrows>,,     -> (["SUPER"], "<arrows>")
+        binde = SUPER, ;/',,          -> (["SUPER"], ";/'")
+
+    Unparsed, the whole literal string became the key and rendered as one very
+    wide keycap reading `bind = SUPER, Hash,,` - config syntax, trailing commas
+    and all, on screen.
+    """
+    rest = re.sub(r'^bind[a-z]*\s*=\s*', '', text.strip())
+    rest = rest.rstrip(",").strip()
+    if not rest:
+        return [], text.strip()
+
+    if "," in rest:
+        # `MODS, KEY` - the common form.
+        mod_part, key_part = rest.split(",", 1)
+    elif " + " in rest:
+        # `MODS + KEY` with no comma; the key is whatever follows the last
+        # separator, since mods are always single tokens.
+        mod_part, key_part = rest.rsplit(" + ", 1)
+    else:
+        return [], rest
+
+    mods = [m.strip() for m in re.split(r'[+\s]+', mod_part) if m.strip()]
+    key = key_part.strip().rstrip(",").strip()
+    if not key:
+        return [], mod_part.strip()
+    return mods, key
+
+
 class KeyBinding(dict):
     def __init__(self, mods, key, dispatcher, params, comment, flags=None, submap=""):
         self["mods"]       = mods
@@ -222,8 +261,14 @@ def get_binds_recursive(current_content: Section, scope: int) -> Section:
                 # It's a descriptive placeholder like "bind = SUPER + ←/→ -- Focus in direction"
                 # Extract key hint from before " -- "
                 key_hint = rest.split(" -- ")[0].strip()
-                # Build a synthetic KeyBinding for display
-                kb = KeyBinding([], key_hint, "comment", "", comment_part)
+                # Split the config syntax into mods and key so it renders as
+                # keycaps rather than as a literal `bind = SUPER, Hash,,`.
+                # Flagged documentation so the cheatsheet can say these stand
+                # for several real binds and cannot be reassigned - one of
+                # them is not a chord the shell could rebind even in principle.
+                mods, key = parse_pseudo_bind(key_hint)
+                kb = KeyBinding(mods, key, "comment", "", comment_part,
+                                flags={"documentation": True})
                 current_content["keybinds"].append(kb)
             reading_line += 1
             continue

@@ -5,6 +5,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Layouts
+import "../../common/functions/cheatsheetLayout.js" as CheatsheetLayout
 
 Item {
     id: root
@@ -16,6 +17,28 @@ Item {
     property real spacing: Appearance.spacing.space250
     property real titleSpacing: Appearance.spacing.space100
     property real padding: Appearance.spacing.space50
+
+    // Every node that actually holds keybinds, flattened out of the tree. The
+    // renderer used to walk `children` only, so a group holding binds at its
+    // own level drew nothing - 48 of them on this machine.
+    readonly property var sections: CheatsheetLayout.sections(root.keybinds)
+    // Rough row budget: how many keybind rows fit in the space the cheatsheet
+    // may occupy before it starts growing past the screen. Approximate on
+    // purpose - it only decides how many columns to ask for, and being one out
+    // costs a slightly taller card, not a broken layout.
+    // Set by the cheatsheet to the height it may use before growing past the
+    // screen; 0 means "unknown", which falls back to a sane budget.
+    property real maxContentHeight: 0
+    // Deliberately budgets less height than there is. Filling the screen
+    // vertically is what the single column already did; the point of columns is
+    // to trade height for width on a display that has width to spare. Two
+    // thirds keeps the card comfortably clear of the screen edges and, on this
+    // 5120x1440 desktop, turns two tall columns into three shorter ones.
+    readonly property real rowHeight: 30
+    readonly property int availableRows: Math.max(
+        8, Math.floor((root.maxContentHeight > 0 ? root.maxContentHeight : 900) * 0.66 / root.rowHeight))
+    readonly property var columns: CheatsheetLayout.balance(
+        root.sections, CheatsheetLayout.columnCount(root.sections, root.availableRows, 4))
     implicitWidth: row.implicitWidth + padding * 2
     implicitHeight: row.implicitHeight + padding * 2
     // Excellent symbol explaination and source :
@@ -86,15 +109,15 @@ Item {
         spacing: root.spacing
         
         Repeater {
-            model: keybinds.children
-            
-            delegate: Column { // Keybind sections
+            model: root.columns
+
+            delegate: Column { // One balanced column of sections
                 spacing: root.spacing
                 required property var modelData
                 anchors.top: row.top
 
                 Repeater {
-                    model: modelData.children
+                    model: modelData
 
                     delegate: Item { // Section with real keybinds
                         id: keybindSection
@@ -109,6 +132,7 @@ Item {
                             
                             StyledText {
                                 id: sectionTitle
+                                visible: text.length > 0
                                 font {
                                     family: Appearance.font.family.title
                                     pixelSize: Appearance.font.pixelSize.title
@@ -158,9 +182,39 @@ Item {
                                         return result;
                                     }
                                     delegate: Item {
+                                        id: keybindCell
                                         required property var modelData
                                         implicitWidth: keybindLoader.implicitWidth
                                         implicitHeight: keybindLoader.implicitHeight
+
+                                        // Only chords open the editor. Comment cells and
+                                        // documentation rows are text, and highlighting
+                                        // them would promise a click that does nothing.
+                                        readonly property bool editable: keybindCell.modelData.type === "keys"
+                                            && keybindCell.modelData.binding !== undefined
+                                            && !(keybindCell.modelData.binding?.flags?.documentation ?? false)
+
+                                        // The keycaps are drawings of keys, not controls, so
+                                        // the row needs its own hover to show where the click
+                                        // target is.
+                                        //
+                                        // It fills the grid CELL rather than the keycap Row:
+                                        // a Row positions its children, so a child anchored to
+                                        // fill it corrupts the row's layout, and padding the
+                                        // fill outwards with a negative margin overflows into
+                                        // the neighbouring cell instead of being clipped -
+                                        // which drew the hovered row on top of the one above.
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            z: -1
+                                            radius: Appearance.rounding.small
+                                            visible: keybindCellHover.hovered && keybindCell.editable
+                                            color: Appearance.colors.colLayer1Hover
+                                        }
+
+                                        HoverHandler {
+                                            id: keybindCellHover
+                                        }
 
                                         Loader {
                                             id: keybindLoader
@@ -173,8 +227,15 @@ Item {
                                                 id: keysRow
                                                 spacing: Appearance.spacing.space50
 
-                                                HoverHandler {
-                                                    id: keysRowHover
+                                                // The whole chord is the edit
+                                                // affordance, not just the pencil:
+                                                // a hover-only target on a dense
+                                                // list is hard to find and
+                                                // impossible to discover.
+                                                TapHandler {
+                                                    acceptedButtons: Qt.LeftButton
+                                                    enabled: keybindCell.editable
+                                                    onTapped: root.editRequested(keybindCell.modelData.binding)
                                                 }
 
                                                 Repeater {
@@ -201,8 +262,8 @@ Item {
                                                     id: editBindingButton
                                                     // Space is always reserved so hovering cannot
                                                     // reflow the grid; only the icon fades in.
-                                                    visible: modelData.binding?.removable ?? false
-                                                    opacity: (keysRowHover.hovered || editBindingButton.hovered) ? 1 : 0
+                                                    visible: keybindCell.editable
+                                                    opacity: (keybindCellHover.hovered || editBindingButton.hovered) ? 1 : 0
                                                     enabled: opacity > 0
                                                     anchors.verticalCenter: parent.verticalCenter
                                                     implicitWidth: 22
