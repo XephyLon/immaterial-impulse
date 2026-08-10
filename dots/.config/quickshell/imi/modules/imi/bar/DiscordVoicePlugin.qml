@@ -78,7 +78,7 @@ MouseArea {
         repeat: true
         property int attempts: 0
         onTriggered: {
-            const window = popupLoader.item?.item;
+            const window = popupLoader.item?.surfaceWindow;
             if (!root.popupOpen || attempts++ > 30) { stop(); return; }
             if (!window) return;
             popupFocus.windows = [root.QsWindow?.window, window].filter(item => item);

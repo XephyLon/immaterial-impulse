@@ -62,14 +62,333 @@ Scope {
                 item: card
             }
 
+            // The popup the card is showing or morphing to, and the one still
+            // fading out inside it. Never more than these two content trees are
+            // in a window at once.
+            property var current: null
+            property var outgoing: null
+            property bool exiting: false
+            // Where the card collapses to on exit. Remembered rather than
+            // recomputed, because the popup that owns it may have been
+            // destroyed by the time the exit runs.
+            property var exitSpot: null
+            readonly property bool morphing: xAnim.running || yAnim.running
+                || widthAnim.running || heightAnim.running
+
+            readonly property var requested: {
+                const popup = GlobalStates.activeBarPopup;
+                if (!popup || !popup.morph || !popup.popupVisible) return null;
+                if (popup.hoverTarget?.QsWindow?.window?.screen !== overlayWindow.modelData) return null;
+                return popup;
+            }
+
+            onRequestedChanged: {
+                if (requested) takeOver(requested);
+                else beginExit();
+            }
+
+            function takeOver(popup) {
+                exitShrinkTimer.stop();
+                exitFadeTimer.stop();
+                overlayWindow.exiting = false;
+                card.opacity = 1;
+                // An exit disables the leaving content; a re-hover of the very
+                // widget the card was leaving has to hand its controls back.
+                if (overlayWindow.current?.contentItem)
+                    overlayWindow.current.contentItem.enabled = true;
+
+                if (overlayWindow.current === popup) {
+                    retargetTimer.restart();
+                    return;
+                }
+
+                // A third takeover arriving before the second cross-fade
+                // finished would leave a tree parented with nothing left to
+                // unparent it, so release it here rather than on its fade.
+                if (overlayWindow.outgoing && overlayWindow.outgoing !== popup)
+                    overlayWindow.release(overlayWindow.outgoing);
+                overlayWindow.outgoing = null;
+
+                const previous = overlayWindow.current;
+                if (previous) previous.popupHovered = false;
+                overlayWindow.current = popup;
+
+                if (previous && previous !== popup && previous.contentItem) {
+                    overlayWindow.outgoing = previous;
+                    // The outgoing tree fades as a picture, not as a control:
+                    // a click landing on the card mid-morph is aimed at the
+                    // content the pointer moved toward.
+                    previous.contentItem.enabled = false;
+                    contentExit.target = previous.contentItem;
+                    contentExit.restart();
+                }
+
+                const arriving = popup.contentItem;
+                if (arriving) {
+                    arriving.parent = contentHost;
+                    arriving.anchors.centerIn = contentHost;
+                    arriving.enabled = true;
+                    arriving.opacity = 0;
+                    contentEnter.stop();
+                    contentEnter.item = arriving;
+                    contentEnter.restart();
+                }
+                popup.overlayWindow = overlayWindow;
+                popup.popupHovered = cardHover.hovered;
+
+                // Coming from idle there is no geometry to morph from, so put
+                // the card at the widget it belongs to before anything animates.
+                if (card.width <= 0 || card.height <= 0) overlayWindow.park();
+                retargetTimer.restart();
+            }
+
+            // The incoming content's implicit size is not readable until it has
+            // been parented into a window and polished, so the first correct
+            // target is one frame away - the same zero-interval deferral, for
+            // the same reason, as the popup window's own updatePosition().
+            function retarget() {
+                const popup = overlayWindow.current;
+                const content = popup?.contentItem;
+                const target = popup?.hoverTarget;
+                if (!content || !target?.QsWindow?.window) return;
+
+                const margin = Appearance.sizes.elevationMargin;
+                const cardWidth = content.implicitWidth + popup.contentPadding * 2;
+                const cardHeight = content.implicitHeight + popup.contentPadding * 2;
+
+                let cardX;
+                let cardY;
+                if (popup.barVertical) {
+                    const base = target.QsWindow.mapFromItem(target, 0, (target.height - cardHeight) / 2).y;
+                    cardY = Math.max(margin, Math.min(base, overlayWindow.height - cardHeight - margin - 15));
+                    cardX = popup.barEdge === "right"
+                        ? overlayWindow.width - popup.barThickness - margin - cardWidth
+                        : popup.barThickness + margin;
+                } else {
+                    const base = target.QsWindow.mapFromItem(target, (target.width - cardWidth) / 2, 0).x;
+                    cardX = Math.max(margin, Math.min(base, overlayWindow.width - cardWidth - margin - 10));
+                    cardY = popup.barEdge === "bottom"
+                        ? overlayWindow.height - popup.barThickness - margin - cardHeight
+                        : popup.barThickness + margin;
+                }
+
+                // Assigned, never bound: nothing the card's geometry feeds may
+                // also feed the computation of it, and on the bottom/right
+                // edges the fixed axis is a function of the animating size.
+                card.width = cardWidth;
+                card.height = cardHeight;
+                card.x = cardX;
+                card.y = cardY;
+                overlayWindow.exitSpot = overlayWindow.anchorSpot();
+            }
+
+            // The card's exit target: a small square on the bar-adjacent edge,
+            // centred on the widget the card belongs to.
+            function anchorSpot() {
+                const popup = overlayWindow.current ?? overlayWindow.outgoing;
+                const target = popup?.hoverTarget;
+                if (!target?.QsWindow?.window) return overlayWindow.exitSpot;
+
+                const margin = Appearance.sizes.elevationMargin;
+                const floor = margin * 2;
+                const centre = target.QsWindow.mapFromItem(target, target.width / 2, target.height / 2);
+                if (popup.barVertical) {
+                    return {
+                        x: popup.barEdge === "right"
+                            ? overlayWindow.width - popup.barThickness - margin - floor
+                            : popup.barThickness + margin,
+                        y: centre.y - floor / 2,
+                        width: floor,
+                        height: floor
+                    };
+                }
+                return {
+                    x: centre.x - floor / 2,
+                    y: popup.barEdge === "bottom"
+                        ? overlayWindow.height - popup.barThickness - margin - floor
+                        : popup.barThickness + margin,
+                    width: floor,
+                    height: floor
+                };
+            }
+
+            function park() {
+                const spot = overlayWindow.anchorSpot();
+                if (!spot) return;
+                card.animate = false;
+                card.opacity = 0;
+                card.x = spot.x;
+                card.y = spot.y;
+                card.width = spot.width;
+                card.height = spot.height;
+                card.animate = true;
+                card.opacity = 1;
+                overlayWindow.exitSpot = spot;
+            }
+
+            // Shrink toward the owning widget, then fade, then collapse. The
+            // collapse is not cosmetic: an opacity-0 card still publishes a
+            // full-size input region and would eat every click in its rectangle.
+            function beginExit() {
+                if (overlayWindow.exiting) return;
+                // Already idle. Returning rather than collapsing again matters:
+                // finishExit() vacates the slot, which re-enters here.
+                if (!overlayWindow.current && !overlayWindow.outgoing
+                        && card.width <= 0 && card.height <= 0) return;
+                if (card.width <= 0 && card.height <= 0) {
+                    overlayWindow.finishExit();
+                    return;
+                }
+                const spot = overlayWindow.anchorSpot();
+                if (!spot) {
+                    overlayWindow.finishExit();
+                    return;
+                }
+                overlayWindow.exiting = true;
+                if (overlayWindow.current?.contentItem)
+                    overlayWindow.current.contentItem.enabled = false;
+                card.x = spot.x;
+                card.y = spot.y;
+                card.width = spot.width;
+                card.height = spot.height;
+                exitShrinkTimer.restart();
+            }
+
+            function finishExit() {
+                exitShrinkTimer.stop();
+                exitFadeTimer.stop();
+                contentEnter.stop();
+                contentExit.stop();
+
+                const leaving = overlayWindow.current;
+                overlayWindow.release(overlayWindow.outgoing);
+                overlayWindow.release(leaving);
+                overlayWindow.outgoing = null;
+                overlayWindow.current = null;
+                overlayWindow.exiting = false;
+
+                card.animate = false;
+                card.opacity = 0;
+                card.width = 0;
+                card.height = 0;
+                card.animate = true;
+
+                if (leaving && GlobalStates.activeBarPopup === leaving)
+                    GlobalStates.activeBarPopup = null;
+            }
+
+            function release(popup) {
+                if (!popup) return;
+                const content = popup.contentItem;
+                if (content) {
+                    content.anchors.centerIn = null;
+                    content.parent = null;
+                    content.opacity = 1;
+                    content.enabled = true;
+                }
+                popup.popupHovered = false;
+                if (popup.overlayWindow === overlayWindow) popup.overlayWindow = null;
+            }
+
+            function updateHover() {
+                if (overlayWindow.current) overlayWindow.current.popupHovered = cardHover.hovered;
+            }
+
+            Timer {
+                id: retargetTimer
+                interval: 0
+                onTriggered: overlayWindow.retarget()
+            }
+
+            Timer {
+                id: exitShrinkTimer
+                interval: Appearance.animation.elementMoveExit.duration
+                onTriggered: {
+                    card.opacity = 0;
+                    exitFadeTimer.restart();
+                }
+            }
+
+            Timer {
+                id: exitFadeTimer
+                interval: Appearance.animation.elementMoveFast.duration
+                onTriggered: overlayWindow.finishExit()
+            }
+
+            // Whatever is on the card can change size while it is shown - the
+            // clock ticking a row in, NetworkSpeed's rows changing.
+            Connections {
+                target: overlayWindow.current?.contentItem ?? null
+                ignoreUnknownSignals: true
+                function onImplicitWidthChanged() { retargetTimer.restart() }
+                function onImplicitHeightChanged() { retargetTimer.restart() }
+            }
+
+            // There is no sensible interpolation between "below the top edge"
+            // and "right of the left edge", so an orientation change idles the
+            // card rather than morphing across it.
+            Connections {
+                target: overlayWindow.current ?? null
+                ignoreUnknownSignals: true
+                function onBarEdgeChanged() { overlayWindow.finishExit() }
+            }
+
+            SequentialAnimation {
+                id: contentEnter
+                property Item item: null
+                // The pause is the slice of the travel the outgoing content's
+                // fade owns; the enter then lands exactly as the move settles.
+                PauseAnimation {
+                    duration: Appearance.animation.elementMove.duration
+                        - Appearance.animation.elementMoveEnter.duration
+                }
+                NumberAnimation {
+                    target: contentEnter.item
+                    property: "opacity"
+                    to: 1
+                    duration: Appearance.animation.elementMoveEnter.duration
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Appearance.animationCurves.emphasizedDecel
+                }
+            }
+
+            NumberAnimation {
+                id: contentExit
+                property: "opacity"
+                to: 0
+                duration: Appearance.animation.elementMoveExit.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animationCurves.emphasizedAccel
+                onFinished: {
+                    const leaving = overlayWindow.outgoing;
+                    if (leaving && leaving.contentItem === contentExit.target) {
+                        overlayWindow.release(leaving);
+                        overlayWindow.outgoing = null;
+                    }
+                }
+            }
+
             StyledRectangularShadow {
                 target: card
                 visible: card.visible
                 opacity: card.opacity
+                // A cached shadow renders to an offscreen texture, which a card
+                // whose size changes every frame invalidates every frame.
+                cached: !overlayWindow.morphing
             }
 
             Rectangle {
                 id: card
+                // Gates the Behaviors so the card can be placed instantly when
+                // there is no previous geometry to travel from.
+                property bool animate: true
+                readonly property int motionDuration: overlayWindow.exiting
+                    ? Appearance.animation.elementMoveExit.duration
+                    : Appearance.animation.elementMove.duration
+                readonly property var motionCurve: overlayWindow.exiting
+                    ? Appearance.animationCurves.emphasizedAccel
+                    : Appearance.animationCurves.expressiveDefaultSpatial
+
                 width: 0
                 height: 0
                 opacity: 0
@@ -79,6 +398,64 @@ Scope {
                 radius: Appearance.rounding.normal + 4
                 border.width: Appearance.borderWidth.standard
                 border.color: Appearance.colors.colLayer0Border
+
+                Behavior on x {
+                    enabled: card.animate
+                    NumberAnimation {
+                        id: xAnim
+                        duration: card.motionDuration
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: card.motionCurve
+                    }
+                }
+                Behavior on y {
+                    enabled: card.animate
+                    NumberAnimation {
+                        id: yAnim
+                        duration: card.motionDuration
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: card.motionCurve
+                    }
+                }
+                Behavior on width {
+                    enabled: card.animate
+                    NumberAnimation {
+                        id: widthAnim
+                        duration: card.motionDuration
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: card.motionCurve
+                    }
+                }
+                Behavior on height {
+                    enabled: card.animate
+                    NumberAnimation {
+                        id: heightAnim
+                        duration: card.motionDuration
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: card.motionCurve
+                    }
+                }
+                Behavior on opacity {
+                    enabled: card.animate
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+
+                HoverHandler {
+                    id: cardHover
+                    onHoveredChanged: overlayWindow.updateHover()
+                }
+
+                // Clipping is load-bearing: while the card shrinks, the
+                // outgoing content is larger than the host and would otherwise
+                // paint outside the card's rounded body. Content is inset by
+                // contentPadding on every side, so the rectangular clip never
+                // reaches the corner radii.
+                Item {
+                    id: contentHost
+                    anchors.fill: parent
+                    anchors.margins: overlayWindow.current?.contentPadding ?? 0
+                    clip: true
+                }
             }
         }
     }

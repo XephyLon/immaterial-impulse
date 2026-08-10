@@ -61,9 +61,12 @@ for transform in ("scale", "rotation"):
             "stop matching the card")
 
 for axis in ("width", "height"):
-    if not re.search(rf"\bcard\.{axis}\s*=\s*0\b|^\s*{axis}\s*:\s*0\b", code, re.MULTILINE):
+    if not re.search(rf"^\s*{axis}\s*:\s*0\b", code, re.MULTILINE):
+        failures.append(f"the card does not start at {axis} 0")
+    if not re.search(rf"\bcard\.{axis}\s*=\s*0\b", code):
         failures.append(
-            f"never puts the card at {axis} 0; an idle card must build an empty input region")
+            f"never collapses the card back to {axis} 0; an exited card must build an empty "
+            "input region, and an opacity-0 card still publishes a full-size one")
 
 if 'WlrLayershell.namespace: "quickshell:popup"' not in code:
     failures.append(
