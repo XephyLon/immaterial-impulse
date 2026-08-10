@@ -30,6 +30,23 @@ EXPECTED_ENTRY_TYPES = {
     "nandoroid-weather": "Expressive.DesktopWeatherWidget",
     "nandoroid-currency": "Expressive.DesktopCurrencyWidget",
 }
+# Which file in a package instantiates the design-system component. It is the
+# package's entry point for three of the four, and for media it is the layout
+# the entry point loads: media has a layout file per offered span
+# (docs/widget-grid.md), so everything this module pins about a wrapper - which
+# type it builds, which options it reads, how it forwards the blur contract -
+# moved one file down when Widget.qml became a switch on the resolved span.
+ENTRY_FILES = {
+    "nandoroid-media": "LayoutLarge.qml",
+}
+# ...and the size assertion below moved with it, to the other side: a widget
+# whose manifest declares a grid is sized by the host to the span it resolved,
+# so its wrapper names spans rather than forwarding a content size.
+SIZED_BY_THE_HOST_GRID = {"nandoroid-media"}
+
+
+def entry_file(directory):
+    return PLUGIN_ROOT / directory / ENTRY_FILES.get(directory, "Widget.qml")
 
 
 class ExpressiveDesignSystemTest(unittest.TestCase):
@@ -69,12 +86,41 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             self.assertEqual(option_keys, EXPECTED_OPTIONS[directory])
 
             wrapper = (package / "Widget.qml").read_text(encoding="utf-8")
+            entry = entry_file(directory).read_text(encoding="utf-8")
             self.assertNotIn("target: Config.options", wrapper)
-            self.assertIn(EXPECTED_ENTRY_TYPES[directory], wrapper)
-            self.assertIn("width: implicitWidth", wrapper)
-            self.assertIn("height: implicitHeight", wrapper)
+            self.assertNotIn("target: Config.options", entry)
+            self.assertIn(EXPECTED_ENTRY_TYPES[directory], entry)
+            if directory in SIZED_BY_THE_HOST_GRID:
+                self.assertIn("Appearance.sizes.widgetGridSpanX(", wrapper)
+                self.assertIn("Appearance.sizes.widgetGridSpanY(", wrapper)
+            else:
+                self.assertIn("width: implicitWidth", wrapper)
+                self.assertIn("height: implicitHeight", wrapper)
             for option_key in option_keys:
-                self.assertIn(f'PluginState.option("{manifest["id"]}", "{option_key}"', wrapper)
+                self.assertIn(f'PluginState.option("{manifest["id"]}", "{option_key}"', entry)
+
+    def test_every_media_layout_answers_the_blur_contract(self):
+        """The wrapper forwards whichever layout is loaded, so each must answer.
+
+        `PluginNode` reads `blurRegions`/`managesBlurTint` off the loaded item
+        and treats an empty region list as "blur the whole widget". A layout
+        that declared neither would therefore frost its own shadow rather than
+        error, and only at the span that loads it - which is the one span nobody
+        looks at while writing the other two.
+        """
+        package = PLUGIN_ROOT / "nandoroid-media"
+        wrapper = (package / "Widget.qml").read_text(encoding="utf-8")
+        self.assertIn("blurRegions: layout.item ? layout.item.blurRegions : []", wrapper)
+        self.assertIn(
+            "managesBlurTint: layout.item ? layout.item.managesBlurTint === true : false",
+            wrapper)
+
+        layouts = sorted(package.glob("Layout*.qml"))
+        self.assertEqual(len(layouts), 3, "one layout per offered span")
+        for layout in layouts:
+            text = layout.read_text(encoding="utf-8")
+            self.assertIn("readonly property var blurRegions", text, layout.name)
+            self.assertIn("readonly property bool managesBlurTint", text, layout.name)
 
     def test_system_monitor_third_card_can_show_the_battery(self):
         """The built-in this widget replaced showed Battery on a laptop.
@@ -211,11 +257,11 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         self.assertIn("readonly property var blurRegions: content.blurRegions", wrapper)
 
         for directory in ("nandoroid-currency", "nandoroid-media", "nandoroid-weather"):
-            wrapper_text = (PLUGIN_ROOT / directory / "Widget.qml").read_text(encoding="utf-8")
-            self.assertIn("readonly property var blurRegions: content.blurRegions", wrapper_text)
-            self.assertIn("readonly property bool managesBlurTint: content.managesBlurTint", wrapper_text)
-            self.assertIn("useBlurBackground: PluginState.option", wrapper_text)
-            self.assertIn("backgroundOpacity: PluginState.effectiveBackgroundOpacity(", wrapper_text)
+            entry_text = entry_file(directory).read_text(encoding="utf-8")
+            self.assertIn("readonly property var blurRegions: content.blurRegions", entry_text)
+            self.assertIn("readonly property bool managesBlurTint: content.managesBlurTint", entry_text)
+            self.assertIn("useBlurBackground: PluginState.option", entry_text)
+            self.assertIn("backgroundOpacity: PluginState.effectiveBackgroundOpacity(", entry_text)
 
         currency = (DESIGN_SYSTEM / "widgets" / "DesktopCurrencyWidget.qml").read_text(
             encoding="utf-8"
