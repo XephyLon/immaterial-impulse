@@ -135,3 +135,20 @@ function sampleOrigin(canvasOffset, widgetPos, wallpaperOffset) {
         y: number(canvasOffset.y, 0) + number(widgetPos.y, 0) - number(wallpaperOffset.y, 0)
     };
 }
+
+// What a single widget adds to its own placement to opt OUT of the pan.
+//
+// This is not the same kind of quantity as widgetOffset above, and the
+// difference is the whole reason it needs a function: the widget canvas is one
+// item whose x/y ARE the pan, so a widget cannot decline to travel by being
+// given a smaller offset - it is already moving because its parent is. It has
+// to cancel the canvas's offset instead, and the two summing to zero is what
+// leaves it at the same place on screen while its neighbours slide.
+//
+// Following is the default, so anything other than an explicit `false` follows:
+// a widget whose flag has not loaded yet must move with the rest rather than
+// pinning itself against a canvas offset it has not seen.
+function parallaxCancel(canvasOffset, follows) {
+    if (follows === false) return -number(canvasOffset, 0);
+    return 0;
+}

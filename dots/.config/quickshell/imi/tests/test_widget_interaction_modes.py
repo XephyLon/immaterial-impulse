@@ -244,9 +244,9 @@ class TheSettingsSideExists(unittest.TestCase):
         PluginOptions' switch. An unlisted type renders no row at all.
         """
         rows = self._rows()
-        self.assertEqual(rows.count('type: "boolean"'), 4,
-                         "blur, lock, click-through and stay-translucent are "
-                         "all boolean rows")
+        self.assertEqual(rows.count('type: "boolean"'), 5,
+                         "blur, lock, click-through, stay-translucent and "
+                         "follow-parallax are all boolean rows")
 
     def test_the_rows_are_desktop_widget_only(self):
         """A bar-only plugin has no draggable surface, so these are as dead

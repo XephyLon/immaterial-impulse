@@ -162,12 +162,13 @@ class TheOptOutIsReachable(unittest.TestCase):
         self.assertIn("default: manifest.desktopWidget?.keepTranslucent === true", src)
 
     def test_the_manifest_field_is_type_checked(self):
-        """The other three seeds are validated; an unvalidated fourth would
-        accept a string and seed a truthy default nobody can account for.
+        """The other seeds are validated; an unvalidated one would accept a
+        string and seed a truthy default nobody can account for. Matched inside
+        the flag list rather than against the whole line, which grows.
         """
-        self.assertIn(
-            'const desktopFlags = ["blur", "locked", "clickThrough", "keepTranslucent"]',
-            VALIDATOR.read_text(encoding="utf-8"))
+        validator = squashed(VALIDATOR)
+        flags = validator[validator.index("const desktopFlags"):]
+        self.assertIn('"keepTranslucent"', flags[:flags.index("]")])
 
 
 class TheInertControlsSaySo(unittest.TestCase):

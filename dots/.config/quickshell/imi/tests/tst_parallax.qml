@@ -163,6 +163,45 @@ TestCase {
         compare(Parallax.widgetOffset(0, 1.2), 0);
     }
 
+    // --- Opting a single widget out of the pan -----------------------------
+
+    function test_a_following_widget_adds_nothing() {
+        // The canvas already carries it. Adding anything here would move it
+        // twice.
+        compare(Parallax.parallaxCancel(-600, true), 0);
+        compare(Parallax.parallaxCancel(0, true), 0);
+    }
+
+    function test_an_opted_out_widget_cancels_the_canvas_offset_exactly() {
+        // The two must sum to zero: the widget's position on screen is
+        // canvas.x + widget.x, so anything short of the exact negative leaves
+        // it drifting a fraction of the pan rather than holding still.
+        compare(Parallax.parallaxCancel(-600, false), 600);
+        compare(Parallax.parallaxCancel(600, false), -600);
+        compare(Parallax.parallaxCancel(-600, false) + -600, 0);
+    }
+
+    function test_an_opted_out_widget_on_a_still_canvas_adds_nothing() {
+        compare(Parallax.parallaxCancel(0, false), 0);
+    }
+
+    function test_following_is_the_default_for_anything_but_an_explicit_false() {
+        // PluginState.option answers undefined until the state file has loaded.
+        // Reading that as "opted out" would pin every widget against a canvas
+        // offset it has not seen, which shows up as the widgets refusing to
+        // parallax at all for the first moment of a session.
+        compare(Parallax.parallaxCancel(-600, undefined), 0);
+        compare(Parallax.parallaxCancel(-600, null), 0);
+        compare(Parallax.parallaxCancel(-600, 0), 0);
+    }
+
+    function test_a_missing_canvas_offset_does_not_produce_nan() {
+        // Bound straight to x/y: a NaN there does not misplace the widget, it
+        // stops it rendering.
+        compare(Parallax.parallaxCancel(undefined, false), 0);
+        verify(!isNaN(Parallax.parallaxCancel("nonsense", false)));
+    }
+
     // --- Guards ------------------------------------------------------------
 
     function test_missing_state_does_not_produce_nan() {
