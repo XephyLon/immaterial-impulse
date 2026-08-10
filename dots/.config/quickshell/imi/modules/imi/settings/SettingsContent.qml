@@ -91,14 +91,15 @@ Item {
                 navigateTo(pageIndex, matchingSection)
                 return
             }
-            // A subsection heading is searchable but is not a navigation
-            // anchor - `sections` is the sidebar's tree and subsections are
-            // deliberately not in it - so the best available landing is the
-            // page that contains it. Without this the sidebar filtered to the
-            // right page and the content pane stayed wherever it already was,
-            // which reads as the search having done nothing.
-            if ((page.searchTerms || []).some(term => normalized(term).includes(query))) {
-                navigateTo(pageIndex, "")
+            // A subsection heading is not a sidebar branch - `sections` is the
+            // tree and subsections are deliberately kept out of it - but it is
+            // still scrollable: a page's goTo() matches any child by title, not
+            // only the ones marked as navigation sections. So hand it the
+            // heading and the page scrolls to it, rather than opening at the
+            // top and leaving the reader to find what they searched for.
+            const matchingTerm = (page.searchTerms || []).find(term => normalized(term).includes(query))
+            if (matchingTerm) {
+                navigateTo(pageIndex, matchingTerm)
                 return
             }
             if (normalized(page.name).includes(query)) {
