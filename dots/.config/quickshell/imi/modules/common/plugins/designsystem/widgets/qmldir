@@ -65,4 +65,4 @@ DesktopSystemMonitorWidget DesktopSystemMonitorWidget.qml
 DesktopWeatherWidget DesktopWeatherWidget.qml
 DesktopCurrencyWidget DesktopCurrencyWidget.qml
 DatePicker DatePicker.qml
-
+VisualizerCookie VisualizerCookie.qml
