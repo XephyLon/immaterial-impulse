@@ -182,6 +182,10 @@ Scope { // Scope
                         }
 
                         CheatsheetKeybinds {
+                            // The room the card may use before it starts
+                            // growing past the screen, minus the toolbar and
+                            // padding - what decides the column count.
+                            maxContentHeight: (cheatsheetRoot.screen?.height ?? 1080) - 220
                             onEditRequested: bindingData => {
                                 cheatsheetRoot.editingBinding = bindingData;
                             }
@@ -209,7 +213,12 @@ Scope { // Scope
                         property real padding: Appearance.spacing.space300
                         width: Math.min(560, keybindEditorScrim.width - Appearance.spacing.space800)
                         height: keybindEditorContent.implicitHeight + padding * 2
-                        color: Appearance.colors.colLayer1
+                        // colLayer1 carries the user's global transparency, which
+                        // is right for a panel resting on the shell background and
+                        // wrong for a modal resting on a dense keybind table: the
+                        // rows underneath read straight through the dialog. The
+                        // *Base* colour is the same surface, opaque.
+                        color: Appearance.colors.colLayer1Base
                         border.width: 1
                         border.color: Appearance.colors.colLayer0Border
                         radius: Appearance.rounding.normal
