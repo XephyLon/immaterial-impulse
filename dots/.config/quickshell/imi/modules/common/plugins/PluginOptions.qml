@@ -113,10 +113,8 @@ ColumnLayout {
             buttonIcon: "push_pin"
             text: Translation.tr("Keep settings across presets")
             checked: PluginState.presetPersisted(root.manifest.id)
-            onCheckedChanged: {
-                if (checked !== PluginState.presetPersisted(root.manifest.id))
-                    PluginState.setPresetPersist(root.manifest.id, checked);
-            }
+            onToggleRequested: PluginState.setPresetPersist(root.manifest.id,
+                !PluginState.presetPersisted(root.manifest.id))
         }
 
         Repeater {
@@ -166,10 +164,8 @@ ColumnLayout {
                     buttonIcon: optionLoader.optionData.icon || "tune"
                     text: optionLoader.optionData.label
                     checked: PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default)
-                    onCheckedChanged: {
-                        if (checked !== PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default))
-                            PluginState.setOption(root.manifest.id, optionLoader.optionData.key, checked);
-                    }
+                    onToggleRequested: PluginState.setOption(root.manifest.id, optionLoader.optionData.key,
+                        !PluginState.option(root.manifest.id, optionLoader.optionData.key, optionLoader.optionData.default))
                 }
             }
 
