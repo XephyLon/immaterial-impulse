@@ -113,3 +113,25 @@ function widgetOffsets(state, factor) {
         y: -overflowY * (f.y - CENTRE) * scale
     };
 }
+
+// Where a desktop widget's frost has to sample the wallpaper.
+//
+// Three items, three positions. The wallpaper sits in a container larger than
+// the screen, placed at `wallpaperOffset` (offsets()); the widget canvas is a
+// screen-sized SIBLING of that container, placed at `canvasOffset`
+// (widgetOffsets()); a widget's own x/y are measured inside the canvas. So a
+// widget's screen position is canvasOffset + widgetPos, and the wallpaper pixel
+// under it is that, measured from where the wallpaper container starts.
+//
+// Both terms are needed and neither cancels the other: the canvas travels at
+// `widgetsFactor` and the wallpaper at 1 - that difference IS the parallax, so
+// they are never the same number except at rest.
+function sampleOrigin(canvasOffset, widgetPos, wallpaperOffset) {
+    canvasOffset = canvasOffset || {};
+    widgetPos = widgetPos || {};
+    wallpaperOffset = wallpaperOffset || {};
+    return {
+        x: number(canvasOffset.x, 0) + number(widgetPos.x, 0) - number(wallpaperOffset.x, 0),
+        y: number(canvasOffset.y, 0) + number(widgetPos.y, 0) - number(wallpaperOffset.y, 0)
+    };
+}

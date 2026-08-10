@@ -212,6 +212,74 @@ TestCase {
                      + "desktop than the other");
     }
 
+    // --- Frost sample origin -----------------------------------------------
+    //
+    // A desktop widget's frosted backdrop samples the wallpaper item behind it.
+    // The rect it samples with has to be measured in that item's own space, and
+    // the widget's x/y are measured in the canvas's - two items that are pinned
+    // to different positions on purpose. Getting this wrong is issue #157: the
+    // frost aligned only on the middle workspace, which is the one position
+    // where the canvas is not panned at all.
+
+    function test_sampleOriginIsTheWidgetItselfWhenNothingIsPanned() {
+        // zoom 1: no overflow, so neither the wallpaper nor the canvas has
+        // anywhere to travel and the widget's canvas position IS its position
+        // on the wallpaper. This is the configuration the old, uncorrected
+        // sampling was accidentally right for.
+        const state = baseState({workspaceIndex: 4, overflowX: 0, overflowY: 0});
+        const origin = Parallax.sampleOrigin(
+            Parallax.widgetOffsets(state, 1.2),
+            {x: 420, y: 260},
+            Parallax.offsets(state));
+        compare(origin.x, 420);
+        compare(origin.y, 260);
+    }
+
+    function test_sampleOriginFollowsBothPans() {
+        // Workspace 9 of 10 with a 500px overflow: the wallpaper is slid fully
+        // left (-500) and the canvas is swung half the overflow times the
+        // factor (-500 * 0.5 * 1.2 = -300). The widget is 300px further left
+        // than its canvas x, over a wallpaper that starts 500px further left
+        // still, so the pixel behind it is 200px further INTO the picture.
+        const state = baseState({workspaceIndex: 9, sidebarFraction: 0});
+        const canvas = Parallax.widgetOffsets(state, 1.2);
+        const wallpaper = Parallax.offsets(state);
+        fuzzyCompare(canvas.x, -300, 0.0001);
+        compare(wallpaper.x, -500);
+        const origin = Parallax.sampleOrigin(canvas, {x: 420, y: 260}, wallpaper);
+        fuzzyCompare(origin.x, 620, 0.0001);
+        // Y is parked: the canvas contributes nothing, the wallpaper is centred.
+        fuzzyCompare(origin.y, 260 + 100, 0.0001);
+    }
+
+    // The bug itself. The canvas travels at widgetsFactor and the wallpaper at
+    // 1, so "the widget moved with the wallpaper" is never true off centre -
+    // sampling at the widget's canvas position (the old behaviour) is wrong by
+    // the difference, and correcting for only one of the two pans is still
+    // wrong by the other.
+    function test_theCanvasAndTheWallpaperDoNotTravelTogether() {
+        const state = baseState({workspaceIndex: 9, sidebarFraction: 0});
+        const canvas = Parallax.widgetOffsets(state, 1.2);
+        const wallpaper = Parallax.offsets(state);
+        verify(canvas.x !== wallpaper.x,
+               "the two factors must differ, or there is no parallax to see");
+        const origin = Parallax.sampleOrigin(canvas, {x: 420, y: 260}, wallpaper);
+        verify(origin.x !== 420,
+               "sampling at the widget's canvas position ignores both pans");
+        verify(origin.x !== 420 + canvas.x,
+               "correcting for the canvas alone still ignores the wallpaper");
+        verify(origin.x !== 420 - wallpaper.x,
+               "correcting for the wallpaper alone still ignores the canvas");
+    }
+
+    function test_sampleOriginDoesNotProduceNan() {
+        // Same reason as the offsets above: this feeds a ShaderEffectSource's
+        // sourceRect, and a NaN there samples nothing at all.
+        const origin = Parallax.sampleOrigin(undefined, undefined, undefined);
+        compare(origin.x, 0);
+        compare(origin.y, 0);
+    }
+
     // The wallpaper container is genuinely larger than the screen and *wants*
     // its middle shown, so its own offsets keep the CENTRE parking.
     function test_wallpaperOffsetsStillParkAtCentre() {
