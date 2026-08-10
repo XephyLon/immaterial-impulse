@@ -327,6 +327,43 @@ class RoundedPolygon {
         return RoundedPolygon.fromVertices(RoundedPolygon.starVerticesFromNumVerts(numVerticesPerRadius, radius, innerRadius, centerX, centerY), rounding, perVertexRounding, centerX, centerY)
     }
 
+    // A star whose inner vertices may each sit at their own radius, so one lobe
+    // can move without the rest following. `innerRadius` is either a number -
+    // in which case this is star() - or one entry per lobe.
+    static starPerLobe(numLobes, radius = 1, innerRadius = .5, rounding = CornerRounding.CornerRounding.Unrounded, perVertexRounding = null, centerX = 0, centerY = 0) {
+        return RoundedPolygon.fromVertices(
+            RoundedPolygon.starVerticesPerLobe(numLobes, radius, innerRadius, centerX, centerY),
+            rounding,
+            perVertexRounding,
+            centerX,
+            centerY
+        )
+    }
+
+    // Not Array.isArray: a QML `list<real>` arrives as a sequence object, for
+    // which that is false, and taking the scalar branch on one yields NaN
+    // vertices - geometry QtQuick never stops re-laying out.
+    static innerRadiusAt(innerRadius, index) {
+        if (typeof innerRadius === "number") return innerRadius
+        const count = innerRadius ? innerRadius.length : 0
+        if (count === 0) return 0
+        return innerRadius[Math.min(index, count - 1)]
+    }
+
+    static starVerticesPerLobe(numLobes, radius, innerRadius, centerX = 0, centerY = 0) {
+        const result = []
+        let arrayIndex = 0
+        for (let i = 0; i < numLobes; i++) {
+            let vertex = Utils.radialToCartesian(radius, (Math.PI / numLobes * 2 * i))
+            result[arrayIndex++] = vertex.x + centerX
+            result[arrayIndex++] = vertex.y + centerY
+            vertex = Utils.radialToCartesian(RoundedPolygon.innerRadiusAt(innerRadius, i), (Math.PI / numLobes * (2 * i + 1)))
+            result[arrayIndex++] = vertex.x + centerX
+            result[arrayIndex++] = vertex.y + centerY
+        }
+        return result
+    }
+
     static starVerticesFromNumVerts(numVerticesPerRadius, radius, innerRadius, centerX, centerY) {
         const result = []
         let arrayIndex = 0
