@@ -158,11 +158,12 @@ ContentPage {
                     text: Translation.tr("Use same wallpaper for both")
                     checked: Config.options.background.lockWall === ""
                         && Config.options.background.lockWallEngine === ""
-                    onCheckedChanged: {
-                        if (checked) {
-                            Config.options.background.lockWall = "";
-                            Config.options.background.lockWallEngine = "";
-                        }
+                    // One-way: clearing both paths is what "same wallpaper"
+                    // means, and there is no stored lockscreen wallpaper to put
+                    // back, so a click while it is already on stays a no-op.
+                    onToggleRequested: {
+                        Config.options.background.lockWall = "";
+                        Config.options.background.lockWallEngine = "";
                     }
                 }
 
@@ -170,9 +171,7 @@ ContentPage {
                     buttonIcon: "preview"
                     text: Translation.tr("Preview wallpaper")
                     checked: Config.options.background.enableWallpaperPreview
-                    onCheckedChanged: {
-                        Config.options.background.enableWallpaperPreview = checked;
-                    }
+                    onToggleRequested: Config.options.background.enableWallpaperPreview = !Config.options.background.enableWallpaperPreview
                 }
 
                 ConfigSpinBox {
@@ -222,9 +221,7 @@ ContentPage {
                         buttonIcon: "animation"
                         text: Translation.tr("Enable")
                         checked: Config.options.background.parallax.enable
-                        onClicked: {
-                            Config.options.background.parallax.enable = !Config.options.background.parallax.enable;
-                        }
+                        onToggleRequested: Config.options.background.parallax.enable = !Config.options.background.parallax.enable
                     }
                     ConfigSpinBox {
                         Layout.fillWidth: true
@@ -248,9 +245,7 @@ ContentPage {
                         enabled: Config.options.background.parallax.enable
                         text: Translation.tr("Follow workspaces")
                         checked: Config.options.background.parallax.enableWorkspace
-                        onClicked: {
-                            Config.options.background.parallax.enableWorkspace = !Config.options.background.parallax.enableWorkspace;
-                        }
+                        onToggleRequested: Config.options.background.parallax.enableWorkspace = !Config.options.background.parallax.enableWorkspace
                     }
                     ConfigSwitch {
                         Layout.fillWidth: true
@@ -258,9 +253,7 @@ ContentPage {
                         enabled: Config.options.background.parallax.enable
                         text: Translation.tr("Follow sidebars")
                         checked: Config.options.background.parallax.enableSidebar
-                        onClicked: {
-                            Config.options.background.parallax.enableSidebar = !Config.options.background.parallax.enableSidebar;
-                        }
+                        onToggleRequested: Config.options.background.parallax.enableSidebar = !Config.options.background.parallax.enableSidebar
                     }
                     ConfigSwitch {
                         Layout.fillWidth: true
@@ -268,9 +261,7 @@ ContentPage {
                         enabled: Config.options.background.parallax.enable
                         text: Translation.tr("Move desktop widgets")
                         checked: Config.options.background.parallax.enableWidgets
-                        onClicked: {
-                            Config.options.background.parallax.enableWidgets = !Config.options.background.parallax.enableWidgets;
-                        }
+                        onToggleRequested: Config.options.background.parallax.enableWidgets = !Config.options.background.parallax.enableWidgets
                     }
                     ConfigSwitch {
                         Layout.fillWidth: true
@@ -278,9 +269,7 @@ ContentPage {
                         enabled: Config.options.background.parallax.enable
                         text: Translation.tr("Pan vertically")
                         checked: Config.options.background.parallax.vertical
-                        onClicked: {
-                            Config.options.background.parallax.vertical = !Config.options.background.parallax.vertical;
-                        }
+                        onToggleRequested: Config.options.background.parallax.vertical = !Config.options.background.parallax.vertical
                     }
                     ConfigSwitch {
                         Layout.fillWidth: true
@@ -288,9 +277,7 @@ ContentPage {
                         enabled: Config.options.background.parallax.enable && !Config.options.background.parallax.vertical
                         text: Translation.tr("Pan vertically on portrait wallpapers")
                         checked: Config.options.background.parallax.autoVertical
-                        onClicked: {
-                            Config.options.background.parallax.autoVertical = !Config.options.background.parallax.autoVertical;
-                        }
+                        onToggleRequested: Config.options.background.parallax.autoVertical = !Config.options.background.parallax.autoVertical
                     }
                 }
             }
@@ -305,18 +292,14 @@ ContentPage {
                         buttonIcon: "check"
                         text: Translation.tr("Enable")
                         checked: Config.options.background.centeredWallpaper
-                        onClicked: {
-                            Config.options.background.centeredWallpaper = !Config.options.background.centeredWallpaper;
-                        }
+                        onToggleRequested: Config.options.background.centeredWallpaper = !Config.options.background.centeredWallpaper
                     }
                     ConfigSwitch {
                         Layout.fillWidth: true
                         buttonIcon: "lock"
                         text: Translation.tr("Show only when locked")
                         checked: Config.options.background.centeredWallpaperOnlyWhenLocked
-                        onCheckedChanged: {
-                            Config.options.background.centeredWallpaperOnlyWhenLocked = checked;
-                        }
+                        onToggleRequested: Config.options.background.centeredWallpaperOnlyWhenLocked = !Config.options.background.centeredWallpaperOnlyWhenLocked
                         enabled: Config.options.background.centeredWallpaper
                     }
                 }
@@ -390,18 +373,14 @@ ContentPage {
                         buttonIcon: "grid_4x4"
                         text: Translation.tr("Show alignment grid while dragging")
                         checked: Config.options.background.showGrid
-                        onCheckedChanged: {
-                            Config.options.background.showGrid = checked;
-                        }
+                        onToggleRequested: Config.options.background.showGrid = !Config.options.background.showGrid
                     }
                     ConfigSwitch {
                         Layout.fillWidth: true
                         buttonIcon: "align_horizontal_center"
                         text: Translation.tr("Show snap lines when dropping")
                         checked: Config.options.background.showSnapLines
-                        onCheckedChanged: {
-                            Config.options.background.showSnapLines = checked;
-                        }
+                        onToggleRequested: Config.options.background.showSnapLines = !Config.options.background.showSnapLines
                     }
                 }
             }
@@ -417,36 +396,28 @@ ContentPage {
                     buttonIcon: "ad"
                     text: Translation.tr('Use system file picker')
                     checked: Config.options.wallpaperSelector.useSystemFileDialog
-                    onCheckedChanged: {
-                        Config.options.wallpaperSelector.useSystemFileDialog = checked;
-                    }
+                    onToggleRequested: Config.options.wallpaperSelector.useSystemFileDialog = !Config.options.wallpaperSelector.useSystemFileDialog
                 }
 
                 ConfigSwitch {
                     buttonIcon: "home"
                     text: Translation.tr('Show home directory in quick access')
                     checked: Config.options.wallpaperSelector.showHomePath
-                    onCheckedChanged: {
-                        Config.options.wallpaperSelector.showHomePath = checked;
-                    }
+                    onToggleRequested: Config.options.wallpaperSelector.showHomePath = !Config.options.wallpaperSelector.showHomePath
                 }
 
                 ConfigSwitch {
                     buttonIcon: "done"
                     text: Translation.tr('Close after selection')
                     checked: Config.options.wallpaperSelector.closeAfterSelection
-                    onCheckedChanged: {
-                        Config.options.wallpaperSelector.closeAfterSelection = checked;
-                    }
+                    onToggleRequested: Config.options.wallpaperSelector.closeAfterSelection = !Config.options.wallpaperSelector.closeAfterSelection
                 }
 
                 ConfigSwitch {
                     buttonIcon: "blur_on"
                     text: Translation.tr('Show blur background')
                     checked: Config.options.wallpaperSelector.showBlurBackground
-                    onCheckedChanged: {
-                        Config.options.wallpaperSelector.showBlurBackground = checked;
-                    }
+                    onToggleRequested: Config.options.wallpaperSelector.showBlurBackground = !Config.options.wallpaperSelector.showBlurBackground
                 }
 
                 ConfigSpinBox {
@@ -477,9 +448,7 @@ ContentPage {
                     buttonIcon: "search"
                     text: Translation.tr('Always show search bar')
                     checked: Config.options.wallpaperSelector.showSearchbar
-                    onCheckedChanged: {
-                        Config.options.wallpaperSelector.showSearchbar = checked;
-                    }
+                    onToggleRequested: Config.options.wallpaperSelector.showSearchbar = !Config.options.wallpaperSelector.showSearchbar
                 }
                 ConfigTextArea {
                     id: userPathField
