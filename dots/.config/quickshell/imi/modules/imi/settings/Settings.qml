@@ -27,7 +27,14 @@ Scope {
         id: settingsWindow
         visible: GlobalStates.settingsOpen
         title: Translation.tr("Settings")
-        color: Appearance.colors.colLayer0
+        // Constant on purpose, and it must stay constant: a window's clear
+        // colour reaching alpha 255 even once permanently costs the surface its
+        // compositor blur. See AGENT.md's layer-shell section - Qt pushes an
+        // opaque Wayland region on the way to opaque and never retracts it, so
+        // binding this to colLayer0 left Settings unblurred for the rest of the
+        // session after one transparency round trip (#143). The backdrop below
+        // carries the colour instead, where alpha is only ever painted.
+        color: "transparent"
 
         // Fixed size: the layout is designed around these dimensions, and a
         // floating utility window has no reason to be resized.
@@ -43,6 +50,12 @@ Scope {
         onVisibleChanged: {
             if (!visible && GlobalStates.settingsOpen)
                 GlobalStates.settingsOpen = false;
+        }
+
+        Rectangle {
+            id: windowBackdrop
+            anchors.fill: parent
+            color: Appearance.colors.colLayer0
         }
 
         SettingsContent {
