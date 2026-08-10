@@ -27,7 +27,16 @@ ShellRoot {
         visible: true
         implicitWidth: 1120
         implicitHeight: 720
-        color: Appearance.colors.colLayer0
+        // Same rule as the Settings window: a window's clear colour is constant
+        // and the backdrop is painted, so an alpha-255 clear colour can never
+        // latch the surface's Wayland opaque region. See AGENT.md.
+        color: "transparent"
+
+        Rectangle {
+            id: galleryBackdrop
+            anchors.fill: parent
+            color: Appearance.colors.colLayer0
+        }
 
         ColumnLayout {
             anchors.fill: parent
