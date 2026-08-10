@@ -9,6 +9,16 @@ MouseArea {
     id: root
     property alias animateXPos: xBehavior.enabled
     property alias animateYPos: yBehavior.enabled
+    // Set false by a subclass whose x/y carry something that is not a move.
+    //
+    // A `Behavior` handed a target that changes every frame restarts every
+    // frame and never gets to tick, so the property sits frozen at its old
+    // value for as long as the target keeps moving. That is exactly what the
+    // desktop's parallax opt-out feeds it (PluginWidget), and a frozen
+    // position is worse than an unanimated one twice over: the widget travels
+    // with the pan it was supposed to decline, and every save taken during the
+    // pan reads a stale coordinate.
+    property bool animatePosition: true
     property bool draggable: true
     property int gridSize: 12
     property bool snapEnabled: true
@@ -214,12 +224,12 @@ MouseArea {
 
     Behavior on x {
         id: xBehavior
-        enabled: !root.dragging && !root.groupDragging
+        enabled: root.animatePosition && !root.dragging && !root.groupDragging
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
     }
     Behavior on y {
         id: yBehavior
-        enabled: !root.dragging && !root.groupDragging
+        enabled: root.animatePosition && !root.dragging && !root.groupDragging
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
     }
 

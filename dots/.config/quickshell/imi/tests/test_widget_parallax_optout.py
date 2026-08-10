@@ -31,6 +31,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "WidgetParallaxOptOutRuntimeTest.qml"
 HOST = ROOT / "modules/common/plugins/PluginWidget.qml"
+BASE_WIDGET = ROOT / "modules/common/widgets/widgetCanvas/AbstractWidget.qml"
 OPTIONS = ROOT / "modules/common/plugins/PluginOptions.qml"
 VALIDATOR = ROOT / "modules/common/plugins/PluginValidator.js"
 MATHS = ROOT / "modules/common/functions/parallax.js"
@@ -48,6 +49,14 @@ class TheArithmeticIsExtracted(unittest.TestCase):
         self.assertIn("function parallaxCancel(canvasOffset, follows)",
                       MATHS.read_text(encoding="utf-8"))
 
+    def test_both_directions_of_the_conversion_live_beside_it(self):
+        """Applying the cancellation by hand at each call site is what let the
+        render and the save disagree about which frame they were in.
+        """
+        maths = MATHS.read_text(encoding="utf-8")
+        self.assertIn("function drawnFromPlacement(placement, cancel)", maths)
+        self.assertIn("function placementFromDrawn(drawn, cancel)", maths)
+
     def test_the_host_does_not_reimplement_it(self):
         """A `-canvas.x` written inline in the host is the same expression with
         nowhere to test it, and it is one sign away from doubling the pan.
@@ -55,6 +64,15 @@ class TheArithmeticIsExtracted(unittest.TestCase):
         host = squashed(HOST)
         self.assertIn("ParallaxMath.parallaxCancel(", host)
         self.assertNotRegex(host, r"x:\s*-\s*\w*[Cc]anvas\.x")
+
+    def test_the_host_applies_it_through_the_named_conversions(self):
+        host = squashed(HOST)
+        self.assertNotRegex(
+            host, r"placedX \+ rootWidget\.parallaxCancelX",
+            "the drawn position goes through ParallaxMath.drawnFromPlacement")
+        self.assertNotRegex(
+            host, r"rootWidget\.x - rootWidget\.parallaxCancelX",
+            "the stored position goes through ParallaxMath.placementFromDrawn")
 
 
 class TheHostCancelsRatherThanOffsets(unittest.TestCase):
@@ -73,8 +91,12 @@ class TheHostCancelsRatherThanOffsets(unittest.TestCase):
             self.assertIn(f"readonly property real {axis}", self.host)
 
     def test_the_drawn_position_is_placement_plus_cancellation(self):
-        self.assertIn("x: rootWidget.placedX + rootWidget.parallaxCancelX", self.host)
-        self.assertIn("y: rootWidget.placedY + rootWidget.parallaxCancelY", self.host)
+        self.assertIn(
+            "x: ParallaxMath.drawnFromPlacement(rootWidget.placedX, "
+            "rootWidget.parallaxCancelX)", self.host)
+        self.assertIn(
+            "y: ParallaxMath.drawnFromPlacement(rootWidget.placedY, "
+            "rootWidget.parallaxCancelY)", self.host)
 
     def test_the_drag_release_rebinding_keeps_the_cancellation(self):
         """`restoreXYBinding` is what runs after every drag. Rebinding to the
@@ -83,16 +105,35 @@ class TheHostCancelsRatherThanOffsets(unittest.TestCase):
         """
         body = self.host[self.host.index("function restoreXYBinding()"):]
         body = body[:body.index("function commitPosition")]
-        self.assertIn("rootWidget.placedX + rootWidget.parallaxCancelX", body)
-        self.assertIn("rootWidget.placedY + rootWidget.parallaxCancelY", body)
+        for axis in ("X", "Y"):
+            self.assertIn(f"ParallaxMath.drawnFromPlacement( rootWidget.placed{axis}, "
+                          f"rootWidget.parallaxCancel{axis})", body)
 
     def test_the_stored_position_has_the_cancellation_taken_back_out(self):
         """The drift bug. `x` is where the widget is drawn on the canvas; the
         store holds where it was placed.
         """
         body = self.host[self.host.index("function commitPosition()"):]
-        self.assertIn("rootWidget.targetX = rootWidget.x - rootWidget.parallaxCancelX", body)
-        self.assertIn("rootWidget.targetY = rootWidget.y - rootWidget.parallaxCancelY", body)
+        for axis in ("X", "Y"):
+            self.assertIn(f"rootWidget.target{axis} = ParallaxMath.placementFromDrawn( "
+                          f"rootWidget.{axis.lower()}, rootWidget.parallaxCancel{axis})", body)
+
+    def test_an_opted_out_widget_does_not_animate_its_position(self):
+        """The bug that made the opt-out inert on a real desktop.
+
+        `Background.qml` animates the pan over 600ms, so an opted-out widget's
+        x/y binding re-evaluates on every frame of it - and a `Behavior` whose
+        target moves every frame restarts every frame and never ticks. The
+        widget sat at its pre-pan canvas coordinate for the whole transition,
+        which is to say it travelled the full pan on screen, and any release
+        landing in that window saved the stale coordinate.
+        """
+        self.assertIn("animatePosition: rootWidget.followParallax", self.host)
+        base = squashed(BASE_WIDGET)
+        self.assertIn("property bool animatePosition: true", base)
+        self.assertEqual(
+            2, base.count("enabled: root.animatePosition && !root.dragging"),
+            "both position Behaviors have to honour it, or one axis still freezes")
 
 
 class TheSettingsSideExists(unittest.TestCase):
