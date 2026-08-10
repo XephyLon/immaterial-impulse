@@ -196,6 +196,14 @@ Scope { // Scope
                             // growing past the screen, minus the toolbar and
                             // padding - what decides the column count.
                             maxContentHeight: (cheatsheetRoot.screen?.height ?? 1080) - 220
+                            // And the room across. Columns trade height for
+                            // width, so a screen with height to spare but not
+                            // width was asked for more columns than fit and the
+                            // outer ones ran off both edges.
+                            maxContentWidth: (cheatsheetRoot.screen?.width ?? 1920)
+                                - Appearance.sizes.elevationMargin * 2
+                                - cheatsheetBackground.padding * 2
+                                - Appearance.spacing.space250 * 2
                             onEditRequested: bindingData => {
                                 cheatsheetRoot.editingBinding = bindingData;
                             }
