@@ -1,6 +1,8 @@
 # Morphing hover overlay for bar popups — design
 
-**Status:** design, not implemented
+**Status:** implemented (b22a923a5 ("refactor(bar): delete the per-popup layer surface") completes
+the landing plan in §6). Four places where the running code differs from this document are recorded
+in "Where the implementation departed from this design" at the end.
 **Issue:** [#140](https://github.com/XephyLon/immaterial-impulse/issues/140)
 **Scope:** `modules/common/widgets/StyledPopup.qml` and its ten users; one new panel
 (`modules/imi/bar/BarPopupOverlay.qml`)
@@ -681,9 +683,14 @@ mechanizable piece is the static lint in §6, and it should land with step 1.
 
 ---
 
-## Open question
+## Open question — closed
 
-One remains, and it needs the shell running rather than a decision:
+**Does `HyprlandFocusGrab` still clear on an outside click when the grabbed surface is full-screen
+but input-masked? It does.** Settled by experiment before implementation, in the second comment on
+[#140](https://github.com/XephyLon/immaterial-impulse/issues/140): an isolated `qs -p` probe built
+exactly this shape, armed a grab over it, and a click ~1800px from the card produced
+`GRAB CLEARED`. The mask lets the click through to the compositor, which still classifies it as an
+outside click. The original statement of the question follows, for the reasoning.
 
 **Does `HyprlandFocusGrab` still clear on an outside click when the grabbed surface is full-screen
 but input-masked?** Docker and DiscordVoice grab `[barWindow, popupWindow]`
@@ -702,6 +709,42 @@ does; a hover claim is refused while pinned, and the accepted cost is that the b
 feedback at all until the pinned popup is dismissed. See §3 → `pinnedOpen`.
 
 ---
+
+## Where the implementation departed from this design
+
+Four, all found by following the code rather than reading it. Everything else landed as written.
+
+1. **There are eleven `StyledPopup` instantiations, not ten.** The Docker package's own bar entry
+   point, `modules/common/plugins/bundled/docker/DockerWidget.qml:120-145`, opens the same
+   `DockerPopup` and reads `popupLoader.item?.item` exactly as the two adapters named in §1 do. It
+   is the plugin-manifest `barWidget` path rather than the native adapter `BarContent` actually
+   loads for `plugin:docker_plugin`, which is why it was easy to miss. It got the same
+   `surfaceWindow` edit.
+
+2. **A pinned popup never claims the slot, so it never reaches the card.** §3 assumed the claim
+   arrives for every popup, but `GlobalStates.activeBarPopup` was only ever written from
+   `onTargetHoveredChanged`, and none of the three click-toggled popups reports hover: the tray
+   overflow's target is a `RippleButton` (no `containsMouse`, as its own comment says) and both
+   plugin adapters set `hoverEnabled: false`. Under the legacy path this did not matter, because
+   `popupVisible` drove the popup's own window directly. `popupVisible` becoming true now claims
+   the slot as well, with a claim at `Component.onCompleted` for the two that a `Loader` constructs
+   already pinned.
+
+3. **`SysTray` overrode `active` rather than merely adding to it.** §1's table says "drop `active:`",
+   which is right, but the reason is stronger than tidiness: `active: root.trayOverflowOpen && ...`
+   shadows `StyledPopup`'s own `active: everShown && !morph`, so opting the tray overflow in without
+   that edit would have left the legacy window loading and showing *underneath* the card.
+
+4. **The two plugin popups' own enter animations had to go.** `DockerPopup` and `DiscordVoicePopup`
+   hung a scale-and-fade on `onActiveChanged`, which cannot fire once there is no `LazyLoader`, and
+   whose opacity half targets the same property the card's cross-fade animates. The card's enter is
+   now every popup's enter.
+
+Two smaller notes on §5's recommendations: `cached: !overlay.morphing` is implemented as
+recommended but has not been measured, and the card's `Behavior`s take their duration and curve
+from properties that switch between `elementMove` and `elementMoveExit` rather than being built
+with `numberAnimation.createObject`, because one `Behavior` has to serve both the travel and the
+exit shrink.
 
 ## Reference
 
