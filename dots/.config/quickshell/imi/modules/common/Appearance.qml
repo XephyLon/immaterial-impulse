@@ -563,8 +563,20 @@ Singleton {
         // bar away from the edge it was meant to overhang and making Hyprland
         // reserve 5px more with it. They live here so the arithmetic is one
         // expression a test can read rather than three inline ternaries.
-        property real barDetachMargin: Config?.options.bar.cornerStyle === 3
+        // The visual gap a detached bar style (cornerStyle 3) leaves against the
+        // screen edge.
+        property real barDetachGap: Config?.options.bar.cornerStyle === 3
             ? root.sizes.hyprlandGapsOut : 0
+        // With auto-hide on, that gap cannot be left outside the surface: the
+        // reveal strip lives inside the window, so a detached surface leaves a
+        // band the pointer can never reach - hovering it reaches whatever is
+        // behind the bar instead, and hiding looks wrong because the bar slides
+        // up inside a surface that already starts below the edge. So the
+        // surface takes the edge and the *content* carries the gap. Identical
+        // to look at, and no surface reconfiguration to do it.
+        property real barDetachInset: (Config?.options.bar.autoHide.enable ?? false)
+            ? root.sizes.barDetachGap : 0
+        property real barDetachMargin: root.sizes.barDetachGap - root.sizes.barDetachInset
         // One physical pixel, not a design token - it is the width of the row
         // the compositor leaves out, so it does not scale with anything.
         property real barDeadPixelOverhang: Config?.options.interactions.deadPixelWorkaround.enable
