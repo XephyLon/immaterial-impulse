@@ -202,6 +202,90 @@ TestCase {
         verify(!isNaN(Parallax.parallaxCancel("nonsense", false)));
     }
 
+    // --- Placement <-> drawn ------------------------------------------------
+    //
+    // The property these exist for is the round trip, not the formula: a widget
+    // is placed, the desktop pans, the user drags it, the position is saved,
+    // the shell reloads - and the widget must come back where it was dropped.
+    // The assertions below walk exactly that, once for a widget that follows
+    // the pan and once for one that does not, at a non-zero pan both times.
+
+    function roundTrip(placement, canvasOffset, follows, dragDelta) {
+        // Place, then pan.
+        const cancel = Parallax.parallaxCancel(canvasOffset, follows);
+        const drawn = Parallax.drawnFromPlacement(placement, cancel);
+        // Drag: the gesture is a delta in the canvas's own frame.
+        const dragged = drawn + dragDelta;
+        // Save, then reload.
+        const stored = Parallax.placementFromDrawn(dragged, cancel);
+        return {
+            drawnBeforeDrag: drawn,
+            screenBeforeDrag: canvasOffset + drawn,
+            stored: stored,
+            screenAfterReload: canvasOffset + Parallax.drawnFromPlacement(stored, cancel)
+        };
+    }
+
+    function test_a_following_widget_survives_place_pan_drag_save_reload() {
+        const trip = roundTrip(600, -180, true, 48);
+        // It travels, which is the whole point of following.
+        compare(trip.screenBeforeDrag, 420);
+        compare(trip.stored, 648, "a follower stores its canvas placement");
+        compare(trip.screenAfterReload, 468, "dropped at 468, comes back at 468");
+    }
+
+    function test_an_opted_out_widget_survives_place_pan_drag_save_reload() {
+        const trip = roundTrip(600, -180, false, 48);
+        // It does not travel, which is the whole point of opting out.
+        compare(trip.screenBeforeDrag, 600);
+        compare(trip.stored, 648, "an opted-out widget stores the same number");
+        compare(trip.screenAfterReload, 648, "dropped at 648, comes back at 648");
+    }
+
+    function test_the_two_directions_are_each_other_s_inverse_at_any_pan() {
+        // Storing the drawn coordinate, or drawing the stored one, is the bug
+        // class this pair exists to make impossible to write by accident.
+        for (const cancel of [0, 215.04000000000033, -600]) {
+            for (const placement of [0, 95.04, 1276]) {
+                compare(Parallax.placementFromDrawn(
+                            Parallax.drawnFromPlacement(placement, cancel), cancel),
+                        placement);
+            }
+        }
+    }
+
+    function test_a_widget_that_never_moves_keeps_its_stored_position() {
+        // A release that is a click rather than a drag runs the same save path.
+        // It must be a no-op, at rest and mid-pan alike.
+        const cancel = Parallax.parallaxCancel(-180, false);
+        compare(Parallax.placementFromDrawn(
+                    Parallax.drawnFromPlacement(600, cancel), cancel), 600);
+    }
+
+    // --- The snap lattice ---------------------------------------------------
+
+    function test_the_snap_lands_the_placement_on_the_lattice_not_the_drawing() {
+        // 215.04 is the author's real canvas offset (5120px wide, 107% zoom,
+        // 1.2 widget factor). Snapping the drawn coordinate stored
+        // 95.04000000000033 - on the lattice where it was drawn, off it where
+        // it was saved, which is "the widget can be placed outside the grid".
+        const cancel = Parallax.parallaxCancel(215.04000000000033, false);
+        const snapped = Parallax.snapPlacement(-118, cancel, 12);
+        const placement = Parallax.placementFromDrawn(snapped, cancel);
+        fuzzyCompare(placement % 12, 0, 0.0001);
+    }
+
+    function test_the_snap_is_the_plain_lattice_for_a_following_widget() {
+        compare(Parallax.snapPlacement(-118, 0, 12), -120);
+        compare(Parallax.snapPlacement(-114, 0, 12), -114 + 6);
+    }
+
+    function test_the_snap_declines_a_nonsense_lattice_rather_than_dividing_by_it() {
+        compare(Parallax.snapPlacement(37, 0, 0), 37);
+        compare(Parallax.snapPlacement(37, 0, undefined), 37);
+        verify(!isNaN(Parallax.snapPlacement(37, "nonsense", 12)));
+    }
+
     // --- Guards ------------------------------------------------------------
 
     function test_missing_state_does_not_produce_nan() {

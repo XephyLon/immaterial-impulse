@@ -152,3 +152,40 @@ function parallaxCancel(canvasOffset, follows) {
     if (follows === false) return -number(canvasOffset, 0);
     return 0;
 }
+
+// A desktop widget has two positions, and this is the only conversion between
+// them. Both directions live here so they cannot drift apart.
+//
+// PluginState stores a widget's PLACEMENT: where it sits when the pan is at
+// rest. That is one meaning for every widget, whatever its `followParallax`
+// says - a following widget's canvas coordinate is already pan-invariant, and
+// an opted-out widget's screen coordinate is the same number, because at rest
+// the canvas covers the screen exactly (widgetOffsets subtracts CENTRE). So
+// the clamp to [0, screenSize - widgetSize] is valid for both, and toggling
+// the flag never has to rewrite a stored position.
+//
+// What the flag changes is where the widget is DRAWN on the canvas, which is
+// the placement plus the cancellation. Anything that reads a widget's `x` is
+// reading the drawn coordinate; anything that writes the store converts back.
+function drawnFromPlacement(placement, cancel) {
+    return number(placement, 0) + number(cancel, 0);
+}
+
+function placementFromDrawn(drawn, cancel) {
+    return number(drawn, 0) - number(cancel, 0);
+}
+
+// The drag's snap lattice, applied in the frame the position is stored in.
+//
+// The lattice exists so widgets line up with each other, and they line up at
+// rest - so it belongs to the placement frame. Snapping the drawn coordinate
+// instead leaves an opted-out widget's *placement* off the lattice by whatever
+// fraction the pan happened to be holding, which is how an x of
+// 95.04000000000033 reached disk: 0.04 is the tail of a live canvas offset.
+// Returns a drawn coordinate, because that is what the drag writes.
+function snapPlacement(drawn, cancel, gridSize) {
+    const grid = number(gridSize, 0);
+    if (grid <= 0) return number(drawn, 0);
+    const placement = placementFromDrawn(drawn, cancel);
+    return drawnFromPlacement(Math.round(placement / grid) * grid, cancel);
+}
