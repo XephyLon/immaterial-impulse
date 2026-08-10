@@ -217,7 +217,12 @@ local popup_blur_threshold = (ok and type(generated) == "number") and generated 
 -- which is what PopupBlurThreshold computes. Getting that backwards unblurs
 -- the panels themselves.
 for _, ns in ipairs({ "quickshell:bar", "quickshell:verticalBar", "quickshell:dock",
-                      "quickshell:sidebarLeft", "quickshell:sidebarRight" }) do
+                      "quickshell:sidebarLeft", "quickshell:sidebarRight",
+                      -- The bar popup overlay: one always-mapped surface whose
+                      -- card hosts every bar popup's content, so the menus those
+                      -- popups open are now xdg-popups of *this* surface and
+                      -- inherit its threshold rather than the bar's.
+                      "quickshell:barPopup" }) do
     hl.layer_rule({ match = { namespace = ns }, ignore_alpha = popup_blur_threshold })
 end
 

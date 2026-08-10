@@ -78,7 +78,7 @@ MouseArea {
             trayItemMenuHandle: root.item.menu
             trayItemId: root.item.id
             anchor {
-                window: root.QsWindow.window
+                window: root.QsWindow?.window ?? null
                 item: root
                 gravity: Config.options.bar.vertical
                     ? (Config.options.bar.bottom ? Edges.Left : Edges.Right)
