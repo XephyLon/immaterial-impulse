@@ -45,10 +45,7 @@ Item {
     onReachChanged: rebuild()
     onColorChanged: canvas.requestPaint()
 
-    Component.onCompleted: {
-        rebuild();
-        holdCava(root.visualizing);
-    }
+    Component.onCompleted: rebuild()
 
     // --- audio -------------------------------------------------------------
 
@@ -70,13 +67,12 @@ Item {
 
     readonly property bool visualizing: root.audioReactive && root.visible
     property bool settling: false
-    property bool cavaHeld: false
 
-    function holdCava(hold) {
-        if (hold === root.cavaHeld)
-            return;
-        CavaService.refCount += hold ? 1 : -1;
-        root.cavaHeld = hold;
+    // Declared rather than counted by hand: the two halves of a refcount have
+    // to agree about whether this consumer is currently counted, and three
+    // hand-written copies of that bookkeeping had already disagreed.
+    CavaRef {
+        active: root.visualizing
     }
 
     function step() {
@@ -101,13 +97,10 @@ Item {
     }
 
     onVisualizingChanged: {
-        holdCava(root.visualizing);
         // A shape frozen mid-beat has settled, so the timer is stopped; kick it
         // or the lobes stay where the music left them.
         root.settling = true;
     }
-
-    Component.onDestruction: holdCava(false)
 
     Timer {
         interval: 16
