@@ -87,7 +87,7 @@ ContentPage {
                     buttonIcon: "counter_2"
                     text: Translation.tr("Unread indicator: show count")
                     checked: Config.options.bar.indicators.notifications.showUnreadCount
-                    onCheckedChanged: { Config.options.bar.indicators.notifications.showUnreadCount = checked; }
+                    onToggleRequested: Config.options.bar.indicators.notifications.showUnreadCount = !Config.options.bar.indicators.notifications.showUnreadCount
                 }
                 ConfigSpinBox {
                     icon: "av_timer"
