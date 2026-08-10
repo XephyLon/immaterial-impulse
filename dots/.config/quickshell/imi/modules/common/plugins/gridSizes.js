@@ -43,6 +43,27 @@ function defaultSize(grid) {
     return normalizeSize(grid);
 }
 
+// `sizes` as a plain JS array, or null when it is not a list at all.
+//
+// `Array.isArray` is not the test, and assuming it was made the whole `sizes`
+// feature inert on the one path that matters. A JS array reaching a delegate
+// through a `Repeater`'s `model` has crossed into QVariant and back: indices
+// and `length` survive, `Array.isArray` does not - and `Background.qml` builds
+// every desktop widget from exactly such a model, so a manifest declaring
+// three spans arrived offering one, with no error anywhere. Measured against a
+// real shell, because the synthetic manifests the harness declares inline
+// never cross that boundary.
+//
+// Anything without a numeric `length` is still rejected, which is what keeps a
+// malformed `sizes` from being read as an empty list of spans.
+function asSizeList(value) {
+    if (Array.isArray(value)) return value;
+    if (!value || typeof value !== "object" || typeof value.length !== "number") return null;
+    const out = [];
+    for (let index = 0; index < value.length; index++) out.push(value[index]);
+    return out;
+}
+
 function sameSize(a, b) {
     return !!a && !!b && a.cols === b.cols && a.rows === b.rows;
 }
@@ -62,8 +83,8 @@ function offeredSizes(grid) {
     const fallback = defaultSize(grid);
     if (!fallback) return [];
 
-    const declared = grid.sizes;
-    if (!Array.isArray(declared)) return [fallback];
+    const declared = asSizeList(grid.sizes);
+    if (declared === null) return [fallback];
 
     const out = [];
     for (const entry of declared) {
@@ -113,11 +134,12 @@ function resolveSize(grid, stored) {
 // between two spans stable rather than flickering between them. A target that
 // is not a real number yields null - the caller keeps whatever it had.
 function nearestSize(candidates, targetWidth, targetHeight) {
-    if (!Array.isArray(candidates)) return null;
+    const list = asSizeList(candidates);
+    if (list === null) return null;
 
     let best = null;
     let bestDistance = Infinity;
-    for (const candidate of candidates) {
+    for (const candidate of list) {
         const dx = candidate.width - targetWidth;
         const dy = candidate.height - targetHeight;
         const distance = dx * dx + dy * dy;

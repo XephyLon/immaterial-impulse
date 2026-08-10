@@ -101,6 +101,31 @@ ShellRoot {
                 scaledScreenHeight: 700
                 wallpaperScale: 1
             }
+
+            // The real desktop builds every widget from a Repeater over
+            // PluginManager.availablePlugins, and a manifest crossing a model
+            // boundary is not the object that went in: its nested `sizes` array
+            // arrives as a QVariantList, with the same indices and length but
+            // `Array.isArray` false. Declaring the manifests inline above, the
+            // way the rest of this harness does, never crosses that boundary -
+            // which is exactly how the whole feature came to be inert on the
+            // one path that ships.
+            Repeater {
+                model: [harness.resizableManifest]
+
+                PluginWidget {
+                    required property var modelData
+                    objectName: "modelledWidget"
+                    manifest: modelData
+                    screenName: harness.testScreen + "-MODEL"
+                    screenWidth: 1200
+                    screenHeight: 700
+                    scaledScreenWidth: 1200
+                    scaledScreenHeight: 700
+                    wallpaperScale: 1
+                    visible: false
+                }
+            }
         }
     }
 
@@ -210,7 +235,24 @@ ShellRoot {
                       && after.resizableY === harness.before.resizableY);
     }
 
+    function modelledWidget() {
+        for (const child of canvas.children)
+            if (child.objectName === "modelledWidget") return child;
+        return null;
+    }
+
     readonly property var steps: [
+        // The same manifest, reached the way the desktop reaches it. Scored
+        // first because everything below is meaningless if the spans do not
+        // survive the trip: a widget offering one span has no grip, and
+        // "nothing resized" is what this harness would report.
+        () => {
+            const widget = harness.modelledWidget();
+            harness.check("a manifest through a model still offers its spans",
+                          widget !== null && widget.offeredGridSizes.length === 3
+                          && widget.gridResizable);
+        },
+
         // Shrink 3x2 -> 2x2: 144px in from the right edge, the whole distance
         // between those two spans.
         () => harness.remember(),

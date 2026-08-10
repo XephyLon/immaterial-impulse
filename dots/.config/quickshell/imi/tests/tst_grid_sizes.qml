@@ -191,4 +191,41 @@ TestCase {
         compare(GridSizes.nearestSize(undefined, 300, 200), null);
         compare(GridSizes.nearestSize(candidates(), NaN, NaN), null);
     }
+
+    // --- a `sizes` list that has crossed a QML model boundary ---------------
+
+    // What a JS array looks like after a round trip through a Repeater's
+    // `model`: same indices, same length, and `Array.isArray` false. Every
+    // desktop widget is built from such a model (Background.qml), so this is
+    // the shape the host really hands in - not the literal the harnesses
+    // declare inline.
+    function asVariantList(entries) {
+        const like = { length: entries.length };
+        for (let i = 0; i < entries.length; i++) like[i] = entries[i];
+        return like;
+    }
+
+    function test_a_sizes_list_survives_the_model_round_trip() {
+        const grid = { cols: 3, rows: 2, sizes: asVariantList(
+            [{ cols: 3, rows: 2 }, { cols: 2, rows: 2 }, { cols: 2, rows: 1 }]) };
+        verify(!Array.isArray(grid.sizes));
+        compare(GridSizes.offeredSizes(grid).length, 3);
+        verify(GridSizes.resizable(grid));
+    }
+
+    function test_a_sizes_value_that_is_not_a_list_is_still_rejected() {
+        // The point of the relaxation is array-LIKE, not anything at all: a
+        // malformed `sizes` must still fall back to the single declared span
+        // rather than be read as an empty list of spans.
+        compare(GridSizes.offeredSizes({ cols: 2, rows: 2, sizes: 5 }).length, 1);
+        compare(GridSizes.offeredSizes({ cols: 2, rows: 2, sizes: "2x2" }).length, 1);
+        compare(GridSizes.offeredSizes({ cols: 2, rows: 2, sizes: { cols: 2 } }).length, 1);
+    }
+
+    function test_the_snap_takes_a_round_tripped_candidate_list_too() {
+        const list = asVariantList([
+            { cols: 2, rows: 1, width: 276, height: 108 },
+            { cols: 3, rows: 2, width: 420, height: 228 }]);
+        compare(GridSizes.formatSize(GridSizes.nearestSize(list, 420, 228)), "3x2");
+    }
 }
