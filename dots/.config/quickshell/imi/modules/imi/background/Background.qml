@@ -90,7 +90,7 @@ Variants {
         property int centeredWallpaperSize: Config.options.background.centeredWallpaperSize
         property color centeredWallpaperColor: root.getColorFromName(Config.options.background.centeredWallpaperColor)
 
-        property var shaderList: ["circlePit", "circleSelect", "magic", "Doom", "Peel", "transition", "pixelate", "stripes"]
+        property var shaderList: WallpaperTransitions.shaderValues
         property string currentShader: "pixelate"
         property string wallpaperAnimation: Config.options.background.wallpaperAnimation ?? "random"
 
