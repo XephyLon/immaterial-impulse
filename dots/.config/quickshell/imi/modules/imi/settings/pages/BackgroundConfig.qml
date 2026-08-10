@@ -192,18 +192,7 @@ ContentPage {
                     buttonIcon: "texture"
                     text: Translation.tr("Transitions")
                     fieldWidth: 50
-                    model: [
-                        { displayName: Translation.tr("None"), icon: "block", value: "" },
-                        { displayName: Translation.tr("Circle"), icon: "circle", value: "circleSelect" },
-                        { displayName: Translation.tr("Circle Pit"), icon: "blur_circular", value: "circlePit" },
-                        { displayName: Translation.tr("Magic"), icon: "auto_awesome", value: "magic" },
-                        { displayName: Translation.tr("Doom"), icon: "whatshot", value: "Doom" },
-                        { displayName: Translation.tr("Peel"), icon: "layers", value: "Peel" },
-                        { displayName: Translation.tr("Fade"), icon: "gradient", value: "transition" },
-                        { displayName: Translation.tr("Pixelate"), icon: "grain", value: "pixelate" },
-                        { displayName: Translation.tr("Stripes"), icon: "texture_minus", value: "stripes" },
-                        { displayName: Translation.tr("Random"), icon: "shuffle", value: "random" },
-                    ]
+                    model: WallpaperTransitions.options
                     currentValue: Config.options.background.wallpaperAnimation
                     onSelected: newValue => {
                         Config.options.background.wallpaperAnimation = newValue;
