@@ -278,7 +278,11 @@ modules/common/             Shared, feature-agnostic building blocks
 
 modules/imi/                 The "imi" (Immaterial Impulse) panel family - one directory per feature:
   bar/                        The top/bottom bar and everything docked in it (Resources, Media,
-                              SysTray, Workspaces, clock, quick toggles, ...)
+                              SysTray, Workspaces, clock, quick toggles, ...). BarPopupOverlay.qml
+                              is the one static layer surface per screen that hosts every bar
+                              popup's content on a single morphing card - it serves the vertical
+                              bar too, which loads the same widget files
+                              (d29cd6e45 ("feat(bar): add the static overlay surface the popup card will live on"))
   sidebarLeft/, sidebarRight/ Slide-out panels (AI chat, quick settings, notifications, volume mixer)
   onScreenDisplay/            Transient toast/OSD popups (volume, brightness, gamma, keyboard
                               layout, audio device switches) - see "OSD system" below
@@ -672,7 +676,8 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   faintest because it thins `colLayer0` again by `bar.backgroundOpacity`. Motivated by 4a1b4f850
   ("fix(blur): stop the compositor frosting drop shadows").
 - **`quickshell:popup` is already handled, and adding `blur = false` to it breaks it.** Its two
-  surfaces (`StyledPopupMenu`, `StyledPopup` - `PanelWindow`s despite the name) paint opaque bodies,
+  surfaces (`StyledPopupMenu`, and `BarPopupOverlay`'s card since b22a923a5 ("refactor(bar): delete
+  the per-popup layer surface") retired `StyledPopup`'s own window) paint opaque bodies,
   and the namespace carries `ignore_alpha = 1` from an older tooltip fix. That blurs the opaque body
   and skips the translucent shadow, which is the whole split the region mechanism exists to produce.
   Set `blur = false` there and the region becomes the only source of blur, which nothing reaches at
@@ -702,6 +707,72 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   toggle makes `PopupBlurThreshold` rewrite `popupBlur.lua` and `hyprctl reload` 400ms later, which
   reconfigures every window. deba3e3f6 ("fix(settings): keep the window's clear colour constant so
   the frost survives"), 4a99f2a8b ("test(lint): pin every window's clear colour to a literal").
+- **One static surface can host many widgets' content, and that is now a pattern here — but only
+  four properties make it safe.** `modules/imi/bar/BarPopupOverlay.qml` is one always-mapped
+  full-screen `Overlay` surface per screen carrying a single `Rectangle` that every bar popup
+  morphs; `modules/common/widgets/StyledPopup.qml` no longer owns a window at all and is a
+  declaration plus a hover state machine that claims `GlobalStates.activeBarPopup`. Ten surfaces,
+  ten shadows and ten compositor map animations became one of each. What holds it up:
+  1. **The surface's geometry is a constant of the screen.** All four edges anchored, no `margins`,
+     no `implicitWidth`/`implicitHeight`. On a layer surface position *is* `margins`, so a card
+     animating along the bar would reconfigure the surface every frame — the create-map-destroy
+     loop `StyledPopup`'s imperative positioning already existed to avoid, reached from the other
+     side. `tests/lint_bar_popup_overlay_static.py` fails on any of those.
+  2. **The mask follows an animating item on its own, but tracks only x/y/width/height.**
+     `PendingRegion::setItem` connects exactly those four signals (`src/core/region.cpp:39-46`) and
+     the region is rebuilt once per polish (`src/window/proxywindow.cpp:660-667`), so no
+     republishing is needed — and none of this is the `WindowBlurRegion` publish-now-and-settle
+     situation above, which is a protocol commit on a surface that reconfigures. Neither `scale`
+     nor `rotation` nor `opacity` is connected: express the motion as geometry only.
+  3. **An `opacity: 0` card still publishes a full-size input region.** Collapse to 0x0 when idle —
+     `build()` on a 0x0 item yields an empty region and `onPolished` then sets
+     `Qt::WindowTransparentForInput` (`src/window/proxywindow.cpp:666`), which is the only thing
+     making a permanently-mapped full-screen `Overlay` surface harmless. Shrink to a floor, fade,
+     *then* zero, so the two do not fight over the same frames.
+  4. **Reuse `quickshell:popup`, do not mint a namespace.** The card's body is `colLayer1Base`, so
+     the `ignore_alpha = 1` note above already describes it exactly. A new namespace falls through
+     to the catch-all `0.05`, under which a full-screen surface's *transparent* pixels clear the
+     threshold and the compositor is asked to blur the entire screen.
+
+  A `HyprlandFocusGrab` over such a surface **does** still clear on an outside click — the mask
+  lets the click through to the compositor, which still classifies it as outside. Measured with an
+  isolated `qs -p` probe before the design was committed to, because Hyprland's grab bookkeeping is
+  per-surface rather than per-region and nothing in-tree had done it before.
+  (d29cd6e45 ("feat(bar): add the static overlay surface the popup card will live on"),
+  b22a923a5 ("refactor(bar): delete the per-popup layer surface").)
+- **Moving content between windows is already how popups work here, and it has two traps.**
+  `StyledPopup` reparented its content into its window at completion long before the overlay
+  existed; the overlay does the same thing, one popup at a time, and never has more than two
+  content trees in a window at once. What that costs:
+  - **An unparented tree does not polish, so its implicit size is stale.** `QQuickLayout` and
+    `QQuickPositioner` size on the polish pass and polish only runs for items in a
+    `QQuickWindow` — which is nine of the ten popup content roots. **You cannot measure the
+    incoming content before you parent it**, so the card's target is computed one frame later on a
+    zero-interval `Timer`. Do not "optimise" that deferral away; it is the difference between a
+    correct first target and a two-stage snap from a stale size.
+  - **Destroying the declaring component destroys the content even while it is on display.**
+    `QQuickItem::setParentItem` changes the *visual* parent; the `QObject` parent stays the
+    declaring object. `BarContent.filterLayout` drops `sysTray` when the tray empties and `plugin:*`
+    when a plugin is disabled, so this is reachable by disabling the Docker plugin while its card
+    is up. The declaring object has to vacate the shared slot from `Component.onDestruction`, or
+    the card strands at its last size with a live input mask.
+  Also: the outgoing tree is `enabled: false` for the whole cross-fade. It fades as a picture, not
+  as a control — a click landing on the card mid-morph is aimed at the content the pointer moved
+  toward, not at the 40%-opacity buttons still under it.
+  (31493a21a ("feat(bar): teach StyledPopup and the overlay to hand the card over").)
+- **A shared surface turns "which popup is open" into a claim, and a claim has to be made by
+  everything that can be shown.** `GlobalStates.activeBarPopup` used to mean "the popup that just
+  claimed the slot, so everyone else should close" and now means "the popup the card is showing".
+  The claim was written only from `onTargetHoveredChanged`, which was invisible while each popup
+  had its own window whose `visible` followed `popupVisible` directly — but the three click-toggled
+  popups (tray overflow, Docker, Discord voice) never report hover at all: a `RippleButton` has no
+  `containsMouse` and both plugin adapters set `hoverEnabled: false` deliberately. Under a shared
+  card that is the difference between appearing and not appearing. `popupVisible` becoming true
+  claims the slot too. The mirror-image rule is that a *pinned* popup holds the card and refuses a
+  hover claim, and that refusal belongs on the claim rather than on honouring it — refusing to
+  honour would leave `GlobalStates.activeBarPopup` pointing at a popup the card is not showing,
+  which is a second silent notion of "current" for every later reader to get wrong.
+  (70934c7e8 ("feat(bar): morph the three click-toggled popups, and let pinned hold the card").)
 - **This whole area is invisible to the test suite.** Quickshell's plugin does not load in
   `qmltestrunner`, so `Region` cannot be constructed there and no test can see whether a region is
   empty, published, or ignored. Every bug in this section was found by looking at the screen, and
@@ -805,6 +876,16 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   overlay-widget registry entries")). Do not "sanitise" manifest strings at parse time instead:
   stripping markup on the way in corrupts legitimate text containing `<`; the render site is the
   defence.
+- **A type that redeclares its default property as `Item` cannot take a non-`Item` child at all.**
+  `default property Item contentItem` on a `QtObject` root makes `Connections { ... }` declared
+  beside it fail with `Cannot assign to non-existent default property` — the whole type goes
+  unavailable, and every file using it reports `Type X unavailable` rather than anything naming the
+  real cause. There is no `data` fallback to catch it, because a `QtObject` has no `data`. Wrap the
+  non-visual object in an explicit property instead (`property Connections watcher: Connections
+  {...}`, `property Timer t: Timer {...}`), which is what `StyledPopup` already did for its close
+  timer and now does for its slot watcher. This surfaced when `StyledPopup` stopped being a
+  `LazyLoader`; probed with `qml6` rather than reasoned about.
+  (b22a923a5 ("refactor(bar): delete the per-popup layer surface").)
 - **`FileView` (`Quickshell.Io`) loads asynchronously - `.text()` right after calling `.reload()`
   is not guaranteed to return the new content.** The correct pattern (used throughout this codebase
   - `MaterialSymbolsSearch.qml`, `Notifications.qml`, `Emojis.qml`, `Profile.qml`) is to read
@@ -1075,8 +1156,10 @@ header button and the rail button must stay the same height, or that shared cent
 Shared building blocks to reach for before writing something from scratch: `StyledText`,
 `StyledComboBox`/`StyledComboBoxSearch`, `StyledSlider`, `StyledToolTip`/`StyledToolTipContent`,
 `RippleButton`, `MaterialSymbol`, `ResourceCard`, `GroupedList` + `ConfigSwitch`/`ConfigSpinBox`/
-`ConfigSelectionArray`/`ConfigComboBox`/`ConfigTextArea` (settings rows), `StyledPopup`,
-`StyledRectangularShadow`, `DockIconMotion` (wraps a dock icon's visuals with hover-lift /
+`ConfigSelectionArray`/`ConfigComboBox`/`ConfigTextArea` (settings rows), `StyledPopup` (a bar
+widget's hover popup: a declaration plus a hover state machine, *not* a window - its content is
+hosted on `modules/imi/bar/BarPopupOverlay.qml`'s shared card, b22a923a5 ("refactor(bar): delete
+the per-popup layer surface")), `StyledRectangularShadow`, `DockIconMotion` (wraps a dock icon's visuals with hover-lift /
 press-squish / launch-bounce / appear-pop feedback, driven by `services/DockLaunchTracker`),
 `SchemePaletteCircle` (an Android 12-style palette circle for a colour scheme, fed from
 `services/SchemePreview`, with the scheme's glyph as the fallback while the colour venv has not
