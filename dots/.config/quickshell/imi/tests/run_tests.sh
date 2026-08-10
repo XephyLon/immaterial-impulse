@@ -224,6 +224,15 @@ if ! python3 "$SCRIPT_DIR/test_widget_resize_grip_runtime.py"; then
     exit 1
 fi
 
+# The source half is static. The runtime half pans a real WidgetCanvas under
+# real PluginWidgets and brings its own headless weston, so it needs no display
+# of its own - but it does need weston, and skips without it.
+echo "Running widget parallax opt-out tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_parallax_optout.py"; then
+    echo "Widget parallax opt-out tests failed."
+    exit 1
+fi
+
 echo "Running widget group selection tests..."
 if ! python3 "$SCRIPT_DIR/test_widget_group_selection.py"; then
     echo "Widget group selection tests failed."

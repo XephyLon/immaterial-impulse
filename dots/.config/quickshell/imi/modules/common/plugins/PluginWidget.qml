@@ -9,6 +9,7 @@ import qs.modules.common.widgets
 import qs.modules.imi.background.widgets
 import "../functions/parallax.js" as ParallaxMath
 import "gridSizes.js" as GridSizes
+import "../functions/parallax.js" as ParallaxMath
 
 AbstractBackgroundWidget {
     id: rootWidget
@@ -91,6 +92,13 @@ AbstractBackgroundWidget {
     readonly property bool keepTranslucent: manifest
         ? PluginState.option(manifest.id, "keepTranslucent", manifest.desktopWidget?.keepTranslucent === true)
         : false
+    // Whether this widget travels with the desktop's parallax pan. Same
+    // manifest-seeds-the-default shape as the four above, but the seed reads
+    // `!== false` rather than `=== true`: following is the default, and a
+    // manifest can only opt out of it.
+    readonly property bool followParallax: manifest
+        ? PluginState.option(manifest.id, "followParallax", manifest.desktopWidget?.followParallax !== false)
+        : true
     // Frost mode is user-selectable: "blur" samples + blurs the wallpaper region
     // behind the widget; "tint" (any non-"blur" value) leaves the widget's own
     // translucent panel to show the sharp wallpaper through it.
@@ -216,20 +224,34 @@ AbstractBackgroundWidget {
 
     // `forceCenter` overrides the persisted position for as long as it is set,
     // without disturbing it - the widget returns to where the user left it the
-    // moment the condition clears. Dragging assigns x/y directly and so breaks
-    // these bindings; AbstractBackgroundWidget calls restoreXYBinding() on
-    // release for exactly this case, so the override has to be restored there
-    // too or a single drag disables centring for the rest of the session.
-    x: rootWidget.forceCenter ? ((scaledScreenWidth - width) / 2) : targetX
-    y: rootWidget.forceCenter ? ((scaledScreenHeight - height) / 2) : targetY
+    // moment the condition clears.
+    readonly property real placedX: rootWidget.forceCenter
+        ? ((scaledScreenWidth - width) / 2) : targetX
+    readonly property real placedY: rootWidget.forceCenter
+        ? ((scaledScreenHeight - height) / 2) : targetY
+
+    // The widget canvas is a sibling of the wallpaper viewport and its x/y ARE
+    // the widget parallax (Background.qml), so every widget on it travels
+    // whether or not it wants to. Opting out is therefore a cancellation, not
+    // a smaller offset - see ParallaxMath.parallaxCancel. Found by walking the
+    // parent chain rather than passed down, the same way AbstractWidget already
+    // reaches its canvas for drag bookkeeping.
+    readonly property Item parallaxCanvas: rootWidget.findCanvas(rootWidget.parent)
+    readonly property real parallaxCancelX: ParallaxMath.parallaxCancel(
+        rootWidget.parallaxCanvas ? rootWidget.parallaxCanvas.x : 0, rootWidget.followParallax)
+    readonly property real parallaxCancelY: ParallaxMath.parallaxCancel(
+        rootWidget.parallaxCanvas ? rootWidget.parallaxCanvas.y : 0, rootWidget.followParallax)
+
+    // Dragging assigns x/y directly and so breaks these bindings;
+    // AbstractBackgroundWidget calls restoreXYBinding() on release for exactly
+    // this case, so the override has to be restored there too or a single drag
+    // disables centring for the rest of the session.
+    x: rootWidget.placedX + rootWidget.parallaxCancelX
+    y: rootWidget.placedY + rootWidget.parallaxCancelY
 
     function restoreXYBinding() {
-        rootWidget.x = Qt.binding(() => rootWidget.forceCenter
-            ? ((rootWidget.scaledScreenWidth - rootWidget.width) / 2)
-            : rootWidget.targetX);
-        rootWidget.y = Qt.binding(() => rootWidget.forceCenter
-            ? ((rootWidget.scaledScreenHeight - rootWidget.height) / 2)
-            : rootWidget.targetY);
+        rootWidget.x = Qt.binding(() => rootWidget.placedX + rootWidget.parallaxCancelX);
+        rootWidget.y = Qt.binding(() => rootWidget.placedY + rootWidget.parallaxCancelY);
     }
 
     // Overrides AbstractBackgroundWidget's release path, which calls this on a
@@ -239,8 +261,13 @@ AbstractBackgroundWidget {
     // after the drag broke the x/y bindings, and setPosition is what makes the
     // move survive a restart.
     function commitPosition() {
-        rootWidget.targetX = rootWidget.x;
-        rootWidget.targetY = rootWidget.y;
+        // The cancellation is subtracted back out: `x` is where the widget is
+        // on the canvas, the persisted position is where it was PLACED. Storing
+        // the drawn coordinate would fold the current pan into the saved
+        // position, so an opted-out widget would walk by one pan's worth every
+        // time it was dragged.
+        rootWidget.targetX = rootWidget.x - rootWidget.parallaxCancelX;
+        rootWidget.targetY = rootWidget.y - rootWidget.parallaxCancelY;
         rootWidget.restoreXYBinding();
         if (!manifest) return;
         PluginState.setPosition(manifest.id, screenName, {

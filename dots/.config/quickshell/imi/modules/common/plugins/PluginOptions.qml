@@ -60,6 +60,15 @@ ColumnLayout {
         label: "Stay translucent",
         icon: "opacity",
         default: manifest.desktopWidget?.keepTranslucent === true
+    }, {
+        // The odd one out among the seeds: travelling with the desktop's
+        // parallax pan is the default, so the manifest field can only turn it
+        // OFF and the seed reads `!== false` rather than `=== true`.
+        key: "followParallax",
+        type: "boolean",
+        label: "Follow parallax",
+        icon: "panorama_horizontal",
+        default: manifest.desktopWidget?.followParallax !== false
     }] : []
 
     Repeater {

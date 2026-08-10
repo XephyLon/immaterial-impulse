@@ -56,7 +56,8 @@ function validateManifest(manifest) {
     // the matching PluginState option, so a non-boolean would slip through as
     // a truthy default nobody can account for later - reject it here instead.
     if (manifest.desktopWidget) {
-        const desktopFlags = ["blur", "locked", "clickThrough", "keepTranslucent"];
+        const desktopFlags = ["blur", "locked", "clickThrough", "keepTranslucent",
+            "followParallax"];
         for (const flag of desktopFlags) {
             if (manifest.desktopWidget[flag] !== undefined
                     && typeof manifest.desktopWidget[flag] !== "boolean") {
