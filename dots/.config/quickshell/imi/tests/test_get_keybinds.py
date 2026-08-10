@@ -187,12 +187,21 @@ def main():
                       comments == ["Focus in direction", "Focus down"],
                       f"got {comments}")
                 synthetic = focus["keybinds"][0] if focus["keybinds"] else None
-                check("--#/# synthetic bind uses 'comment' dispatcher",
+                # This used to assert mods == [] and key == "SUPER + Arrows",
+                # which pinned the defect rather than the behaviour: the whole
+                # config-syntax string was kept as the key, and the cheatsheet
+                # rendered it verbatim as one wide keycap reading
+                # `bind = SUPER, Hash,,`. The line is documentation for a family
+                # of real binds, so it is split like any other chord and flagged
+                # so the UI does not offer to rebind something that has no
+                # single chord behind it.
+                check("--#/# synthetic bind is split into mods and key",
                       synthetic is not None
                       and synthetic["dispatcher"] == "comment"
-                      and synthetic["mods"] == []
-                      and synthetic["key"] == "SUPER + Arrows"
-                      and synthetic["params"] == "",
+                      and synthetic["mods"] == ["SUPER"]
+                      and synthetic["key"] == "Arrows"
+                      and synthetic["params"] == ""
+                      and synthetic["flags"].get("documentation") is True,
                       f"got {synthetic}")
 
         # --- Apps section: exec autogen + blacklist + multiline -------------
