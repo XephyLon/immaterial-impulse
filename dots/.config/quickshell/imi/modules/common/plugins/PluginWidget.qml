@@ -62,6 +62,16 @@ AbstractBackgroundWidget {
     clickThrough: manifest
         ? PluginState.option(manifest.id, "clickThrough", manifest.desktopWidget?.clickThrough === true)
         : false
+    // Exempts this widget from the transparency toggle: with transparency off
+    // every other widget's panel is forced fully opaque
+    // (PluginState.effectiveBackgroundOpacity) and loses its frost, which is
+    // the whole point for a widget that is meant to be see-through. Both
+    // halves have to follow the flag together - a translucent panel with the
+    // frost still suppressed is exactly the sharp-wallpaper hole the opaque
+    // default exists to remove.
+    readonly property bool keepTranslucent: manifest
+        ? PluginState.option(manifest.id, "keepTranslucent", manifest.desktopWidget?.keepTranslucent === true)
+        : false
     // Frost mode is user-selectable: "blur" samples + blurs the wallpaper region
     // behind the widget; "tint" (any non-"blur" value) leaves the widget's own
     // translucent panel to show the sharp wallpaper through it.
@@ -190,7 +200,8 @@ AbstractBackgroundWidget {
         && Config.options.lock.blur.enable
     Repeater {
         model: rootWidget.frostBlur && rootWidget.blurEnabled && !rootWidget.lockCoversFrost
-            && rootWidget.hasBlurSurface && Config.options.appearance.transparency.enable
+            && rootWidget.hasBlurSurface
+            && (Config.options.appearance.transparency.enable || rootWidget.keepTranslucent)
             ? (pluginNode.hasCustomBlurRegions
                 ? pluginNode.blurRegions
                 : [{ x: 0, y: 0, width: rootWidget.width,
