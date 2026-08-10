@@ -205,13 +205,30 @@ Scope {
                         bottomMargin: (Config.options.interactions.deadPixelWorkaround.enable && barRoot.anchors.bottom) * 1
                     }
 
+                    // The window's input region, and the only thing that can
+                    // reveal an auto-hidden bar: the pointer has to land inside
+                    // it for hoverRegion to see anything at all.
+                    //
+                    // Kept inside the surface on purpose. Anchoring this to
+                    // barContent with negative margins was the obvious way to
+                    // write it, but while the bar is hidden barContent sits at
+                    // y = -barHeight, so the published rect began roughly a
+                    // whole bar height *above* the surface and the compositor
+                    // was left to clamp it. The reveal strip is only
+                    // hoverRegionWidth (2px by default) tall once clamped, so
+                    // an off-by-one there costs half of it - and the row that
+                    // goes missing is y = 0, the screen edge, which is exactly
+                    // where a pointer thrown at the top of the screen lands.
                     Item {
                         id: hoverMaskRegion
-                        anchors {
-                            fill: barContent
-                            topMargin: -Config.options.bar.autoHide.hoverRegionWidth
-                            bottomMargin: -Config.options.bar.autoHide.hoverRegionWidth
-                        }
+                        readonly property real reveal: Config.options.bar.autoHide.hoverRegionWidth
+                        readonly property real rawTop: barContent.y - reveal
+                        readonly property real rawBottom: barContent.y + barContent.height + reveal
+
+                        x: 0
+                        width: parent.width
+                        y: Math.max(0, rawTop)
+                        height: Math.max(0, Math.min(parent.height, rawBottom) - y)
                     }
 
                     RoundCorner {
