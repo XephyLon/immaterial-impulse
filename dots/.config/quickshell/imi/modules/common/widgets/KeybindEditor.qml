@@ -46,8 +46,15 @@ ColumnLayout {
     readonly property bool chordChanged: capture.hasChord && root.bindingData !== null
         && HyprlandKeybindOverrides.identityFor(capture.mods, capture.key)
            !== HyprlandKeybindOverrides.identityFor(root.bindingData.mods, root.bindingData.key)
+    // Acknowledging a conflict is per-chord: capturing a different one has to
+    // re-ask, or a stale "yes" from an earlier attempt would carry over.
+    property string acknowledgedChord: ""
+    readonly property string capturedIdentity: capture.hasChord
+        ? HyprlandKeybindOverrides.identityFor(capture.mods, capture.key) : ""
+    readonly property bool conflictAcknowledged: root.conflicts.length === 0
+        || (root.capturedIdentity.length > 0 && root.acknowledgedChord === root.capturedIdentity)
     readonly property bool canApply: root.writable && root.chordChanged
-        && root.conflicts.length === 0
+        && root.conflictAcknowledged
         && (root.bindingData.editable || root.bindingData.added)
 
     function apply() {
@@ -161,6 +168,46 @@ ColumnLayout {
                 wrapMode: Text.Wrap
             }
         }
+
+        // A conflict used to disable Apply outright, which left no way to
+        // deliberately move a chord onto one already in use - and no
+        // explanation, just a dead button. It is a warning to confirm now.
+        // Hyprland keeps both binds; the shell cannot remove someone else's,
+        // so say what will actually happen rather than implying a swap.
+        ConfigSwitch {
+            id: conflictConfirm
+            Layout.fillWidth: true
+            visible: root.conflicts.length > 0
+            buttonIcon: "warning"
+            text: Translation.tr("Assign it anyway — both shortcuts will fire on this chord")
+            checked: root.acknowledgedChord === root.capturedIdentity
+            onClicked: {
+                root.acknowledgedChord = (root.acknowledgedChord === root.capturedIdentity)
+                    ? "" : root.capturedIdentity;
+            }
+        }
+    }
+
+    // Auto-cancel. A click on a chord row opens this, and a misclick on a dense
+    // list is easy - without a way out that costs nothing, the editor is a trap
+    // that has to be dismissed deliberately. Any interaction cancels the
+    // countdown: it only fires when the editor was opened and then ignored.
+    Timer {
+        id: idleCancel
+        interval: 5000
+        running: root.bindingData !== null && !capture.hasChord
+            && !capture.activeFocus && capture.pendingMods.length === 0
+        onTriggered: root.done()
+    }
+
+    StyledText {
+        Layout.fillWidth: true
+        visible: idleCancel.running
+        horizontalAlignment: Text.AlignHCenter
+        text: Translation.tr("Closing in %1s — press a shortcut to edit it")
+            .arg(Math.ceil(idleCancel.interval / 1000))
+        color: Appearance.colors.colSubtext
+        font.pixelSize: Appearance.font.pixelSize.smaller
     }
 
     RowLayout {
