@@ -15,7 +15,18 @@ Scope {
 
     readonly property bool shakeToSummon: Config.options.dropShelf.shakeToSummon
     readonly property real shakeSensitivity: Config.options.dropShelf.shakeSensitivity
+    // Frost *is* the translucency here (see shelfBg: the compositor blurs behind
+    // the layer, so the only thing "blur" does in this file is thin the tint),
+    // so the global transparency switch has to gate it. Ungated, the shelf stayed
+    // 50% see-through onto a now-sharp wallpaper while every other surface went
+    // opaque - and out of the box, since both settings default to on/0.5.
+    //
+    // No per-panel exemption, deliberately: the desktop widgets' `keepTranslucent`
+    // exists because widgets are user-installed and heterogeneous, and one of them
+    // may exist precisely to be see-through. This is one first-party transient
+    // shelf; the global switch is its switch.
     readonly property bool blurBackground: Config.options.dropShelf.blurBackground
+        && Config.options.appearance.transparency.enable
     readonly property real backgroundOpacity: Config.options.dropShelf.backgroundOpacity
 
     // Dropover-style mid-drag summon: press the bound key while dragging files
