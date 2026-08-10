@@ -33,7 +33,15 @@ LazyLoader {
     // card whenever the slot holds a popup that has not opted in.
     property bool morph: false
     active: everShown && !morph
-    onPopupVisibleChanged: if (popupVisible) everShown = true
+    onPopupVisibleChanged: {
+        if (!popupVisible) return;
+        everShown = true;
+        // A click-toggled popup's widget never reports hover (a RippleButton
+        // has no containsMouse; the plugin adapters set hoverEnabled: false),
+        // so becoming visible is the only moment it can claim the card.
+        claimSlot();
+    }
+    Component.onCompleted: if (popupVisible) claimSlot()
 
     // The overlay publishes its own PanelWindow here for whichever popup it is
     // currently showing. Consumers that need a window to hand to a focus grab
@@ -63,10 +71,26 @@ LazyLoader {
         onTriggered: root.hoverHeld = false
     }
 
+    // Claim the shared slot, which is now also a claim on the shared card.
+    // A pinned popup holds it: pinning is a deliberate click, often with a focus
+    // grab over it, while a hover is an accident of where the pointer passed, so
+    // travelling across the bar must not take the tray overflow or the Docker
+    // panel out from under the pointer. The accepted cost is that while a popup
+    // is pinned, hovering another bar widget produces nothing at all.
+    //
+    // The refusal lives here rather than in the overlay because the slot is the
+    // shared resource: refusing to honour a claim would leave
+    // GlobalStates.activeBarPopup pointing at a popup the card is not showing.
+    function claimSlot() {
+        const occupant = GlobalStates.activeBarPopup;
+        if (occupant && occupant !== root && occupant.pinnedOpen && !root.pinnedOpen) return;
+        GlobalStates.activeBarPopup = root;
+    }
+
     onTargetHoveredChanged: {
-        // Claim the shared slot the moment this popup's widget is hovered, so any
-        // neighbour that was still open collapses before it can paint over us.
-        if (targetHovered) GlobalStates.activeBarPopup = root;
+        // Claim the moment this popup's widget is hovered, so any neighbour that
+        // was still open collapses before it can paint over us.
+        if (targetHovered) claimSlot();
         updateHoverHold();
     }
     onPopupHoveredChanged: updateHoverHold()

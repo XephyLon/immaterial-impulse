@@ -112,7 +112,7 @@ Item {
                 // hover path reads containsMouse, which a QQC2-derived
                 // RippleButton does not expose.
                 pinnedOpen: root.trayOverflowOpen && root.unpinnedItems.length > 0
-                active: root.trayOverflowOpen && root.unpinnedItems.length > 0
+                morph: true
 
                 GridLayout {
                     id: trayOverflowLayout

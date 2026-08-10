@@ -8,6 +8,7 @@ import qs.modules.common.widgets
 
 StyledPopup {
     id: root
+    morph: true
     contentPadding: Appearance.spacing.space200
 
     function beginAuthorization() {
