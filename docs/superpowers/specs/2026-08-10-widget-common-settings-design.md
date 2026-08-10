@@ -1,6 +1,6 @@
 # Common per-widget settings — design
 
-**Status:** design, not implemented
+**Status:** landed — see "As it landed" at the end for the three places reality differed
 **Scope:** `modules/common/plugins/` (`PluginOptions`, `PluginWidget`, `PluginState`), the bundled
 weather and currency manifests, `modules/imi/settings/pages/PluginsPage.qml`
 
@@ -132,3 +132,39 @@ with the drag handle, and a parallax opt-out actually holding still while worksp
 
 Step 1 is worth looking at on screen before 2-4 exist, since it changes every widget's settings page
 and nothing else.
+
+---
+
+## As it landed
+
+Three places the implementation had to differ from the design above. Recorded here
+rather than silently, because each one is a thing the next person would otherwise
+re-derive.
+
+1. **A prerequisite bug: `grid.sizes` did not survive the model boundary.** `offeredSizes`
+   gated the list on `Array.isArray`, which is false for an array that has crossed a
+   `Repeater`'s `model` — and `Background.qml` builds every desktop widget from such a
+   model. So a manifest declaring several spans reached the host offering one, and steps
+   3 and 4 were both dead on arrival until it was fixed. The runtime harness had missed
+   it because it declares its manifests inline on the harness root, a path that never
+   crosses a model.
+
+2. **Weather and currency lost their own resize grips, which the design did not mention.**
+   Retiring `sizeMode` leaves the host's generic grip in the same bottom-right corner
+   their `swap_horiz` chips occupied, so keeping both would stack two controls on one
+   spot — and theirs gated on a legacy `cfg.locked` rather than the host's resolved lock,
+   staying live on a widget the user had pinned. Their `sizeModeRequested` signal and
+   `getModeForWidth` helper went with them.
+
+3. **The migration is scoped by the manifest, not by the key name.** §2 describes reading
+   "a stored `sizeMode`", which is not enough: `world-clock` and `calendar` declare no
+   `grid` and drive a `sizeMode` of their own from their own toggles, so for them the key
+   is a live setting. A pass keyed on the name emptied their options and reset both
+   widgets. It now acts only where the manifest offers more than one span. The
+   `migratedSizeMode` marker is kept as designed, but is belt-and-braces rather than the
+   load-bearing part — deleting the old key is what makes the pass one-shot — and it is
+   fired on a settle timer, because a marker records that a pass ran, not that it saw the
+   user's data, and manifests load one `FileView` at a time.
+
+The settings-search note in §5 did not apply: this branch's tree has no `searchTerms` in
+`SettingsContent.qml` and no `tests/test_settings_search_index.py`.
