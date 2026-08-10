@@ -17,6 +17,13 @@ Item {
         "Circle", "Square", "Cookie12Sided", "Clover4Leaf", "Pill", "Heart"
     ]
 
+    // This submenu is built and destroyed on every hover, so the swatches have
+    // to come from a cache that outlives it. refresh() is free while the
+    // wallpaper and the dark/light mode it was computed from still hold.
+    readonly property string swatchInputs: SchemePreview.inputs
+    onSwatchInputsChanged: SchemePreview.refresh()
+    Component.onCompleted: SchemePreview.refresh()
+
     ColumnLayout {
         id: col
         width: root.width
@@ -90,11 +97,20 @@ Item {
                             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
                         }
 
-                        MaterialSymbol {
+                        // The palette the preset produces, not an abstract
+                        // glyph: nine Material Symbols read as nine more
+                        // animation entries, which is exactly what sits below
+                        // them in this menu (#142). Falls back to the glyph
+                        // while the color venv has not answered.
+                        SchemePaletteCircle {
                             anchors.centerIn: parent
-                            text: schemeTile.modelData.icon
-                            iconSize: Appearance.font.pixelSize.larger
-                            color: schemeTile.isSelected ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
+                            diameter: 22
+                            swatches: SchemePreview.swatches[schemeTile.modelData.value] ?? []
+                            fallbackIcon: schemeTile.modelData.icon
+                            fallbackIconSize: Appearance.font.pixelSize.larger
+                            fallbackIconColor: schemeTile.isSelected
+                                ? Appearance.colors.colOnPrimary
+                                : Appearance.colors.colOnSecondaryContainer
                         }
 
                         MouseArea {
