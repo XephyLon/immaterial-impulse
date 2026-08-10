@@ -222,6 +222,31 @@ TestCase {
         compare(result.error, "grid.cols must be an integer between 1 and 12");
     }
 
+    // A manifest's options and the host's own per-plugin state are one
+    // PluginState namespace. `__gridSize` (the span the user resized a widget
+    // to) lives there, so a manifest declaring a `__`-prefixed option would ship
+    // a settings control that writes over host state.
+    function test_rejectsReservedOptionKeyPrefix() {
+        var result = PluginValidator.validateManifest({
+            "id": "reserved_opt",
+            "name": "Reserved Opt",
+            "options": [{ "key": "__gridSize", "type": "boolean", "default": false }],
+            "desktopWidget": { "component": "Widget.qml" }
+        });
+        verify(!result.valid);
+        compare(result.error, "Plugin option key '__gridSize' is reserved: '__' is the host's prefix");
+    }
+
+    function test_acceptsASingleLeadingUnderscore() {
+        var result = PluginValidator.validateManifest({
+            "id": "underscore_opt",
+            "name": "Underscore Opt",
+            "options": [{ "key": "_private", "type": "boolean", "default": false }],
+            "desktopWidget": { "component": "Widget.qml" }
+        });
+        verify(result.valid, "Single underscore should stay valid: " + (result.error ? result.error : ""));
+    }
+
     function test_rejectsNonObjectGrid() {
         var result = PluginValidator.validateManifest({
             "id": "grid_arr",

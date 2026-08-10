@@ -93,6 +93,14 @@ function validateManifest(manifest) {
             if (optionKeys.has(option.key)) {
                 return { valid: false, error: "Duplicate plugin option key '" + option.key + "'" };
             }
+            // A manifest's options and the host's own per-plugin state share one
+            // PluginState namespace, so a manifest could otherwise declare a
+            // control that writes over host state - `__gridSize`, the span the
+            // user resized the widget to, is the first of those. The prefix is
+            // the host's; nothing under it may come from a manifest.
+            if (option.key.startsWith("__")) {
+                return { valid: false, error: "Plugin option key '" + option.key + "' is reserved: '__' is the host's prefix" };
+            }
             optionKeys.add(option.key);
             if (!["boolean", "choice", "shape", "color", "number", "text"].includes(option.type)) {
                 return { valid: false, error: "Unsupported plugin option type '" + option.type + "'" };
