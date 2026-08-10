@@ -12,6 +12,32 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.23.1] — 2026-08-10
+
+### Fixed
+- **Right-clicking a tray icon in the overflow popup crashed the whole shell.**
+  0.23.0 moved every bar popup's content onto one shared card, and a tray menu
+  is a window opened from that content - so closing the popup unparented the
+  content while the menu was still anchored to the window it had been in. Two
+  smaller faults from the same move went with it: the overflow closed itself the
+  moment a menu opened, and the menu closed itself again about half a second
+  later.
+- **A tray menu opened from the bar is blurred again.** Menus inherit the blur
+  rules of whichever surface they were opened from, and moving tray items onto
+  the shared card quietly moved them onto a surface whose threshold no
+  translucent menu could reach.
+- **The cheatsheet no longer runs off the sides of a smaller screen.** The
+  column count was decided by how much *height* there was, and columns trade
+  height for width - so a display with room to spare vertically but not
+  horizontally was given four columns and the outer two were cut off at the
+  screen edges.
+- **An auto-hidden bar comes back when you throw the pointer at the screen
+  edge.** With the detached bar style the bar's surface was held a few pixels
+  off the edge, and those pixels belonged to no part of the bar - so the edge
+  itself did nothing, and hiding left the band above the bar untouched instead
+  of clearing it. Sliding along the top edge no longer makes the bar flicker in
+  and out either.
+
 ## [0.23.0] — 2026-08-10
 
 ### Added
