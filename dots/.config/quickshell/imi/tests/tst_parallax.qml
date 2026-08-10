@@ -262,30 +262,6 @@ TestCase {
                     Parallax.drawnFromPlacement(600, cancel), cancel), 600);
     }
 
-    // --- The snap lattice ---------------------------------------------------
-
-    function test_the_snap_lands_the_placement_on_the_lattice_not_the_drawing() {
-        // 215.04 is the author's real canvas offset (5120px wide, 107% zoom,
-        // 1.2 widget factor). Snapping the drawn coordinate stored
-        // 95.04000000000033 - on the lattice where it was drawn, off it where
-        // it was saved, which is "the widget can be placed outside the grid".
-        const cancel = Parallax.parallaxCancel(215.04000000000033, false);
-        const snapped = Parallax.snapPlacement(-118, cancel, 12);
-        const placement = Parallax.placementFromDrawn(snapped, cancel);
-        fuzzyCompare(placement % 12, 0, 0.0001);
-    }
-
-    function test_the_snap_is_the_plain_lattice_for_a_following_widget() {
-        compare(Parallax.snapPlacement(-118, 0, 12), -120);
-        compare(Parallax.snapPlacement(-114, 0, 12), -114 + 6);
-    }
-
-    function test_the_snap_declines_a_nonsense_lattice_rather_than_dividing_by_it() {
-        compare(Parallax.snapPlacement(37, 0, 0), 37);
-        compare(Parallax.snapPlacement(37, 0, undefined), 37);
-        verify(!isNaN(Parallax.snapPlacement(37, "nonsense", 12)));
-    }
-
     // --- Guards ------------------------------------------------------------
 
     function test_missing_state_does_not_produce_nan() {

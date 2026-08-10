@@ -252,6 +252,15 @@ AbstractBackgroundWidget {
     // unaffected, since the Behaviors are already off while dragging.
     animatePosition: rootWidget.followParallax
 
+    // The 12px lattice is what makes widgets line up with each other, and they
+    // line up at rest - so it belongs to the placement frame, not to the drawn
+    // one. Snapping the drawn coordinate leaves an opted-out widget's stored
+    // position off the lattice by whatever fraction the pan happened to be
+    // holding, which is what put `x: 95.04000000000033` in a real
+    // plugin-state.json.
+    snapOffsetX: rootWidget.parallaxCancelX
+    snapOffsetY: rootWidget.parallaxCancelY
+
     // Dragging assigns x/y directly and so breaks these bindings;
     // AbstractBackgroundWidget calls restoreXYBinding() on release for exactly
     // this case, so the override has to be restored there too or a single drag

@@ -143,6 +143,9 @@ ShellRoot {
 
     function storedX(id) { return Math.round(PluginState.position(id, harness.testScreen).x); }
     function storedY(id) { return Math.round(PluginState.position(id, harness.testScreen).y); }
+    // Unrounded, for the one check that is about the fraction itself.
+    function rawStoredX(id) { return PluginState.position(id, harness.testScreen).x; }
+    function rawStoredY(id) { return PluginState.position(id, harness.testScreen).y; }
 
     // Snapped to the shared 12px lattice by AbstractWidget, so every gesture
     // here is a whole number of steps and the expected result is exact.
@@ -309,6 +312,27 @@ ShellRoot {
             harness.check("pan settled: the follower arrived",
                           harness.screenX(followWidget) === -72
                           && harness.screenY(followWidget) === 24);
+        },
+
+        // --- The lattice belongs to the frame the position is stored in -----
+        //
+        // A real canvas offset is not a round number: 5120px wide at 107% zoom
+        // with a 1.2 widget factor is 215.04000000000033. Snapping the drawn
+        // coordinate puts the widget on the lattice where it is drawn and off
+        // it where it is saved - which is a stored x of 95.04000000000033, and
+        // a widget that no longer lines up with its neighbours at rest.
+        () => { canvas.animatePan = false; harness.pan(-215.04000000000033, -60.5); },
+        // The gesture is deliberately NOT a whole number of lattice steps: a
+        // drag of 48 from a placement of 696 lands on the lattice whether or
+        // not anything snapped, which is a check that cannot fail.
+        () => harness.dragWidget(holdWidget, 50, 26),
+        () => {
+            harness.check("dragged at a fractional pan: the placement is on the lattice",
+                          harness.rawStoredX("hold-probe") % 12 === 0
+                          && harness.rawStoredY("hold-probe") % 12 === 0);
+            harness.check("dragged at a fractional pan: lands on the nearest lattice cell",
+                          harness.screenX(holdWidget) === 744
+                          && harness.screenY(holdWidget) === 432);
         }
     ]
 
