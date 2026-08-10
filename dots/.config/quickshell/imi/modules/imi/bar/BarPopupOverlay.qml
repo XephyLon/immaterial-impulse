@@ -352,11 +352,25 @@ Scope {
             // There is no sensible interpolation between "below the top edge"
             // and "right of the left edge", so an orientation change idles the
             // card rather than morphing across it.
-            Connections {
-                target: overlayWindow.current ?? null
-                ignoreUnknownSignals: true
-                function onBarEdgeChanged() { overlayWindow.finishExit() }
+            //
+            // Derived here from the config rather than watched on whichever
+            // popup currently holds the card. Every popup computes the same
+            // value from the same global config, so the per-popup signal says
+            // nothing extra - but a popup that is rebuilt on every open (the
+            // Docker and Discord adapters' Loaders both do) evaluates its own
+            // barEdge binding for the first time *after* a Connections targeting
+            // it attaches, and that initial evaluation is indistinguishable from
+            // an orientation flip. It called finishExit() in the middle of the
+            // takeover that was building the card, stranding it at the parked
+            // 20x20 square: the popup opened as a small dot and only rendered
+            // when the race happened to fall the other way, which is why it took
+            // several clicks (#140).
+            readonly property string barEdge: {
+                if (!Config.options.bar.vertical)
+                    return Config.options.bar.bottom ? "bottom" : "top";
+                return Config.options.bar.bottom ? "right" : "left";
             }
+            onBarEdgeChanged: overlayWindow.finishExit()
 
             SequentialAnimation {
                 id: contentEnter
