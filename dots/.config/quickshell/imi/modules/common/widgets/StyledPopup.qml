@@ -33,6 +33,20 @@ QtObject {
     // binding rather than close the popup.
     signal dismissRequested()
 
+    // Raised by the overlay immediately *before* it unparents this popup's
+    // content from the card. Anything holding a reference to the window the
+    // content is currently in - a menu anchored to it, say - has to let go here:
+    // once the reparent starts, Qt tears the item's window association down and
+    // re-evaluates every binding that read it, with the item half destroyed.
+    signal aboutToRelease()
+
+    // Windows that belong to this popup but are not the card: a tray item's
+    // context menu is a real window of its own, opened from content sitting on
+    // the shared card. The overlay's focus grab has to count them as inside, or
+    // opening one reads as a click outside the card and dismisses the popup that
+    // owns it.
+    property var extraGrabWindows: []
+
     onPopupVisibleChanged: {
         // A click-toggled popup's widget never reports hover (a RippleButton has
         // no containsMouse; the plugin adapters set hoverEnabled: false), so

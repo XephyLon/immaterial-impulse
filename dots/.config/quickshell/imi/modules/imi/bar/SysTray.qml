@@ -119,6 +119,16 @@ Item {
                 // Bound, not assignable - so the overlay's grab asks rather
                 // than writes, and this clears the flag the binding reads.
                 onDismissRequested: root.trayOverflowOpen = false
+                extraGrabWindows: root.activeMenu ? [root.activeMenu] : []
+                // The overflow's delegates own tray menus anchored to whatever
+                // window the card is on. Let them go before the card unparents.
+                onAboutToRelease: {
+                    if (root.activeMenu) {
+                        root.activeMenu.close()
+                        root.activeMenu = null
+                    }
+                    root.trayOverflowOpen = false
+                }
 
                 GridLayout {
                     id: trayOverflowLayout

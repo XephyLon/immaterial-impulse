@@ -50,13 +50,24 @@ Scope {
                 right: true
             }
 
-            // Reused deliberately rather than minting a namespace: rules.lua
-            // gives quickshell:popup ignore_alpha = 1, which blurs the card's
-            // opaque body and skips its translucent shadow. A new namespace
-            // would fall through to the catch-all 0.05, under which this
-            // surface's transparent pixels ask the compositor to blur the
-            // entire screen.
-            WlrLayershell.namespace: "quickshell:popup"
+            // Its own namespace, listed in rules.lua's computed-threshold loop
+            // beside the bar and the dock. quickshell:popup was reused at first
+            // because its ignore_alpha = 1 blurs the card's opaque body and
+            // skips its translucent shadow - but a tray item's context menu is
+            // an xdg-popup of whatever surface it was opened from, and popups
+            // inherit the parent surface's rules. Once tray items moved onto
+            // this card their menus inherited that 1, and a translucent menu
+            // body sits below it: the menu stopped being blurred at all.
+            //
+            // The computed threshold serves both, which the constant cannot:
+            // it is above the shadow and below the faintest body, so the opaque
+            // card blurs, its shadow stays sharp, this surface's transparent
+            // pixels are left alone, and the popups opened from the card are
+            // blurred like the ones opened from the bar always were. A
+            // namespace absent from that loop is the real hazard - it falls
+            // through to the catch-all 0.05, under which the transparent pixels
+            // ask the compositor to blur the whole screen.
+            WlrLayershell.namespace: "quickshell:barPopup"
             WlrLayershell.layer: WlrLayer.Overlay
 
             mask: Region {
@@ -280,6 +291,11 @@ Scope {
 
             function release(popup) {
                 if (!popup) return;
+                // Before the reparent, not after: setParentItem() runs
+                // derefWindow(), which re-evaluates every binding that read the
+                // old window while the item is mid-teardown. A tray menu
+                // anchored to that window segfaulted the shell there.
+                popup.aboutToRelease();
                 const content = popup.contentItem;
                 if (content) {
                     content.anchors.centerIn = null;
@@ -335,7 +351,8 @@ Scope {
                     && card.width > Appearance.sizes.elevationMargin * 2
                 windows: [
                     overlayWindow,
-                    overlayWindow.current?.hoverTarget?.QsWindow?.window
+                    overlayWindow.current?.hoverTarget?.QsWindow?.window,
+                    ...(overlayWindow.current?.extraGrabWindows ?? [])
                 ].filter(window => window)
                 onCleared: overlayWindow.current?.dismissRequested()
             }

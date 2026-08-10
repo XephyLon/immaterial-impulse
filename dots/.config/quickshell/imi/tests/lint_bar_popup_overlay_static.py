@@ -68,9 +68,10 @@ for axis in ("width", "height"):
             f"never collapses the card back to {axis} 0; an exited card must build an empty "
             "input region, and an opacity-0 card still publishes a full-size one")
 
-if 'WlrLayershell.namespace: "quickshell:popup"' not in code:
+if 'WlrLayershell.namespace: "quickshell:barPopup"' not in code:
     failures.append(
-        'does not reuse the quickshell:popup namespace; a new one falls through to the '
+        'does not use the quickshell:barPopup namespace, which rules.lua gives the computed '
+        'popup-blur threshold; a namespace outside that loop falls through to the '
         "catch-all ignore_alpha and asks the compositor to blur the whole screen")
 
 if "WindowBlurRegion" in code:
