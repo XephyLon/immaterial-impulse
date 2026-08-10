@@ -602,6 +602,12 @@ if ! python3 "$SCRIPT_DIR/test_mpris_controller_contract.py"; then
     exit 1
 fi
 
+echo "Running cava spectrum contract tests..."
+if ! python3 "$SCRIPT_DIR/test_cava_contract.py"; then
+    echo "Cava spectrum contract tests failed."
+    exit 1
+fi
+
 echo "Running lyrics widget contract tests..."
 if ! python3 "$SCRIPT_DIR/test_lyrics_widget_contract.py"; then
     echo "Lyrics widget contract tests failed."
