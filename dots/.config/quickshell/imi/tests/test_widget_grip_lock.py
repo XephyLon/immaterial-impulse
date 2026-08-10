@@ -199,10 +199,13 @@ class TheHostsOwnResizeGrip(unittest.TestCase):
         self.assertRegex(self._grip(), r"visible:[^\n]*rootWidget\.gridResizable")
 
     def test_it_claims_the_press_from_drag_to_move(self):
-        """`AbstractWidget`'s drag-to-move is this widget's own root MouseArea.
-        The nested area takes the press, but without `preventStealing` the root
-        takes the grab back on the first move and the corner walks the widget
-        instead of resizing it.
+        """`AbstractWidget`'s drag-to-move is this widget's own root MouseArea,
+        and what claims the press is the nesting - `WidgetResizeGripRuntimeTest`
+        scores that, and passes with `preventStealing` removed, because a
+        MouseArea steals a child's grab through its `drag` target and
+        AbstractWidget has none. This pins the belt beside the braces: it is one
+        `drag.target` binding away from mattering, and the bundled grips all
+        set it.
         """
         self.assertIn("preventStealing: true", self._grip())
 
