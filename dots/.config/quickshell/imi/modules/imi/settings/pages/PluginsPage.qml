@@ -20,6 +20,17 @@ Item {
     property bool showingStore: false
     onStoreAvailableChanged: if (!storeAvailable) showingStore = false
 
+    // Both widget-frost controls below are inert while transparency is off:
+    // PluginWidget's blur Repeater is gated on the toggle, and
+    // PluginState.effectiveBackgroundOpacity forces every widget's panel to
+    // fully opaque. The exception is a widget that opted out with
+    // `keepTranslucent` - it still reads both - so the rows only go dead once
+    // there is genuinely nothing left for them to move.
+    readonly property bool widgetTranslucencyApplies: Config.options.appearance.transparency.enable
+        || PluginManager.availablePlugins.some(plugin => plugin.desktopWidget !== undefined
+            && PluginState.option(plugin.id, "keepTranslucent",
+                plugin.desktopWidget?.keepTranslucent === true))
+
     // Filter state. Capability is single-select: clicking the active chip
     // clears it, matching the store's behaviour exactly.
     property string searchQuery: ""
@@ -85,6 +96,7 @@ Item {
 
                     ConfigSelectionArray {
                         Layout.fillWidth: true
+                        enabled: root.widgetTranslucencyApplies
                         text: Translation.tr("Widget frost")
                         icon: "blur_on"
                         currentValue: Config.options.plugins.frostMode
@@ -100,6 +112,7 @@ Item {
 
                     ConfigSlider {
                         Layout.fillWidth: true
+                        enabled: root.widgetTranslucencyApplies
                         text: Translation.tr("Blurred widget opacity")
                         buttonIcon: "opacity"
                         from: 0
