@@ -105,6 +105,52 @@ Implementation note: the 2x1 ring is already an arc-length dash along a rounded-
 version is a cross-fade between the two renderers while their *bounding geometry* morphs — a true
 path morph between a wave and a ring is a research problem, not a sprint.
 
+## 3b. Weather is the second case, and it sharpens the requirement
+
+The media widget is not special. `DesktopWeatherWidget.qml` does the same thing with inline
+components rather than files:
+
+```qml
+Loader {
+    sourceComponent: sizeMode === "1x1" ? mode1x1Layout
+                   : sizeMode === "2x1" ? mode2x1Layout : mode3x1Layout
+}
+```
+
+One file, three `Component`s, one `Loader` — still a destroy. (An earlier note in this project said
+weather "switches layout within one file" as though that made it closer to the target. It does not;
+the swap is the same.)
+
+Its weather-icon container is the clearest example of what the user means by cohesion, and it is
+already *designed* as a morph across the three sizes:
+
+| Span | The glyph's container |
+| --- | --- |
+| 3x1 | `MaterialShape { shape: Ghostish }` — an asymmetric wavy shape |
+| 2x1 | `Rectangle { radius: 30 }` — a tall squircle |
+| 1x1 | `Rectangle { radius: 16 }`, clipped by the card so it peeks from the corner |
+
+**These are three different component types, not one component in three states.** A `Rectangle`
+cannot morph into a `MaterialShape`: different renderers, no shared geometry. So persistence is not
+enough on its own —
+
+> A shared element must be **one component whose shape is a parameter**, not several components that
+> happen to resemble each other.
+
+Which is what `shapes/morph.js` already assumes: it interpolates between two *rounded polygons*. A
+squircle and Ghostish are both expressible that way; a `Rectangle` with a `radius` is not, until it
+is re-expressed as one.
+
+That has a cost worth naming: converting a `Rectangle` to a shape-canvas draw is more expensive per
+frame than a rectangle with a corner radius, and the 1x1 case also **clips against the card**, so the
+morph has to carry the clip as well as the outline. Clipping is a property of the parent, not the
+shape, so a shared element that leaves the card's bounds at one span needs the clip animated or
+switched at a defined moment.
+
+The order this implies: media proves the architecture, weather proves the *shape* half — its three
+containers are a harder morph than media's pill-to-cookie, and the 1x1 clip is a case media does not
+have at all.
+
 ## 4. A motion model for interaction
 
 One vocabulary, in `Appearance`, for the states every interactive element passes through:
