@@ -85,25 +85,67 @@ Two cautions:
 - Per-frame geometry regeneration was measured at 0.59 ms per shape and four animating cookies held
   62 fps (#161). Several morphing controls at once is a different load; measure before assuming.
 
-## 3. Progress is the hard one, and needs a decision
+## 3. Progress: decided — an inner wavy ring at 2x2
 
-Progress exists as a wavy bar at 3x2 and as the cookie's stroked outline at 2x1. Those are the same
-information in radically different geometry, and morphing one into the other is not a rect tween.
+**Decision (2026-08-12):** 2x2 gains a seek ring *inside* the cookie, carrying the **same travelling
+wave** as the 3x2 straight bar.
 
-**2x2 currently has no progress at all.** A shared element must exist at every span or have a defined
-exit, so this needs answering before implementation:
+Both halves matter, and the second one changes the engineering.
 
-- give 2x2 a progress ring on its cookie outline — consistent with 2x1 and makes the three sizes one
-  family; or
-- treat progress as present at 3x2 and 2x1 only, and give it an explicit exit at 2x2.
+### Inside, not on the outline
 
-The first is more coherent and is the recommendation. It is called out because it is a *visible
-design change to a size the user has already reviewed*, not an implementation detail.
+The earlier recommendation was a ring on the cookie's own outline. Inside is better: at 2x2 the
+cookie outline *is* the widget's edge, so stroking it as progress reads as a border, and it would
+contend with the container's own shape morph during a resize. An inset ring is independent geometry
+that can morph freely without fighting the shape it sits in.
 
-Implementation note: the 2x1 ring is already an arc-length dash along a rounded-polygon path
-(`shapes/path-length.js`). The 3x2 wavy bar is a different renderer entirely. The honest first
-version is a cross-fade between the two renderers while their *bounding geometry* morphs — a true
-path morph between a wave and a ring is a research problem, not a sprint.
+### The wave makes it one renderer, not two
+
+This spec previously said a true path morph between the 3x2 wave and a ring was "a research problem,
+not a sprint", and proposed cross-fading two renderers. **That is wrong once the ring is wavy.**
+
+`WavyLine.qml` is a displacement normal to a baseline, parameterised by distance along it:
+
+```qml
+waveY = centerY + amplitude * Math.sin(frequency * 2 * Math.PI * x / root.fullLength + phase);
+```
+
+Nothing there requires the baseline to be straight. Substitute a path for the segment and the same
+expression holds — and `path-length.js` already measures arc length along cubics
+(`measureCubics`), which is precisely the parameter it wants. So:
+
+| Span | Baseline | Renderer |
+| --- | --- | --- |
+| 3x2 | a straight segment | wave along a baseline |
+| 2x2 | an inset closed ring | wave along a baseline |
+| 2x1 | the play button's cookie outline | wave along a baseline |
+
+One renderer, three baselines. The morph is then a morph of the *baseline* — geometry the shape
+system already handles — rather than a cross-fade between two ways of drawing.
+
+### It is mostly assembled already
+
+- `WavyLine.qml` — the wave, animated by a `FrameAnimation` calling `requestPaint` (the wave is a
+  `Canvas`, which repaints on resize and nothing else, so the driver is not optional).
+- `SineCookie.qml` — a sine-modulated *closed* cookie, proving the wrapped case. It fills rather than
+  strokes, and the clock is its only caller, so stroking it is the delta.
+- `path-length.js` — arc length and `dashInPenWidths`, already driving the 2x1 ring's progress.
+
+The wavy ring is the intersection of those three, not new invention.
+
+### One question this raises, for the user
+
+The 2x1 ring is a **plain** stroke today, and per `LayoutCompact.qml:97` it deliberately doubles as
+the play button's border. If 3x2 and 2x2 are wavy and 2x1 is not, the wave enters and exits across a
+resize — the exact discontinuity this whole design rejects.
+
+Two ways out:
+
+- Make the 2x1 outline wavy too. Consistent, but it changes how that button looks, and the button is
+  already reviewed and shipped.
+- **Animate `amplitudeMultiplier` to 0 at 2x1** so the wave flattens into the border. A flat wave *is*
+  the current plain stroke, so this is continuous, needs no special case, and the property already
+  exists and is already animatable. **Recommended.**
 
 ## 3b. Weather is the second case, and it sharpens the requirement
 
@@ -253,7 +295,8 @@ Each step leaves the tree working and is separately reviewable on screen.
    This is the risky structural step and is worth reviewing alone.
 3. Behaviors on the shared elements' geometry. Resize now morphs position and size.
 4. Shape morphing for the transport controls, on the resize's clock.
-5. Progress: the 2x2 decision from §3, then the renderer cross-fade.
+5. Progress: the wave gains a path baseline, then the 2x2 inner ring and the 2x1 amplitude
+   fade. No renderer cross-fade - §3 removed the need for one.
 6. The interaction-state model in `Appearance`; `RippleButton` adopts it.
 7. Media controls adopt it.
 8. Extract whatever is genuinely generic into the widget framework — *after* steps 1-7 have shown
