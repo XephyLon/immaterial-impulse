@@ -254,6 +254,12 @@ bug in anything that qualifies:
   (`PluginWidget.qml`, which only compiles once a plugin is enabled on some monitor) - it compiles
   them, so a bad property on a page nobody opened is caught. Everything else still needs the live
   load. 494580b65 ("feat(plugins): resolve a placed widget's span from its stored choice").
+  **It sweeps a bundled package through its `Widget.qml` only**, on the reasoning that a sibling
+  file is a type resolved through the package's `qmldir` and so is reached from the entry point
+  anyway. A file the entry point loads *by URL* is not that - it is a standalone component that
+  compiles, or does not, on its own - so it has to be named in the explicit list or it compiles for
+  the first time on the user's desktop. The media widget's three per-span layouts are the current
+  case. 61e2f723c ("refactor(media): move the media widget's content into LayoutLarge").
 - **A new Python check must actually run.** `run_tests.sh` invokes each one as `python3 <file>`, so
   a module of bare `test_*` functions exits zero without executing anything. Either subclass
   `unittest.TestCase` with `unittest.main()`, or end the file with the `contract_runner` block

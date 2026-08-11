@@ -1343,17 +1343,37 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   fallback: 0.77ms per cookie per frame at 240px, and four animating at once still held 62fps
   offscreen. f6a7e251e ("feat(designsystem): VisualizerCookie, a cookie driven by one level per
   lobe").
-- **Nothing writes `CavaService.values`, so a widget wired to it is silent.**
-  `modules/common/plugins/designsystem/services/CavaService.qml` looks like a service - `barCount`,
-  `values`, and a `refCount` that `CavaWidget`, `MediaCard` and `VisualizerCookie` all take and
-  release - but no code in this tree ever assigns `values` or starts a cava process when the
-  refcount rises. The live band source is `GlobalStates.visualizerPoints`, filled by the `cavaProc`
-  `Process` in `modules/imi/mediaControls/MediaControls.qml` (50 bars, 0..1000, running only while
-  a sidebar, the media controls or a visualizer widget wants it), and that is what the bar
-  visualizer and the bundled `visualizer` plugin read. Don't read the refcount as evidence of a
-  producer behind it; either give `CavaService` one or point the consumer's band input at
-  `GlobalStates.visualizerPoints`. 66da530c4 ("feat(designsystem): drive the visualizer cookie from
-  cava").
+- **`CavaService` has had a producer since ce41c4f9c, and `GlobalStates.visualizerPoints` is
+  gone.** This entry used to say the opposite and to send a new consumer to `visualizerPoints`,
+  which by then had been removed - so the advice named a property that does not exist. Claim the
+  bands with a `CavaRef` and read `CavaService.values`; the reasoning behind the one-source rule,
+  and the failure that produced it, are under
+  [State propagation is reactive](#state-propagation-is-reactive-or-it-is-a-bug-waiting).
+  ce41c4f9c ("feat(cava): give CavaService the producer it always implied").
+- **A `Canvas`'s `setLineDash` is measured in line widths, not in path length.** HTML's is in
+  path-length units; QML's hands the array to `QPen::setDashPattern`, which is specified in
+  multiples of the pen width - so a pattern computed honestly from a path's arc length comes out
+  wrong by a factor of the line width. Watch the shape of the failure, because it does not look
+  like one: both the "on" and the "off" run shrink by the same factor, so the *period* shrinks
+  with them and the pattern repeats. A 25% progress ring stroked around a cookie drew as thirteen
+  evenly spaced dashes all the way round, growing together as progress rose - which reads as a
+  deliberate dashed border. `shapes/path-length.js` measures the outline (sampled per cubic, paid
+  once per geometry change) and `dashInPenWidths` does the conversion, named rather than left as a
+  division at the call site. Found by rendering the ring offscreen with `qml6` and looking at the
+  PNG: nothing about a `Canvas` is reachable from `qmltestrunner`, and the software scene graph
+  the runtime harnesses use draws none of it either.
+  08341739f ("fix(shapes): Qt measures a dash pattern in line widths, not in path length").
+- **A shape that must carry two moving things on one edge should carry one.** The media widget's
+  2x1 strokes playback progress around its play button's own cookie outline, and its cookie is
+  deliberately the *static* `MaterialCookie` shape rather than the audio-reactive
+  `VisualizerCookie` the 2x2 uses: an outline that ripples while also filling up is two motions on
+  one edge and neither is readable. Draw the body and the ring as two concentric passes over the
+  same outline (the body inside the ring) rather than as one stroked shape, or the stroke reads as
+  a line laid over the button's edge instead of as its border. And rotate the path so its first
+  vertex sits at twelve o'clock: the dash starts where the path starts, which is wherever that
+  vertex happens to be, and a twelve-lobed cookie is symmetric every 30 degrees so nothing about
+  the shape reads as rotated. 8c211b3d8 ("feat(media): draw the 2x1 as three controls whose centre
+  carries the seek bar").
 
 **Wallpaper parallax is one oversized viewport, not a per-layer effect.**
 `Background.qml` draws every wallpaper layer inside `parallaxViewport`, an item sized to
