@@ -1,8 +1,19 @@
 # Media widget sizes, and a resize handle for every grid widget — design
 
-**Status:** design, not implemented
+**Status:** implemented. Steps 1-5 (the grid machinery, the grip, `VisualizerCookie` and its
+cava input) landed on `main`; steps 6-9 (the three media layouts and the docs) landed on
+`feat/media-layouts`.
 **Scope:** `modules/common/plugins/` (grid machinery, shapes), the bundled
 `nandoroid-media` widget, `docs/widget-grid.md`
+
+**Where §5 met reality.** The 3x2's migration risk did not exist: measured through a `qs -p`
+probe, the widget was already exactly `spanX(3) x spanY(2)` = 420x228 before and after adopting
+the grid, because the design-system component declares those pixels itself. The 2x2's artwork is
+clipped to a circle inside the cookie rather than to the cookie's own outline - masking it with
+the rippling outline swallows the motion the outline exists to show. And the 2x1's arc-length
+maths was right while its units were not: Qt measures `setLineDash` in pen widths, not path
+length, which draws a repeating dashed border instead of one arc (AGENT.md, "Dynamic/data-driven
+QML gotchas").
 
 Paths are relative to the theme root `dots/.config/quickshell/imi/` unless written repo-relative.
 

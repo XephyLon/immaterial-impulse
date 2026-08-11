@@ -115,8 +115,8 @@ shown disabled — for a manifest naming a single span.
 **Only declare `sizes` for a widget that has a design per size.** Most widgets have one
 layout, and the host swaps the pixel size and nothing else: offering a span a widget has
 no layout for is worse than offering no choice at all. `nandoroid-weather` (1x1 / 2x1 /
-3x1) and `nandoroid-currency` (1x1 / 2x1) qualify because each span is a different
-layout inside the widget; nothing else bundled does.
+3x1), `nandoroid-currency` (1x1 / 2x1) and `nandoroid-media` (3x2 / 2x2 / 2x1) qualify
+because each span is a different layout inside the widget; nothing else bundled does.
 
 Such a widget reads the resolved span back from the host as `hostGridSize`
 (`"<cols>x<rows>"`, declared as a `property string` on its `Widget.qml` root and bound
@@ -162,6 +162,50 @@ covered by `tests/tst_grid_sizes.qml`):
   crosses a model, so it now also builds one widget through a `Repeater`.
   109e6d897 ("fix(plugins): a manifest's grid.sizes survives the model boundary").
 
+### A layout per span
+
+`nandoroid-weather` and `nandoroid-currency` switch on `hostGridSize` inside one file.
+`nandoroid-media` has three genuinely different designs - a 3x2 with lyrics and a wavy
+seek bar, a 2x2 whose album art sits inside an audio-reactive cookie, a 2x1 of three
+controls whose centre button's border *is* the seek bar - so its `Widget.qml` is a shell
+that loads one of `LayoutLarge.qml` / `LayoutCookie.qml` / `LayoutCompact.qml`. Four
+things that costs, all of them one-time:
+
+- **The span-to-file mapping is one table, read twice** (`media_layouts.js`): once for
+  the file and once for the cell counts behind the widget's own implicit size. Two
+  lookups over one table is what stops a layout being drawn at another span's pixels.
+- **Anything unrecognised resolves to the default entry, never to nothing.**
+  `hostGridSize` is empty until the host answers, and stays empty for a bare `qs -p`
+  probe of `Widget.qml`; a span a later manifest stops offering is still sitting in
+  `plugin-state.json`. A lookup returning nothing for either leaves the widget drawing
+  nothing at all, which on screen is indistinguishable from a layout that failed to
+  compile. That fallback must be the *manifest's* default, since that is the span the
+  host will resolve in the same situation.
+- **The manifest's `sizes` and the table are two lists in two files**, which is the
+  drift AGENT.md's validator/renderer note describes: a span offered with no layout of
+  its own does not fail, it silently draws the default layout squeezed into a box it was
+  never designed for, and the grip goes on offering that size forever.
+  `tests/test_media_layouts_contract.py` pins them together and
+  `tests/tst_media_layouts.qml` drives the lookup itself.
+- **A layout loaded by URL escapes `DesignSystemCompile`'s sweep**, which takes a bundled
+  package through its `Widget.qml` only - so each layout is named in that file's explicit
+  list, or it compiles for the first time on the user's desktop.
+
+The wrapper must also answer the blur contract for whichever layout is loaded
+(`blurRegions`, `managesBlurTint`), and every layout must therefore declare both: an
+empty region list means "blur the whole widget", so a layout that declared neither would
+frost its own shadow rather than error - at one span only.
+61e2f723c ("refactor(media): move the media widget's content into LayoutLarge"),
+b4113ecd6 ("feat(media): offer the media widget three spans, and pick a layout from it").
+
+**Measure a content-sized widget before pinning it to a span.** Adopting the grid replaces
+whatever the content happened to measure with exactly `spanX(cols) x spanY(rows)`, and if
+those differ every placed copy resizes on upgrade with nothing reporting why. Media
+measured 420x228 through a `qs -p` probe both before and after, which is exactly
+`spanX(3) x spanY(2)` - the design-system widget already declared the span's pixels. Where
+they do differ, adjust the layout to the span rather than picking the span that flatters
+the current content.
+
 Growing past the screen edge needs no new rule: committing a span writes plugin state,
 which re-evaluates the widget's persisted position, so the existing clamp
 (`PluginWidget.applyPersistedPosition`) pulls it back inside against its *new* width -
@@ -201,9 +245,9 @@ The only test is `size === widgetGridSpanX(cols)` / `widgetGridSpanY(rows)`.
   broken at the smallest. Switch on the resolved span if the content needs to differ,
   rather than scaling one layout down.
 - **The `nandoroid-*` widgets already conform.** They define this grid (media = 3x2,
-  system monitor = 3x1 / 1x3). Media and the system monitor are content-sized rather than
-  declaring `grid`, but their pixel sizes are exactly on it, so new `grid` widgets tile
-  flush beside them; weather (1x1 / 2x1 / 3x1) and currency (1x1 / 2x1) declare
+  system monitor = 3x1 / 1x3). The system monitor is content-sized rather than declaring
+  `grid`, but its pixel sizes are exactly on it, so new `grid` widgets tile flush beside
+  it; weather (1x1 / 2x1 / 3x1), currency (1x1 / 2x1) and media (3x2 / 2x2 / 2x1) declare
   `grid.sizes` and take their size from the host. `clock` is exempt by decision: its shape
   places neatly without a span, so it stays content-sized behind
   `defaultWidth`/`defaultHeight`.
