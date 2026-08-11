@@ -11,10 +11,15 @@ Item {
     id: root
 
     // This widget is only built while the plugin is enabled (its host loader
-    // follows the enabled list), so existing is the claim on cava - which is
-    // the `plugins.enabled.includes("visualizer")` term the old process gate
-    // read straight out of the config.
-    CavaRef {}
+    // follows the enabled list), so existing is most of the claim on cava -
+    // which is the `plugins.enabled.includes("visualizer")` term the old
+    // process gate read straight out of the config.
+    //
+    // `visible` adds the rest. Everything the desktop draws hangs off
+    // `parallaxViewport`, which Background.qml switches off while a window is
+    // fullscreen, and `visible` is the effective value - so this claim drops
+    // when the wallpaper stops being drawn, without knowing why it stopped.
+    CavaRef { active: root.visible }
 
     // The visualiser draws bars straight onto the wallpaper - it has no panel,
     // card or tint of its own - so it opts out of the host's frost entirely by
