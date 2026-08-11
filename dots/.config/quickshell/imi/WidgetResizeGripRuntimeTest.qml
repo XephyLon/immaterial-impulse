@@ -331,9 +331,16 @@ ShellRoot {
     // One step per tick: the grip only becomes visible once the hover has
     // animated its opacity off zero, so the hover and the press it enables
     // cannot share a frame.
+    //
+    // The tick outlasts the resize itself (Appearance's 500ms elementMove,
+    // which a commit and an Escape both take) because these checks read the
+    // widget's *settled* width. A shorter tick scores a frame the size
+    // Behavior is still travelling through, which is a working animation
+    // reading as a failed resize. Whether that motion happens at all is
+    // `WidgetResizeMotionRuntimeTest.qml`'s question, not this one's.
     Timer {
         id: runner
-        interval: 400
+        interval: 700
         repeat: true
         running: false
         onTriggered: {

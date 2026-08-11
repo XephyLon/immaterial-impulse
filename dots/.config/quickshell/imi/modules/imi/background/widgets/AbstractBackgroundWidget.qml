@@ -95,8 +95,20 @@ AbstractWidget {
         root.y = Qt.binding(() => root.targetY);
     }
 
-    function clampX(v) { return Math.max(0, Math.min(v, scaledScreenWidth - width)); }
-    function clampY(v) { return Math.max(0, Math.min(v, scaledScreenHeight - height)); }
+    // The size the clamp measures this widget by. `width`/`height` for
+    // everything that changes size in one frame - but a subclass whose size
+    // *animates* overrides them with the size the animation is heading for,
+    // because a clamp taken mid-flight is taken against a size the widget is
+    // about to leave, and nothing runs again once the animation lands: the
+    // widget settles past the screen edge and stays there (PluginWidget's span
+    // resize). Two properties rather than an extra argument on the clamp - a
+    // call site that forgets to pass one clamps against the wrong size in
+    // silence, and this function exists so there is one clamp and not several.
+    property real clampWidth: root.width
+    property real clampHeight: root.height
+
+    function clampX(v) { return Math.max(0, Math.min(v, scaledScreenWidth - clampWidth)); }
+    function clampY(v) { return Math.max(0, Math.min(v, scaledScreenHeight - clampHeight)); }
 
     onReleased: root.commitPosition()
 
