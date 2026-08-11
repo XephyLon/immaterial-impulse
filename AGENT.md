@@ -1113,6 +1113,54 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   on every drag, silently, because it looks right until the pan next changes. Anything else
   that reads a widget's `x` and means "where the user put it" has the same subtraction to do.
   95f851c28 ("feat(plugins): let a widget opt out of the desktop's parallax pan").
+- **`PluginState` stores a widget's placement in the canvas's *rest* frame, and that is one
+  meaning for every widget — do not let it become two.** A follower's canvas coordinate is
+  already pan-invariant; an opted-out widget's screen coordinate is the same number, because
+  `widgetOffsets` subtracts CENTRE and the canvas therefore covers the screen exactly at rest.
+  So there is one clamp range (`[0, screenSize - widgetSize]`) for both, toggling the flag never
+  rewrites a stored position, and `followParallax` is a *rendering* fact rather than a storage
+  one. What differs is where the widget is **drawn**, which is the placement plus the
+  cancellation — `ParallaxMath.drawnFromPlacement` / `placementFromDrawn`, a pair rather than the
+  same arithmetic spelled out at each call site, which is how the render and the save came to
+  disagree in the first place. 6acb5b0e8 ("feat(parallax): name both directions of a widget's
+  placement conversion").
+- **A `Behavior` whose target moves every frame restarts every frame and never ticks — the
+  property freezes.** This is what made the parallax opt-out inert on a real desktop for its
+  whole life: `x: placedX + parallaxCancelX` re-evaluates on every frame of `Background.qml`'s
+  600ms pan, so `x` sat at exactly its pre-pan value for the entire transition and the widget
+  travelled the *full* pan on screen before sliding back — the opposite of what the setting
+  promises, and indistinguishable from "the toggle does nothing". Two consequences worth
+  separating. On screen it is a wobble; **in the store it is corruption**, because `onReleased`
+  runs `commitPosition` for *any* release (a click that never dragged included) and that
+  conversion read a frozen `x` against a live cancellation, writing `placement + canvasOffset`.
+  Every click or drag during a pan walked the saved position by one pan. The rule: a property
+  carrying both a value that should animate and one that must not cannot animate at all — set
+  `AbstractWidget.animatePosition: false` and say why. The corollary for tests is sharper than
+  the fix: the runtime harness for this feature set `animateXPos: false` on both probes and
+  panned by assignment, i.e. it switched off both halves of the interaction it existed to score,
+  and stayed green for the entire life of the bug. b710ef731 ("fix(plugins): stop the position
+  Behavior swallowing the parallax cancellation").
+- **A subclass cannot read `AbstractWidget.gridSize`: `PluginWidget` shadows it.** The base's
+  `gridSize` is the 12px drag lattice; `PluginWidget` declares its own `gridSize`, the
+  component-grid span (`{"cols": 2, "rows": 1}`). Code *inside* the base still resolves to the
+  base property — measured, `snap(100)` is 96 there — while anything reading `rootWidget.gridSize`
+  from the subclass gets the object, and a snap written against it silently applies no lattice at
+  all. Nothing warns. That is why the drag lattice never leaves the file that owns it and a
+  subclass declares `snapOffsetX`/`snapOffsetY` instead: the seam hands in the frame, not the
+  lattice. 8a534a7da ("fix(plugins): snap a widget's drag to the lattice it is stored on").
+- **Clamp a position where it is written, not only where it is read.** The widget drag is
+  deliberately unclamped (the release decides), but only `applyPersistedPosition` clamped, so a
+  drag that ended past a screen edge stored the overshoot and the widget was drawn somewhere
+  else — permanently, silently, and read by the user as the widget moving on its own. A real
+  store held `visualizer` at `x: -852` on a 5120px screen. When two sides of a store apply
+  different rules to the same number, the disagreement is invisible by construction. For entries
+  already on disk: an unreachable value **cannot be repaired** (the offset it absorbed depends on
+  which workspace was showing and whether a sidebar was open, and it accrued over an unknown
+  number of releases) and **must not be reset to a default** (that moves the widget somewhere the
+  user never chose) — it is pinned to what is already on screen, once, on a settle timer, only
+  where the clamp actually bites, and only after `width` has arrived. A clamp written back on
+  every load is the `ConfigSpinBox` trap in [The Config system](#the-config-system-settings-page--persisted-json).
+  705e9006d ("fix(plugins): stop a widget's stored position disagreeing with where it is drawn").
 - **A per-plugin key can be a retired manifest option for one widget and a live setting for
   another, so migrate on what the manifest says, not on the key name.** `sizeMode` was a
   manifest *option* on weather and currency, which `__gridSize` took over; `world-clock` and
