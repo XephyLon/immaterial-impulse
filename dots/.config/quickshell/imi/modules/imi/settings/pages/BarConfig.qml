@@ -581,24 +581,42 @@ ContentPage {
             title: Translation.tr("Media")
 
             GroupedList {
-                ConfigTextArea {
-                    id: preferredPlayerField
+                ConfigComboBox {
+                    id: preferredPlayerPicker
                     Layout.fillWidth: true
                     buttonIcon: "play_circle"
+                    fieldWidth: 260
                     text: Translation.tr("Preferred Player")
-                    placeholderText: Translation.tr("e.g. spotify, firefox")
-                    value: Config.options.bar.media.preferredPlayer
-                    onValueChanged: {
-                        mediaDebounceTimer.restart();
-                    }
-
-                    Timer {
-                        id: mediaDebounceTimer
-                        interval: 600
-                        repeat: false
-                        onTriggered: {
-                            Config.options.bar.media.preferredPlayer = preferredPlayerField.value;
+                    description: Translation.tr("Automatic follows whatever is playing. A chosen player is remembered while it is closed.")
+                    // The stable half of the bus name, which is what
+                    // MprisController resolves the setting against - never the
+                    // running instance's bus name, which changes on relaunch.
+                    currentValue: MprisController.preferredPlayerId
+                    model: {
+                        const rows = [{
+                            value: "",
+                            icon: "auto_mode",
+                            displayName: Translation.tr("Automatic")
+                        }];
+                        for (const option of MprisController.playerOptions) {
+                            let label = option.name;
+                            if (!option.available)
+                                label = Translation.tr("%1 (not running)").arg(option.name);
+                            else if (option.trackTitle.length > 0)
+                                label = `${option.name} — ${option.trackTitle}`;
+                            rows.push({
+                                value: option.value,
+                                icon: !option.available ? "help" : (option.isPlaying ? "play_arrow" : "pause"),
+                                displayName: label
+                            });
                         }
+                        return rows;
+                    }
+                    // Only a real selection writes. Nothing here reacts to a
+                    // player appearing or disappearing, so closing the chosen
+                    // player cannot quietly reset the preference to Automatic.
+                    onSelected: newValue => {
+                        Config.options.bar.media.preferredPlayer = newValue;
                     }
                 }
                 ConfigSwitch {

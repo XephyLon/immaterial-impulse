@@ -150,3 +150,56 @@ function meaningfulPlayers(candidates, preference) {
     const matches = preferenceMatches(candidates, preference);
     return collapseDuplicates(matches.length > 0 ? matches : Array.from(candidates ?? []));
 }
+
+// Rows for the settings picker, one per distinct player id. Labels are built
+// at the call site because a translated string is not reachable from a
+// `.pragma library`.
+function playerOptions(candidates, preference) {
+    const rows = [];
+    const seen = {};
+
+    for (const player of Array.from(candidates ?? [])) {
+        const id = playerId(player);
+        if (id.length === 0)
+            continue;
+        const existing = seen[id];
+        if (existing !== undefined) {
+            // Two instances of one program share an id, so let the one with
+            // something to say describe the row.
+            if (!existing.isPlaying && player?.isPlaying) {
+                existing.isPlaying = true;
+                existing.trackTitle = String(player?.trackTitle ?? "");
+            } else if (existing.trackTitle.length === 0) {
+                existing.trackTitle = String(player?.trackTitle ?? "");
+            }
+            continue;
+        }
+        const row = {
+            value: id,
+            name: String(player?.identity ?? "").trim() || id,
+            trackTitle: String(player?.trackTitle ?? ""),
+            isPlaying: !!player?.isPlaying,
+            available: true
+        };
+        seen[id] = row;
+        rows.push(row);
+    }
+
+    // A stored preference always gets a row, whether or not the player is
+    // running and whether or not it matches by id. Without it the combo box
+    // has nothing to show as current and falls back to displaying Automatic,
+    // which reads as "closing the player reset my choice".
+    const wanted = String(preference ?? "").trim().toLowerCase();
+    if (wanted.length > 0 && !rows.some(row => row.value === wanted)) {
+        const matches = preferenceMatches(candidates, wanted);
+        rows.push({
+            value: wanted,
+            name: String(matches[0]?.identity ?? "").trim() || wanted,
+            trackTitle: String(matches[0]?.trackTitle ?? ""),
+            isPlaying: matches.some(player => !!player?.isPlaying),
+            available: matches.length > 0
+        });
+    }
+
+    return rows;
+}
