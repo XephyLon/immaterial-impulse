@@ -19,17 +19,7 @@ Item {
     property bool vertical: false
     property bool borderless: Config.options.bar.borderless
     property bool isMaterial: Config.options.bar.cornerStyle === 3
-    readonly property MprisPlayer activePlayer: {
-        const preferred = Config.options.bar.media.preferredPlayer.trim().toLowerCase()
-        if (preferred.length === 0) return MprisController.activePlayer
-        const _ = MprisController.players.count
-        for (const p of MprisController.players) {
-            if ((p.identity ?? "").toLowerCase().includes(preferred) ||
-                (p.desktopEntry ?? "").toLowerCase().includes(preferred))
-                return p
-        }
-        return MprisController.activePlayer
-    }
+    readonly property MprisPlayer activePlayer: MprisController.activePlayer
 
     readonly property string cleanedTitle: StringUtils.cleanMusicTitle(activePlayer?.trackTitle) || Translation.tr("No media")
 

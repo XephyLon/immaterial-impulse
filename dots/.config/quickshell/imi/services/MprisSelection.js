@@ -112,3 +112,41 @@ function selectPlayer(candidates, preference) {
         return preferredPlayer(matches);
     return preferredPlayer(candidates);
 }
+
+function collapseDuplicates(players) {
+    const all = Array.from(players ?? []);
+    const filtered = [];
+    const used = new Set();
+
+    for (let i = 0; i < all.length; ++i) {
+        if (used.has(i))
+            continue;
+
+        const p1 = all[i];
+        const group = [i];
+
+        for (let j = i + 1; j < all.length; ++j) {
+            const p2 = all[j];
+            const titlesOverlap = p1.trackTitle && p2.trackTitle
+                && (p1.trackTitle.includes(p2.trackTitle) || p2.trackTitle.includes(p1.trackTitle));
+            const timingMatches = Math.abs(p1.position - p2.position) <= 2
+                && Math.abs(p1.length - p2.length) <= 2;
+
+            if (titlesOverlap || timingMatches)
+                group.push(j);
+        }
+
+        let chosenIdx = group.find(idx => all[idx].trackArtUrl?.length > 0);
+        if (chosenIdx === undefined)
+            chosenIdx = group[0];
+
+        filtered.push(all[chosenIdx]);
+        group.forEach(idx => used.add(idx));
+    }
+    return filtered;
+}
+
+function meaningfulPlayers(candidates, preference) {
+    const matches = preferenceMatches(candidates, preference);
+    return collapseDuplicates(matches.length > 0 ? matches : Array.from(candidates ?? []));
+}

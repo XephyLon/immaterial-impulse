@@ -36,6 +36,7 @@ Singleton {
 	readonly property string preferredPlayerId: MprisSelection.normalizePreferredPlayer(
 		Config.options.bar.media.preferredPlayer);
 	readonly property bool preferenceApplies: MprisSelection.preferenceMatches(players, preferredPlayerId).length > 0;
+	readonly property var meaningfulPlayers: MprisSelection.meaningfulPlayers(players, preferredPlayerId);
 
 	function hasUsableMetadata(player) {
 		return MprisSelection.hasUsableMetadata(player);
