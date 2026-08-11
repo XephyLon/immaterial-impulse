@@ -17,7 +17,8 @@ import "MprisSelection.js" as MprisSelection
  */
 Singleton {
 	id: root;
-	property list<MprisPlayer> players: Mpris.players.values.filter(player => isRealPlayer(player));
+	property list<MprisPlayer> players: MprisSelection.candidatePlayers(
+		Mpris.players.values, Config.options.media.filterDuplicatePlayers);
 	property MprisPlayer trackedPlayer: null;
 	property MprisPlayer activePlayer: null;
 	readonly property string trackTitle: activePlayer?.trackTitle ?? "";
@@ -29,22 +30,6 @@ Singleton {
 	property bool __reverse: false;
 
 	property var activeTrack;
-
-	readonly property bool hasActivePlasmaIntegration: Mpris.players.values.some(
-		p => p.dbusName?.startsWith('org.mpris.MediaPlayer2.plasma-browser-integration')
-	)
-	function isRealPlayer(player) {
-        if (!Config.options.media.filterDuplicatePlayers) {
-            return true;
-        }
-        return (
-            // Remove native browser buses only if plasma-browser-integration is actually active on D-Bus
-            !(hasActivePlasmaIntegration && player.dbusName.startsWith('org.mpris.MediaPlayer2.firefox')) && !(hasActivePlasmaIntegration && player.dbusName.startsWith('org.mpris.MediaPlayer2.chromium')) &&
-            // playerctld just copies other buses and we don't need duplicates
-            !player.dbusName?.startsWith('org.mpris.MediaPlayer2.playerctld') &&
-            // Non-instance mpd bus
-            !(player.dbusName?.endsWith('.mpd') && !player.dbusName.endsWith('MediaPlayer2.mpd')));
-    }
 
 	function hasUsableMetadata(player) {
 		return MprisSelection.hasUsableMetadata(player);
