@@ -125,7 +125,7 @@ class GroupDragIsRigid(unittest.TestCase):
                 text,
                 rf"Math\.max\(root\.groupDragMin{axis}, Math\.min\("
                 rf"root\.groupDragMax{axis}, root\.snapEnabled \? "
-                rf"root\.snap\({re.escape(proxy)}\) : {re.escape(proxy)}\)\)",
+                rf"root\.snap{axis}\({re.escape(proxy)}\) : {re.escape(proxy)}\)\)",
                 f"the {axis} drag binding must clamp the snapped value")
 
     def test_the_widget_reports_its_drag_to_the_canvas(self):
@@ -145,7 +145,7 @@ class GroupDragIsRigid(unittest.TestCase):
         text = squashed(WIDGET)
         self.assertIn("property bool groupDragging: false", text)
         self.assertEqual(
-            text.count("enabled: !root.dragging && !root.groupDragging"), 2,
+            text.count("&& !root.dragging && !root.groupDragging"), 2,
             "both position Behaviors must gate on groupDragging too")
 
     def test_followers_commit_like_a_released_drag(self):
