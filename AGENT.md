@@ -366,8 +366,16 @@ services/                  Singletons wrapping external state/processes - one pe
                               builds every Material variant from it. Cached against the wallpaper
                               and the dark/light mode, so refresh() is free while those hold and
                               nothing recomputes while no picker is on screen
+  MprisController.qml         The one answer to "which player is the media UI showing". It filters
+                              the bus list (proxies always, duplicates by setting) through
+                              MprisSelection.js - a .pragma library kept pure so the rules are
+                              reachable from tests - resolves bar.media.preferredPlayer, and
+                              publishes activePlayer / meaningfulPlayers / playerOptions. The bar,
+                              the media popup, the right sidebar and the lock screen read those
+                              rather than each resolving the setting again
+                              (25329ade9 ("feat(mpris): resolve the preferred player once, against a stable bus id"))
   Brightness.qml, Battery.qml, Hyprsunset.qml, Network.qml, BluetoothStatus.qml, TrayService.qml,
-  MprisController.qml, Weather.qml, Docker.qml, ... (one per integration)
+  Weather.qml, Docker.qml, ... (one per integration)
 
 panelFamilies/              PanelLoader.qml (thin LazyLoader) + ImmaterialImpulseFamily.qml (the
                             actual list of panels for the "imi" family)
@@ -1441,6 +1449,43 @@ therefore needs a one-shot migration with a marker (`migrateDeadParallaxSwitches
 test that seeds a real config directory. Reset only the switches - a tuned number is a plausible
 preference and usually cannot disable the feature by itself.
 (fix(config): revive the parallax switches every stored config turned off.)
+
+**A player on the MPRIS bus may be a proxy for another player, and every field you would match on
+is the borrowed one.** `playerctld` is `playerctl`'s daemon, not a player: it re-publishes whichever
+player it considers *current* — and current means last **interacted with**, not playing — so it sits
+at `PlaybackStatus: "Playing"` over a paused player's metadata indefinitely.
+[#170](https://github.com/XephyLon/immaterial-impulse/issues/170) measured its `Identity` as
+`"Mozilla zen"`: the name of the player it was mirroring. So `identity`, `desktopEntry`, the track
+title and the playback state are all second-hand, and a rule as reasonable as "prefer a player that
+is playing and has metadata" matches it *truthfully*. The only honest thing about it is its bus
+name, which is what `services/MprisSelection.js` excludes it by — and unconditionally:
+`media.filterDuplicatePlayers` is a preference about duplicates, while a proxy is not a player at
+all. Two neighbours that look like the same case and are not: `plasma-browser-integration` may be
+the only MPRIS source for a browser whose own is switched off, and `kdeconnect.mpris_*` is a phone,
+which is a genuine remote rather than a local mirror. Both stay.
+bb789e017 ("fix(mpris): stop a proxy and duplicate suppression hiding what is playing").
+
+**Duplicate suppression must never drop a bus that is playing, and note which half of that issue's
+diagnosis was wrong.** #170 blamed `playerctld` — but on the reporting machine it was already
+excluded, and what actually decided the selection was the *other* filter: while
+`plasma-browser-integration` is on the bus, every native Firefox and Chromium bus was dropped as its
+duplicate. That integration republishes one browser tab at a time, so with a paused video mirrored
+through it and music playing in the other browser, the only bus carrying the music was suppressed
+and the paused mirror was the sole surviving candidate. A correct-looking diagnosis of a real
+lurking bug can still not be the bug in front of you; read what the filter chain actually returns
+before fixing the part that was named. bb789e017 ("fix(mpris): stop a proxy and duplicate
+suppression hiding what is playing").
+
+**An MPRIS bus name is not stable, so nothing may be stored against it.** The spec lets a program
+publishing more than one bus append `.instance<pid>` — Chromium writes
+`org.mpris.MediaPlayer2.chromium.instance700643`, Firefox `.instance_1_52` — and that suffix is new
+on every launch. `bar.media.preferredPlayer` stores the bus name minus the
+`org.mpris.MediaPlayer2.` prefix and minus that suffix, which is what survives a restart and what
+the settings picker writes; a `kdeconnect` bus carries no suffix and keeps its whole name, one id
+per device and player. Resolution lives in `MprisController` alone (`activePlayer`,
+`meaningfulPlayers`, `playerOptions`) because four widgets used to carry their own copy of it and
+had already drifted apart; `tests/test_mpris_controller_contract.py` fails the suite on a fifth.
+25329ade9 ("feat(mpris): resolve the preferred player once, against a stable bus id").
 
 **Treat repeated binding exceptions as potential resource runaways, not harmless log noise.** A
 sidebar media-player binding called `filterDuplicatePlayers()` without defining the helper in that
