@@ -141,15 +141,45 @@ Which is what `shapes/morph.js` already assumes: it interpolates between two *ro
 squircle and Ghostish are both expressible that way; a `Rectangle` with a `radius` is not, until it
 is re-expressed as one.
 
-That has a cost worth naming: converting a `Rectangle` to a shape-canvas draw is more expensive per
-frame than a rectangle with a corner radius, and the 1x1 case also **clips against the card**, so the
-morph has to carry the clip as well as the outline. Clipping is a property of the parent, not the
-shape, so a shared element that leaves the card's bounds at one span needs the clip animated or
-switched at a defined moment.
+### The morph already ships, and it is one property
 
-The order this implies: media proves the architecture, weather proves the *shape* half — its three
-containers are a harder morph than media's pill-to-cookie, and the 1x1 clip is a case media does not
-have at all.
+This is not a mechanism to be built. Turn on **Wallpaper & Desktop → Centered wallpaper** and change
+the shape: it morphs. The whole of it is
+
+```qml
+MaterialShape { shape: bgRoot.centeredWallpaperShape }   // Background.qml:950
+```
+
+because `ShapeCanvas` morphs on *any* polygon change, unprompted:
+
+```qml
+root.morph = new Morph.Morph(root.prevRoundedPolygon ?? root.roundedPolygon, root.roundedPolygon);
+morphBehavior.enabled = false; root.progress = 0;
+morphBehavior.enabled = true;  root.progress = 1;
+```
+
+So "one component whose shape is a parameter" is not a new pattern to invent — it is the pattern
+already on screen, and the morph comes free the moment the component stays alive. That collapses the
+weather work from *construction* to **conversion**: re-express the 2x1 squircle and the 1x1 clipped
+corner as `MaterialShape`s, bind `shape` to the span, keep the item alive. Nothing else is required
+for the outline to morph.
+
+What is left is genuinely weather-specific and not free: the **clip**. The 1x1 glyph is cut by the
+card, and clipping is the parent's property, not the shape's — no polygon interpolation expresses it.
+That is the one part of the weather case with no existing answer, and media has no equivalent.
+
+### One caution, from the same snippet
+
+That reset is a *restart*, not a retarget: it disables the `Behavior`, slams `progress` to 0, and
+re-enables. A shape change arriving mid-morph therefore snaps back to the start instead of
+continuing from where it is. For the wallpaper shape picker that is invisible — nobody changes shape
+twice in 350 ms. During a resize it is reachable: drag a grip through two spans quickly and the
+outline jumps. §4 requires every transition to be interruptible; the shape morph does not currently
+meet that bar, and making it retarget is a change to `ShapeCanvas` shared with the wallpaper.
+
+The order this implies: media proves the architecture, weather proves the *shape* half — and since
+the shape half turns out to be mostly conversion, weather is the cheaper of the two to land once the
+one-tree structure exists.
 
 ## 4. A motion model for interaction
 
