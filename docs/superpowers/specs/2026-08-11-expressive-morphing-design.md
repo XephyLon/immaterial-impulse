@@ -356,21 +356,10 @@ with no `sourceSize` and no `sourceClipRect`, so every surface shares one `QQuic
 and *"a surface created after that decode is Ready in the frame it is built"*. Re-creating a frost
 surface costs no decode.
 
-**Open, and it is the one thing this decision does not settle: what occupies the card while the
-frost is gone.** Removing the blur without naming a substitute is a visible flash, which is worse
-than the cost being avoided. Three candidates:
-
-- the card's own colour, faded in and out — simple, but it is a colour change *during* a motion,
-  which competes with the motion for attention;
-- the **last blurred frame, frozen and left to stretch** — no pop at either end, and it removes the
-  per-frame cost that motivated the decision, since the expense is the re-sample rather than the
-  pixels. Slightly wrong mid-flight, and nobody can read a blur that is moving;
-- nothing at all, the card going briefly transparent — cheapest and the most obviously a glitch.
-
-The frozen frame is the recommendation: it satisfies the intent (no per-frame blur work during
-motion) while removing the reason to dislike it (the pop). It should be measured rather than
-assumed — the cost being avoided is real but unquantified, and a 5120x1440 wallpaper is the case
-that would show it.
+The card keeps its tint throughout, so there is nothing to substitute and nothing to flash: the card
+already draws `color: useBlurBackground ? applyAlpha(colOnPrimary, backgroundOpacity)
+: colOnPrimary` beneath the frost (`DesktopWeatherWidget:84`). Dropping the blur leaves the tinted
+card moving, and restoring it puts the frost back over the same tint.
 
 ### The standing trap
 
