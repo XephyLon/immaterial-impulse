@@ -1148,8 +1148,37 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   panned by assignment, i.e. it switched off both halves of the interaction it existed to score,
   and stayed green for the entire life of the bug. b710ef731 ("fix(plugins): stop the position
   Behavior swallowing the parallax cancellation").
-- **The mirror-image failure: a `Behavior` *retriggered* every frame does tick, forever, and
-  nothing on screen shows you.** Where the parallax bug was a frozen property, this one is a
+- **The mirror image of that rule: a binding that re-evaluates every frame is not a target
+  that moves every frame, and a `Behavior` is fine on the second.** A desktop widget's span
+  resize animates its `width`/`height` even though the grip re-previews on every mouse move
+  and hands `previewGridSize` a fresh object each time — because the *value* the binding
+  produces changes only at a span boundary, and Qt does not restart a running Behavior for a
+  write of the value it is already animating to (`QQuickBehavior::write` returns early when
+  the target value is unchanged). So the test is what the property is written *with*, not how
+  often the binding runs, and the way to find out is to sample the property mid-change rather
+  than to reason about it. Two things follow for anything animating a size here. Nothing may
+  clamp, measure or persist against the *animating* value: the position clamp runs when the
+  span commits, while the widget is still the size it is leaving, and nothing runs again once
+  the animation lands — so `AbstractBackgroundWidget.clampWidth`/`clampHeight` exist for a
+  subclass to point at the size it is heading for (a property rather than an argument on
+  `clampX`, because a call site that forgets to pass one is silent). And a settled-size test
+  passes identically on an animation and on the snap it replaced, which is why
+  `WidgetResizeMotionRuntimeTest.qml` samples the width 80ms in and fails if it is already at
+  the destination — the sibling grip harness scores only settled sizes and stayed green under
+  every mutation of the motion. fa1e2a8b5 ("feat(plugins): animate a resizable widget's size
+  between its offered spans"), 4e33a332a ("test(widgets): score a span change as in flight, not
+  as a snap").
+- **A change handler that writes the state its own binding reads is a binding loop, and Qt
+  drops the re-evaluation rather than erroring where you are looking.** `PluginWidget` repairs a
+  resized widget's stored position from `onStoredGridSpanChanged`, and that repair calls
+  `PluginState.setPosition` — which is the state `storedGridSize` is derived from, so the write
+  lands inside that binding's own evaluation and the log says `Binding loop detected for
+  property "storedGridSize"` at the *call site's* file. A zero-interval `Timer` moves the write
+  one turn of the event loop out of the evaluation and costs nothing, since what the widget is
+  drawn at was already clamped by a different path. fa1e2a8b5 ("feat(plugins): animate a
+  resizable widget's size between its offered spans").
+- **A third failure in the same family: a `Behavior` *retriggered* every frame does tick,
+  forever, and nothing on screen shows you.** Where the parallax bug was a frozen property, this one is a
   property that never rests. `CavaService` gated cava on `MprisController.activePlayer !== null`
   — but a *paused* player is still an active player, and cava visualises whatever is **audible**
   rather than the tracked player's stream. So three paused players left cava decoding a

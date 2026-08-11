@@ -182,6 +182,32 @@ XDG_CONFIG_HOME=$(mktemp -d) XDG_STATE_HOME=$(mktemp -d) \
   qs -p WidgetInteractionRuntimeTest.qml
 ```
 
+`WidgetResizeGripRuntimeTest.qml` and `WidgetResizeMotionRuntimeTest.qml` split one
+feature between them, and the split is the point. The grip harness
+(`tests/test_widget_resize_grip_runtime.py`) drags the corner of two real
+`PluginWidget`s — one offering three spans, one offering a single one as the
+control — and scores only **settled** sizes plus the widget's position, because
+its question is whether the corner resizes the widget or *walks* it. That leaves
+it blind to whether the resize is animated at all: a `Behavior` handed a target
+that moves every frame compiles, never ticks, and snaps the property to its final
+value, which is how the parallax opt-out shipped inert. So the motion harness
+(`tests/test_widget_resize_motion_runtime.py`) samples the size 80ms and 240ms
+**into** a span change and fails if it was already at the destination, if it had
+not left the old span, or if the two samples agree — driving both the Size row's
+single write and a live grip drag, since only the second re-writes the target on
+every mouse move. It also scores the three things a settled size cannot show: that
+the content's span name is still the old one early and the new one past the
+midpoint (read off `PluginNode`, not off the host property feeding it — reading the
+latter passed while the pop was back), that a widget grown flush with the right
+screen edge ends up inside the screen with its stored position agreeing, and that
+Escape returns the size on a move rather than a snap. Both write plugin state, so
+run them by hand against a throwaway config:
+
+```bash
+XDG_CONFIG_HOME=$(mktemp -d) XDG_STATE_HOME=$(mktemp -d) \
+  qs -p WidgetResizeMotionRuntimeTest.qml
+```
+
 `ConfigControlWriteBackRuntimeTest.qml` is self-checking and driven by
 `tests/test_config_control_write_back.py`. It seeds a throwaway
 `XDG_CONFIG_HOME` with `osd.timeout: 4321` — a value the config format accepts
