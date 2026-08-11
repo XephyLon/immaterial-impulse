@@ -15,6 +15,12 @@ maths was right while its units were not: Qt measures `setLineDash` in pen width
 length, which draws a repeating dashed border instead of one arc (AGENT.md, "Dynamic/data-driven
 QML gotchas").
 
+**And the 2x2 was designed wrong here, not implemented wrong.** §5 described it as a cookie with
+the title and artist beneath, which is what shipped; the design is the cookie clock's shape with
+next and previous where its date badges are. Both §"Settled input" and §5 are corrected below
+rather than rewritten, because the two designs are not compatible and the reason is the useful
+part. 562cdf815 ("feat(media): rebuild the 2x2 as the cookie clock with next and previous").
+
 Paths are relative to the theme root `dots/.config/quickshell/imi/` unless written repo-relative.
 
 ## Problem
@@ -35,8 +41,9 @@ one-size limitation.
   ripples asymmetrically. Not a uniform pulse.
 - **The handle is generic** — it lives in `PluginWidget`, so any grid widget that declares more than
   one span gets it.
-- **2x2 is cookie-as-artwork**: album art inside the cookie, visualizer lobes around it, title and
-  artist below.
+- **2x2 is the cookie clock's shape**: album art inside the cookie, visualizer lobes around it, and
+  the clock's two date badges replaced by previous and next. No title and no artist — see §5, which
+  records why the first version of this line ("title and artist below") was the wrong design.
 - **2x1 is exactly the reference**: prev, cookie-shaped play/pause, next. No text and no artwork —
   but progress *is* shown, stroked around the centre button's own outline rather than as a separate
   track. See §5.
@@ -150,8 +157,25 @@ The existing content moves to `LayoutLarge.qml` unchanged, so the current widget
   already that, this is a visible change on upgrade** and is the one migration risk here; measure
   before committing to it, and if it differs, the honest fix is to adjust the layout to the span
   rather than to pick a span that flatters the current content.
-- **2x2 `LayoutCookie.qml`** — 276x228. `VisualizerCookie` with album art clipped inside it, title
-  and artist beneath. Tap the cookie to play/pause.
+- **2x2 `LayoutCookie.qml`** — 276x228. **The cookie clock's shape, with next and previous where
+  its date badges are.** `VisualizerCookie` filling a square frame centred in the tile, album art
+  clipped to a circle inside the lobe valleys, and two circular transport badges at opposite
+  corners of that frame: previous in the top-left (the clock's day bubble) and next in the
+  bottom-right (its month bubble), each overlapping the cookie's edge. Tap the artwork to
+  play/pause.
+
+  **This corrects what this section said first** — "with album art clipped inside it, title and
+  artist beneath" — which is what shipped and was the wrong design. The two do not coexist: a text
+  block under the cookie is paid for out of the cookie's diameter, and a smaller cookie moves the
+  badges off its edge, which is the one relationship being copied. The 3x2 is the size that names
+  the track; dropping the text here grew the cookie from ~150px to 204.
+
+  The placement is `cookie_layout.js`, and it is the layout's only testable part: the clock's own
+  `implicitSize: 230` and `dateSquareSize: 64` give the badge ratio, the square frame is centred in
+  a tile that is 48px wider than it is tall, and `badgeOverlap` names the bite into the cookie's
+  edge in pixels so a changed ratio reads as a number rather than as "still positive". Anchoring
+  the badges to the *tile's* corners instead drops that bite from 26px to 8px — see AGENT.md,
+  "Dynamic/data-driven QML gotchas".
 - **2x1 `LayoutCompact.qml`** — 276x108. Prev pill, cookie-shaped play/pause, next pill, centred.
 
   **The centre button's border is the seek bar.** Playback progress is stroked around the cookie's
@@ -183,6 +207,9 @@ pointer grabs, shapes or layout is testable here.
 - The nearest-size snap: given a pointer delta and a list of spans, which span wins. Pure.
 - Band aggregation: 32 values to 12 lobes, including the short-array and empty cases that happen
   before cava has produced anything.
+- The 2x2's placement (`cookie_layout.js`, `tests/tst_media_cookie_layout.qml`): the square frame
+  centred in a non-square tile, the badge's proportion to it, and how far a corner badge overlaps
+  the cookie's edge. Pure arithmetic over numbers, and the only part of that layout a test reaches.
 - A lint that no manifest declares an option key beginning with `__`.
 
 **Not testable, needs the screen:** the handle claiming the press before drag-to-move, the cookie's
