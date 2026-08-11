@@ -29,9 +29,19 @@ Singleton {
 
     // Consumers hold a claim (CavaRef) for exactly as long as they are showing
     // bands. cava decodes audio continuously, so it must not run for an idle
-    // desktop; with no player there is nothing to decode either.
+    // desktop; with nothing playing there is nothing to decode either.
+    //
+    // `isPlaying`, not `activePlayer !== null`: a *paused* player is still an
+    // active player, so the old test kept cava decoding for as long as any
+    // player existed at all. cava visualises whatever is audible rather than
+    // that player's stream, so it then drew some other application's sound -
+    // and every band it emitted retriggered twenty `Behavior on height`
+    // animations, which tick at the display's refresh rate whether or not
+    // anyone can see them. Measured on a 240 Hz output with three paused
+    // players and a fullscreen game: the bar's render thread ran at 237 fps
+    // behind the game, and pausing cava took it to 33.
     property int refCount: 0
-    readonly property bool active: root.refCount > 0 && MprisController.activePlayer !== null
+    readonly property bool active: root.refCount > 0 && MprisController.isPlaying
 
     property list<real> values: []
 
