@@ -312,6 +312,72 @@ the card rather than the card being reverse-engineered out of media afterwards. 
 the decision that the rest depends on — that a surface's shape is a *parameter* — at the level where
 it is easiest to prove.
 
+## 3d. Card motion
+
+**Settled with the user (12 Aug).**
+
+### One clock for the widget's box, many for what is inside it
+
+The card does **not** animate its own width and height. `PluginWidget` already owns that
+(`Behavior on width`/`height`, `enabled: gridResizeAnimated`), and a card that animated its size too
+would be a second clock describing the same movement.
+
+That is not hypothetical. It already ships:
+
+| | duration | curve | honours `gridResizeAnimated` |
+| --- | --- | --- | --- |
+| `PluginWidget` `Behavior on width`/`height` | `gridResizeDuration` | expressive spatial | yes |
+| `DesktopWeatherWidget:43` `Behavior on implicitWidth` | **250 ms, hardcoded** | `[0.2, 0, 0, 1]` fallback | **no `enabled:` at all** |
+
+Both fire on one span change, so the box and the content disagree for the whole transition, and the
+second animates even with the feature switched off. Absorbing this is part of what the card is for.
+
+**Cards that reflow *within* a widget are free to differ.** The system monitor's three cards may
+rearrange rather than merely scale (3-across to stacked), and that motion is their own — own
+duration, own curve, deliberately not slaved to the box. The rule is narrower than "one clock for
+everything": one clock per *movement*, and a card rearranging inside a resizing widget is a
+different movement from the widget's box travelling.
+
+### The shape morphs continuously
+
+A card's shape interpolates through the span change rather than swapping at a threshold. It follows
+that the shape morph and the size animation must be driven by the same progress — the §3 caution
+about the ring detaching from the cookie, one level up. A card whose outline arrives before its
+box does reads as two objects.
+
+### Frost is dropped for the duration of the motion, and restored after
+
+The frost does not track a resizing card. `WallpaperBlurSurface` binds its `sourceRect` to
+`root.width`/`height`, so every frame of a resize is a fresh sample and a resized texture, times
+however many frosted cards are on screen.
+
+This is cheap to restore precisely because of #147: the surface asks for the plain wallpaper file
+with no `sourceSize` and no `sourceClipRect`, so every surface shares one `QQuickPixmap` cache key,
+and *"a surface created after that decode is Ready in the frame it is built"*. Re-creating a frost
+surface costs no decode.
+
+**Open, and it is the one thing this decision does not settle: what occupies the card while the
+frost is gone.** Removing the blur without naming a substitute is a visible flash, which is worse
+than the cost being avoided. Three candidates:
+
+- the card's own colour, faded in and out — simple, but it is a colour change *during* a motion,
+  which competes with the motion for attention;
+- the **last blurred frame, frozen and left to stretch** — no pop at either end, and it removes the
+  per-frame cost that motivated the decision, since the expense is the re-sample rather than the
+  pixels. Slightly wrong mid-flight, and nobody can read a blur that is moving;
+- nothing at all, the card going briefly transparent — cheapest and the most obviously a glitch.
+
+The frozen frame is the recommendation: it satisfies the intent (no per-frame blur work during
+motion) while removing the reason to dislike it (the pop). It should be measured rather than
+assumed — the cost being avoided is real but unquantified, and a 5120x1440 wallpaper is the case
+that would show it.
+
+### The standing trap
+
+Nothing may clamp, measure or persist against the animating value. `PluginWidget.settledWidth`
+exists for exactly this, and cards inherit the discipline: a card that measures itself mid-animation
+reads a number that was never real. See AGENT.md's note on the same failure in the resize path.
+
 ## 4. A motion model for interaction
 
 One vocabulary, in `Appearance`, for the states every interactive element passes through:
@@ -380,8 +446,9 @@ seek-ring dash pattern).
 Each step leaves the tree working and is separately reviewable on screen.
 
 1. The shared card: one component, shape as a parameter, plus the optional-mask change to
-   `WallpaperBlurSurface`. Weather, currency and media adopt it; `calendar` follows later. Nothing
-   morphs yet - this step only removes the duplication and makes the shape expressible.
+   `WallpaperBlurSurface` (bundled, per §3c). Weather, currency and media adopt it; `calendar`
+   follows later. Removes `DesktopWeatherWidget`'s competing size Behavior. Nothing morphs yet -
+   this step only removes the duplication and makes the shape expressible.
 2. `media_geometry.js` + tests. No caller.
 3. Media collapses to one tree, **no animation** — every span still renders correctly, statically.
    This is the risky structural step and is worth reviewing alone.
