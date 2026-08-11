@@ -68,3 +68,47 @@ function preferredPlayer(candidates) {
         ?? available[0]
         ?? null;
 }
+
+// The setting used to be free text matched as a substring of `identity` or
+// `desktopEntry`. It now stores a player id, but a config written before the
+// picker existed still holds whatever the user typed, so the substring match
+// stays as the fallback branch rather than as the rule.
+function matchesPreference(player, preference) {
+    const wanted = String(preference ?? "").trim().toLowerCase();
+    if (wanted.length === 0)
+        return false;
+    const id = playerId(player);
+    if (id === wanted)
+        return true;
+    return id.includes(wanted)
+        || String(player?.identity ?? "").toLowerCase().includes(wanted)
+        || String(player?.desktopEntry ?? "").toLowerCase().includes(wanted);
+}
+
+function preferenceMatches(candidates, preference) {
+    return Array.from(candidates ?? []).filter(player => matchesPreference(player, preference));
+}
+
+// Idempotent, so it is safe to run on every load without a "already migrated"
+// marker - a value the picker wrote is already its own normal form. A legacy
+// value may be a list ("spotify, firefox"), which the old substring match
+// could never have matched as a whole anyway; keep the first entry.
+function normalizePreferredPlayer(value) {
+    const raw = String(value ?? "").trim().toLowerCase();
+    if (raw.length === 0)
+        return "";
+    const first = raw.split(/[,;]/)[0].trim().split(/\s+/)[0];
+    return playerIdFromBusName(first);
+}
+
+// The preference is absolute while the player it names is present: a setting
+// that stops applying the moment anything else starts playing is not a
+// preference. When that player is absent the preference is simply not
+// applicable this session and normal selection resumes - nothing is written
+// back, so closing the player never forgets the choice.
+function selectPlayer(candidates, preference) {
+    const matches = preferenceMatches(candidates, preference);
+    if (matches.length > 0)
+        return preferredPlayer(matches);
+    return preferredPlayer(candidates);
+}

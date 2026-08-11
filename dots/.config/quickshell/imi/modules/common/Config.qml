@@ -5,6 +5,11 @@ import Quickshell
 import Quickshell.Io
 import qs.modules.common
 import qs.modules.common.functions
+// A `.pragma library` module of pure functions that happens to live beside its
+// other consumer, not the MprisController service - there is no cycle to have,
+// and the normalization below must apply the same rule the selection code
+// does, or the two disagree about what the setting means.
+import "../../services/MprisSelection.js" as MprisSelection
 
 Singleton {
     id: root
@@ -79,6 +84,27 @@ Singleton {
     // keycap. Nobody chose that value - there is no setting for it in the UI,
     // so the only way to have set it deliberately is by hand, and this runs
     // once either way.
+    // bar.media.preferredPlayer was free text matched as a substring of a
+    // player's identity; it is now the stable half of an MPRIS bus name, which
+    // is what the settings picker writes. Converting the stored value keeps the
+    // config and the picker talking about the same thing.
+    //
+    // Unconditional and unmarked, on the reasoning AGENT.md gives for
+    // clearStaleKbOptions: a marker records that the pass ran, not that it saw
+    // the user's config, and the two come apart exactly when the config
+    // directory migration declines and the installer default loads first.
+    // There is nothing to protect with one either way - normalization is
+    // idempotent, so a value the picker wrote is already its own normal form
+    // and running this every load cannot change it. A value it cannot parse
+    // into an id still resolves through MprisSelection.matchesPreference's
+    // legacy substring branch, so nothing is lost by converting it either.
+    function migratePreferredPlayerToBusId() {
+        const stored = root.options.bar.media.preferredPlayer;
+        const normalized = MprisSelection.normalizePreferredPlayer(stored);
+        if (normalized !== stored)
+            root.options.bar.media.preferredPlayer = normalized;
+    }
+
     function migrateSplitCheatsheetButtons() {
         if (root.options.cheatsheet.migratedSplitButtons)
             return;
@@ -437,6 +463,7 @@ Singleton {
             root.migrateUpstreamKeys(text());
             root.ready = true;
             root.clearStaleKbOptions();
+            root.migratePreferredPlayerToBusId();
             root.migrateDeadParallaxSwitches();
             root.migrateSplitCheatsheetButtons();
             root.migrateDesktopWidgetsToPlugins();
