@@ -1382,6 +1382,22 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   vertex happens to be, and a twelve-lobed cookie is symmetric every 30 degrees so nothing about
   the shape reads as rotated. 8c211b3d8 ("feat(media): draw the 2x1 as three controls whose centre
   carries the seek bar").
+- **A square design copied into a non-square tile keeps its own square frame; anchoring its parts
+  to the tile's corners quietly breaks the relationship being copied.** The media widget's 2x2 is
+  the cookie clock's shape - `clock/CookieClock.qml` is a square `implicitSize: 230` and
+  `dateIndicator/DateIndicator.qml` anchors two `dateSquareSize: 64` badges to opposite corners of
+  it - with next and previous where the day and month are. What makes a badge read as *fastened*
+  to the cookie is that it bites into the edge: its centre sits on the diagonal at 1.02 outer
+  radii, so ~13% of the frame overlaps. The 2x2 span is 276x228, and anchoring the badges to the
+  tile's corners instead moves them along a shallower bearing and cuts that bite from 26px to 8px
+  - the badge grazes the cookie and the tile reads as three unrelated objects. Centre a square
+  frame in the tile and hang everything off *that*; the leftover width becomes symmetric margin.
+  The same arithmetic is why the title and artist left: a text block under the cookie is paid for
+  out of the cookie's diameter, so keeping it shrinks the frame and pushes the badges off the edge
+  anyway. `cookie_layout.js` is the whole of it, extracted because nothing else about that layout
+  is reachable from a test - and `badgeOverlap` returns the bite in pixels rather than a boolean,
+  so a changed ratio reads as a number instead of as "still positive".
+  562cdf815 ("feat(media): rebuild the 2x2 as the cookie clock with next and previous").
 
 **Wallpaper parallax is one oversized viewport, not a per-layer effect.**
 `Background.qml` draws every wallpaper layer inside `parallaxViewport`, an item sized to
