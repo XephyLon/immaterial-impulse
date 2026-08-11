@@ -1148,6 +1148,28 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   panned by assignment, i.e. it switched off both halves of the interaction it existed to score,
   and stayed green for the entire life of the bug. b710ef731 ("fix(plugins): stop the position
   Behavior swallowing the parallax cancellation").
+- **The mirror-image failure: a `Behavior` *retriggered* every frame does tick, forever, and
+  nothing on screen shows you.** Where the parallax bug was a frozen property, this one is a
+  property that never rests. `CavaService` gated cava on `MprisController.activePlayer !== null`
+  — but a *paused* player is still an active player, and cava visualises whatever is **audible**
+  rather than the tracked player's stream. So three paused players left cava decoding a
+  fullscreen game's sound, each spectrum retriggered the bar visualiser's twenty `Behavior on
+  height` animations, and those tick at the display's refresh rate. Measured on a 240 Hz output:
+  the bar's render thread ran at **237 fps behind a fullscreen game**, and `SIGSTOP`ping cava
+  took it to 33. The generalisation is about gates, not about cava: **"a thing exists" and "the
+  thing is doing something" are different predicates, and animation cost follows the second.**
+  a57cd00b2 ("fix(cava): gate the spectrum on playback, not on a player existing").
+- **A surface the compositor *covers* is not a surface QML considers hidden — `visible` stays
+  true and no guard written against it will fire.** `Bar.qml` picks `WlrLayer.Top` precisely so
+  fullscreen windows bury the bar (Overlay only while a special workspace sits on top). That is
+  occlusion, and it happens entirely below Qt: the surface stays mapped, the item tree is
+  untouched, and the bar happily animates for nobody. Contrast the desktop widgets, which *are*
+  hidden properly — everything they draw hangs off `parallaxViewport`, and `Background.qml` sets
+  `visible: false` on it, so `visible` (the effective value) is the correct guard there. Before
+  gating work on visibility, establish which of the two you have; the wrong one reads identically
+  in the source and does nothing at runtime. Diagnosing this took stack-sampling the render
+  thread, because every cheaper signal said the widget was fine.
+  53d1ff893 ("fix(bar): drop the cava claim while a fullscreen window covers the bar").
 - **A subclass cannot read `AbstractWidget.gridSize`: `PluginWidget` shadows it.** The base's
   `gridSize` is the 12px drag lattice; `PluginWidget` declares its own `gridSize`, the
   component-grid span (`{"cols": 2, "rows": 1}`). Code *inside* the base still resolves to the
