@@ -30,7 +30,11 @@ Canvas {
 
     Component.onCompleted: root._initArrays(barCount)
 
-    CavaRef {}
+    // Bands nobody is looking at still cost a running cava and a repaint per
+    // spectrum, so the claim follows what is actually drawn. `visible` is the
+    // effective value, so an ancestor switching off is enough - no consumer has
+    // to know which ancestor, or why.
+    CavaRef { active: root.visible }
 
     Connections {
         target: CavaService
