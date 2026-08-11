@@ -223,6 +223,71 @@ The order this implies: media proves the architecture, weather proves the *shape
 the shape half turns out to be mostly conversion, weather is the cheaper of the two to land once the
 one-tree structure exists.
 
+## 3c. The shared card, and why it comes first
+
+**Settled with the user (12 Aug):** widgets draw their surfaces from a shared component library.
+Three constraints came with that, and each one shapes the component:
+
+- **The card does not own frost.** `nandoroid-system-monitor` has *three* frosted cards and no outer
+  container, so a widget has zero, one or many. Frost stays a widget-level declaration
+  (`blurRegions`) that points at whichever cards exist.
+- **Desktop widgets and bar popups are different.** This library is desktop widgets only. A bar popup
+  is not a card with different numbers in it.
+- **`calendar` gets rebuilt to match** once the architecture is settled on media and weather. Its
+  divergence is a defect to correct, not a parameter to preserve.
+
+So the abstraction is a **card**, not a "widget container" — a widget composes some number of them.
+
+### The evidence it should be shared, which is not the same as speculation
+
+The spec's step 8 defers extraction until a real case has proven what is generic. That rule does not
+apply here, and it is worth saying why rather than quietly breaking it. It guards against inventing
+an abstraction for something that exists *once*. The card already exists four times:
+
+| file | container |
+| --- | --- |
+| `DesktopWeatherWidget.qml:83` | `Rectangle`, `radius: 30 * Appearance.effectiveScale` |
+| `DesktopCurrencyWidget.qml:92` | identical |
+| `nandoroid-media/LayoutCookie.qml:91` | identical |
+| `calendar/Widget.qml:212` | `Appearance.rounding?.verylarge ?? 30`, and a different colour |
+
+Three copies and one that has **already drifted**. Deduplicating a demonstrated repetition is
+evidence-driven; that is a different act from inventing an interface for an imagined one.
+
+### Frost is a rounded rectangle, and a morphing card is not
+
+This is the constraint that decides the component, and it is not obvious from the outside. A blur
+region is not data handed to the compositor — `WallpaperBlurSurface` builds an `OpacityMask` whose
+`maskSource` is a `Rectangle`:
+
+```qml
+readonly property Rectangle _mask: Rectangle { radius: root.cornerRadius }
+layer.effect: OpacityMask { maskSource: root._mask }
+```
+
+and `PluginWidget:381` feeds it region records of `{x, y, width, height, radius}`. **A frosted card
+can therefore only ever be a rounded rectangle.** Morph one into a cookie and the frost stays a
+rounded rect behind it — the blur stops following the outline, visibly, at exactly the moment the
+shape becomes interesting.
+
+The fix belongs in the blur surface rather than in the cards: `OpacityMask` does not care what the
+mask *is*, only that it has alpha. So
+
+- a card exposes its own mask item, and a `MaterialShape` serves as one unchanged;
+- a region record gains an optional `mask`, and `WallpaperBlurSurface` prefers it, falling back to
+  the radius `Rectangle` when absent.
+
+That keeps every existing caller working — including the three system-monitor cards, which have no
+reason to stop being rounded rectangles — while making a morphing frosted card expressible at all.
+
+### Why this lands before the media work
+
+It is the cheapest step in the whole plan and the least likely to break anything: mechanical,
+adoptable one widget at a time, and each adoption leaves the tree working. Media then gets built on
+the card rather than the card being reverse-engineered out of media afterwards. It also front-loads
+the decision that the rest depends on — that a surface's shape is a *parameter* — at the level where
+it is easiest to prove.
+
 ## 4. A motion model for interaction
 
 One vocabulary, in `Appearance`, for the states every interactive element passes through:
@@ -290,17 +355,21 @@ seek-ring dash pattern).
 
 Each step leaves the tree working and is separately reviewable on screen.
 
-1. `media_geometry.js` + tests. No caller.
-2. Media collapses to one tree, **no animation** — every span still renders correctly, statically.
+1. The shared card: one component, shape as a parameter, plus the optional-mask change to
+   `WallpaperBlurSurface`. Weather, currency and media adopt it; `calendar` follows later. Nothing
+   morphs yet - this step only removes the duplication and makes the shape expressible.
+2. `media_geometry.js` + tests. No caller.
+3. Media collapses to one tree, **no animation** — every span still renders correctly, statically.
    This is the risky structural step and is worth reviewing alone.
-3. Behaviors on the shared elements' geometry. Resize now morphs position and size.
-4. Shape morphing for the transport controls, on the resize's clock.
-5. Progress: the wave gains a path baseline, then the 2x2 inner ring and the 2x1 amplitude
+4. Behaviors on the shared elements' geometry. Resize now morphs position and size.
+5. Shape morphing for the transport controls, on the resize's clock.
+6. Progress: the wave gains a path baseline, then the 2x2 inner ring and the 2x1 amplitude
    fade. No renderer cross-fade - §3 removed the need for one.
-6. The interaction-state model in `Appearance`; `RippleButton` adopts it.
-7. Media controls adopt it.
-8. Extract whatever is genuinely generic into the widget framework — *after* steps 1-7 have shown
+7. The interaction-state model in `Appearance`; `RippleButton` adopts it.
+8. Media controls adopt it.
+9. Extract whatever is genuinely generic into the widget framework — *after* steps 2-8 have shown
    what that is.
 
-Steps 1-2 are the ones that could go wrong quietly. Step 8 is deliberately last: the framework is
-derived from a working case, per the settled input.
+Steps 2-3 are the ones that could go wrong quietly. Step 9 is deliberately last: the framework is
+derived from a working case, per the settled input — with the card as the one exception, for the
+reason given in §3c.
