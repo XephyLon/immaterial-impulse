@@ -31,6 +31,12 @@ Singleton {
 
 	property var activeTrack;
 
+	// The one place the preferred-player setting is resolved. Four widgets used
+	// to carry their own copy of this block and had already drifted apart.
+	readonly property string preferredPlayerId: MprisSelection.normalizePreferredPlayer(
+		Config.options.bar.media.preferredPlayer);
+	readonly property bool preferenceApplies: MprisSelection.preferenceMatches(players, preferredPlayerId).length > 0;
+
 	function hasUsableMetadata(player) {
 		return MprisSelection.hasUsableMetadata(player);
 	}
@@ -39,25 +45,36 @@ Singleton {
 		return MprisSelection.preferredPlayer(candidates);
 	}
 
+	function honoursPreference(player) {
+		return !preferenceApplies || MprisSelection.matchesPreference(player, preferredPlayerId);
+	}
+
 	function reconcileTrackedPlayer(preferred) {
-		if (preferred && players.includes(preferred) && preferred.isPlaying) {
+		if (!honoursPreference(trackedPlayer)) {
+			trackedPlayer = MprisSelection.selectPlayer(players, preferredPlayerId);
+			syncActivePlayer();
+			return;
+		}
+		if (preferred && players.includes(preferred) && preferred.isPlaying && honoursPreference(preferred)) {
 			trackedPlayer = preferred;
 			syncActivePlayer();
 			return;
 		}
 		if (!trackedPlayer || !players.includes(trackedPlayer)
 				|| (!trackedPlayer.isPlaying && players.some(player => player.isPlaying))) {
-			trackedPlayer = MprisSelection.preferredPlayer(players);
+			trackedPlayer = MprisSelection.selectPlayer(players, preferredPlayerId);
 		}
 		syncActivePlayer();
 	}
 
 	function syncActivePlayer() {
-		const nextPlayer = trackedPlayer && players.includes(trackedPlayer)
-			? trackedPlayer : MprisSelection.preferredPlayer(players);
+		const nextPlayer = trackedPlayer && players.includes(trackedPlayer) && honoursPreference(trackedPlayer)
+			? trackedPlayer : MprisSelection.selectPlayer(players, preferredPlayerId);
 		if (activePlayer !== nextPlayer)
 			activePlayer = nextPlayer;
 	}
+
+	onPreferredPlayerIdChanged: reconcileTrackedPlayer(null)
 
 	onPlayersChanged: reconcileTrackedPlayer(null)
 	onTrackedPlayerChanged: syncActivePlayer()
