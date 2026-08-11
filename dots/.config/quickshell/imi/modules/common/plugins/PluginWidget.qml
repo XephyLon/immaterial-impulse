@@ -226,6 +226,12 @@ AbstractBackgroundWidget {
 
     SequentialAnimation {
         id: spanSwap
+        // The span the widget loads with is adopted rather than animated into,
+        // and `onTargetGridSpanChanged` only ever sees changes. Declared on the
+        // animation that owns every later value of `shownGridSpan` rather than
+        // in the host's own `Component.onCompleted`, which stays the single
+        // call `tests/test_presets.py` pins.
+        Component.onCompleted: rootWidget.shownGridSpan = rootWidget.targetGridSpan
         NumberAnimation {
             target: pluginNode
             property: "opacity"
@@ -329,12 +335,7 @@ AbstractBackgroundWidget {
     }
 
     onCurrentConfigChanged: applyPersistedPosition()
-    Component.onCompleted: {
-        rootWidget.applyPersistedPosition();
-        // The first span the host resolves is adopted rather than animated
-        // into, and `onTargetGridSpanChanged` only sees changes.
-        rootWidget.shownGridSpan = rootWidget.targetGridSpan;
-    }
+    Component.onCompleted: applyPersistedPosition()
 
     // A widget resized near a screen edge no longer fits where it is stored,
     // and the two halves of that go wrong in different directions. Where the
