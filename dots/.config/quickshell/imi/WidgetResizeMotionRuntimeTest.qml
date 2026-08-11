@@ -23,12 +23,15 @@ import qs.modules.common.widgets.widgetCanvas
  * which re-previews on every mouse move and hands the host a fresh span object
  * each time.
  *
- * Three further things are scored because none of them are visible from a
+ * Four further things are scored because none of them are visible from a
  * settled size either:
  *   - the content's span name swaps at the *midpoint* of the move, not at
  *     either end - a widget with a layout per span (media loads a different
  *     file per span) would otherwise pop at the moment the motion exists to
  *     cover;
+ *   - the frost surface is the widget's rect on every frame and is the *same*
+ *     surface throughout, rather than being destroyed and rebuilt at the
+ *     refresh rate by a region list handed to a `Repeater`'s `model`;
  *   - a widget grown at the right-hand screen edge ends up inside the screen,
  *     and its stored position agrees. The clamp runs when the span commits,
  *     when the widget is still the size it is leaving, so an animation that is
@@ -55,6 +58,8 @@ ShellRoot {
     function spanW(cols) { return Math.round(Appearance.sizes.widgetGridSpanX(cols)); }
     function spanH(rows) { return Math.round(Appearance.sizes.widgetGridSpanY(rows)); }
 
+    // `blur: true` seeds the host's own frost surface on, which is the thing
+    // that has to keep up with an animating rect without being rebuilt.
     function manifestFor(id) {
         return {
             id: id,
@@ -63,7 +68,7 @@ ShellRoot {
                 cols: 3, rows: 2,
                 sizes: [{ cols: 3, rows: 2 }, { cols: 2, rows: 2 }, { cols: 2, rows: 1 }]
             },
-            desktopWidget: { type: "Item" }
+            desktopWidget: { type: "Item", blur: true }
         };
     }
 
@@ -152,12 +157,28 @@ ShellRoot {
         return null;
     }
 
+    // The widget's frost surface, found the same way and for the same reason:
+    // it is what the wallpaper is sampled through, and it has to track a rect
+    // that is now moving under it.
+    function frostSurface(item) {
+        for (const child of item.children) {
+            if (child.surfaceX !== undefined && child.wallpaperSource !== undefined) return child;
+            const found = harness.frostSurface(child);
+            if (found) return found;
+        }
+        return null;
+    }
+
     function sampleOf(widget) {
         const node = harness.contentNode(widget);
+        const frost = harness.frostSurface(widget);
         return {
             width: Math.round(widget.width),
             height: Math.round(widget.height),
             shown: node ? node.gridSize : "<no content node>",
+            frost: frost,
+            frostWidth: frost ? Math.round(frost.width) : -1,
+            frostHeight: frost ? Math.round(frost.height) : -1,
             x: Math.round(widget.x)
         };
     }
@@ -217,6 +238,36 @@ ShellRoot {
                       harness.sampleOf(widget).shown === `${cols}x${rows}`);
     }
 
+    // The frost samples the wallpaper by the widget's rect, so it has to be that
+    // rect on every frame - and it has to be the *same surface* throughout.
+    //
+    // The second half is the one that is not obvious. The host's region list is
+    // a JS array handed to a `Repeater`'s `model`, and it is now rebuilt on
+    // every frame of a resize: the default region is the widget's own animating
+    // rect, and a custom `blurRegions` list belongs to content being stretched
+    // with the box. Rebuilding the surface per frame would mean a fresh
+    // ShaderEffectSource, FastBlur and image request per frame - the serialized
+    // decode cascade #147 removed, re-created at the refresh rate. Measured, it
+    // does not: a replacement list of the same length reaches the delegate as a
+    // change rather than a reset, so the surface survives and its own bindings
+    // move it. That is worth a check rather than a comment, because it is a Qt
+    // behaviour nothing in this repo controls. A destroyed QObject reads as null
+    // from JS, so an identity comparison catches the day it stops holding.
+    function scoreFrostKeepsUp(label) {
+        const early = harness.samples.early;
+        const mid = harness.samples.mid;
+        harness.check(`${label}: the frost surface exists`,
+                      !!early && !!early.frost && !!mid && !!mid.frost);
+        if (!early || !mid || !early.frost || !mid.frost) return;
+        harness.check(`${label}: the frost is not rebuilt mid-resize`,
+                      early.frost === mid.frost);
+        // Both axes, because a gesture that moves only the height would
+        // otherwise be scored on a width neither of them touched.
+        harness.check(`${label}: the frost is the widget's own rect`,
+                      early.frostWidth === early.width && mid.frostWidth === mid.width
+                      && early.frostHeight === early.height && mid.frostHeight === mid.height);
+    }
+
     // The content changes identity once, in the middle. Either end is a pop:
     // at the start the new layout is drawn into the old box for the whole
     // move, at the end the old one is.
@@ -274,6 +325,7 @@ ShellRoot {
         () => {
             harness.scoreInFlight("a Size row change", "width", harness.spanW(3), harness.spanW(2));
             harness.scoreSwapsAtTheMidpoint("a Size row change", "3x2", "2x2");
+            harness.scoreFrostKeepsUp("a Size row change");
             harness.scoreSettled("a Size row change", motionWidget, 2, 2);
         },
 
@@ -287,6 +339,7 @@ ShellRoot {
         },
         () => {
             harness.scoreInFlight("a grip drag", "height", harness.spanH(2), harness.spanH(1));
+            harness.scoreFrostKeepsUp("a grip drag");
             harness.releaseDrag(0, -120);
         },
         () => harness.scoreSettled("a grip drag", motionWidget, 2, 1),
@@ -337,6 +390,9 @@ ShellRoot {
             if (!PluginState.ready || !Config.ready)
                 return;
             Config.options.background.widgetsLocked = false;
+            // The host builds no frost surface with the transparency switch
+            // off, and it ships off.
+            Config.options.appearance.transparency.enable = true;
             // Both manifests default to 3x2, which is 420 wide: the edge widget
             // cannot be placed flush with the right edge until it is the 2x2 it
             // is meant to grow *from*, because the host clamps it back in.
