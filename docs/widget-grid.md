@@ -260,7 +260,11 @@ animating size**: the frost surface's default region is the widget's own `width`
 (and a custom `blurRegions` list belongs to content that is being stretched with the box),
 and the grip is anchored to the corner. The frost costs no extra decode while it moves —
 the slice is a `ShaderEffectSource` `sourceRect` over a shared cached wallpaper `Image`,
-which is free to move (AGENT.md's shared-decode note). The grip's *gesture* is measured in
+which is free to move (AGENT.md's shared-decode note) — and the surface itself is not
+rebuilt, even though the region list handed to its `Repeater`'s `model` is a new array on
+every frame of the resize: a replacement list of the same length reaches the delegate as a
+change rather than a reset. That is Qt behaviour rather than a decision here, so the motion
+harness scores the surface's identity across a resize instead of trusting it. The grip's *gesture* is measured in
 scene coordinates from the press for the same reason it always was, plus one: it captures
 the span being animated **to**, so pressing the grip again mid-animation does not measure
 from a size the widget is leaving.

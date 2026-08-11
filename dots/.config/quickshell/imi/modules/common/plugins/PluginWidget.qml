@@ -352,6 +352,7 @@ AbstractBackgroundWidget {
     // dragged somewhere else on the desktop would re-run every other widget's
     // repair. Both the grip and the Size row land here, because both write the
     // same stored span.
+    //
     // Deferred by one turn of the event loop, because the repair *writes*
     // plugin state and this handler runs inside the evaluation of a binding
     // that reads it - Qt reports that as a binding loop on `storedGridSize`
