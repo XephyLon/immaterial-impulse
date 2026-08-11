@@ -251,6 +251,15 @@ if ! python3 "$SCRIPT_DIR/test_widget_resize_grip_runtime.py"; then
     exit 1
 fi
 
+# The grip harness above reads settled sizes on purpose, so it passes whether a
+# span change is animated or instant. This one samples the size mid-change,
+# which is the only way to tell a Behavior that ticks from one that never does.
+echo "Running widget resize motion runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_resize_motion_runtime.py"; then
+    echo "Widget resize motion runtime tests failed."
+    exit 1
+fi
+
 # The source half is static. The runtime half pans a real WidgetCanvas under
 # real PluginWidgets and brings its own headless weston, so it needs no display
 # of its own - but it does need weston, and skips without it.
