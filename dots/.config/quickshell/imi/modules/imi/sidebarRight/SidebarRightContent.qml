@@ -46,7 +46,6 @@ Item {
     readonly property Item backgroundItem: sidebarRightBackground
 
     readonly property MprisPlayer activePlayer: MprisController.activePlayer
-    readonly property var realPlayers: MprisController.players
     readonly property var meaningfulPlayers: MprisController.meaningfulPlayers
 
     Connections {
