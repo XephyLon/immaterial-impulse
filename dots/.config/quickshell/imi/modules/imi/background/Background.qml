@@ -880,7 +880,17 @@ Variants {
                 cache: false
                 smooth: true
                 asynchronous: true
-                layer.enabled: true
+                // An offscreen render target the size of the output, held for
+                // the whole session. With no lock wallpaper configured there is
+                // nothing to sample and the layer is pure cost, so skip it.
+                //
+                // Deliberately NOT gated on "is the lock peel showing": the
+                // shader samples this the frame the lock appears, and a layer
+                // built one frame late would sample the raw texture instead of
+                // the PreserveAspectCrop'd render - the exact bug the comment
+                // above describes. Narrowing it further needs the lock path
+                // exercised, which is a test rather than a guess.
+                layer.enabled: lockWallImage.source.toString() !== ""
                 visible: false
             }
             // Lock peel: live WE <-> lock image, using the configured shader. Above
