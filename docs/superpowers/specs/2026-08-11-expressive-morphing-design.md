@@ -133,19 +133,43 @@ system already handles — rather than a cross-fade between two ways of drawing.
 
 The wavy ring is the intersection of those three, not new invention.
 
-### One question this raises, for the user
+### Decided (12 Aug): the 2x1 outline waves too, and the button waves with it
 
-The 2x1 ring is a **plain** stroke today, and per `LayoutCompact.qml:97` it deliberately doubles as
-the play button's border. If 3x2 and 2x2 are wavy and 2x1 is not, the wave enters and exits across a
-resize — the exact discontinuity this whole design rejects.
+The alternative was flattening `amplitudeMultiplier` to 0 at 2x1 so the wave resolved into a plain
+border. Rejected: the wave is present at every span, so nothing about it enters or exits.
 
-Two ways out:
+The stronger half of the decision is that **the button and the seeker animate as one thing.**
+`LayoutCompact.qml:97` already describes the arrangement this needs — the button body and the seek
+ring are *two concentric draws of one cookie outline*, the body inside the ring so the stroke reads
+as the button's border rather than a line laid across its edge. The wave therefore belongs to that
+shared outline, and both draws sample it at the same phase. The button breathes with the track
+instead of sitting still inside something that moves.
 
-- Make the 2x1 outline wavy too. Consistent, but it changes how that button looks, and the button is
-  already reviewed and shipped.
-- **Animate `amplitudeMultiplier` to 0 at 2x1** so the wave flattens into the border. A flat wave *is*
-  the current plain stroke, so this is continuous, needs no special case, and the property already
-  exists and is already animatable. **Recommended.**
+That makes the seeker a property of the button's own geometry, not an overlay on it, and it is the
+clearest statement in the whole design of what "one renderer, three baselines" buys.
+
+### The arc-length trap, and the constraint that avoids it
+
+`outlineLength` is measured **once**, and the comment says why: *"the shape never changes, so a
+moving progress costs a dash pattern rather than a re-measure."* A wavy outline breaks that premise —
+if the shape moves, its length moves, and `dashForProgress` divides by a total that is now a lie. A
+progress of 50% would drift against the actual halfway point of the path, visibly, as the wave
+travels.
+
+Re-measuring every frame is the obvious escape and the wrong one: `measureCubics` samples every
+cubic, and it would run per frame per widget.
+
+The cheap escape is a constraint on the wave rather than a change to the measuring. A travelling
+wave is a *phase* shift, and phase-shifting a periodic modulation around a closed loop leaves its
+arc length unchanged **provided a whole number of wavelengths fits around the loop**. Fit an integer
+number and the length is invariant, the measure-once optimisation survives untouched, and the dash
+maths stays exact. Fit a fractional number and the modulation has a seam that beats against the
+travel, which is both a length error and a visible artefact.
+
+So: **the wave's frequency around a closed baseline is an integer, and it is a derived value rather
+than a tunable one.** The straight 3x2 baseline has no such constraint — it has ends, not a seam —
+which is worth noting because `WavyLine`'s `frequency: 6` is a free parameter there and must not be
+copied across as if it were.
 
 ## 3b. Weather is the second case, and it sharpens the requirement
 
@@ -363,8 +387,8 @@ Each step leaves the tree working and is separately reviewable on screen.
    This is the risky structural step and is worth reviewing alone.
 4. Behaviors on the shared elements' geometry. Resize now morphs position and size.
 5. Shape morphing for the transport controls, on the resize's clock.
-6. Progress: the wave gains a path baseline, then the 2x2 inner ring and the 2x1 amplitude
-   fade. No renderer cross-fade - §3 removed the need for one.
+6. Progress: the wave gains a path baseline, then the 2x2 inner ring and the 2x1 wavy outline
+   drawn as one shape with the play button. No renderer cross-fade - §3 removed the need for one.
 7. The interaction-state model in `Appearance`; `RippleButton` adopts it.
 8. Media controls adopt it.
 9. Extract whatever is genuinely generic into the widget framework — *after* steps 2-8 have shown
