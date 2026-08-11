@@ -62,10 +62,32 @@ class CavaContractTest(unittest.TestCase):
         gate = re.search(r"readonly\s+property\s+bool\s+active:([^\n]*)", text)
         self.assertIsNotNone(gate, "the service needs one named gate expression")
         self.assertIn("refCount > 0", gate.group(1))
-        self.assertIn("activePlayer !== null", gate.group(1),
-                      "with no player there is nothing to decode")
         self.assertRegex(text, r"\brunning:\s*root\.active\b",
                          "the process must run on the gate, not on its own condition")
+
+    def test_the_gate_is_playback_and_not_a_player_merely_existing(self):
+        """A paused player is still an active player.
+
+        This assertion used to require `activePlayer !== null`, which reads as
+        "with no player there is nothing to decode" and is true - but it is not
+        the same claim. cava visualises whatever is *audible*, not the tracked
+        player's stream, so a paused player left it decoding some other
+        application's sound, and every band retriggered the visualiser's twenty
+        `Behavior on height` animations at the display's refresh rate. Measured
+        on a 240 Hz output with three paused players and a fullscreen game: the
+        bar's render thread ran at 237 fps behind the game, dropping to 33 when
+        cava was paused.
+
+        So the test now pins the requirement rather than the expression that
+        happened to be there.
+        """
+        gate = re.search(r"readonly\s+property\s+bool\s+active:([^\n]*)",
+                         qml_text(SERVICE)).group(1)
+        self.assertIn("isPlaying", gate,
+                      "cava must run only while something is actually playing")
+        self.assertNotIn("activePlayer !== null", gate,
+                         "a paused player is still an active player - this gate "
+                         "keeps cava decoding for anything else making noise")
 
     def test_the_band_count_is_the_one_the_process_is_asked_for(self):
         """`barCount: 32` against a config asking for 50 bars is how this drifted."""

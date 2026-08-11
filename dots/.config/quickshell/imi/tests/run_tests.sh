@@ -120,6 +120,12 @@ if ! python3 "$SCRIPT_DIR/lint_duplicate_imports.py"; then
     exit 1
 fi
 
+echo "Running cava claim lint..."
+if ! python3 "$SCRIPT_DIR/lint_cava_claims.py"; then
+    echo "cava claim lint failed."
+    exit 1
+fi
+
 echo "Running process pattern lint..."
 if ! python3 "$SCRIPT_DIR/lint_self_matching_process_patterns.py"; then
     echo "Process pattern lint failed."
