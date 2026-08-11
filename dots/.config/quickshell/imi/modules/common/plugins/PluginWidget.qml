@@ -195,6 +195,56 @@ AbstractBackgroundWidget {
         }
     }
 
+    // The span the CONTENT is currently drawn as, which is not always the span
+    // the widget IS.
+    //
+    // A manifest only offers several spans when it has a design per span
+    // (docs/widget-grid.md): media loads a different layout file per span,
+    // weather and currency switch branches inside one file. So the content has
+    // to change identity somewhere during the move, and both ends are a pop -
+    // hand the new name down at the start and the incoming layout is drawn
+    // inside the outgoing box for the whole animation; hand it down at the end
+    // and the outgoing one is. It changes at the midpoint instead, under a fade
+    // out and back in, which is the one moment the swap is not visible.
+    //
+    // The host cannot know which of those two kinds of widget it is holding,
+    // and it does not need to: a swap it did not have to make costs a fade
+    // nobody can distinguish from the resize it sits inside.
+    readonly property string targetGridSpan: GridSizes.formatSize(rootWidget.gridSize)
+    property string shownGridSpan: ""
+
+    onTargetGridSpanChanged: {
+        if (!rootWidget.gridResizeAnimated
+                || !GridResize.animatesSpanSwap(rootWidget.shownGridSpan, rootWidget.targetGridSpan)) {
+            spanSwap.stop();
+            pluginNode.opacity = 1;
+            rootWidget.shownGridSpan = rootWidget.targetGridSpan;
+            return;
+        }
+        spanSwap.restart();
+    }
+
+    SequentialAnimation {
+        id: spanSwap
+        NumberAnimation {
+            target: pluginNode
+            property: "opacity"
+            to: 0
+            duration: GridResize.contentSwapHalfMs(rootWidget.gridResizeDuration)
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+        }
+        ScriptAction { script: rootWidget.shownGridSpan = rootWidget.targetGridSpan }
+        NumberAnimation {
+            target: pluginNode
+            property: "opacity"
+            to: 1
+            duration: GridResize.contentSwapHalfMs(rootWidget.gridResizeDuration)
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+        }
+    }
+
     // The size the widget is resizing *to*. Everything that has to agree with
     // where the widget ends up - the position clamp, and the grip's own press
     // measurement - reads this rather than `width`, which is a frame of an
@@ -279,7 +329,12 @@ AbstractBackgroundWidget {
     }
 
     onCurrentConfigChanged: applyPersistedPosition()
-    Component.onCompleted: applyPersistedPosition()
+    Component.onCompleted: {
+        rootWidget.applyPersistedPosition();
+        // The first span the host resolves is adopted rather than animated
+        // into, and `onTargetGridSpanChanged` only sees changes.
+        rootWidget.shownGridSpan = rootWidget.targetGridSpan;
+    }
 
     // A widget resized near a screen edge no longer fits where it is stored,
     // and the two halves of that go wrong in different directions. Where the
@@ -520,8 +575,10 @@ AbstractBackgroundWidget {
         gridWidth: rootWidget.gridSized ? rootWidget.width : 0
         gridHeight: rootWidget.gridSized ? rootWidget.height : 0
         // ...and hand the span down by name too, for a widget that has a
-        // different layout per size rather than one that stretches.
-        gridSize: GridSizes.formatSize(rootWidget.gridSize)
+        // different layout per size rather than one that stretches. The span
+        // the content is *showing*, which lags the widget's own by half a
+        // resize - see shownGridSpan.
+        gridSize: rootWidget.shownGridSpan
         anchors.centerIn: parent
     }
 
