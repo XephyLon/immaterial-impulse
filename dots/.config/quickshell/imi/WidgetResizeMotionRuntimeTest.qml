@@ -130,11 +130,34 @@ ShellRoot {
 
     property var samples: ({})
 
+    // The span the CONTENT is being told it is, read off the host's PluginNode
+    // rather than off the host property that feeds it.
+    //
+    // Scoring `shownGridSpan` instead looks equivalent and is not: rewiring the
+    // node back to the widget's own span makes every layout pop at the start of
+    // the move again while the property this would have read goes on behaving
+    // perfectly. Measured - that mutation passed a version of this file that
+    // read the host property.
+    //
+    // Found by walking for PluginNode's own `hasGrid`, because the node is a
+    // grandchild of the widget (AbstractBackgroundWidget parents everything a
+    // subclass declares into a content Item) and neither has an objectName the
+    // host has any other reason to carry.
+    function contentNode(item) {
+        for (const child of item.children) {
+            if (child.hasGrid !== undefined && child.gridSize !== undefined) return child;
+            const found = harness.contentNode(child);
+            if (found) return found;
+        }
+        return null;
+    }
+
     function sampleOf(widget) {
+        const node = harness.contentNode(widget);
         return {
             width: Math.round(widget.width),
             height: Math.round(widget.height),
-            shown: widget.shownGridSpan,
+            shown: node ? node.gridSize : "<no content node>",
             x: Math.round(widget.x)
         };
     }
@@ -191,7 +214,7 @@ ShellRoot {
                       Math.round(widget.width) === harness.spanW(cols)
                       && Math.round(widget.height) === harness.spanH(rows));
         harness.check(`${label}: the content is the span it settled on`,
-                      widget.shownGridSpan === `${cols}x${rows}`);
+                      harness.sampleOf(widget).shown === `${cols}x${rows}`);
     }
 
     // The content changes identity once, in the middle. Either end is a pop:
