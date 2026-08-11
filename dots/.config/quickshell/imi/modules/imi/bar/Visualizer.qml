@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
 import qs.services
@@ -29,9 +30,26 @@ Item {
     // index per dot threw away the ones in between.
     readonly property var levels: CavaBands.bands(root.points, root.barCount, root.maxVisualizerValue)
 
+    // A fullscreen window on this monitor covers the bar - Bar.qml:67 chooses
+    // the Top layer precisely so that it does, except while a special workspace
+    // sits on top, which puts the bar back on Overlay and in front. Mirrored
+    // here rather than passed down because the visualiser is placed by the
+    // layout registry, not by Bar.qml, so there is no parent to read it from.
+    //
+    // The bar is *occluded*, never hidden: its surface stays mapped and QML
+    // keeps `visible` true, so nothing in the item tree knows. Gating this
+    // claim on `visible` - the obvious guard - would therefore not fire at all.
+    readonly property var thisMonitorData: HyprlandData.monitors.find(monitor =>
+        monitor.name === root.QsWindow.window?.screen?.name)
+    readonly property bool coveredByFullscreen:
+        (HyprlandData.workspaceById[root.thisMonitorData?.activeWorkspace?.id]?.hasfullscreen ?? false)
+        && ((root.thisMonitorData?.specialWorkspace?.name ?? "") === "")
+
     // This widget only exists while "visualizer" sits in a bar layout, which is
-    // the layout term the old process gate spelled out by reading the config.
-    CavaRef {}
+    // the layout term the old process gate spelled out by reading the config -
+    // but existing is not enough on its own, because bands nobody can see still
+    // animate at the refresh rate.
+    CavaRef { active: !root.coveredByFullscreen }
 
     implicitWidth: vertical
         ? Appearance.sizes.verticalBarWidth
