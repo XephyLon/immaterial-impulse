@@ -115,8 +115,8 @@ class TheHostCancelsRatherThanOffsets(unittest.TestCase):
         """
         body = self.host[self.host.index("function commitPosition()"):]
         for axis in ("X", "Y"):
-            self.assertIn(f"rootWidget.target{axis} = ParallaxMath.placementFromDrawn( "
-                          f"rootWidget.{axis.lower()}, rootWidget.parallaxCancel{axis})", body)
+            self.assertIn(f"ParallaxMath.placementFromDrawn( rootWidget.{axis.lower()}, "
+                          f"rootWidget.parallaxCancel{axis})", body)
 
     def test_an_opted_out_widget_does_not_animate_its_position(self):
         """The bug that made the opt-out inert on a real desktop.
@@ -147,6 +147,36 @@ class TheHostCancelsRatherThanOffsets(unittest.TestCase):
         self.assertIn(
             "function snapX(value) { return root.snap(value - root.snapOffsetX) "
             "+ root.snapOffsetX }", base)
+
+    def test_the_stored_position_is_clamped_where_it_is_written(self):
+        """The store held positions the screen would never honour, because the
+        drag was unclamped and only the load clamped. `visualizer` sat at
+        `x: -852` on a 5120px screen and was drawn at 0 every session.
+        """
+        body = self.host[self.host.index("function commitPosition()"):]
+        self.assertIn("rootWidget.targetX = rootWidget.clampX(", body)
+        self.assertIn("rootWidget.targetY = rootWidget.clampY(", body)
+
+    def test_an_unreachable_stored_position_is_pinned_not_reset(self):
+        """Not repaired - the offset a corrupt value absorbed is unrecoverable
+        - and not reset to the default either, which would move the widget
+        somewhere the user never put it. Pinned to what is already on screen.
+        """
+        body = self.host[self.host.index("function repairUnreachableStoredPosition()"):]
+        body = body[:body.index("Timer {")]
+        self.assertIn("if (!manifest || !PluginState.ready) return", body)
+        self.assertIn("if (nextX === stored.x && nextY === stored.y) return", body,
+                      "a write on every load is the ConfigSpinBox trap in AGENT.md")
+        self.assertIn("rootWidget.clampX(stored.x)", body)
+        self.assertNotIn("defaultPosition", body)
+
+    def test_the_repair_waits_for_a_size_before_it_believes_the_clamp(self):
+        """The clamp is against `screenWidth - width`, so a repair taken before
+        the widget has a width writes a range that is not the real one.
+        """
+        self.assertIn(
+            "if (!PluginState.ready || rootWidget.width <= 0 "
+            "|| rootWidget.height <= 0) return;", self.host)
 
     def test_the_lattice_itself_stays_inside_the_base(self):
         """The host hands in an offset and never does the snap itself.

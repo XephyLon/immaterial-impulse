@@ -211,15 +211,68 @@ AbstractBackgroundWidget {
     // Dragging assigns targetX/targetY directly and therefore intentionally
     // breaks their initial bindings. Re-apply persisted geometry whenever the
     // external state file changes so preset switches also move live widgets.
+    //
+    // The clamp is AbstractBackgroundWidget's own, rather than the same
+    // expression written again: the placement frame is the one both ends of
+    // this agree on (ParallaxMath), so the range is the same range for every
+    // widget and there is no reason for two copies of it to exist.
     function applyPersistedPosition() {
         const nextX = currentConfig.x !== undefined ? currentConfig.x : 100;
         const nextY = currentConfig.y !== undefined ? currentConfig.y : 100;
-        rootWidget.targetX = Math.max(0, Math.min(nextX, scaledScreenWidth - width));
-        rootWidget.targetY = Math.max(0, Math.min(nextY, scaledScreenHeight - height));
+        rootWidget.targetX = rootWidget.clampX(nextX);
+        rootWidget.targetY = rootWidget.clampY(nextY);
     }
 
     onCurrentConfigChanged: applyPersistedPosition()
     Component.onCompleted: applyPersistedPosition()
+
+    // A stored position the screen will never honour, written back so it stops
+    // being a lie.
+    //
+    // The drag is unclamped - deliberately, it is the release that decides -
+    // but until now only the *load* clamped, so a drag that ended outside the
+    // screen stored a number the widget was then drawn nowhere near. It is
+    // silent, permanent, and it reads exactly as the widget moving on its own:
+    // the author's `visualizer` sat at `x: -852` on a 5120px screen and was
+    // drawn at 0 every session.
+    //
+    // Note what this is not. The corrupt values that motivated it cannot be
+    // *repaired* - the offset each one absorbed depends on which workspace was
+    // showing and whether a sidebar was open at that instant, and it accrued
+    // over an unknown number of releases, so there is no arithmetic that
+    // recovers the intended position. Nor are they reset to the default, which
+    // would move a widget to somewhere the user never put it. They are pinned
+    // to what is already on screen, which is the one answer that changes
+    // nothing visible.
+    //
+    // It runs once, on a settle timer, and only where the clamp actually bites
+    // - a write-back on every load is the ConfigSpinBox trap in AGENT.md, and
+    // the guard against it here is that `width` has to have arrived first.
+    function repairUnreachableStoredPosition() {
+        if (!manifest || !PluginState.ready) return;
+        const stored = rootWidget.currentConfig;
+        const nextX = rootWidget.clampX(stored.x);
+        const nextY = rootWidget.clampY(stored.y);
+        if (nextX === stored.x && nextY === stored.y) return;
+        PluginState.setPosition(manifest.id, screenName, {
+            x: nextX,
+            y: nextY,
+            placementStrategy: rootWidget.placementStrategy
+        });
+    }
+
+    Timer {
+        id: storedPositionRepair
+        interval: 1000
+        repeat: true
+        running: true
+        onTriggered: {
+            if (!PluginState.ready || rootWidget.width <= 0 || rootWidget.height <= 0)
+                return;
+            storedPositionRepair.running = false;
+            rootWidget.repairUnreachableStoredPosition();
+        }
+    }
 
     // `forceCenter` overrides the persisted position for as long as it is set,
     // without disturbing it - the widget returns to where the user left it the
@@ -286,11 +339,13 @@ AbstractBackgroundWidget {
         // on the canvas, the persisted position is where it was PLACED (see
         // ParallaxMath). Storing the drawn coordinate would fold the current
         // pan into the saved position, so an opted-out widget would walk by one
-        // pan's worth every time it was dragged.
-        rootWidget.targetX = ParallaxMath.placementFromDrawn(
-            rootWidget.x, rootWidget.parallaxCancelX);
-        rootWidget.targetY = ParallaxMath.placementFromDrawn(
-            rootWidget.y, rootWidget.parallaxCancelY);
+        // pan's worth every time it was dragged. It is clamped here as well as
+        // on the way back in, so the store can never hold a position the
+        // widget is not drawn at.
+        rootWidget.targetX = rootWidget.clampX(ParallaxMath.placementFromDrawn(
+            rootWidget.x, rootWidget.parallaxCancelX));
+        rootWidget.targetY = rootWidget.clampY(ParallaxMath.placementFromDrawn(
+            rootWidget.y, rootWidget.parallaxCancelY));
         rootWidget.restoreXYBinding();
         if (!manifest) return;
         PluginState.setPosition(manifest.id, screenName, {

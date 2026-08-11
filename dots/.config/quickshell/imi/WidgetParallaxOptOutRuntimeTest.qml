@@ -333,6 +333,40 @@ ShellRoot {
             harness.check("dragged at a fractional pan: lands on the nearest lattice cell",
                           harness.screenX(holdWidget) === 744
                           && harness.screenY(holdWidget) === 432);
+        },
+
+        // --- A stored position the screen will not honour -------------------
+        //
+        // The author's `visualizer` sat at `x: -852` on a 5120px screen: the
+        // drag is unclamped, only the load clamped, so the store kept a number
+        // the widget was drawn nowhere near - permanently, and silently.
+        () => { canvas.animatePan = false; harness.pan(0, 0);
+                PluginState.setPosition("hold-probe", harness.testScreen,
+                                        { x: -852, y: 1200, placementStrategy: "free" }); },
+        () => {
+            harness.check("an unreachable stored position is clamped on screen",
+                          harness.screenX(holdWidget) === 0
+                          && harness.screenY(holdWidget) === 700 - Math.round(holdWidget.height));
+            harness.check("...and the store is left holding what the screen refused",
+                          harness.storedX("hold-probe") === -852);
+            holdWidget.repairUnreachableStoredPosition();
+        },
+        () => {
+            harness.check("repaired: the store agrees with where the widget is drawn",
+                          harness.storedX("hold-probe") === 0
+                          && harness.storedY("hold-probe") === 700 - Math.round(holdWidget.height));
+            harness.check("repaired: nothing moved - it is not a reset to the default",
+                          harness.screenX(holdWidget) === 0
+                          && harness.screenY(holdWidget) === 700 - Math.round(holdWidget.height));
+        },
+
+        // A drag that ends outside the screen is stored clamped, so the two
+        // cannot come apart again.
+        () => harness.dragWidget(holdWidget, -600, 0),
+        () => {
+            harness.check("dragged off the left edge: the store holds the edge, not the overshoot",
+                          harness.storedX("hold-probe") === 0
+                          && harness.screenX(holdWidget) === 0);
         }
     ]
 
