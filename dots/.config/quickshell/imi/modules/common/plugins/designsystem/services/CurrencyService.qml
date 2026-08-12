@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import "CurrencyMath.js" as CurrencyMath
+import "currency_schedule.js" as Schedule
 
 Singleton {
     id: root
@@ -14,6 +15,9 @@ Singleton {
     property string quote3: "JPY"
     property string quote4: "CAD"
     property int requestGeneration: 0
+    // Consecutive failures, for the backoff. Reset by success and by any
+    // settings change (a new base deserves a fresh quick attempt).
+    property int failureCount: 0
 
     // PluginState bindings are applied just after this singleton is created.  A
     // short debounce prevents the default USD request from winning that race
@@ -33,12 +37,23 @@ Singleton {
             // Invalidate the callback without aborting from inside a timer.
             // Qt's XHR abort path can synchronously re-enter QML handlers.
             root.requestGeneration++;
-            root.loading = false;
-            root.errorMessage = "Network timeout";
+            root.attemptFailed("Network timeout");
         }
     }
 
+    // The schedule (currency_schedule.js): failure backs off from quick
+    // retries to patient ones; success settles into an hourly refresh. The
+    // service used to make ONE attempt per session, so a shell that started
+    // before the network stayed on "Network timeout" forever.
+    Timer {
+        id: nextAttempt
+        repeat: false
+        onTriggered: root.refresh()
+    }
+
     function scheduleRefresh() {
+        root.failureCount = 0;
+        nextAttempt.stop();
         refreshDebounce.restart();
     }
 
@@ -53,12 +68,26 @@ Singleton {
         return String(value || "").trim().toLowerCase();
     }
 
+    function attemptFailed(message) {
+        root.loading = false;
+        // Stale rates stay on screen; the message only fills empty slots.
+        root.errorMessage = message;
+        root.failureCount++;
+        nextAttempt.interval = Schedule.nextRetryMs(root.failureCount);
+        nextAttempt.restart();
+    }
+
+    function attemptSucceeded() {
+        root.loading = false;
+        root.failureCount = 0;
+        nextAttempt.interval = Schedule.REFRESH_MS;
+        nextAttempt.restart();
+    }
+
     function refresh() {
         if (!root.baseCurrency) return;
         requestTimeout.stop();
         root.loading = true;
-        root.errorMessage = "";
-        const generation = ++root.requestGeneration;
         const target = normalizedCode(root.baseCurrency);
         const quotes = [root.quote1, root.quote2, root.quote3, root.quote4]
             .map(normalizedCode).filter(code => code.length > 0);
@@ -69,24 +98,41 @@ Singleton {
             root.rates = ({});
             return;
         }
+        root.tryHost(Schedule.urlsFor(target), 0, target, uniqueQuotes);
+    }
 
+    // One attempt walks the host list (primary, then the mirror) before it
+    // counts as a failure and backs off.
+    function tryHost(urls, hostIndex, target, uniqueQuotes) {
+        if (hostIndex >= urls.length) {
+            root.attemptFailed(root.errorMessage || "No network");
+            return;
+        }
+        const generation = ++root.requestGeneration;
         const xhr = new XMLHttpRequest();
-        xhr.open("GET", `https://latest.currency-api.pages.dev/v1/currencies/${encodeURIComponent(target)}.json`);
+        xhr.open("GET", urls[hostIndex]);
         xhr.onreadystatechange = function() {
             if (xhr.readyState !== XMLHttpRequest.DONE || generation !== root.requestGeneration) return;
             requestTimeout.stop();
-            root.loading = false;
             if (xhr.status !== 200) {
                 root.errorMessage = xhr.status === 0 ? "No network" : `HTTP ${xhr.status}`;
+                root.tryHost(urls, hostIndex + 1, target, uniqueQuotes);
                 return;
             }
             try {
                 const table = JSON.parse(xhr.responseText)[target] || {};
                 const fetchedRates = CurrencyMath.ratesIntoTarget(table, uniqueQuotes);
-                root.rates = fetchedRates;
-                root.errorMessage = Object.keys(fetchedRates).length > 0 ? "" : "No rates returned";
+                if (Object.keys(fetchedRates).length > 0) {
+                    root.rates = fetchedRates;
+                    root.errorMessage = "";
+                    root.attemptSucceeded();
+                } else {
+                    root.errorMessage = "No rates returned";
+                    root.tryHost(urls, hostIndex + 1, target, uniqueQuotes);
+                }
             } catch (error) {
                 root.errorMessage = "Parse error";
+                root.tryHost(urls, hostIndex + 1, target, uniqueQuotes);
             }
         };
         requestTimeout.restart();
