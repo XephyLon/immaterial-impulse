@@ -123,10 +123,10 @@ Item {
         id: prevButton
         objectName: "prevButton"
         // Explicit stacking: at 2x2 the play button's rect is the whole
-        // cookie frame and the corner badges OVERLAP it. Declaration order
-        // put play over prev (and under next), so prev's badge was dead at
-        // exactly one span - the pointer sweep caught it.
-        z: 2
+        // cookie frame and the corner badges OVERLAP it - and the seeker's
+        // ring (z 3) overlaps the badges, whose faces it was drawn across.
+        // Badges top the ladder; play stays under everything.
+        z: 4
         role: "prev"
         span: root.spanName
         visible: !root.lyricsUp && root.transport !== null
@@ -164,7 +164,7 @@ Item {
     MediaTransportButton {
         id: nextButton
         objectName: "nextButton"
-        z: 2
+        z: 4
         role: "next"
         span: root.spanName
         visible: !root.lyricsUp && root.transport !== null
