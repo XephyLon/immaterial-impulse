@@ -125,12 +125,20 @@ Item {
                 property string shownShape: root.glyphSlot.shape
                 property string fromShape: root.glyphSlot.shape
                 property real morphT: 1
-                Behavior on morphT { TravelBehavior {} }
+                Behavior on morphT { id: morphGate; TravelBehavior {} }
                 readonly property string targetShape: root.glyphSlot.shape
                 onTargetShapeChanged: {
                     glyphCanvas.fromShape = glyphCanvas.shownShape;
                     glyphCanvas.shownShape = glyphCanvas.targetShape;
+                    // The gate is the whole trick (ShapeCanvas's own idiom,
+                    // cited and then not copied): written through a live
+                    // Behavior, `morphT = 0` RETARGETS the animation toward 0
+                    // instead of resetting, the immediate `= 1` retargets it
+                    // back from wherever it got, and the shape flips at
+                    // nearly full morphT - a snap wearing a morph's clothes.
+                    morphGate.enabled = false;
                     morphT = 0;
+                    morphGate.enabled = true;
                     morphT = 1;
                 }
                 readonly property color fillColor: Appearance.colors.colPrimary
