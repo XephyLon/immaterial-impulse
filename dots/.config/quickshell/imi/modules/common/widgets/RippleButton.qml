@@ -14,8 +14,13 @@ Button {
     property string buttonText
     property bool pointingHandCursor: true
     property real buttonRadius: Appearance?.rounding?.small ?? 4
-    property real buttonRadiusPressed: buttonRadius
-    property real buttonEffectiveRadius: root.down ? root.buttonRadiusPressed : root.buttonRadius
+    // The pressed radius is the shared model's tightening, unless a caller
+    // names its own - a header button that squares off while open still wins.
+    property real buttonRadiusPressed: buttonRadius * (Appearance?.interaction?.pressRadiusScale ?? 1)
+    // ...and it ARRIVES there: the model's press progress is animated, so a
+    // press no longer snaps the corners in one frame.
+    property real buttonEffectiveRadius: root.buttonRadius
+        + (root.buttonRadiusPressed - root.buttonRadius) * interactionMotion.pressProgress
     // Per-corner overrides, defaulting to the uniform radius. A button used as
     // the header of an expanding surface needs square bottom corners while
     // open so its hover and ripple blend into the content below instead of
@@ -45,13 +50,33 @@ Button {
     // this instead of `opacity` directly keeps the disabled-state binding
     // below alive - an imperative write to `opacity` destroys it, and every
     // disabled button then renders as if it were enabled.
+    // The shared interaction states: hover lifts, press settles, disabled is
+    // opacity only. The button keeps owning its colours and its ripple - this
+    // drives the motion, and only the motion.
+    property bool interactionMotionEnabled: true
+    property InteractionMotion interactionMotion: InteractionMotion {
+        hovered: root.hovered && root.interactionMotionEnabled
+        down: root.down && root.interactionMotionEnabled
+        controlEnabled: root.enabled
+    }
+
     property real appear: 1
-    opacity: (root.enabled ? 1 : 0.4) * root.appear
+    opacity: root.interactionMotion.dimOpacity * root.appear
     // Staggered entrances read as motion, not just a fade: the button rises
     // into place as it appears. A Translate leaves `y` alone, which a layout
     // owns, so this is safe inside a Row/Flow/Layout.
     property real appearRise: 6
-    transform: Translate { y: (1 - root.appear) * root.appearRise }
+    // Two transforms, not one: the rise belongs to the entrance and the scale
+    // to the interaction, and a control can be doing both at once.
+    transform: [
+        Translate { y: (1 - root.appear) * root.appearRise },
+        Scale {
+            origin.x: root.width / 2
+            origin.y: root.height / 2
+            xScale: root.interactionMotion.scale
+            yScale: root.interactionMotion.scale
+        }
+    ]
     property color buttonColor: ColorUtils.transparentize(root.toggled ? 
         (root.hovered ? colBackgroundToggledHover : 
             colBackgroundToggled) :
