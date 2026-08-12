@@ -169,54 +169,29 @@ Item {
         Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
     }
 
-    // Progress's 3x2 renderer, in its geometry slot. At 2x1 the ring is drawn
-    // by the play button itself - the same rect, two concentric draws of one
-    // outline - and at 2x2 the slot is reserved for step 7's inner ring, so
-    // this slider exists only where the wavy bar does.
-    Expressive.StyledSlider {
-        id: progressSlider
+    // THE seeker - one element at every span. A wavy stroke whose baseline
+    // bends: the straight bar at 3x2, a perfect circle inside the play button
+    // at 2x2, the button's own outline at 2x1. It never fades on a span
+    // change - its geometry Behaviors and its bend are the transition. Only
+    // the lyrics page (which replaces the whole control face) dims it.
+    MediaSeeker {
+        id: seeker
         objectName: "progressSlider"
-        // The seeker leaves by TRAVELLING, not by blinking out. Its slot at
-        // 2x1 is the play button's own rect (two concentric draws of one
-        // outline), so on a span change the wavy bar rides its geometry
-        // Behaviors into the button while fading, and the ring fades in
-        // there - a handoff at the same place, until step 7's one renderer
-        // makes it literally one element. `visible` follows the fade so a
-        // fully-faded slider costs nothing and takes no clicks.
-        readonly property bool shown: root.spanName === "3x2" && !root.lyricsUp && root.progressSlot !== null
-        opacity: shown ? 1 : 0
+        span: root.spanName
+        progress: root.playbackProgress
+        playing: MprisController.isPlaying
+        opacity: root.lyricsUp ? 0 : 1
         Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveEffects } }
         visible: opacity > 0
+        z: 3
         x: root.progressSlot ? root.progressSlot.x : 0
         y: root.progressSlot ? root.progressSlot.y : 0
         width: root.progressSlot ? root.progressSlot.width : 0
         height: root.progressSlot ? root.progressSlot.height : 0
-
         Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
         Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
         Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
         Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        handleMargins: 0
-        configuration: Expressive.StyledSlider.Configuration.Wavy
-        stopIndicatorValues: []
-        animateValue: false
-        value: root.playbackProgress
-        wavy: MprisController.isPlaying
-        highlightColor: Appearance.colors.colPrimary
-        trackColor: Functions.ColorUtils.applyAlpha(Appearance.colors.colPrimary, 0.25)
-        handle: Rectangle {
-            x: progressSlider.leftPadding + (progressSlider.visualPosition * (progressSlider.availableWidth - width))
-            y: (progressSlider.height - height) / 2
-            width: 14 * Appearance.effectiveScale
-            height: 14 * Appearance.effectiveScale
-            radius: width / 2
-            color: Appearance.colors.colPrimary
-        }
-        onMoved: {
-            if (MprisController.activePlayer && MprisController.activePlayer.canSeek) {
-                MprisController.activePlayer.position = value * MprisController.activePlayer.length;
-            }
-        }
     }
 
     // The time label, in the fixed slot the geometry gives it (the one

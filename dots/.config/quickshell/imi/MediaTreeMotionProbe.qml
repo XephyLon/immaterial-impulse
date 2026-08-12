@@ -103,8 +103,32 @@ ShellRoot {
         harness.connections = [];
     }
 
+    // Visual capture: a PNG at each settle and one mid-flight, so the sweep
+    // can be JUDGED as pixels, not only scored as numbers.
+    property string shotDir: Quickshell.env("MEDIA_PROBE_SHOTS") || ""
+    function shoot(tag) {
+        if (harness.shotDir === "") return;
+        widget.grabToImage(result => {
+            result.saveToFile(`${harness.shotDir}/${tag}.png`);
+        });
+    }
+    Timer { id: midShot; interval: 160; onTriggered: harness.shoot(`${harness.transitions[harness.transitionIndex][0]}-to-${harness.transitions[harness.transitionIndex][1]}_mid`) }
+
+    function census(item, depth) {
+        if (!item || depth > 6) return;
+        for (const child of item.children) {
+            if (child.visible && child.x < 6 && child.y < 6 && (child.text !== undefined && child.text !== ""))
+                console.log(`[MediaTreeMotion] census: text item at 0,0: "${String(child.text).slice(0, 18)}" ` +
+                            `visible=${child.visible} w=${Math.round(child.width)} opacity=${child.opacity.toFixed(2)} name=${child.objectName}`);
+            harness.census(child, depth + 1);
+        }
+    }
+
     function beginTransition() {
         const pair = harness.transitions[harness.transitionIndex];
+        harness.census(widget, 0);
+        harness.shoot(`${pair[0]}_settled`);
+        midShot.start();
         harness.trails = ({});
         const play = harness.findByName(widget, "playButton");
         const prev = harness.findByName(widget, "prevButton");
