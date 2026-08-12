@@ -3,6 +3,7 @@ import Qt5Compat.GraphicalEffects
 import qs.modules.common
 import qs.modules.common.functions as Functions
 import "./shapes"
+import "../../resize-tension.js" as Tension
 
 // The surface a desktop widget draws itself on.
 //
@@ -62,12 +63,63 @@ Item {
     default property alias data: contentItem.data
     property bool clipContent: false
 
+    // ---- tension ---------------------------------------------------------
+    // The bow the host's resize grip is applying, in pixels (resize-tension.js
+    // owns the arithmetic). Zero at rest - and at rest the surface below is
+    // the plain Rectangle, so a card that is never pulled never pays for a
+    // Canvas. The clip mask deliberately stays the rounded rectangle: the bow
+    // reaches at most BOW_PX outside the rect, and clipped content already
+    // sits inside it.
+    property real tensionX: 0
+    property real tensionY: 0
+    readonly property bool underTension: !root.usesShapeCanvas
+        && (root.tensionX !== 0 || root.tensionY !== 0)
+
     Rectangle {
         id: rectSurface
-        visible: !root.usesShapeCanvas
+        visible: !root.usesShapeCanvas && !root.underTension
         anchors.fill: parent
         radius: root.radius
         color: root.effectiveColor
+    }
+
+    // The bulged surface, alive only while pulled. Margins give the bow room
+    // to draw outside the card's own box without being cut by the item.
+    Loader {
+        active: root.underTension
+        anchors.fill: parent
+        anchors.margins: -Tension.BOW_PX * 2
+        sourceComponent: Canvas {
+            id: tensionCanvas
+            onPaint: {
+                const ctx = getContext("2d");
+                ctx.clearRect(0, 0, width, height);
+                const pad = Tension.BOW_PX * 2;
+                const radii = Tension.cornerRadii(root.radius, root.tensionX, root.tensionY);
+                const path = Tension.outline(root.width, root.height,
+                    root.tensionX, root.tensionY, radii);
+                ctx.save();
+                ctx.translate(pad, pad);
+                ctx.fillStyle = root.effectiveColor;
+                ctx.beginPath();
+                for (const seg of path.segments) {
+                    if (seg.op === "move") ctx.moveTo(seg.x, seg.y);
+                    else if (seg.op === "line") ctx.lineTo(seg.x, seg.y);
+                    else ctx.quadraticCurveTo(seg.cx, seg.cy, seg.x, seg.y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+            // A Canvas repaints on resize and nothing else - mirror every
+            // input onPaint reads, or the shape keeps stale values.
+            Connections {
+                target: root
+                function onTensionXChanged() { tensionCanvas.requestPaint(); }
+                function onTensionYChanged() { tensionCanvas.requestPaint(); }
+                function onEffectiveColorChanged() { tensionCanvas.requestPaint(); }
+            }
+        }
     }
 
     Loader {
