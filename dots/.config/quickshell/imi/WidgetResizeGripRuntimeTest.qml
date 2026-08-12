@@ -264,13 +264,13 @@ ShellRoot {
         // between those two spans.
         () => harness.remember(),
         () => harness.hoverGrip(resizableWidget),
-        () => harness.dragPending(-144, 0),
+        () => harness.dragPending(-150, 0),
         () => harness.scoreResize("shrink to 2x2", "2x2"),
 
         // ...and 2x2 -> 2x1, which only moves vertically.
         () => harness.remember(),
         () => harness.hoverGrip(resizableWidget),
-        () => harness.dragPending(0, -120),
+        () => harness.dragPending(0, -126),
         () => harness.scoreResize("shrink to 2x1", "2x1"),
 
         // Back out to the largest span, so the cancel below has somewhere to go.
@@ -293,7 +293,7 @@ ShellRoot {
 
         () => harness.remember(),
         () => harness.hoverGrip(resizableWidget),
-        () => harness.dragPending(-144, 0),
+        () => harness.dragPending(-150, 0),
         () => harness.scoreResize("shrink to 2x2 again", "2x2"),
 
         // Escape mid-drag: the release that follows commits nothing and the
@@ -319,7 +319,7 @@ ShellRoot {
         // harness quietly stopped delivering events partway.
         () => { harness.remember(); PluginState.setOption("resize-probe", "positionLocked", false); },
         () => harness.hoverGrip(resizableWidget),
-        () => harness.dragPending(0, -120),
+        () => harness.dragPending(0, -126),
         () => harness.scoreResize("unlocked again", "2x1")
     ]
 

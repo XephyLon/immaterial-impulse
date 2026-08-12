@@ -334,13 +334,13 @@ ShellRoot {
         // opt-out's position Behavior solid.
         () => harness.hoverGrip(motionWidget),
         () => {
-            harness.pressAndDrag(0, -120);
+            harness.pressAndDrag(0, -126);
             harness.startSampling(motionWidget);
         },
         () => {
             harness.scoreInFlight("a grip drag", "height", harness.spanH(2), harness.spanH(1));
             harness.scoreFrostKeepsUp("a grip drag");
-            harness.releaseDrag(0, -120);
+            harness.releaseDrag(0, -126);
         },
         () => harness.scoreSettled("a grip drag", motionWidget, 2, 1),
 
