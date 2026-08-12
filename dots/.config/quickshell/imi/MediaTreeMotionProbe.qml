@@ -235,10 +235,13 @@ ShellRoot {
             const bump = () => hits++;
             item.activated.connect(bump);
             const scene = item.mapToItem(null, item.width / 2, item.height / 2);
+            driver.mouseMove(canvas, scene.x, scene.y);
+            harness.check(`${span} ${pair[0]} hovers under the pointer`, item.hoveredNow === true);
             driver.mouseClick(canvas, scene.x, scene.y, Qt.LeftButton);
             item.activated.disconnect(bump);
             harness.check(`${span} ${pair[0]} click reaches the button`, hits === 1);
         }
+        driver.mouseMove(canvas, 5, 5);
         // a click on the seeker's own stroke seeks and does not activate play
         if (seeker && seeker.visible) {
             let sought = 0, played = 0;
