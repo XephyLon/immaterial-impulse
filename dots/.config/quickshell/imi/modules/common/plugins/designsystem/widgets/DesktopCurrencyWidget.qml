@@ -8,6 +8,8 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import "."
+import "currency_geometry.js" as Geometry
+import "currency_shapes.js" as CurrencyShapes
 
 Item {
     id: root
@@ -40,6 +42,22 @@ Item {
     implicitWidth: {
         if (sizeMode === "1x1") return width1x1;
         return width2x1;
+    }
+
+    // Geometry evaluates at the span's SETTLED box; Behaviors carry the
+    // travel (the media tree's frozen-Behavior lesson).
+    readonly property real spanW: root.implicitWidth
+    readonly property real spanH: root.baseHeight
+
+    component TravelBehavior: NumberAnimation {
+        duration: Appearance.animation.elementMove.duration
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
+    }
+    component FadeBehavior: NumberAnimation {
+        duration: Appearance.animation.elementMove.duration
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Appearance.animationCurves.expressiveEffects
     }
 
     Behavior on implicitWidth {
@@ -135,244 +153,216 @@ Item {
                 }
             }
 
-            // ── [RADICAL M3 DESAIN 1x1: Original Immaterial Impulse Layout (Top-Right Icon, Left Bottom-Aligned Texts)] ──
-            Item {
-                visible: sizeMode === "1x1"
+            // ---- one tree (spec 2026-08-11): the container, the labels and
+            // the first two quote cells are single elements that travel;
+            // quotes 3-4 and the sparkline belong to 2x1 alone and fade.
+            // The container is the weather glyph's pattern, third adopter:
+            // one canvas whose shape is a parameter, Bun at 1x1 morphing
+            // into the full-height panel at 2x1.
+
+            // 2x1 only: the sparkline backdrop
+            Canvas {
+                id: sparklineCanvas
                 anchors.fill: parent
-
-                // Sisi Atas Kiri: Info teks mata uang dasar (e.g. "to IDR")
-                ColumnLayout {
-                    spacing: 0
-                    anchors {
-                        top: parent.top
-                        left: parent.left
-                        topMargin: 14 * Appearance.effectiveScale
-                        leftMargin: 14 * Appearance.effectiveScale
+                opacity: root.sizeMode === "2x1" ? 0.35 : 0
+                Behavior on opacity { FadeBehavior {} }
+                visible: opacity > 0
+                onPaint: {
+                    var ctx = getContext("2d");
+                    ctx.reset();
+                    ctx.clearRect(0, 0, width, height);
+                    ctx.strokeStyle = Appearance.colors.colOnPrimaryContainer;
+                    ctx.lineWidth = 2 * Appearance.effectiveScale;
+                    ctx.lineCap = "round";
+                    ctx.beginPath();
+                    let points = [0.8, 0.6, 0.75, 0.4, 0.55, 0.3, 0.45, 0.2];
+                    let step = width / (points.length - 1);
+                    ctx.moveTo(0, height * points[0]);
+                    for (let i = 1; i < points.length; i++) {
+                        let x = i * step;
+                        let y = height * points[i];
+                        let prevX = (i - 1) * step;
+                        let prevY = height * points[i - 1];
+                        ctx.bezierCurveTo(prevX + step/2, prevY, x - step/2, y, x, y);
                     }
-                    StyledText {
-                        text: "Rates"
-                        font.pixelSize: Appearance.font.pixelSize.smallest
-                        font.weight: Font.DemiBold
-                        color: Appearance.colors.colOnPrimaryContainer
-                        opacity: 0.6
-                    }
-                    StyledText {
-                        text: "to " + CurrencyService.baseCurrency
-                        font.pixelSize: Math.round(10 * Appearance.effectiveScale)
-                        font.weight: Font.Bold
-                        color: Appearance.colors.colPrimary
-                    }
-                }
-
-                // Sisi Atas Kanan: Material Shape Wrapped Symbol (Top Right)
-                MaterialShape {
-                    id: currencyIconShape
-                    width: 34 * Appearance.effectiveScale
-                    height: 34 * Appearance.effectiveScale
-                    shape: MaterialShape.Shape.Bun
-                    color: Appearance.colors.colPrimary
-                    anchors {
-                        top: parent.top
-                        right: parent.right
-                        topMargin: 14 * Appearance.effectiveScale
-                        rightMargin: 14 * Appearance.effectiveScale
-                    }
-
-                    MaterialSymbol {
-                        anchors.centerIn: parent
-                        text: "payments"
-                        iconSize: 18 * Appearance.effectiveScale
-                        color: Appearance.colors.colOnPrimary
-                    }
-                }
-
-                // Sisi Bawah Kiri: 2 Stacked Rates (Bottom-Aligned Left)
-                ColumnLayout {
-                    spacing: -2 * Appearance.effectiveScale
-                    anchors {
-                        bottom: parent.bottom
-                        left: parent.left
-                        right: parent.right
-                        bottomMargin: 14 * Appearance.effectiveScale
-                        leftMargin: 14 * Appearance.effectiveScale
-                        rightMargin: 14 * Appearance.effectiveScale
-                    }
-                    
-                    // Quote 1 Row (USD)
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 4 * Appearance.effectiveScale
-
-                        StyledText {
-                            text: CurrencyService.quote1
-                            font.pixelSize: Appearance.font.pixelSize.small
-                            font.weight: Font.DemiBold
-                            color: Appearance.colors.colOnPrimaryContainer
-                            opacity: 0.6
-                        }
-                        
-                        Item { Layout.fillWidth: true } // Spacer
-
-                        StyledText {
-                            text: {
-                                let v = CurrencyService.rates[CurrencyService.quote1] || 0.0;
-                                if (v > 0.0) return root.formatRate(v);
-                                return CurrencyService.errorMessage || "...";
-                            }
-                            font.pixelSize: Appearance.font.pixelSize.small
-                            font.weight: Font.Bold
-                            color: Appearance.colors.colOnPrimaryContainer
-                        }
-                    }
-
-                    // Quote 2 Row (EUR)
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 4 * Appearance.effectiveScale
-
-                        StyledText {
-                            text: CurrencyService.quote2
-                            font.pixelSize: Appearance.font.pixelSize.small
-                            font.weight: Font.DemiBold
-                            color: Appearance.colors.colOnPrimaryContainer
-                            opacity: 0.6
-                        }
-                        
-                        Item { Layout.fillWidth: true } // Spacer
-
-                        StyledText {
-                            text: {
-                                let v = CurrencyService.rates[CurrencyService.quote2] || 0.0;
-                                if (v > 0.0) return root.formatRate(v);
-                                return CurrencyService.errorMessage || "...";
-                            }
-                            font.pixelSize: Appearance.font.pixelSize.small
-                            font.weight: Font.Bold
-                            color: Appearance.colors.colOnPrimaryContainer
-                        }
-                    }
+                    ctx.stroke();
                 }
             }
 
-            // ── [RADICAL M3 DESAIN 2x1: Wavy Sparkline / Trading Card] ──
+            // ---- shared: the container (Bun <-> panel) --------------------
             Item {
-                visible: sizeMode === "2x1"
-                anchors.fill: parent
+                id: container
+                objectName: "currencyContainer"
+                readonly property var slot: Geometry.containerRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+                x: slot.x
+                y: slot.y
+                width: slot.width
+                height: slot.height
+                Behavior on x { TravelBehavior {} }
+                Behavior on y { TravelBehavior {} }
+                Behavior on width { TravelBehavior {} }
+                Behavior on height { TravelBehavior {} }
 
-                // Wavy line di background untuk kesan trading chart live yang sangat premium
                 Canvas {
-                    id: sparklineCanvas
+                    id: containerCanvas
                     anchors.fill: parent
-                    opacity: 0.35
+                    property string shownShape: container.slot.shape
+                    property string fromShape: container.slot.shape
+                    property real morphT: 1
+                    Behavior on morphT { id: morphGate; TravelBehavior {} }
+                    readonly property string targetShape: container.slot.shape
+                    onTargetShapeChanged: {
+                        containerCanvas.fromShape = containerCanvas.shownShape;
+                        containerCanvas.shownShape = containerCanvas.targetShape;
+                        // Through a CLOSED gate - written through the live
+                        // Behavior, a reset retargets instead (the weather
+                        // glyph shipped that snap).
+                        morphGate.enabled = false;
+                        morphT = 0;
+                        morphGate.enabled = true;
+                        morphT = 1;
+                    }
+                    readonly property color fillColor: Appearance.colors.colPrimary
+                    onMorphTChanged: requestPaint()
+                    onFillColorChanged: requestPaint()
+                    onWidthChanged: requestPaint()
+                    onHeightChanged: requestPaint()
+                    onAvailableChanged: if (available) requestPaint()
                     onPaint: {
-                        var ctx = getContext("2d");
-                        ctx.reset();
+                        const ctx = getContext("2d");
                         ctx.clearRect(0, 0, width, height);
-
-                        // Draw a smooth sparkline trend
-                        ctx.strokeStyle = Appearance.colors.colOnPrimaryContainer;
-                        ctx.lineWidth = 2 * Appearance.effectiveScale;
-                        ctx.lineCap = "round";
+                        const shape = CurrencyShapes.containerAt(
+                            containerCanvas.fromShape, containerCanvas.shownShape, containerCanvas.morphT);
+                        if (shape.cubics.length === 0) return;
+                        const spanX = Math.max(0.001, shape.maxX - shape.minX);
+                        const spanY = Math.max(0.001, shape.maxY - shape.minY);
+                        const scale = Math.min(width / spanX, height / spanY);
+                        ctx.save();
+                        ctx.translate(width / 2 - (shape.minX + spanX / 2) * scale,
+                                      height / 2 - (shape.minY + spanY / 2) * scale);
+                        ctx.scale(scale, scale);
                         ctx.beginPath();
-                        
-                        let points = [0.8, 0.6, 0.75, 0.4, 0.55, 0.3, 0.45, 0.2];
-                        let step = width / (points.length - 1);
-                        
-                        ctx.moveTo(0, height * points[0]);
-                        for (let i = 1; i < points.length; i++) {
-                            let x = i * step;
-                            let y = height * points[i];
-                            // Curving coordinates
-                            let prevX = (i - 1) * step;
-                            let prevY = height * points[i - 1];
-                            ctx.bezierCurveTo(prevX + step/2, prevY, x - step/2, y, x, y);
-                        }
-                        ctx.stroke();
+                        ctx.moveTo(shape.cubics[0].anchor0X, shape.cubics[0].anchor0Y);
+                        for (const cubic of shape.cubics)
+                            ctx.bezierCurveTo(cubic.control0X, cubic.control0Y,
+                                cubic.control1X, cubic.control1Y, cubic.anchor1X, cubic.anchor1Y);
+                        ctx.closePath();
+                        ctx.fillStyle = containerCanvas.fillColor;
+                        ctx.fill();
+                        ctx.restore();
                     }
                 }
 
-                // Sisi Kiri: Base currency label besar
-                ColumnLayout {
-                    anchors {
-                        left: parent.left
-                        verticalCenter: parent.verticalCenter
-                        leftMargin: 20 * Appearance.effectiveScale
-                    }
-                    spacing: -4 * Appearance.effectiveScale
+                // 1x1 only: the payments badge glyph, fading as the container
+                // becomes a data panel.
+                MaterialSymbol {
+                    anchors.centerIn: parent
+                    text: "payments"
+                    iconSize: 18 * Appearance.effectiveScale
+                    color: Appearance.colors.colOnPrimary
+                    opacity: root.sizeMode === "1x1" ? 1 : 0
+                    Behavior on opacity { FadeBehavior {} }
+                    visible: opacity > 0
+                }
+            }
+
+            // ---- shared: "Rates" ------------------------------------------
+            StyledText {
+                objectName: "currencyRatesLabel"
+                readonly property var slot: Geometry.ratesLabelRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+                x: slot.x
+                y: slot.y
+                Behavior on x { TravelBehavior {} }
+                Behavior on y { TravelBehavior {} }
+                text: "Rates"
+                font.pixelSize: root.sizeMode === "1x1" ? Appearance.font.pixelSize.smallest : Appearance.font.pixelSize.small
+                Behavior on font.pixelSize { TravelBehavior {} }
+                font.weight: root.sizeMode === "1x1" ? Font.DemiBold : Font.Bold
+                Behavior on font.weight { TravelBehavior {} }
+                color: Appearance.colors.colOnPrimaryContainer
+                opacity: root.sizeMode === "1x1" ? 0.6 : 0.8
+                Behavior on opacity { FadeBehavior {} }
+            }
+
+            // ---- shared: the base currency --------------------------------
+            StyledText {
+                objectName: "currencyBase"
+                readonly property var slot: Geometry.baseLabelRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+                x: slot.x
+                y: slot.y
+                Behavior on x { TravelBehavior {} }
+                Behavior on y { TravelBehavior {} }
+                text: root.sizeMode === "1x1" ? "to " + CurrencyService.baseCurrency : CurrencyService.baseCurrency
+                font.pixelSize: Math.round(slot.size)
+                Behavior on font.pixelSize { TravelBehavior {} }
+                font.weight: Font.Bold
+                color: root.sizeMode === "1x1" ? Appearance.colors.colPrimary : Appearance.colors.colOnPrimaryContainer
+                Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
+            }
+
+            // ---- the quote cells: 1-2 shared, 3-4 enter and exit ----------
+            Repeater {
+                model: 4
+                Item {
+                    id: quoteCell
+                    required property int index
+                    readonly property var slot: Geometry.quoteCellRect(index, root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+                    readonly property var lastSlot: slot ?? ({ x: x, y: y, width: width, height: height, stacked: true })
+                    readonly property string quoteCurrency:
+                        index === 0 ? CurrencyService.quote1
+                        : index === 1 ? CurrencyService.quote2
+                        : index === 2 ? CurrencyService.quote3
+                        : CurrencyService.quote4
+                    readonly property real rateVal: CurrencyService.rates[quoteCurrency] !== undefined
+                        ? CurrencyService.rates[quoteCurrency] : 0.0
+                    x: lastSlot.x
+                    y: lastSlot.y
+                    width: lastSlot.width
+                    height: lastSlot.height
+                    Behavior on x { TravelBehavior {} }
+                    Behavior on y { TravelBehavior {} }
+                    Behavior on width { TravelBehavior {} }
+                    opacity: slot !== null ? 1 : 0
+                    Behavior on opacity { FadeBehavior {} }
+                    visible: opacity > 0
+                    z: 2
+
+                    readonly property color inkColor: quoteCell.lastSlot.stacked
+                        ? Appearance.colors.colOnPrimary
+                        : Appearance.colors.colOnPrimaryContainer
 
                     StyledText {
-                        text: "Rates"
+                        // the code: top-left when stacked, left-middle in a row
+                        x: 0
+                        y: quoteCell.lastSlot.stacked ? 0 : (quoteCell.height - height) / 2
+                        Behavior on y { TravelBehavior {} }
+                        text: quoteCell.quoteCurrency
+                        font.pixelSize: quoteCell.lastSlot.stacked
+                            ? Appearance.font.pixelSize.smallest : Appearance.font.pixelSize.small
+                        Behavior on font.pixelSize { TravelBehavior {} }
+                        font.weight: quoteCell.lastSlot.stacked ? Font.Bold : Font.DemiBold
+                        color: quoteCell.inkColor
+                        Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
+                        opacity: quoteCell.lastSlot.stacked ? 1 : 0.6
+                        Behavior on opacity { FadeBehavior {} }
+                    }
+                    StyledText {
+                        // the value: under the code when stacked, right-aligned
+                        // in a row
+                        x: quoteCell.lastSlot.stacked ? 0 : quoteCell.width - width
+                        y: quoteCell.lastSlot.stacked ? 14 * Appearance.effectiveScale
+                            : (quoteCell.height - height) / 2
+                        Behavior on x { TravelBehavior {} }
+                        Behavior on y { TravelBehavior {} }
+                        text: {
+                            if (quoteCell.rateVal > 0.0) return root.formatRate(quoteCell.rateVal);
+                            if (CurrencyService.loading) return "...";
+                            return CurrencyService.errorMessage || "...";
+                        }
                         font.pixelSize: Appearance.font.pixelSize.small
                         font.weight: Font.Bold
-                        color: Appearance.colors.colOnPrimaryContainer
-                        opacity: 0.8
-                    }
-
-                    StyledText {
-                        text: CurrencyService.baseCurrency
-                        font.pixelSize: Math.round(42 * Appearance.effectiveScale)
-                        font.weight: Font.Bold
-                        color: Appearance.colors.colOnPrimaryContainer
-                    }
-                }
-
-                // Area Kanan: Split Solid Panel dengan sudut KIRI membulat (Rounded Left Edge)
-                Rectangle {
-                    id: rightSplitPanel
-                    width: 140 * Appearance.effectiveScale
-                    radius: 30 * Appearance.effectiveScale
-                    color: Appearance.colors.colPrimary
-                    
-                    anchors {
-                        right: parent.right
-                        top: parent.top
-                        bottom: parent.bottom
-                    }
-
-                    // Grid data mata uang di dalam panel kanan (tanpa pemotongan k)
-                    GridLayout {
-                        anchors.fill: parent
-                        anchors.margins: 14 * Appearance.effectiveScale
-                        columns: 2
-                        rowSpacing: 4 * Appearance.effectiveScale
-                        columnSpacing: 10 * Appearance.effectiveScale
-
-                        Repeater {
-                            model: 4
-                            delegate: ColumnLayout {
-                                spacing: -4 * Appearance.effectiveScale
-
-                                property string quoteCurrency: {
-                                    if (index === 0) return CurrencyService.quote1;
-                                    if (index === 1) return CurrencyService.quote2;
-                                    if (index === 2) return CurrencyService.quote3;
-                                    return CurrencyService.quote4;
-                                }
-
-                                property real rateVal: {
-                                    let r = CurrencyService.rates[quoteCurrency];
-                                    return r !== undefined ? r : 0.0;
-                                }
-
-                                StyledText {
-                                    text: quoteCurrency
-                                    font.pixelSize: Appearance.font.pixelSize.smallest
-                                    font.weight: Font.Bold
-                                    color: Appearance.colors.colOnPrimary
-                                }
-
-                                StyledText {
-                                    text: {
-                                        if (CurrencyService.loading) return "...";
-                                        if (rateVal === 0.0) return CurrencyService.errorMessage || "...";
-                                        return root.formatRate(rateVal);
-                                    }
-                                    font.pixelSize: Appearance.font.pixelSize.small
-                                    font.weight: Font.Bold
-                                    color: Appearance.colors.colOnPrimary
-                                }
-                            }
-                        }
+                        color: quoteCell.inkColor
+                        Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
                     }
                 }
             }
