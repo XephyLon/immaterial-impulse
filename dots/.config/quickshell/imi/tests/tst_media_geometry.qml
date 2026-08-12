@@ -72,12 +72,17 @@ TestCase {
         fuzzyCompare(t.prev.width, 204 * 64 / 230, 0.001, "the clock's badge ratio");
     }
 
-    function test_2x2_play_is_the_artwork_circle() {
+    function test_2x2_play_is_the_cookie_and_holds_the_artwork() {
+        // The button IS the cookie frame, and the artwork is its interior -
+        // the review's design: art appears from within the play button.
         const t = Geometry.transportRects("2x2", 276, 228, 1);
+        const frame = Geometry.cookieFrame(276, 228, 1);
+        compare(t.play.x, frame.x);
+        compare(t.play.width, frame.size);
         const art = Geometry.artworkRect("2x2", 276, 228, 1);
-        compare(t.play.x, art.x);
-        compare(t.play.width, art.width);
         fuzzyCompare(art.width, 204 * 0.72, 0.001);
+        fuzzyCompare(art.x + art.width / 2, t.play.x + t.play.width / 2, 0.001,
+                     "the artwork is centred in the button");
     }
 
     function test_2x2_progress_reserves_the_cookie_frame() {

@@ -89,11 +89,12 @@ function transportRects(span, width, height, scale) {
     if (span === "2x2") {
         var frame = cookieFrame(width, height, scale);
         var badge = CookieLayout.badgeSize(frame.size);
-        var art = frame.size * COOKIE_ART_RATIO;
+        // Play IS the cookie: the button holds the artwork and the seek ring
+        // inside itself (the review's design), so its rect is the whole
+        // frame, and the artwork circle is the button's interior.
         return {
             prev: _rect(frame.x, frame.y, badge, badge),
-            play: _rect(frame.x + (frame.size - art) / 2,
-                        frame.y + (frame.size - art) / 2, art, art),
+            play: _rect(frame.x, frame.y, frame.size, frame.size),
             next: _rect(frame.x + frame.size - badge,
                         frame.y + frame.size - badge, badge, badge)
         };
@@ -147,8 +148,13 @@ function timeLabelRect(span, width, height, scale) {
                  width - 2 * LARGE_MARGIN * scale, TIME_LABEL_H * scale);
 }
 
-// Artwork (2x2 only - the circle clipped inside the cookie's lobes).
+// Artwork (2x2 only - the circle clipped inside the cookie's lobes). It
+// lives INSIDE the play button, so this rect is the button's interior:
+// centred, 0.72 of the frame - numerically what it always was.
 function artworkRect(span, width, height, scale) {
     if (span !== "2x2") return null;
-    return transportRects(span, width, height, scale).play;
+    var frame = cookieFrame(width, height, scale);
+    var art = frame.size * COOKIE_ART_RATIO;
+    return _rect(frame.x + (frame.size - art) / 2,
+                 frame.y + (frame.size - art) / 2, art, art);
 }

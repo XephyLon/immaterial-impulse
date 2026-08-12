@@ -102,37 +102,18 @@ Item {
     // those.
     Loader {
         id: largeExtras
-        active: root.spanName === "3x2"
+        objectName: "largeExtras"
+        // Fades out before it unloads and fades in after it loads - an
+        // instant unload was a whole text page vanishing in one frame.
+        readonly property bool wanted: root.spanName === "3x2"
+        active: wanted || opacity > 0.01
+        opacity: wanted ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveEffects } }
         anchors.fill: parent
         sourceComponent: Expressive.DesktopMediaWidget {
             chromeless: true
             showLyrics: PluginState.option("nandoroid_media", "showLyrics", false)
             useRomaji: PluginState.option("nandoroid_media", "useRomaji", false)
-        }
-    }
-
-    // 2x2: the visualizer cookie the artwork sits in. The cookie is the
-    // progress slot's occupant-in-waiting (step 7 strokes the inner ring on
-    // this frame); today it is the celebratory container it was in
-    // LayoutCookie, unchanged.
-    Loader {
-        id: cookieExtras
-        active: root.spanName === "2x2"
-        x: root.progressSlot ? root.progressSlot.x : 0
-        y: root.progressSlot ? root.progressSlot.y : 0
-        width: root.progressSlot ? root.progressSlot.width : 0
-        height: root.progressSlot ? root.progressSlot.height : 0
-
-        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        sourceComponent: Expressive.VisualizerCookie {
-            lobes: 12
-            // Claimed only while something is playing: the claim starts cava,
-            // and a paused desktop has no spectrum to draw.
-            audioReactive: MprisController.isPlaying
-            color: Appearance.colors.colPrimary
         }
     }
 
