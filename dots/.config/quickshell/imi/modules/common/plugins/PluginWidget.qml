@@ -9,6 +9,7 @@ import qs.modules.common.widgets
 import qs.modules.imi.background.widgets
 import "../functions/parallax.js" as ParallaxMath
 import "gridSizes.js" as GridSizes
+import "resize-tension.js" as Tension
 import "gridResize.js" as GridResize
 
 AbstractBackgroundWidget {
@@ -269,28 +270,69 @@ AbstractBackgroundWidget {
         rootWidget.previewGridSize = rootWidget.storedGridSize;
     }
 
-    // The offered spans measured in pixels, which is where Appearance's
-    // effectiveScale enters: the snap compares the dragged rectangle against
-    // what each span would actually be on this screen, not against cell counts.
-    function previewGridResize(targetWidth, targetHeight) {
+    // ---- elastic resize (spec 3d) ---------------------------------------
+    //
+    // The grip no longer picks the nearest span - it accumulates PULL. The
+    // widget holds its span while tension builds; each whole breakaway steps
+    // one span in the pulled direction and the remainder carries, so a long
+    // drag walks several spans in one gesture. At a wall (no offered span
+    // further out) the leftover pull is held, clamped to one breakaway, so
+    // the bow rubber-bands against the limit instead of winding up unbounded.
+    //
+    // `resizeBow` is what the widget's cards render: the edge distortion in
+    // pixels, derived from the *unconsumed* pull. Zero the instant the drag
+    // ends - the settle back to the committed span is the box animation's job.
+    property real resizePullX: 0
+    property real resizePullY: 0
+    readonly property point resizeBow: Qt.point(
+        rootWidget.resizingGrid ? Tension.bow(rootWidget.resizePullX) : 0,
+        rootWidget.resizingGrid ? Tension.bow(rootWidget.resizePullY) : 0)
+
+    function previewGridResize(pullX, pullY) {
         if (!rootWidget.resizingGrid) return;
-        const nearest = GridSizes.nearestSize(rootWidget.offeredGridSizes.map(size => ({
-            cols: size.cols,
-            rows: size.rows,
-            width: Appearance.sizes.widgetGridSpanX(size.cols),
-            height: Appearance.sizes.widgetGridSpanY(size.rows)
-        })), targetWidth, targetHeight);
-        if (nearest) rootWidget.previewGridSize = nearest;
+        let current = rootWidget.previewGridSize;
+        const giveX = Tension.giveAxis(pullX);
+        const giveY = Tension.giveAxis(pullY);
+        let remainderX = giveX.remainder;
+        let remainderY = giveY.remainder;
+        for (let i = 0; i < Math.abs(giveX.steps); i++) {
+            const next = Tension.stepSize(rootWidget.offeredGridSizes, current,
+                Math.sign(giveX.steps), 0);
+            // The wall: the un-stepped pull stays live (capped), so the bow
+            // holds and the gesture does not eat pull that moved nothing.
+            if (next === current) { remainderX = Math.sign(pullX) * Tension.BREAK_PX; break; }
+            current = next;
+        }
+        for (let i = 0; i < Math.abs(giveY.steps); i++) {
+            const next = Tension.stepSize(rootWidget.offeredGridSizes, current,
+                0, Math.sign(giveY.steps));
+            if (next === current) { remainderY = Math.sign(pullY) * Tension.BREAK_PX; break; }
+            current = next;
+        }
+        rootWidget.previewGridSize = current;
+        rootWidget.resizePullX = remainderX;
+        rootWidget.resizePullY = remainderY;
+    }
+
+    // A give consumes pull, and the *gesture's* origin has to move with it or
+    // the next mouse event re-delivers the spent pull and the resize sprints
+    // to the largest span. The grip owns the press point, so it asks.
+    function consumedPull(pullX, pullY) {
+        return Qt.point(pullX - rootWidget.resizePullX, pullY - rootWidget.resizePullY);
     }
 
     function endGridResize() {
         const chosen = rootWidget.previewGridSize;
         rootWidget.previewGridSize = null;
+        rootWidget.resizePullX = 0;
+        rootWidget.resizePullY = 0;
         rootWidget.commitGridSize(chosen);
     }
 
     function cancelGridResize() {
         rootWidget.previewGridSize = null;
+        rootWidget.resizePullX = 0;
+        rootWidget.resizePullY = 0;
     }
 
     configEntryName: manifest ? "plugin_" + manifest.id : "plugin_unknown"
@@ -584,6 +626,7 @@ AbstractBackgroundWidget {
         // the content is *showing*, which lags the widget's own by half a
         // resize - see shownGridSpan.
         gridSize: rootWidget.shownGridSpan
+        resizeBow: rootWidget.resizeBow
         anchors.centerIn: parent
     }
 
@@ -665,9 +708,14 @@ AbstractBackgroundWidget {
             onPositionChanged: mouse => {
                 if (!rootWidget.resizingGrid) return;
                 const scenePoint = resizeArea.mapToItem(null, mouse.x, mouse.y);
-                rootWidget.previewGridResize(
-                    resizeArea.pressWidth + scenePoint.x - resizeArea.pressSceneX,
-                    resizeArea.pressHeight + scenePoint.y - resizeArea.pressSceneY);
+                const pullX = scenePoint.x - resizeArea.pressSceneX;
+                const pullY = scenePoint.y - resizeArea.pressSceneY;
+                rootWidget.previewGridResize(pullX, pullY);
+                // Move the gesture's origin by whatever the give consumed, so
+                // spent pull is not re-delivered on the next event.
+                const consumed = rootWidget.consumedPull(pullX, pullY);
+                resizeArea.pressSceneX += consumed.x;
+                resizeArea.pressSceneY += consumed.y;
             }
             // A release after Escape commits nothing: the cancel already
             // cleared the preview, and endGridResize has nothing to store.
