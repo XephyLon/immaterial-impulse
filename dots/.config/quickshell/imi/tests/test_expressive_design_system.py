@@ -173,7 +173,15 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         background = (ROOT / "modules/imi/background/Background.qml").read_text(encoding="utf-8")
         self.assertIn("modelData.startupSafe !== false", background)
         host = (ROOT / "modules/common/plugins/PluginWidget.qml").read_text(encoding="utf-8")
-        self.assertRegex(host, r"id:\s*pluginNode\s*z:\s*1\b")
+        # The node renders above the frost (z 1). The z moved from the node
+        # itself to nodeLayerFrame - the padded wrapper carrying the bounded
+        # layer, sized with room for the resize bow - so the contract is that
+        # the frame is z 1 and the node lives inside it.
+        self.assertRegex(host, r"id:\s*nodeLayerFrame\s*z:\s*1\b")
+        frame_index = host.index("id: nodeLayerFrame")
+        node_index = host.index("id: pluginNode")
+        self.assertLess(frame_index, node_index,
+                        "the node must sit inside the layered frame")
         currency_widget = (
             DESIGN_SYSTEM / "widgets" / "DesktopCurrencyWidget.qml"
         ).read_text(encoding="utf-8")
