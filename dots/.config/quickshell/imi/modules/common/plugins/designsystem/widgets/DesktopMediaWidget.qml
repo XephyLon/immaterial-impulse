@@ -30,14 +30,12 @@ Item {
         LyricsService.desktopWidgetLyricsActive = viewLyrics;
     }
 
-    // Main Card Background
-    Rectangle {
+    // Main Card Background. Card bg = play/pause icon color (user request).
+    WidgetCard {
         id: bgCard
         anchors.fill: parent
-        radius: 30 * Appearance.effectiveScale
-        color: root.useBlurBackground
-            ? Functions.ColorUtils.applyAlpha(Appearance.colors.colOnPrimary, root.backgroundOpacity)
-            : Appearance.colors.colOnPrimary // Card bg = play/pause icon color (user request)
+        useBlurBackground: root.useBlurBackground
+        backgroundOpacity: root.backgroundOpacity
     }
 
     // Toggle button in top right corner (M3 Styled Shape)

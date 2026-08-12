@@ -19,9 +19,7 @@ Item {
 
     property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("", 0.1)
     readonly property bool managesBlurTint: true
-    readonly property var blurRegions: [{
-        x: card.x, y: card.y, width: card.width, height: card.height, radius: card.radius
-    }]
+    readonly property var blurRegions: [card.blurRegion]
     
     // Choice A Grid System Specs
     readonly property real baseWidth: 132 * Appearance.effectiveScale
@@ -38,13 +36,6 @@ Item {
         if (sizeMode === "1x1") return width1x1;
         if (sizeMode === "2x1") return width2x1;
         return width3x1;
-    }
-
-    Behavior on implicitWidth {
-        NumberAnimation {
-            duration: 250
-            easing.bezierCurve: Appearance.animation.elementResize.numberAnimation?.easing?.bezierCurve || [0.2, 0, 0, 1]
-        }
     }
 
     // CustomIcon lives one directory below this imported widget's former location.
@@ -76,24 +67,15 @@ Item {
 
 
 
-    // Flat Material 3 container (No shadows for clean widget look)
-    Rectangle {
+    // The shared card. Clipped so the split vertical panels and slanted leaves
+    // cut cleanly at the rounded corners; tint and blur-thinning are the
+    // card's own logic now rather than this widget's.
+    WidgetCard {
         id: card
         anchors.fill: parent
-        radius: 30 * Appearance.effectiveScale
-        color: root.useBlurBackground
-            ? Functions.ColorUtils.applyAlpha(Appearance.colors.colOnPrimary, root.backgroundOpacity)
-            : Appearance.colors.colOnPrimary
-
-        // Mask the entire card contents to ensure split vertical panels and slanted leaves clip perfectly at the rounded corners
-        layer.enabled: true
-        layer.effect: OpacityMask {
-            maskSource: Rectangle {
-                width: card.width
-                height: card.height
-                radius: card.radius
-            }
-        }
+        useBlurBackground: root.useBlurBackground
+        backgroundOpacity: root.backgroundOpacity
+        clipContent: true
 
         // Layout Loader based on sizeMode
         Loader {

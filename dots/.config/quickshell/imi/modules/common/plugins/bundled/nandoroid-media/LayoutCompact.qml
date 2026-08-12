@@ -5,6 +5,7 @@ import qs.modules.common.functions as Functions
 import qs.modules.common.widgets
 import qs.modules.common.plugins
 import qs.services
+import "../../designsystem/widgets" as Expressive
 import "../../designsystem/widgets/shapes/material-shapes.js" as MaterialShapes
 import "../../designsystem/widgets/shapes/path-length.js" as PathLength
 
@@ -51,13 +52,11 @@ Item {
         onTriggered: MprisController.activePlayer?.positionChanged()
     }
 
-    Rectangle {
+    Expressive.WidgetCard {
         id: bgCard
         anchors.fill: parent
-        radius: 30 * Appearance.effectiveScale
-        color: root.useBlurBackground
-            ? Functions.ColorUtils.applyAlpha(Appearance.colors.colOnPrimary, root.backgroundOpacity)
-            : Appearance.colors.colOnPrimary
+        useBlurBackground: root.useBlurBackground
+        backgroundOpacity: root.backgroundOpacity
     }
 
     RowLayout {

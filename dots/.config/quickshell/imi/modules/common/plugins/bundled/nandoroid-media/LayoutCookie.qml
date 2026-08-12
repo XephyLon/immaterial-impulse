@@ -30,9 +30,7 @@ Item {
     readonly property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("nandoroid_media")
 
     readonly property bool managesBlurTint: true
-    readonly property var blurRegions: [{
-        x: bgCard.x, y: bgCard.y, width: bgCard.width, height: bgCard.height, radius: bgCard.radius
-    }]
+    readonly property var blurRegions: [bgCard.blurRegion]
 
     readonly property string artUrl: MprisController.activePlayer?.trackArtUrl ?? ""
     readonly property bool hasArt: root.artUrl !== "" && albumArt.status === Image.Ready
@@ -85,13 +83,11 @@ Item {
         }
     }
 
-    Rectangle {
+    Expressive.WidgetCard {
         id: bgCard
         anchors.fill: parent
-        radius: 30 * Appearance.effectiveScale
-        color: root.useBlurBackground
-            ? Functions.ColorUtils.applyAlpha(Appearance.colors.colOnPrimary, root.backgroundOpacity)
-            : Appearance.colors.colOnPrimary
+        useBlurBackground: root.useBlurBackground
+        backgroundOpacity: root.backgroundOpacity
     }
 
     Item {
