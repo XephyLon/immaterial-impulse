@@ -145,6 +145,7 @@ Item {
         objectName: "playButton"
         ringPhase: seeker.phase
         ringWaves: seeker.waves && root.spanName === "2x1"
+        ringWaveLevel: root.spanName === "2x1" ? seeker.waveLevel : 0
         // BELOW the seeker: play rose above it once to fix hover, and the
         // opaque body then painted over the 2x2 ring - paint order and input
         // order pull opposite ways here, so the seeker keeps the top for
