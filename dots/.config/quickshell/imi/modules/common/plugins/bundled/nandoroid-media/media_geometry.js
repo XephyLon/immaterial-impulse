@@ -49,6 +49,7 @@ var COMPACT_SPACING = 12;      // Appearance.spacing.space150
 // ---- 2x2 constants -------------------------------------------------------
 var COOKIE_INSET = 12;         // cardInset = Appearance.spacing.space150
 var COOKIE_ART_RATIO = 0.72;   // artClip diameter / frame size
+var RING_MARGIN_2X1 = 0.14;    // how far the 2x1 seek ring floats outside play
 
 function _rect(x, y, w, h) {
     return { x: x, y: y, width: w, height: h };
@@ -132,12 +133,22 @@ function sliderRect3x2(width, height, scale) {
 // a rect at every span from the day the tree exists.
 function progressRect(span, width, height, scale) {
     if (span === "3x2") return sliderRect3x2(width, height, scale);
-    if (span === "2x1") return transportRects(span, width, height, scale).play;
+    if (span === "2x1") {
+        // INFLATED past the button: the ring is its border, and a border
+        // stuck to the edge reads as part of it (the review) - the margin is
+        // the ring floating just outside, spring-parallel to the contour.
+        var play = transportRects(span, width, height, scale).play;
+        var grow = play.width * RING_MARGIN_2X1;
+        return _rect(play.x - grow, play.y - grow,
+                     play.width + 2 * grow, play.height + 2 * grow);
+    }
     if (span === "2x2") {
         // A perfect circle INSIDE the play button (the review's words): the
         // ring sits between the artwork (0.72) and the cookie's valleys.
+        // Clear of the artwork below it AND of the lobes above it - the
+        // review: the circle must not touch the button's outer edges.
         var frame = cookieFrame(width, height, scale);
-        var inner = frame.size * 0.82;
+        var inner = frame.size * 0.76;
         return _rect(frame.x + (frame.size - inner) / 2,
                      frame.y + (frame.size - inner) / 2, inner, inner);
     }

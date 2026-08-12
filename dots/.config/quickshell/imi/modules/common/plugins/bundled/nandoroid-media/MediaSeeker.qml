@@ -26,6 +26,13 @@ Item {
     Behavior on bend { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
     // 0 = circle .. 1 = cookie outline
     property real ringT: root.span === "2x1" ? 1 : 0
+    // What the stroke sits ON decides its palette, not what shape it is: the
+    // bar (3x2) and the floating 2x1 border both sit on the CARD and read in
+    // primary; only the 2x2 circle sits on the button's light body and reads
+    // in on-primary. Keyed on bend, the 2x1 ring came out dark-on-dark the
+    // moment the margin moved it off the body.
+    property real onBody: root.span === "2x2" ? 1 : 0
+    Behavior on onBody { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveEffects } }
     Behavior on ringT { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
 
     property real phase: 0
@@ -96,10 +103,10 @@ Item {
         readonly property real bendNow: root.bend
         readonly property real ringNow: root.ringT
         readonly property real progressNow: Math.max(0, Math.min(1, root.progress))
-        readonly property color arcColor: root.mix(Appearance.colors.colPrimary, Appearance.colors.colOnPrimary, root.bend)
+        readonly property color arcColor: root.mix(Appearance.colors.colPrimary, Appearance.colors.colOnPrimary, root.onBody)
         readonly property color trackColor: root.mix(
             Functions.ColorUtils.applyAlpha(Appearance.colors.colPrimary, 0.25),
-            Functions.ColorUtils.applyAlpha(Appearance.colors.colOnPrimary, 0.3), root.bend)
+            Functions.ColorUtils.applyAlpha(Appearance.colors.colOnPrimary, 0.3), root.onBody)
         readonly property bool playingNow: root.playing
         readonly property string spanNow: root.span
         onSpanNowChanged: requestPaint()
@@ -174,6 +181,15 @@ Item {
         }
     }
 
+    // The cursor points only near the stroke - the same distance test the
+    // press uses, so what invites a click is exactly what accepts one.
+    HoverHandler {
+        id: seekHover
+        cursorShape: seekHover.hovered
+            && root.strokeDistance(seekHover.point.position.x, seekHover.point.position.y)
+                <= root.lineWidthPx * 2.5
+            ? Qt.PointingHandCursor : Qt.ArrowCursor
+    }
     MouseArea {
         anchors.fill: parent
         // A ring's hit area is its STROKE, not its disc. The first version

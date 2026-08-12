@@ -31,22 +31,16 @@ function capsule() {
     return _capsule;
 }
 
+// ONE recipe for the cookie at rest and the cookie breathing: cookieRaw IS
+// liveCookieRaw at zero levels. star() and starPerLobe() build not-quite-
+// identical vertex paths, and having the rest shape come from one and the
+// breathing shape from the other flickered a frame at every switchover -
+// first at the settle threshold, then (after gating on breath) at the first
+// audible lobe. Same constructor, same shape, nothing to flicker between.
 var _cookieRaw = null;
 function cookieRaw() {
-    if (_cookieRaw === null) {
-        // material-shapes' cookie12 exactly, in the height-1 space: star(12,
-        // r, 0.8r, rounding) rotated 30 degrees. CornerRounding is an
-        // ABSOLUTE distance, so at half the radius the rounding halves too -
-        // the first version kept 0.4 at radius 0.5, effectively double the
-        // real cookie's rounding, and the lobes came out as shallow scallops
-        // that matched nothing else on the widget (the review screenshot).
-        var cos30 = Math.cos(Math.PI / 6), sin30 = Math.sin(Math.PI / 6);
-        _cookieRaw = RoundedPolygon.RoundedPolygon.star(
-            12, 0.5, 0.5 * 0.8, new CornerRounding.CornerRounding(0.25))
-            .transformed(function (x, y) {
-                return { x: x * cos30 - y * sin30, y: x * sin30 + y * cos30 };
-            });
-    }
+    if (_cookieRaw === null)
+        _cookieRaw = liveCookieRaw([], 12);
     return _cookieRaw;
 }
 
@@ -60,7 +54,14 @@ function bodyMorph() {
 // The cubics at progress t, with the bounds they actually occupy - the
 // caller scales so the mid-flight shape fits its box instead of clipping.
 function bodyAt(t) {
-    var cubics = bodyMorph().asCubics(Math.max(0, Math.min(1, t)));
+    var clamped = Math.max(0, Math.min(1, t));
+    // Endpoint bounds are PINNED: the interpolated cubics' measured bounds
+    // wobble by a hair around the endpoints, and a hair of scale at the
+    // settle threshold reads as a flicker.
+    if (clamped >= 0.999) {
+        return { cubics: bodyMorph().asCubics(1), minX: -0.5, minY: -0.5, maxX: 0.5, maxY: 0.5 };
+    }
+    var cubics = bodyMorph().asCubics(clamped);
     var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (var i = 0; i < cubics.length; i++) {
         var c = cubics[i];

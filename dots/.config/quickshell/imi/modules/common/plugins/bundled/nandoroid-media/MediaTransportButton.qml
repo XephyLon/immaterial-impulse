@@ -117,7 +117,7 @@ Item {
                     : root.span === "2x2" ? parent.height * 0.46
                     : 26 * Appearance.effectiveScale
                 fill: 0
-                color: hitArea.containsMouse
+                color: hoverState.hovered
                     ? (root.span === "3x2" && Appearance.m3colors.darkmode
                         ? Appearance.colors.colTertiaryContainer
                         : Appearance.colors.colPrimary)
@@ -306,7 +306,7 @@ Item {
                 id: artClip
                 objectName: "playArtwork"
                 anchors.centerIn: parent
-                width: root.span === "2x2" ? playRoot.side * 0.72 : 0
+                width: root.span === "2x2" ? playRoot.side * 0.66 : 0
                 height: width
                 Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
                 visible: width > 1
@@ -349,7 +349,7 @@ Item {
                     anchors.fill: parent
                     radius: width / 2
                     color: Appearance.colors.colOnPrimary
-                    opacity: !artClip.artLoaded ? 0 : (hitArea.containsMouse ? 0.55 : 0)
+                    opacity: !artClip.artLoaded ? 0 : (hoverState.hovered ? 0.55 : 0)
                     Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration } }
                 }
             }
@@ -358,7 +358,7 @@ Item {
             // 2x2; everywhere else it is the button's face.
             Expressive.MaterialSymbol {
                 anchors.centerIn: parent
-                visible: !artClip.visible || !artClip.artLoaded || hitArea.containsMouse
+                visible: !artClip.visible || !artClip.artLoaded || hoverState.hovered
                 text: MprisController.isPlaying ? "pause" : "play_arrow"
                 iconSize: (root.span === "3x2" ? 40 : root.span === "2x2" ? 34 : 30) * Appearance.effectiveScale
                 fill: 0
@@ -375,17 +375,23 @@ Item {
                 radius: playRoot.side / 2
                 color: Appearance.colors.colOnPrimary
                 visible: root.span === "3x2"
-                opacity: hitArea.pressed ? 0.15 : (hitArea.containsMouse ? 0.08 : 0)
+                opacity: hitArea.pressed ? 0.15 : (hoverState.hovered ? 0.08 : 0)
                 Behavior on opacity { NumberAnimation { duration: 150 } }
             }
         }
     }
 
+    // Hover through a HANDLER, not the MouseArea: handlers are cooperative,
+    // so the button still hovers (and shows its cursor) where the seeker's
+    // input area covers it - a plain MouseArea's containsMouse died under
+    // that cover, which froze hover styling and the pointer cursor.
+    HoverHandler {
+        id: hoverState
+        cursorShape: Qt.PointingHandCursor
+    }
     MouseArea {
         id: hitArea
         anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
         onClicked: { root.activated(); root.trigger(); }
     }
 }

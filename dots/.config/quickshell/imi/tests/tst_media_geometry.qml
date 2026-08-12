@@ -91,7 +91,7 @@ TestCase {
         const progress = Geometry.progressRect("2x2", 276, 228, 1);
         const play = Geometry.transportRects("2x2", 276, 228, 1).play;
         const art = Geometry.artworkRect("2x2", 276, 228, 1);
-        fuzzyCompare(progress.width, 204 * 0.82, 0.001);
+        fuzzyCompare(progress.width, 204 * 0.76, 0.001);
         verify(progress.width > art.width, "outside the artwork");
         verify(progress.width < play.width, "inside the button");
         fuzzyCompare(progress.x + progress.width / 2, play.x + play.width / 2, 0.001,
@@ -112,11 +112,16 @@ TestCase {
         compare(t.prev.y, 26, "(108 - 56) / 2");
     }
 
-    function test_2x1_progress_is_the_play_buttons_own_rect() {
+    function test_2x1_progress_floats_just_outside_the_play_button() {
+        // The ring is the button's border, floating with a margin rather
+        // than stuck to its edge - concentric, and wider by the margin ratio
+        // on every side.
         const t = Geometry.transportRects("2x1", 276, 108, 1);
         const progress = Geometry.progressRect("2x1", 276, 108, 1);
-        compare(progress.x, t.play.x, "two concentric draws of one outline");
-        compare(progress.width, t.play.width);
+        fuzzyCompare(progress.x + progress.width / 2, t.play.x + t.play.width / 2, 0.001,
+                     "concentric with the button");
+        verify(progress.width > t.play.width, "outside the button");
+        fuzzyCompare(progress.width, t.play.width * 1.28, 0.01);
     }
 
     // ---- cross-span, and scale -------------------------------------------
