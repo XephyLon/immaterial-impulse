@@ -171,5 +171,28 @@ ShellRoot {
         PluginState.setPosition("nandoroid_media", harness.testScreen, { x: 40, y: 40, placementStrategy: "free" });
         settle0.start();
     } }
-    Timer { id: settle0; interval: 800; onTriggered: harness.beginTransition() }
+    Timer { id: settle0; interval: 800; onTriggered: {
+        // One forced-wave portrait before the sweep: the wave exists only
+        // while playing, and the sandbox player may be paused, so the check
+        // that the sine is a sine would otherwise be vacuously flat.
+        const seeker = harness.findByName(widget, "progressSlider");
+        if (seeker) { seeker.playing = true; seeker.progress = 0.6; }
+        waveShot.start();
+    } }
+    Timer { id: waveShot; interval: 400; onTriggered: {
+        harness.shoot("wave_forced");
+        const seeker = harness.findByName(widget, "progressSlider");
+        if (seeker) {
+            seeker.playing = Qt.binding(() => MprisController.isPlaying);
+            seeker.progress = Qt.binding(() => harness.findByName(widget, "playButton") ? widgetProgress() : 0);
+            // restore the real binding through the tree's own property
+            seeker.progress = Qt.binding(() => widget ? widgetTreeProgress() : 0);
+        }
+        harness.beginTransition();
+    } }
+    function widgetProgress() { return 0; }
+    function widgetTreeProgress() {
+        const item = harness.findByName(widget, "playButton");
+        return item ? item.progress ?? 0 : 0;
+    }
 }

@@ -96,24 +96,28 @@ Item {
             const freq = Math.round(6 + (12 - 6) * canvas.bendNow);
             const amp = (canvas.playingNow ? stroke * 0.6 : 0);
 
-            const points = [];
+            const base = [];
             for (let i = 0; i <= N; i++) {
                 const u = i / N;
                 const line = { x: pad + u * (width - 2 * pad), y: cy };
                 const ring = ringPoint(u);
-                const x = line.x + (ring.x - line.x) * canvas.bendNow;
-                const y = line.y + (ring.y - line.y) * canvas.bendNow;
-                points.push({ x: x, y: y });
+                base.push({ x: line.x + (ring.x - line.x) * canvas.bendNow,
+                            y: line.y + (ring.y - line.y) * canvas.bendNow });
             }
-            // normals from neighbours, wave displacement along them
+            // Normals from the RAW baseline, displaced into a second array.
+            // Displacing in place fed each point's normal from an already-
+            // displaced neighbour - a feedback loop that turned the sine into
+            // a knotted scribble, and it shipped because the visual check was
+            // graded at thumbnail size.
+            const points = [];
             for (let i = 0; i <= N; i++) {
-                const before = points[Math.max(0, i - 1)];
-                const after = points[Math.min(N, i + 1)];
+                const before = base[Math.max(0, i - 1)];
+                const after = base[Math.min(N, i + 1)];
                 let nx = -(after.y - before.y), ny = after.x - before.x;
                 const len = Math.hypot(nx, ny) || 1;
                 nx /= len; ny /= len;
                 const w = amp * Math.sin(freq * 2 * Math.PI * (i / N) + root.phase);
-                points[i] = { x: points[i].x + nx * w, y: points[i].y + ny * w };
+                points.push({ x: base[i].x + nx * w, y: base[i].y + ny * w });
             }
 
             function strokeRun(from, to, colour) {
