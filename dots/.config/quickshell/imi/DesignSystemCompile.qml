@@ -48,9 +48,8 @@ ShellRoot {
                 // sibling file is a type resolved through the package's qmldir.
                 // These are not: Widget.qml loads one of them by URL, so each is
                 // a standalone component and compiles - or does not - on its own.
-                Quickshell.shellPath("modules/common/plugins/bundled/nandoroid-media/LayoutLarge.qml"),
-                Quickshell.shellPath("modules/common/plugins/bundled/nandoroid-media/LayoutCookie.qml"),
-                Quickshell.shellPath("modules/common/plugins/bundled/nandoroid-media/LayoutCompact.qml"),
+                Quickshell.shellPath("modules/common/plugins/bundled/nandoroid-media/Widget.qml"),
+                Quickshell.shellPath("modules/common/plugins/bundled/nandoroid-media/MediaTransportButton.qml"),
                 Quickshell.shellPath("modules/common/plugins/PluginOptions.qml"),
                 // The desktop-widget host. It only compiles once a plugin is
                 // enabled on some monitor, so a bad property on it is invisible
