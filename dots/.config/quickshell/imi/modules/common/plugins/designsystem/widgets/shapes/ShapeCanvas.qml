@@ -1,5 +1,6 @@
 import QtQuick
 import "./morph.js" as Morph
+import "./shape-fit.js" as ShapeFit
 
 Canvas {
     id: root
@@ -8,6 +9,16 @@ Canvas {
     property bool polygonIsNormalized: true
     property real borderWidth: 0
     property color borderColor: "transparent"
+
+    // Fill the whole item rather than the largest square inside it.
+    //
+    // The default is the square: a normalised polygon is scaled by
+    // `min(width, height)` and centred, which is right for a glyph, a button or
+    // anything else that is as tall as it is wide. A *card* is not - at 320x112
+    // the default draws a 112x112 shape floating in the middle of it - so a
+    // shape can only be a card's outline if it may stretch to the box it is
+    // given. Off by default because every existing caller wants the square.
+    property bool stretch: false
 
     // Internals: size
     property var bounds: roundedPolygon.calculateBounds()
@@ -39,10 +50,16 @@ Canvas {
         animation: root.animation
     }
 
+    // A Canvas repaints on resize and on nothing else, so every input onPaint
+    // reads has to be mirrored here or it is the silent half - the shape keeps
+    // the last values it happened to be drawn with.
     onProgressChanged: requestPaint()
     onColorChanged: requestPaint()
     onWidthChanged: requestPaint()
     onHeightChanged: requestPaint()
+    onStretchChanged: requestPaint()
+    onBorderWidthChanged: requestPaint()
+    onBorderColorChanged: requestPaint()
     onPaint: {
         var ctx = getContext("2d")
         ctx.fillStyle = root.color
@@ -51,30 +68,28 @@ Canvas {
         const cubics = root.morph.asCubics(root.progress)
         if (cubics.length === 0) return
 
-        const size = Math.min(root.width, root.height)
-        const offsetX = root.width / 2 - size / 2
-        const offsetY = root.height / 2 - size / 2
-
-        ctx.save()
-        ctx.translate(offsetX, offsetY)
-        if (root.polygonIsNormalized) ctx.scale(size, size)
+        // Placement and the pixel mapping live in shape-fit.js - see there for
+        // why the path is built in pixels rather than drawn through ctx.scale().
+        const placement = ShapeFit.fit(root.width, root.height,
+            root.polygonIsNormalized, root.stretch)
+        const mapX = value => ShapeFit.mapX(value, placement)
+        const mapY = value => ShapeFit.mapY(value, placement)
 
         ctx.beginPath()
-        ctx.moveTo(cubics[0].anchor0X, cubics[0].anchor0Y)
+        ctx.moveTo(mapX(cubics[0].anchor0X), mapY(cubics[0].anchor0Y))
         for (const cubic of cubics) {
             ctx.bezierCurveTo(
-                cubic.control0X, cubic.control0Y,
-                cubic.control1X, cubic.control1Y,
-                cubic.anchor1X, cubic.anchor1Y
+                mapX(cubic.control0X), mapY(cubic.control0Y),
+                mapX(cubic.control1X), mapY(cubic.control1Y),
+                mapX(cubic.anchor1X), mapY(cubic.anchor1Y)
             )
         }
         ctx.closePath()
         ctx.fill()
         if (root.borderWidth > 0) {
             ctx.strokeStyle = root.borderColor
-            ctx.lineWidth = root.borderWidth / (root.polygonIsNormalized ? size : 1)
+            ctx.lineWidth = root.borderWidth
             ctx.stroke()
         }
-        ctx.restore()
     }
 }
