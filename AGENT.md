@@ -1218,6 +1218,24 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   meaningful at a span with somewhere to step - probed at a wall, both semantics hold the span and
   the check is vacuous. ccde619bf ("feat(plugins): the grip accumulates tension instead of picking
   the nearest span").
+- **One painter owns a widget's body surface at every span - other painters ride it, never
+  replace it.** Handing the media play button's face to a second canvas at a settle blanked it
+  twice in one branch: a visualizer crossfade (the static twin masked every inward ripple, and the
+  "fixed" version left an empty face when the second canvas's first paint did not composite), then
+  a seeker-fill handoff that shipped and died within one probe run. The body canvas draws every
+  span and every transition; the visualizer's pipeline lives INSIDE it, and the seek ring strokes
+  over it. Related: hover STATE and the pointer CURSOR are different channels - two cooperative
+  HoverHandlers on stacked items both report hovered while arguing over the cursor (Arrow won),
+  which passed every hover assertion while the cursor never changed. Input areas own their
+  cursors; z order guarantees the interactive thing is topmost.
+  05bf3013f ("feat(media): the play button's body IS the visualizer").
+- **A bundled package component loaded by URL has no implicit siblings - the package needs a
+  qmldir naming every component, and the qmldir then governs DIRECTORY imports of the package
+  too.** MediaTransportButton shipped bare and every media widget vanished with "is not a type";
+  the fix's first version listed only the bare-referenced files and would have broken the discord
+  popup, whose directory import had been auto-listing the whole package - the registration lint
+  caught the half-listing before deploy. lint_qmldir_registration.py holds both halves.
+  d3145342e ("fix(plugins): a URL-loaded package component has no implicit siblings").
 - **A subclass cannot read `AbstractWidget.gridSize`: `PluginWidget` shadows it.** The base's
   `gridSize` is the 12px drag lattice; `PluginWidget` declares its own `gridSize`, the
   component-grid span (`{"cols": 2, "rows": 1}`). Code *inside* the base still resolves to the

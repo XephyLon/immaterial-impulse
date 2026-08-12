@@ -118,56 +118,8 @@ ShellRoot {
     }
     Timer { id: midShot; interval: 160; onTriggered: harness.shoot(`${harness.transitions[harness.transitionIndex][0]}-to-${harness.transitions[harness.transitionIndex][1]}_mid`) }
 
-    function census(item, depth) {
-        if (!item || depth > 6) return;
-        for (const child of item.children) {
-            if (child.visible && child.x < 6 && child.y < 6 && (child.text !== undefined && child.text !== ""))
-                console.log(`[MediaTreeMotion] census: text item at 0,0: "${String(child.text).slice(0, 18)}" ` +
-                            `visible=${child.visible} w=${Math.round(child.width)} opacity=${child.opacity.toFixed(2)} name=${child.objectName}`);
-            harness.census(child, depth + 1);
-        }
-    }
-
-    function playFace(item, depth, indent) {
-        if (!item || depth > 5) return;
-        for (const child of item.children) {
-            console.log(`[MediaTreeMotion] face${indent} ${child.toString().split("(")[0]} ` +
-                `vis=${child.visible} o=${child.opacity.toFixed(2)} ${Math.round(child.width)}x${Math.round(child.height)}` +
-                (child.status !== undefined ? ` status=${child.status}` : "") +
-                (child.polygon !== undefined ? ` polygonCubics=${child.polygon ? child.polygon.cubics.length : "null"} lobes=${child.lobes}` : "") +
-                (child.available !== undefined ? ` canvasAvailable=${child.available}` : ""));
-            harness.playFace(child, depth + 1, indent + "-");
-        }
-    }
-
     function beginTransition() {
         const pair = harness.transitions[harness.transitionIndex];
-        if (pair[0] === "2x2") {
-            harness.playFace(harness.findByName(widget, "playButton"), 0, "");
-            // Force-paint experiment: count painted() from the visualizer's
-            // canvas and repaint it by hand. Painted-but-blank means the
-            // pixels are lost after painting; no painted() means the paint
-            // never runs at all.
-            const play = harness.findByName(widget, "playButton");
-            const walk = (item, depth) => {
-                if (!item || depth > 6) return null;
-                for (const child of item.children) {
-                    if (child.polygon !== undefined && child.lobes !== undefined) return child;
-                    const hit = walk(child, depth + 1);
-                    if (hit) return hit;
-                }
-                return null;
-            };
-            const cookie = walk(play, 0);
-            if (cookie) {
-                const cookieCanvas = cookie.children[0];
-                let paints = 0;
-                cookieCanvas.painted.connect(() => paints++);
-                cookieCanvas.requestPaint();
-                Qt.callLater(() => console.log(`[MediaTreeMotion] cookie canvas painted ${paints} times after forced request, available=${cookieCanvas.available}, size=${cookieCanvas.width}x${cookieCanvas.height}, parentOpacity=${cookie.opacity}`));
-            } else console.log("[MediaTreeMotion] no cookie found in play button");
-        }
-        harness.census(widget, 0);
         harness.shoot(`${pair[0]}_settled`);
         midShot.start();
         harness.trails = ({});
