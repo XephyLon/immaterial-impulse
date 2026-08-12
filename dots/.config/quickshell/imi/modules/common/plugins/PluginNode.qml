@@ -42,6 +42,11 @@ Item {
         ? componentLoader.item.visibleWhenLocked === true : false
     readonly property bool wantsForceCenter: componentLoader.item
         ? componentLoader.item.forceCenter === true : false
+    // A one-tree widget repositions its own elements through a span change,
+    // so the host's midpoint cross-fade would put a dissolve over elements
+    // that deliberately never disappear.
+    readonly property bool wantsOwnSpanTransition: componentLoader.item
+        ? componentLoader.item.handlesSpanTransition === true : false
     readonly property bool wantsAdaptiveTextColor: componentLoader.item
         ? componentLoader.item.needsColText === true : false
 
