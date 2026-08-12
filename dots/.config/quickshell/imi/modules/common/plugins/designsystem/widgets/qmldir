@@ -4,6 +4,7 @@ CustomIcon CustomIcon.qml
 DragManager DragManager.qml
 DashedBorder DashedBorder.qml
 MaterialShape MaterialShape.qml
+WidgetCard WidgetCard.qml
 MaterialSymbol MaterialSymbol.qml
 NotificationActionButton NotificationActionButton.qml
 NotificationAppIcon NotificationAppIcon.qml
