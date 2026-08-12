@@ -1,4 +1,5 @@
 import QtQuick
+import QtTest
 import Quickshell
 import qs
 import qs.modules.common
@@ -53,6 +54,8 @@ ShellRoot {
         implicitWidth: harness.screenW
         implicitHeight: harness.screenH
         color: "black"
+
+        TestCase { id: driver; when: false; name: "MediaTreePointerDriver" }
 
         WidgetCanvas {
             id: canvas
@@ -160,6 +163,63 @@ ShellRoot {
         harness.transitionIndex++;
         if (harness.transitionIndex < harness.transitions.length) {
             nextTimer.start();
+        } else {
+            pointerSweep.start();
+        }
+    } }
+
+    // ---- the pointer sweep: every control, every span, real clicks -------
+    //
+    // Scores signals, not playback: `activated` on each button and `sought`
+    // on the seeker, because the sandbox must never toggle whatever the
+    // session is really playing. The seeker check is the routing one that
+    // shipped broken: a click on the play button's FACE must reach the
+    // button (the ring passes it through), and a click ON the ring's stroke
+    // must seek and not activate.
+    property var pointerSpans: ["3x2", "2x2", "2x1"]
+    property int pointerIndex: 0
+    property int activatedCount: 0
+    property int soughtCount: 0
+
+    Timer { id: pointerSweep; interval: 300; onTriggered: {
+        widget.commitGridSize(harness.spanOf(harness.pointerSpans[harness.pointerIndex]));
+        pointerSettle.start();
+    } }
+    Timer { id: pointerSettle; interval: 900; onTriggered: {
+        const span = harness.pointerSpans[harness.pointerIndex];
+        const play = harness.findByName(widget, "playButton");
+        const prev = harness.findByName(widget, "prevButton");
+        const next = harness.findByName(widget, "nextButton");
+        const seeker = harness.findByName(widget, "progressSlider");
+        for (const pair of [["play", play], ["prev", prev], ["next", next]]) {
+            const item = pair[1];
+            let hits = 0;
+            const bump = () => hits++;
+            item.activated.connect(bump);
+            const scene = item.mapToItem(null, item.width / 2, item.height / 2);
+            driver.mouseClick(canvas, scene.x, scene.y, Qt.LeftButton);
+            item.activated.disconnect(bump);
+            harness.check(`${span} ${pair[0]} click reaches the button`, hits === 1);
+        }
+        // a click on the seeker's own stroke seeks and does not activate play
+        if (seeker && seeker.visible) {
+            let sought = 0, played = 0;
+            const onSeek = () => sought++;
+            const onPlay = () => played++;
+            seeker.sought.connect(onSeek);
+            play.activated.connect(onPlay);
+            const pts = seeker.baselinePoints(96);
+            const at = pts[Math.round(pts.length * 0.25)];
+            const scene = seeker.mapToItem(null, at.x, at.y);
+            driver.mouseClick(canvas, scene.x, scene.y, Qt.LeftButton);
+            seeker.sought.disconnect(onSeek);
+            play.activated.disconnect(onPlay);
+            harness.check(`${span} stroke click seeks`, sought >= 1);
+            harness.check(`${span} stroke click does not activate play`, played === 0);
+        }
+        harness.pointerIndex++;
+        if (harness.pointerIndex < harness.pointerSpans.length) {
+            pointerSweep.start();
         } else {
             console.log(`[MediaTreeMotion] failures: ${harness.failures}`);
             Qt.quit();

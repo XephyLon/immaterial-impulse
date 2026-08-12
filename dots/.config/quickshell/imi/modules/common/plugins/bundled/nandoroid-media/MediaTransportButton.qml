@@ -55,6 +55,11 @@ Item {
         ? Appearance.colors.colTertiaryContainer
         : Appearance.colors.colOnSecondaryContainer
 
+    // Emitted on every pointer activation, before the action - what the
+    // pointer sweep scores, since the action itself would toggle whatever
+    // the session is really playing.
+    signal activated()
+
     function trigger() {
         if (root.role === "prev") MprisController.previous();
         else if (root.role === "next") MprisController.next();
@@ -258,6 +263,6 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: root.trigger()
+        onClicked: { root.activated(); root.trigger(); }
     }
 }
