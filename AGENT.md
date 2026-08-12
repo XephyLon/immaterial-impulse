@@ -1229,6 +1229,23 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   which passed every hover assertion while the cursor never changed. Input areas own their
   cursors; z order guarantees the interactive thing is topmost.
   05bf3013f ("feat(media): the play button's body IS the visualizer").
+- **A one-tree widget's geometry reads the SETTLED span's box, never the animating one.** Three
+  trees were written with `spanW: root.implicitWidth`, and `implicitWidth` carries a Behavior: every
+  rect became a per-frame target, so the Behaviors that carry the travel never converged, and any
+  rect measured from the right edge (the media play button, the weather glyph, the currency panel
+  and its cells) crawled behind the card instead of travelling with it. The settled width is a
+  function of the span name alone. A widget's SHAPE also morphs off a t that must be reset through a
+  closed gate - writing `morphT = 0` through a live Behavior retargets it, which is a snap wearing
+  the morph's clothes. Both are checked:
+  `test_geometry_rects_come_from_the_settled_span_not_the_animating_box`.
+  189caa6ff ("fix(weather): geometry reads the settled span, not the animating box").
+- **An element that changes its TEXT across spans is two elements, not one.** The currency base
+  code read "to USD" at 1x1 and "USD" at 2x1 from a single `StyledText`, so the content swapped in
+  one frame in the middle of an otherwise continuous morph. "to" is its own element that fades,
+  and the code slides left into the space it vacates as it goes. The same rule retires the
+  screenshot that hid it: `grabToImage` renders a LATER frame, so a probe that shoots and then
+  commits the span in one call files the transition's first frame as "settled".
+  38ad4d94b ("fix(currency): the word \"to\" becomes its own element, and rates stop colliding").
 - **A bundled package component loaded by URL has no implicit siblings - the package needs a
   qmldir naming every component, and the qmldir then governs DIRECTORY imports of the package
   too.** MediaTransportButton shipped bare and every media widget vanished with "is not a type";
