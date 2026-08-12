@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import qs
 import qs.modules.common.functions
+import "interaction_motion.js" as InteractionMotion
 pragma Singleton
 pragma ComponentBehavior: Bound
 
@@ -13,6 +14,7 @@ Singleton {
     property QtObject m3colors
     property QtObject animation
     property QtObject animationCurves
+    property QtObject interaction
     property QtObject colors
     property QtObject rounding
     property QtObject spacing
@@ -326,6 +328,54 @@ Singleton {
         readonly property real expressiveDefaultSpatialDuration: 500
         readonly property real expressiveSlowSpatialDuration: 650
         readonly property real expressiveEffectsDuration: 200
+    }
+
+    // The motion vocabulary every interactive element passes through, in one
+    // place, so five controls do not each invent their own hover. The states
+    // and the transition between any two of them are decided by
+    // interaction_motion.js (pure, and therefore tested); this object holds
+    // the numbers and maps the tiers onto the shell's existing curves.
+    //
+    // Adopters read `state`, `targets` and `transition` - they do not hardcode
+    // a duration. `InteractionMotion.qml` wires all three to a control.
+    interaction: QtObject {
+        id: interactionModel
+
+        // Multipliers on whatever geometry the control already has.
+        readonly property real hoverScale: 1.02
+        readonly property real pressScale: 0.97
+        readonly property real pressRadiusScale: 0.85
+        readonly property real disabledOpacity: 0.4
+
+        readonly property var tokens: ({
+            hoverScale: interactionModel.hoverScale,
+            pressScale: interactionModel.pressScale,
+            pressRadiusScale: interactionModel.pressRadiusScale,
+            disabledOpacity: interactionModel.disabledOpacity
+        })
+
+        // The tiers, on the shell's existing curves. The press tier is the
+        // fastest one there is because a press must be acknowledged before
+        // anything else; the release is longer AND lands on the spatial curve
+        // whose control points leave the unit box, so it springs back rather
+        // than deflating.
+        readonly property var tiers: ({
+            hoverIn: { duration: root.animationCurves.expressiveEffectsDuration,
+                       curve: root.animationCurves.expressiveEffects },
+            hoverOut: { duration: Math.round(root.animationCurves.expressiveEffectsDuration * 1.25),
+                        curve: root.animationCurves.expressiveEffects },
+            press: { duration: 150, curve: root.animationCurves.expressiveEffects },
+            release: { duration: root.animationCurves.expressiveFastSpatialDuration,
+                       curve: root.animationCurves.expressiveFastSpatial },
+            instant: { duration: 0, curve: root.animationCurves.standard },
+            hold: { duration: 0, curve: root.animationCurves.standard }
+        })
+
+        function state(flags) { return InteractionMotion.stateOf(flags); }
+        function targets(state) { return InteractionMotion.targetsFor(state, interactionModel.tokens); }
+        function transition(fromState, toState) {
+            return InteractionMotion.transitionFor(fromState, toState, interactionModel.tiers);
+        }
     }
 
     animation: QtObject {
