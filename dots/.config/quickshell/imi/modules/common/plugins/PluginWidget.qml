@@ -215,6 +215,16 @@ AbstractBackgroundWidget {
     property string shownGridSpan: ""
 
     onTargetGridSpanChanged: {
+        // A widget that repositions its own elements gets the new span
+        // immediately and no dissolve: the fade exists to hide a destroy, and
+        // a one-tree widget has nothing to hide - its shared elements follow
+        // the animating box instead (spec 2026-08-11, §5).
+        if (pluginNode.wantsOwnSpanTransition) {
+            spanSwap.stop();
+            pluginNode.opacity = 1;
+            rootWidget.shownGridSpan = rootWidget.targetGridSpan;
+            return;
+        }
         if (!rootWidget.gridResizeAnimated
                 || !GridResize.animatesSpanSwap(rootWidget.shownGridSpan, rootWidget.targetGridSpan)) {
             spanSwap.stop();

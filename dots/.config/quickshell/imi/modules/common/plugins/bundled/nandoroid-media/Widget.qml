@@ -36,6 +36,13 @@ Item {
     property string hostGridSize: ""
     property point hostResizeBow: Qt.point(0, 0)
 
+    // The host's span-change cross-fade exists to hide a destroy. This tree
+    // has no destroy: the shared elements re-derive their rects from the
+    // animating box on every frame, so they travel while the box does, and a
+    // dissolve on top of that would be exactly the vanish-and-reappear this
+    // architecture replaces.
+    readonly property bool handlesSpanTransition: true
+
     readonly property var span: MediaLayouts.spanFor(root.hostGridSize)
     readonly property string spanName: root.span.cols + "x" + root.span.rows
 
