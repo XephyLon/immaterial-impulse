@@ -102,9 +102,13 @@ Item {
     
     property color borderColor: "transparent"
     property real borderWidth: 0
-    
+
+    // Fill the item's box rather than the largest square inside it - what lets
+    // this shape serve as a non-square card's outline. See ShapeCanvas.stretch.
+    property bool stretch: false
+
     // Explicitly expose properties expected by ShapeCanvas users if needed
-    property bool polygonIsNormalized: true 
+    property bool polygonIsNormalized: true
 
     implicitHeight: implicitSize
     implicitWidth: implicitSize
@@ -166,6 +170,7 @@ Item {
         borderColor: root.borderColor
         roundedPolygon: root.roundedPolygon
         polygonIsNormalized: root.polygonIsNormalized
+        stretch: root.stretch
     }
 
     // Image overlay with masking
