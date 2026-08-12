@@ -428,6 +428,40 @@ with 144 and 240 matching exactly and 60 differing only by the coarser sampling 
 its `spring`/`damping` are its own units rather than omega/zeta, so that conversion happens once and
 should be pinned by a runtime test sampling mid-transition - the check #171 established.
 
+### Moving is a different movement, and wants a different spring
+
+Dragging a card to reposition it and dragging its grip to resize it are two movements, so per the
+rule above they get two springs - and they are not close:
+
+| | omega | zeta | |
+| --- | --- | --- | --- |
+| resize | 56.79 rad/s (9.04 Hz) | **1.268** | overdamped: settles, never overshoots |
+| move | 95.52 rad/s (15.20 Hz) | **0.352** | underdamped: lags the pointer, overshoots, springs back |
+
+The move also carries what the resize does not:
+
+- **Volume-preserving squash along the direction of travel**, so the card reads as a material rather
+  than as a scaled image. Stretch factor `1 + min(0.16, speed * 0.010/240)` with speed in px/s.
+- **A press lift** - shadow and a few percent of scale - on grab, easing back on release.
+- **Rubber-banding at the field edges** (0.34 of the travel kept past a limit), rather than a stop.
+- Direction is only computed above **96 px/s**; below that the card is treated as still, or the
+  stretch axis jitters from near-zero velocity.
+
+### Two porting lessons, both learned the hard way here
+
+**Every constant carries units, and only some of them are springs.** Moving this tuning between two
+loops, the spring constants were converted and the rest were not. The squash constant was written
+for velocity in px per *frame* and reused against px per *second* - a factor of 240, so it sat pinned
+at its cap and the card sheared instead of stretching. The velocity thresholds were out by the same
+factor. The spring conversion is the interesting arithmetic and therefore the one that gets
+attention; the plain multipliers beside it are what actually broke.
+
+**Position must be composited, not laid out.** Driving the card's `left`/`top` per frame forced
+layout and paint on every frame behind a blur, and read as stutter rather than as elasticity; the
+same motion through a transform is smooth. The QML counterpart is the same distinction - a property
+that triggers relayout versus one the scene graph can carry - and this repo has already met the
+render-versus-store half of it in the parallax work.
+
 ### What is drawn and what is committed stay separate
 
 The stretched size is never a span. On release the card commits the nearest **offered** span and
