@@ -181,15 +181,27 @@ Item {
         }
     }
 
+    // The play button under this ring (2x2 and 2x1). The ring holds hover
+    // on top - paint order demands it stay above - so it answers for the
+    // button too: pointer cursor over the button's face, and hover reported
+    // back through hoveringPlay.
+    property var playItem: null
+    readonly property bool hoveringPlay: seekArea.containsMouse && root.playItem
+        && root.playItem.visible && (function () {
+            const point = seekArea.mapToItem(root.playItem, seekArea.mouseX, seekArea.mouseY);
+            return point.x >= 0 && point.y >= 0
+                && point.x < root.playItem.width && point.y < root.playItem.height;
+        })()
+
     MouseArea {
+        id: seekArea
         anchors.fill: parent
         hoverEnabled: true
-        // The cursor points only near the stroke - the same distance test the
-        // press uses, so what invites a click is exactly what accepts one.
-        // On the input area itself, not a HoverHandler: two cooperative
-        // handlers on stacked items argue over the cursor and Arrow won.
+        // Points near the stroke (a press there seeks) and over the covered
+        // play button (a press there is handed down to it).
         cursorShape: containsMouse
-            && root.strokeDistance(mouseX, mouseY) <= root.lineWidthPx * 2.5
+            && (root.strokeDistance(mouseX, mouseY) <= root.lineWidthPx * 2.5
+                || root.hoveringPlay)
             ? Qt.PointingHandCursor : Qt.ArrowCursor
         // A ring's hit area is its STROKE, not its disc. The first version
         // said so in this comment and then filled the rect anyway - at 2x2

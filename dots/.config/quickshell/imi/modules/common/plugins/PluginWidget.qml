@@ -298,25 +298,43 @@ AbstractBackgroundWidget {
         rootWidget.resizingGrid ? Tension.bow(rootWidget.resizePullX) : 0,
         rootWidget.resizingGrid ? Tension.bow(rootWidget.resizePullY) : 0)
 
+    // A give COSTS the span's own pixel travel, not the breakaway threshold.
+    //
+    // With every give priced at BREAK_PX (60), growing one span consumed 60px
+    // of pull while the edge moved ~144px - the widget outran the hand, three
+    // spans for 180px of travel, and the grip ended nowhere near the pointer
+    // (the review recording). The threshold is still BREAK_PX - force must be
+    // built before the material gives - but what a give consumes is the pixel
+    // delta it actually moved, floored at the threshold, so the edge tracks
+    // the cursor and a long drag walks spans at the speed the hand does.
     function previewGridResize(pullX, pullY) {
         if (!rootWidget.resizingGrid) return;
         let current = rootWidget.previewGridSize;
-        const giveX = Tension.giveAxis(pullX);
-        const giveY = Tension.giveAxis(pullY);
-        let remainderX = giveX.remainder;
-        let remainderY = giveY.remainder;
-        for (let i = 0; i < Math.abs(giveX.steps); i++) {
+        let remainderX = pullX;
+        let remainderY = pullY;
+        while (Math.abs(remainderX) > Tension.BREAK_PX) {
             const next = Tension.stepSize(rootWidget.offeredGridSizes, current,
-                Math.sign(giveX.steps), 0);
+                Math.sign(remainderX), 0);
             // The wall: the un-stepped pull stays live (capped), so the bow
             // holds and the gesture does not eat pull that moved nothing.
-            if (next === current) { remainderX = Math.sign(pullX) * Tension.BREAK_PX; break; }
+            if (next === current) { remainderX = Math.sign(remainderX) * Tension.BREAK_PX; break; }
+            const travelled = Math.abs(
+                Appearance.sizes.widgetGridSpanX(next.cols)
+                - Appearance.sizes.widgetGridSpanX(current.cols));
+            remainderX -= Math.sign(remainderX) * Math.max(travelled, Tension.BREAK_PX);
+            // The edge moved past the hand: tension is spent, not owed back.
+            if (remainderX * pullX < 0) remainderX = 0;
             current = next;
         }
-        for (let i = 0; i < Math.abs(giveY.steps); i++) {
+        while (Math.abs(remainderY) > Tension.BREAK_PX) {
             const next = Tension.stepSize(rootWidget.offeredGridSizes, current,
-                0, Math.sign(giveY.steps));
-            if (next === current) { remainderY = Math.sign(pullY) * Tension.BREAK_PX; break; }
+                0, Math.sign(remainderY));
+            if (next === current) { remainderY = Math.sign(remainderY) * Tension.BREAK_PX; break; }
+            const travelled = Math.abs(
+                Appearance.sizes.widgetGridSpanY(next.rows)
+                - Appearance.sizes.widgetGridSpanY(current.rows));
+            remainderY -= Math.sign(remainderY) * Math.max(travelled, Tension.BREAK_PX);
+            if (remainderY * pullY < 0) remainderY = 0;
             current = next;
         }
         rootWidget.previewGridSize = current;
