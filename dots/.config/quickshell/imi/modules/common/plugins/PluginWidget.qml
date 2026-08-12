@@ -591,14 +591,27 @@ AbstractBackgroundWidget {
         }
     }
 
-    PluginNode {
-        id: pluginNode
+    // The layer lives on this wrapper rather than on the node so its texture
+    // is a ring larger than the widget: a layer clips at its item's bounds,
+    // and the resize bow deliberately draws up to 2*BOW_PX outside the card -
+    // on the node's own layer the bulge came back with its edge sliced flat.
+    // The node keeps its exact geometry (centred both ways cancels out), so
+    // every coordinate that references it - blur regions included - is
+    // untouched.
+    Item {
+        id: nodeLayerFrame
         z: 1
+        anchors.centerIn: parent
+        width: pluginNode.width + Tension.BOW_PX * 4
+        height: pluginNode.height + Tension.BOW_PX * 4
         // Render package widgets on a bounded texture above the blur backdrop.
         // This avoids the background layer swallowing package content on some
         // Wayland scene-graph paths while keeping the texture widget-sized.
-        layer.enabled: width > 0 && height > 0
+        layer.enabled: pluginNode.width > 0 && pluginNode.height > 0
         layer.smooth: true
+
+    PluginNode {
+        id: pluginNode
         manifestNode: rootWidget.manifest ? rootWidget.manifest.desktopWidget : null
         pluginId: rootWidget.manifest?.id ?? ""
         optionDefinitions: rootWidget.manifest?.options ?? []
@@ -628,6 +641,7 @@ AbstractBackgroundWidget {
         gridSize: rootWidget.shownGridSpan
         resizeBow: rootWidget.resizeBow
         anchors.centerIn: parent
+    }
     }
 
     // Resize grip, for a widget whose manifest offers more than one span. It
