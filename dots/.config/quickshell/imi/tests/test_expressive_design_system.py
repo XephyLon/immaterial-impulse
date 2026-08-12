@@ -96,6 +96,34 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             for option_key in option_keys:
                 self.assertIn(f'PluginState.option("{manifest["id"]}", "{option_key}"', entry)
 
+    def test_geometry_rects_come_from_the_settled_span_not_the_animating_box(self):
+        """`spanW` may not read the box that is currently animating.
+
+        Three trees have now been written with `spanW: root.implicitWidth`,
+        and implicitWidth carries a Behavior: every element's rect became a
+        per-frame target, so Behaviors never converged and any rect measured
+        from the right edge (the media play button, the weather glyph, the
+        currency panel and its cells) crawled behind the card instead of
+        travelling with it. The settled span's width is a function of the
+        span name alone.
+        """
+        trees = [
+            PLUGIN_ROOT / "nandoroid-media/Widget.qml",
+            DESIGN_SYSTEM / "widgets/DesktopWeatherWidget.qml",
+            DESIGN_SYSTEM / "widgets/DesktopCurrencyWidget.qml",
+        ]
+        for tree in trees:
+            source = tree.read_text(encoding="utf-8")
+            self.assertIn("spanW", source, f"{tree.name} declares a span width")
+            for line in source.splitlines():
+                if "property real spanW" in line or "property real spanH" in line:
+                    # `root.width1x1` and friends are settled constants; the
+                    # live box is `root.width` / `root.implicitWidth` exactly.
+                    for live in (r"\bimplicitWidth\b", r"\bimplicitHeight\b",
+                                 r"\broot\.width\b", r"\broot\.height\b"):
+                        self.assertIsNone(re.search(live, line),
+                                          f"{tree.name}: {line.strip()}")
+
     def test_the_media_tree_answers_the_blur_contract_itself(self):
         """One tree, one card, one region list.
 

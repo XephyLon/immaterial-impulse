@@ -54,7 +54,14 @@ Item {
     // Geometry evaluates at the span's SETTLED box (the media tree's lesson:
     // live-box rects made size snap and are per-frame Behavior targets, the
     // frozen-Behavior shape). Rects change once per span; Behaviors carry.
-    readonly property real spanW: root.implicitWidth
+    // implicitWidth is NOT that box - it animates, so reading it here
+    // retargets every rect every frame and a right-edge rect like the glyph's
+    // crawls behind the card instead of travelling with it.
+    readonly property real spanW: {
+        if (sizeMode === "1x1") return width1x1;
+        if (sizeMode === "2x1") return width2x1;
+        return width3x1;
+    }
     readonly property real spanH: root.baseHeight
     readonly property var tempSlot: Geometry.temperatureRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
     readonly property var conditionSlot: Geometry.conditionRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
