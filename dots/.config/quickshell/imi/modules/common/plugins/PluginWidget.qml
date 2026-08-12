@@ -298,55 +298,69 @@ AbstractBackgroundWidget {
         rootWidget.resizingGrid ? Tension.bow(rootWidget.resizePullX) : 0,
         rootWidget.resizingGrid ? Tension.bow(rootWidget.resizePullY) : 0)
 
-    // A give COSTS the span's own pixel travel, not the breakaway threshold.
+    // The gesture is ABSOLUTE: the size follows where the cursor IS.
     //
-    // With every give priced at BREAK_PX (60), growing one span consumed 60px
-    // of pull while the edge moved ~144px - the widget outran the hand, three
-    // spans for 180px of travel, and the grip ended nowhere near the pointer
-    // (the review recording). The threshold is still BREAK_PX - force must be
-    // built before the material gives - but what a give consumes is the pixel
-    // delta it actually moved, floored at the threshold, so the edge tracks
-    // the cursor and a long drag walks spans at the speed the hand does.
-    function previewGridResize(pullX, pullY) {
+    // Two relative-pull models shipped before this and both failed the same
+    // review: accumulated pull works anywhere, so the cursor could sit at
+    // the monitor's edge and a 60px twitch there still resized the widget.
+    // What the hand expects is positional - the widget's edge chases the
+    // cursor, gives happen where the widget is, and far away there is no
+    // boundary left to cross, so movement out there does nothing.
+    //
+    // Growing: the cursor pulls past the CURRENT edge by the breakaway.
+    // Shrinking: the cursor comes back INSIDE the smaller span's edge - into
+    // the widget's own space. The two conditions are disjoint (grow needs
+    // target > edge + BREAK, shrink needs target <= the smaller edge), so
+    // the walk cannot oscillate within one event. (resizePullX/Y and
+    // resizeBow are declared with the elastic block above.)
+    function previewGridResize(targetWidth, targetHeight) {
         if (!rootWidget.resizingGrid) return;
         let current = rootWidget.previewGridSize;
-        let remainderX = pullX;
-        let remainderY = pullY;
-        while (Math.abs(remainderX) > Tension.BREAK_PX) {
-            const next = Tension.stepSize(rootWidget.offeredGridSizes, current,
-                Math.sign(remainderX), 0);
-            // The wall: the un-stepped pull stays live (capped), so the bow
-            // holds and the gesture does not eat pull that moved nothing.
-            if (next === current) { remainderX = Math.sign(remainderX) * Tension.BREAK_PX; break; }
-            const travelled = Math.abs(
-                Appearance.sizes.widgetGridSpanX(next.cols)
-                - Appearance.sizes.widgetGridSpanX(current.cols));
-            remainderX -= Math.sign(remainderX) * Math.max(travelled, Tension.BREAK_PX);
-            // The edge moved past the hand: tension is spent, not owed back.
-            if (remainderX * pullX < 0) remainderX = 0;
-            current = next;
+        for (;;) {
+            const edge = Appearance.sizes.widgetGridSpanX(current.cols);
+            if (targetWidth > edge + Tension.BREAK_PX) {
+                const up = Tension.stepSize(rootWidget.offeredGridSizes, current, 1, 0);
+                if (up === current) break;
+                current = up;
+                continue;
+            }
+            const down = Tension.stepSize(rootWidget.offeredGridSizes, current, -1, 0);
+            // STRICTLY inside: at exactly the smaller edge the size stays. An
+            // x-only grow can raise the row count (2x1 -> 3x2 is diagonal in
+            // span space), leaving the untouched y target sitting exactly ON
+            // the old row edge - with <=, the y loop immediately stepped the
+            // rows back down and the whole grow netted to nothing.
+            if (down !== current
+                    && targetWidth < Appearance.sizes.widgetGridSpanX(down.cols)) {
+                current = down;
+                continue;
+            }
+            break;
         }
-        while (Math.abs(remainderY) > Tension.BREAK_PX) {
-            const next = Tension.stepSize(rootWidget.offeredGridSizes, current,
-                0, Math.sign(remainderY));
-            if (next === current) { remainderY = Math.sign(remainderY) * Tension.BREAK_PX; break; }
-            const travelled = Math.abs(
-                Appearance.sizes.widgetGridSpanY(next.rows)
-                - Appearance.sizes.widgetGridSpanY(current.rows));
-            remainderY -= Math.sign(remainderY) * Math.max(travelled, Tension.BREAK_PX);
-            if (remainderY * pullY < 0) remainderY = 0;
-            current = next;
+        for (;;) {
+            const edge = Appearance.sizes.widgetGridSpanY(current.rows);
+            if (targetHeight > edge + Tension.BREAK_PX) {
+                const up = Tension.stepSize(rootWidget.offeredGridSizes, current, 0, 1);
+                if (up === current) break;
+                current = up;
+                continue;
+            }
+            const down = Tension.stepSize(rootWidget.offeredGridSizes, current, 0, -1);
+            if (down !== current
+                    && targetHeight < Appearance.sizes.widgetGridSpanY(down.rows)) {
+                current = down;
+                continue;
+            }
+            break;
         }
         rootWidget.previewGridSize = current;
-        rootWidget.resizePullX = remainderX;
-        rootWidget.resizePullY = remainderY;
-    }
-
-    // A give consumes pull, and the *gesture's* origin has to move with it or
-    // the next mouse event re-delivers the spent pull and the resize sprints
-    // to the largest span. The grip owns the press point, so it asks.
-    function consumedPull(pullX, pullY) {
-        return Qt.point(pullX - rootWidget.resizePullX, pullY - rootWidget.resizePullY);
+        // The bow is the live tension toward the next boundary, clamped to
+        // one breakaway - at a wall the cursor may be far out, and the bow
+        // holds at full rather than winding up.
+        rootWidget.resizePullX = Math.max(-Tension.BREAK_PX, Math.min(Tension.BREAK_PX,
+            targetWidth - Appearance.sizes.widgetGridSpanX(current.cols)));
+        rootWidget.resizePullY = Math.max(-Tension.BREAK_PX, Math.min(Tension.BREAK_PX,
+            targetHeight - Appearance.sizes.widgetGridSpanY(current.rows)));
     }
 
     function endGridResize() {
@@ -750,14 +764,9 @@ AbstractBackgroundWidget {
             onPositionChanged: mouse => {
                 if (!rootWidget.resizingGrid) return;
                 const scenePoint = resizeArea.mapToItem(null, mouse.x, mouse.y);
-                const pullX = scenePoint.x - resizeArea.pressSceneX;
-                const pullY = scenePoint.y - resizeArea.pressSceneY;
-                rootWidget.previewGridResize(pullX, pullY);
-                // Move the gesture's origin by whatever the give consumed, so
-                // spent pull is not re-delivered on the next event.
-                const consumed = rootWidget.consumedPull(pullX, pullY);
-                resizeArea.pressSceneX += consumed.x;
-                resizeArea.pressSceneY += consumed.y;
+                rootWidget.previewGridResize(
+                    resizeArea.pressWidth + scenePoint.x - resizeArea.pressSceneX,
+                    resizeArea.pressHeight + scenePoint.y - resizeArea.pressSceneY);
             }
             // A release after Escape commits nothing: the cancel already
             // cleared the preview, and endGridResize has nothing to store.
