@@ -205,10 +205,14 @@ Item {
             Behavior on y { TravelBehavior {} }
             Behavior on width { TravelBehavior {} }
             text: root.condition
+            // The size and weight are part of the element's travel - snapped,
+            // the same text visibly becomes a different text at the boundary.
             font.pixelSize: root.sizeMode === "1x1" ? Appearance.font.pixelSize.smallest
                 : root.sizeMode === "2x1" ? Appearance.font.pixelSize.normal
                 : Appearance.font.pixelSize.large
+            Behavior on font.pixelSize { TravelBehavior {} }
             font.weight: root.sizeMode === "1x1" ? Font.Medium : Font.DemiBold
+            Behavior on font.weight { TravelBehavior {} }
             color: root.contentColor
             opacity: root.sizeMode === "1x1" ? 0.8 : 1
             Behavior on opacity { FadeBehavior {} }
