@@ -45,8 +45,11 @@ Item {
     }
 
     // Geometry evaluates at the span's SETTLED box; Behaviors carry the
-    // travel (the media tree's frozen-Behavior lesson).
-    readonly property real spanW: root.implicitWidth
+    // travel (the media tree's frozen-Behavior lesson). Reading implicitWidth
+    // here instead would retarget every element every frame, and elements
+    // whose x depends on the right edge - the panel, its cells - would crawl
+    // behind the card instead of travelling with it.
+    readonly property real spanW: root.sizeMode === "1x1" ? root.width1x1 : root.width2x1
     readonly property real spanH: root.baseHeight
 
     component TravelBehavior: NumberAnimation {
@@ -284,15 +287,52 @@ Item {
                 Behavior on opacity { FadeBehavior {} }
             }
 
+            // ---- 1x1 only: the word "to" ----------------------------------
+            // Its own element, because swapping the text of the code below
+            // ("to USD" to "USD") would be a content snap in the middle of
+            // the morph - exactly what this architecture exists to kill.
+            StyledText {
+                id: basePrefix
+                objectName: "currencyBasePrefix"
+                readonly property var slot: Geometry.basePrefixRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+                readonly property var lastSlot: slot ?? ({ x: x, y: y, size: font.pixelSize })
+                x: lastSlot.x
+                y: lastSlot.y
+                Behavior on x { TravelBehavior {} }
+                Behavior on y { TravelBehavior {} }
+                text: "to"
+                // It keeps its small size while it fades, so the growing code
+                // beside it does not drag it up in scale on the way out.
+                font.pixelSize: Math.round(lastSlot.size)
+                font.weight: Font.Bold
+                color: Appearance.colors.colPrimary
+                opacity: slot !== null ? 1 : 0
+                // Quicker than the shared fade: "Rates" travels down onto this
+                // line on the way to 2x1, and the two must not be legible on
+                // top of each other while it passes.
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Math.round(Appearance.animation.elementMove.duration * 0.45)
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+                    }
+                }
+                visible: opacity > 0
+            }
+
             // ---- shared: the base currency --------------------------------
             StyledText {
                 objectName: "currencyBase"
                 readonly property var slot: Geometry.baseLabelRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
-                x: slot.x
+                // The group's left edge travels; the code then sits after
+                // whatever width the fading prefix still occupies, so it
+                // slides into that space instead of jumping when it vanishes.
+                property real groupX: slot.x
+                Behavior on groupX { TravelBehavior {} }
+                x: groupX + (basePrefix.paintedWidth + 3 * Appearance.effectiveScale) * basePrefix.opacity
                 y: slot.y
-                Behavior on x { TravelBehavior {} }
                 Behavior on y { TravelBehavior {} }
-                text: root.sizeMode === "1x1" ? "to " + CurrencyService.baseCurrency : CurrencyService.baseCurrency
+                text: CurrencyService.baseCurrency
                 font.pixelSize: Math.round(slot.size)
                 Behavior on font.pixelSize { TravelBehavior {} }
                 font.weight: Font.Bold
@@ -349,16 +389,23 @@ Item {
                     StyledText {
                         // the value: under the code when stacked, right-aligned
                         // in a row
-                        x: quoteCell.lastSlot.stacked ? 0 : quoteCell.width - width
+                        width: quoteCell.width
+                        horizontalAlignment: quoteCell.lastSlot.stacked
+                            ? Text.AlignLeft : Text.AlignRight
+                        x: 0
                         y: quoteCell.lastSlot.stacked ? 14 * Appearance.effectiveScale
                             : (quoteCell.height - height) / 2
-                        Behavior on x { TravelBehavior {} }
                         Behavior on y { TravelBehavior {} }
                         text: {
                             if (quoteCell.rateVal > 0.0) return root.formatRate(quoteCell.rateVal);
                             if (CurrencyService.loading) return "...";
                             return CurrencyService.errorMessage || "...";
                         }
+                        // A JPY-sized rate is six decimals wide and used to run
+                        // straight into the next column; shrinking to fit keeps
+                        // the precision without the collision.
+                        fontSizeMode: Text.HorizontalFit
+                        minimumPixelSize: Math.round(8 * Appearance.effectiveScale)
                         font.pixelSize: Appearance.font.pixelSize.small
                         font.weight: Font.Bold
                         color: quoteCell.inkColor

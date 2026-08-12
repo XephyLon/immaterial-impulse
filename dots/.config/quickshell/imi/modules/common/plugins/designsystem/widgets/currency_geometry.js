@@ -25,11 +25,21 @@ function ratesLabelRect(span, width, height, scale) {
     return { x: 20 * scale, y: 24 * scale };
 }
 
-// The base currency: tiny "to USD" under the label at 1x1, the giant code at
-// 2x1. One element; the size is most of the identity change.
+// The base currency code. It reads "to USD" small at 1x1 and "USD" giant at
+// 2x1, but the word "to" is its own element (see basePrefixRect) - swapping
+// the text of one element would be a snap in the middle of the morph. `x` is
+// the left edge of the whole group; the code itself is offset by whatever
+// the fading prefix still occupies.
 function baseLabelRect(span, width, height, scale) {
     if (span === "1x1") return { x: 14 * scale, y: 30 * scale, size: 10 * scale };
     return { x: 20 * scale, y: 38 * scale, size: 42 * scale };
+}
+
+// The word "to", which only exists at 1x1. It keeps its small size while it
+// fades so the growing code does not drag it along.
+function basePrefixRect(span, width, height, scale) {
+    if (span === "1x1") return { x: 14 * scale, y: 30 * scale, size: 10 * scale };
+    return null;
 }
 
 // A quote cell. All four exist at 2x1 (the panel's 2x2 grid); the first two

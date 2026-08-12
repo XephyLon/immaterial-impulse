@@ -41,6 +41,18 @@ TestCase {
         }
     }
 
+    function test_the_word_to_is_its_own_element() {
+        // The code used to read "to USD" at 1x1 and "USD" at 2x1 as one
+        // element, so its text swapped mid-morph - a content snap.
+        verify(Geometry.basePrefixRect("1x1", 132, 108, 1) !== null);
+        compare(Geometry.basePrefixRect("2x1", 276, 108, 1), null,
+                "no home at 2x1, so it fades");
+        const prefix = Geometry.basePrefixRect("1x1", 132, 108, 1);
+        const base = Geometry.baseLabelRect("1x1", 132, 108, 1);
+        compare(prefix.y, base.y, "one line at 1x1");
+        compare(prefix.size, base.size);
+    }
+
     function test_the_base_label_grows_between_spans() {
         const at1 = Geometry.baseLabelRect("1x1", 132, 108, 1);
         const at2 = Geometry.baseLabelRect("2x1", 276, 108, 1);
