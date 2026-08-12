@@ -39,7 +39,7 @@ ENTRY_FILES = {}
 # ...and the size assertion below moved with it, to the other side: a widget
 # whose manifest declares a grid is sized by the host to the span it resolved,
 # so its wrapper names spans rather than forwarding a content size.
-SIZED_BY_THE_HOST_GRID = {"nandoroid-media"}
+SIZED_BY_THE_HOST_GRID = {"nandoroid-media", "nandoroid-weather"}
 
 
 def entry_file(directory):
