@@ -58,6 +58,9 @@ Item {
     // manifest declares no grid. It tracks the resize grip's live preview, so a
     // drag reshapes the content as it goes instead of on release.
     property string gridSize: ""
+    // The resize grip's live edge distortion, forwarded to widgets whose cards
+    // bow under tension. A point of pixels; (0,0) at rest.
+    property point resizeBow: Qt.point(0, 0)
 
     readonly property string effectiveBasePath: manifestNode?._basePath || basePath
     readonly property string componentPath: manifestNode?.component && effectiveBasePath
@@ -161,6 +164,8 @@ Item {
                     item.hostInteractionLocked = Qt.binding(() => rootNode.hostInteractionLocked);
                 if (item.hostGridSize !== undefined)
                     item.hostGridSize = Qt.binding(() => rootNode.gridSize);
+                if (item.hostResizeBow !== undefined)
+                    item.hostResizeBow = Qt.binding(() => rootNode.resizeBow);
                 return;
             }
             if (manifestNode.props) {

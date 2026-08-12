@@ -10,6 +10,7 @@ Item {
     // then the manifest default. Empty until the host answers, and for a bare
     // `qs -p` probe of this file.
     property string hostGridSize: ""
+    property point hostResizeBow: Qt.point(0, 0)
 
     readonly property var span: MediaLayouts.spanFor(root.hostGridSize)
 
@@ -26,5 +27,12 @@ Item {
         id: layout
         anchors.fill: parent
         source: MediaLayouts.layoutFor(root.hostGridSize)
+        // Duck-typed like PluginNode's own injection: a layout that declares
+        // `resizeBow` receives the grip's tension, one that does not is left
+        // alone (LayoutLarge has no card to bow yet).
+        onLoaded: {
+            if (item.resizeBow !== undefined)
+                item.resizeBow = Qt.binding(() => root.hostResizeBow);
+        }
     }
 }

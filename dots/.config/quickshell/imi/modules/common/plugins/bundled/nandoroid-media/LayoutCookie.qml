@@ -29,6 +29,7 @@ Item {
     readonly property bool useBlurBackground: PluginState.option("nandoroid_media", "blurEnabled", false)
     readonly property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("nandoroid_media")
 
+    property point resizeBow: Qt.point(0, 0)
     readonly property bool managesBlurTint: true
     readonly property var blurRegions: [bgCard.blurRegion]
 
@@ -88,6 +89,8 @@ Item {
         anchors.fill: parent
         useBlurBackground: root.useBlurBackground
         backgroundOpacity: root.backgroundOpacity
+        tensionX: root.resizeBow.x
+        tensionY: root.resizeBow.y
     }
 
     Item {

@@ -12,6 +12,7 @@ Item {
     // `sizeMode` choice option of its own - a second mechanism for the concept
     // `__gridSize` now owns, in the same format.
     property string hostGridSize: ""
+    property point hostResizeBow: Qt.point(0, 0)
     implicitWidth: content.implicitWidth
     implicitHeight: content.implicitHeight
     width: implicitWidth
@@ -21,6 +22,7 @@ Item {
         width: implicitWidth
         height: implicitHeight
         sizeMode: root.hostGridSize || "3x1"
+        resizeBow: root.hostResizeBow
         useBlurBackground: PluginState.option("nandoroid_weather", "blurEnabled", false)
         backgroundOpacity: PluginState.effectiveBackgroundOpacity("nandoroid_weather")
     }
