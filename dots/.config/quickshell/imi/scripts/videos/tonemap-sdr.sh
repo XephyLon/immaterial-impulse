@@ -44,6 +44,68 @@ esac
 notify-send "Tonemapping to SDR" "${FILE##*/} - the HDR original will be replaced" \
     -a 'Recorder' & disown
 
+# THE SIGNAL PEAK MUST BE MEASURED FROM THE PIXELS. ffmpeg's `tonemap` filter,
+# handed PQ input and no override, assumes a FIXED peak of 10x its reference
+# white - 2030 nits - and normalises the curve by it. A desktop capture peaks
+# around 235 nits (1.16x), so the whole image was squeezed into the bottom
+# eighth of the curve. Scored against the compositor's own SDR rendering of the
+# same desktop: SDR white left the converter at 136/255, mean error 27.3/255.
+# That 10x is not inferred from the file - `peak=10.0` reproduces the default
+# output byte for byte, on clips whose declared MaxCLL differs fourfold.
+#
+# WHICH IS THE PART THAT MISLEADS: gpu-screen-recorder really does stamp the
+# MONITOR's EDID luminance into every recording as mastering-display and
+# content-light-level metadata (on this 1015-nit panel every file claims MaxCLL
+# 1015 whatever is on screen), and that reads exactly like the cause. It is
+# not - the CPU `tonemap` filter never looks at it, and two fixtures tagged 250
+# and 1015 nits tonemap identically. It matters only to libplacebo, which does
+# read mastering metadata, which is why that chain gets src_max below. Do not
+# "fix" this by correcting the file's metadata: the CPU path would not notice.
+#
+# Keyframes only and downscaled first: bounded work (0.3s on a 5s 5120x1440
+# clip) and a peak that lands on the content's p99.99 rather than on one stray
+# pixel - measured 235 nits where the frame's absolute maximum was 276.
+#
+# Floored at 1.0. A peak below reference white would ask the tonemapper to
+# EXPAND the signal, and a measurement that fails must not fall back to the
+# filter's own 10x, which is the bug: assuming "nothing above SDR white" clips
+# a genuine highlight at worst, where 10x crushes every frame.
+measure_peak() {
+    local depth range ymax
+    depth="$(ffprobe -v error -select_streams v:0 -show_entries stream=bits_per_raw_sample \
+        -of default=nw=1:nk=1 "$FILE" 2>/dev/null | head -n1 || true)"
+    [[ "$depth" =~ ^[0-9]+$ ]] && (( depth >= 8 )) || depth=10
+    range="$(ffprobe -v error -select_streams v:0 -show_entries stream=color_range \
+        -of default=nw=1:nk=1 "$FILE" 2>/dev/null | head -n1 || true)"
+    # Captured to a variable rather than piped into a reader that can exit
+    # early - the same pipefail trap documented on the libplacebo probe below.
+    ymax="$(ffmpeg -v error -skip_frame nokey -i "$FILE" -an \
+        -vf "scale=320:-2,signalstats,metadata=print:key=lavfi.signalstats.YMAX:file=-" \
+        -f null - 2>/dev/null | sed -n 's/^lavfi\.signalstats\.YMAX=//p' \
+        | sort -n | tail -n1 || true)"
+    [[ "$ymax" =~ ^[0-9]+$ ]] || return 1
+    awk -v y="$ymax" -v d="$depth" -v r="$range" 'BEGIN {
+        s = 2 ^ (d - 8)
+        n = (r == "pc" || r == "full") ? y / (2 ^ d - 1) : (y - 16 * s) / (219 * s)
+        if (n <= 0) exit 1
+        if (n > 1) n = 1
+        m1 = 2610 / 16384; m2 = 2523 / 4096 * 128
+        c1 = 3424 / 4096;  c2 = 2413 / 4096 * 32; c3 = 2392 / 4096 * 32
+        p = exp(log(n) / m2)
+        num = p - c1; if (num < 0) num = 0
+        den = c2 - c3 * p; if (den <= 0) exit 1
+        if (num == 0) exit 1
+        nits = 10000 * exp(log(num / den) / m1)
+        printf "%.1f", nits
+    }'
+}
+
+PEAK_NITS="$(measure_peak || true)"
+[[ "$PEAK_NITS" =~ ^[0-9.]+$ ]] || PEAK_NITS=203
+# ffmpeg measures `peak` in units of its reference white (203 nits), which is
+# also the npl the linearising zscale below is given, so the two agree.
+PEAK="$(awk -v n="$PEAK_NITS" 'BEGIN { p = n / 203; if (p < 1) p = 1; printf "%.3f", p }')"
+
 # The temporary MUST end in .mp4: ffmpeg infers the muxer from the output
 # extension, and a bare ".tmp" fails - silently, if stderr is ever discarded.
 # Same trap that shipped in we_still.sh once already.
@@ -52,6 +114,16 @@ log="$(mktemp --suffix=-tonemap.log)"
 
 # libplacebo (Vulkan, GPU tonemap - fast and gamut-aware) when this ffmpeg has
 # it, else the zscale/tonemap CPU chain.
+#
+# mobius rather than hable, now that the peak is honest: hable compresses the
+# midtones even when asked to map a range that barely exceeds its target, while
+# mobius stays linear below the knee and rolls off only near the peak - which
+# is the shape a desktop capture has, almost all of it under SDR white with a
+# little headroom above. Scored against the compositor's own SDR rendering of
+# the same desktop, mean error 15.2/255 versus hable's 16.3 and the shipped
+# hable-on-EDID-peak's 27.3. `clip` scored a shade better still (14.7) and is
+# not used: it is only better while nothing on screen is genuinely HDR, and it
+# blows those highlights out irrecoverably when something is.
 #
 # Captured to a variable, NOT `ffmpeg | grep -q`: grep -q exits at the first
 # match, ffmpeg takes SIGPIPE, and under `set -o pipefail` the whole pipeline
@@ -68,10 +140,17 @@ filters="$(ffmpeg -hide_banner -filters 2>/dev/null || true)"
 if [[ "$filters" == *libplacebo* ]] \
     && ffmpeg -v error -init_hw_device vulkan -f lavfi -i "nullsrc=s=64x64:d=0.1" \
         -vf "libplacebo=format=yuv420p" -frames:v 1 -f null - >/dev/null 2>&1; then
-    VF="libplacebo=tonemapping=auto:colorspace=bt709:color_primaries=bt709:color_trc=bt709:format=yuv420p"
+    # src_max for the same reason the CPU chain gets `peak`, and with a second
+    # reason of its own: libplacebo DOES read the recorder's mastering-display
+    # metadata, so left alone it inherits the panel's EDID luminance rather
+    # than the content's. Unverified on this machine - ffmpeg's libplacebo
+    # filter fails to initialise here for every invocation, Vulkan device
+    # present, so the smoke test below correctly picks the CPU chain and this
+    # branch has never run.
+    VF="libplacebo=tonemapping=auto:src_max=$PEAK_NITS:colorspace=bt709:color_primaries=bt709:color_trc=bt709:format=yuv420p"
     HW=(-init_hw_device vulkan)
 else
-    VF="zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p"
+    VF="zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=mobius:desat=0:peak=$PEAK,zscale=t=bt709:m=bt709:r=tv,format=yuv420p"
     HW=()
 fi
 
@@ -91,7 +170,7 @@ width="$(ffprobe -v error -select_streams v:0 -show_entries stream=width \
 
 # The vaapi rung uses the CPU tonemap chain: mixing the Vulkan libplacebo
 # filter with a VAAPI hwupload made ffmpeg's format negotiation fall over.
-VF_CPU="zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p"
+VF_CPU="zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=mobius:desat=0:peak=$PEAK,zscale=t=bt709:m=bt709:r=tv,format=yuv420p"
 
 try_encode() {
     local enc="$1" vfarg="$VF" hw=("${HW[@]}") pre=() args=()

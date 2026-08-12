@@ -32,18 +32,38 @@ def encoders():
                           capture_output=True, text=True).stdout
 
 
-def make_clip(path, hdr):
+def make_clip(path, hdr, maxcll=None, grey=None):
     # x265 writes the VUI from its own params and ignores ffmpeg's -color_*
     # flags, so the HDR tagging must go through -x265-params or the fixture
     # probes as "unknown" - which it did on this test's first run.
-    color = (["-pix_fmt", "yuv420p10le", "-x265-params",
-              "colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc"]
+    params = "colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc"
+    if maxcll is not None:
+        # What a real gpu-screen-recorder file carries: the MONITOR's EDID
+        # luminance, written as if it described the content.
+        params += f":master-display=G(8500,39850)B(6550,2300)R(35400,14600)"
+        params += f"WP(15635,16450)L({maxcll * 10000},1)"
+        params += f":max-cll={maxcll},{maxcll}"
+    color = (["-pix_fmt", "yuv420p10le", "-x265-params", params]
              if hdr else ["-pix_fmt", "yuv420p"])
     codec = "libx265" if hdr else "libx264"
+    src = (f"color=c=0x{grey:02x}{grey:02x}{grey:02x}:s=128x128:d=0.5:r=10"
+           if grey is not None else "testsrc2=s=64x64:d=0.3:r=10")
     subprocess.run(
-        ["ffmpeg", "-y", "-v", "error", "-f", "lavfi",
-         "-i", "testsrc2=s=64x64:d=0.3:r=10", "-c:v", codec, *color, str(path)],
+        ["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", src,
+         "-c:v", codec, *color, str(path)],
         capture_output=True, check=True)
+
+
+def mean_luma(path):
+    out = subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", str(path), "-vf",
+         "signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-",
+         "-frames:v", "1", "-f", "null", "-"],
+        capture_output=True, text=True).stdout
+    for line in out.splitlines():
+        if line.startswith("lavfi.signalstats.YAVG="):
+            return float(line.split("=", 1)[1])
+    raise AssertionError(f"no YAVG in ffmpeg output: {out!r}")
 
 
 def transfer_of(path):
