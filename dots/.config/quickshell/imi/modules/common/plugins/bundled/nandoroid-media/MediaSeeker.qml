@@ -30,9 +30,12 @@ Item {
 
     property real phase: 0
     // The travelling wave, alive only while something plays and the item is
-    // on screen - a FrameAnimation with no gate is the idle-repaint bug.
+    // on screen - a FrameAnimation with no gate is the idle-repaint bug. At
+    // 2x2 the ring is a STILL perfect circle (the review's call): no wave,
+    // no travel, so no frame ticks either.
+    readonly property bool waves: root.playing && root.span !== "2x2"
     FrameAnimation {
-        running: root.visible && root.playing && root.opacity > 0
+        running: root.visible && root.waves && root.opacity > 0
         onTriggered: { root.phase += frameTime * 2.5; canvas.requestPaint(); }
     }
 
@@ -98,6 +101,8 @@ Item {
             Functions.ColorUtils.applyAlpha(Appearance.colors.colPrimary, 0.25),
             Functions.ColorUtils.applyAlpha(Appearance.colors.colOnPrimary, 0.3), root.bend)
         readonly property bool playingNow: root.playing
+        readonly property string spanNow: root.span
+        onSpanNowChanged: requestPaint()
 
         onBendNowChanged: requestPaint()
         onRingNowChanged: requestPaint()
@@ -121,7 +126,7 @@ Item {
             // closed ring or the wave beats against its own seam (the spec's
             // arc-length note). 12 matches the cookie's lobes.
             const freq = Math.round(6 + (12 - 6) * canvas.bendNow);
-            const amp = (canvas.playingNow ? stroke * 0.6 : 0);
+            const amp = (root.waves ? stroke * 0.6 : 0);
 
             const base = root.baselinePoints(N);
             // Normals from the RAW baseline, displaced into a second array.

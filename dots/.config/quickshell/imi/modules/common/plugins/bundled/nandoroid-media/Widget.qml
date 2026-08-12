@@ -143,6 +143,8 @@ Item {
     MediaTransportButton {
         id: playButton
         objectName: "playButton"
+        ringPhase: seeker.phase
+        ringWaves: seeker.waves && root.spanName === "2x1"
         z: 1
         role: "play"
         span: root.spanName
