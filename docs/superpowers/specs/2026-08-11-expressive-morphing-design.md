@@ -361,6 +361,79 @@ already draws `color: useBlurBackground ? applyAlpha(colOnPrimary, backgroundOpa
 : colOnPrimary` beneath the frost (`DesktopWeatherWidget:84`). Dropping the blur leaves the tinted
 card moving, and restoring it puts the frost back over the same tint.
 
+### Resizing is elastic: a heavy card with elastic edges
+
+**Settled and tuned on screen (12 Aug).**
+
+Today the grip does not resize the card, it *picks* a span: `previewGridResize` maps the drag
+straight to `GridSizes.nearestSize` and sets it, so the pointer moves continuously while the card
+occupies one of four sizes. #171 animates the jump, which is a smoother teleport rather than a card
+that follows the hand.
+
+The model instead: **pulling takes force.** The card holds its size while tension builds, the edges
+being pulled distort first, and only past a breakaway threshold does the material give and the card
+spring to the next span. Leftover pull carries into the next span, so one drag walks through several
+sizes without re-grabbing.
+
+Three things make it read as material rather than as a rectangle with bent sides:
+
+- **The corners are not rigid.** Fixed radii were what felt wrong. Under load the corner being pulled
+  *tightens* (material drawn toward a point) and the two corners it pulls away from *open up*; the
+  far corner stays at rest.
+- **The bulge sits near the hand**, not at the edge's midpoint - so the distortion looks drawn toward
+  the pointer.
+- **The dragged corner leads** and the edges follow it.
+
+### The tuned constants
+
+Found by pulling on them rather than by argument, with a freeze-under-load control so a held
+distortion could be judged against each knob:
+
+| | value | meaning |
+| --- | --- | --- |
+| breakaway | **60 px** | pull before the card gives |
+| edge bow | **14 px** | distortion at full tension |
+| give curve | **1.15** | >1: resists, then gives |
+| corner follow | **1.00** | the dragged corner leads |
+| bulge peak | **0.85** | near the corner being pulled |
+| corner tension | **0.50** | pulled corner tightens, others open |
+
+### Those numbers are not portable, and the reason is measured
+
+The knobs above are per-frame coefficients from a `requestAnimationFrame` loop tuned on a **240 Hz**
+display. Ported literally they are wrong: the same spring at 60 Hz settles in **733 ms** instead of
+183 ms. Matching the per-frame recurrence against a damped spring converts them once:
+
+```
+v(n+1) = damp * (v(n) + stiff * (target - x))          per frame, dt0 = 1/240
+omega  = sqrt(damp * stiff) / dt0        zeta = (1 - damp) / (2 * omega * dt0)
+```
+
+giving the values that **do** port:
+
+| | |
+| --- | --- |
+| spring frequency | **omega 56.79 rad/s (9.04 Hz)** |
+| damping ratio | **zeta 1.268** - overdamped, settles without overshoot |
+| bow time constant | **tau 6.0 ms** |
+
+Verified: the time-based form reproduces the tuned motion at 240 Hz to the decimal (168.42, 188.30,
+195.40 px at 50/100/200 ms).
+
+**And a trap inside the fix.** Integrating this spring at the display's own interval is unstable:
+explicit Euler needs `2*zeta*omega*dt < 2`, and at 1/60 that term is **2.4** - the simulation
+diverges to 1e10 rather than settling. Substepping at a fixed 1/240 is stable at 60, 144 and 240 Hz,
+with 144 and 240 matching exactly and 60 differing only by the coarser sampling grid (7.5 px at
+50 ms, converged by 200 ms). QML's `SpringAnimation` sidesteps this by integrating internally, but
+its `spring`/`damping` are its own units rather than omega/zeta, so that conversion happens once and
+should be pinned by a runtime test sampling mid-transition - the check #171 established.
+
+### What is drawn and what is committed stay separate
+
+The stretched size is never a span. On release the card commits the nearest **offered** span and
+springs into it. This is the same split as `followParallax`: the drawn value is derived, the stored
+value is authoritative.
+
 ### The standing trap
 
 Nothing may clamp, measure or persist against the animating value. `PluginWidget.settledWidth`
@@ -435,21 +508,24 @@ seek-ring dash pattern).
 Each step leaves the tree working and is separately reviewable on screen.
 
 1. The shared card: one component, shape as a parameter, plus the optional-mask change to
-   `WallpaperBlurSurface` (bundled, per §3c). Weather, currency and media adopt it; `calendar`
-   follows later. Removes `DesktopWeatherWidget`'s competing size Behavior. Nothing morphs yet -
-   this step only removes the duplication and makes the shape expressible.
-2. `media_geometry.js` + tests. No caller.
-3. Media collapses to one tree, **no animation** — every span still renders correctly, statically.
+   `WallpaperBlurSurface` and a stroked outline (bundled, per §3c). Weather, currency and media adopt
+   it; `calendar` follows later. Removes `DesktopWeatherWidget`'s competing size Behavior. Nothing
+   morphs yet - this step only removes the duplication and makes the shape expressible.
+2. Elastic resize on the card: breakaway, edge bow, live corner radii, and the spring - with the
+   constants expressed as time rather than per frame (§3d), and a runtime test that samples
+   mid-transition.
+3. `media_geometry.js` + tests. No caller.
+4. Media collapses to one tree, **no animation** - every span still renders correctly, statically.
    This is the risky structural step and is worth reviewing alone.
-4. Behaviors on the shared elements' geometry. Resize now morphs position and size.
-5. Shape morphing for the transport controls, on the resize's clock.
-6. Progress: the wave gains a path baseline, then the 2x2 inner ring and the 2x1 wavy outline
+5. Behaviors on the shared elements' geometry. Resize now morphs position and size.
+6. Shape morphing for the transport controls, on the resize's clock.
+7. Progress: the wave gains a path baseline, then the 2x2 inner ring and the 2x1 wavy outline
    drawn as one shape with the play button. No renderer cross-fade - §3 removed the need for one.
-7. The interaction-state model in `Appearance`; `RippleButton` adopts it.
-8. Media controls adopt it.
-9. Extract whatever is genuinely generic into the widget framework — *after* steps 2-8 have shown
+8. The interaction-state model in `Appearance`; `RippleButton` adopts it.
+9. Media controls adopt it.
+10. Extract whatever is genuinely generic into the widget framework - *after* steps 3-9 have shown
    what that is.
 
-Steps 2-3 are the ones that could go wrong quietly. Step 9 is deliberately last: the framework is
+Steps 3-4 are the ones that could go wrong quietly. Step 10 is deliberately last: the framework is
 derived from a working case, per the settled input — with the card as the one exception, for the
 reason given in §3c.
