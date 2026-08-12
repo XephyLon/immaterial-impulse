@@ -31,14 +31,11 @@ EXPECTED_ENTRY_TYPES = {
     "nandoroid-currency": "Expressive.DesktopCurrencyWidget",
 }
 # Which file in a package instantiates the design-system component. It is the
-# package's entry point for three of the four, and for media it is the layout
-# the entry point loads: media has a layout file per offered span
-# (docs/widget-grid.md), so everything this module pins about a wrapper - which
-# type it builds, which options it reads, how it forwards the blur contract -
-# moved one file down when Widget.qml became a switch on the resolved span.
-ENTRY_FILES = {
-    "nandoroid-media": "LayoutLarge.qml",
-}
+# package's entry point for all four again: media's per-span layout files -
+# which once held everything this module pins about a wrapper - collapsed back
+# into Widget.qml when it became the one tree, and the design-system component
+# it instantiates (chromeless, for the text and lyrics page) lives there too.
+ENTRY_FILES = {}
 # ...and the size assertion below moved with it, to the other side: a widget
 # whose manifest declares a grid is sized by the host to the span it resolved,
 # so its wrapper names spans rather than forwarding a content size.
@@ -99,28 +96,24 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             for option_key in option_keys:
                 self.assertIn(f'PluginState.option("{manifest["id"]}", "{option_key}"', entry)
 
-    def test_every_media_layout_answers_the_blur_contract(self):
-        """The wrapper forwards whichever layout is loaded, so each must answer.
+    def test_the_media_tree_answers_the_blur_contract_itself(self):
+        """One tree, one card, one region list.
 
-        `PluginNode` reads `blurRegions`/`managesBlurTint` off the loaded item
-        and treats an empty region list as "blur the whole widget". A layout
-        that declared neither would therefore frost its own shadow rather than
-        error, and only at the span that loads it - which is the one span nobody
-        looks at while writing the other two.
+        The wrapper used to forward `blurRegions`/`managesBlurTint` off
+        whichever layout file its Loader held, and this test made every layout
+        answer. The one tree ended the dispatch: the card is a shared element,
+        so the tree declares the contract directly from it, and a span change
+        cannot swap in a layout that forgot - there is nothing left to swap.
         """
         package = PLUGIN_ROOT / "nandoroid-media"
         wrapper = (package / "Widget.qml").read_text(encoding="utf-8")
-        self.assertIn("blurRegions: layout.item ? layout.item.blurRegions : []", wrapper)
-        self.assertIn(
-            "managesBlurTint: layout.item ? layout.item.managesBlurTint === true : false",
-            wrapper)
-
-        layouts = sorted(package.glob("Layout*.qml"))
-        self.assertEqual(len(layouts), 3, "one layout per offered span")
-        for layout in layouts:
-            text = layout.read_text(encoding="utf-8")
-            self.assertIn("readonly property var blurRegions", text, layout.name)
-            self.assertIn("readonly property bool managesBlurTint", text, layout.name)
+        self.assertIn("blurRegions: [bgCard.blurRegion]", wrapper)
+        self.assertIn("managesBlurTint: true", wrapper)
+        self.assertNotIn("layout.item", wrapper,
+                         "the per-span Loader dispatch must not return")
+        for dead in ("LayoutLarge.qml", "LayoutCookie.qml", "LayoutCompact.qml"):
+            self.assertFalse((package / dead).exists(),
+                             f"{dead} is the destroy the tree replaced")
 
     def test_system_monitor_third_card_can_show_the_battery(self):
         """The built-in this widget replaced showed Battery on a laptop.
@@ -264,12 +257,19 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         self.assertIn("readonly property var blurRegions", monitor)
         self.assertIn("readonly property var blurRegions: content.blurRegions", wrapper)
 
-        for directory in ("nandoroid-currency", "nandoroid-media", "nandoroid-weather"):
+        # Currency and weather forward the contract from the design-system
+        # component they wrap; media's one tree owns a card of its own and
+        # declares the contract directly from it (see
+        # test_the_media_tree_answers_the_blur_contract_itself).
+        for directory in ("nandoroid-currency", "nandoroid-weather"):
             entry_text = entry_file(directory).read_text(encoding="utf-8")
             self.assertIn("readonly property var blurRegions: content.blurRegions", entry_text)
             self.assertIn("readonly property bool managesBlurTint: content.managesBlurTint", entry_text)
             self.assertIn("useBlurBackground: PluginState.option", entry_text)
             self.assertIn("backgroundOpacity: PluginState.effectiveBackgroundOpacity(", entry_text)
+        media = entry_file("nandoroid-media").read_text(encoding="utf-8")
+        self.assertIn('useBlurBackground: PluginState.option("nandoroid_media", "blurEnabled"', media)
+        self.assertIn("backgroundOpacity: PluginState.effectiveBackgroundOpacity(", media)
 
         currency = (DESIGN_SYSTEM / "widgets" / "DesktopCurrencyWidget.qml").read_text(
             encoding="utf-8"

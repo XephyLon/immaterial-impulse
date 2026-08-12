@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""Source contract: the media widget's spans and its layouts are one list.
+"""Source contract: the media widget's spans are one list, in three files.
 
-The host resolves which span a placed widget is (`__gridSize`, docs/widget-grid.md)
-and the widget picks the file that draws it, so the manifest's `grid.sizes` and
-`media_layouts.js`'s table are two lists that have to name the same set. They
-are edited in different files, which is exactly the drift AGENT.md's
-validator/renderer note describes: a span offered with no layout of its own does
-not fail, it silently draws the default layout squeezed into a box it was never
-designed for - and the grip offers that size for the rest of the widget's life.
+The host resolves which span a placed widget is (`__gridSize`,
+docs/widget-grid.md), `media_layouts.js`'s table turns it into cell counts,
+and `media_geometry.js` places every shared element for it. Before the one
+tree there was a fourth file per span - a layout - and the drift this module
+guards against was a span offered with no layout, which silently drew the
+default squeezed into the wrong box. The layouts are gone; the drift is not:
+a span offered with no GEOMETRY now falls through `transportRects` to null
+and the tree draws a card with no controls at all, only at the one span
+nobody was looking at.
 
-`tests/tst_media_layouts.qml` drives the lookup itself; this is the half that
-can see the manifest.
+`tests/tst_media_layouts.qml` and `tst_media_geometry.qml` drive the lookups
+themselves; this is the half that can see the manifest.
 """
 from pathlib import Path
 import json
@@ -21,17 +23,17 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "modules/common/plugins/bundled/nandoroid-media"
 MANIFEST = PACKAGE / "manifest.json"
 LAYOUTS = PACKAGE / "media_layouts.js"
+GEOMETRY = PACKAGE / "media_geometry.js"
 
 ENTRY = re.compile(
     r'\{\s*size:\s*"(?P<size>\d+x\d+)"\s*,\s*'
     r'cols:\s*(?P<cols>\d+)\s*,\s*'
-    r'rows:\s*(?P<rows>\d+)\s*,\s*'
-    r'layout:\s*"(?P<layout>[^"]+)"\s*\}')
+    r'rows:\s*(?P<rows>\d+)\s*\}')
 
 
 def table():
     body = LAYOUTS.read_text(encoding="utf-8")
-    start = body.index("var SIZES = [")
+    start = body.index("var SPANS = [")
     end = body.index("];", start)
     return [match.groupdict() for match in ENTRY.finditer(body[start:end])]
 
@@ -46,10 +48,10 @@ class TheManifestAndTheTableNameTheSameSpans(unittest.TestCase):
         # vacuous pass, so say so out loud.
         self.assertEqual(len(table()), 3, "media_layouts.js parsed to nothing")
 
-    def test_every_offered_span_has_a_layout_of_its_own(self):
+    def test_every_offered_span_is_in_the_table(self):
         offered = [f"{size['cols']}x{size['rows']}" for size in grid()["sizes"]]
-        drawn = [entry["size"] for entry in table()]
-        self.assertEqual(offered, drawn,
+        known = [entry["size"] for entry in table()]
+        self.assertEqual(offered, known,
                          "the manifest's sizes and media_layouts.js's table "
                          "must name the same spans, in the same order - the "
                          "order is the resize order the grip walks")
@@ -59,16 +61,20 @@ class TheManifestAndTheTableNameTheSameSpans(unittest.TestCase):
             self.assertEqual(entry["size"], f"{entry['cols']}x{entry['rows']}",
                              f"entry {entry['size']} disagrees with its cells")
 
-    def test_every_layout_file_exists(self):
+    def test_every_offered_span_has_geometry(self):
+        """The tree draws what the geometry places; a span without a branch in
+        media_geometry.js renders a card with no controls, silently, at that
+        one span."""
+        geometry = GEOMETRY.read_text(encoding="utf-8")
         for entry in table():
-            self.assertTrue((PACKAGE / entry["layout"]).is_file(),
-                            f"{entry['layout']} is named but not shipped")
+            self.assertIn(f'span === "{entry["size"]}"', geometry,
+                          f"media_geometry.js places nothing at {entry['size']}")
 
     def test_the_fallback_entry_is_the_manifest_default(self):
         """An unrecognised span resolves to the table's first entry, and the
         host resolves an unrecognised stored span to the manifest default. Those
         two answers have to be the same span, or the one case where both fire -
-        a stored span dropped from the manifest - draws one size's layout at
+        a stored span dropped from the manifest - draws one size's geometry at
         another size's pixels.
         """
         default = grid()
