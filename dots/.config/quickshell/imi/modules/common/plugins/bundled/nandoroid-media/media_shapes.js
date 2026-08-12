@@ -89,3 +89,22 @@ function ringMorph() {
 function ringAt(t) {
     return ringMorph().asCubics(Math.max(0, Math.min(1, t)));
 }
+
+// The live cookie: cookieRaw's own recipe with per-lobe inner radii, so the
+// breathing shape and the resting shape are one family in one space. Levels
+// are 0..1 per lobe; base and reach are VisualizerCookie's tuning, halved
+// into the height-1 space like everything else here.
+function liveCookieRaw(levels, lobes) {
+    var count = lobes || 12;
+    var radii = [];
+    for (var i = 0; i < count; i++) {
+        var level = i < levels.length ? Math.max(0, Math.min(1, levels[i])) : 0;
+        radii.push((0.8 + level * 0.14) * 0.5);
+    }
+    var cos30 = Math.cos(Math.PI / 6), sin30 = Math.sin(Math.PI / 6);
+    return RoundedPolygon.RoundedPolygon.starPerLobe(
+        count, 0.5, radii, new CornerRounding.CornerRounding(0.25))
+        .transformed(function (x, y) {
+            return { x: x * cos30 - y * sin30, y: x * sin30 + y * cos30 };
+        });
+}

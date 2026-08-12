@@ -140,30 +140,9 @@ Item {
         Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
     }
 
-    // The LIVE cookie: audio-reactive lobes at the play button's own rect,
-    // under the button so the artwork and glyph sit over it. Tree-level
-    // rather than inside the button: nested there its canvas texture never
-    // composited in the sandbox (paint ran, pixels lost), and tree level is
-    // the configuration every probe run has rendered.
-    Loader {
-        id: liveCookie
-        active: root.spanName === "2x2"
-        z: 1
-        x: root.transport ? root.transport.play.x : 0
-        y: root.transport ? root.transport.play.y : 0
-        width: root.transport ? root.transport.play.width : 0
-        height: root.transport ? root.transport.play.height : 0
-        sourceComponent: Expressive.VisualizerCookie {
-            lobes: 12
-            audioReactive: MprisController.isPlaying
-            color: Appearance.colors.colPrimary
-        }
-    }
-
     MediaTransportButton {
         id: playButton
         objectName: "playButton"
-        liveCookiePainted: liveCookie.item ? liveCookie.item.hasPainted === true : false
         z: 1
         role: "play"
         span: root.spanName
