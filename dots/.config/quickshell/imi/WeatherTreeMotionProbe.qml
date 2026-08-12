@@ -116,6 +116,13 @@ ShellRoot {
         harness.watch("glyph.w", glyph, "widthChanged", () => glyph.width);
         harness.watch("glyph.rot", glyph, "rotationChanged", () => glyph.rotation);
         harness.watch("cond.x", condition, "xChanged", () => condition.x);
+        // The shape morph itself: morphT must sweep 0 -> 1 on a shape change,
+        // not flip at the top - the retarget-through-a-live-Behavior bug made
+        // exactly that snap while every position trail stayed green.
+        if (glyph && glyph.children.length > 0 && glyph.children[0].morphT !== undefined) {
+            const canvas = glyph.children[0];
+            harness.watch("glyph.morphT", canvas, "morphTChanged", () => canvas.morphT);
+        }
         widget.commitGridSize(harness.spanOf(pair[1]));
         settleTimer.start();
     }
@@ -127,7 +134,13 @@ ShellRoot {
         for (const label in harness.trails) {
             const trail = harness.trails[label];
             const first = trail[0], last = trail[trail.length - 1];
-            const moved = Math.abs(last - first) > 0.5;
+            const moved = label === "glyph.morphT"
+                ? trail.some(v => v > 0.05 && v < 0.95)
+                : Math.abs(last - first) > 0.5;
+            if (label === "glyph.morphT" && trail.length > 1 && !moved) {
+                harness.check(`${tag} glyph.morphT sweeps instead of flipping`, false);
+                continue;
+            }
             if (!moved) { console.log(`[WeatherTreeMotion] ${tag} ${label}: static`); continue; }
             harness.check(`${tag} ${label} animates (${trail.length} steps)`, trail.length >= 4);
         }
