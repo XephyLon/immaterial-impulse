@@ -1229,6 +1229,21 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   which passed every hover assertion while the cursor never changed. Input areas own their
   cursors; z order guarantees the interactive thing is topmost.
   05bf3013f ("feat(media): the play button's body IS the visualizer").
+- **A Behavior whose animation reads its tier from a binding carries the PREVIOUS transition.** The
+  shared interaction model (`Appearance.interaction`, decided in `modules/common/interaction_motion.js`)
+  gives every control the same five states, and each pair of states has its own duration and curve -
+  a press is acknowledged faster than it is released, and a release animates even when the pointer
+  has already left, because press → drag off → let go is `pressed -> rest` with no hover in between
+  and treating that as a hover-out leaves the control visibly stuck. Selecting the tier through a
+  binding on the animation's `duration` hands the Behavior whichever tier was current *before* the
+  state changed; `InteractionMotion.qml` therefore writes the tier onto the animation and only then
+  writes the target, in the same handler. Interruptibility comes free from the Behavior itself - a
+  press landing mid-hover retargets from where the value actually is, which a `SequentialAnimation`
+  fired on a signal cannot do. Related: `lint_disabled_opacity.py` recognises a self-dimming control
+  by its dim EXPRESSION, so adopting the model made `RippleButton` invisible to it and would have
+  vacated the nested-dim rule for every component rooted on one - a detector that knows only one
+  idiom stops detecting the moment the idiom changes.
+  af09ed3b9 ("feat(widgets): one driver wires a control to the model").
 - **A one-tree widget's geometry reads the SETTLED span's box, never the animating one.** Three
   trees were written with `spanW: root.implicitWidth`, and `implicitWidth` carries a Behavior: every
   rect became a per-frame target, so the Behaviors that carry the travel never converged, and any
