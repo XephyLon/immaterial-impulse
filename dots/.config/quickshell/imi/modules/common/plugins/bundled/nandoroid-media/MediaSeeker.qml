@@ -44,6 +44,48 @@ Item {
                        a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t);
     }
 
+    // The raw baseline, shared by the painter, the hit test and the probe -
+    // one sampler, so what is drawn IS what is clickable.
+    function baselinePoints(sampleCount) {
+        const N = sampleCount || 160;
+        const stroke = root.lineWidthPx;
+        const pad = stroke;
+        const cx = width / 2, cy = height / 2;
+        const dia = Math.min(width, height) - stroke;
+        const cubics = MediaShapes.ringAt(root.ringT);
+        const measure = PathLength.measureCubics(cubics);
+        const out = [];
+        for (let i = 0; i <= N; i++) {
+            const u = i / N;
+            const line = { x: pad + u * (width - 2 * pad), y: cy };
+            const target = u * measure.total;
+            let index = 0;
+            while (index < cubics.length - 1 && measure.lengths[index + 1] < target) index++;
+            const span = measure.lengths[index + 1] - measure.lengths[index];
+            const t = span > 0 ? (target - measure.lengths[index]) / span : 0;
+            const point = PathLength.pointOnCubic(cubics[index], t);
+            const ring = { x: cx + point.x * dia, y: cy + point.y * dia };
+            out.push({ x: line.x + (ring.x - line.x) * root.bend,
+                       y: line.y + (ring.y - line.y) * root.bend });
+        }
+        return out;
+    }
+
+    // Distance from a point to the stroked baseline - the seeker's true hit
+    // area. Anything further than this passes through to whatever is under
+    // it, which at 2x2 and 2x1 is the play button this ring sits on.
+    function strokeDistance(x, y) {
+        const pts = root.baselinePoints(96);
+        let best = Infinity;
+        for (const p of pts) {
+            const d = Math.hypot(p.x - x, p.y - y);
+            if (d < best) best = d;
+        }
+        return best;
+    }
+
+    signal sought(real fraction)
+
     Canvas {
         id: canvas
         anchors.fill: parent
@@ -75,35 +117,13 @@ Item {
             const cx = width / 2, cy = height / 2;
             const dia = Math.min(width, height) - stroke;
 
-            // The ring baseline, arc-length parameterised so the wave's
-            // wavelength is even all the way round.
-            const cubics = MediaShapes.ringAt(canvas.ringNow);
-            const measure = PathLength.measureCubics(cubics);
-            function ringPoint(u) {
-                const target = u * measure.total;
-                let index = 0;
-                while (index < cubics.length - 1 && measure.lengths[index + 1] < target) index++;
-                const span = measure.lengths[index + 1] - measure.lengths[index];
-                const t = span > 0 ? (target - measure.lengths[index]) / span : 0;
-                const point = PathLength.pointOnCubic(cubics[index], t);
-                // raw shapes are centred on the origin at height 1
-                return { x: cx + point.x * dia, y: cy + point.y * dia };
-            }
-
             // Wavelength: 6 cycles across the bar; an INTEGER count around the
             // closed ring or the wave beats against its own seam (the spec's
             // arc-length note). 12 matches the cookie's lobes.
             const freq = Math.round(6 + (12 - 6) * canvas.bendNow);
             const amp = (canvas.playingNow ? stroke * 0.6 : 0);
 
-            const base = [];
-            for (let i = 0; i <= N; i++) {
-                const u = i / N;
-                const line = { x: pad + u * (width - 2 * pad), y: cy };
-                const ring = ringPoint(u);
-                base.push({ x: line.x + (ring.x - line.x) * canvas.bendNow,
-                            y: line.y + (ring.y - line.y) * canvas.bendNow });
-            }
+            const base = root.baselinePoints(N);
             // Normals from the RAW baseline, displaced into a second array.
             // Displacing in place fed each point's normal from an already-
             // displaced neighbour - a feedback loop that turned the sine into
@@ -151,16 +171,23 @@ Item {
 
     MouseArea {
         anchors.fill: parent
-        // A ring's hit area is its stroke, not its disc - a filled hit disc
-        // over the play button would eat the button's own clicks.
-        onPressed: mouse => root.seekTo(mouse)
+        // A ring's hit area is its STROKE, not its disc. The first version
+        // said so in this comment and then filled the rect anyway - at 2x2
+        // and 2x1 the ring sits on the play button, so every click on the
+        // button died here and play/pause stopped working at those spans.
+        // A press further than a few stroke-widths from the baseline is
+        // rejected, which hands it to whatever is underneath.
+        onPressed: mouse => {
+            if (root.strokeDistance(mouse.x, mouse.y) > root.lineWidthPx * 2.5) {
+                mouse.accepted = false;
+                return;
+            }
+            root.seekTo(mouse);
+        }
         onPositionChanged: mouse => { if (pressed) root.seekTo(mouse); }
-        enabled: MprisController.activePlayer !== null && (MprisController.activePlayer.canSeek ?? false)
     }
 
     function seekTo(mouse) {
-        const player = MprisController.activePlayer;
-        if (!player || !player.canSeek) return;
         let u;
         if (root.bend < 0.5) {
             u = Math.max(0, Math.min(1, (mouse.x - root.lineWidthPx) / (width - 2 * root.lineWidthPx)));
@@ -168,6 +195,9 @@ Item {
             u = (Math.atan2(mouse.y - height / 2, mouse.x - width / 2) + Math.PI / 2) / (2 * Math.PI);
             if (u < 0) u += 1;
         }
-        player.position = u * player.length;
+        root.sought(u);
+        const player = MprisController.activePlayer;
+        if (player && player.canSeek)
+            player.position = u * player.length;
     }
 }
