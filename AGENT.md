@@ -1207,6 +1207,17 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   `shapeName` parameter that turns the card into a stretched `MaterialShape` (which morphs on any
   shape change, because `ShapeCanvas` does). calendar is the one exempted copy until its scheduled
   rebuild. b362d8c80 ("feat(widgets): one card component for the surface every widget redrew").
+- **The resize grip accumulates tension; it does not pick the nearest span.** A widget holds its
+  span while pull builds, gives one offered span per 60px breakaway with the remainder carried, and
+  rubber-bands at a wall. `resize-tension.js` owns every constant and all of the arithmetic; the
+  host exposes the live bow as `resizeBow`, injected into wrappers as `hostResizeBow` by the same
+  duck-typed pattern as `hostGridSize`, and a `WidgetCard` renders it via `tensionX`/`tensionY`.
+  Two things to know before touching it: spent pull must move the gesture's origin (the grip
+  re-bases its press point by exactly what a give consumed, or the next mouse event re-delivers the
+  pull and the resize sprints to the largest span), and a sub-breakaway regression probe is only
+  meaningful at a span with somewhere to step - probed at a wall, both semantics hold the span and
+  the check is vacuous. ccde619bf ("feat(plugins): the grip accumulates tension instead of picking
+  the nearest span").
 - **A subclass cannot read `AbstractWidget.gridSize`: `PluginWidget` shadows it.** The base's
   `gridSize` is the 12px drag lattice; `PluginWidget` declares its own `gridSize`, the
   component-grid span (`{"cols": 2, "rows": 1}`). Code *inside* the base still resolves to the
