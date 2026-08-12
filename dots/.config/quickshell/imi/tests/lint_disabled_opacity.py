@@ -28,8 +28,18 @@ MODULES = ROOT / "modules"
 
 # A property of the root object: the repo indents QML with four spaces, so a
 # root-level binding sits at one level and anything nested sits deeper.
-ROOT_DIM = re.compile(r"^ {1,4}opacity:.*\benabled\b.*\?")
-NESTED_DIM = re.compile(r"^ {5,}opacity:.*\benabled\b.*\?")
+#
+# There are two ways a component says "disabled" now. The literal
+# `opacity: enabled ? 1 : 0.4` is the original; a control that adopted the
+# shared interaction model instead reads the dim off its driver
+# (`interactionMotion.dimOpacity`), and the model resolves the disabled state
+# from `enabled` itself. Both are a root-level dim and both must be recognised
+# - a detector that only knows the literal quietly stops seeing the adopters,
+# and the nested-dim rule below then passes vacuously for every component
+# rooted on one.
+DIM_SOURCE = r"(?:\benabled\b.*\?|\bdimOpacity\b)"
+ROOT_DIM = re.compile(r"^ {1,4}opacity:.*" + DIM_SOURCE)
+NESTED_DIM = re.compile(r"^ {5,}opacity:.*" + DIM_SOURCE)
 ROOT_TYPE = re.compile(r"^([A-Z]\w*)\s*\{")
 NESTED_TYPE = re.compile(r"^ {5,}([A-Z]\w*)\s*\{")
 
