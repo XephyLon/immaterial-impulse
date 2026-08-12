@@ -13,6 +13,13 @@ Item {
     implicitWidth: 420 * Appearance.effectiveScale
     implicitHeight: 228 * Appearance.effectiveScale
 
+    // Hosted by the media widget's one tree (nandoroid-media/Widget.qml): the
+    // tree owns the card, the transport, the slider and the time label, so
+    // this instance draws only what is unshared - title, artist, the lyrics
+    // page and its toggles. Standalone (the component registry) it stays the
+    // complete widget it always was.
+    property bool chromeless: false
+
     property bool showLyrics: Config.options.appearance.mediaWidget.showLyrics
     property bool useRomaji: Config.options.appearance.lyrics.lyricsUseRomaji
     property bool viewLyrics: false
@@ -33,6 +40,7 @@ Item {
     // Main Card Background. Card bg = play/pause icon color (user request).
     WidgetCard {
         id: bgCard
+        visible: !root.chromeless
         anchors.fill: parent
         useBlurBackground: root.useBlurBackground
         backgroundOpacity: root.backgroundOpacity
@@ -129,6 +137,7 @@ Item {
 
             // 3. BUTTONS (Centered, SANGAT BESAR)
             RowLayout {
+                visible: !root.chromeless
                 Layout.alignment: Qt.AlignHCenter
                 spacing: 12 * Appearance.effectiveScale
 
@@ -297,6 +306,7 @@ Item {
             // 4. DURASI SAAT INI / DURASI TOTAL (Centered with tabular figures)
             StyledText {
                 Layout.fillWidth: true
+                visible: !root.chromeless
                 horizontalAlignment: Text.AlignHCenter
                 text: Functions.StringUtils.friendlyTimeForSeconds(MprisController.position) + " / " + Functions.StringUtils.friendlyTimeForSeconds(MprisController.length)
                 font.pixelSize: Appearance.font.pixelSize.smallest
@@ -310,6 +320,7 @@ Item {
             // 5. PROGRESS BAR
             StyledSlider {
                 id: progressSlider
+                visible: !root.chromeless
                 Layout.preferredWidth: 170 * Appearance.effectiveScale
                 Layout.fillWidth: false
                 Layout.alignment: Qt.AlignHCenter
