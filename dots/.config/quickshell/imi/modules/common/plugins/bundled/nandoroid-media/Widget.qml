@@ -194,7 +194,18 @@ Item {
     // this slider exists only where the wavy bar does.
     Expressive.StyledSlider {
         id: progressSlider
-        visible: root.spanName === "3x2" && !root.lyricsUp && root.progressSlot !== null
+        objectName: "progressSlider"
+        // The seeker leaves by TRAVELLING, not by blinking out. Its slot at
+        // 2x1 is the play button's own rect (two concentric draws of one
+        // outline), so on a span change the wavy bar rides its geometry
+        // Behaviors into the button while fading, and the ring fades in
+        // there - a handoff at the same place, until step 7's one renderer
+        // makes it literally one element. `visible` follows the fade so a
+        // fully-faded slider costs nothing and takes no clicks.
+        readonly property bool shown: root.spanName === "3x2" && !root.lyricsUp && root.progressSlot !== null
+        opacity: shown ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveEffects } }
+        visible: opacity > 0
         x: root.progressSlot ? root.progressSlot.x : 0
         y: root.progressSlot ? root.progressSlot.y : 0
         width: root.progressSlot ? root.progressSlot.width : 0

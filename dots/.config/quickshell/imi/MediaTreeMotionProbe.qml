@@ -95,6 +95,50 @@ ShellRoot {
     Timer { id: s1; interval: 40;  onTriggered: harness.sampleNow("t40") }
     Timer { id: s2; interval: 120; onTriggered: harness.sampleNow("t120") }
     Timer { id: s3; interval: 240; onTriggered: harness.sampleNow("t240") }
+    property var fadeTrail: []
+    Timer { id: sld; interval: 1500; onTriggered: {
+        const slider = harness.findByName(widget, "progressSlider");
+        harness.sliderBefore = slider ? { x: slider.x, w: Math.round(slider.width), o: slider.opacity, v: slider.visible } : null;
+        // Signal capture, not timer sampling: a span change rebuilds loaders
+        // and can stall the event loop, firing sample timers after the fade
+        // is over. The signal records every value the property ever took.
+        if (slider) slider.opacityChanged.connect(() => harness.fadeTrail.push(slider.opacity));
+        // Act one left the widget at 2x2, where the seeker is already faded
+        // out - a 2x2 -> 2x1 commit fades 0 -> 0 and proves nothing (the
+        // first version of this act did exactly that and read an empty
+        // trail). Going BACK to 3x2 exercises the same Behavior as a fade-in.
+        widget.commitGridSize({ cols: 3, rows: 2 });
+        sldMidA.start(); sldMid.start(); sldEnd.start();
+    } }
+    // Two mid samples: the fade's window depends on the effects curve, and
+    // one sample can straddle it. Either being mid-fade satisfies the check.
+    Timer { id: sldMidA; interval: 50; onTriggered: {
+        const slider = harness.findByName(widget, "progressSlider");
+        if (slider) console.log(`[MediaTreeMotion] slider@50ms o=${slider.opacity.toFixed(3)} v=${slider.visible} shown=${slider.shown}`);
+        if (slider && slider.opacity > 0 && slider.opacity < 1 && slider.visible)
+            harness.sliderMid = { x: slider.x, w: Math.round(slider.width), o: slider.opacity, v: slider.visible };
+    } }
+    Timer { id: sldMid; interval: 130; onTriggered: {
+        const slider = harness.findByName(widget, "progressSlider");
+        if (harness.sliderMid === null && slider)
+            harness.sliderMid = { x: slider.x, w: Math.round(slider.width), o: slider.opacity, v: slider.visible };
+    } }
+    Timer { id: sldEnd; interval: 900; onTriggered: {
+        const slider = harness.findByName(widget, "progressSlider");
+        const mid = harness.sliderMid;
+        console.log(`[MediaTreeMotion] fade trail: ${harness.fadeTrail.map(o => o.toFixed(2)).join(" ")}`);
+        harness.check("the seeker fades mid-change instead of blinking",
+            harness.fadeTrail.some(o => o > 0.05 && o < 0.95));
+        harness.check("the seeker travels while it fades",
+            mid !== null && harness.sliderBefore !== null && mid.w !== harness.sliderBefore.w);
+        harness.check("a fully-arrived seeker is shown",
+            slider !== null && slider.visible === true && slider.opacity === 1);
+        console.log(`[MediaTreeMotion] failures: ${harness.failures}`);
+        Qt.quit();
+    } }
+    property var sliderBefore: null
+    property var sliderMid: null
+
     Timer { id: s4; interval: 900; onTriggered: {
         harness.sampleNow("settled");
         const first = harness.samples[0], last = harness.samples[harness.samples.length - 1];
@@ -113,7 +157,6 @@ ShellRoot {
             mids.some(s => (s.w - first.w) * (s.w - last.w) < 0));
         harness.check("the play button's y travels, not teleports",
             mids.some(s => (s.y - first.y) * (s.y - last.y) < 0));
-        console.log(`[MediaTreeMotion] failures: ${harness.failures}`);
-        Qt.quit();
+        sld.start();
     } }
 }
