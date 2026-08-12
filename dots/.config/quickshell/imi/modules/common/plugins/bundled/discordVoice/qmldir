@@ -1,0 +1,20 @@
+# Without this file none of the components below is a type for a component
+# loaded BY URL (PluginNode / PluginBarWidget `source:`): under Quickshell's
+# `qs:` scheme Qt adds no implicit import for the containing directory, so a
+# bare sibling reference fails with "X is not a type" - exactly how the media
+# widget's tree shipped broken. The bar's own DiscordVoicePlugin reaches this
+# package through a directory import, which happens to register types without
+# a qmldir - so the popup worked while Widget.qml and BarWidget.qml were
+# latent failures waiting for someone to place them. One qmldir serves every
+# load path. See docs/PLUGINS.md, "Multi-file packages".
+# Every component here, not only the ones referenced bare: a qmldir DISABLES
+# the directory-import auto-listing, so the moment this file exists, every
+# `DiscordPackage.X` consumer sees only what is listed. The registration lint
+# caught exactly that half-listing before it shipped.
+module DiscordVoiceWidget
+Widget Widget.qml
+BarWidget BarWidget.qml
+DiscordGlyph DiscordGlyph.qml
+DiscordVoicePopup DiscordVoicePopup.qml
+ParticipantAvatar ParticipantAvatar.qml
+TaskbarGlyph TaskbarGlyph.qml
