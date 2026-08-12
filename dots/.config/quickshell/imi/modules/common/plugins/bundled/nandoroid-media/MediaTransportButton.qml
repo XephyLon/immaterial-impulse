@@ -50,9 +50,10 @@ Item {
     // the curves are identical by construction.
     property real ringPhase: 0
     property bool ringWaves: false
-    // The seeker below this button (play only): presses near its stroke are
-    // handed down, the mirror of the routing it used to do from above.
-    property var seekerItem: null
+    // Play only: the seeker above this button reports hover it is holding
+    // on the button's behalf, so the glyph-over-art and hover styling work
+    // under the ring's cover.
+    property bool coveredHover: false
 
 
     readonly property bool isPlay: root.role === "play"
@@ -120,7 +121,7 @@ Item {
                     : root.span === "2x2" ? parent.height * 0.46
                     : 26 * Appearance.effectiveScale
                 fill: 0
-                color: hitArea.containsMouse
+                color: root.hoveredNow
                     ? (root.span === "3x2" && Appearance.m3colors.darkmode
                         ? Appearance.colors.colTertiaryContainer
                         : Appearance.colors.colPrimary)
@@ -352,7 +353,7 @@ Item {
                     anchors.fill: parent
                     radius: width / 2
                     color: Appearance.colors.colOnPrimary
-                    opacity: !artClip.artLoaded ? 0 : (hitArea.containsMouse ? 0.55 : 0)
+                    opacity: !artClip.artLoaded ? 0 : (root.hoveredNow ? 0.55 : 0)
                     Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration } }
                 }
             }
@@ -361,7 +362,7 @@ Item {
             // 2x2; everywhere else it is the button's face.
             Expressive.MaterialSymbol {
                 anchors.centerIn: parent
-                visible: !artClip.visible || !artClip.artLoaded || hitArea.containsMouse
+                visible: !artClip.visible || !artClip.artLoaded || root.hoveredNow
                 text: MprisController.isPlaying ? "pause" : "play_arrow"
                 iconSize: (root.span === "3x2" ? 40 : root.span === "2x2" ? 34 : 30) * Appearance.effectiveScale
                 fill: 0
@@ -378,7 +379,7 @@ Item {
                 radius: playRoot.side / 2
                 color: Appearance.colors.colOnPrimary
                 visible: root.span === "3x2"
-                opacity: hitArea.pressed ? 0.15 : (hitArea.containsMouse ? 0.08 : 0)
+                opacity: hitArea.pressed ? 0.15 : (root.hoveredNow ? 0.08 : 0)
                 Behavior on opacity { NumberAnimation { duration: 150 } }
             }
         }
@@ -391,22 +392,12 @@ Item {
     // interactive thing is topmost, so the bar's battle-tested pattern -
     // hoverEnabled + cursorShape on the input area itself - is sufficient
     // and unambiguous.
-    readonly property bool hoveredNow: hitArea.containsMouse
+    readonly property bool hoveredNow: hitArea.containsMouse || root.coveredHover
     MouseArea {
         id: hitArea
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onPressed: mouse => {
-            const seeker = root.seekerItem;
-            if (seeker && seeker.visible) {
-                const point = hitArea.mapToItem(seeker, mouse.x, mouse.y);
-                if (seeker.strokeDistance(point.x, point.y) <= seeker.lineWidthPx * 2.5) {
-                    mouse.accepted = false;
-                    return;
-                }
-            }
-        }
         onClicked: { root.activated(); root.trigger(); }
     }
 }
