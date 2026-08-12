@@ -1,4 +1,5 @@
 import QtQuick
+import qs.modules.common
 import qs.modules.common.plugins
 import "../../designsystem/widgets" as Expressive
 import "../../designsystem/services" as ExpressiveServices
@@ -14,11 +15,16 @@ Item {
     // `sizeMode` choice option of its own - a second mechanism for the concept
     // `__gridSize` now owns, in the same format.
     property string hostGridSize: ""
+    // One tree below: shared elements travel and the container morphs, so
+    // the host's midpoint dissolve yields.
+    readonly property bool handlesSpanTransition: true
     property point hostResizeBow: Qt.point(0, 0)
-    implicitWidth: content.implicitWidth
-    implicitHeight: content.implicitHeight
-    width: implicitWidth
-    height: implicitHeight
+    // Implicit from the SPAN; the content fills whatever the host gives -
+    // the host's animating box is the resize (weather's wrapper shipped the
+    // self-sized version of this and its card teleported).
+    readonly property int spanCols: parseInt((root.hostGridSize || "2x1")[0]) || 2
+    implicitWidth: Appearance.sizes.widgetGridSpanX(root.spanCols)
+    implicitHeight: Appearance.sizes.widgetGridSpanY(1)
     readonly property string baseCode: PluginState.option("nandoroid_currency", "baseCurrency", "USD")
     readonly property string quoteOne: PluginState.option("nandoroid_currency", "quote1", "EUR")
     readonly property string quoteTwo: PluginState.option("nandoroid_currency", "quote2", "GBP")
@@ -32,8 +38,7 @@ Item {
     Expressive.DesktopCurrencyWidget {
         id: content
         objectName: "nandoroidCurrencyContent"
-        width: implicitWidth
-        height: implicitHeight
+        anchors.fill: parent
         sizeMode: root.hostGridSize || "2x1"
         resizeBow: root.hostResizeBow
         useBlurBackground: PluginState.option("nandoroid_currency", "blurEnabled", false)
