@@ -134,8 +134,12 @@ function progressRect(span, width, height, scale) {
     if (span === "3x2") return sliderRect3x2(width, height, scale);
     if (span === "2x1") return transportRects(span, width, height, scale).play;
     if (span === "2x2") {
+        // A perfect circle INSIDE the play button (the review's words): the
+        // ring sits between the artwork (0.72) and the cookie's valleys.
         var frame = cookieFrame(width, height, scale);
-        return _rect(frame.x, frame.y, frame.size, frame.size);
+        var inner = frame.size * 0.82;
+        return _rect(frame.x + (frame.size - inner) / 2,
+                     frame.y + (frame.size - inner) / 2, inner, inner);
     }
     return null;
 }

@@ -85,12 +85,17 @@ TestCase {
                      "the artwork is centred in the button");
     }
 
-    function test_2x2_progress_reserves_the_cookie_frame() {
+    function test_2x2_progress_is_the_circle_inside_the_play_button() {
+        // The review's words: a perfect circle inside the play button,
+        // between the artwork (0.72 of the frame) and the cookie's valleys.
         const progress = Geometry.progressRect("2x2", 276, 228, 1);
-        const frame = Geometry.cookieFrame(276, 228, 1);
-        compare(progress.x, frame.x);
-        compare(progress.width, frame.size,
-                "the slot step 7's inner ring lands in");
+        const play = Geometry.transportRects("2x2", 276, 228, 1).play;
+        const art = Geometry.artworkRect("2x2", 276, 228, 1);
+        fuzzyCompare(progress.width, 204 * 0.82, 0.001);
+        verify(progress.width > art.width, "outside the artwork");
+        verify(progress.width < play.width, "inside the button");
+        fuzzyCompare(progress.x + progress.width / 2, play.x + play.width / 2, 0.001,
+                     "concentric with the button");
     }
 
     // ---- 2x1 -------------------------------------------------------------

@@ -5,3 +5,4 @@
 # See docs/PLUGINS.md, "Multi-file packages".
 module NandoroidMediaWidget
 MediaTransportButton MediaTransportButton.qml
+MediaSeeker MediaSeeker.qml
