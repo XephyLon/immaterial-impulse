@@ -263,6 +263,48 @@ the GPU")):
   ffmpeg's `-encoders` list advertises build capability, not working hardware — try encoders for
   real, in a ladder with a CPU floor.
 
+**ffmpeg's `tonemap` filter assumes a signal peak of 10× reference white (2030 nits) for PQ input,
+and that assumption is the difference between a recording that looks like the desktop and one that
+does not.** A desktop capture peaks around 235 nits — roughly 1.16× — so the converter was
+normalising the curve against a peak eight times too high and squeezing the whole image into the
+bottom eighth of it: SDR white came out of `tonemap-sdr.sh` at **136/255**, contrast collapsed with
+it, and every recording the user made was a region capture, which is the path that converts. The
+10× is a constant, not something derived from the file: `peak=10.0` reproduces the old output byte
+for byte. `scripts/videos/tonemap-sdr.sh` now measures the peak off the pixels (`signalstats` over
+keyframes only, downscaled first — bounded at 0.3s on a 5s 5120x1440 clip, and the result lands on
+the content's p99.99 rather than on one stray pixel) and passes it to every chain.
+fb9556757 ("fix(record): measure the tonemap's signal peak instead of assuming 10x").
+
+Four things around that are worth not re-deriving:
+
+- **gpu-screen-recorder stamps the *monitor's* EDID luminance into every recording** as
+  mastering-display and content-light-level metadata — on a 1015-nit panel every file claims
+  `MaxCLL 1015` whatever is on screen. This is a real defect and it is **not** what caused the
+  wash-out: the CPU `tonemap` filter never reads that metadata, and two fixtures tagged 250 and
+  1015 nits tonemap identically. It reaches only libplacebo, which does read it, which is why that
+  chain gets `src_max`. Correcting the file's metadata would fix nothing on the path that runs.
+  This is the same shape as the `playerctld` misdiagnosis under
+  [State propagation is reactive](#state-propagation-is-reactive-or-it-is-a-bug-waiting): a correct
+  observation about a real bug, that was not the bug in front of anyone.
+- **A peak *below* the signal's own values blacks the frame out**, it does not stretch it — measured
+  Y'=16 on a 100-nit clip given `peak=0.49`. So the measured peak is floored at 1.0, and a test for
+  that floor needs a two-sided band; the first version asserted only "not brighter than" and passed
+  on a black frame.
+- **The compositor is the only thing that converts this correctly, and the portal is how to reach
+  it.** grim and gsr's portal capture agree to 4.0/255 against each other, so either serves as the
+  reference for "what the desktop looks like"; the best ffmpeg chain scores 15.2. That gap is
+  Hyprland's own screencopy curve, which is not a linear-light inverse and cannot be matched by
+  `npl` alone — measured, the `npl` that reproduces white (134) and the one that minimises overall
+  error (203) are different numbers. Fullscreen recordings already take the portal. **Regions
+  cannot**: `-region` is rejected outright with `-w portal` ("option -region can only be used when
+  option '-w region' is used"), so the conversion is unavoidable there and its quality is capped.
+- **Scoring a colour conversion needs a static-pixel mask, not a screenshot pair.** A desktop moves
+  between two captures, and the drift swamps the effect being measured — the first pass here
+  "measured" a reference white of 204 nits that way and 134 once only pixels identical across
+  bracketing shots were compared. Bracket the recording with screenshots, keep pixels that match in
+  both *and* whose 3×3 neighbourhood is uniform (which kills subpixel edges), and report RMSE plus
+  what code 255 became.
+
 ## Directory map
 
 ```
