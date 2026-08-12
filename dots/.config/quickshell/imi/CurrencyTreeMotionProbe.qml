@@ -73,9 +73,16 @@ ShellRoot {
     }
 
     property string shotDir: Quickshell.env("CURRENCY_PROBE_SHOTS") || ""
-    function shoot(tag) {
-        if (harness.shotDir === "") return;
-        widget.grabToImage(result => result.saveToFile(`${harness.shotDir}/${tag}.png`));
+    // The grab renders a LATER frame, so anything that changes the widget has
+    // to wait for `andThen` - shooting and then committing the span in the
+    // same call captured the first frame of the transition and labelled it
+    // "settled".
+    function shoot(tag, andThen) {
+        if (harness.shotDir === "") { if (andThen) andThen(); return; }
+        widget.grabToImage(result => {
+            result.saveToFile(`${harness.shotDir}/${tag}.png`);
+            if (andThen) andThen();
+        });
     }
 
     readonly property var transitions: [
@@ -104,7 +111,11 @@ ShellRoot {
 
     function beginTransition() {
         const pair = harness.transitions[harness.transitionIndex];
-        harness.shoot(`${pair[0]}_settled`);
+        harness.shoot(`${pair[0]}_settled`, () => harness.driveTransition());
+    }
+
+    function driveTransition() {
+        const pair = harness.transitions[harness.transitionIndex];
         midShot.start();
         harness.trails = ({});
         const container = harness.findByName(widget, "currencyContainer");
