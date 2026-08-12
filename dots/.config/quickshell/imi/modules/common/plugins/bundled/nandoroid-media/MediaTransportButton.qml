@@ -60,21 +60,28 @@ Item {
         else MprisController.togglePlaying();
     }
 
-    // ---- 3x2 prev/next: the cassette reels -------------------------------
+    // ---- prev/next: one shape, every span --------------------------------
+    //
+    // The reel at 3x2 and the circle elsewhere are ONE MaterialShape whose
+    // `shape` follows the span - ShapeCanvas morphs on any polygon change
+    // (the wallpaper shape picker is the proof), so leaving 3x2 the scalloped
+    // reel gracefully rounds into the badge/pill circle instead of being a
+    // different object. The spin eases back to rest through the same
+    // Behavior that always owned it, so the reel stops turning as it stops
+    // being a reel.
     Loader {
-        active: !root.isPlay && root.span === "3x2"
+        active: !root.isPlay
         anchors.fill: parent
         sourceComponent: Item {
-            // Only the scalloped shape rotates; the icon and hit area are
-            // siblings so the skip glyph stays upright. Both cogs spin the
-            // same way like the two reels of a cassette while playing.
             Expressive.MaterialShape {
                 id: reelShape
                 anchors.fill: parent
-                shape: Expressive.MaterialShape.Shape.Cookie12Sided
+                shape: root.span === "3x2"
+                    ? Expressive.MaterialShape.Shape.Cookie12Sided
+                    : Expressive.MaterialShape.Shape.Circle
                 color: root.controlColor
 
-                property bool spinning: MprisController.isPlaying
+                property bool spinning: root.span === "3x2" && MprisController.isPlaying
                 RotationAnimator on rotation {
                     from: 0
                     to: 360
@@ -91,33 +98,15 @@ Item {
             Expressive.MaterialSymbol {
                 anchors.centerIn: parent
                 text: root.role === "prev" ? "skip_previous" : "skip_next"
-                iconSize: 28 * Appearance.effectiveScale
-                fill: 0
-                color: hitArea.containsMouse
-                    ? (Appearance.m3colors.darkmode ? Appearance.colors.colTertiaryContainer : Appearance.colors.colPrimary)
-                    : root.controlIconColor
-                Behavior on color { ColorAnimation { duration: 150 } }
-            }
-        }
-    }
-
-    // ---- 2x2/2x1 prev/next: the badge and pill circles -------------------
-    Loader {
-        active: !root.isPlay && root.span !== "3x2"
-        anchors.fill: parent
-        sourceComponent: Rectangle {
-            radius: height / 2
-            color: root.controlColor
-            Expressive.MaterialSymbol {
-                anchors.centerIn: parent
-                text: root.role === "prev" ? "skip_previous" : "skip_next"
-                // The badge sizes its glyph from its own height (the clock's
-                // ratio); the pill uses the layout's fixed 26.
-                iconSize: root.span === "2x2"
-                    ? parent.height * 0.46
+                iconSize: root.span === "3x2" ? 28 * Appearance.effectiveScale
+                    : root.span === "2x2" ? parent.height * 0.46
                     : 26 * Appearance.effectiveScale
                 fill: 0
-                color: hitArea.containsMouse ? Appearance.colors.colPrimary : root.controlIconColor
+                color: hitArea.containsMouse
+                    ? (root.span === "3x2" && Appearance.m3colors.darkmode
+                        ? Appearance.colors.colTertiaryContainer
+                        : Appearance.colors.colPrimary)
+                    : root.controlIconColor
                 Behavior on color { ColorAnimation { duration: Appearance.animation.elementMoveFast.duration } }
             }
         }
