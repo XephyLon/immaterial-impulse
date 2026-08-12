@@ -50,6 +50,9 @@ Item {
     // the curves are identical by construction.
     property real ringPhase: 0
     property bool ringWaves: false
+    // The seeker below this button (play only): presses near its stroke are
+    // handed down, the mirror of the routing it used to do from above.
+    property var seekerItem: null
 
 
     readonly property bool isPlay: root.role === "play"
@@ -389,9 +392,21 @@ Item {
         id: hoverState
         cursorShape: Qt.PointingHandCursor
     }
+    // For the pointer sweep: hover is behaviour, and behaviour gets probed.
+    readonly property bool hoveredNow: hoverState.hovered
     MouseArea {
         id: hitArea
         anchors.fill: parent
+        onPressed: mouse => {
+            const seeker = root.seekerItem;
+            if (seeker && seeker.visible) {
+                const point = hitArea.mapToItem(seeker, mouse.x, mouse.y);
+                if (seeker.strokeDistance(point.x, point.y) <= seeker.lineWidthPx * 2.5) {
+                    mouse.accepted = false;
+                    return;
+                }
+            }
+        }
         onClicked: { root.activated(); root.trigger(); }
     }
 }

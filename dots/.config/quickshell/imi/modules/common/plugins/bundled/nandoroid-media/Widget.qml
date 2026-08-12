@@ -145,7 +145,12 @@ Item {
         objectName: "playButton"
         ringPhase: seeker.phase
         ringWaves: seeker.waves && root.spanName === "2x1"
-        z: 1
+        // ABOVE the seeker: hover starves under a covering hover-accepting
+        // item (probed: play alone lost hover at exactly the two spans the
+        // ring covers it), so the button takes the top and hands presses
+        // near the stroke back down instead.
+        seekerItem: seeker
+        z: 3.5
         role: "play"
         span: root.spanName
         visible: !root.lyricsUp && root.transport !== null
