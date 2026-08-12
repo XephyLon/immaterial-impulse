@@ -44,6 +44,10 @@ Item {
     property real cardSpacing: 12 * Appearance.effectiveScale
     property real cardHeight: isVertical ? (108 * Appearance.effectiveScale) : (108 * Appearance.effectiveScale)
     property real cardWidth: isVertical ? (132 * Appearance.effectiveScale) : ((420 * Appearance.effectiveScale - cardSpacing * 2) / 3)
+    // The grip sits at the widget's bottom-right, so the tension lands on the
+    // card under it - thirdCard. All three bowing identically would read as
+    // jelly, not as a pull.
+    property point resizeBow: Qt.point(0, 0)
     readonly property var blurRegions: [
         cpuCard.blurRegion,
         ramCard.blurRegion,
@@ -247,6 +251,8 @@ Item {
             tint: Appearance.colors.colTertiaryContainer
             useBlurBackground: root.useBlurBackground
             backgroundOpacity: root.backgroundOpacity
+            tensionX: root.resizeBow.x
+            tensionY: root.resizeBow.y
 
             // Sisi Atas: Liquid Cookie12Sided (Centered Top)
             Item {

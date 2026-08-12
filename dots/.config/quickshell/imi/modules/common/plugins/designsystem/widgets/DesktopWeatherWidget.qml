@@ -14,6 +14,9 @@ Item {
     property var cfg: Config.ready ? Config.options.appearance.weatherWidget : null
     property string sizeMode: cfg ? cfg.sizeMode : "3x1"
     property bool useBlurBackground: false
+    // The grip's live tension, from the host through the wrapper. The card
+    // renders it; this widget only passes it along.
+    property point resizeBow: Qt.point(0, 0)
     // The host wrapper overrides this with its own plugin id; the fallback keeps
     // the toggle honoured for a component instantiated without one.
 
@@ -76,6 +79,8 @@ Item {
         useBlurBackground: root.useBlurBackground
         backgroundOpacity: root.backgroundOpacity
         clipContent: true
+        tensionX: root.resizeBow.x
+        tensionY: root.resizeBow.y
 
         // Layout Loader based on sizeMode
         Loader {

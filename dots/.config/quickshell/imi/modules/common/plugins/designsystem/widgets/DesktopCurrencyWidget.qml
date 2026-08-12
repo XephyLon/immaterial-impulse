@@ -15,6 +15,7 @@ Item {
     property var cfg: Config.ready ? Config.options.appearance.currencyWidget : null
     property string sizeMode: cfg ? cfg.sizeMode : "2x1"
     property bool useBlurBackground: false
+    property point resizeBow: Qt.point(0, 0)
     // The host wrapper overrides this with its own plugin id; the fallback keeps
     // the toggle honoured for a component instantiated without one.
 
@@ -90,6 +91,8 @@ Item {
         tint: Appearance.colors.colPrimaryContainer
         useBlurBackground: root.useBlurBackground
         backgroundOpacity: root.backgroundOpacity
+        tensionX: root.resizeBow.x
+        tensionY: root.resizeBow.y
 
         // --- PAGE 1: View Mode ---
         Item {

@@ -5,6 +5,7 @@ import "../../designsystem/widgets" as Expressive
 import "ThirdCard.js" as ThirdCard
 
 Item {
+    property point hostResizeBow: Qt.point(0, 0)
     readonly property var blurRegions: content.blurRegions
     readonly property bool managesBlurTint: content.managesBlurTint
     implicitWidth: content.implicitWidth
@@ -13,6 +14,7 @@ Item {
     height: implicitHeight
     Expressive.DesktopSystemMonitorWidget {
         id: content
+        resizeBow: root.hostResizeBow
         width: implicitWidth
         height: implicitHeight
         isVertical: PluginState.option("nandoroid_system_monitor", "vertical", false)
