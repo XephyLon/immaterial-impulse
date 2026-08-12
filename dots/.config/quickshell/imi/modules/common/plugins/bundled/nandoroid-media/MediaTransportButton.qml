@@ -120,7 +120,7 @@ Item {
                     : root.span === "2x2" ? parent.height * 0.46
                     : 26 * Appearance.effectiveScale
                 fill: 0
-                color: hoverState.hovered
+                color: hitArea.containsMouse
                     ? (root.span === "3x2" && Appearance.m3colors.darkmode
                         ? Appearance.colors.colTertiaryContainer
                         : Appearance.colors.colPrimary)
@@ -352,7 +352,7 @@ Item {
                     anchors.fill: parent
                     radius: width / 2
                     color: Appearance.colors.colOnPrimary
-                    opacity: !artClip.artLoaded ? 0 : (hoverState.hovered ? 0.55 : 0)
+                    opacity: !artClip.artLoaded ? 0 : (hitArea.containsMouse ? 0.55 : 0)
                     Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration } }
                 }
             }
@@ -361,7 +361,7 @@ Item {
             // 2x2; everywhere else it is the button's face.
             Expressive.MaterialSymbol {
                 anchors.centerIn: parent
-                visible: !artClip.visible || !artClip.artLoaded || hoverState.hovered
+                visible: !artClip.visible || !artClip.artLoaded || hitArea.containsMouse
                 text: MprisController.isPlaying ? "pause" : "play_arrow"
                 iconSize: (root.span === "3x2" ? 40 : root.span === "2x2" ? 34 : 30) * Appearance.effectiveScale
                 fill: 0
@@ -378,25 +378,25 @@ Item {
                 radius: playRoot.side / 2
                 color: Appearance.colors.colOnPrimary
                 visible: root.span === "3x2"
-                opacity: hitArea.pressed ? 0.15 : (hoverState.hovered ? 0.08 : 0)
+                opacity: hitArea.pressed ? 0.15 : (hitArea.containsMouse ? 0.08 : 0)
                 Behavior on opacity { NumberAnimation { duration: 150 } }
             }
         }
     }
 
-    // Hover through a HANDLER, not the MouseArea: handlers are cooperative,
-    // so the button still hovers (and shows its cursor) where the seeker's
-    // input area covers it - a plain MouseArea's containsMouse died under
-    // that cover, which froze hover styling and the pointer cursor.
-    HoverHandler {
-        id: hoverState
-        cursorShape: Qt.PointingHandCursor
-    }
-    // For the pointer sweep: hover is behaviour, and behaviour gets probed.
-    readonly property bool hoveredNow: hoverState.hovered
+    // Plain MouseArea hover, deliberately: the HoverHandler detour set two
+    // cooperative handlers arguing over the cursor (the seeker's, still
+    // hovered under the button, answered Arrow while this one answered
+    // pointing - the cursor never changed). The z ladder now guarantees the
+    // interactive thing is topmost, so the bar's battle-tested pattern -
+    // hoverEnabled + cursorShape on the input area itself - is sufficient
+    // and unambiguous.
+    readonly property bool hoveredNow: hitArea.containsMouse
     MouseArea {
         id: hitArea
         anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
         onPressed: mouse => {
             const seeker = root.seekerItem;
             if (seeker && seeker.visible) {

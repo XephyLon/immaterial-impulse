@@ -181,17 +181,16 @@ Item {
         }
     }
 
-    // The cursor points only near the stroke - the same distance test the
-    // press uses, so what invites a click is exactly what accepts one.
-    HoverHandler {
-        id: seekHover
-        cursorShape: seekHover.hovered
-            && root.strokeDistance(seekHover.point.position.x, seekHover.point.position.y)
-                <= root.lineWidthPx * 2.5
-            ? Qt.PointingHandCursor : Qt.ArrowCursor
-    }
     MouseArea {
         anchors.fill: parent
+        hoverEnabled: true
+        // The cursor points only near the stroke - the same distance test the
+        // press uses, so what invites a click is exactly what accepts one.
+        // On the input area itself, not a HoverHandler: two cooperative
+        // handlers on stacked items argue over the cursor and Arrow won.
+        cursorShape: containsMouse
+            && root.strokeDistance(mouseX, mouseY) <= root.lineWidthPx * 2.5
+            ? Qt.PointingHandCursor : Qt.ArrowCursor
         // A ring's hit area is its STROKE, not its disc. The first version
         // said so in this comment and then filled the rect anyway - at 2x2
         // and 2x1 the ring sits on the play button, so every click on the
