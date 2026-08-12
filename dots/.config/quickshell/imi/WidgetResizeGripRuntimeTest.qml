@@ -210,9 +210,16 @@ ShellRoot {
         harness.check(`${label}: the widget stays put`,
                       after.resizableX === harness.before.resizableX
                       && after.resizableY === harness.before.resizableY);
+        // Against the span REMEMBERED at the gesture's start, not a literal:
+        // the original hardcoded span 2 and was only ever called at 2x2, so
+        // the first caller at another span failed on a correct tree.
+        const spanCols = parseInt(harness.before.resizableSize[0]);
+        const spanRows = parseInt(harness.before.resizableSize[2]);
         harness.check(`${label}: the widget is back at its stored span`,
                       Math.round(resizableWidget.width)
-                          === Math.round(Appearance.sizes.widgetGridSpanX(2)));
+                          === Math.round(Appearance.sizes.widgetGridSpanX(spanCols))
+                      && Math.round(resizableWidget.height)
+                          === Math.round(Appearance.sizes.widgetGridSpanY(spanRows)));
     }
 
     // The control. A widget offering one span has no grip, so the same gesture
@@ -271,6 +278,18 @@ ShellRoot {
         () => harness.hoverGrip(resizableWidget),
         () => harness.dragPending(144, 120),
         () => harness.scoreResize("grow back to 3x2", "3x2"),
+
+        // The elastic model's discriminating case, and the exact inverse of
+        // the old semantics: a pull SHORT of the breakaway (60px) must not
+        // resize. It runs at 3x2 with an inward pull because a smaller span
+        // exists in that direction - probed at a wall, both semantics hold
+        // the span and the check proves nothing (measured, not guessed).
+        // Under nearest-span mapping a 40px drag stepped; under tension it
+        // builds bow and commits nothing.
+        () => harness.remember(),
+        () => harness.hoverGrip(resizableWidget),
+        () => harness.dragPending(-40, 0),
+        () => harness.scoreCancelled("a pull short of the breakaway"),
 
         () => harness.remember(),
         () => harness.hoverGrip(resizableWidget),
