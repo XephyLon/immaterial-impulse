@@ -279,6 +279,23 @@ ShellRoot {
     } }
     Timer { id: waveShot; interval: 400; onTriggered: {
         harness.shoot("wave_forced");
+        wave2x1.start();
+    } }
+    Timer { id: wave2x1; interval: 200; onTriggered: {
+        widget.commitGridSize({ cols: 2, rows: 1 });
+        wave2x1Shot.start();
+    } }
+    Timer { id: wave2x1Shot; interval: 900; onTriggered: {
+        const seeker = harness.findByName(widget, "progressSlider");
+        if (seeker) { seeker.playing = true; seeker.progress = 0.6; }
+        wave2x1Final.start();
+    } }
+    Timer { id: wave2x1Final; interval: 400; onTriggered: {
+        harness.shoot("wave2x1_forced");
+        widget.commitGridSize({ cols: 3, rows: 2 });
+        restore3x2.start();
+    } }
+    Timer { id: restore3x2; interval: 900; onTriggered: {
         const seeker = harness.findByName(widget, "progressSlider");
         if (seeker) {
             seeker.playing = Qt.binding(() => MprisController.isPlaying);
