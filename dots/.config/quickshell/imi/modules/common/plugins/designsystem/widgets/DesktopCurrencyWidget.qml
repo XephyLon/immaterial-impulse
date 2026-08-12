@@ -20,9 +20,7 @@ Item {
 
     property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("", 0.1)
     readonly property bool managesBlurTint: true
-    readonly property var blurRegions: [{
-        x: card.x, y: card.y, width: card.width, height: card.height, radius: card.radius
-    }]
+    readonly property var blurRegions: [card.blurRegion]
     signal baseCurrencyRequested(string value)
     signal quoteCurrencyRequested(int index, string value)
 
@@ -84,15 +82,14 @@ Item {
             Qt.locale(), "f", CurrencyMath.fractionDigits(value));
     }
 
-    // Main Card Rectangle (Colored using colPrimaryContainer)
-    Rectangle {
+    // The shared card, on the currency tint.
+    WidgetCard {
         id: card
         objectName: "nandoroidCurrencyCard"
         anchors.fill: parent
-        radius: 30 * Appearance.effectiveScale
-        color: root.useBlurBackground
-            ? Functions.ColorUtils.applyAlpha(Appearance.colors.colPrimaryContainer, root.backgroundOpacity)
-            : Appearance.colors.colPrimaryContainer
+        tint: Appearance.colors.colPrimaryContainer
+        useBlurBackground: root.useBlurBackground
+        backgroundOpacity: root.backgroundOpacity
 
         // --- PAGE 1: View Mode ---
         Item {
