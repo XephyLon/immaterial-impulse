@@ -64,6 +64,29 @@ def main() -> int:
         text = path.read_text(encoding="utf-8")
         directory = path.parent.resolve()
 
+        # Bare same-directory siblings in a bundled package with NO qmldir.
+        # A package component loaded BY URL (PluginNode / PluginBarWidget
+        # `source:`) gets no implicit directory import under the qs: scheme,
+        # so the reference fails at scene load - MediaTransportButton shipped
+        # exactly this way and every media widget vanished. A file reached
+        # only through a DIRECTORY import would resolve bare (that is how the
+        # bar's discord popup worked while the same package's Widget.qml was
+        # a latent failure), but which load path reaches a file is invisible
+        # here and one qmldir serves both - so the rule is uniform.
+        # See docs/PLUGINS.md, Multi-file packages.
+        in_bundled_package = "bundled" in path.relative_to(ROOT).parts
+        if in_bundled_package and directory not in modules:
+            for sibling in directory.glob("*.qml"):
+                name = sibling.stem
+                if sibling == path or not name[:1].isupper():
+                    continue
+                if re.search(rf"(?<![\w.\"/]){name}\s*\{{", text):
+                    failures.append(
+                        f"{path.relative_to(ROOT)}: uses sibling `{name}` but the "
+                        f"package has no qmldir - under the qs: URL scheme there is "
+                        f"no implicit directory import, so this fails at scene load. "
+                        f"Add a qmldir listing it (docs/PLUGINS.md, Multi-file packages).")
+
         # Bare same-directory siblings under a qmldir.
         if directory in modules:
             listed = modules[directory]
