@@ -6,30 +6,40 @@ import "."
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
+import "weather_geometry.js" as Geometry
+import "weather_shapes.js" as WeatherShapes
 
+// The weather widget as ONE tree (spec 2026-08-11, §3b - this widget is the
+// element the morphing design was specified around).
+//
+// It used to be a Loader over three inline Components, so a span change
+// destroyed one layout and constructed another: the temperature at 3x1 and
+// the temperature at 1x1 were different objects, and the glyph's container
+// was three different TYPES - a Ghostish MaterialShape, a radius-30 panel and
+// a radius-16 leaf. Now the shared three - temperature, condition, the glyph
+// container - are declared once and travel; the container is one canvas whose
+// shape is a parameter, morphing Ghostish -> panel -> leaf through
+// weather_shapes.js. The card's content clip is what cuts the leaf at the
+// corner, which is the half the spec called unsolved before the card owned
+// clipping.
+//
+// Unshared content (feels-like at 2x1; high/low, the divider and the badge
+// pills at 3x1) fades and scales - it has nothing to morph into.
 Item {
     id: root
-    
-    // Config configuration linkage
+
     property var cfg: Config.ready ? Config.options.appearance.weatherWidget : null
     property string sizeMode: cfg ? cfg.sizeMode : "3x1"
     property bool useBlurBackground: false
-    // The grip's live tension, from the host through the wrapper. The card
-    // renders it; this widget only passes it along.
     property point resizeBow: Qt.point(0, 0)
-    // The host wrapper overrides this with its own plugin id; the fallback keeps
-    // the toggle honoured for a component instantiated without one.
 
     property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("", 0.1)
     readonly property bool managesBlurTint: true
     readonly property var blurRegions: [card.blurRegion]
-    
-    // Choice A Grid System Specs
+
     readonly property real baseWidth: 132 * Appearance.effectiveScale
     readonly property real baseHeight: 108 * Appearance.effectiveScale
     readonly property real gap: 12 * Appearance.effectiveScale
-    
-    // Snap mode dimensions
     readonly property real width1x1: baseWidth
     readonly property real width2x1: (baseWidth * 2) + gap
     readonly property real width3x1: (baseWidth * 3) + (gap * 2)
@@ -41,14 +51,17 @@ Item {
         return width3x1;
     }
 
-    // CustomIcon lives one directory below this imported widget's former location.
-    // Walk back to the shared, preserved upstream icon set at repository /assets.
+    // Geometry evaluates at the span's SETTLED box (the media tree's lesson:
+    // live-box rects made size snap and are per-frame Behavior targets, the
+    // frozen-Behavior shape). Rects change once per span; Behaviors carry.
+    readonly property real spanW: root.implicitWidth
+    readonly property real spanH: root.baseHeight
+    readonly property var tempSlot: Geometry.temperatureRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+    readonly property var conditionSlot: Geometry.conditionRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+    readonly property var glyphSlot: Geometry.glyphRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+
     readonly property string weatherIconsDir: "../../../../assets/icons/google-weather"
     readonly property color contentColor: Appearance.m3colors.m3onSurface
-    readonly property real midOpacity: 0.8
-    readonly property real lowOpacity: 0.6
-    // Adapt end4's OpenWeather service schema to the original nandoroid visual.
-    // The widget remains visually unchanged; only its data source is translated.
     readonly property var weatherData: Weather.data || ({})
     readonly property string temperature: (weatherData.temp || "--").replace(/[^0-9+\-.]/g, "")
     readonly property string feelsLike: (weatherData.tempFeelsLike || "--").replace(/[^0-9+\-.]/g, "")
@@ -68,11 +81,17 @@ Item {
         return "cloudy"
     }
 
+    component TravelBehavior: NumberAnimation {
+        duration: Appearance.animation.elementMove.duration
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
+    }
+    component FadeBehavior: NumberAnimation {
+        duration: Appearance.animation.elementMove.duration
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+    }
 
-
-    // The shared card. Clipped so the split vertical panels and slanted leaves
-    // cut cleanly at the rounded corners; tint and blur-thinning are the
-    // card's own logic now rather than this widget's.
     WidgetCard {
         id: card
         anchors.fill: parent
@@ -82,289 +101,197 @@ Item {
         tensionX: root.resizeBow.x
         tensionY: root.resizeBow.y
 
-        // Layout Loader based on sizeMode
-        Loader {
-            anchors.fill: parent
-            sourceComponent: {
-                if (root.sizeMode === "1x1") return mode1x1Layout;
-                if (root.sizeMode === "2x1") return mode2x1Layout;
-                return mode3x1Layout;
+        // ---- shared: the glyph container, one shape-parameterised canvas --
+        Item {
+            id: glyph
+            objectName: "weatherGlyph"
+            x: root.glyphSlot.x
+            y: root.glyphSlot.y
+            width: root.glyphSlot.width
+            height: root.glyphSlot.height
+            rotation: root.glyphSlot.rotation
+            Behavior on x { TravelBehavior {} }
+            Behavior on y { TravelBehavior {} }
+            Behavior on width { TravelBehavior {} }
+            Behavior on height { TravelBehavior {} }
+            Behavior on rotation { TravelBehavior {} }
+
+            Canvas {
+                id: glyphCanvas
+                anchors.fill: parent
+
+                // The morph: on every span change the previous shape becomes
+                // the start and morphT runs 0 -> 1 (the ShapeCanvas idiom).
+                property string shownShape: root.glyphSlot.shape
+                property string fromShape: root.glyphSlot.shape
+                property real morphT: 1
+                Behavior on morphT { TravelBehavior {} }
+                readonly property string targetShape: root.glyphSlot.shape
+                onTargetShapeChanged: {
+                    glyphCanvas.fromShape = glyphCanvas.shownShape;
+                    glyphCanvas.shownShape = glyphCanvas.targetShape;
+                    morphT = 0;
+                    morphT = 1;
+                }
+                readonly property color fillColor: Appearance.colors.colPrimary
+
+                onMorphTChanged: requestPaint()
+                onFillColorChanged: requestPaint()
+                onWidthChanged: requestPaint()
+                onHeightChanged: requestPaint()
+                onAvailableChanged: if (available) requestPaint()
+
+                onPaint: {
+                    const ctx = getContext("2d");
+                    ctx.clearRect(0, 0, width, height);
+                    const shape = WeatherShapes.containerAt(
+                        glyphCanvas.fromShape, glyphCanvas.shownShape, glyphCanvas.morphT);
+                    if (shape.cubics.length === 0) return;
+                    const spanX = Math.max(0.001, shape.maxX - shape.minX);
+                    const spanY = Math.max(0.001, shape.maxY - shape.minY);
+                    const scale = Math.min(width / spanX, height / spanY);
+                    ctx.save();
+                    ctx.translate(width / 2 - (shape.minX + spanX / 2) * scale,
+                                  height / 2 - (shape.minY + spanY / 2) * scale);
+                    ctx.scale(scale, scale);
+                    ctx.beginPath();
+                    ctx.moveTo(shape.cubics[0].anchor0X, shape.cubics[0].anchor0Y);
+                    for (const cubic of shape.cubics)
+                        ctx.bezierCurveTo(cubic.control0X, cubic.control0Y,
+                            cubic.control1X, cubic.control1Y, cubic.anchor1X, cubic.anchor1Y);
+                    ctx.closePath();
+                    ctx.fillStyle = glyphCanvas.fillColor;
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            CustomIcon {
+                anchors.centerIn: parent
+                source: root.weatherIcon
+                iconFolder: root.weatherIconsDir
+                width: root.glyphSlot.icon
+                height: root.glyphSlot.icon
+                Behavior on width { TravelBehavior {} }
+                Behavior on height { TravelBehavior {} }
+                colorize: true
+                color: Appearance.colors.colOnPrimary
+                // The leaf slants; the glyph inside stays upright.
+                rotation: -glyph.rotation
             }
         }
 
-        // ──────────────────────────────
-        // TATA LETAK 1x1
-        // ──────────────────────────────
-        Component {
-            id: mode1x1Layout
-            Item {
-                anchors.fill: parent
-
-                // Kiri Atas: Suhu Utama Sangat Besar
-                ColumnLayout {
-                    anchors {
-                        left: parent.left
-                        top: parent.top
-                        leftMargin: 16 * Appearance.effectiveScale
-                        topMargin: 14 * Appearance.effectiveScale
-                    }
-                    spacing: 2 * Appearance.effectiveScale
-
-                    StyledText {
-                        text: root.temperature + "°"
-                        font.pixelSize: Math.round(44 * Appearance.effectiveScale)
-                        font.weight: Font.Bold
-                        color: Appearance.colors.colPrimary
-                    }
-
-                    StyledText {
-                        text: root.condition
-                        font.pixelSize: Appearance.font.pixelSize.smallest
-                        font.weight: Font.Medium
-                        color: root.contentColor
-                        opacity: 0.8
-                        wrapMode: Text.WordWrap
-                        maximumLineCount: 2
-                        Layout.maximumWidth: 58 * Appearance.effectiveScale // Clean wrap before reaching the leaf
-                    }
-                }
-
-                // Kanan Bawah: Giant Slanted Leaf Overlay (Rotated Pill overlapping the edge)
-                Item {
-                    width: 50 * Appearance.effectiveScale
-                    height: 50 * Appearance.effectiveScale
-                    
-                    anchors {
-                        right: parent.right
-                        bottom: parent.bottom
-                        rightMargin: -6 * Appearance.effectiveScale // Elegant overlap
-                        bottomMargin: -6 * Appearance.effectiveScale
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 16 * Appearance.effectiveScale
-                        color: Appearance.colors.colPrimary
-                        rotation: -22 // Bold Android slanted shape
-                    }
-
-                    CustomIcon {
-                        anchors.centerIn: parent
-                        source: root.weatherIcon
-                        iconFolder: root.weatherIconsDir
-                        width: 28 * Appearance.effectiveScale
-                        height: 28 * Appearance.effectiveScale
-                        colorize: true
-                        color: Appearance.colors.colOnPrimary
-                        rotation: 22 // Rotate icon back straight
-                    }
-                }
-            }
+        // ---- shared: temperature ------------------------------------------
+        StyledText {
+            objectName: "weatherTemp"
+            x: root.tempSlot.x
+            y: root.tempSlot.y
+            Behavior on x { TravelBehavior {} }
+            Behavior on y { TravelBehavior {} }
+            text: root.temperature + "°"
+            font.pixelSize: Math.round(root.tempSlot.size)
+            Behavior on font.pixelSize { TravelBehavior {} }
+            font.weight: Font.Bold
+            color: Appearance.colors.colPrimary
         }
 
-        // ──────────────────────────────
-        // TATA LETAK 2x1
-        // ──────────────────────────────
-        Component {
-            id: mode2x1Layout
-            Item {
-                anchors.fill: parent
+        // ---- shared: condition --------------------------------------------
+        StyledText {
+            objectName: "weatherCondition"
+            x: root.conditionSlot.x
+            y: root.conditionSlot.y
+            width: root.conditionSlot.w
+            Behavior on x { TravelBehavior {} }
+            Behavior on y { TravelBehavior {} }
+            Behavior on width { TravelBehavior {} }
+            text: root.condition
+            font.pixelSize: root.sizeMode === "1x1" ? Appearance.font.pixelSize.smallest
+                : root.sizeMode === "2x1" ? Appearance.font.pixelSize.normal
+                : Appearance.font.pixelSize.large
+            font.weight: root.sizeMode === "1x1" ? Font.Medium : Font.DemiBold
+            color: root.contentColor
+            opacity: root.sizeMode === "1x1" ? 0.8 : 1
+            Behavior on opacity { FadeBehavior {} }
+            elide: root.sizeMode === "1x1" ? Text.ElideNone : Text.ElideRight
+            wrapMode: root.sizeMode === "1x1" ? Text.WordWrap : Text.NoWrap
+            maximumLineCount: root.sizeMode === "1x1" ? 2 : 1
+        }
 
-                // Area Kiri: Info Cuaca Vertikal - Terpusat Vertikal Secara Geometris
-                ColumnLayout {
-                    id: textCol
-                    spacing: 2 * Appearance.effectiveScale
-                    
-                    anchors {
-                        left: parent.left
-                        right: rightIconCard.left
-                        verticalCenter: parent.verticalCenter
-                        leftMargin: 20 * Appearance.effectiveScale
-                        rightMargin: 12 * Appearance.effectiveScale
-                    }
+        // ---- unshared: enters and exits -----------------------------------
+        StyledText {
+            // 2x1 only
+            x: 20 * Appearance.effectiveScale
+            y: 84 * Appearance.effectiveScale
+            text: `Feels like ${root.feelsLike}°`
+            font.pixelSize: Appearance.font.pixelSize.smallest
+            color: root.contentColor
+            opacity: root.sizeMode === "2x1" ? 0.6 : 0
+            Behavior on opacity { FadeBehavior {} }
+            visible: opacity > 0
+        }
 
-                    StyledText {
-                        text: root.temperature + "°"
-                        font.pixelSize: Math.round(44 * Appearance.effectiveScale)
-                        font.weight: Font.Bold
-                        color: Appearance.colors.colPrimary
-                    }
+        StyledText {
+            // 3x1 only
+            x: 20 * Appearance.effectiveScale
+            y: 74 * Appearance.effectiveScale
+            text: `High ${root.highTemperature}° · Low ${root.lowTemperature}°`
+            font.pixelSize: Appearance.font.pixelSize.smallest
+            color: root.contentColor
+            opacity: root.sizeMode === "3x1" ? 0.6 : 0
+            Behavior on opacity { FadeBehavior {} }
+            visible: opacity > 0
+        }
 
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: root.condition
-                        font.pixelSize: Appearance.font.pixelSize.normal
-                        font.weight: Font.DemiBold
-                        color: root.contentColor
-                        elide: Text.ElideRight
-                    }
+        Rectangle {
+            // 3x1 only: the column divider
+            x: 132 * Appearance.effectiveScale
+            y: 16 * Appearance.effectiveScale
+            width: 1
+            height: root.spanH - 32 * Appearance.effectiveScale
+            color: root.contentColor
+            opacity: root.sizeMode === "3x1" ? 0.15 : 0
+            Behavior on opacity { FadeBehavior {} }
+            visible: opacity > 0
+        }
 
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: `Feels like ${root.feelsLike}°`
-                        font.pixelSize: Appearance.font.pixelSize.smallest
-                        color: root.contentColor
-                        opacity: 0.6
-                        elide: Text.ElideRight
-                    }
-                }
+        RowLayout {
+            // 3x1 only: the humidity and wind pills
+            x: 148 * Appearance.effectiveScale
+            y: 60 * Appearance.effectiveScale
+            spacing: 8 * Appearance.effectiveScale
+            opacity: root.sizeMode === "3x1" ? 1 : 0
+            Behavior on opacity { FadeBehavior {} }
+            visible: opacity > 0
 
-                // Area Kanan: Split Solid Panel dengan sudut KIRI membulat (Rounded Left Edge)
+            Repeater {
+                model: [
+                    { icon: "humidity_mid", value: root.humidity },
+                    { icon: "air", value: root.wind }
+                ]
                 Rectangle {
-                    id: rightIconCard
-                    width: 76 * Appearance.effectiveScale
-                    radius: 30 * Appearance.effectiveScale // Rounds the left-top and left-bottom edges beautifully
-                    color: Appearance.colors.colPrimary
-                    
-                    anchors {
-                        right: parent.right
-                        top: parent.top
-                        bottom: parent.bottom
-                    }
-
-                    CustomIcon {
-                        anchors.centerIn: parent
-                        source: root.weatherIcon
-                        iconFolder: root.weatherIconsDir
-                        width: 36 * Appearance.effectiveScale
-                        height: 36 * Appearance.effectiveScale
-                        colorize: true
-                        color: Appearance.colors.colOnPrimary
-                    }
-                }
-            }
-        }
-
-        // ──────────────────────────────
-        // TATA LETAK 3x1
-        // ──────────────────────────────
-        Component {
-            id: mode3x1Layout
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 16 * Appearance.effectiveScale
-                anchors.leftMargin: 20 * Appearance.effectiveScale
-                spacing: 16 * Appearance.effectiveScale
-
-                // 1. Suhu Utama Raksasa di Kiri
-                ColumnLayout {
-                    Layout.alignment: Qt.AlignVCenter
-                    spacing: 2 * Appearance.effectiveScale
-
-                    StyledText {
-                        text: root.temperature + "°"
-                        font.pixelSize: Math.round(48 * Appearance.effectiveScale)
-                        font.weight: Font.Bold
-                        color: Appearance.colors.colPrimary
-                    }
-                    
-                    StyledText {
-                        text: `High ${root.highTemperature}° · Low ${root.lowTemperature}°`
-                        font.pixelSize: Appearance.font.pixelSize.smallest
-                        color: root.contentColor
-                        opacity: 0.6
-                    }
-                }
-
-                // Divider line vertical
-                Rectangle {
-                    Layout.fillHeight: true
-                    Layout.preferredWidth: 1
-                    color: root.contentColor
-                    opacity: 0.15
-                }
-
-                // 2. Deskripsi & Mini Badge Pills
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter
-                    spacing: 8 * Appearance.effectiveScale
-
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: root.condition
-                        font.pixelSize: Appearance.font.pixelSize.large
-                        font.weight: Font.DemiBold
-                        color: root.contentColor
-                        elide: Text.ElideRight
-                    }
-
+                    required property var modelData
+                    Layout.preferredHeight: 22 * Appearance.effectiveScale
+                    implicitWidth: pillRow.implicitWidth + (16 * Appearance.effectiveScale)
+                    radius: 11 * Appearance.effectiveScale
+                    color: Appearance.m3colors.darkmode ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.05)
                     RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 8 * Appearance.effectiveScale
-
-                        // Humidity Badge (Clean Solid Text via RGBA Background Color)
-                        Rectangle {
-                            Layout.preferredHeight: 22 * Appearance.effectiveScale
-                            implicitWidth: humidityLayout.implicitWidth + (16 * Appearance.effectiveScale)
-                            radius: 11 * Appearance.effectiveScale
-                            color: Appearance.m3colors.darkmode ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.05)
-
-                            RowLayout {
-                                id: humidityLayout
-                                anchors.centerIn: parent
-                                spacing: 4 * Appearance.effectiveScale
-                                MaterialSymbol {
-                                    iconSize: 14 * Appearance.effectiveScale
-                                    text: "humidity_mid"
-                                    color: Appearance.colors.colPrimary
-                                }
-                                StyledText {
-                                    text: root.humidity
-                                    font.pixelSize: Appearance.font.pixelSize.smallest
-                                    font.weight: Font.DemiBold
-                                    color: root.contentColor
-                                }
-                            }
-                        }
-
-                        // Wind Speed Badge (Clean Solid Text via RGBA Background Color)
-                        Rectangle {
-                            Layout.preferredHeight: 22 * Appearance.effectiveScale
-                            implicitWidth: windLayout.implicitWidth + (16 * Appearance.effectiveScale)
-                            radius: 11 * Appearance.effectiveScale
-                            color: Appearance.m3colors.darkmode ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.05)
-
-                            RowLayout {
-                                id: windLayout
-                                anchors.centerIn: parent
-                                spacing: 4 * Appearance.effectiveScale
-                                MaterialSymbol {
-                                    iconSize: 14 * Appearance.effectiveScale
-                                    text: "air"
-                                    color: Appearance.colors.colPrimary
-                                }
-                                StyledText {
-                                    text: root.wind
-                                    font.pixelSize: Appearance.font.pixelSize.smallest
-                                    font.weight: Font.DemiBold
-                                    color: root.contentColor
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 3. Ikon Cuaca berbentuk Ghostish Raksasa (Estetika Premium & Anti-Luber) di Kanan
-                MaterialShape {
-                    Layout.alignment: Qt.AlignVCenter
-                    implicitWidth: 72 * Appearance.effectiveScale
-                    implicitHeight: 72 * Appearance.effectiveScale
-                    shape: MaterialShape.Shape.Ghostish // Sleek asymmetric wavy shape
-                    color: Appearance.colors.colPrimary
-
-                    CustomIcon {
+                        id: pillRow
                         anchors.centerIn: parent
-                        source: root.weatherIcon
-                        iconFolder: root.weatherIconsDir
-                        width: 42 * Appearance.effectiveScale
-                        height: 42 * Appearance.effectiveScale
-                        colorize: true
-                        color: Appearance.colors.colOnPrimary
+                        spacing: 4 * Appearance.effectiveScale
+                        MaterialSymbol {
+                            iconSize: 14 * Appearance.effectiveScale
+                            text: parent.parent.modelData.icon
+                            color: Appearance.colors.colPrimary
+                        }
+                        StyledText {
+                            text: parent.parent.modelData.value
+                            font.pixelSize: Appearance.font.pixelSize.smallest
+                            font.weight: Font.DemiBold
+                            color: root.contentColor
+                        }
                     }
                 }
             }
         }
-
     }
 }

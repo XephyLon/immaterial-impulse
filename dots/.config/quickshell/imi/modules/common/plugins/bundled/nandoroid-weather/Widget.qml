@@ -12,6 +12,10 @@ Item {
     // `sizeMode` choice option of its own - a second mechanism for the concept
     // `__gridSize` now owns, in the same format.
     property string hostGridSize: ""
+    // One tree below: the shared elements travel and the glyph container
+    // morphs, so the host's midpoint dissolve would put a fade over elements
+    // that deliberately never disappear.
+    readonly property bool handlesSpanTransition: true
     property point hostResizeBow: Qt.point(0, 0)
     implicitWidth: content.implicitWidth
     implicitHeight: content.implicitHeight
