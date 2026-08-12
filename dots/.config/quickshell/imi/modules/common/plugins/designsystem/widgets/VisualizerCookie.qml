@@ -116,14 +116,28 @@ Item {
     // is drawn at a fixed scale rather than normalized() for the same class of
     // reason: normalizing refits every frame, so a lobe pushing out would
     // shrink the other eleven instead of standing out.
+    // Whether this cookie has actually put pixels up - a host that swaps its
+    // own static stand-in for the live cookie must not do so on faith, or a
+    // dropped first paint leaves an empty face (measured in the media probe's
+    // sandbox, where exactly that happened).
+    readonly property bool hasPainted: canvas.paintCount > 0
+
     Canvas {
         id: canvas
+        property int paintCount: 0
         anchors.fill: parent
 
         onWidthChanged: requestPaint()
         onHeightChanged: requestPaint()
+        // A requestPaint issued before the canvas is available is dropped,
+        // and rebuild() runs from Component.onCompleted - earlier than
+        // availability when the host's size is already settled (a fixed-size
+        // Loader). On the desktop a transition resizes the canvas and hides
+        // the miss; in a static host the cookie simply never appears.
+        onAvailableChanged: if (available) requestPaint()
 
         onPaint: {
+            canvas.paintCount++;
             const ctx = getContext("2d");
             ctx.clearRect(0, 0, width, height);
             if (!root.polygon)

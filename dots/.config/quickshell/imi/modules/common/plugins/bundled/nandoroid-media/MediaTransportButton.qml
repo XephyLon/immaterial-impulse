@@ -42,6 +42,9 @@ Item {
     property real progress: 0
     // 2x2 play only: the artwork.
     property string artUrl: ""
+    // 2x2 play only: whether the tree-level visualizer cookie has painted -
+    // the static body yields only on this proof.
+    property bool liveCookiePainted: false
 
     readonly property bool isPlay: root.role === "play"
 
@@ -141,6 +144,21 @@ Item {
             Canvas {
                 id: body
                 anchors.fill: parent
+                // At settled 2x2 the LIVE cookie (the visualizer) is the body,
+                // and this static twin yields - stacked, the static cookie
+                // masked every inward ripple and the visualizer read as
+                // frozen. During any transition the static body carries the
+                // morph and the visualizer is the one that yields.
+                // ...and only on PROOF: the host tells this button its live
+                // cookie has actually painted before the static body steps
+                // aside. A dropped or non-compositing first paint otherwise
+                // leaves the whole face blank - the sandbox reproduced that
+                // with the visualizer nested in here, which is why it lives
+                // at tree level now (the configuration that demonstrably
+                // paints) and reports back through this flag.
+                opacity: root.span === "2x2" && root.liveCookiePainted
+                    && Math.abs(morphT - 1) < 0.01 ? 0 : 1
+                Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration } }
 
                 property real morphT: root.span === "3x2" ? 0 : 1
                 Behavior on morphT { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
@@ -178,25 +196,16 @@ Item {
                 }
             }
 
-            // The living cookie: audio-reactive lobes over the static body at
-            // 2x2. It fades in over a body that is already the same cookie, so
-            // its arrival is a shimmer, not an appearance.
-            Loader {
-                anchors.fill: parent
-                active: root.span === "2x2"
-                sourceComponent: Expressive.VisualizerCookie {
-                    lobes: 12
-                    audioReactive: MprisController.isPlaying
-                    color: Appearance.colors.colPrimary
-                    opacity: 0
-                    Component.onCompleted: opacity = 1
-                    Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveEffects } }
-                }
-            }
-
             // The artwork, from WITHIN: a circle centred in the button that
             // grows out of nothing when the span is 2x2 and returns into the
             // button when it is not.
+            //
+            // Clipped by a Canvas clip path, NOT an OpacityMask: the mask's
+            // ShaderEffect composited as opaque black on the sandbox's
+            // software GL and blanked the entire play face there - and a
+            // shader-free clip is also one less per-frame ShaderEffectSource
+            // on the desktop. The fallback disc and hover wash are plain
+            // radius rectangles, which never needed a mask at all.
             Item {
                 id: artClip
                 objectName: "playArtwork"
@@ -205,28 +214,46 @@ Item {
                 height: width
                 Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
                 visible: width > 1
-                readonly property bool hasArt: root.artUrl !== "" && albumArt.status === Image.Ready
-                layer.enabled: true
-                layer.effect: OpacityMask {
-                    maskSource: Rectangle {
-                        width: artClip.width
-                        height: artClip.height
-                        radius: width / 2
-                    }
-                }
-                Rectangle { anchors.fill: parent; color: Appearance.colors.colOnPrimary }
-                Image {
-                    id: albumArt
+                property bool artLoaded: false
+
+                Rectangle {
                     anchors.fill: parent
-                    source: root.artUrl
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    visible: artClip.hasArt
+                    radius: width / 2
+                    color: Appearance.colors.colOnPrimary
+                }
+                Canvas {
+                    id: artCanvas
+                    anchors.fill: parent
+                    onWidthChanged: requestPaint()
+                    onHeightChanged: requestPaint()
+                    property string artSource: root.artUrl
+                    onArtSourceChanged: {
+                        artClip.artLoaded = false;
+                        if (artSource !== "") loadImage(artSource);
+                        requestPaint();
+                    }
+                    Component.onCompleted: if (artSource !== "") loadImage(artSource)
+                    onImageLoaded: {
+                        artClip.artLoaded = artSource !== "" && isImageLoaded(artSource);
+                        requestPaint();
+                    }
+                    onPaint: {
+                        const ctx = getContext("2d");
+                        ctx.clearRect(0, 0, width, height);
+                        if (!artClip.artLoaded) return;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(width / 2, height / 2, Math.min(width, height) / 2, 0, Math.PI * 2);
+                        ctx.clip();
+                        ctx.drawImage(artCanvas.artSource, 0, 0, width, height);
+                        ctx.restore();
+                    }
                 }
                 Rectangle {
                     anchors.fill: parent
+                    radius: width / 2
                     color: Appearance.colors.colOnPrimary
-                    opacity: !artClip.hasArt ? 0 : (hitArea.containsMouse ? 0.55 : 0)
+                    opacity: !artClip.artLoaded ? 0 : (hitArea.containsMouse ? 0.55 : 0)
                     Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration } }
                 }
             }
@@ -235,13 +262,13 @@ Item {
             // 2x2; everywhere else it is the button's face.
             Expressive.MaterialSymbol {
                 anchors.centerIn: parent
-                visible: !artClip.visible || !artClip.hasArt || hitArea.containsMouse
+                visible: !artClip.visible || !artClip.artLoaded || hitArea.containsMouse
                 text: MprisController.isPlaying ? "pause" : "play_arrow"
                 iconSize: (root.span === "3x2" ? 40 : root.span === "2x2" ? 34 : 30) * Appearance.effectiveScale
                 fill: 0
                 color: hitArea.pressed
                     ? Functions.ColorUtils.applyAlpha(Appearance.colors.colOnPrimary, 0.7)
-                    : (artClip.visible && artClip.hasArt ? Appearance.colors.colPrimary : Appearance.colors.colOnPrimary)
+                    : (artClip.visible && artClip.artLoaded ? Appearance.colors.colPrimary : Appearance.colors.colOnPrimary)
                 Behavior on color { ColorAnimation { duration: 100 } }
             }
 

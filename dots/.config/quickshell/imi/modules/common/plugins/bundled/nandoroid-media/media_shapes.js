@@ -33,9 +33,20 @@ function capsule() {
 
 var _cookieRaw = null;
 function cookieRaw() {
-    if (_cookieRaw === null)
+    if (_cookieRaw === null) {
+        // material-shapes' cookie12 exactly, in the height-1 space: star(12,
+        // r, 0.8r, rounding) rotated 30 degrees. CornerRounding is an
+        // ABSOLUTE distance, so at half the radius the rounding halves too -
+        // the first version kept 0.4 at radius 0.5, effectively double the
+        // real cookie's rounding, and the lobes came out as shallow scallops
+        // that matched nothing else on the widget (the review screenshot).
+        var cos30 = Math.cos(Math.PI / 6), sin30 = Math.sin(Math.PI / 6);
         _cookieRaw = RoundedPolygon.RoundedPolygon.star(
-            12, 0.5, 0.5 * 0.8, new CornerRounding.CornerRounding(0.4));
+            12, 0.5, 0.5 * 0.8, new CornerRounding.CornerRounding(0.25))
+            .transformed(function (x, y) {
+                return { x: x * cos30 - y * sin30, y: x * sin30 + y * cos30 };
+            });
+    }
     return _cookieRaw;
 }
 
