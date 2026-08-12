@@ -304,6 +304,21 @@ mask *is*, only that it has alpha. So
 That keeps every existing caller working — including the three system-monitor cards, which have no
 reason to stop being rounded rectangles — while making a morphing frosted card expressible at all.
 
+**From implementation (12 Aug):** the blocker was not where this section expected. `ShapeCanvas`
+already strokes an outline (`borderWidth`/`borderColor`), so a shape loses nothing there. What a
+shape could not do was *be a card at all*: every normalised polygon was scaled by
+`min(width, height)` and centred, so a 320x112 card would have drawn a 112x112 shape floating in its
+middle. The foundation was an opt-in `stretch` placement — identical to the square one on square
+items, which is what makes it safe under every existing caller — with the path built in pixel space,
+because scaling the context scales the pen and only a uniform scale cancels that out; stretched axes
+differ, so a border would thicken on the short axis by the aspect ratio.
+
+**And the count was wrong: seven copies, not four.** The lint that reserves the tint pair to the
+card found three more on its first run — the media 3x2, the media 2x1, and the system monitor's
+helper feeding three cards. calendar's drift also went further than recorded: it does not use the
+conditional at all. A survey done by reading finds the copies already known about; the mechanized
+rule found the rest immediately.
+
 ### Why this lands before the media work
 
 It is the cheapest step in the whole plan and the least likely to break anything: mechanical,

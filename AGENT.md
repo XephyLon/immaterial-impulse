@@ -1199,6 +1199,14 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   in the source and does nothing at runtime. Diagnosing this took stack-sampling the render
   thread, because every cheaper signal said the widget was fine.
   53d1ff893 ("fix(bar): drop the cava claim while a fullscreen window covers the bar").
+- **A widget's card surface comes from `WidgetCard`, not a hand-rolled tint pair.** The
+  `useBlurBackground ? applyAlpha(tint, opacity) : tint` conditional was written seven times across
+  the desktop widgets — the spec's own survey counted four, and the lint that now reserves the
+  pattern to the component (`lint_widget_card_tint.py`) found the other three on its first run.
+  `WidgetCard` owns the tint, the rounding, an optional content clip, a `blurRegion` record, and a
+  `shapeName` parameter that turns the card into a stretched `MaterialShape` (which morphs on any
+  shape change, because `ShapeCanvas` does). calendar is the one exempted copy until its scheduled
+  rebuild. b362d8c80 ("feat(widgets): one card component for the surface every widget redrew").
 - **A subclass cannot read `AbstractWidget.gridSize`: `PluginWidget` shadows it.** The base's
   `gridSize` is the 12px drag lattice; `PluginWidget` declares its own `gridSize`, the
   component-grid span (`{"cols": 2, "rows": 1}`). Code *inside* the base still resolves to the
