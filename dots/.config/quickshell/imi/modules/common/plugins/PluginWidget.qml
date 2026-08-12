@@ -539,6 +539,9 @@ AbstractBackgroundWidget {
             liveWallpaperActive: rootWidget.liveWallpaperActive
             weSurfaceItem: rootWidget.weSurfaceItem
             cornerRadius: Number(modelData.radius ?? rootWidget.widgetRounding)
+            // A region may carry its own mask item (a non-rounded-rect card's
+            // outline); absent, the surface builds its radius Rectangle.
+            maskItem: modelData.mask ?? null
             wallpaperWidth: rootWidget.wallpaperRect.width
             wallpaperHeight: rootWidget.wallpaperRect.height
             surfaceX: rootWidget.frostSampleOrigin.x + x

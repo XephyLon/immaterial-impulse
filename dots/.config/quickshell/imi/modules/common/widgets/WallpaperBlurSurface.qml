@@ -52,6 +52,15 @@ Item {
     // tests/tst_wallpaper_blur_sharing.qml.
     readonly property int sampleStatus: wallpaperImage.status
 
+    // The frost's shape. By default a rounded rectangle built from
+    // `cornerRadius` - which is why, historically, a frosted card could *only*
+    // be a rounded rectangle: this was the one mask there was. A caller whose
+    // card is not a rounded rect (a MaterialShape card, morphing or settled)
+    // supplies its own mask item instead; OpacityMask only reads alpha, so any
+    // item drawing the card's outline serves. The fallback keeps every
+    // existing region record working untouched.
+    property Item maskItem: null
+
     readonly property Rectangle _mask: Rectangle {
         width: root.width
         height: root.height
@@ -103,7 +112,7 @@ Item {
         radius: root.blurRadius
         layer.enabled: true
         layer.effect: OpacityMask {
-            maskSource: root._mask
+            maskSource: root.maskItem ?? root._mask
         }
     }
 }
