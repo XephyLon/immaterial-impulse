@@ -178,20 +178,27 @@ class TonemapBehaviourTests(unittest.TestCase):
             "converter is normalising against a peak it assumed rather than "
             "one it measured")
 
-    def test_a_dim_clip_is_not_pushed_up_to_white(self):
-        # The mirror of the test above, and the reason the measured peak is
-        # floored at 1.0 rather than simply handed to the tonemapper: a capture
-        # whose brightest pixel sits below reference white must not be
-        # *expanded* to fill the SDR range. 0x82 is the PQ code for 100 nits,
-        # which owes roughly half of SDR white back, not all of it.
+    def test_a_dim_clip_keeps_its_own_brightness(self):
+        # Why the measured peak is floored at 1.0 rather than handed straight
+        # to the tonemapper. 0x82 is the PQ code for 100 nits - a capture whose
+        # brightest pixel sits BELOW reference white, which is the ordinary
+        # case for a dim desktop, not an exotic one. It owes roughly half of
+        # SDR white back (Y'~181), and both ways of getting the peak wrong are
+        # gross: expanding it to fill the range would return white, and handing
+        # ffmpeg a peak beneath the signal's own values returns Y'=16 - the
+        # frame goes BLACK, measured, which is not what "peak too low" sounds
+        # like it should do. Hence a band rather than a one-sided bound; the
+        # first version of this test asserted only the upper half and passed
+        # happily on a black frame.
         clip = self.dir / "dim.mp4"
         make_clip(clip, hdr=True, grey=0x82)
         proc = SandboxedRun(enabled=True).run(clip)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         luma = mean_luma(clip)
-        self.assertLess(luma, 210,
-                        f"a 100-nit clip came out at Y'={luma}; the peak floor "
-                        "is missing and dim captures are being stretched")
+        self.assertTrue(
+            150 < luma < 210,
+            f"a 100-nit clip came out at Y'={luma}, expected ~181 - a peak "
+            "below the signal crushes it to black, one above stretches it")
 
 
 class HookWiringTests(unittest.TestCase):
