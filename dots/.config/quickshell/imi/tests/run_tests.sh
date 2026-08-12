@@ -120,6 +120,12 @@ if ! python3 "$SCRIPT_DIR/lint_duplicate_imports.py"; then
     exit 1
 fi
 
+echo "Running qmldir registration lint..."
+if ! python3 "$SCRIPT_DIR/lint_qmldir_registration.py"; then
+    echo "qmldir registration lint failed."
+    exit 1
+fi
+
 echo "Running widget card tint lint..."
 if ! python3 "$SCRIPT_DIR/lint_widget_card_tint.py"; then
     echo "Widget card tint lint failed."
