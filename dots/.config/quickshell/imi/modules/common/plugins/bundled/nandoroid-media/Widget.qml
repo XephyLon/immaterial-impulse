@@ -60,14 +60,23 @@ Item {
         (MprisController.length > 0 ? (MprisController.position / MprisController.length) : 0) || 0
     readonly property string artUrl: MprisController.activePlayer?.trackArtUrl ?? ""
 
-    // The geometry, evaluated at this widget's actual box. Width/height enter
-    // the bindings so a resize re-evaluates every rect.
+    // The geometry, evaluated at the span's SETTLED box, not the animating
+    // one. Measured before this was fixed: rects derived from the live width
+    // made position drift but size and y snap at t0 - the new-span branch
+    // evaluated at the old-span box - and the change read as a teleport.
+    // Worse, live-box rects are targets that move every frame, which is the
+    // shape that freezes a Behavior outright (AGent.md, the parallax opt-out).
+    // Settled-span rects change exactly once per commit, so the Behaviors
+    // below get a discrete jump to carry - old rect to new rect, on the same
+    // clock family as the box.
+    readonly property real spanW: Appearance.sizes.widgetGridSpanX(root.span.cols)
+    readonly property real spanH: Appearance.sizes.widgetGridSpanY(root.span.rows)
     readonly property var transport: Geometry.transportRects(
-        root.spanName, root.width, root.height, Appearance.effectiveScale)
+        root.spanName, root.spanW, root.spanH, Appearance.effectiveScale)
     readonly property var progressSlot: Geometry.progressRect(
-        root.spanName, root.width, root.height, Appearance.effectiveScale)
+        root.spanName, root.spanW, root.spanH, Appearance.effectiveScale)
     readonly property var timeSlot: Geometry.timeLabelRect(
-        root.spanName, root.width, root.height, Appearance.effectiveScale)
+        root.spanName, root.spanW, root.spanH, Appearance.effectiveScale)
 
     // The 3x2's lyrics page replaces its controls; while it is up the shared
     // elements yield the stage. Text pages exist at one span only, so reading
@@ -113,6 +122,11 @@ Item {
         y: root.progressSlot ? root.progressSlot.y : 0
         width: root.progressSlot ? root.progressSlot.width : 0
         height: root.progressSlot ? root.progressSlot.height : 0
+
+        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
         sourceComponent: Expressive.VisualizerCookie {
             lobes: 12
             // Claimed only while something is playing: the claim starts cava,
@@ -126,6 +140,7 @@ Item {
 
     MediaTransportButton {
         id: prevButton
+        objectName: "prevButton"
         role: "prev"
         span: root.spanName
         visible: !root.lyricsUp && root.transport !== null
@@ -133,10 +148,15 @@ Item {
         y: root.transport ? root.transport.prev.y : 0
         width: root.transport ? root.transport.prev.width : 0
         height: root.transport ? root.transport.prev.height : 0
+        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
     }
 
     MediaTransportButton {
         id: playButton
+        objectName: "playButton"
         role: "play"
         span: root.spanName
         visible: !root.lyricsUp && root.transport !== null
@@ -146,10 +166,15 @@ Item {
         y: root.transport ? root.transport.play.y : 0
         width: root.transport ? root.transport.play.width : 0
         height: root.transport ? root.transport.play.height : 0
+        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
     }
 
     MediaTransportButton {
         id: nextButton
+        objectName: "nextButton"
         role: "next"
         span: root.spanName
         visible: !root.lyricsUp && root.transport !== null
@@ -157,6 +182,10 @@ Item {
         y: root.transport ? root.transport.next.y : 0
         width: root.transport ? root.transport.next.width : 0
         height: root.transport ? root.transport.next.height : 0
+        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
     }
 
     // Progress's 3x2 renderer, in its geometry slot. At 2x1 the ring is drawn
@@ -170,6 +199,11 @@ Item {
         y: root.progressSlot ? root.progressSlot.y : 0
         width: root.progressSlot ? root.progressSlot.width : 0
         height: root.progressSlot ? root.progressSlot.height : 0
+
+        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
         handleMargins: 0
         configuration: Expressive.StyledSlider.Configuration.Wavy
         stopIndicatorValues: []
@@ -201,6 +235,11 @@ Item {
         y: root.timeSlot ? root.timeSlot.y : 0
         width: root.timeSlot ? root.timeSlot.width : 0
         height: root.timeSlot ? root.timeSlot.height : 0
+
+        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         text: Functions.StringUtils.friendlyTimeForSeconds(MprisController.position)
