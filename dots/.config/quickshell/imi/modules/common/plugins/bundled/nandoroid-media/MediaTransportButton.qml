@@ -50,6 +50,9 @@ Item {
     // the curves are identical by construction.
     property real ringPhase: 0
     property bool ringWaves: false
+    // The seeker's wave amplitude level (0..1), so the body's spring fades
+    // out with the ring's on pause instead of chopping flat.
+    property real ringWaveLevel: 0
     // Play only: the seeker above this button reports hover it is holding
     // on the button's behalf, so the glyph-over-art and hover styling work
     // under the ring's cover.
@@ -203,7 +206,9 @@ Item {
 
                 onMorphTChanged: requestPaint()
                 readonly property real phaseNow: root.ringPhase
-                onPhaseNowChanged: if (root.ringWaves) requestPaint()
+                onPhaseNowChanged: if (root.ringWaveLevel > 0.001) requestPaint()
+                readonly property real ringLevelNow: root.ringWaveLevel
+                onRingLevelNowChanged: requestPaint()
                 readonly property bool wavesNow: root.ringWaves
                 onWavesNowChanged: requestPaint()
                 onBodyColorChanged: requestPaint()
@@ -215,14 +220,14 @@ Item {
                     const ctx = getContext("2d");
                     ctx.clearRect(0, 0, width, height);
                     const waving2x1 = root.span === "2x1" && Math.abs(body.morphT - 1) < 0.01
-                        && root.ringWaves;
+                        && root.ringWaveLevel > 0.001;
                     if (waving2x1) {
                         const N = 160;
                         const stroke = Appearance.borderWidth.heavy * Appearance.effectiveScale;
                         const dia = Math.min(width, height) - stroke;
                         const cubics = MediaShapes.ringAt(1);
                         const measure = PathLength.measureCubics(cubics);
-                        const amp = stroke * 0.6;
+                        const amp = stroke * 0.6 * root.ringWaveLevel;
                         // VERBATIM the seeker's construction - arc-length
                         // samples, normals from RAW neighbours, sine along the
                         // normal - so the filled contour and the stroked ring

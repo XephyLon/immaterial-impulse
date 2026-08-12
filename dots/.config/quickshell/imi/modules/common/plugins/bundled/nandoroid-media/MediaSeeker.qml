@@ -41,10 +41,23 @@ Item {
     // 2x2 the ring is a STILL perfect circle (the review's call): no wave,
     // no travel, so no frame ticks either.
     readonly property bool waves: root.playing && root.span !== "2x2"
+    // The wave's amplitude is a LEVEL, not a switch: pause snapped it to zero
+    // in one frame and the spring visibly chopped flat (the review). It eases
+    // out and back in, and the frame clock runs until the fade completes so
+    // the flattening itself is drawn.
+    property real waveLevel: root.waves ? 1 : 0
+    Behavior on waveLevel { NumberAnimation { duration: 250; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveEffects } }
     FrameAnimation {
-        running: root.visible && root.waves && root.opacity > 0
+        running: root.visible && root.opacity > 0 && root.waveLevel > 0.001
         onTriggered: { root.phase += frameTime * 2.5; canvas.requestPaint(); }
     }
+
+    // Position arrives from MPRIS about once a second, so raw progress moves
+    // in steps. The drawn progress glides between those steps - linear, a
+    // touch under the update cadence, so it neither stutters nor lags a seek
+    // by more than a beat.
+    property real shownProgress: root.progress
+    Behavior on shownProgress { NumberAnimation { duration: 700 } }
 
     readonly property real lineWidthPx:
         (4 + (Appearance.borderWidth.heavy - 4) * root.bend) * Appearance.effectiveScale
@@ -101,8 +114,10 @@ Item {
         anchors.fill: parent
 
         readonly property real bendNow: root.bend
+        readonly property real waveLevelNow: root.waveLevel
+        onWaveLevelNowChanged: requestPaint()
         readonly property real ringNow: root.ringT
-        readonly property real progressNow: Math.max(0, Math.min(1, root.progress))
+        readonly property real progressNow: Math.max(0, Math.min(1, root.shownProgress))
         readonly property color arcColor: root.mix(Appearance.colors.colPrimary, Appearance.colors.colOnPrimary, root.onBody)
         readonly property color trackColor: root.mix(
             Functions.ColorUtils.applyAlpha(Appearance.colors.colPrimary, 0.25),
@@ -133,7 +148,7 @@ Item {
             // closed ring or the wave beats against its own seam (the spec's
             // arc-length note). 12 matches the cookie's lobes.
             const freq = Math.round(6 + (12 - 6) * canvas.bendNow);
-            const amp = (root.waves ? stroke * 0.6 : 0);
+            const amp = stroke * 0.6 * root.waveLevel;
 
             const base = root.baselinePoints(N);
             // Normals from the RAW baseline, displaced into a second array.
