@@ -4,7 +4,9 @@ import qs.modules.common
 import qs.modules.common.functions as Functions
 import qs.services
 import "../../designsystem/widgets" as Expressive
+import qs.modules.common.plugins.designsystem.services
 import "../../designsystem/widgets/shapes/material-shapes.js" as MaterialShapes
+import "../../designsystem/widgets/visualizer_bands.js" as VisualizerBands
 import "../../designsystem/widgets/shapes/path-length.js" as PathLength
 import "media_shapes.js" as MediaShapes
 
@@ -42,9 +44,7 @@ Item {
     property real progress: 0
     // 2x2 play only: the artwork.
     property string artUrl: ""
-    // 2x2 play only: whether the tree-level visualizer cookie has painted -
-    // the static body yields only on this proof.
-    property bool liveCookiePainted: false
+
 
     readonly property bool isPlay: root.role === "play"
 
@@ -141,38 +141,71 @@ Item {
             // normalized "Pill" stretched to 192x66 is an ellipse - that
             // ellipse shipped, and this replaces it. Same colour at every
             // span: the colour flip was half of what read as a blink.
+            // THE BODY IS THE VISUALIZER (the review's question, answered
+            // yes): one canvas that draws the capsule-to-cookie morph in
+            // flight and, settled at 2x2, breathes the same cookie with
+            // per-lobe audio levels. No separate visualizer object, so no
+            // crossfade, no proof gate, no stacked twin masking the ripple -
+            // the machinery that existed only because the breathing shape
+            // and the button's shape were two objects is gone with the
+            // second object.
             Canvas {
                 id: body
                 anchors.fill: parent
-                // At settled 2x2 the LIVE cookie (the visualizer) is the body,
-                // and this static twin yields - stacked, the static cookie
-                // masked every inward ripple and the visualizer read as
-                // frozen. During any transition the static body carries the
-                // morph and the visualizer is the one that yields.
-                // ...and only on PROOF: the host tells this button its live
-                // cookie has actually painted before the static body steps
-                // aside. A dropped or non-compositing first paint otherwise
-                // leaves the whole face blank - the sandbox reproduced that
-                // with the visualizer nested in here, which is why it lives
-                // at tree level now (the configuration that demonstrably
-                // paints) and reports back through this flag.
-                opacity: root.span === "2x2" && root.liveCookiePainted
-                    && Math.abs(morphT - 1) < 0.01 ? 0 : 1
-                Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration } }
 
                 property real morphT: root.span === "3x2" ? 0 : 1
                 Behavior on morphT { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
                 readonly property color bodyColor: Appearance.colors.colPrimary
 
+                // ---- the breath: VisualizerCookie's pipeline, verbatim ----
+                readonly property bool visualizing: root.span === "2x2"
+                    && Math.abs(morphT - 1) < 0.01 && MprisController.isPlaying && root.visible
+                property list<real> levels: []
+                property bool settlingLevels: false
+                readonly property var cavaClaim: CavaRef { active: body.visualizing }
+                function stepLevels() {
+                    const targets = VisualizerBands.toLobes(
+                        body.visualizing ? CavaService.values : [], 12, CavaService.maxValue);
+                    const next = [];
+                    let moved = false;
+                    for (let i = 0; i < 12; i++) {
+                        const current = i < body.levels.length ? body.levels[i] : 0;
+                        const level = VisualizerBands.envelope(current, targets[i], 0.55, 0.12);
+                        const settled = Math.abs(targets[i] - level) <= 0.001 ? targets[i] : level;
+                        if (settled !== current) moved = true;
+                        next.push(settled);
+                    }
+                    body.settlingLevels = moved;
+                    if (moved) { body.levels = next; body.requestPaint(); }
+                }
+                onVisualizingChanged: body.settlingLevels = true
+                readonly property Timer levelTimer: Timer {
+                    interval: 16
+                    repeat: true
+                    running: body.visible && (body.visualizing || body.settlingLevels)
+                    onTriggered: body.stepLevels()
+                }
+
                 onMorphTChanged: requestPaint()
                 onBodyColorChanged: requestPaint()
                 onWidthChanged: requestPaint()
                 onHeightChanged: requestPaint()
+                onAvailableChanged: if (available) requestPaint()
 
                 onPaint: {
                     const ctx = getContext("2d");
                     ctx.clearRect(0, 0, width, height);
-                    const shape = MediaShapes.bodyAt(body.morphT);
+                    const breathing = root.span === "2x2" && Math.abs(body.morphT - 1) < 0.01;
+                    const shape = breathing
+                        // FIXED bounds for the breathing shape, on purpose:
+                        // fitting the live bounds would rescale the whole
+                        // cookie every frame, so a lobe pushing out shrinks
+                        // the other eleven (VisualizerCookie's own warning).
+                        // The resting cookie spans the unit box; lobes breathe
+                        // within and slightly past it.
+                        ? { cubics: MediaShapes.liveCookieRaw(body.levels, 12).cubics,
+                            minX: -0.5, minY: -0.5, maxX: 0.5, maxY: 0.5 }
+                        : MediaShapes.bodyAt(body.morphT);
                     if (shape.cubics.length === 0) return;
                     // Fit the mid-flight bounds into the box: the capsule is
                     // wider than tall and the box is travelling, so scaling by
