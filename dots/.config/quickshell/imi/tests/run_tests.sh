@@ -290,6 +290,27 @@ fi
 # one: calendar is content-sized, so a card that failed to resolve leaves a
 # zero-size widget rather than an error, and a `dragging` that never arrives
 # leaves a shadow that never lifts. Brings its own headless weston.
+# Enumerated, not globbed - which is why these three could exist, pass by hand
+# and be enforced by nothing. Added when a review counted the files run_tests.sh
+# names against the files on disk.
+echo "Running settings search index tests..."
+if ! python3 "$SCRIPT_DIR/test_settings_search_index.py"; then
+    echo "Settings search index tests failed."
+    exit 1
+fi
+
+echo "Running bar hover region tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_hover_region.py"; then
+    echo "Bar hover region tests failed."
+    exit 1
+fi
+
+echo "Running cheatsheet width budget tests..."
+if ! python3 "$SCRIPT_DIR/test_cheatsheet_width_budget.py"; then
+    echo "Cheatsheet width budget tests failed."
+    exit 1
+fi
+
 echo "Running calendar card tests..."
 if ! python3 "$SCRIPT_DIR/test_calendar_card.py"; then
     echo "Calendar card tests failed."
