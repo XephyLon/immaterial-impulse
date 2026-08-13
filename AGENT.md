@@ -1347,6 +1347,16 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   elastic-resize canvas deliberately draws up to `2*BOW_PX` outside the card and a layer would cut
   it. The shadow is dropped while the card is moving and restored on settle, for the same reason the
   frost is: re-rendering a blurred copy of the body every frame of a morph is the expensive path.
+  **That last sentence shipped half-true, and the correction is the lesson.** `motionActive` had
+  exactly one producer - `WidgetCard` passing its own `underTension`, the grip's elastic bow - which
+  is the one motion that does NOT resize the layer. The span animation, which reallocates the FBO
+  and re-runs the gaussian every frame, and which every Size row in Settings takes with no grip
+  involved, ran with the shadow live throughout: `resizeBow` is already zero when the settle begins.
+  Neither probe could see it, because both ASSIGN `motionActive` rather than driving motion - the
+  parallax-opt-out shape, a harness that switches off the interaction it exists to score. The host
+  publishes `boxInMotion` (drawn box vs settled box) now, forwarded by the same duck-typed path as
+  `hostGridSize`, and `test_the_shadow_is_dropped_for_the_motion_that_actually_costs` pins the chain
+  end to end. e5d243c5e ("fix(widgets): the shadow drops for the motion that actually costs").
   Verification is pixels, not source text (`test_card_shadow.py`), and two traps live there:
   `ItemGrabResult.image` is not scriptable from QML, so analysis belongs outside; and `grabToImage`
   captures the ITEM, so a field relying on its WINDOW's colour grabs a transparent PNG whose "white"

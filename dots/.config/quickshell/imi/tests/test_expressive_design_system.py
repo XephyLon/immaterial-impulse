@@ -274,6 +274,37 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             self.assertIn("property bool dragging: false", source, style)
             self.assertIn("dragging: root.dragging", source, style)
 
+    def test_the_shadow_is_dropped_for_the_motion_that_actually_costs(self):
+        """`motionActive` had exactly one producer: the grip's elastic bow.
+
+        Which is the one motion that does NOT resize the layer. The span
+        animation - which reallocates the effect's FBO and re-runs a gaussian
+        every frame, and which every "Size" row in settings triggers with no
+        grip involved - ran with the shadow live throughout, because
+        `resizeBow` is already zero by the time it starts.
+
+        Both probes ASSIGN the flag rather than driving motion, so neither
+        could see it. This pins the chain instead: the host publishes its own
+        in-flight state, and it reaches every card.
+        """
+        host = (PLUGIN_ROOT.parent / "PluginWidget.qml").read_text(encoding="utf-8")
+        node = (PLUGIN_ROOT.parent / "PluginNode.qml").read_text(encoding="utf-8")
+        card = (DESIGN_SYSTEM / "widgets/WidgetCard.qml").read_text(encoding="utf-8")
+
+        # The host knows: the drawn box differs from the settled one.
+        self.assertIn("readonly property bool boxInMotion", host)
+        self.assertIn("settledWidth", host.split("boxInMotion")[1][:300])
+        self.assertIn("hostBoxInMotion: rootWidget.boxInMotion", host)
+        self.assertIn("item.hostBoxInMotion = Qt.binding", node)
+        # The card drops the shadow for the bow OR for the host's animation.
+        self.assertIn("root.underTension || root.hostMotionActive", card)
+
+        for directory in TOLD_ABOUT_THE_DRAG:
+            wrapper = (PLUGIN_ROOT / directory / "Widget.qml").read_text(encoding="utf-8")
+            self.assertIn("property bool hostBoxInMotion", wrapper, directory)
+            self.assertIn("hostBoxInMotion", wrapper.split("hostBoxInMotion", 1)[1],
+                          f"{directory}: declares the property but forwards it nowhere")
+
     def test_the_card_shadows_its_body_and_drops_it_while_moving(self):
         """The shadow comes off the BODY, and goes away during motion.
 
