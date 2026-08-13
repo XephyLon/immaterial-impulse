@@ -1353,6 +1353,39 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   reads as black to any analyser - a measurement that looks like a catastrophic failure when nothing
   is wrong, and would equally hide a real one.
   4046f1854 ("feat(widgets): the card casts a shadow, and lifts when handled").
+- **The elevation is a component of its own, and it is what a widget that is not a card reaches
+  for.** `WidgetElevation` owns the numbers, the hover/drag lift and the layer; `WidgetCard` hands
+  it the states and adds a surface. That split exists because five bundled widgets cannot be cards
+  — a cookie dial, a punched glyph grid, a shape-masked image, and a card with an avatar bubble
+  off its top edge — and each had carried its own `StyledDropShadow` at its own radius and colour
+  since long before the card. The elevation shadows **painted alpha**, so a cookie casts a cookie
+  and a `Heart`-masked photograph casts a heart; the corollary is that it goes around the BODY, and
+  a widget wrapping its whole self in one gets a shadow under every label it draws. The bleed is
+  added on the frame carrying the layer and taken straight back off the body, so children see the
+  item's own box and no call site compensates for the inset. Do not spell a second `MultiEffect`
+  shadow from `Appearance.elevation` — `test_expressive_design_system.py` fails the suite on a file
+  other than `WidgetElevation.qml` reading those numbers, and on `StyledDropShadow.qml` coming
+  back, because what this replaced was five hand-rolled shadows behind **two** components of that
+  one name in two directories, none agreeing with any other.
+  ("feat(designsystem): move the card's elevation into a component of its own").
+- **A gate on a `Config.options` key that was never declared reads as `undefined` and takes the
+  `??` fallback for ever.** The pixel clock's drop shadow was `visible:
+  Config.options.background.widgets.enableShadows ?? false`, and no `Config.qml` has ever declared
+  `enableShadows` — so that widget alone had no elevation at all, silently, for the whole life of
+  the feature, and the QML reads perfectly. Nothing warns: an undeclared key on a `JsonObject` is a
+  plain `undefined` property read, not an error. When a feature is gated on config, grep `Config.qml`
+  for the key rather than trusting the expression, and prefer a gate whose absence is loud.
+  ("feat(clock): the cookie and the pixel grid take the shared elevation").
+- **Scoring a shadow on a widget that is not a rectangle wants the widget's own twin, not a band.**
+  `test_card_shadow.py` reads a strip below a card, which works because a card's bottom edge is
+  where the box says it is. It measures a different thing for a cookie (whose bottom is a valley),
+  for a glyph grid that overhangs its own box by 8%, and for a card inset 20px from the bottom of
+  its tile. `test_widget_elevation.py` renders each widget three times — at rest, handled, and with
+  `motionActive` forced on — and scores each cell against its own suppressed twin, so the shadow is
+  exactly what the cells differ BY and no per-widget geometry is involved. The probe drives all
+  three columns duck-typed (`hostDragging`, and `motionActive` on anything exposing
+  `shadowVisible`), which is why no widget carries a property that exists only for a test.
+  ("test(widgets): score the five folded widgets in pixels, not in spelling").
 - **A morphing container brings its polygons; the mechanics are shared.** `shape_morph.js` owns the
   bounds, the endpoint short-circuit and the Morph cache for every container that morphs between
   named shapes (media's body, weather's glyph, currency's badge); a widget passes a
