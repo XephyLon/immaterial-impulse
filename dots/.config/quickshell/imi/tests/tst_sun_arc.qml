@@ -1,9 +1,18 @@
 import QtTest
 import "../modules/common/plugins/designsystem/widgets/sun_arc.js" as SunArc
+import "../modules/common/plugins/designsystem/widgets/weather_geometry.js" as Geometry
 
 // The sun arc's arithmetic. The curve is the easy half; the clock is not.
 TestCase {
     name: "SunArcTest"
+
+    // The card the arc is drawn on, per span, at scale 1.
+    readonly property var spans: [
+        { name: "1x1", width: 132, height: 108 },
+        { name: "2x1", width: 276, height: 108 },
+        { name: "3x1", width: 420, height: 108 },
+        { name: "3x2", width: 420, height: 228 }
+    ]
 
     function test_it_reads_both_providers_clock_formats() {
         // OpenWeatherMap's, formatted en-US with seconds before publishing.
@@ -148,6 +157,31 @@ TestCase {
                 SunArc.phaseAt(at, window), 45, 0.35);
             fuzzyCompare(SunArc.curveY(at, window, 80, 45, 0.35), expected, 0.0001);
         }
+    }
+
+    function test_the_arc_reads_as_an_arc_at_every_span_it_lives_at() {
+        // The bug this pins: at 1x1 the curve drew a whole day plus a night
+        // margin at each end across 132px while still rising 45px, so what
+        // showed either side of the temperature was a diagonal streak. What
+        // separates a day from a streak is the ASPECT - how wide the daylight
+        // stretch is against how far the curve rises in it - and three to one
+        // is where the two visibly part company on this card.
+        const window = SunArc.windowFor(SunArc.NIGHT_MARGIN);
+        const dayFraction = window.uSet - window.uRise;
+        const readable = 3;
+        for (const span of spans) {
+            const arc = Geometry.sunArcRect(span.name, span.width, span.height, 1);
+            if (arc === null) continue;
+            const aspect = (span.width * dayFraction) / arc.apexRise;
+            verify(aspect >= readable,
+                   `${span.name} carries the arc at ${aspect.toFixed(2)}:1`);
+        }
+        // ...and 1x1 is the span that cannot, which is the whole reason it has
+        // no home: it would keep the shape it stands at while fading, and the
+        // three one-row spans share that shape.
+        const stands = Geometry.sunArcRect("2x1", 276, 108, 1);
+        const at1x1 = (132 * dayFraction) / stands.apexRise;
+        verify(at1x1 < readable, `1x1 would only manage ${at1x1.toFixed(2)}:1`);
     }
 
     function test_the_sun_sits_where_the_clock_says() {

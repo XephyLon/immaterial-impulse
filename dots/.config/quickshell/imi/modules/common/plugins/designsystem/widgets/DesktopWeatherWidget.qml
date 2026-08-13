@@ -104,6 +104,20 @@ Item {
     readonly property var stripSlot: Geometry.forecastStripRect("3x2", root.width3x1, root.height2Rows, Appearance.effectiveScale)
     readonly property var bandRuleSlot: Geometry.bandDividerRect("3x2", root.width3x1, root.height2Rows, Appearance.effectiveScale)
 
+    // The sun arc has a home at every span but 1x1, where the card is fully
+    // occupied and the module returns null (its comment has the numbers). So
+    // it fades there, like every other element with nowhere to be - and a fade
+    // happens WHERE THE ELEMENT STANDS, so it still needs somewhere to stand.
+    // 2x1 is the nearest span that has a home for it, and the three one-row
+    // spans share a height, so standing there means the curve holds exactly
+    // the shape it is fading out of and comes back on it rather than arriving
+    // from somewhere.
+    readonly property bool showsSunArc: Geometry.sunArcRect(
+        root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale) !== null
+    readonly property string arcSpan: root.sizeMode === "1x1" ? "2x1" : root.sizeMode
+    readonly property var sunArcSlot: Geometry.sunArcRect(
+        root.arcSpan, root.spanW, root.spanH, Appearance.effectiveScale)
+
     // wttr.in answers with three days, OpenWeatherMap with four, and a failed
     // forecast request with none - all three are real and the row is laid out
     // from whatever arrives (#111 deliberately padded to no fixed count).
@@ -161,26 +175,24 @@ Item {
             id: sunArc
             objectName: "weatherSunArc"
             anchors.fill: parent
-            opacity: 0.32
+            // 1x1 has no home for the arc, so it leaves the way anything else
+            // in this tree leaves a span it does not live at.
+            opacity: root.showsSunArc ? 0.32 : 0
+            Behavior on opacity { SpanFade {} }
+            visible: opacity > 0
             z: -1
 
-            // How much night to show past each horizon, as a fraction of the
-            // daylight. Enough to read as a dip, not so much that the day is
-            // squeezed into the middle of the card.
-            readonly property real nightMargin: 0.22
-            // How much of the sine's depth the night tails keep at their
-            // deepest, so they level off toward the card's edges.
-            readonly property real tailFlatten: 0.35
+            readonly property real nightMargin: SunArc.NIGHT_MARGIN
+            readonly property real tailFlatten: SunArc.TAIL_FLATTEN
             readonly property var window: SunArc.windowFor(sunArc.nightMargin)
 
-            // The horizon: the band seam at 3x2 (the hairline is already
-            // there), and a proportion of the card elsewhere.
-            property real horizonY: root.sizeMode === "3x2"
-                ? root.bandRuleSlot.y
-                : height * 0.74
+            // The horizon and the apex come from the SETTLED span's box, like
+            // every other rect in this tree, and travel on their own
+            // Behaviors - the card's animating height is not the box.
+            property real horizonY: root.sunArcSlot.horizonY
             Behavior on horizonY { SpanTravel {} }
-            readonly property real apexRise: root.sizeMode === "3x2"
-                ? horizonY * 0.62 : height * 0.42
+            property real apexRise: root.sunArcSlot.apexRise
+            Behavior on apexRise { SpanTravel {} }
 
             // Local minutes, repainted on the minute rather than per frame:
             // the sun moves about a pixel a minute across a card this wide.
@@ -190,6 +202,11 @@ Item {
                 sunArc.nowMinutes = now.getHours() * 60 + now.getMinutes();
             }
             Component.onCompleted: sunArc.refreshNow()
+            // The clock is only read while the arc is on screen, so a card
+            // that spent the afternoon at 1x1 comes back holding a stale
+            // minute until the timer's next tick - up to a minute of the sun
+            // sitting where it was an hour ago.
+            onVisibleChanged: if (visible) sunArc.refreshNow()
             Timer {
                 interval: 60000
                 repeat: true
@@ -210,6 +227,7 @@ Item {
             onSunsetTextChanged: requestPaint()
             onInkColorChanged: requestPaint()
             onHorizonYChanged: requestPaint()
+            onApexRiseChanged: requestPaint()
             onWidthChanged: requestPaint()
             onHeightChanged: requestPaint()
 
@@ -287,7 +305,12 @@ Item {
             color: root.contentColor
             // Brighter than the curve it rides - it is the one part of this
             // background that is a reading rather than a frame.
-            opacity: sunArc.sunPosition === null ? 0 : 0.8
+            //
+            // Two separate reasons to be invisible, and they must stay
+            // separate: an unknown sunrise ("0" from either provider) hides
+            // the marker while the curve stays, and 1x1 takes both away.
+            opacity: sunArc.sunPosition === null ? 0
+                : root.showsSunArc ? 0.8 : 0
             Behavior on opacity { SpanFade {} }
             visible: opacity > 0 && sunArc.visible
             z: -1

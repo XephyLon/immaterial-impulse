@@ -87,6 +87,70 @@ TestCase {
         verify(Geometry.bandDividerRect("3x2", 420, 228, 1) !== null);
     }
 
+    // ---- the sun arc's background layer ---------------------------------
+
+    function test_the_sun_arc_has_no_home_at_1x1() {
+        // The one span the curve does not fit: it always draws a whole day
+        // plus a night margin at each end across whatever width it is given,
+        // and at 132px that is steep enough to read as a diagonal streak
+        // rather than as a day. Null is a fade, which is how the tree gets rid
+        // of an element with nowhere to be.
+        compare(Geometry.sunArcRect("1x1", 132, 108, 1), null);
+        for (const span of spans) {
+            if (span.name === "1x1") continue;
+            verify(Geometry.sunArcRect(span.name, span.width, span.height, 1) !== null,
+                   "the arc lives at " + span.name);
+        }
+    }
+
+    function test_the_arcs_horizon_is_the_band_seam_at_3x2() {
+        // No separate horizon is drawn at 3x2 - the curve's zero-crossing is
+        // the hairline the card already draws between its bands. Derived, so
+        // moving the seam cannot leave the curve crossing somewhere else.
+        const arc = Geometry.sunArcRect("3x2", 420, 228, 1);
+        const seam = Geometry.bandDividerRect("3x2", 420, 228, 1);
+        compare(arc.horizonY, seam.y);
+    }
+
+    function test_the_arcs_apex_clears_the_horizon_without_leaving_the_card() {
+        for (const span of spans) {
+            const arc = Geometry.sunArcRect(span.name, span.width, span.height, 1);
+            if (arc === null) continue;
+            verify(arc.apexRise > 0, "the curve rises at " + span.name);
+            verify(arc.horizonY - arc.apexRise > 0,
+                   "and its apex is still inside the card at " + span.name);
+            verify(arc.horizonY < span.height,
+                   "the horizon is inside the card at " + span.name);
+        }
+    }
+
+    function test_the_arc_travels_into_the_taller_card() {
+        // The same rule as the shared three: an element present on both sides
+        // of a span change must have somewhere new to go, or the card grows
+        // around a frozen curve.
+        const one = Geometry.sunArcRect("3x1", 420, 108, 1);
+        const two = Geometry.sunArcRect("3x2", 420, 228, 1);
+        verify(two.horizonY > one.horizonY, "the horizon drops into the second row");
+        verify(two.apexRise > one.apexRise, "and the curve rises further with it");
+    }
+
+    function test_the_one_row_spans_share_the_arcs_shape() {
+        // 1x1 fades to where 2x1 stands, so the two must agree: a curve that
+        // came back at a different height would be a snap wearing a fade's
+        // clothes.
+        const two = Geometry.sunArcRect("2x1", 276, 108, 1);
+        const three = Geometry.sunArcRect("3x1", 420, 108, 1);
+        compare(two.horizonY, three.horizonY);
+        compare(two.apexRise, three.apexRise);
+    }
+
+    function test_scale_multiplies_the_arc() {
+        const plain = Geometry.sunArcRect("3x2", 420, 228, 1);
+        const scaled = Geometry.sunArcRect("3x2", 630, 342, 1.5);
+        fuzzyCompare(scaled.horizonY, plain.horizonY * 1.5, 0.0001);
+        fuzzyCompare(scaled.apexRise, plain.apexRise * 1.5, 0.0001);
+    }
+
     function test_the_strip_sits_inside_the_card_with_even_margins() {
         const strip = Geometry.forecastStripRect("3x2", 420, 228, 1);
         compare(strip.x, 20, "left margin");
