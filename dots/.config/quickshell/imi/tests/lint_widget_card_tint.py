@@ -13,10 +13,15 @@ This does not force a widget to use the card (the system monitor's three cards
 are its own composition); it forces a widget that wants the *standard* card
 look to get it from the standard card, where its motion can be tuned once.
 
-calendar/Widget.qml is the one temporary exemption: it is scheduled to be
-rebuilt on the card once the architecture settles on media and weather, and
-its drifted copy is left alone until then rather than half-migrated. Remove
-the exemption with the rebuild.
+calendar/Widget.qml used to be exempted here, pending the rebuild the spec
+scheduled for it. That rebuild has landed - it composes WidgetCard now, which
+tests/test_expressive_design_system.py pins - so the exemption is gone. What
+the widget still spells for itself is a *content* tint: the 1x1 banner, the
+month pill, the day grid and today's highlight thin with the card so the frost
+reads through the whole widget rather than through its edges only. That is
+deliberately not what this reserves, and not what it matches either - those go
+through `transparentize`, which scales an alpha two of those colours already
+carry, rather than the card's absolute `applyAlpha`.
 """
 
 from pathlib import Path
@@ -29,8 +34,6 @@ SKIP_DIRS = {".git", "node_modules", "__pycache__", "tests"}
 
 ALLOWED = {
     Path("modules/common/plugins/designsystem/widgets/WidgetCard.qml"),
-    # Rebuilt on the card after media and weather settle - see docstring.
-    Path("modules/common/plugins/bundled/calendar/Widget.qml"),
 }
 
 # The tint conditional, however the alpha helper is qualified and whatever the
