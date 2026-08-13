@@ -322,6 +322,14 @@ if ! python3 "$SCRIPT_DIR/test_notes_surfaces_runtime.py"; then
     exit 1
 fi
 
+# Also brings its own weston, plus its own D-Bus session so the harness's
+# notification server is the one notify-send reaches rather than the caller's.
+echo "Running notification card list runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_notification_cards_runtime.py"; then
+    echo "Notification card list runtime tests failed."
+    exit 1
+fi
+
 echo "Running plugin installer tests..."
 if ! python3 "$SCRIPT_DIR/test_plugin_installer.py"; then
     echo "Plugin installer tests failed."
