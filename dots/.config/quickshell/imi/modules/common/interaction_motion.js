@@ -30,20 +30,24 @@ function stateOf(flags) {
 // Hover LIFTS (scale up, tint), press SETTLES (scale down, corners tighten).
 // `press` is that same settle as a plain 0..1, for adopters whose geometry is
 // not a multiple of anything - a control lerps its own pressed values with it
-// rather than working backwards from `radiusScale`.
+// rather than working backwards from `radiusScale`. `hover` is the same for
+// the lift, and a pressed control is still hovered by it: a wash that fades
+// out as the press lands would read as the control letting go.
 // Disabled is opacity only - it must not move, because motion reads as
 // affordance and there is none.
 function targetsFor(state, tokens) {
     switch (state) {
     case PRESSED:
         return { scale: tokens.pressScale, radiusScale: tokens.pressRadiusScale,
-                 press: 1, opacity: 1 };
+                 hover: 1, press: 1, opacity: 1 };
     case HOVERED:
-        return { scale: tokens.hoverScale, radiusScale: 1, press: 0, opacity: 1 };
+        return { scale: tokens.hoverScale, radiusScale: 1,
+                 hover: 1, press: 0, opacity: 1 };
     case DISABLED:
-        return { scale: 1, radiusScale: 1, press: 0, opacity: tokens.disabledOpacity };
+        return { scale: 1, radiusScale: 1, hover: 0, press: 0,
+                 opacity: tokens.disabledOpacity };
     default:
-        return { scale: 1, radiusScale: 1, press: 0, opacity: 1 };
+        return { scale: 1, radiusScale: 1, hover: 0, press: 0, opacity: 1 };
     }
 }
 

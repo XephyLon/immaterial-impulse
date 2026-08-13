@@ -39,7 +39,9 @@ QtObject {
     // stays its own business.
     property real scale: 1
     property real radiusScale: 1
-    // The settle as a plain 0..1, for geometry that is not a multiple.
+    // The lift and the settle as plain 0..1, for feedback that is not a
+    // multiple of anything - a tint wash, a stroke weight, a glyph's alpha.
+    property real hoverProgress: 0
     property real pressProgress: 0
     property real dimOpacity: 1
 
@@ -50,6 +52,8 @@ QtObject {
         scaleAnim.easing.bezierCurve = transition.curve;
         radiusAnim.duration = transition.duration;
         radiusAnim.easing.bezierCurve = transition.curve;
+        hoverAnim.duration = transition.duration;
+        hoverAnim.easing.bezierCurve = transition.curve;
         pressAnim.duration = transition.duration;
         pressAnim.easing.bezierCurve = transition.curve;
         opacityAnim.duration = transition.duration;
@@ -61,6 +65,7 @@ QtObject {
         const targets = Appearance.interaction.targets(root.interactionState);
         root.scale = targets.scale;
         root.radiusScale = targets.radiusScale;
+        root.hoverProgress = targets.hover;
         root.pressProgress = targets.press;
         root.dimOpacity = targets.opacity;
     }
@@ -70,6 +75,9 @@ QtObject {
     }
     Behavior on radiusScale {
         NumberAnimation { id: radiusAnim; easing.type: Easing.BezierSpline }
+    }
+    Behavior on hoverProgress {
+        NumberAnimation { id: hoverAnim; easing.type: Easing.BezierSpline }
     }
     Behavior on pressProgress {
         NumberAnimation { id: pressAnim; easing.type: Easing.BezierSpline }
