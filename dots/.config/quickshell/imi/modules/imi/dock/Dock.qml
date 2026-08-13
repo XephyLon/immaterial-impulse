@@ -11,10 +11,16 @@ import Quickshell.Io
 import Quickshell
 import Quickshell.Widgets
 import Quickshell.Wayland
+import "dock_geometry.js" as DockGeometry
 
 Scope {
     id: root
     property bool pinned: Config.options?.dock.pinnedOnStartup ?? false
+
+    // Which edge the dock lives on. Hardcoded for now: this step moves the
+    // geometry into one derivation without changing where anything sits, so
+    // that a later step can change this one value and have the rest follow.
+    readonly property string edge: "bottom"
 
     Variants {
         model: Quickshell.screens
@@ -40,19 +46,32 @@ Scope {
                     || (!ToplevelManager.activeToplevel?.activated)
             }
 
+            // Everything positional comes from one derivation
+            // (dock_geometry.js), so the four places that used to spell the
+            // margin pair out by hand cannot drift apart.
+            readonly property real dockThickness: DockGeometry.thickness(
+                Config.options?.dock.height ?? 60,
+                Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut)
+            readonly property var dockMargins: DockGeometry.margins(
+                root.edge, Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut)
+
             exclusiveZone: (root.pinned && !fullscreenOnThisMonitor)
-                ? implicitHeight - Appearance.sizes.hyprlandGapsOut
-                  - (Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut)
+                ? DockGeometry.exclusiveZone(
+                    Config.options?.dock.height ?? 60,
+                    Appearance.sizes.elevationMargin, Appearance.sizes.hyprlandGapsOut)
                 : 0
 
-            anchors { bottom: true; left: true; right: true }
+            anchors {
+                top: DockGeometry.anchors(root.edge).top
+                bottom: DockGeometry.anchors(root.edge).bottom
+                left: DockGeometry.anchors(root.edge).left
+                right: DockGeometry.anchors(root.edge).right
+            }
             implicitWidth: dockBackground.implicitWidth
             WlrLayershell.namespace: "quickshell:dock"
             color: "transparent"
 
-            implicitHeight: (Config.options?.dock.height ?? 70)
-                + Appearance.sizes.elevationMargin
-                + Appearance.sizes.hyprlandGapsOut
+            implicitHeight: dockRoot.dockThickness
 
             mask: Region { item: dockMouseArea }
 
@@ -76,13 +95,18 @@ Scope {
             MouseArea {
                 id: dockMouseArea
                 height: parent.height
+                // The reveal is one number: revealed, a sliver, or one past
+                // gone. Which margin it lands on is the edge's business.
+                readonly property var revealOffsets: DockGeometry.revealOffsets(
+                    dockRoot.implicitHeight, Config.options?.dock.hoverRegionHeight ?? 2)
+                readonly property real revealOffset: dockRoot.reveal
+                    ? revealOffsets.revealed
+                    : (Config.options?.dock.hoverToReveal
+                        ? revealOffsets.peeking : revealOffsets.hidden)
+
                 anchors {
                     top: parent.top
-                    topMargin: dockRoot.reveal
-                        ? 0
-                        : Config.options?.dock.hoverToReveal
-                            ? (dockRoot.implicitHeight - Config.options.dock.hoverRegionHeight)
-                            : (dockRoot.implicitHeight + 1)
+                    topMargin: dockMouseArea.revealOffset
                     horizontalCenter: parent.horizontalCenter
                 }
                 implicitWidth: dockHoverRegion.implicitWidth + Appearance.sizes.elevationMargin * 2
@@ -118,8 +142,8 @@ Scope {
                             id: dockVisualBackground
                             property real margin: Appearance.sizes.elevationMargin
                             anchors.fill: parent
-                            anchors.topMargin:    Appearance.sizes.elevationMargin
-                            anchors.bottomMargin: Appearance.sizes.hyprlandGapsOut
+                            anchors.topMargin:    dockRoot.dockMargins.top
+                            anchors.bottomMargin: dockRoot.dockMargins.bottom
                             color: Config.options.dock.showBackground
                                    ? Appearance.colors.colLayer0 : "transparent"
                             border.width: Config.options.dock.showBackground ? 1 : 0
