@@ -53,7 +53,13 @@ ShellRoot {
     // and the sweep runs both, because the row divides the strip by the count
     // it is handed and a layout that only ever saw one of them proves nothing.
     function seedForecast(count) {
-        const codes = [113, 296, 200, 338];
+        // OpenWeatherMap condition ids, because that is the provider a config
+        // with nothing set resolves to and the card reads `wCode` against
+        // whichever one reported it. Seeded with wttr's WWO codes instead, the
+        // shots render four storms and a cloud - correct behaviour for codes
+        // the provider did not send, and a misleading picture of the widget.
+        // The mapping itself is unit-tested on both providers.
+        const codes = [800, 500, 202, 601];
         const days = [];
         for (let i = 0; i < count; i++)
             days.push({ date: harness.isoIn(i), wCode: codes[i % codes.length],
