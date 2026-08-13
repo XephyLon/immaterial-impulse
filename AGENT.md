@@ -1072,6 +1072,25 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   timer and now does for its slot watcher. This surfaced when `StyledPopup` stopped being a
   `LazyLoader`; probed with `qml6` rather than reasoned about.
   (b22a923a5 ("refactor(bar): delete the per-popup layer surface").)
+- **QtQml replaces `Date`'s locale methods with its own overloads, so ECMAScript's
+  options-object form is not an error here - it is a different, plausible answer.**
+  `toLocaleDateString`, `toLocaleTimeString` and `toLocaleString` take **(locale, format)** in
+  QML, where `locale` is a `Qt.locale()` and `format` is a `Locale.*Format` enum or a Qt format
+  string. Handed a browser's `date.toLocaleDateString(undefined, { weekday: "short" })` the
+  engine does not recognise the object, falls through to the locale's short **date** format, and
+  returns `"8/14/26"` where the call plainly asks for `"Fri"` - no warning, no exception, no log
+  line. Use `date.toLocaleDateString(Qt.locale(), "ddd")`. Two things generalise past the one
+  call. The test that should have caught it compared the function against **the same expression
+  the function ran**, so it asserted only that the function agreed with itself and passed on the
+  bug - the sibling of the UTC-runner problem pinned three functions up the same file, with the
+  tautology in the assertion rather than in the environment. Check the *shape* of a localized
+  answer (a weekday name carries no digits, three consecutive days are three different names,
+  seven days on is the same name again) rather than an expected string no locale is obliged to
+  produce. And a `.pragma library` is held free of `Qt` by
+  `tests/test_weather_forecast_contract.py`, so the locale is passed in by the caller, which has
+  an engine context. Found by rendering the widget and reading the labels; the whole of it is
+  invisible from the source. fix(weather): a forecast card is named for its weekday, not for its
+  date.
 - **`FileView` (`Quickshell.Io`) loads asynchronously - `.text()` right after calling `.reload()`
   is not guaranteed to return the new content.** The correct pattern (used throughout this codebase
   - `MaterialSymbolsSearch.qml`, `Notifications.qml`, `Emojis.qml`, `Profile.qml`) is to read

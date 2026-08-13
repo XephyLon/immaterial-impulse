@@ -115,7 +115,7 @@ shown disabled — for a manifest naming a single span.
 **Only declare `sizes` for a widget that has a design per size.** Most widgets have one
 layout, and the host swaps the pixel size and nothing else: offering a span a widget has
 no layout for is worse than offering no choice at all. `nandoroid-weather` (1x1 / 2x1 /
-3x1), `nandoroid-currency` (1x1 / 2x1) and `nandoroid-media` (3x2 / 2x2 / 2x1) qualify
+3x1 / 3x2), `nandoroid-currency` (1x1 / 2x1) and `nandoroid-media` (3x2 / 2x2 / 2x1) qualify
 because each span is a different layout inside the widget; nothing else bundled does.
 
 Such a widget reads the resolved span back from the host as `hostGridSize`
@@ -326,7 +326,7 @@ The only test is `size === widgetGridSpanX(cols)` / `widgetGridSpanY(rows)`.
 - **The `nandoroid-*` widgets already conform.** They define this grid (media = 3x2,
   system monitor = 3x1 / 1x3). The system monitor is content-sized rather than declaring
   `grid`, but its pixel sizes are exactly on it, so new `grid` widgets tile flush beside
-  it; weather (1x1 / 2x1 / 3x1), currency (1x1 / 2x1) and media (3x2 / 2x2 / 2x1) declare
+  it; weather (1x1 / 2x1 / 3x1 / 3x2), currency (1x1 / 2x1) and media (3x2 / 2x2 / 2x1) declare
   `grid.sizes` and take their size from the host. `clock` is exempt by decision: its shape
   places neatly without a span, so it stays content-sized behind
   `defaultWidth`/`defaultHeight`.
