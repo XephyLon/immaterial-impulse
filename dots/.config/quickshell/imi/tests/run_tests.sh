@@ -263,14 +263,23 @@ if ! python3 "$SCRIPT_DIR/test_widget_resize_grip_runtime.py"; then
     exit 1
 fi
 
-# Renders real cards and reads the pixels under them: the shadow is not
-# reachable from a source-text check. Brings its own headless weston.
 echo "Running dock position contract tests..."
 if ! python3 "$SCRIPT_DIR/test_dock_position_contract.py"; then
     echo "Dock position contract tests failed."
     exit 1
 fi
 
+# A column of dock icons can lay out perfectly and still refuse to reorder,
+# because every slot centre shares an x - only real mouse events see that.
+# Brings its own headless weston.
+echo "Running dock edge runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_dock_edge_runtime.py"; then
+    echo "Dock edge runtime tests failed."
+    exit 1
+fi
+
+# Renders real cards and reads the pixels under them: the shadow is not
+# reachable from a source-text check. Brings its own headless weston.
 echo "Running widget card shadow tests..."
 if ! python3 "$SCRIPT_DIR/test_card_shadow.py"; then
     echo "Widget card shadow tests failed."
