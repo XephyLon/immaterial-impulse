@@ -65,10 +65,13 @@ Item {
             id: contextPopup
             visible: true
 
+            // Away from the edge the dock is on: a menu that opens upward
+            // from a top dock is drawn off the screen.
+            readonly property bool dockAtTop: (Config.options?.dock.edge ?? "bottom") === "top"
             anchor {
                 item: root.targetButton
-                gravity: Edges.Top
-                edges: Edges.Top
+                gravity: contextPopup.dockAtTop ? Edges.Bottom : Edges.Top
+                edges: contextPopup.dockAtTop ? Edges.Bottom : Edges.Top
                 adjustment: PopupAdjustment.SlideX
             }
 
@@ -91,9 +94,11 @@ Item {
                 property real contentPadding: Appearance.spacing.space50
 
                 anchors {
-                    bottom: parent.bottom
+                    top: contextPopup.dockAtTop ? parent.top : undefined
+                    bottom: contextPopup.dockAtTop ? undefined : parent.bottom
                     horizontalCenter: parent.horizontalCenter
-                    bottomMargin: Appearance.sizes.elevationMargin
+                    topMargin: contextPopup.dockAtTop ? Appearance.sizes.elevationMargin : 0
+                    bottomMargin: contextPopup.dockAtTop ? 0 : Appearance.sizes.elevationMargin
                 }
                 color: Appearance.m3colors.m3surfaceContainer
                 radius: Appearance.rounding.normal

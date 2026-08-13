@@ -140,9 +140,15 @@ DockButton {
 
                 RowLayout {
                     spacing: Appearance.spacing.space50
+                    // The running dots sit between the icon and the screen
+                    // edge, so they swap sides with the dock: below the icon
+                    // at the bottom edge, above it at the top.
+                    readonly property bool dockAtTop: (Config.options?.dock.edge ?? "bottom") === "top"
                     anchors {
-                        top: iconImageLoader.bottom
-                        topMargin: Appearance.spacing.space25
+                        top: dockAtTop ? undefined : iconImageLoader.bottom
+                        bottom: dockAtTop ? iconImageLoader.top : undefined
+                        topMargin: dockAtTop ? 0 : Appearance.spacing.space25
+                        bottomMargin: dockAtTop ? Appearance.spacing.space25 : 0
                         horizontalCenter: parent.horizontalCenter
                     }
                     Repeater {
