@@ -124,6 +124,64 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
                         self.assertIsNone(re.search(live, line),
                                           f"{tree.name}: {line.strip()}")
 
+    def test_every_card_is_told_when_its_widget_is_handled(self):
+        """A card that never receives `dragging` silently never lifts.
+
+        The elevation is a property chain - host -> node -> wrapper -> entry
+        component -> card - and any link that forgets to forward it produces
+        no error, no warning, and a card that simply sits flat while every
+        other one rises. The chain is short enough to pin end to end.
+        """
+        node = (PLUGIN_ROOT.parent / "PluginNode.qml").read_text(encoding="utf-8")
+        host = (PLUGIN_ROOT.parent / "PluginWidget.qml").read_text(encoding="utf-8")
+        self.assertIn("item.hostDragging = Qt.binding", node)
+        self.assertIn("hostDragging: rootWidget.dragging", host)
+
+        for directory in SIZED_BY_THE_HOST_GRID | {"nandoroid-system-monitor"}:
+            wrapper = (PLUGIN_ROOT / directory / "Widget.qml").read_text(encoding="utf-8")
+            self.assertIn("property bool hostDragging", wrapper, directory)
+            self.assertIn("dragging: root.hostDragging", wrapper, directory)
+
+        # ...and every card in the components those wrappers instantiate.
+        for name in ("DesktopCurrencyWidget", "DesktopWeatherWidget",
+                     "DesktopMediaWidget", "DesktopSystemMonitorWidget"):
+            source = (DESIGN_SYSTEM / "widgets" / name).with_suffix(".qml") \
+                .read_text(encoding="utf-8")
+            cards = source.count("WidgetCard {")
+            forwarded = source.count("dragging: root.dragging")
+            self.assertEqual(cards, forwarded,
+                             f"{name}: {cards} cards, {forwarded} told about the drag")
+
+    def test_the_card_shadows_its_body_and_drops_it_while_moving(self):
+        """The shadow comes off the BODY, and goes away during motion.
+
+        Taken from the card as a whole it would put a shadow under every label
+        and glyph inside it. And re-rendering a blurred copy of the body every
+        frame of a morph is the expensive path - the same reason the frost is
+        dropped for the duration of the motion.
+        """
+        card = (DESIGN_SYSTEM / "widgets/WidgetCard.qml").read_text(encoding="utf-8")
+        self.assertIn("id: bodySurface", card)
+        self.assertIn("shadowEnabled: true", card)
+        self.assertIn("layer.enabled: root.shadowVisible", card)
+        self.assertIn("root.shadowEnabled && !root.motionActive", card)
+        # The layer clips at its item's bounds and the bowed canvas draws
+        # outside the card, so the frame is inset negatively by the bow.
+        body = card[card.index("id: bodySurface"):]
+        self.assertIn("anchors.margins: -Tension.BOW_PX * 2", body[:400])
+        # The content layer is a different one and must not gain a shadow.
+        content = card[card.index("id: contentItem"):]
+        self.assertNotIn("shadow", content.lower())
+
+    def test_the_elevation_numbers_are_the_ones_that_were_picked(self):
+        """Tuned on the real wallpaper in ShadowTuningPlayground; a later edit
+        that drifts them should be a deliberate re-tune, not a stray diff."""
+        appearance = (ROOT / "modules/common/Appearance.qml").read_text(encoding="utf-8")
+        for token, value in (("blur", "0.51"), ("shadowOpacity", "0.50"),
+                             ("offsetY", "4.0"), ("shadowScale", "1.00"),
+                             ("hoverLift", "1.94"), ("dragLift", "2.65")):
+            self.assertIn(f"property real {token}: {value}", appearance)
+
     def test_the_media_tree_answers_the_blur_contract_itself(self):
         """One tree, one card, one region list.
 
