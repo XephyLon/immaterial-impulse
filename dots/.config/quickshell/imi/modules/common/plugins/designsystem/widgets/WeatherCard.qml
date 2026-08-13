@@ -29,7 +29,12 @@ Rectangle {
     }
     
     readonly property string weatherIconsDir: "assets/icons/google-weather"
-    readonly property bool showDailyForecast: Config.options.weather ? Config.options.weather.showDailyForecast : true
+    // There is no top-level `weather` in the config adapter - the key lives at
+    // `bar.weather` - so this read was `undefined` and the ternary took `true`
+    // every time. A gate whose absence is silent is worse than no gate: it
+    // reads as a supported setting nobody can turn off. The card shows the
+    // full outlook, which is what it has always actually done.
+    readonly property bool showDailyForecast: true
     
     readonly property color contentColor: Appearance.m3colors.m3onSurface
     readonly property real midOpacity: 0.8
