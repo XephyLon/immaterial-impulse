@@ -5,6 +5,7 @@ import Qt5Compat.GraphicalEffects
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.plugins
+import qs.modules.common.plugins.designsystem.widgets as Expressive
 
 Item {
     id: root
@@ -15,6 +16,10 @@ Item {
     // pinned on its own cannot still be resized. False with no host, for a bare
     // `qs -p` probe of this file, the same as `screenName: ""`.
     property bool hostInteractionLocked: false
+
+    // The host's drag, forwarded to the elevation so the tile lifts while it is
+    // handled. A body never told about the drag silently never lifts.
+    property bool hostDragging: false
 
     // The tile is a shape-masked image, never a rectangular card: the host's
     // frost is a rounded rectangle, so it would render as a square halo around
@@ -96,79 +101,78 @@ Item {
             animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
         }
 
-        MaterialShape {
-            id: shadowShape
+        // The tokens, not the component. The tile is a shape-masked image, and
+        // WidgetCard clips its content to a rounded RECTANGLE - it says so
+        // itself - so a Heart or a Cookie9Sided would be cut square. The
+        // elevation has no such limit: it shadows painted alpha, so the
+        // silhouette it casts is whichever shape the user picked. That also
+        // retires the invisible twin the old drop shadow needed as a source.
+        Expressive.WidgetElevation {
+            id: shapeElevation
             anchors.fill: parent
-            color: Appearance.colors.colPrimaryContainer
-            shape: root.getShape(root.shapeName)
-            visible: false
-        }
+            dragging: root.hostDragging
 
-        StyledDropShadow {
-            target: shadowShape
-            z: -1
-        }
-
-        MaterialShape {
-            id: imageShape
-            anchors.fill: parent
-            z: 0
-            color: Appearance.colors.colPrimaryContainer
-            shape: root.getShape(root.shapeName)
-
-            layer.enabled: true
-            layer.effect: OpacityMask {
-                maskSource: MaterialShape {
-                    width: imageShape.width
-                    height: imageShape.height
-                    shape: root.getShape(root.shapeName)
-                }
-            }
-
-            StyledImage {
+            MaterialShape {
+                id: imageShape
                 anchors.fill: parent
-                source: root.imagePath !== "" ? root.imagePath : ""
-                fillMode: Image.PreserveAspectCrop
-                cache: false
-                antialiasing: true
-                sourceSize.width: parent.width
-                sourceSize.height: parent.height
-                visible: root.imagePath !== ""
-            }
+                z: 0
+                color: Appearance.colors.colPrimaryContainer
+                shape: root.getShape(root.shapeName)
 
-            // Placeholder + hover hint
-            MaterialSymbol {
-                anchors.centerIn: parent
-                iconSize: contentItem.implicitWidth / 3
-                text: root.dropHover ? "download" : "image"
-                fill: root.dropHover ? 1 : 0
-                color: root.dropHover
-                    ? Appearance.colors.colPrimary
-                    : Appearance.colors.colOnPrimaryContainer
-                visible: root.imagePath === ""
-                Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
-            }
-
-            DropArea {
-                anchors.fill: parent
-                keys: ["text/uri-list"]
-                onEntered: (drag) => {
-                    drag.accept(Qt.CopyAction)
-                    root.dropHover = true
-                }
-                onExited: {
-                    root.dropHover = false
-                }
-                onDropped: (drop) => {
-                    if (drop.hasUrls && drop.urls.length > 0) {
-                        var cleanPath = drop.urls[0].toString().replace(/^file:\/\//, "")
-                        var ext = cleanPath.split(".").pop().toLowerCase()
-                        var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif"]
-                        if (accepted.indexOf(ext) !== -1) {
-                            PluginState.setOption("custom-image", "path", cleanPath)
-                        }
+                layer.enabled: true
+                layer.effect: OpacityMask {
+                    maskSource: MaterialShape {
+                        width: imageShape.width
+                        height: imageShape.height
+                        shape: root.getShape(root.shapeName)
                     }
-                    root.dropHover = false
+                }
+
+                StyledImage {
+                    anchors.fill: parent
+                    source: root.imagePath !== "" ? root.imagePath : ""
+                    fillMode: Image.PreserveAspectCrop
+                    cache: false
+                    antialiasing: true
+                    sourceSize.width: parent.width
+                    sourceSize.height: parent.height
+                    visible: root.imagePath !== ""
+                }
+
+                // Placeholder + hover hint
+                MaterialSymbol {
+                    anchors.centerIn: parent
+                    iconSize: contentItem.implicitWidth / 3
+                    text: root.dropHover ? "download" : "image"
+                    fill: root.dropHover ? 1 : 0
+                    color: root.dropHover
+                        ? Appearance.colors.colPrimary
+                        : Appearance.colors.colOnPrimaryContainer
+                    visible: root.imagePath === ""
+                    Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
+                }
+
+                DropArea {
+                    anchors.fill: parent
+                    keys: ["text/uri-list"]
+                    onEntered: (drag) => {
+                        drag.accept(Qt.CopyAction)
+                        root.dropHover = true
+                    }
+                    onExited: {
+                        root.dropHover = false
+                    }
+                    onDropped: (drop) => {
+                        if (drop.hasUrls && drop.urls.length > 0) {
+                            var cleanPath = drop.urls[0].toString().replace(/^file:\/\//, "")
+                            var ext = cleanPath.split(".").pop().toLowerCase()
+                            var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif"]
+                            if (accepted.indexOf(ext) !== -1) {
+                                PluginState.setOption("custom-image", "path", cleanPath)
+                            }
+                        }
+                        root.dropHover = false
+                    }
                 }
             }
         }
@@ -179,9 +183,12 @@ Item {
             height: 16
             radius: Appearance.rounding.unsharpenslight
             color: Appearance.colors.colOnPrimaryContainer
+            // The shape fills this item, so its corner is this item's corner -
+            // and the shape sits inside the elevation now, which is neither
+            // this handle's parent nor its sibling to anchor to.
             anchors {
-                right: imageShape.right
-                bottom: imageShape.bottom
+                right: parent.right
+                bottom: parent.bottom
                 margins: Appearance.spacing.space100
             }
             opacity: (widgetHover.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
