@@ -201,6 +201,10 @@ Item {
     // button too: pointer cursor over the button's face, and hover reported
     // back through hoveringPlay.
     property var playItem: null
+    // Exposed for the probe's failure diagnostics: when a button reports
+    // itself hovered with the pointer elsewhere, the next question is always
+    // whether this area is the one holding it.
+    readonly property bool seekAreaContainsMouse: seekArea.containsMouse
     readonly property bool hoveringPlay: seekArea.containsMouse && root.playItem
         && root.playItem.visible && (function () {
             const point = seekArea.mapToItem(root.playItem, seekArea.mouseX, seekArea.mouseY);
