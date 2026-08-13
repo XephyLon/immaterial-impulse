@@ -449,9 +449,31 @@ plausible can still have the drag reorder inert.
   region over an unpainted rect frosts bare wallpaper, and `lint_blur_region_pairing.py` pins the
   region to the layer rule but cannot see whether it is over the right rect.
 
-## 9. Open questions for the user
+## 9. Questions, and how they were settled
 
-These are not rhetorical. Four of them change what gets built.
+Answered 13 Aug, before implementation began. The reasoning that produced each option is kept
+below; what changed is that three of them are no longer open.
+
+**1. The media tile at vertical edges: HIDDEN.** As the vertical bar already omits what does not
+fit. A richer vertical media tile (art-only tile, or a stacked column) becomes its own spec rather
+than holding up the position work. This collapses step 8 of the landing plan into step 7.
+
+**2. Structure: ONE TREE with a vertical flag**, on `DocktoPanel`'s evidence. An orientation change
+then preserves icon and launch state instead of destroying and recreating the dock, which is also
+what lets anything animate across it later.
+
+**3. Same edge as an auto-hiding bar: REFUSED in the settings UI.** The shell declines the
+combination rather than arbitrating two reveal slivers on one edge. Simpler, and it cannot be got
+subtly wrong - the failure mode of the alternative is two controls that are both hard to hit.
+
+**4-7** take the recommendations already argued below: no `screenList` in this work, the new
+`dock.edge` string rather than literal parity with the bar's overloaded pair, one settings row in
+the Dock section, and `dock.height`/`hoverRegionHeight` keep their names meaning thickness on
+either axis.
+
+### The original questions, with their reasoning
+
+These were not rhetorical. Four of them changed what got built.
 
 1. **Does the vertical dock carry the media tile at all?** `DockMedia.qml` is a 240x60 card and
    there is no rotation of it that works in a 60px column. Three options, none of them derivable
