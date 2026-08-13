@@ -57,12 +57,6 @@ Item {
     readonly property real spanH: root.baseHeight
 
 
-    Behavior on implicitWidth {
-        NumberAnimation {
-            duration: 250
-            easing.bezierCurve: [0.2, 0, 0, 1]
-        }
-    }
 
 
 
