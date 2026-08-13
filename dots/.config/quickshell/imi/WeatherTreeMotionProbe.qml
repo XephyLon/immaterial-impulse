@@ -66,16 +66,20 @@ ShellRoot {
                         high: 24 - i, low: 12 - i });
         Weather.forecast = days;
     }
-    function seedWeather() {
-        // Sunrise and sunset in the shape OpenWeatherMap's parser publishes
-        // them (en-US, with seconds). Without them the sun marker is correctly
-        // hidden - "0" is an unknown day, not midnight - and the shots would
-        // show a curve with nothing on it while looking perfectly fine.
+    // Sunrise and sunset in the shape OpenWeatherMap's parser publishes them
+    // (en-US, with seconds). Without them the sun marker is correctly hidden -
+    // "0" is an unknown day, not midnight - and the shots would show a curve
+    // with nothing on it while looking perfectly fine. Which is also a state
+    // worth driving, so the times are arguments.
+    function seedSun(sunrise, sunset) {
         Weather.data = {
             temp: "21°C", tempFeelsLike: "19°C", tempHigh: "24°C", tempLow: "12°C",
             description: "Light rain", humidity: "72%", wind: "12 km/h", wCode: 296,
-            sunrise: "6:12:00 AM", sunset: "7:48:00 PM"
+            sunrise: sunrise, sunset: sunset
         };
+    }
+    function seedWeather() {
+        harness.seedSun("6:12:00 AM", "7:48:00 PM");
         harness.seedForecast(4);
     }
 
@@ -204,6 +208,16 @@ ShellRoot {
         // travel between the two wide spans on the y axis alone, so watching
         // x - which is what every other trail here watches - would report them
         // static through the one transition that moves them.
+        // The background arc. 1x1 is the one span with no home for it, so the
+        // pairs that enter and leave 1x1 must show the opacity moving through
+        // its middle rather than a value that is 0.32 in one frame and 0 in
+        // the next - and its horizon has to travel into and out of the taller
+        // card, which is the axis the six one-row pairs never exercise.
+        const arc = harness.findByName(widget, "weatherSunArc");
+        const marker = harness.findByName(widget, "weatherSunMarker");
+        harness.watch("arc.op", arc, "opacityChanged", () => arc.opacity);
+        harness.watch("arc.horizon", arc, "horizonYChanged", () => arc.horizonY);
+        harness.watch("sun.y", marker, "yChanged", () => marker.y);
         const pills = harness.findByName(widget, "weatherPills");
         const rule = harness.findByName(widget, "weatherColumnRule");
         const strip = harness.findByName(widget, "weatherForecast");
@@ -229,9 +243,16 @@ ShellRoot {
         for (const label in harness.trails) {
             const trail = harness.trails[label];
             const first = trail[0], last = trail[trail.length - 1];
+            // Half a pixel is the floor for a position, a size or a font, and
+            // it is nonsense for an opacity: the sun arc leaves 1x1 by going
+            // 0.32 -> 0, which is a complete disappearance and a change of
+            // 0.32, so the pixel floor filed the one trail that had to move as
+            // "static" and printed nothing at all about it. A trail's units
+            // decide its floor.
+            const floor = label.endsWith(".op") ? 0.02 : 0.5;
             const moved = label === "glyph.morphT"
                 ? trail.some(v => v > 0.05 && v < 0.95)
-                : Math.abs(last - first) > 0.5;
+                : Math.abs(last - first) > floor;
             if (label === "glyph.morphT" && trail.length > 1 && !moved) {
                 harness.check(`${tag} glyph.morphT sweeps instead of flipping`, false);
                 continue;
@@ -239,6 +260,13 @@ ShellRoot {
             if (!moved) { console.log(`[WeatherTreeMotion] ${tag} ${label}: static`); continue; }
             harness.check(`${tag} ${label} animates (${trail.length} steps)`, trail.length >= 4);
         }
+        // Motion trails score the journey; this scores where it arrived. An
+        // arc that faded out and back in on every pair would pass every trail
+        // above and still be wrong at rest.
+        const arc = harness.findByName(widget, "weatherSunArc");
+        const gone = pair[1] === "1x1";
+        harness.check(`${tag} the arc ${gone ? "is gone" : "is drawn"} at ${pair[1]}`,
+            gone ? arc.opacity < 0.01 : arc.opacity > 0.3);
         harness.transitionIndex++;
         if (harness.transitionIndex < harness.transitions.length) {
             nextTimer.start();
@@ -308,9 +336,37 @@ ShellRoot {
         if (harness.countIndex < harness.countCases.length) {
             harness.runCountCase();
         } else {
-            console.log(`[WeatherTreeMotion] failures: ${harness.failures}`);
-            Qt.quit();
+            unknownPhase.start();
         }
+    } }
+
+    // ---- a day the provider did not report -------------------------------
+    //
+    // "0" is what both providers' parsers write for a missing sunrise or
+    // sunset, and it must not read as midnight: the marker hides and the curve
+    // stays. That is a different reason to be invisible from 1x1's, and the
+    // two are now expressed in one binding, so a rewrite that collapsed them
+    // would put a confident sun at the card's left edge all day - or take the
+    // curve away with it - and neither would warn.
+    Timer { id: unknownPhase; interval: 250; onTriggered: {
+        widget.commitGridSize(harness.spanOf("3x1"));
+        harness.currentSpan = "3x1";
+        harness.seedSun("0", "0");
+        unknownCheck.start();
+    } }
+
+    Timer { id: unknownCheck; interval: 900; onTriggered: {
+        const arc = harness.findByName(widget, "weatherSunArc");
+        const marker = harness.findByName(widget, "weatherSunMarker");
+        harness.check("an unknown sunrise hides the marker", marker.opacity < 0.01);
+        harness.check("...and leaves the curve drawn", arc.opacity > 0.3);
+        harness.shoot("3x1_unknown-day");
+        finish.start();
+    } }
+
+    Timer { id: finish; interval: 200; onTriggered: {
+        console.log(`[WeatherTreeMotion] failures: ${harness.failures}`);
+        Qt.quit();
     } }
 
     Timer { id: t0; interval: 1200; running: true; onTriggered: {
