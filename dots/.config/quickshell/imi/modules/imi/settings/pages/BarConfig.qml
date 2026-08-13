@@ -667,6 +667,20 @@ ContentPage {
                     checked: Config.options.dock.enable
                     onToggleRequested: Config.options.dock.enable = !Config.options.dock.enable
                 }
+                ConfigSelectionArray {
+                    text: Translation.tr("Dock position")
+                    icon: "swap_vert"
+                    // The value IS the stored string - no bitfield to
+                    // open-code, which is the whole argument for the new key.
+                    currentValue: Config.options.dock.edge
+                    onSelected: newValue => { Config.options.dock.edge = newValue; }
+                    options: [
+                        { displayName: Translation.tr("Top"),    icon: "arrow_upward",   value: "top" },
+                        { displayName: Translation.tr("Left"),   icon: "arrow_back",     value: "left" },
+                        { displayName: Translation.tr("Bottom"), icon: "arrow_downward", value: "bottom" },
+                        { displayName: Translation.tr("Right"),  icon: "arrow_forward",  value: "right" }
+                    ]
+                }
                 ConfigSwitch {
                     buttonIcon: "background_dot_small"
                     text: Translation.tr("Background")
