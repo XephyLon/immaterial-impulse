@@ -1,6 +1,7 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
 import qs.modules.common
+import qs.modules.common.widgets
 import qs.modules.common.functions as Functions
 import qs.services
 import "../../designsystem/widgets" as Expressive
@@ -61,6 +62,18 @@ Item {
 
     readonly property bool isPlay: root.role === "play"
 
+    // The shared interaction states (step 9). The control keeps its own
+    // painting; the model decides only how far into hover and press it is,
+    // and on which tier it travels - so these buttons and every RippleButton
+    // in the shell acknowledge a press on the same clock.
+    // Hover has to be forwarded from the seeker (hover does not propagate);
+    // the press does not, because the seeker rejects anything off its stroke
+    // and an unaccepted press falls through to this button's own area.
+    readonly property InteractionMotion motion: InteractionMotion {
+        hovered: root.hoveredNow
+        down: hitArea.pressed
+    }
+
     // The colour pair the 2x1 pills and 2x2 badges share (LayoutCompact and
     // LayoutCookie declared them identically, which is why they read as one
     // widget's controls).
@@ -91,10 +104,29 @@ Item {
     // different object. The spin eases back to rest through the same
     // Behavior that always owned it, so the reel stops turning as it stops
     // being a reel.
+    // What the badge is ACTUALLY drawn at. The model saying "hovered" is not
+    // evidence the lift reached a pixel: the first version applied it through
+    // a `Scale` whose `origin.x: width / 2` resolved against a scope with no
+    // width, and every state property read correctly while the badge never
+    // moved. A probe can watch this one.
+    readonly property real appliedBadgeScale: badgeLoader.item ? badgeLoader.item.scale : 1
     Loader {
+        id: badgeLoader
         active: !root.isPlay
         anchors.fill: parent
         sourceComponent: Item {
+            // The badge lifts on hover and settles on press. The PLAY button
+            // deliberately does not: the seek ring is a perfect circle inside
+            // it at 2x2 and its own outline at 2x1, and scaling one and not
+            // the other pulls apart an alignment the review asked for
+            // explicitly. Its feedback is the wash on its own outline, which
+            // is what the ring is drawn around anyway.
+            // Item.scale, not a Scale transform: `origin.x: width / 2` inside
+            // the transform resolved against a scope with no width and the
+            // lift never reached a pixel, while every state property said it
+            // had. `scale` is centred by default and cannot miss.
+            scale: root.motion.scale
+
             Expressive.MaterialShape {
                 id: reelShape
                 anchors.fill: parent
@@ -171,6 +203,15 @@ Item {
                 // the rule is structural: this canvas never yields. At 2x1 it
                 // waves in the seeker's phase instead.
 
+                // Hover and press ride the BODY's own outline instead of a
+                // rectangle laid over it: the flat wash was square-cornered
+                // against a capsule at 3x2 and could not follow the cookie at
+                // all. One painter owns this face, so it paints the state too.
+                readonly property real washAlpha: 0.08 * root.motion.hoverProgress
+                    + 0.07 * root.motion.pressProgress
+                onWashAlphaChanged: requestPaint()
+                readonly property color washColor: Appearance.colors.colOnPrimary
+
                 property real morphT: root.span === "3x2" ? 0 : 1
                 Behavior on morphT { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
                 readonly property color bodyColor: Appearance.colors.colPrimary
@@ -202,6 +243,15 @@ Item {
                     repeat: true
                     running: body.visible && (body.visualizing || body.settlingLevels)
                     onTriggered: body.stepLevels()
+                }
+
+                // Fills the path that is already current - the wash is the
+                // body's shape by construction, never an approximation of it.
+                function washOver(ctx) {
+                    if (body.washAlpha <= 0.001) return;
+                    ctx.fillStyle = Functions.ColorUtils.applyAlpha(
+                        body.washColor, body.washAlpha);
+                    ctx.fill();
                 }
 
                 onMorphTChanged: requestPaint()
@@ -259,6 +309,7 @@ Item {
                         ctx.closePath();
                         ctx.fillStyle = body.bodyColor;
                         ctx.fill();
+                        body.washOver(ctx);
                         return;
                     }
                     // Breathing takes over only once a lobe actually moves:
@@ -297,6 +348,7 @@ Item {
                     ctx.closePath();
                     ctx.fillStyle = body.bodyColor;
                     ctx.fill();
+                    body.washOver(ctx);
                     ctx.restore();
                 }
             }
@@ -377,16 +429,6 @@ Item {
                 Behavior on color { ColorAnimation { duration: 100 } }
             }
 
-            // The 3x2 pill's hover/press wash, riding the body's own shape is
-            // step 8's interaction-model work; the flat wash keeps parity.
-            Rectangle {
-                anchors.fill: parent
-                radius: playRoot.side / 2
-                color: Appearance.colors.colOnPrimary
-                visible: root.span === "3x2"
-                opacity: hitArea.pressed ? 0.15 : (root.hoveredNow ? 0.08 : 0)
-                Behavior on opacity { NumberAnimation { duration: 150 } }
-            }
         }
     }
 
@@ -397,7 +439,17 @@ Item {
     // interactive thing is topmost, so the bar's battle-tested pattern -
     // hoverEnabled + cursorShape on the input area itself - is sufficient
     // and unambiguous.
-    readonly property bool hoveredNow: hitArea.containsMouse || root.coveredHover
+    // Hover STATE comes from a HoverHandler; the cursor and the clicks stay
+    // with the MouseArea below. Those are different channels (the two-handlers
+    // lesson was about both of them answering for the CURSOR), and this one
+    // has to be the handler: at 2x2 and 2x1 the seek ring sits ABOVE this
+    // button, so once a press grab ends, the pointer's leave is delivered to
+    // the ring and a MouseArea's containsMouse here stays true forever - the
+    // button sat permanently hovered, which at 2x2 means the play glyph never
+    // leaves the artwork again. A HoverHandler tracks the scene position and
+    // clears.
+    readonly property bool hoveredNow: hoverTracker.hovered || root.coveredHover
+    HoverHandler { id: hoverTracker }
     MouseArea {
         id: hitArea
         anchors.fill: parent
