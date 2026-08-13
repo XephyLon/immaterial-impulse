@@ -75,12 +75,20 @@ Item {
         const pad = stroke;
         const cx = width / 2, cy = height / 2;
         const dia = Math.min(width, height) - stroke;
-        const cubics = MediaShapes.ringAt(root.ringT);
-        const measure = PathLength.measureCubics(cubics);
+        // Cached against ringT: rebuilding the Morph and re-measuring 24
+        // cubics here ran on every frame of the wave clock and on every mouse
+        // move through strokeDistance(), for a shape that changes twice.
+        const ring = MediaShapes.ringMeasuredAt(root.ringT, PathLength.measureCubics);
+        const cubics = ring.cubics;
+        const measure = ring.measure;
         const out = [];
         for (let i = 0; i <= N; i++) {
             const u = i / N;
             const line = { x: pad + u * (width - 2 * pad), y: cy };
+            // At 3x2 the baseline IS the line: bend is 0, so every ring point
+            // below was computed and then multiplied away. Measured, that was
+            // 42% of the seeker's per-frame cost at that span.
+            if (root.bend <= 0.0001) { out.push(line); continue; }
             const target = u * measure.total;
             let index = 0;
             while (index < cubics.length - 1 && measure.lengths[index + 1] < target) index++;
