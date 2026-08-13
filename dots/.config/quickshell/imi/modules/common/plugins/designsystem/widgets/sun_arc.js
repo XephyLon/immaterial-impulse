@@ -12,6 +12,15 @@
 // formatted. Neither is a Date, and parsing either with `new Date(...)` gets
 // an Invalid Date - so this reads the clock itself.
 
+// How much night the card shows past each horizon, as a fraction of the
+// daylight, and how much of the sine's depth the night tails keep at their
+// deepest. Named here rather than left as literals on the canvas because the
+// arc's ASPECT - how wide the day is against how far the curve rises in it -
+// is what decides whether a span can carry the arc at all, and a test cannot
+// ask that question of a number sitting in a QML binding.
+var NIGHT_MARGIN = 0.22;
+var TAIL_FLATTEN = 0.35;
+
 // Minutes since local midnight, or -1 when the string is not a clock. "0" is
 // what both providers' parsers write when the field was missing, and it must
 // not read as midnight - a sun that rises at 00:00 puts the dot in the wrong
@@ -98,7 +107,7 @@ function phaseAt(u, window) {
 function heightAt(phase, rise, tailFlatten) {
     var raw = Math.sin(phase * Math.PI) * rise;
     if (phase >= 0 && phase <= 1) return raw;
-    var flatten = tailFlatten === undefined ? 0.35 : tailFlatten;
+    var flatten = tailFlatten === undefined ? TAIL_FLATTEN : tailFlatten;
     // How far into the night this is, in phase units, capped at half a period
     // (where the continued sine would bottom out).
     // Ease from full depth at the horizon to `flatten` of it further out, on

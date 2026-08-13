@@ -96,6 +96,38 @@ function columnDividerRect(span, width, height, scale) {
     return null;
 }
 
+// ---- the sun's day, across the card's background -------------------------
+//
+// The arc is a background layer rather than one of the shared three, but it
+// obeys the same rule as everything else in this file: a rect where it has a
+// home, null where it does not.
+//
+// `horizonY` is where the curve crosses from day into night, and `apexRise`
+// is how far above it the midday sine reaches. Both are measured from the
+// card's top edge.
+//
+// **1x1 is the null.** The curve always draws one whole day plus a night
+// margin at each end across whatever width it is given, so at 132px the
+// daylight stretch is 92px wide while the apex still rises 45px: a 2:1 arc,
+// steep enough that what shows either side of the 44px temperature reads as a
+// diagonal streak through the card rather than as a day. Making it fit is not
+// the answer either - flattening it to a readable ~4:1 puts the whole curve
+// in the 28px strip below the condition line, where the leaf glyph swallows
+// the sunset half and the marker lands on the text. The 1x1 card is fully
+// occupied; the arc has nowhere to be, which is what null means here.
+function sunArcRect(span, width, height, scale) {
+    if (span === "1x1") return null;
+    if (span === "3x2") {
+        // No separate horizon is drawn at 3x2: the curve's zero-crossing lands
+        // on the hairline the card already draws between its two bands, so the
+        // divider and the horizon are one line doing both jobs. Derived from
+        // that rect rather than restated, so moving the seam moves the horizon.
+        var seam = bandDividerRect(span, width, height, scale).y;
+        return { horizonY: seam, apexRise: seam * 0.62 };
+    }
+    return { horizonY: height * 0.74, apexRise: height * 0.42 };
+}
+
 // ---- the second row ------------------------------------------------------
 
 // The hairline between the two bands. 3x2 only - there is no seam to draw on
