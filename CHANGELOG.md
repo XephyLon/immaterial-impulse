@@ -12,6 +12,63 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.24.0] — 2026-08-13
+
+The Material 3 Expressive morphing release: desktop widgets stopped disappearing
+when they resize. Every shared element of a widget is now declared once and
+travels between the places its spans put it, on one clock, over a card that
+bows when you pull it and casts a shadow that lifts when you handle it.
+
+### Added
+- **Widgets morph instead of swapping.** A widget used to hold one layout per
+  span and cross-fade between them, so its own parts vanished and reappeared on
+  a resize. Media, weather and currency are each one tree now: the play button,
+  the seek bar, the glyph, the rates panel are single elements whose geometry
+  comes from a per-span table, and the resize animates them from one place to
+  the other. Only what genuinely has no home at the next span fades.
+- **Elastic resize.** A widget's card resists the pull, bows at the edge you are
+  dragging, and breaks to the next span when you pass the threshold — with the
+  constants tuned on screen rather than guessed, and expressed as time so they
+  do not change with the frame rate.
+- **Desktop cards cast a shadow**, lifting on hover and further while dragged.
+  The five older bundled widgets that carried their own hand-rolled shadow at
+  their own values now share the one elevation, and calendar — the copy the
+  design spec recorded as having already drifted — draws on the shared card.
+- **One interaction model** for hover and press, in `Appearance`, adopted by
+  both RippleButtons and the media transport controls. A press is acknowledged
+  faster than it is released, and a release animates even when the pointer has
+  already left the control.
+- **The dock lives on any edge.** Top is a mirror of bottom; left and right are
+  a genuinely different layout, ported from the vertical dock strip the shell
+  already shipped in its bar. One derivation decides anchors, thickness, the
+  reserved zone and the margin pair for all four. The settings UI declines to
+  put the dock on an edge an auto-hiding bar already owns.
+- **A weather forecast on the desktop.** The weather card gains a 3x2 span whose
+  second row is the day-by-day outlook, from either provider, and a background
+  line tracing today's daylight with the sun's position on it.
+- **A media widget at three sizes**, whose play button *is* the visualiser and
+  whose seek bar bends from a straight line to a ring inside the button to the
+  button's own outline.
+
+### Fixed
+- **Screen recordings were washed out.** The tonemap assumed a signal peak of
+  ten times reference white; a desktop capture peaks near one. Measured from the
+  pixels instead, white lands at 210/255 rather than 136.
+- **Only the first notification of a session was blurred.** The popup refreshed
+  its blur region from a signal that never fired again, so from the second
+  notification on the compositor was handed the region of a destroyed card.
+- **The currency widget stopped saying "Network timeout" forever.** It made one
+  attempt per session; it now walks both hosts and retries with backoff.
+- **A paused player no longer repaints an invisible bar visualiser at 237 fps.**
+- **Weather icons match the provider that reported them.** Both providers' codes
+  were resolved through one provider's table, drawing a clear sky through every
+  storm on the default provider.
+
+### Changed
+- The morphing machinery is shared rather than copied: one module for the shape
+  morphs, one spelling of the travel animation, one card component. Checks fail
+  on a fourth copy rather than a note asking for one.
+
 ## [0.23.1] — 2026-08-10
 
 ### Fixed
@@ -1952,7 +2009,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.9...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.23.1...v0.24.0
 [0.14.9]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.8...v0.14.9
 [0.14.8]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.7...v0.14.8
 [0.14.7]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.6...v0.14.7
