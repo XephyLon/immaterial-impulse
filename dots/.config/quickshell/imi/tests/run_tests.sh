@@ -287,6 +287,14 @@ if ! python3 "$SCRIPT_DIR/test_calendar_card.py"; then
     exit 1
 fi
 
+# The same measurement for the five widgets that are not cards, each scored
+# against a twin of itself with the elevation suppressed. Also weston-bound.
+echo "Running widget elevation tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_elevation.py"; then
+    echo "Widget elevation tests failed."
+    exit 1
+fi
+
 # The grip harness above reads settled sizes on purpose, so it passes whether a
 # span change is animated or instant. This one samples the size mid-change,
 # which is the only way to tell a Behavior that ticks from one that never does.
