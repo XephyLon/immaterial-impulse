@@ -182,6 +182,13 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             wrapper = (PLUGIN_ROOT / directory / "Widget.qml").read_text(encoding="utf-8")
             self.assertIn("property bool hostDragging", wrapper, directory)
             self.assertIn("dragging: root.hostDragging", wrapper, directory)
+            # ...and that `root` is THIS file. Without the id, `root.hostDragging`
+            # resolves by dynamic scope up the creation chain, reads undefined,
+            # and the card silently never lifts - which is how the system
+            # monitor shipped with a dead drag while this very loop passed on
+            # the text being spelled correctly.
+            self.assertRegex(wrapper, r"(?m)^\s*id: root\s*$",
+                             f"{directory}: `root.` names nothing in this file")
 
         # ...and every card in the components those wrappers instantiate.
         for name in ("DesktopCurrencyWidget", "DesktopWeatherWidget",
