@@ -7,6 +7,7 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import "weather_geometry.js" as Geometry
+import "weather_glyphs.js" as WeatherGlyphs
 import "weather_shapes.js" as WeatherShapes
 
 // The weather widget as ONE tree (spec 2026-08-11, §3b - this widget is the
@@ -79,16 +80,12 @@ Item {
     readonly property string condition: weatherData.description || "Unknown"
     readonly property string humidity: weatherData.humidity || "--"
     readonly property string wind: weatherData.wind || "--"
-    readonly property string weatherIcon: {
-        const code = Number(weatherData.wCode || 0)
-        if (code === 800) return Icons.isNight() ? "clear_night" : "clear_day"
-        if (code === 801) return Icons.isNight() ? "partly_cloudy_night" : "partly_cloudy_day"
-        if (code >= 200 && code < 300) return "strong_thunderstorms"
-        if (code >= 300 && code < 600) return "heavy_rain"
-        if (code >= 600 && code < 700) return "heavy_snow"
-        if (code >= 700 && code < 800) return "haze_fog_dust_smoke"
-        return "cloudy"
-    }
+    // A weather code means nothing without the provider that reported it:
+    // `wCode` is an OpenWeatherMap condition id on `owm` and a World Weather
+    // Online code on `wttr`, and this expression used to read both through
+    // OWM's ranges. weather_glyphs.js is the split.
+    readonly property string weatherIcon: WeatherGlyphs.glyphFor(
+        Weather.provider, root.weatherData.wCode, Icons.isNight())
 
 
     WidgetCard {
