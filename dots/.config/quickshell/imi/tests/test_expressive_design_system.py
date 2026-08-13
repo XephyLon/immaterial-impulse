@@ -234,6 +234,38 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         self.assertNotIn("hostGridSize", widget)
         self.assertIn("implicitWidth: card.implicitWidth", widget)
         self.assertIn("implicitHeight: card.implicitHeight", widget)
+    def test_the_five_folded_widgets_are_told_when_they_are_handled(self):
+        """The same chain, for the widgets that were never cards.
+
+        Four of them are the loaded item themselves, so the host reaches them
+        directly; the two clock styles are one Loader further down, which is
+        the extra link the clock package's wrapper has to carry. A link that
+        forgets produces no error - just a widget that alone never lifts.
+        """
+        for directory in ("world-clock", "user-card", "custom-image", "clock"):
+            wrapper = (PLUGIN_ROOT / directory / "Widget.qml").read_text(encoding="utf-8")
+            self.assertIn("property bool hostDragging", wrapper, directory)
+
+        world_clock = (PLUGIN_ROOT / "world-clock/Widget.qml").read_text(encoding="utf-8")
+        self.assertIn("Expressive.WidgetCard {", world_clock,
+                      "the one card-shaped widget of the five takes the component")
+        self.assertIn("dragging: root.hostDragging", world_clock)
+
+        # The other four are not cards - a cookie, a punched glyph grid, a
+        # shape-masked image and a card with an avatar off its edge - so they
+        # take the tokens through WidgetElevation instead.
+        for path in ("user-card/Widget.qml", "custom-image/Widget.qml",
+                     "clock/CookieClock.qml", "clock/PixelClock.qml"):
+            source = (PLUGIN_ROOT / path).read_text(encoding="utf-8")
+            self.assertIn("Expressive.WidgetElevation {", source, path)
+
+        clock = (PLUGIN_ROOT / "clock/Widget.qml").read_text(encoding="utf-8")
+        self.assertEqual(clock.count("dragging: root.hostDragging"), 2,
+                         "both clock styles that draw a body take the drag")
+        for style in ("clock/CookieClock.qml", "clock/PixelClock.qml"):
+            source = (PLUGIN_ROOT / style).read_text(encoding="utf-8")
+            self.assertIn("property bool dragging: false", source, style)
+            self.assertIn("dragging: root.dragging", source, style)
 
     def test_the_card_shadows_its_body_and_drops_it_while_moving(self):
         """The shadow comes off the BODY, and goes away during motion.
@@ -272,6 +304,29 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         self.assertIn("anchors.margins: -root.bleed", frame[:400])
         self.assertIn("anchors.margins: root.bleed",
                       elevation[elevation.index("id: body"):][:300])
+
+    def test_the_elevation_is_spelled_in_exactly_one_place(self):
+        """`StyledDropShadow` was five hand-rolled shadows and two copies.
+
+        The five older bundled widgets each carried one, at radius 8 against
+        the design system's 12, at `colShadow` against `applyAlpha(colShadow,
+        0.1)` - two components of the same name in two directories, neither
+        agreeing with the other or with the card. They are folded onto
+        `Appearance.elevation` through `WidgetElevation`, and the numbers may
+        be read in that one file: a sixth copy is how this started.
+        """
+        self.assertFalse(list(ROOT.rglob("StyledDropShadow.qml")),
+                         "the hand-rolled drop shadow came back")
+        readers = set()
+        for path in ROOT.rglob("*.qml"):
+            if any(part in {".git", "tests"} for part in path.relative_to(ROOT).parts):
+                continue
+            if "Appearance.elevation." in path.read_text(encoding="utf-8"):
+                readers.add(path.relative_to(ROOT).as_posix())
+        self.assertEqual(
+            readers,
+            {"modules/common/plugins/designsystem/widgets/WidgetElevation.qml"},
+            "the elevation numbers are read outside the component that owns them")
 
     def test_the_elevation_numbers_are_the_ones_that_were_picked(self):
         """Tuned on the real wallpaper in ShadowTuningPlayground; a later edit
