@@ -23,8 +23,9 @@ Item {
     // They used to be bare negative y, which is correct at exactly one edge:
     // at the top it drives the icon into the screen edge, and at a side edge
     // it slides along the strip instead of rising out of it.
-    readonly property var liftVector: DockGeometry.inwardVector(
+    readonly property string dockEdge: DockGeometry.normalizedEdge(
         Config.options?.dock.edge ?? "bottom")
+    readonly property var liftVector: DockGeometry.inwardVector(root.dockEdge)
 
     property real hoverScale: 1.15
     property real pressScale: 0.92
