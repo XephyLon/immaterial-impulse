@@ -1251,6 +1251,21 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   every mutation of the motion. fa1e2a8b5 ("feat(plugins): animate a resizable widget's size
   between its offered spans"), 4e33a332a ("test(widgets): score a span change as in flight, not
   as a snap").
+- **A sweep over ordered PAIRS is not a walk, and a trail's floor is in the trail's own units.**
+  Two ways a span-motion harness reports confidently about a transition it never ran.
+  `WeatherTreeMotionProbe` drives a list of `[from, to]` pairs but only ever committed `to` — so
+  `3x2 -> 2x1`, which follows `3x2 -> 3x1` in the list, started from 3x1: the sweep measured
+  `3x1 -> 2x1`, printed a green trail for every element under the `3x2->2x1` label, filed its
+  settled shot as `3x2_settled.png`, and the one pair whose card shrinks in **both** axes was
+  never exercised at all. A pair the sweep names has to be a pair the sweep runs — reposition to
+  `from` first, on its own settle. Separately, the "did this move" floor was `0.5` for every
+  trail, which is right for a position, a size or a font and nonsense for an opacity: the weather
+  card's sun arc leaves 1x1 by fading `0.32 -> 0`, a complete disappearance and a change of
+  `0.32`, so the pixel floor filed the one trail that had to move as `static`. Note the failure
+  direction on both — neither reddens, both go *quiet*, and a probe that says nothing about an
+  element reads exactly like a probe with nothing to say about it.
+  test(weather): the probe runs the pairs it names,
+  test(weather): the probe scores the arc's fade, its travel and an unknown day.
 - **A change handler that writes the state its own binding reads is a binding loop, and Qt
   drops the re-evaluation rather than erroring where you are looking.** `PluginWidget` repairs a
   resized widget's stored position from `onStoredGridSpanChanged`, and that repair calls
