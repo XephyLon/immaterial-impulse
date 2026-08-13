@@ -9,6 +9,7 @@ shadow is dropped for the duration of the movement, as the frost is.
 """
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -37,6 +38,15 @@ def darkness_below(shot, card_x):
     return (1.0 - float(mean)) * 255.0
 
 
+def _runtime_available():
+    # Same gate the other runtime probes use, plus the analyser: CI has no
+    # compositor, and a test that hard-fails there is reporting the runner's
+    # shape as a defect in the shadow.
+    return all(shutil.which(tool) is not None
+               for tool in ("qs", "weston", "magick"))
+
+
+@unittest.skipUnless(_runtime_available(), "needs qs, weston and magick on PATH")
 class CardShadowTest(unittest.TestCase):
     def test_the_card_casts_lifts_and_drops_its_shadow(self):
         with tempfile.TemporaryDirectory() as tmp:
