@@ -378,6 +378,24 @@ Singleton {
         }
     }
 
+    // The desktop card's elevation. Numbers picked on the real wallpaper with
+    // ShadowTuningPlayground rather than argued about, the same way the
+    // resize-tension constants were:
+    //   blur 0.51 opacity 0.50 offset 4.0 scale 1.00 hover 1.94 drag 2.65
+    //
+    // hover/drag are multipliers on blur and offset, not separate shadows: a
+    // card lifts further off the wallpaper the more directly it is being
+    // handled, and one animated lift factor drives both.
+    property QtObject elevation: QtObject {
+        readonly property real blur: 0.51
+        readonly property real shadowOpacity: 0.50
+        readonly property real offsetY: 4.0
+        readonly property real shadowScale: 1.00
+        readonly property real hoverLift: 1.94
+        readonly property real dragLift: 2.65
+        readonly property color shadowColor: root.m3colors.m3shadow
+    }
+
     animation: QtObject {
         property QtObject elementMove: QtObject {
             property int duration: animationCurves.expressiveDefaultSpatialDuration
