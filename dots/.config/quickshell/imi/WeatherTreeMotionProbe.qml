@@ -134,6 +134,14 @@ ShellRoot {
     property int transitionIndex: 0
     property var trails: ({})
     property var connections: []
+    // Which span the card is actually at. The list above is a list of ORDERED
+    // PAIRS, not a walk: `3x2 -> 2x1` follows `3x2 -> 3x1`, so the card is at
+    // 3x1 when that pair starts. Nothing put it back, so the sweep ran
+    // 3x1 -> 2x1 under the label `3x2->2x1`, filed its settled shot as
+    // `3x2_settled.png`, and the real 3x2 -> 2x1 was never run at all - the one
+    // pair whose card SHRINKS in both axes. A pair the sweep names has to be a
+    // pair the sweep runs.
+    property string currentSpan: "3x1"
 
     function spanOf(name) {
         const parts = name.split("x");
@@ -155,7 +163,23 @@ ShellRoot {
 
     Timer { id: midShot; interval: 160; onTriggered: harness.shoot(`${harness.transitions[harness.transitionIndex][0]}-to-${harness.transitions[harness.transitionIndex][1]}_mid`) }
 
+    // Put the card at the pair's starting span before running the pair. The
+    // reposition is a span change like any other, so it gets its own settle
+    // rather than being folded into the transition being measured.
     function beginTransition() {
+        const pair = harness.transitions[harness.transitionIndex];
+        if (harness.currentSpan !== pair[0]) {
+            widget.commitGridSize(harness.spanOf(pair[0]));
+            harness.currentSpan = pair[0];
+            repositionSettle.start();
+            return;
+        }
+        harness.runTransition();
+    }
+
+    Timer { id: repositionSettle; interval: 1100; onTriggered: harness.runTransition() }
+
+    function runTransition() {
         const pair = harness.transitions[harness.transitionIndex];
         harness.shoot(`${pair[0]}_settled`);
         midShot.start();
@@ -194,6 +218,7 @@ ShellRoot {
             harness.watch("glyph.morphT", canvas, "morphTChanged", () => canvas.morphT);
         }
         widget.commitGridSize(harness.spanOf(pair[1]));
+        harness.currentSpan = pair[1];
         settleTimer.start();
     }
 
@@ -237,6 +262,7 @@ ShellRoot {
 
     Timer { id: countPhase; interval: 250; onTriggered: {
         widget.commitGridSize(harness.spanOf("3x2"));
+        harness.currentSpan = "3x2";
         countSettle.start();
     } }
     Timer { id: countSettle; interval: 900; onTriggered: harness.runCountCase() }
