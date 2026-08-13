@@ -79,7 +79,20 @@ ShellRoot {
                 Quickshell.shellPath("modules/imi/bar/DiscordVoicePlugin.qml"),
                 Quickshell.shellPath("modules/common/plugins/bundled/docker/DockerPopup.qml"),
                 Quickshell.shellPath("modules/common/plugins/bundled/docker/DockerWidget.qml"),
-                Quickshell.shellPath("modules/common/plugins/bundled/discordVoice/DiscordVoicePopup.qml")
+                Quickshell.shellPath("modules/common/plugins/bundled/discordVoice/DiscordVoicePopup.qml"),
+                // The dock. It is opt-in - dock.enable defaults to false - so
+                // on a shell without it a FINAL override or a missing import in
+                // any of these passes every test and is found by whoever
+                // switches the dock on. Now that all four edges reach one tree,
+                // that is every user of it rather than the ones who moved it.
+                Quickshell.shellPath("modules/imi/dock/Dock.qml"),
+                Quickshell.shellPath("modules/imi/dock/DockMedia.qml"),
+                Quickshell.shellPath("modules/common/widgets/DockButton.qml"),
+                Quickshell.shellPath("modules/common/widgets/DockAppButton.qml"),
+                Quickshell.shellPath("modules/common/widgets/DockSeparator.qml"),
+                Quickshell.shellPath("modules/common/widgets/DockIconMotion.qml"),
+                Quickshell.shellPath("modules/common/widgets/DockContextMenu.qml"),
+                Quickshell.shellPath("modules/common/widgets/DragApps.qml")
             ]);
             for (const path of paths) {
                 const component = Qt.createComponent(`file://${path}`, Component.PreferSynchronous);
