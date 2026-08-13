@@ -10,9 +10,14 @@ import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.modules.common.plugins
+import qs.modules.common.plugins.designsystem.widgets as Expressive
 
 Item {
     id: root
+
+    // The host's drag, forwarded to the elevation so the widget lifts while it
+    // is handled. A body never told about the drag silently never lifts.
+    property bool hostDragging: false
 
     // The visual is a card with an avatar bubble straddling its top edge, plus
     // the name lines sitting on the bare wallpaper - not one continuous surface.
@@ -60,13 +65,17 @@ Item {
         return { text: `• ${Weather.data?.description ?? ""}`, icon: "thermostat" };
     }
 
-    StyledDropShadow {
-        target: outerRect
-    }
-
-    Item {
+    // The tokens, not the component. Three surfaces sit on this widget - a
+    // rounded card, a bordered circular avatar straddling its top edge, and two
+    // name lines on the bare wallpaper - and one shadow has always covered all
+    // three, which is what makes the bubble read as fastened to the card and
+    // keeps the names legible off it. A WidgetCard renders ONE surface and has
+    // no border, so taking the component here would mean three of them, two
+    // shadows and no shadow at all under the names.
+    Expressive.WidgetElevation {
         id: outerRect
         anchors.fill: parent
+        dragging: root.hostDragging
 
         Rectangle {
             id: contentBox
