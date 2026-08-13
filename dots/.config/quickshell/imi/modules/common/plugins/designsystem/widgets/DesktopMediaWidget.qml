@@ -528,8 +528,13 @@ Item {
                 onEntered: romajiToggleBtn.hovered = true
                 onExited: romajiToggleBtn.hovered = false
                 onClicked: {
+                    // Write the CONFIG, not the property bound to it: assigning
+                    // to `root.useRomaji` destroyed its binding on the first
+                    // click, after which the toggle showed local state that
+                    // never persisted and no preset could move.
                     if (Config.ready) {
-                        root.useRomaji = !root.useRomaji;
+                        Config.options.appearance.lyrics.lyricsUseRomaji =
+                            !Config.options.appearance.lyrics.lyricsUseRomaji;
                     }
                 }
             }
