@@ -189,11 +189,61 @@ ShellRoot {
             const scene = item.mapToItem(null, item.width / 2, item.height / 2);
             driver.mouseMove(canvas, scene.x, scene.y);
             harness.check(`${span} ${pair[0]} hovers under the pointer`, item.hoveredNow === true);
-            driver.mouseClick(canvas, scene.x, scene.y, Qt.LeftButton);
+            // The shared interaction model resolves the state immediately;
+            // only the progress toward it is animated.
+            harness.check(`${span} ${pair[0]} reads as hovered to the model`,
+                item.motion.interactionState === "hovered");
+            driver.mousePress(canvas, scene.x, scene.y, Qt.LeftButton);
+            harness.check(`${span} ${pair[0]} acknowledges the press`,
+                item.motion.interactionState === "pressed");
+            driver.mouseRelease(canvas, scene.x, scene.y, Qt.LeftButton);
             item.activated.disconnect(bump);
             harness.check(`${span} ${pair[0]} click reaches the button`, hits === 1);
+            harness.check(`${span} ${pair[0]} returns to hovered after release`,
+                item.motion.interactionState === "hovered");
         }
+        // The wash the body paints is driven by hoverProgress, and a state
+        // flag that flips while the progress stays at 0 would paint nothing.
+        // Canvas pixels are not readable from QML, so the value the painter
+        // consumes is what gets checked.
+        {
+            const scene = play.mapToItem(null, play.width / 2, play.height / 2);
+            driver.mouseMove(canvas, scene.x, scene.y);
+            driver.wait(320);
+            harness.check(`${span} play's wash progress rises on hover`,
+                play.motion.hoverProgress > 0.5, `(${play.motion.hoverProgress.toFixed(2)})`);
+
+            // The badge lifts instead - the play button deliberately does not
+            // scale, or it would pull away from the ring drawn around it.
+            const prevScene = prev.mapToItem(null, prev.width / 2, prev.height / 2);
+            driver.mouseMove(canvas, prevScene.x, prevScene.y);
+            driver.wait(320);
+            harness.check(`${span} prev's badge lifts on hover`,
+                prev.motion.scale > 1.005, `(scale ${prev.motion.scale.toFixed(3)})`);
+            // ...and the lift reaches the item that is drawn, not just the
+            // model: a transform that silently does nothing passes the check
+            // above and moves no pixel.
+            harness.check(`${span} the lift reaches the drawn badge`,
+                prev.appliedBadgeScale > 1.005,
+                `(applied ${prev.appliedBadgeScale.toFixed(3)})`);
+            harness.check(`${span} the play button does not scale`,
+                Math.abs(play.motion.scale - 1) < 0.001
+                || play.motion.interactionState === "rest",
+                `(scale ${play.motion.scale.toFixed(3)})`);
+        }
+
         driver.mouseMove(canvas, 5, 5);
+        // Pointer gone: a release that happened off the control still has to
+        // leave it resting, never stuck at its pressed size.
+        for (const pair of [["play", play], ["prev", prev], ["next", next]]) {
+            if (pair[1].motion.interactionState !== "rest")
+                console.log(`[MediaTreeMotion] DIAG ${span} ${pair[0]} state=${pair[1].motion.interactionState}`
+                    + ` hoveredNow=${pair[1].hoveredNow} covered=${pair[1].coveredHover}`
+                    + ` seekerHoverPlay=${seeker ? seeker.hoveringPlay : "n/a"}`
+                    + ` seekerContains=${seeker ? seeker.seekAreaContainsMouse : "n/a"}`);
+            harness.check(`${span} ${pair[0]} rests once the pointer leaves`,
+                pair[1].motion.interactionState === "rest");
+        }
         // a click on the seeker's own stroke seeks and does not activate play
         if (seeker && seeker.visible) {
             let sought = 0, played = 0;
