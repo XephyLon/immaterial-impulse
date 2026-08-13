@@ -1303,8 +1303,21 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   pattern to the component (`lint_widget_card_tint.py`) found the other three on its first run.
   `WidgetCard` owns the tint, the rounding, an optional content clip, a `blurRegion` record, and a
   `shapeName` parameter that turns the card into a stretched `MaterialShape` (which morphs on any
-  shape change, because `ShapeCanvas` does). calendar is the one exempted copy until its scheduled
-  rebuild. b362d8c80 ("feat(widgets): one card component for the surface every widget redrew").
+  shape change, because `ShapeCanvas` does). b362d8c80 ("feat(widgets): one card component for the
+  surface every widget redrew").
+  calendar was the exempted copy and is not any more, and two things about adopting the card are
+  worth carrying to the next one. **The tint the card takes over is the card's own, not every
+  surface a widget paints**: calendar still thins its 1x1 banner, its month pill, its day grid and
+  today's highlight so the frost reads through the whole widget, and it does that with
+  `transparentize` rather than the card's `applyAlpha` because `colLayer1` already carries an alpha
+  the widget must *scale* rather than overwrite — `lint_widget_card_tint.py` reserves the card's
+  spelling and deliberately does not match that one. And **the card routes children into its own
+  content item**, so anything that anchored to the old `Rectangle` by id (calendar's two corner
+  handles did) has to anchor to `parent` instead: an anchor may only name a parent or a sibling, and
+  the card is now the grandparent. Neither of those is caught by the tint lint;
+  `test_expressive_design_system.py` pins the composition and `test_calendar_card.py` renders it,
+  because a content-sized widget whose card failed to resolve is a zero-size widget rather than an
+  error. 486272dbe ("feat(calendar): draw the widget's surface on the shared card").
 - **The resize grip accumulates tension; it does not pick the nearest span.** A widget holds its
   span while pull builds, gives one offered span per 60px breakaway with the remainder carried, and
   rubber-bands at a wall. `resize-tension.js` owns every constant and all of the arithmetic; the
