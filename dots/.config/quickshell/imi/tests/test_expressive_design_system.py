@@ -242,19 +242,36 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         and glyph inside it. And re-rendering a blurred copy of the body every
         frame of a morph is the expensive path - the same reason the frost is
         dropped for the duration of the motion.
+
+        The card no longer spells the effect itself: five bundled widgets that
+        are not cards need the same depth, so `WidgetElevation` owns the
+        numbers and the card hands it the states. Both halves are checked here
+        - what the card delegates, and what the shared piece does with it.
         """
         card = (DESIGN_SYSTEM / "widgets/WidgetCard.qml").read_text(encoding="utf-8")
+        self.assertIn("WidgetElevation {", card)
         self.assertIn("id: bodySurface", card)
-        self.assertIn("shadowEnabled: true", card)
-        self.assertIn("layer.enabled: root.shadowVisible", card)
-        self.assertIn("root.shadowEnabled && !root.motionActive", card)
-        # The layer clips at its item's bounds and the bowed canvas draws
-        # outside the card, so the frame is inset negatively by the bow.
         body = card[card.index("id: bodySurface"):]
-        self.assertIn("anchors.margins: -Tension.BOW_PX * 2", body[:400])
+        for handed in ("shadowEnabled: root.shadowEnabled",
+                       "motionActive: root.motionActive",
+                       "dragging: root.dragging"):
+            self.assertIn(handed, body[:400], "the card must hand over its state")
         # The content layer is a different one and must not gain a shadow.
         content = card[card.index("id: contentItem"):]
         self.assertNotIn("shadow", content.lower())
+
+        elevation = (DESIGN_SYSTEM / "widgets/WidgetElevation.qml").read_text(
+            encoding="utf-8")
+        self.assertIn("shadowEnabled: true", elevation)
+        self.assertIn("layer.enabled: root.shadowVisible", elevation)
+        self.assertIn("root.shadowEnabled && !root.motionActive", elevation)
+        # The layer clips at its item's bounds, and both the shadow and the
+        # card's bowed canvas draw outside them, so the frame that carries the
+        # layer is inset negatively and the body takes the bleed straight back.
+        frame = elevation[elevation.index("id: shadowFrame"):]
+        self.assertIn("anchors.margins: -root.bleed", frame[:400])
+        self.assertIn("anchors.margins: root.bleed",
+                      elevation[elevation.index("id: body"):][:300])
 
     def test_the_elevation_numbers_are_the_ones_that_were_picked(self):
         """Tuned on the real wallpaper in ShadowTuningPlayground; a later edit
