@@ -58,6 +58,42 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         weather_icons = list((ROOT / "assets/icons/google-weather").glob("*.svg"))
         self.assertEqual(len(weather_icons), 60)
 
+    def test_every_weather_glyph_names_an_asset_that_exists(self):
+        """A `CustomIcon` handed a name with no file draws nothing, silently.
+
+        `weather_glyphs.js` is a lookup table of ~50 asset basenames, half of
+        them assembled by concatenating a `_day`/`_night` suffix, and a typo
+        in one of them costs exactly one weather condition on one provider -
+        which nobody would notice until that condition happened to occur. The
+        table is source text, so checking it against the directory is cheap
+        and it is the only check that can see the whole of it at once.
+        """
+        available = {
+            path.stem for path in (ROOT / "assets/icons/google-weather").glob("*.svg")
+        }
+        source = (
+            DESIGN_SYSTEM / "widgets" / "weather_glyphs.js"
+        ).read_text(encoding="utf-8")
+
+        def table(name, least):
+            block = re.search(rf"var {name} = \{{(.*?)\n\}};", source, re.S)
+            self.assertIsNotNone(block, f"{name} is still a table literal")
+            entries = re.findall(r':\s*"([^"]+)"', block.group(1))
+            # Without this the check passes vacuously the moment the table is
+            # reformatted out from under the regex, which is the failure mode
+            # every source-text check in this suite is warned about.
+            self.assertGreaterEqual(len(entries), least, f"{name} was read")
+            return entries
+
+        named = set(re.findall(r'return "([^"]+)"', source))
+        named |= set(table("_FIXED", 30))
+        for stem in table("_DAY_NIGHT", 8):
+            named |= {f"{stem}_day", f"{stem}_night"}
+
+        self.assertGreater(len(named), 20, "the fallbacks were read too")
+        missing = sorted(named - available)
+        self.assertEqual(missing, [], f"no such google-weather asset: {missing}")
+
     def test_nandoroid_scale_compatibility_is_finite(self):
         appearance = (ROOT / "modules/common/Appearance.qml").read_text(encoding="utf-8")
         self.assertIn("readonly property real effectiveScale: 1.0", appearance)
