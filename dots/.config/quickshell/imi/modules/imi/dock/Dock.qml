@@ -233,11 +233,21 @@ Scope {
                                 Layout.bottomMargin: pinMargins.bottom
                                 Layout.leftMargin: pinMargins.left
                                 Layout.rightMargin: pinMargins.right
+                                // A layout item that does not fill defaults to
+                                // AlignLeft, which at a vertical edge is the
+                                // OUTWARD side: the pin hung half off the
+                                // painted body. Everything else in the strip
+                                // fills its cross axis and never showed it.
+                                Layout.alignment: Qt.AlignCenter
 
                                 GroupButton {
                                     baseWidth: 35; baseHeight: 35
                                     visible: Config.options.dock.showPinButton
-                                    clickedWidth: baseWidth; clickedHeight: baseHeight + 20
+                                    // The press stretches along the strip, so
+                                    // the grown edge is the one the strip runs
+                                    // in - at a side edge that is the width.
+                                    clickedWidth: root.vertical ? baseWidth + 20 : baseWidth
+                                    clickedHeight: root.vertical ? baseHeight : baseHeight + 20
                                     buttonRadius: Appearance.rounding.normal
                                     toggled: root.pinned
                                     onClicked: root.pinned = !root.pinned
@@ -374,9 +384,21 @@ Scope {
                                 onClicked: GlobalStates.overviewOpen = !GlobalStates.overviewOpen
                                 insetInward:  dockRow.padding + 10
                                 insetOutward: dockRow.padding + 7
+                                // Centred in what is PAINTED, not in the item:
+                                // the insets are asymmetric (they compensate
+                                // the body's elevation-vs-gap margins), so a
+                                // glyph filling the whole rect sits off-centre
+                                // by half their difference. Vertically nobody
+                                // saw it; at a side edge it reads as a glyph
+                                // pushed sideways.
                                 contentItem: MaterialSymbol {
                                     anchors.fill: parent
+                                    anchors.topMargin: parent.topInset
+                                    anchors.bottomMargin: parent.bottomInset
+                                    anchors.leftMargin: parent.leftInset
+                                    anchors.rightMargin: parent.rightInset
                                     horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
                                     font.pixelSize: Math.min(parent.width, parent.height) / 2
                                     text: "apps"
                                     color: Appearance.colors.colOnLayer0
