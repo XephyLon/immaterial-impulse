@@ -25,8 +25,14 @@ import "../../../functions/weatherForecast.js" as WeatherForecast
 // corner, which is the half the spec called unsolved before the card owned
 // clipping.
 //
-// Unshared content (feels-like at 2x1; high/low, the divider and the badge
-// pills at 3x1) fades and scales - it has nothing to morph into.
+// Unshared content fades - it has nothing to morph into: feels-like at 2x1,
+// the high/low line at 3x1, and the day-by-day forecast band at 3x2. The
+// column rule and the badge pills live at BOTH wide spans and travel between
+// them; only the narrow spans are a fade for those two.
+//
+// 3x2 is the one span with two rows. It is split into two bands - current
+// conditions above, the forecast below - and everything in the top band
+// travels into it from 3x1 rather than being redrawn there.
 Item {
     id: root
 
@@ -431,7 +437,7 @@ Item {
                             // system reaches for the translation singleton,
                             // and one word is not the place to start.
                             text: WeatherForecast.isToday(dayCard.modelData.date, root.todayIso)
-                                ? "Today" : WeatherForecast.shortDayName(dayCard.modelData.date)
+                                ? "Today" : WeatherForecast.shortDayName(dayCard.modelData.date, Qt.locale())
                             font.pixelSize: Appearance.font.pixelSize.smaller
                             font.weight: Font.DemiBold
                             color: root.contentColor

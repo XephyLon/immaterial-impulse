@@ -42,13 +42,26 @@ function isToday(isoDate, todayIsoDate) {
 // Parsed at midday rather than at midnight: a bare "YYYY-MM-DD" is read as UTC
 // midnight, which is the previous day's evening for anyone west of UTC, and the
 // card would name the wrong weekday.
-function shortDayName(isoDate) {
+//
+// A locale and a format string, NOT ECMAScript's options object. QtQml
+// replaces `Date.prototype.toLocaleDateString` with an overload taking
+// (locale, format), and it does not understand `{ weekday: "short" }` - it
+// falls through to the locale's short DATE format, so every card read
+// "8/14/26" where a browser would say "Fri". Nothing about that is visible
+// from reading the call; it was measured in the engine.
+//
+// The locale is an argument because this file is a `.pragma library` and
+// keeps itself free of `Qt` (test_weather_forecast_contract.py). The callers
+// have an engine context and pass `Qt.locale()`; the arithmetic that has to
+// be right whatever the locale is - parsing at midday so a bare
+// "YYYY-MM-DD" is not read as the previous evening west of UTC - stays here.
+function shortDayName(isoDate, locale) {
     if (!isoDate)
         return "";
     const parsed = new Date(isoDate + "T12:00:00");
     if (isNaN(parsed.getTime()))
         return "";
-    return parsed.toLocaleDateString(undefined, { weekday: "short" });
+    return parsed.toLocaleDateString(locale, "ddd");
 }
 
 // OpenWeatherMap's /data/2.5/forecast `list`, grouped into days.
