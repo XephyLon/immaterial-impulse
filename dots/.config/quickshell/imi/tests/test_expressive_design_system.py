@@ -182,6 +182,53 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
                              ("hoverLift", "1.94"), ("dragLift", "2.65")):
             self.assertIn(f"property real {token}: {value}", appearance)
 
+    def test_the_trees_share_one_spelling_of_the_span_animations(self):
+        """Twenty-three copies of the same NumberAnimation existed before this.
+
+        The media tree wrote the travel out twenty times inline; weather and
+        currency each declared a private `component TravelBehavior` saying the
+        same thing. Nothing warns when one of them drifts by a curve - it just
+        looks slightly wrong next to the others - so the spelling is shared and
+        the private ones may not come back.
+        """
+        trees = {
+            "media": PLUGIN_ROOT / "nandoroid-media/Widget.qml",
+            "weather": DESIGN_SYSTEM / "widgets/DesktopWeatherWidget.qml",
+            "currency": DESIGN_SYSTEM / "widgets/DesktopCurrencyWidget.qml",
+        }
+        for name, path in trees.items():
+            source = path.read_text(encoding="utf-8")
+            self.assertNotIn("component TravelBehavior", source, name)
+            self.assertNotIn("component FadeBehavior", source, name)
+            self.assertNotIn("expressiveDefaultSpatial", source,
+                             f"{name} spells the travel curve itself")
+            self.assertIn("SpanTravel {}", source, name)
+        for component in ("SpanTravel.qml", "SpanFade.qml"):
+            self.assertTrue((DESIGN_SYSTEM / "widgets" / component).exists())
+
+    def test_the_morphing_containers_share_their_mechanics(self):
+        """Three shape modules, one set of bounds-and-cache maths.
+
+        weather_shapes and currency_shapes were byte-identical apart from
+        their shape tables, and media carried a third copy of the bounds loop.
+        What legitimately differs per widget is the polygons and their names;
+        that is all these files may now hold.
+        """
+        shared = DESIGN_SYSTEM / "widgets/shapes/shape_morph.js"
+        self.assertTrue(shared.exists())
+        for path in (DESIGN_SYSTEM / "widgets/weather_shapes.js",
+                     DESIGN_SYSTEM / "widgets/currency_shapes.js",
+                     PLUGIN_ROOT / "nandoroid-media/media_shapes.js"):
+            source = path.read_text(encoding="utf-8")
+            self.assertIn("shape_morph.js", source, path.name)
+            self.assertNotIn("minX = Infinity", source,
+                             f"{path.name} keeps its own copy of the bounds loop")
+        for path in (DESIGN_SYSTEM / "widgets/weather_shapes.js",
+                     DESIGN_SYSTEM / "widgets/currency_shapes.js"):
+            source = path.read_text(encoding="utf-8")
+            self.assertNotIn("new MorphLib.Morph", source,
+                             f"{path.name} builds Morphs the shared cache owns")
+
     def test_the_media_tree_answers_the_blur_contract_itself(self):
         """One tree, one card, one region list.
 
