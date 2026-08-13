@@ -154,9 +154,26 @@ TestCase {
     // A bare "YYYY-MM-DD" parses as UTC midnight, which is the previous evening
     // west of UTC - so the card would be named for the wrong weekday.
     function test_shortDayNameIsTheDatesOwnWeekday() {
-        compare(WeatherForecast.shortDayName("2026-08-04"),
-                new Date(2026, 7, 4, 12, 0, 0).toLocaleDateString(undefined, { weekday: "short" }));
-        compare(WeatherForecast.shortDayName(""), "");
-        compare(WeatherForecast.shortDayName("not-a-date"), "");
+        compare(WeatherForecast.shortDayName("", Qt.locale()), "");
+        compare(WeatherForecast.shortDayName("not-a-date", Qt.locale()), "");
+
+        // This used to compare the function against the very expression the
+        // function ran, so it asserted that it agreed with itself - and stayed
+        // green while every card read "8/14/26". Exactly the ambient coverage
+        // the localIsoDate pin was added for, one function later.
+        //
+        // Checked by SHAPE instead, which holds in any locale where an
+        // expected string would not: a weekday name carries no digits, three
+        // consecutive days are three different names, and seven days on is the
+        // same name again. A short DATE format fails the first of those.
+        const monday = WeatherForecast.shortDayName("2026-08-03", Qt.locale());
+        const tuesday = WeatherForecast.shortDayName("2026-08-04", Qt.locale());
+        const wednesday = WeatherForecast.shortDayName("2026-08-05", Qt.locale());
+        verify(monday.length > 0, "a real date gets a name");
+        verify(!/[0-9]/.test(tuesday), `a weekday name has no digits: "${tuesday}"`);
+        verify(monday !== tuesday && tuesday !== wednesday && monday !== wednesday,
+               "consecutive days are different weekdays");
+        compare(WeatherForecast.shortDayName("2026-08-11", Qt.locale()), tuesday,
+                "a week later is the same weekday");
     }
 }
