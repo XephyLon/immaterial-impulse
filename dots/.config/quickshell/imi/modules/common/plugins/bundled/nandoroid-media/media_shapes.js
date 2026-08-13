@@ -79,6 +79,30 @@ function ringAt(t) {
     return ringMorph().asCubics(Math.max(0, Math.min(1, t)));
 }
 
+// The ring's cubics AND their arc-length measure, cached against t.
+//
+// path-length.js states the contract this exists to keep: "The cost is per
+// geometry change, not per frame: a static shape pays it once, which is what
+// makes a progress ring stroked around a cookie's outline cost nothing to
+// animate." Both callers were rebuilding the Morph and re-measuring 24 cubics
+// on every paint of a 240Hz frame clock, and again on every mouse move through
+// the seeker's hit test - while `ringT` holds one of two values except during
+// a 300ms span change.
+//
+// Pure in t, so this trades no correctness property: same input, same cubics,
+// same lengths. One slot is enough - t moves monotonically through a
+// transition and rests at an endpoint.
+var _ringMeasureT = null;
+var _ringMeasured = null;
+function ringMeasuredAt(t, measureCubics) {
+    var clamped = Math.max(0, Math.min(1, t));
+    if (_ringMeasureT === clamped && _ringMeasured !== null) return _ringMeasured;
+    var cubics = ringAt(clamped);
+    _ringMeasureT = clamped;
+    _ringMeasured = { cubics: cubics, measure: measureCubics(cubics) };
+    return _ringMeasured;
+}
+
 // The live cookie: cookieRaw's own recipe with per-lobe inner radii, so the
 // breathing shape and the resting shape are one family in one space. Levels
 // are 0..1 per lobe; base and reach are VisualizerCookie's tuning, halved

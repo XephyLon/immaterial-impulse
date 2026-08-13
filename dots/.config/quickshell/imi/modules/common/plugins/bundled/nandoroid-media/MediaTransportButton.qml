@@ -275,8 +275,12 @@ Item {
                         const N = 160;
                         const stroke = Appearance.borderWidth.heavy * Appearance.effectiveScale;
                         const dia = Math.min(width, height) - stroke;
-                        const cubics = MediaShapes.ringAt(1);
-                        const measure = PathLength.measureCubics(cubics);
+                        // Same cache the seeker uses - this canvas was
+                        // rebuilding and re-measuring the identical constant
+                        // shape (ringAt(1)) once per frame beside it.
+                        const ring = MediaShapes.ringMeasuredAt(1, PathLength.measureCubics);
+                        const cubics = ring.cubics;
+                        const measure = ring.measure;
                         const amp = stroke * 0.6 * root.ringWaveLevel;
                         // VERBATIM the seeker's construction - arc-length
                         // samples, normals from RAW neighbours, sine along the
