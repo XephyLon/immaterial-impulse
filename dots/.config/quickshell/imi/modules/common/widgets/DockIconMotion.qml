@@ -1,5 +1,6 @@
 import QtQuick
 import qs.modules.common
+import qs.modules.common.widgets
 import "../../imi/dock/dock_geometry.js" as DockGeometry
 
 /**
@@ -32,7 +33,18 @@ Item {
 
     default property alias content: contentContainer.data
 
-    readonly property real targetScale: dragging ? 1.0 : pressed ? pressScale : hovered ? hoverScale : 1.0
+    // The shared model carries the hover and press progress on the right tiers
+    // (a press is acknowledged faster than it is released, and a release
+    // animates even when the pointer has already left). The icon's own
+    // magnitudes stay its own - this reads the model's 0..1, not its scale.
+    readonly property InteractionMotion motion: InteractionMotion {
+        hovered: root.hovered && !root.dragging
+        down: root.pressed && !root.dragging
+    }
+    readonly property real targetScale: root.dragging
+        ? 1.0
+        : 1 + (root.hoverScale - 1) * root.motion.hoverProgress
+            + (root.pressScale - 1) * root.motion.pressProgress
 
     Component.onDestruction: {
         bounceAnimation.stop();
@@ -115,16 +127,12 @@ Item {
             x: (root.liftOffset + root.bounceOffset) * root.liftVector.x
             y: (root.liftOffset + root.bounceOffset) * root.liftVector.y
         }
-        Behavior on scale {
-            enabled: !root.dragging && !appearAnimation.running
-            NumberAnimation {
-                // Fast, non-bouncy on the way into a press; springy overshoot out.
-                duration: root.pressed ? Appearance.animation.elementMoveFast.duration
-                                       : Appearance.animation.elementMoveSmall.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: root.pressed ? Appearance.animationCurves.expressiveEffects
-                                                 : Appearance.animationCurves.expressiveFastSpatial
-            }
-        }
+        // No `Behavior on scale` here on purpose. Selecting the tier through a
+        // binding on `duration`/`bezierCurve` hands the Behavior whichever tier
+        // was current BEFORE the state changed - measured, a press played the
+        // release's 999ms spring and a release played the press's 111ms curve,
+        // exactly backwards. The scale is animated by the shared interaction
+        // model instead, which writes the tier onto the animation and only then
+        // writes the target.
     }
 }
