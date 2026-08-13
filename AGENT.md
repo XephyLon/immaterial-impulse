@@ -1306,6 +1306,18 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   reads as black to any analyser - a measurement that looks like a catastrophic failure when nothing
   is wrong, and would equally hide a real one.
   4046f1854 ("feat(widgets): the card casts a shadow, and lifts when handled").
+- **A state property that says "hovered" is not evidence a pixel moved.** The media badge's hover
+  lift shipped through `transform: Scale { origin.x: width / 2 }`, whose `width` resolved against a
+  scope that has none - the model reported `hovered`, `scale` read 1.02, and the badge measured
+  60px before and 60px after on the desktop. `Item.scale` is centred by default and cannot miss it.
+  A probe that asserts only the model's value passes this happily, so the sweep now also reads the
+  scale of the item that is DRAWN (`appliedBadgeScale`), which is the check that fails. Related: at
+  2x2 and 2x1 the seek ring sits ABOVE the play button, so after a press grab ends the pointer's
+  leave goes to the ring and a `MouseArea.containsMouse` under it never clears - the button sat
+  permanently hovered, and at 2x2 that means the play glyph never leaves the artwork again. Hover
+  STATE belongs to a `HoverHandler` there; the cursor and the clicks stay with the MouseArea, which
+  is the same channels rule as 05bf3013f, applied the other way round.
+  0b9a5df1e ("feat(media): the transport controls adopt the interaction model").
 - **A Behavior whose animation reads its tier from a binding carries the PREVIOUS transition.** The
   shared interaction model (`Appearance.interaction`, decided in `modules/common/interaction_motion.js`)
   gives every control the same five states, and each pair of states has its own duration and curve -
