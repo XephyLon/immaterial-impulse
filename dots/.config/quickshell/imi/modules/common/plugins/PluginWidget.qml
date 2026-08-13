@@ -179,6 +179,15 @@ AbstractBackgroundWidget {
         ? Appearance.animationCurves.expressiveFastSpatial
         : Appearance.animationCurves.expressiveDefaultSpatial
 
+    // In flight whenever the drawn box differs from the span's settled box, or
+    // while the grip is bowing it. Published so a widget can drop the work that
+    // is not worth doing mid-motion - the shadow's blurred copy of its own
+    // body, which otherwise re-renders into a reallocating FBO every frame of
+    // every resize.
+    readonly property bool boxInMotion: rootWidget.resizingGrid
+        || Math.abs(rootWidget.width - rootWidget.settledWidth) > 0.5
+        || Math.abs(rootWidget.height - rootWidget.settledHeight) > 0.5
+
     Behavior on width {
         enabled: rootWidget.gridResizeAnimated
         NumberAnimation {
@@ -683,6 +692,7 @@ AbstractBackgroundWidget {
         gridSize: rootWidget.shownGridSpan
         resizeBow: rootWidget.resizeBow
         hostDragging: rootWidget.dragging
+        hostBoxInMotion: rootWidget.boxInMotion
         anchors.centerIn: parent
     }
     }

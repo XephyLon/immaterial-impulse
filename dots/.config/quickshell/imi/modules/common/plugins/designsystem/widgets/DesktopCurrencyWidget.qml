@@ -20,6 +20,8 @@ Item {
     property point resizeBow: Qt.point(0, 0)
     // Handled state, for the cards' elevation.
     property bool dragging: false
+    // The host's box is animating; the cards drop their shadow for it.
+    property bool boxInMotion: false
     // The host wrapper overrides this with its own plugin id; the fallback keeps
     // the toggle honoured for a component instantiated without one.
 
@@ -107,6 +109,7 @@ Item {
         tensionX: root.resizeBow.x
         tensionY: root.resizeBow.y
         dragging: root.dragging
+        hostMotionActive: root.boxInMotion
 
         // --- PAGE 1: View Mode ---
         Item {

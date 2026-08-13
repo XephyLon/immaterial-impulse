@@ -18,6 +18,9 @@ Item {
     property point hostResizeBow: Qt.point(0, 0)
     // Set by the host while this widget is being dragged; the cards lift.
     property bool hostDragging: false
+    // Set by the host while its own box is animating; the cards drop their
+    // shadow for the duration rather than re-blurring into a resizing FBO.
+    property bool hostBoxInMotion: false
 
     // Implicit size from the SPAN, and the content fills whatever the host
     // gives - the host's box is what animates a resize. The old wrapper set
@@ -40,6 +43,7 @@ Item {
         sizeMode: root.hostGridSize || "3x1"
         resizeBow: root.hostResizeBow
         dragging: root.hostDragging
+        boxInMotion: root.hostBoxInMotion
         useBlurBackground: PluginState.option("nandoroid_weather", "blurEnabled", false)
         backgroundOpacity: PluginState.effectiveBackgroundOpacity("nandoroid_weather")
     }

@@ -50,6 +50,8 @@ Item {
     property point resizeBow: Qt.point(0, 0)
     // Handled state, for the cards' elevation.
     property bool dragging: false
+    // The host's box is animating; the cards drop their shadow for it.
+    property bool boxInMotion: false
     readonly property var blurRegions: [
         cpuCard.blurRegion,
         ramCard.blurRegion,
@@ -68,6 +70,7 @@ Item {
             implicitWidth: root.cardWidth
             implicitHeight: root.cardHeight
             dragging: root.dragging
+            hostMotionActive: root.boxInMotion
             radius: Appearance.rounding.large
             tint: Appearance.colors.colPrimaryContainer
             useBlurBackground: root.useBlurBackground
@@ -160,6 +163,7 @@ Item {
             implicitWidth: root.cardWidth
             implicitHeight: root.cardHeight
             dragging: root.dragging
+            hostMotionActive: root.boxInMotion
             radius: Appearance.rounding.large
             tint: Appearance.colors.colSecondaryContainer
             useBlurBackground: root.useBlurBackground
@@ -258,6 +262,7 @@ Item {
             tensionX: root.resizeBow.x
             tensionY: root.resizeBow.y
             dragging: root.dragging
+            hostMotionActive: root.boxInMotion
 
             // Sisi Atas: Liquid Cookie12Sided (Centered Top)
             Item {

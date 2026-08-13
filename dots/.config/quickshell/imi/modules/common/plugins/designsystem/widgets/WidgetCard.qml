@@ -86,7 +86,13 @@ Item {
     // layer over the content would have every label and glyph casting one too.
     property bool shadowEnabled: true
     property bool dragging: false
-    property bool motionActive: root.underTension
+    // Motion that is worth dropping the shadow for: the grip's bow, and the
+    // host's own resize animation, which the widget passes in. The bow alone
+    // was the only producer for a release - and it is the ONE motion that does
+    // not resize the layer, while the span animation, which reallocates the
+    // FBO every frame, was left casting a live shadow throughout.
+    property bool motionActive: root.underTension || root.hostMotionActive
+    property bool hostMotionActive: false
 
     // One frame around every body renderer, so one effect shadows all three:
     // the plain rectangle, the bowed canvas and a MaterialShape polygon all

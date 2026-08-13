@@ -37,6 +37,9 @@ Item {
     property point hostResizeBow: Qt.point(0, 0)
     // Set by the host while this widget is being dragged; the cards lift.
     property bool hostDragging: false
+    // Set by the host while its own box is animating; the cards drop their
+    // shadow for the duration rather than re-blurring into a resizing FBO.
+    property bool hostBoxInMotion: false
 
     // The host's span-change cross-fade exists to hide a destroy. This tree
     // has no destroy: the shared elements re-derive their rects from the
@@ -95,6 +98,7 @@ Item {
         tensionX: root.hostResizeBow.x
         tensionY: root.hostResizeBow.y
         dragging: root.hostDragging
+        hostMotionActive: root.hostBoxInMotion
     }
 
     // ---- unshared content, entering and exiting per span -----------------
