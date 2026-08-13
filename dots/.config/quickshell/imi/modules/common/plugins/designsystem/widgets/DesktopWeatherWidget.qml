@@ -9,6 +9,7 @@ import Qt5Compat.GraphicalEffects
 import "weather_geometry.js" as Geometry
 import "weather_glyphs.js" as WeatherGlyphs
 import "weather_shapes.js" as WeatherShapes
+import "sun_arc.js" as SunArc
 import "../../../functions/weatherForecast.js" as WeatherForecast
 
 // The weather widget as ONE tree (spec 2026-08-11, §3b - this widget is the
@@ -143,6 +144,155 @@ Item {
         tensionX: root.resizeBow.x
         tensionY: root.resizeBow.y
         dragging: root.dragging
+
+        // ---- the sun's day, across the card's background --------------
+        //
+        // The currency sparkline's place in the composition, except this line
+        // is a claim: the curve is today's daylight, the disc is where the sun
+        // is in it. First in the tree, so everything else draws over it.
+        //
+        // The curve carries on PAST both horizons and dips below them, dimmed.
+        // That is what makes the horizon read as a horizon rather than as a
+        // baseline the curve happens to rest on - and at 3x2 the horizon is
+        // not drawn here at all: it lands exactly on the hairline the card
+        // already draws between its two bands, so the divider and the horizon
+        // are one line doing both jobs.
+        Canvas {
+            id: sunArc
+            objectName: "weatherSunArc"
+            anchors.fill: parent
+            opacity: 0.32
+            z: -1
+
+            // How much night to show past each horizon, as a fraction of the
+            // daylight. Enough to read as a dip, not so much that the day is
+            // squeezed into the middle of the card.
+            readonly property real nightMargin: 0.22
+            // How much of the sine's depth the night tails keep at their
+            // deepest, so they level off toward the card's edges.
+            readonly property real tailFlatten: 0.35
+            readonly property var window: SunArc.windowFor(sunArc.nightMargin)
+
+            // The horizon: the band seam at 3x2 (the hairline is already
+            // there), and a proportion of the card elsewhere.
+            property real horizonY: root.sizeMode === "3x2"
+                ? root.bandRuleSlot.y
+                : height * 0.74
+            Behavior on horizonY { SpanTravel {} }
+            readonly property real apexRise: root.sizeMode === "3x2"
+                ? horizonY * 0.62 : height * 0.42
+
+            // Local minutes, repainted on the minute rather than per frame:
+            // the sun moves about a pixel a minute across a card this wide.
+            property int nowMinutes: 0
+            function refreshNow() {
+                const now = new Date();
+                sunArc.nowMinutes = now.getHours() * 60 + now.getMinutes();
+            }
+            Component.onCompleted: sunArc.refreshNow()
+            Timer {
+                interval: 60000
+                repeat: true
+                running: sunArc.visible
+                onTriggered: sunArc.refreshNow()
+            }
+
+            readonly property string sunriseText: Weather.data.sunrise ?? "0"
+            readonly property string sunsetText: Weather.data.sunset ?? "0"
+            readonly property var sunPosition: SunArc.sunU(
+                sunArc.nowMinutes, sunArc.sunriseText, sunArc.sunsetText, sunArc.window)
+            readonly property bool daylight: SunArc.isDaylight(
+                sunArc.nowMinutes, sunArc.sunriseText, sunArc.sunsetText)
+            readonly property color inkColor: root.contentColor
+
+            onNowMinutesChanged: requestPaint()
+            onSunriseTextChanged: requestPaint()
+            onSunsetTextChanged: requestPaint()
+            onInkColorChanged: requestPaint()
+            onHorizonYChanged: requestPaint()
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+
+            onPaint: {
+                const ctx = getContext("2d");
+                ctx.reset();
+                ctx.clearRect(0, 0, width, height);
+                if (width < 2 || height < 2) return;
+
+                const step = Math.max(1.5, width / 120);
+                const yAt = u => sunArc.horizonY - SunArc.heightAt(
+                    SunArc.phaseAt(u, sunArc.window), sunArc.apexRise, sunArc.tailFlatten);
+
+                // Two passes over the same curve, split at the horizon: the
+                // daylight stretch at full strength, the night dips faint.
+                // Drawn as separate strokes rather than one path with a
+                // changing alpha, because a canvas stroke takes one alpha for
+                // the whole path it is closing.
+                const strokeRange = (from, to, alpha) => {
+                    if (to - from < 0.0005) return;
+                    ctx.globalAlpha = alpha;
+                    ctx.beginPath();
+                    let first = true;
+                    for (let x = from * width; x <= to * width + 0.001; x += step) {
+                        const u = Math.min(to, x / width);
+                        const y = yAt(u);
+                        first ? ctx.moveTo(u * width, y) : ctx.lineTo(u * width, y);
+                        first = false;
+                    }
+                    const endY = yAt(to);
+                    ctx.lineTo(to * width, endY);
+                    ctx.stroke();
+                };
+
+                ctx.strokeStyle = sunArc.inkColor;
+                ctx.lineWidth = 1.5 * Appearance.effectiveScale;
+                ctx.lineCap = "round";
+
+                strokeRange(0, sunArc.window.uRise, 0.35);
+                strokeRange(sunArc.window.uRise, sunArc.window.uSet, 1);
+                strokeRange(sunArc.window.uSet, 1, 0.35);
+                ctx.globalAlpha = 1;
+
+            }
+        }
+
+        // The sun on the curve, moving along it as the day does.
+        //
+        // A MaterialSymbol rather than the google-weather `clear_day` asset
+        // the card draws its condition from: colorised down to 14px that
+        // asset's lobes fall under a pixel and it reads as a plain disc, while
+        // the symbol's rays survive. The condition glyph keeps the richer
+        // asset because it has 84px to spend.
+        //
+        // Outside the canvas so it is not repainted with the curve - the curve
+        // changes when the card resizes, this changes every minute.
+        MaterialSymbol {
+            objectName: "weatherSunMarker"
+            readonly property real u: sunArc.sunPosition ?? 0
+            readonly property real markerSize:
+                Math.max(12, Math.min(18, sunArc.height * 0.15)) * Appearance.effectiveScale
+            width: markerSize
+            height: markerSize
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            x: sunArc.width * u - width / 2
+            y: sunArc.horizonY - SunArc.heightAt(
+                SunArc.phaseAt(u, sunArc.window), sunArc.apexRise, sunArc.tailFlatten)
+               - height / 2
+            Behavior on x { SpanTravel {} }
+            Behavior on y { SpanTravel {} }
+            // Below its own horizon it is not the sun that is showing.
+            text: sunArc.daylight ? "sunny" : "bedtime"
+            iconSize: markerSize
+            fill: 1
+            color: root.contentColor
+            // Brighter than the curve it rides - it is the one part of this
+            // background that is a reading rather than a frame.
+            opacity: sunArc.sunPosition === null ? 0 : 0.8
+            Behavior on opacity { SpanFade {} }
+            visible: opacity > 0 && sunArc.visible
+            z: -1
+        }
 
         // ---- shared: the glyph container, one shape-parameterised canvas --
         Item {
