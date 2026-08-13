@@ -84,6 +84,12 @@ ShellRoot {
                     + `${harness.fieldTop},${Math.round(loader.width)},`
                     + `${Math.round(loader.height)}`);
             console.log(`[CalendarCard] layout ${boxes.join(" ")}`);
+            // A strip of untouched field, well below the tallest card. The
+            // field is not white after the grab - a shadow has to be measured
+            // as darker than THIS, not as darker than zero, or an assertion
+            // written against zero passes on a card with no shadow at all.
+            console.log(`[CalendarCard] baseline ${harness.leftMargin},`
+                + `${window.implicitHeight - 40},236,14`);
             field.grabToImage(result => {
                 result.saveToFile(shot);
                 console.log("[CalendarCard] saved");
