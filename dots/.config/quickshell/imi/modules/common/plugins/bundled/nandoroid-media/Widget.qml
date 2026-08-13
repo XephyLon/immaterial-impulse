@@ -35,6 +35,8 @@ Item {
     // `qs -p` probe of this file.
     property string hostGridSize: ""
     property point hostResizeBow: Qt.point(0, 0)
+    // Set by the host while this widget is being dragged; the cards lift.
+    property bool hostDragging: false
 
     // The host's span-change cross-fade exists to hide a destroy. This tree
     // has no destroy: the shared elements re-derive their rects from the
@@ -92,6 +94,7 @@ Item {
         backgroundOpacity: root.backgroundOpacity
         tensionX: root.hostResizeBow.x
         tensionY: root.hostResizeBow.y
+        dragging: root.hostDragging
     }
 
     // ---- unshared content, entering and exiting per span -----------------

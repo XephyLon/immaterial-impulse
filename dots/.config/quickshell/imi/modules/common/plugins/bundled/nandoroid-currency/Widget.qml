@@ -19,6 +19,8 @@ Item {
     // the host's midpoint dissolve yields.
     readonly property bool handlesSpanTransition: true
     property point hostResizeBow: Qt.point(0, 0)
+    // Set by the host while this widget is being dragged; the cards lift.
+    property bool hostDragging: false
     // Implicit from the SPAN; the content fills whatever the host gives -
     // the host's animating box is the resize (weather's wrapper shipped the
     // self-sized version of this and its card teleported).
@@ -41,6 +43,7 @@ Item {
         anchors.fill: parent
         sizeMode: root.hostGridSize || "2x1"
         resizeBow: root.hostResizeBow
+        dragging: root.hostDragging
         useBlurBackground: PluginState.option("nandoroid_currency", "blurEnabled", false)
         backgroundOpacity: PluginState.effectiveBackgroundOpacity("nandoroid_currency")
         onBaseCurrencyRequested: value => PluginState.setOption("nandoroid_currency", "baseCurrency", value)

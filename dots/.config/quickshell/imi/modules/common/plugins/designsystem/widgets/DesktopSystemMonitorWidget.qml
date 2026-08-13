@@ -48,6 +48,8 @@ Item {
     // card under it - thirdCard. All three bowing identically would read as
     // jelly, not as a pull.
     property point resizeBow: Qt.point(0, 0)
+    // Handled state, for the cards' elevation.
+    property bool dragging: false
     readonly property var blurRegions: [
         cpuCard.blurRegion,
         ramCard.blurRegion,
@@ -65,6 +67,7 @@ Item {
             id: cpuCard
             implicitWidth: root.cardWidth
             implicitHeight: root.cardHeight
+            dragging: root.dragging
             radius: Appearance.rounding.large
             tint: Appearance.colors.colPrimaryContainer
             useBlurBackground: root.useBlurBackground
@@ -156,6 +159,7 @@ Item {
             id: ramCard
             implicitWidth: root.cardWidth
             implicitHeight: root.cardHeight
+            dragging: root.dragging
             radius: Appearance.rounding.large
             tint: Appearance.colors.colSecondaryContainer
             useBlurBackground: root.useBlurBackground
@@ -253,6 +257,7 @@ Item {
             backgroundOpacity: root.backgroundOpacity
             tensionX: root.resizeBow.x
             tensionY: root.resizeBow.y
+            dragging: root.dragging
 
             // Sisi Atas: Liquid Cookie12Sided (Centered Top)
             Item {

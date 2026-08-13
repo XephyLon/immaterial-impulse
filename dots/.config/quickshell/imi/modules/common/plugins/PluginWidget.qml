@@ -682,6 +682,7 @@ AbstractBackgroundWidget {
         // resize - see shownGridSpan.
         gridSize: rootWidget.shownGridSpan
         resizeBow: rootWidget.resizeBow
+        hostDragging: rootWidget.dragging
         anchors.centerIn: parent
     }
     }

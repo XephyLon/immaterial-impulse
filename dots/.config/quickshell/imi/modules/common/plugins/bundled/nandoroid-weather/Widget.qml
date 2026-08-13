@@ -16,6 +16,8 @@ Item {
     // that deliberately never disappear.
     readonly property bool handlesSpanTransition: true
     property point hostResizeBow: Qt.point(0, 0)
+    // Set by the host while this widget is being dragged; the cards lift.
+    property bool hostDragging: false
 
     // Implicit size from the SPAN, and the content fills whatever the host
     // gives - the host's box is what animates a resize. The old wrapper set
@@ -31,6 +33,7 @@ Item {
         anchors.fill: parent
         sizeMode: root.hostGridSize || "3x1"
         resizeBow: root.hostResizeBow
+        dragging: root.hostDragging
         useBlurBackground: PluginState.option("nandoroid_weather", "blurEnabled", false)
         backgroundOpacity: PluginState.effectiveBackgroundOpacity("nandoroid_weather")
     }

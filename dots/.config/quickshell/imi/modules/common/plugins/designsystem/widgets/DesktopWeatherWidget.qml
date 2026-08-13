@@ -32,6 +32,8 @@ Item {
     property string sizeMode: cfg ? cfg.sizeMode : "3x1"
     property bool useBlurBackground: false
     property point resizeBow: Qt.point(0, 0)
+    // Handled state, for the cards' elevation.
+    property bool dragging: false
 
     property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("", 0.1)
     readonly property bool managesBlurTint: true
@@ -107,6 +109,7 @@ Item {
         clipContent: true
         tensionX: root.resizeBow.x
         tensionY: root.resizeBow.y
+        dragging: root.dragging
 
         // ---- shared: the glyph container, one shape-parameterised canvas --
         Item {

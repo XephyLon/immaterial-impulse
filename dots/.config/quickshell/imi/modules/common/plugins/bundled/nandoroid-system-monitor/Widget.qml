@@ -6,6 +6,8 @@ import "ThirdCard.js" as ThirdCard
 
 Item {
     property point hostResizeBow: Qt.point(0, 0)
+    // Set by the host while this widget is being dragged; the cards lift.
+    property bool hostDragging: false
     readonly property var blurRegions: content.blurRegions
     readonly property bool managesBlurTint: content.managesBlurTint
     implicitWidth: content.implicitWidth
@@ -15,6 +17,7 @@ Item {
     Expressive.DesktopSystemMonitorWidget {
         id: content
         resizeBow: root.hostResizeBow
+        dragging: root.hostDragging
         width: implicitWidth
         height: implicitHeight
         isVertical: PluginState.option("nandoroid_system_monitor", "vertical", false)

@@ -66,6 +66,9 @@ Item {
     // The resize grip's live edge distortion, forwarded to widgets whose cards
     // bow under tension. A point of pixels; (0,0) at rest.
     property point resizeBow: Qt.point(0, 0)
+    // Whether the host is currently being dragged, for a widget that lifts
+    // its cards while handled.
+    property bool hostDragging: false
 
     readonly property string effectiveBasePath: manifestNode?._basePath || basePath
     readonly property string componentPath: manifestNode?.component && effectiveBasePath
@@ -171,6 +174,8 @@ Item {
                     item.hostGridSize = Qt.binding(() => rootNode.gridSize);
                 if (item.hostResizeBow !== undefined)
                     item.hostResizeBow = Qt.binding(() => rootNode.resizeBow);
+                if (item.hostDragging !== undefined)
+                    item.hostDragging = Qt.binding(() => rootNode.hostDragging);
                 return;
             }
             if (manifestNode.props) {

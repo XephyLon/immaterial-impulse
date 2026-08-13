@@ -18,6 +18,8 @@ Item {
     property string sizeMode: cfg ? cfg.sizeMode : "2x1"
     property bool useBlurBackground: false
     property point resizeBow: Qt.point(0, 0)
+    // Handled state, for the cards' elevation.
+    property bool dragging: false
     // The host wrapper overrides this with its own plugin id; the fallback keeps
     // the toggle honoured for a component instantiated without one.
 
@@ -114,6 +116,7 @@ Item {
         backgroundOpacity: root.backgroundOpacity
         tensionX: root.resizeBow.x
         tensionY: root.resizeBow.y
+        dragging: root.dragging
 
         // --- PAGE 1: View Mode ---
         Item {
