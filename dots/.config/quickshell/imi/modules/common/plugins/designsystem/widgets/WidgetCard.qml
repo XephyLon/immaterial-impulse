@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import Qt5Compat.GraphicalEffects
 import qs.modules.common
 import qs.modules.common.functions as Functions
@@ -78,70 +77,43 @@ Item {
 
     // ---- elevation -------------------------------------------------------
     // The card casts a shadow, and lifts further the more directly it is
-    // being handled: rest, hover, drag. The numbers are Appearance.elevation
-    // (picked on the real wallpaper in ShadowTuningPlayground); what varies
-    // here is only how far off the surface this card currently is.
+    // being handled: rest, hover, drag. `WidgetElevation` owns the numbers and
+    // the lift - the five older bundled widgets that are not cards need the
+    // same depth without the surface - so all the card decides here is which
+    // of its own states count as motion.
     //
     // The shadow is taken from the BODY, not from the card as a whole - a
     // layer over the content would have every label and glyph casting one too.
-    // It therefore follows painted alpha, which is the point: the plain
-    // rectangle, the bowed canvas and a MaterialShape polygon all cast the
-    // shape they actually draw.
     property bool shadowEnabled: true
     property bool dragging: false
-    // Motion drops the shadow and it returns on settle, exactly as the frost
-    // does: re-rendering a blurred copy of the body every frame of a morph is
-    // the expensive path, and the card is moving too fast to read a shadow.
     property bool motionActive: root.underTension
-    readonly property bool shadowVisible: root.shadowEnabled && !root.motionActive
 
-    property real elevationLift: root.dragging ? Appearance.elevation.dragLift
-        : (cardHover.hovered ? Appearance.elevation.hoverLift : 1.0)
-    Behavior on elevationLift {
-        NumberAnimation {
-            duration: Appearance.animation.elementMoveFast.duration
-            easing.type: Easing.BezierSpline
-            easing.bezierCurve: Appearance.animationCurves.expressiveEffects
-        }
-    }
-
-    // State only, no cursor: the cursor is a different channel and two
-    // handlers arguing over it is a bug this repo has already paid for.
-    HoverHandler { id: cardHover }
-
-    // One frame around every body renderer, so one effect shadows all three.
-    // It is inset NEGATIVELY by the bow's reach: a layer clips at its item's
-    // bounds, and the bowed canvas deliberately draws outside the card.
-    Item {
+    // One frame around every body renderer, so one effect shadows all three:
+    // the plain rectangle, the bowed canvas and a MaterialShape polygon all
+    // cast the shape they actually draw.
+    WidgetElevation {
         id: bodySurface
         anchors.fill: parent
-        anchors.margins: -Tension.BOW_PX * 2
-
-        layer.enabled: root.shadowVisible
-        layer.effect: MultiEffect {
-            shadowEnabled: true
-            shadowBlur: Appearance.elevation.blur * root.elevationLift
-            shadowOpacity: Appearance.elevation.shadowOpacity
-            shadowVerticalOffset: Appearance.elevation.offsetY * root.elevationLift
-            shadowHorizontalOffset: 0
-            shadowScale: Appearance.elevation.shadowScale
-            shadowColor: Appearance.elevation.shadowColor
-        }
+        bleed: Tension.BOW_PX * 2
+        shadowEnabled: root.shadowEnabled
+        motionActive: root.motionActive
+        dragging: root.dragging
 
         Rectangle {
             id: rectSurface
             visible: !root.usesShapeCanvas && !root.underTension
             anchors.fill: parent
-            anchors.margins: Tension.BOW_PX * 2
             radius: root.radius
             color: root.effectiveColor
         }
 
-        // The bulged surface, alive only while pulled. Margins give the bow room
-        // to draw outside the card's own box without being cut by the item.
+        // The bulged surface, alive only while pulled. Negative margins give
+        // the bow room to draw outside the card's own box; the elevation's
+        // bleed is what keeps the layer from cutting it there.
         Loader {
             active: root.underTension
             anchors.fill: parent
+            anchors.margins: -Tension.BOW_PX * 2
             sourceComponent: Canvas {
                 id: tensionCanvas
                 onPaint: {
@@ -178,7 +150,6 @@ Item {
         Loader {
             active: root.usesShapeCanvas
             anchors.fill: parent
-            anchors.margins: Tension.BOW_PX * 2
             sourceComponent: MaterialShape {
                 shapeString: root.shapeName
                 color: root.effectiveColor

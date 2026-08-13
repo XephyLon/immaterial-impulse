@@ -69,3 +69,4 @@ WaveVisualizer WaveVisualizer.qml
 WavyLine WavyLine.qml
 WeatherCard WeatherCard.qml
 WidgetCard WidgetCard.qml
+WidgetElevation WidgetElevation.qml
