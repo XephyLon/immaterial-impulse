@@ -220,8 +220,8 @@ Item {
                 if (width < 2 || height < 2) return;
 
                 const step = Math.max(1.5, width / 120);
-                const yAt = u => sunArc.horizonY - SunArc.heightAt(
-                    SunArc.phaseAt(u, sunArc.window), sunArc.apexRise, sunArc.tailFlatten);
+                const yAt = u => SunArc.curveY(u, sunArc.window,
+                    sunArc.horizonY, sunArc.apexRise, sunArc.tailFlatten);
 
                 // Two passes over the same curve, split at the horizon: the
                 // daylight stretch at full strength, the night dips faint.
@@ -276,9 +276,8 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             x: sunArc.width * u - width / 2
-            y: sunArc.horizonY - SunArc.heightAt(
-                SunArc.phaseAt(u, sunArc.window), sunArc.apexRise, sunArc.tailFlatten)
-               - height / 2
+            y: SunArc.curveY(u, sunArc.window, sunArc.horizonY,
+                sunArc.apexRise, sunArc.tailFlatten) - height / 2
             Behavior on x { SpanTravel {} }
             Behavior on y { SpanTravel {} }
             // Below its own horizon it is not the sun that is showing.

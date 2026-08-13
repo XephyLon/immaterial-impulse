@@ -108,6 +108,18 @@ function heightAt(phase, rise, tailFlatten) {
     return raw * (1 - (1 - flatten) * eased);
 }
 
+// Where the curve is at a point across the card, in CARD coordinates - y
+// grows downward, so the apex is the smallest number this returns.
+//
+// The marker rides the line the canvas strokes, and this is the one place
+// that line is spelled. Written out at both call sites instead, the two agree
+// only for as long as nobody edits one of them: a marker floating a few pixels
+// off its own curve is not an error, does not warn, and looks like a rounding
+// artefact rather than like two expressions that have drifted apart.
+function curveY(u, window, horizonY, apexRise, tailFlatten) {
+    return horizonY - heightAt(phaseAt(u, window), apexRise, tailFlatten);
+}
+
 // Where today's sun sits across the card, or null when the day is not
 // knowable. Clamped to the card, so a sun deep in the night parks at the edge
 // rather than being drawn off it.
