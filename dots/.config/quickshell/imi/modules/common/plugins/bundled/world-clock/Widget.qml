@@ -7,6 +7,7 @@ import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.modules.common.plugins
+import qs.modules.common.plugins.designsystem.widgets as Expressive
 
 Item {
     id: root
@@ -18,18 +19,20 @@ Item {
     // a bare `qs -p` probe of this file, the same as `screenName: ""`.
     property bool hostInteractionLocked: false
 
+    // The host's drag, forwarded to the card so it lifts while it is handled.
+    // A card never told about the drag silently never lifts.
+    property bool hostDragging: false
+
     // The card fills the whole widget, so the host's default region already has
     // the right extent - but not the right corner radius (it falls back to
     // `Appearance.rounding.large`, 7px tighter than the card's `verylarge`),
     // which would leave frosted slivers outside the four corners. Naming the
-    // card is the only way to hand the host its actual radius.
+    // card is the only way to hand the host its actual radius, and `blurRegion`
+    // is the record WidgetCard builds for exactly that.
     readonly property bool blurEnabled: PluginState.option("world-clock", "blurEnabled", false)
     readonly property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("world-clock")
     readonly property bool managesBlurTint: true
-    readonly property var blurRegions: [
-        { x: contentRect.x, y: contentRect.y, width: contentRect.width,
-            height: contentRect.height, radius: contentRect.radius }
-    ]
+    readonly property var blurRegions: [contentRect.blurRegion]
 
     function tinted(surfaceColor) {
         return root.blurEnabled
@@ -114,12 +117,17 @@ Item {
             }
         }
 
-        StyledDropShadow { target: contentRect }
-
-        Rectangle {
+        // The one widget of the five that is genuinely card-shaped: a rounded
+        // rectangle filling the widget with everything drawn inside it. It
+        // takes the component rather than only the tokens, so its surface,
+        // its rounding and its shadow are the ones every other card has.
+        Expressive.WidgetCard {
             id: contentRect
             anchors.fill: parent
-            color:  root.tinted(Appearance.colors.colPrimaryContainer)
+            tint: Appearance.colors.colPrimaryContainer
+            useBlurBackground: root.blurEnabled
+            backgroundOpacity: root.backgroundOpacity
+            dragging: root.hostDragging
             radius: Appearance.rounding?.verylarge ?? 30
 
             // 2x2. Two steps of the scale: cardInset (space150) at the card
