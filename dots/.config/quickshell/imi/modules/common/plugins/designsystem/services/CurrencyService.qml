@@ -29,6 +29,13 @@ Singleton {
         onTriggered: root.refresh()
     }
 
+    // What the running request is, so a timeout can advance to the next host
+    // rather than ending the attempt. A hung primary - DNS blackhole, TLS
+    // stall - is the case the mirror most exists for, and it was the one case
+    // that never reached it: the timeout called attemptFailed() directly
+    // because it had no way to name the attempt it was killing.
+    property var pendingAttempt: null
+
     Timer {
         id: requestTimeout
         interval: 12000
@@ -37,6 +44,14 @@ Singleton {
             // Invalidate the callback without aborting from inside a timer.
             // Qt's XHR abort path can synchronously re-enter QML handlers.
             root.requestGeneration++;
+            const attempt = root.pendingAttempt;
+            root.errorMessage = "Network timeout";
+            if (attempt) {
+                root.pendingAttempt = null;
+                root.tryHost(attempt.urls, attempt.hostIndex + 1,
+                             attempt.target, attempt.uniqueQuotes);
+                return;
+            }
             root.attemptFailed("Network timeout");
         }
     }
@@ -105,15 +120,19 @@ Singleton {
     // counts as a failure and backs off.
     function tryHost(urls, hostIndex, target, uniqueQuotes) {
         if (hostIndex >= urls.length) {
+            root.pendingAttempt = null;
             root.attemptFailed(root.errorMessage || "No network");
             return;
         }
         const generation = ++root.requestGeneration;
+        root.pendingAttempt = { urls: urls, hostIndex: hostIndex,
+                                target: target, uniqueQuotes: uniqueQuotes };
         const xhr = new XMLHttpRequest();
         xhr.open("GET", urls[hostIndex]);
         xhr.onreadystatechange = function() {
             if (xhr.readyState !== XMLHttpRequest.DONE || generation !== root.requestGeneration) return;
             requestTimeout.stop();
+            root.pendingAttempt = null;
             if (xhr.status !== 200) {
                 root.errorMessage = xhr.status === 0 ? "No network" : `HTTP ${xhr.status}`;
                 root.tryHost(urls, hostIndex + 1, target, uniqueQuotes);

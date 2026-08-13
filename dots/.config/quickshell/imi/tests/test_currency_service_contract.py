@@ -48,6 +48,26 @@ def test_wrapper_does_not_duplicate_service_refreshes():
     assert "CurrencyService.refresh()" not in source
 
 
+def test_a_timeout_reaches_the_mirror_rather_than_ending_the_attempt():
+    """A hung primary is the case the mirror most exists for.
+
+    The timeout used to call `attemptFailed()` directly - it had no way to
+    name the attempt it was killing - so the one failure mode the fallback was
+    added for (DNS blackhole, TLS stall: connection accepted, nothing ever
+    answers) went straight to backoff without ever trying jsdelivr. Only a
+    non-200, a parse error or an empty table reached it.
+    """
+    source = SERVICE.read_text()
+    assert "property var pendingAttempt" in source
+    timeout = source[source.index("id: requestTimeout"):]
+    timeout = timeout[:timeout.index("\n    }")]
+    assert "root.tryHost(attempt.urls, attempt.hostIndex + 1" in timeout, \
+        "the timeout must advance to the next host"
+    # ...and the attempt must be cleared wherever it ends, or a later timeout
+    # would resume a request that already answered.
+    assert source.count("root.pendingAttempt = null") >= 3
+
+
 def test_currency_service_has_bounded_non_reentrant_request():
     source = SERVICE.read_text()
     assert "id: requestTimeout" in source
