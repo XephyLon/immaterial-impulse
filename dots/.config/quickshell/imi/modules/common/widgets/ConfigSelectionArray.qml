@@ -72,6 +72,11 @@ RowLayout {
                 buttonIcon: modelData.icon || ""
                 buttonText: modelData.displayName
                 toggled: root.currentValue == modelData.value
+                // An option the shell declines. It is still drawn, and still
+                // drawn as current if a stored config already holds it -
+                // dropping it from the model would silently shorten the row
+                // with nothing on screen saying why.
+                enabled: root.enabled && !(modelData.disabled ?? false)
                 onClicked: {
                     root.selected(modelData.value);
                 }

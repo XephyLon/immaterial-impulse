@@ -7,6 +7,7 @@ import qs.modules.common.widgets
 import qs.modules.common.plugins
 import Quickshell.Hyprland
 import "../../../common/functions/screenSelection.js" as ScreenSelection
+import "../../dock/dock_geometry.js" as DockGeometry
 
 ContentPage {
     id: page
@@ -668,17 +669,40 @@ ContentPage {
                     onToggleRequested: Config.options.dock.enable = !Config.options.dock.enable
                 }
                 ConfigSelectionArray {
-                    text: Translation.tr("Dock position")
+                    id: dockEdgeRow
+                    // The shell DECLINES a dock on the same edge as an
+                    // auto-hiding bar rather than arbitrating the two 2px
+                    // reveal slivers that would then share one row of pixels
+                    // (spec §3, settled as §9 Q3). Two strips fighting over
+                    // the same line is not a layout that can be tuned into
+                    // working: whichever loses, the bar becomes unrevealable
+                    // and nothing on screen says why.
+                    //
+                    // Only auto-hide collides. A bottom bar plus a pinned dock
+                    // is a legitimate arrangement the compositor lays out
+                    // cumulatively, and refusing that would forbid something
+                    // that works.
+                    readonly property string blockedEdge: Config.options.bar.autoHide.enable
+                        ? DockGeometry.barEdge(Config.options.bar.vertical,
+                                               Config.options.bar.bottom)
+                        : ""
+                    text: dockEdgeRow.blockedEdge === ""
+                        ? Translation.tr("Dock position")
+                        : Translation.tr("Dock position (not the auto-hiding bar's edge)")
                     icon: "swap_vert"
                     // The value IS the stored string - no bitfield to
                     // open-code, which is the whole argument for the new key.
                     currentValue: Config.options.dock.edge
                     onSelected: newValue => { Config.options.dock.edge = newValue; }
                     options: [
-                        { displayName: Translation.tr("Top"),    icon: "arrow_upward",   value: "top" },
-                        { displayName: Translation.tr("Left"),   icon: "arrow_back",     value: "left" },
-                        { displayName: Translation.tr("Bottom"), icon: "arrow_downward", value: "bottom" },
-                        { displayName: Translation.tr("Right"),  icon: "arrow_forward",  value: "right" }
+                        { displayName: Translation.tr("Top"),    icon: "arrow_upward",   value: "top",
+                          disabled: dockEdgeRow.blockedEdge === "top" },
+                        { displayName: Translation.tr("Left"),   icon: "arrow_back",     value: "left",
+                          disabled: dockEdgeRow.blockedEdge === "left" },
+                        { displayName: Translation.tr("Bottom"), icon: "arrow_downward", value: "bottom",
+                          disabled: dockEdgeRow.blockedEdge === "bottom" },
+                        { displayName: Translation.tr("Right"),  icon: "arrow_forward",  value: "right",
+                          disabled: dockEdgeRow.blockedEdge === "right" }
                     ]
                 }
                 ConfigSwitch {
