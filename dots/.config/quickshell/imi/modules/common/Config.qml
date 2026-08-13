@@ -1128,6 +1128,16 @@ Singleton {
                 property bool showMedia: true
                 property bool monochromeIcons: true
                 property real height: 60
+                // Which screen edge the dock lives on. A string rather than
+                // the bar's `bottom` + `vertical` pair: presets are never
+                // rewritten, so a new key needs no migration where renaming
+                // an existing one would lose every stored value.
+                //
+                // `height` and `hoverRegionHeight` keep their names at every
+                // edge - they are the dock's THICKNESS, and renaming them
+                // would mean migrating the presets this key was designed to
+                // avoid touching.
+                property string edge: "bottom"
                 property real hoverRegionHeight: 2
                 property bool pinnedOnStartup: false
                 property bool hoverToReveal: true // When false, only reveals on empty workspace
