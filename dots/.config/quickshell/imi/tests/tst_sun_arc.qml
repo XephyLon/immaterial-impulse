@@ -116,6 +116,40 @@ TestCase {
         verify(before < at && at < after, "and it keeps going the same way");
     }
 
+    // ---- the curve as card coordinates --------------------------------
+
+    function test_the_curve_meets_the_horizon_at_both_horizons() {
+        // y grows downward, so "on the horizon" is literally horizonY.
+        const window = SunArc.windowFor(0.22);
+        fuzzyCompare(SunArc.curveY(window.uRise, window, 80, 45, 0.35), 80, 0.0001);
+        fuzzyCompare(SunArc.curveY(window.uSet, window, 80, 45, 0.35), 80, 0.0001);
+    }
+
+    function test_the_curve_hangs_below_the_horizon_at_the_cards_edges() {
+        const window = SunArc.windowFor(0.22);
+        verify(SunArc.curveY(0, window, 80, 45, 0.35) > 80, "dawn side dips");
+        verify(SunArc.curveY(1, window, 80, 45, 0.35) > 80, "dusk side dips");
+    }
+
+    function test_the_marker_rides_the_line_the_canvas_strokes() {
+        // The marker and the curve read the same expression, so the sun at
+        // midday is ON the apex rather than near it - the failure this pins
+        // is two spellings of one line drifting a few pixels apart, which
+        // reads as a rounding artefact and never warns.
+        const window = SunArc.windowFor(0.22);
+        const rise = "06:00 AM", set = "06:00 PM";
+        const u = SunArc.sunU(12 * 60, rise, set, window);
+        fuzzyCompare(SunArc.curveY(u, window, 80, 45, 0.35), 80 - 45, 0.0001);
+        // ...and an hour either side of it, where the answer is not a
+        // landmark either function could have short-circuited to.
+        for (const minutes of [7 * 60, 11 * 60, 16 * 60]) {
+            const at = SunArc.sunU(minutes, rise, set, window);
+            const expected = 80 - SunArc.heightAt(
+                SunArc.phaseAt(at, window), 45, 0.35);
+            fuzzyCompare(SunArc.curveY(at, window, 80, 45, 0.35), expected, 0.0001);
+        }
+    }
+
     function test_the_sun_sits_where_the_clock_says() {
         const window = SunArc.windowFor(0.25);
         const rise = "06:00 AM", set = "06:00 PM";
