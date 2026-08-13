@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
 import qs.modules.common
+import qs.modules.common.widgets
 import qs.modules.common.functions as Functions
 import "."
 
@@ -17,10 +18,26 @@ Button {
     hoverEnabled: true
     readonly property bool realHovered: mouseArea.containsMouse
     
+    // The shared interaction states, same model the mainline button adopted:
+    // hover lifts, press settles, disabled is opacity only. This copy has
+    // diverged far enough that it cannot simply BE that button (its hover is
+    // its own MouseArea, and SegmentedWrapper drives its per-corner radii), so
+    // it adopts the model rather than the component. Unifying the two is
+    // step 10's job, not this change's.
+    property bool interactionMotionEnabled: true
+    property InteractionMotion interactionMotion: InteractionMotion {
+        hovered: root.hovered && root.interactionMotionEnabled
+        down: root.down && root.interactionMotionEnabled
+        controlEnabled: root.enabled
+    }
+
     // Base radii
     property real buttonRadius: Appearance.rounding.button
-    property real buttonRadiusPressed: buttonRadius
-    property real buttonEffectiveRadius: root.down ? root.buttonRadiusPressed : root.buttonRadius
+    property real buttonRadiusPressed: buttonRadius * (Appearance?.interaction?.pressRadiusScale ?? 1)
+    // The corners ARRIVE at the pressed radius instead of snapping: the
+    // per-corner Behaviors below carried a target that changed in one frame.
+    property real buttonEffectiveRadius: root.buttonRadius
+        + (root.buttonRadiusPressed - root.buttonRadius) * root.interactionMotion.pressProgress
     
     // Properties for SegmentedWrapper support
     property real topLeftRadius: buttonEffectiveRadius
@@ -46,7 +63,7 @@ Button {
     
     property color colRipple: Functions.ColorUtils.applyAlpha(root.textColor, 0.12)
 
-    opacity: root.enabled ? 1 : 0.4
+    opacity: root.interactionMotion.dimOpacity
     
     // Simplified color logic: Use the specific color based on state
     property color baseColor: root.toggled ? 
@@ -55,8 +72,16 @@ Button {
     
     property color textColor: root.toggled ? colTextToggled : colText
 
+    // The lift. A Scale rather than a width/height change, so a button inside
+    // a Layout does not shove its neighbours as the pointer crosses it.
+    transform: Scale {
+        origin.x: root.width / 2
+        origin.y: root.height / 2
+        xScale: root.interactionMotion.scale
+        yScale: root.interactionMotion.scale
+    }
+
     // ── Animations ──
-    Behavior on opacity { animation: Appearance.animation.elementResize.numberAnimation.createObject(root) }
     Behavior on topLeftRadius { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(root) }
     Behavior on topRightRadius { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(root) }
     Behavior on bottomLeftRadius { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(root) }
