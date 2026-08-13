@@ -1306,6 +1306,20 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   reads as black to any analyser - a measurement that looks like a catastrophic failure when nothing
   is wrong, and would equally hide a real one.
   4046f1854 ("feat(widgets): the card casts a shadow, and lifts when handled").
+- **A morphing container brings its polygons; the mechanics are shared.** `shape_morph.js` owns the
+  bounds, the endpoint short-circuit and the Morph cache for every container that morphs between
+  named shapes (media's body, weather's glyph, currency's badge); a widget passes a
+  `name -> RoundedPolygon` resolver and gets `at(from, to, t)`. Each container keeps its OWN caches,
+  because two widgets can both call a shape "panel" and mean different polygons. Bounds are MEASURED
+  mid-flight and PINNED at the endpoints - the interpolated cubics' measured extent wobbles by a
+  hair at a settle threshold, and a hair of scale reads as a flicker. Likewise `SpanTravel`/
+  `SpanFade` are the one spelling of how a shared element travels and how one with no home at the
+  next span leaves; there were twenty-three copies of that NumberAnimation before, and a tree that
+  spells its own can drift from the others by a curve without anything warning. Both extractions are
+  enforced (`test_the_trees_share_one_spelling_of_the_span_animations`,
+  `test_the_morphing_containers_share_their_mechanics`) - the point of extracting was to stop the
+  fourth copy, so the check is the deliverable, not the module.
+  e62584f17 ("refactor(designsystem): the morph mechanics become one module").
 - **A state property that says "hovered" is not evidence a pixel moved.** The media badge's hover
   lift shipped through `transform: Scale { origin.x: width / 2 }`, whose `width` resolved against a
   scope that has none - the model reported `hovered`, `scale` read 1.02, and the badge measured
