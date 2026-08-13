@@ -125,9 +125,11 @@ Item {
                 z: 1000
                 width:  root.btnSize
                 height: root.btnSize
-                anchors.verticalCenter: root.vertical ? undefined : parent.verticalCenter
-                anchors.horizontalCenter: root.vertical ? parent.horizontalCenter : undefined
-
+                // Both coordinates are explicit rather than one anchored: an
+                // anchor on the axis the ghost is NOT travelling along would
+                // silently overwrite whichever of x and y the other branch
+                // wrote, and which one that is changes with the edge.
+                //
                 // The ghost follows the pointer along the strip only, so a
                 // sideways wobble does not drag the icon out of the dock.
                 readonly property point localPointer: dragHandler.active
@@ -135,8 +137,12 @@ Item {
                         dragHandler.centroid.scenePosition.x,
                         dragHandler.centroid.scenePosition.y)
                     : Qt.point(0, 0)
-                x: root.vertical ? 0 : (dragHandler.active ? localPointer.x - width / 2 : 0)
-                y: root.vertical ? (dragHandler.active ? localPointer.y - height / 2 : 0) : 0
+                x: root.vertical
+                    ? (slotItem.width - width) / 2
+                    : (dragHandler.active ? localPointer.x - width / 2 : 0)
+                y: root.vertical
+                    ? (dragHandler.active ? localPointer.y - height / 2 : 0)
+                    : (slotItem.height - height) / 2
 
                 scale: dragHandler.active ? 1.15 : 0.9
                 Behavior on scale {
