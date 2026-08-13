@@ -61,8 +61,17 @@ case "$action" in
         }' "$PLUGIN_STATE_FILE" 2>/dev/null \
             || printf '{"version":2,"desktopPositions":{},"pluginOptions":{}}')"
         fi
+        # A preset is a document people SHARE, and `config.json` holds the
+        # user's own OpenWeatherMap key. Saving one used to copy it verbatim,
+        # so posting a preset published your key with it. Stripped here rather
+        # than on apply: apply merges the preset over the user's config, so a
+        # key left in the file would also overwrite the recipient's own.
+        # (The AI provider keys are not affected - those live in the keyring,
+        # never in this document.)
         jq --argjson pluginState "$plugin_state" \
-            'del(._presetMeta, ._pluginState) | ._pluginState = $pluginState' \
+            'del(._presetMeta, ._pluginState)
+             | ._pluginState = $pluginState
+             | if .bar.weather.apiKey? then .bar.weather.apiKey = "" else . end' \
             "$CONFIG_FILE" > "$PRESETS_DIR/${name}.json"
         if [ -n "$description" ]; then
             jq --arg desc "$description" '._presetMeta = {"description": $desc}' \

@@ -243,5 +243,38 @@ class PresetTests(unittest.TestCase):
         )
 
 
+    def test_saving_a_preset_does_not_publish_the_users_weather_key(self):
+        """A preset is a document people share; config.json holds their key.
+
+        Saved verbatim, posting a preset published the author's OpenWeatherMap
+        key with it. Stripped on SAVE rather than on apply, because apply
+        merges the preset over the recipient's config - a key left in the file
+        would overwrite theirs too.
+        """
+        source = PRESETS.read_text()
+        self.assertIn(".bar.weather.apiKey", source)
+        save = source[source.index("del(._presetMeta, ._pluginState)"):]
+        save = save[:save.index("$PRESETS_DIR")]
+        self.assertIn('.bar.weather.apiKey = ""', save,
+                      "the save filter must blank the key")
+
+    def test_the_save_filter_survives_a_config_without_the_key(self):
+        """`?` on the path, so a config that has never had a weather key is
+        passed through rather than failing the save."""
+        source = PRESETS.read_text()
+        self.assertIn("if .bar.weather.apiKey? then", source)
+        for document in ('{"bar":{"weather":{"apiKey":"SECRET"}}}',
+                         '{"dock":{"edge":"left"}}'):
+            result = subprocess.run(
+                ["jq", 'if .bar.weather.apiKey? then .bar.weather.apiKey = "" else . end'],
+                input=document, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            # The VALUE, not a substring of the output - "apiKey" itself
+            # contains a K, which is how the first version of this assertion
+            # failed against a filter that was working correctly.
+            saved = json.loads(result.stdout)
+            self.assertEqual(saved.get("bar", {}).get("weather", {}).get("apiKey", ""), "")
+
+
 if __name__ == "__main__":
     unittest.main()
