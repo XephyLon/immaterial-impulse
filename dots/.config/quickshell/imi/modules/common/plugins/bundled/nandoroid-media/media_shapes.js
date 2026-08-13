@@ -3,6 +3,7 @@
 .import "../../designsystem/widgets/shapes/rounded-polygon.js" as RoundedPolygon
 .import "../../designsystem/widgets/shapes/corner-rounding.js" as CornerRounding
 .import "../../designsystem/widgets/shapes/morph.js" as MorphLib
+.import "../../designsystem/widgets/shapes/shape_morph.js" as ShapeMorph
 
 // The play button's two selves, in ONE coordinate space, and the Morph
 // between them.
@@ -57,24 +58,11 @@ function bodyAt(t) {
     var clamped = Math.max(0, Math.min(1, t));
     // Endpoint bounds are PINNED: the interpolated cubics' measured bounds
     // wobble by a hair around the endpoints, and a hair of scale at the
-    // settle threshold reads as a flicker.
-    if (clamped >= 0.999) {
-        return { cubics: bodyMorph().asCubics(1), minX: -0.5, minY: -0.5, maxX: 0.5, maxY: 0.5 };
-    }
-    var cubics = bodyMorph().asCubics(clamped);
-    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (var i = 0; i < cubics.length; i++) {
-        var c = cubics[i];
-        var xs = [c.anchor0X, c.control0X, c.control1X, c.anchor1X];
-        var ys = [c.anchor0Y, c.control0Y, c.control1Y, c.anchor1Y];
-        for (var j = 0; j < 4; j++) {
-            if (xs[j] < minX) minX = xs[j];
-            if (xs[j] > maxX) maxX = xs[j];
-            if (ys[j] < minY) minY = ys[j];
-            if (ys[j] > maxY) maxY = ys[j];
-        }
-    }
-    return { cubics: cubics, minX: minX, minY: minY, maxX: maxX, maxY: maxY };
+    // settle threshold reads as a flicker. Mid-flight they are measured,
+    // because the capsule really is wider than the box it is travelling to.
+    if (clamped >= 0.999)
+        return ShapeMorph.pinned(bodyMorph().asCubics(1));
+    return ShapeMorph.bounded(bodyMorph().asCubics(clamped));
 }
 
 // The seeker's ring endpoints: a perfect circle (2x2, inside the button) and
