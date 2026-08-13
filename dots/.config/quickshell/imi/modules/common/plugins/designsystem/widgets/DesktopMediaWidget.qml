@@ -26,6 +26,8 @@ Item {
     property bool useBlurBackground: false
     // Handled state, for the card's elevation.
     property bool dragging: false
+    // The host's box is animating; the cards drop their shadow for it.
+    property bool boxInMotion: false
     // The host wrapper overrides this with its own plugin id; the fallback keeps
     // the toggle honoured for a component instantiated without one.
 
@@ -45,6 +47,7 @@ Item {
         visible: !root.chromeless
         anchors.fill: parent
         dragging: root.dragging
+        hostMotionActive: root.boxInMotion
         useBlurBackground: root.useBlurBackground
         backgroundOpacity: root.backgroundOpacity
     }

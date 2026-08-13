@@ -14,6 +14,9 @@ Item {
     property point hostResizeBow: Qt.point(0, 0)
     // Set by the host while this widget is being dragged; the cards lift.
     property bool hostDragging: false
+    // Set by the host while its own box is animating; the cards drop their
+    // shadow for the duration rather than re-blurring into a resizing FBO.
+    property bool hostBoxInMotion: false
     readonly property var blurRegions: content.blurRegions
     readonly property bool managesBlurTint: content.managesBlurTint
     implicitWidth: content.implicitWidth
@@ -24,6 +27,7 @@ Item {
         id: content
         resizeBow: root.hostResizeBow
         dragging: root.hostDragging
+        boxInMotion: root.hostBoxInMotion
         width: implicitWidth
         height: implicitHeight
         isVertical: PluginState.option("nandoroid_system_monitor", "vertical", false)

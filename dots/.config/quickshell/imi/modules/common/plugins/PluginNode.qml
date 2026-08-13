@@ -69,6 +69,9 @@ Item {
     // Whether the host is currently being dragged, for a widget that lifts
     // its cards while handled.
     property bool hostDragging: false
+    // Whether the host's own box is animating. A widget uses it to stop
+    // re-rendering effects that cost a frame each while it moves.
+    property bool hostBoxInMotion: false
 
     readonly property string effectiveBasePath: manifestNode?._basePath || basePath
     readonly property string componentPath: manifestNode?.component && effectiveBasePath
@@ -176,6 +179,8 @@ Item {
                     item.hostResizeBow = Qt.binding(() => rootNode.resizeBow);
                 if (item.hostDragging !== undefined)
                     item.hostDragging = Qt.binding(() => rootNode.hostDragging);
+                if (item.hostBoxInMotion !== undefined)
+                    item.hostBoxInMotion = Qt.binding(() => rootNode.hostBoxInMotion);
                 return;
             }
             if (manifestNode.props) {

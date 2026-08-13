@@ -24,6 +24,9 @@ Item {
     // a link that forgets to forward this produces a card that silently never
     // rises (tests/test_expressive_design_system.py pins the chain).
     property bool hostDragging: false
+    // Set by the host while its own box is animating; the cards drop their
+    // shadow for the duration rather than re-blurring into a resizing FBO.
+    property bool hostBoxInMotion: false
 
     // The card fills the whole widget, so the host's default frost region has
     // the right extent - but not the right corner radius (PluginWidget falls
@@ -228,6 +231,7 @@ Item {
         useBlurBackground: root.blurEnabled
         backgroundOpacity: root.backgroundOpacity
         dragging: root.hostDragging
+        hostMotionActive: root.hostBoxInMotion
 
         Loader {
             anchors.fill: parent
