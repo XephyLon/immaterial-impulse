@@ -149,13 +149,20 @@ TestCase {
         const rise = "06:00 AM", set = "06:00 PM";
         const u = SunArc.sunU(12 * 60, rise, set, window);
         fuzzyCompare(SunArc.curveY(u, window, 80, 45, 0.35), 80 - 45, 0.0001);
-        // ...and an hour either side of it, where the answer is not a
-        // landmark either function could have short-circuited to.
-        for (const minutes of [7 * 60, 11 * 60, 16 * 60]) {
+        // ...and at the quarter points, against ARITHMETIC rather than
+        // against the expression curveY runs. The previous version computed
+        // `80 - heightAt(phaseAt(u))` and compared it to curveY, which is
+        // literally that function's body - so any error inside heightAt or
+        // phaseAt appeared identically on both sides. Distorting the daylight
+        // curve by 30% left this file fully green.
+        //
+        // Daylight is 06:00-18:00, so 09:00 and 15:00 are phase 0.25 and 0.75
+        // (sin = √½) and 12:00 is the apex: 80 - 45·sin(φπ).
+        const quarters = [[9 * 60, 48.1802], [12 * 60, 35.0], [15 * 60, 48.1802]];
+        for (const [minutes, expected] of quarters) {
             const at = SunArc.sunU(minutes, rise, set, window);
-            const expected = 80 - SunArc.heightAt(
-                SunArc.phaseAt(at, window), 45, 0.35);
-            fuzzyCompare(SunArc.curveY(at, window, 80, 45, 0.35), expected, 0.0001);
+            fuzzyCompare(SunArc.curveY(at, window, 80, 45, 0.35), expected, 0.001,
+                         `curve at ${minutes / 60}:00`);
         }
     }
 
