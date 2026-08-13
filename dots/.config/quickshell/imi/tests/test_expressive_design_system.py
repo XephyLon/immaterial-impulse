@@ -384,18 +384,34 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         looks slightly wrong next to the others - so the spelling is shared and
         the private ones may not come back.
         """
-        trees = {
-            "media": PLUGIN_ROOT / "nandoroid-media/Widget.qml",
-            "weather": DESIGN_SYSTEM / "widgets/DesktopWeatherWidget.qml",
-            "currency": DESIGN_SYSTEM / "widgets/DesktopCurrencyWidget.qml",
-        }
-        for name, path in trees.items():
+        # Swept, not named. The first version of this test listed three files
+        # by hand and five verbatim copies survived in the very package it was
+        # written for - MediaSeeker and MediaTransportButton, both added by the
+        # same release. A check that enumerates its subjects only ever guards
+        # the subjects someone remembered.
+        swept = sorted(
+            list((PLUGIN_ROOT / "nandoroid-media").glob("*.qml"))
+            + [DESIGN_SYSTEM / "widgets/DesktopWeatherWidget.qml",
+               DESIGN_SYSTEM / "widgets/DesktopCurrencyWidget.qml",
+               DESIGN_SYSTEM / "widgets/DesktopMediaWidget.qml"])
+        self.assertGreaterEqual(len(swept), 6, "the sweep found nothing to check")
+        carriers = 0
+        for path in swept:
             source = path.read_text(encoding="utf-8")
+            name = path.name
             self.assertNotIn("component TravelBehavior", source, name)
             self.assertNotIn("component FadeBehavior", source, name)
-            self.assertNotIn("expressiveDefaultSpatial", source,
-                             f"{name} spells the travel curve itself")
-            self.assertIn("SpanTravel {}", source, name)
+            # A whole-tier animation spelled inline. `ParallelAnimation`
+            # members that name a target/property are a different thing and
+            # SpanTravel cannot express them, so this looks for the Behavior
+            # body's shape rather than the curve name alone.
+            inline = ("NumberAnimation { duration: Appearance.animation.elementMove.duration"
+                      in source)
+            self.assertFalse(inline, f"{name} spells the span animation itself")
+            if "SpanTravel {}" in source:
+                carriers += 1
+        self.assertGreaterEqual(carriers, 3,
+                                "nothing in the sweep uses the shared spelling")
         for component in ("SpanTravel.qml", "SpanFade.qml"):
             self.assertTrue((DESIGN_SYSTEM / "widgets" / component).exists())
 
