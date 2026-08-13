@@ -98,4 +98,112 @@ TestCase {
         verify(Geometry.isVertical("left") && Geometry.isVertical("right"));
         verify(!Geometry.isVertical("top") && !Geometry.isVertical("bottom"));
     }
+
+    // --- the two side edges -------------------------------------------------
+
+    function test_thickness_is_the_same_arithmetic_on_either_axis() {
+        // A vertical dock is 75px WIDE and reserves 65 of them. The dock's
+        // `height` key keeps its name and means thickness at every edge, so
+        // there is no second number to get wrong - only a different axis to
+        // apply the one number to.
+        for (const edge of ["top", "bottom", "left", "right"]) {
+            compare(Geometry.thickness(dockHeight, elevation, gaps), 75,
+                    edge + " is the same thickness");
+            compare(Geometry.exclusiveZone(dockHeight, elevation, gaps), 65,
+                    edge + " reserves the same");
+        }
+        // ...and the axis it lands on is the one the anchors leave free.
+        for (const edge of ["left", "right"]) {
+            const a = Geometry.anchors(edge);
+            verify(a.top && a.bottom, edge + " spans the screen's height");
+            verify(!(a.left && a.right), edge + " leaves its width to the thickness");
+        }
+    }
+
+    function test_the_margin_pair_lands_on_the_horizontal_axis_at_a_side_edge() {
+        // The asymmetry that is load-bearing for the blur region: the
+        // elevation margin is inward (it is where the shadow is drawn), the
+        // compositor's gap outward. At a side edge that pair is left/right.
+        const left = Geometry.margins("left", elevation, gaps);
+        compare(left.right, elevation, "the shadow falls toward the screen");
+        compare(left.left, gaps, "and the compositor's gap toward the edge");
+        const right = Geometry.margins("right", elevation, gaps);
+        compare(right.left, elevation);
+        compare(right.right, gaps);
+        // Not merely different - genuinely swapped between the two.
+        verify(left.left !== right.left && left.right !== right.right);
+    }
+
+    function test_inward_and_outward_are_one_relation_asked_four_ways() {
+        compare(Geometry.inwardSide("bottom"), "top");
+        compare(Geometry.inwardSide("left"), "right");
+        compare(Geometry.outwardSide("left"), "left");
+        // The reveal anchors inward and pushes the body outward from there; a
+        // dock that anchored its outward side would slide ONTO the screen to
+        // hide.
+        for (const edge of ["top", "bottom", "left", "right"])
+            compare(Geometry.revealAnchorSide(edge), Geometry.inwardSide(edge),
+                    edge + " reveals along its inward side");
+        // ...and a popup opens the same way, so neither can drift.
+        for (const edge of ["top", "bottom", "left", "right"])
+            compare(Geometry.popupGravity(edge), Geometry.inwardSide(edge));
+    }
+
+    function test_a_directed_pair_never_touches_the_long_axis() {
+        const left = Geometry.directedSides("left", 7, 3);
+        compare(left.right, 7);
+        compare(left.left, 3);
+        compare(left.top, 0, "an inset on the long axis eats the strip, not its thickness");
+        compare(left.bottom, 0);
+        const bottom = Geometry.directedSides("bottom", 7, 3);
+        compare(bottom.top, 7);
+        compare(bottom.bottom, 3);
+        compare(bottom.left, 0);
+        compare(bottom.right, 0);
+    }
+
+    function test_a_surface_anchored_popup_takes_a_corner_and_a_direction() {
+        // The window-preview popup hangs off the dock's whole surface, so one
+        // side is not enough: it needs the corner it attaches to and the way
+        // it grows. Both start inward - a popup opening into the screen edge
+        // is a popup the compositor clips.
+        const bottom = Geometry.popupAnchorSides("bottom");
+        compare(bottom.edges, ["top", "left"]);
+        compare(bottom.gravity, ["top", "right"]);
+        const left = Geometry.popupAnchorSides("left");
+        compare(left.edges, ["right", "top"]);
+        compare(left.gravity, ["right", "bottom"]);
+        const right = Geometry.popupAnchorSides("right");
+        compare(right.edges, ["left", "top"]);
+        compare(right.gravity, ["left", "bottom"]);
+        for (const edge of ["top", "bottom", "left", "right"]) {
+            const sides = Geometry.popupAnchorSides(edge);
+            compare(sides.edges[0], Geometry.inwardSide(edge));
+            compare(sides.gravity[0], Geometry.inwardSide(edge));
+        }
+    }
+
+    function test_the_hover_lift_rises_out_of_the_dock_at_every_edge() {
+        // -y only is correct at exactly one edge. At the top it drives the
+        // icon into the screen edge; at a side edge it moves along the strip
+        // instead of out of it.
+        compare(Geometry.inwardVector("bottom"), { x: 0, y: -1 });
+        compare(Geometry.inwardVector("top"), { x: 0, y: 1 });
+        compare(Geometry.inwardVector("left"), { x: 1, y: 0 });
+        compare(Geometry.inwardVector("right"), { x: -1, y: 0 });
+        for (const edge of ["left", "right"])
+            compare(Geometry.inwardVector(edge).y, 0,
+                    edge + " must not lift along its own strip");
+    }
+
+    function test_the_bars_overloaded_pair_reads_as_an_edge() {
+        // `bottom` stops meaning bottom once `vertical` is set. The dock only
+        // needs this to notice it is being sent where an auto-hiding bar
+        // already lives, and a comparison across two vocabularies means
+        // nothing.
+        compare(Geometry.barEdge(false, false), "top");
+        compare(Geometry.barEdge(false, true), "bottom");
+        compare(Geometry.barEdge(true, false), "left");
+        compare(Geometry.barEdge(true, true), "right");
+    }
 }
