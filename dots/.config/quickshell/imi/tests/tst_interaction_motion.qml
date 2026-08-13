@@ -37,6 +37,15 @@ TestCase {
         compare(hover.radiusScale, 1, "hover does not reshape");
     }
 
+    function test_a_pressed_control_is_still_hovered_by_the_model() {
+        // A wash driven by `hover` must not fade out the instant the press
+        // lands - that reads as the control letting go under the finger.
+        compare(Motion.targetsFor("pressed", tokens).hover, 1);
+        compare(Motion.targetsFor("hovered", tokens).hover, 1);
+        compare(Motion.targetsFor("rest", tokens).hover, 0);
+        compare(Motion.targetsFor("disabled", tokens).hover, 0);
+    }
+
     function test_disabled_is_opacity_only() {
         const disabled = Motion.targetsFor("disabled", tokens);
         compare(disabled.scale, 1);
