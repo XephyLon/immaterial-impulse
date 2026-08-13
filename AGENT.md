@@ -1496,6 +1496,47 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   `FadeLoader`, rather than repeating only the enabled ids. Removing a model delegate destroys it
   immediately and makes an M3 exit transition impossible; keep disabled loaders dormant until their
   fade-and-scale exit reaches zero opacity.
+- **A comparison that is correct on one axis is INERT on the other, not merely wrong — and a
+  layout that turns is where you meet that.** The dock now lives on any of the four edges
+  (`modules/imi/dock/dock_geometry.js` derives anchors, thickness, exclusive zone, margins by
+  INWARD/OUTWARD direction, reveal offsets and popup gravity from one `OPPOSITE` table; one tree
+  with a `vertical` flag rather than the bar's two modules, so an orientation change reflows the
+  icons instead of destroying and rebuilding them). Three things about that turn are worth not
+  re-deriving:
+  - **The drag reorder was `Math.abs(dragX - centre.x)` throughout.** In a column every slot
+    centre has the *same* x, so the distance is zero for all of them, the "nearest" slot is
+    whichever the loop reached first, and the swap test compares a number with itself: it fires
+    on the press and unfires on the next event, for as long as the pointer moves at all. Nothing
+    errors, the column lays out and spaces perfectly, and a screenshot is no help — the icons
+    simply refuse to move past each other. `DragApps` chooses the axis once (`alongAxis`), and
+    the check that can see it is `DockEdgeRuntimeTest.qml` (driven by
+    `tests/test_dock_edge_runtime.py`, headless weston, in `run_tests.sh`): it drags ALONG the
+    strip and requires a swap, then ACROSS it and requires none, with the horizontal edge first
+    as the control — "nothing happened" is also what a harness that stopped delivering events
+    reports. It reaches the dock's *content* tree only; weston implements no wlr-layer-shell, so
+    anchors, the exclusive zone, the reveal push and the compositor's inferred slide are all
+    invisible to it.
+  - **A control sized "width from height" cannot be turned.** `DockButton` derived its width from
+    its height minus the *vertical* insets, which in a column is the axis the layout owns. Both
+    axes are now written out against a span, so there is no direction to get backwards, and the
+    insets are named `insetInward`/`insetOutward` rather than top/bottom — a widget that decides
+    which side the elevation margin lands on is correct at one edge in four, and
+    `tests/test_dock_position_contract.py` fails on a margin or inset bound to a named side while
+    naming `elevationMargin` or `hyprlandGapsOut`.
+  - **`DockSeparator` and `DockAppButton` still reach `dockRow.padding` and
+    `dockVisualBackground.margin` by dynamic scope through the dock's tree.** The ids are
+    deliberately unchanged: a failed lookup there is `undefined`, then NaN geometry, then a
+    relayout that never converges and a pegged core — see the Design-language note on the missing
+    `import qs.modules.common`. Restructure above them and nothing warns.
+
+  The same contract test carries the "one derivation" lint (the analogue of
+  `lint_bar_popup_overlay_static.py`'s rule for `barEdge`): a file may read
+  `Config.options.dock.edge`, but only straight into `normalizedEdge()`, and nothing may compare
+  the stored value to a side. `modules/imi/bar/DocktoPanel.qml` renders the same `pinnedApps`
+  inside the bar and must keep following the *bar*; that is pinned too.
+  6b082ea16 ("feat(dock): the geometry module answers for the two side edges"),
+  8e608cb61 ("feat(dock): the dock strip lays out along whichever edge it is on"),
+  c7efc6db4 ("test(dock): the vertical edges get a contract and a real drag").
 - **`MouseArea.drag` cannot accurately drag a target the MouseArea itself follows.** QQuickDrag
   rebases its press origin when the grab is established, silently swallowing the arming move's
   delta — a few threshold pixels under a real pointer, invisible behind the widget lattice's 12px
@@ -1831,7 +1872,9 @@ Shared building blocks to reach for before writing something from scratch: `Styl
 widget's hover popup: a declaration plus a hover state machine, *not* a window - its content is
 hosted on `modules/imi/bar/BarPopupOverlay.qml`'s shared card, b22a923a5 ("refactor(bar): delete
 the per-popup layer surface")), `StyledRectangularShadow`, `DockIconMotion` (wraps a dock icon's visuals with hover-lift /
-press-squish / launch-bounce / appear-pop feedback, driven by `services/DockLaunchTracker`),
+press-squish / launch-bounce / appear-pop feedback, driven by `services/DockLaunchTracker`; the
+lift and the bounce are magnitudes travelling along `dock_geometry.js`'s inward vector, not a
+negative y),
 `SchemePaletteCircle` (an Android 12-style palette circle for a colour scheme, fed from
 `services/SchemePreview`, with the scheme's glyph as the fallback while the colour venv has not
 answered). All in `modules/common/widgets/`.

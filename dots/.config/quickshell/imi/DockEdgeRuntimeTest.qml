@@ -143,8 +143,9 @@ ShellRoot {
     }
 
     function scoreReordered(label, expected) {
-        harness.check(`${label}: ${expected.join(",")}`,
-                      harness.sameOrder(harness.pinned(), expected));
+        const actual = harness.pinned();
+        harness.check(`${label}: want ${expected.join(",")}, got ${actual.join(",")}`,
+                      harness.sameOrder(actual, expected));
     }
 
     readonly property var steps: [
