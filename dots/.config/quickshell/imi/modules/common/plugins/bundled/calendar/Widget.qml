@@ -6,6 +6,7 @@ import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.modules.common.plugins
+import "../../designsystem/widgets" as Expressive
 
 Item {
     id: root
@@ -18,24 +19,30 @@ Item {
     // (a bare `qs -p` probe of this file), same as `screenName: ""`.
     property bool hostInteractionLocked: false
 
+    // Set by the host while this widget is being dragged, and handed straight
+    // to the card: the shadow lifts on hover and lifts further on a drag, and
+    // a link that forgets to forward this produces a card that silently never
+    // rises (tests/test_expressive_design_system.py pins the chain).
+    property bool hostDragging: false
+
     // The card fills the whole widget, so the host's default frost region has
     // the right extent - but not the right corner radius (PluginWidget falls
-    // back to `Appearance.rounding.large`, 7px tighter than the card's
-    // `verylarge`), which would leave blurred slivers outside the four corners.
-    // Naming the card is the only way to hand the host the radius it has.
+    // back to `Appearance.rounding.large`, 7px tighter than the card's own),
+    // which would leave blurred slivers outside the four corners. The record
+    // comes from the card itself, so the widget cannot disagree with its own
+    // surface about where the frost goes.
     readonly property bool blurEnabled: PluginState.option("calendar", "blurEnabled", false)
     readonly property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("calendar")
     readonly property bool managesBlurTint: true
-    readonly property var blurRegions: [
-        {
-            x: card.x,
-            y: card.y,
-            width: card.width,
-            height: card.height,
-            radius: card.radius
-        }
-    ]
+    readonly property var blurRegions: [card.blurRegion]
 
+    // The card's own surface is the card's business now; this stays for the
+    // surfaces drawn *inside* it - the 1x1 banner, the month pill, the day
+    // grid and today's highlight - which thin with the card so the frost
+    // reads through the whole widget rather than through its edges only.
+    // `transparentize` rather than the card's `applyAlpha` because two of
+    // those colours (colLayer1 most of all) already carry an alpha that the
+    // widget must scale, not overwrite.
     function tinted(surfaceColor) {
         return root.blurEnabled ? ColorUtils.transparentize(surfaceColor, 1 - root.backgroundOpacity) : surfaceColor;
     }
@@ -205,17 +212,22 @@ Item {
         }
     }
 
-    Rectangle {
+    // The surface every other desktop widget already composes. It owns the
+    // tint pair, the rounding (this widget's own `verylarge` was the token the
+    // shared card's 30 had drifted from), the frost record above, and the drop
+    // shadow with its hover and drag lift - which is what replaces the flat
+    // StyledRectangularShadow that used to hang behind this rectangle.
+    //
+    // No `tensionX`/`tensionY`: the manifest declares no `grid`, so the host
+    // draws no resize grip here and there is never a bow to render.
+    Expressive.WidgetCard {
         id: card
         implicitWidth: root.widgetWidth
         implicitHeight: root.sizeMode === "1x1" ? root.shortHeight : root.sizeMode === "2x1" ? root.shortHeight : root.tallHeight
-        radius: Appearance.rounding?.verylarge ?? 30
-        color: root.tinted(Appearance.colors.colPrimaryContainer)
-
-        StyledRectangularShadow {
-            target: card
-            z: -2
-        }
+        tint: Appearance.colors.colPrimaryContainer
+        useBlurBackground: root.blurEnabled
+        backgroundOpacity: root.backgroundOpacity
+        dragging: root.hostDragging
 
         Loader {
             anchors.fill: parent
@@ -538,9 +550,13 @@ Item {
             height: 16
             radius: Appearance.rounding.unsharpenslight
             color: Appearance.colors.colOnPrimaryContainer
+            // The card routes its children into its own content item, so the
+            // handles anchor to that rather than reaching back up to `card` -
+            // an anchor may only name a parent or a sibling. It fills the
+            // card, so the corner is the same corner.
             anchors {
-                right: card.right
-                bottom: card.bottom
+                right: parent.right
+                bottom: parent.bottom
                 margins: Appearance.spacing.space50
             }
             opacity: (widgetHover.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
@@ -586,8 +602,8 @@ Item {
             radius: Appearance.rounding.unsharpenslight
             color: Appearance.colors.colOnPrimaryContainer
             anchors {
-                left: card.left
-                bottom: card.bottom
+                left: parent.left
+                bottom: parent.bottom
                 margins: Appearance.spacing.space50
             }
             opacity: (widgetHover.hovered || toggleArea.containsMouse) && root.sizeMode !== "1x1" ? 0.5 : 0
