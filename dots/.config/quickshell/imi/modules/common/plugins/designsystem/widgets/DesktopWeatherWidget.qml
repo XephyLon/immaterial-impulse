@@ -9,6 +9,7 @@ import Qt5Compat.GraphicalEffects
 import "weather_geometry.js" as Geometry
 import "weather_glyphs.js" as WeatherGlyphs
 import "weather_shapes.js" as WeatherShapes
+import "../../../functions/weatherForecast.js" as WeatherForecast
 
 // The weather widget as ONE tree (spec 2026-08-11, §3b - this widget is the
 // element the morphing design was specified around).
@@ -86,6 +87,28 @@ Item {
     readonly property var highLowSlot: Geometry.highLowRect(root.bandSpan, root.width3x1, root.bandH, Appearance.effectiveScale)
     readonly property var pillsSlot: Geometry.pillsRect(root.bandSpan, root.width3x1, root.bandH, Appearance.effectiveScale)
     readonly property var columnRuleSlot: Geometry.columnDividerRect(root.bandSpan, root.width3x1, root.bandH, Appearance.effectiveScale)
+
+    // The forecast band exists at 3x2 and nowhere else, so its rect is its one
+    // home and the span test is what decides whether it is drawn - the null
+    // the module returns elsewhere is what says "fade", never a rect to travel
+    // to.
+    readonly property bool showsForecast: Geometry.forecastStripRect(
+        root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale) !== null
+    readonly property var stripSlot: Geometry.forecastStripRect("3x2", root.width3x1, root.height2Rows, Appearance.effectiveScale)
+    readonly property var bandRuleSlot: Geometry.bandDividerRect("3x2", root.width3x1, root.height2Rows, Appearance.effectiveScale)
+
+    // wttr.in answers with three days, OpenWeatherMap with four, and a failed
+    // forecast request with none - all three are real and the row is laid out
+    // from whatever arrives (#111 deliberately padded to no fixed count).
+    readonly property var forecastDays: Weather.forecast || []
+    // Recomputed whenever the forecast is, which is often enough to keep the
+    // "Today" label honest: a card mislabelled at midnight would need the
+    // desktop to sit untouched across it, and a fetch lands every
+    // fetchInterval.
+    readonly property string todayIso: {
+        Weather.forecast;
+        return WeatherForecast.localIsoDate(new Date());
+    }
 
     readonly property string weatherIconsDir: "../../../../assets/icons/google-weather"
     readonly property color contentColor: Appearance.m3colors.m3onSurface
@@ -257,7 +280,12 @@ Item {
         }
 
         StyledText {
-            // 3x1 and 3x2.
+            // 3x1 always, and 3x2 only while there is no forecast to draw.
+            // The strip opens on today's card, which carries this same range
+            // and says it better - but the forecast is a request that can fail
+            // on its own (OpenWeatherMap fetches it separately), and a 3x2 card
+            // answering that by silently dropping the high and low would tell
+            // the user LESS than the 3x1 does.
             objectName: "weatherHighLow"
             x: root.highLowSlot.x
             y: root.highLowSlot.y
@@ -266,7 +294,8 @@ Item {
             text: `High ${root.highTemperature}° · Low ${root.lowTemperature}°`
             font.pixelSize: Appearance.font.pixelSize.smallest
             color: root.contentColor
-            opacity: root.sizeMode === "3x1" || root.sizeMode === "3x2" ? 0.6 : 0
+            opacity: (root.sizeMode === "3x1"
+                || (root.showsForecast && root.forecastDays.length === 0)) ? 0.6 : 0
             Behavior on opacity { SpanFade {} }
             visible: opacity > 0
         }
@@ -323,6 +352,124 @@ Item {
                             font.pixelSize: Appearance.font.pixelSize.smallest
                             font.weight: Font.DemiBold
                             color: root.contentColor
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            // 3x2 only: the seam between the two bands
+            objectName: "weatherBandRule"
+            x: root.bandRuleSlot.x
+            y: root.bandRuleSlot.y
+            width: root.bandRuleSlot.width
+            height: 1
+            color: root.contentColor
+            opacity: root.showsForecast && root.forecastDays.length > 0 ? 0.15 : 0
+            Behavior on opacity { SpanFade {} }
+            visible: opacity > 0
+        }
+
+        // ---- unshared: the second row's day-by-day forecast ---------------
+        //
+        // 3x2 only, so it fades rather than travelling - and unlike the other
+        // fades in this tree it is worth UNLOADING as well as hiding. Each
+        // card holds a CustomIcon, and an invisible-but-alive strip is four
+        // SVG loads and a dozen bindings kept warm for three spans that never
+        // show them (spec 2026-08-11, §6: in a reflowing tree, unloaded beats
+        // invisible-but-alive wherever the element has no home).
+        //
+        // The unload waits for the fade to land rather than following the
+        // span, because removing a delegate destroys it in the same frame and
+        // an exit transition is impossible after that - the rule the desktop
+        // plugin loaders already follow.
+        Item {
+            id: forecastStrip
+            objectName: "weatherForecast"
+            x: root.stripSlot.x
+            y: root.stripSlot.y
+            width: root.stripSlot.width
+            height: root.stripSlot.height
+            opacity: root.showsForecast && root.forecastDays.length > 0 ? 1 : 0
+            Behavior on opacity { SpanFade {} }
+            visible: opacity > 0
+
+            Repeater {
+                model: root.showsForecast || forecastStrip.opacity > 0 ? root.forecastDays : []
+
+                Item {
+                    id: dayCard
+                    required property int index
+                    required property var modelData
+
+                    readonly property var slot: Geometry.forecastCardRect(
+                        dayCard.index, root.forecastDays.length,
+                        forecastStrip.width, forecastStrip.height, Appearance.effectiveScale)
+                    x: dayCard.slot ? dayCard.slot.x : 0
+                    width: dayCard.slot ? dayCard.slot.width : 0
+                    height: forecastStrip.height
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Appearance.rounding.small * Appearance.effectiveScale
+                        // The pills' tint, because these are the same kind of
+                        // object one band up: a small tonal container holding
+                        // one reading. A MaterialShape here would put four more
+                        // morphing outlines under the one the card already has.
+                        color: Appearance.m3colors.darkmode ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.05)
+                    }
+
+                    ColumnLayout {
+                        anchors.centerIn: parent
+                        spacing: 2 * Appearance.effectiveScale
+
+                        StyledText {
+                            Layout.alignment: Qt.AlignHCenter
+                            // Plain English, like the "Feels like" and "High"
+                            // one band up: nothing in the vendored design
+                            // system reaches for the translation singleton,
+                            // and one word is not the place to start.
+                            text: WeatherForecast.isToday(dayCard.modelData.date, root.todayIso)
+                                ? "Today" : WeatherForecast.shortDayName(dayCard.modelData.date)
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            font.weight: Font.DemiBold
+                            color: root.contentColor
+                            opacity: 0.8
+                        }
+
+                        CustomIcon {
+                            Layout.alignment: Qt.AlignHCenter
+                            // The day icon, never the night variant: this card
+                            // is a claim about Thursday, not about tonight's
+                            // sky, and after 20:00 every one of them would
+                            // otherwise flip.
+                            source: WeatherGlyphs.glyphFor(Weather.provider, dayCard.modelData.wCode, false)
+                            iconFolder: root.weatherIconsDir
+                            width: 26 * Appearance.effectiveScale
+                            height: 26 * Appearance.effectiveScale
+                            colorize: true
+                            color: Appearance.colors.colPrimary
+                        }
+
+                        RowLayout {
+                            Layout.alignment: Qt.AlignHCenter
+                            spacing: 4 * Appearance.effectiveScale
+
+                            StyledText {
+                                // An absent reading is not 0° - the service
+                                // keeps it null and the card says so.
+                                text: dayCard.modelData.high === null ? "—" : `${dayCard.modelData.high}°`
+                                font.pixelSize: Appearance.font.pixelSize.smallest
+                                font.weight: Font.DemiBold
+                                color: root.contentColor
+                            }
+                            StyledText {
+                                text: dayCard.modelData.low === null ? "—" : `${dayCard.modelData.low}°`
+                                font.pixelSize: Appearance.font.pixelSize.smallest
+                                color: root.contentColor
+                                opacity: 0.6
+                            }
                         }
                     }
                 }
