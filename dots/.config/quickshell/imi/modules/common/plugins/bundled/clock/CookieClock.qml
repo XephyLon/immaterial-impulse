@@ -6,10 +6,10 @@ import qs.modules.common.widgets
 import qs.modules.common.functions
 import QtQuick
 import QtQuick.Layouts
-import Qt5Compat.GraphicalEffects
 import Quickshell.Io
 
 import qs.modules.common.plugins
+import qs.modules.common.plugins.designsystem.widgets as Expressive
 
 // A subdirectory of a bundled package is its own module: it needs its own
 // `qmldir` and an explicit import here. Same-directory siblings need no
@@ -22,6 +22,10 @@ Item {
     id: root
 
     property real implicitSize: 230
+
+    // The package wrapper forwards the host's drag; the cookie lifts on it the
+    // same way every card does.
+    property bool dragging: false
 
     // The cookie style owns every `cookie*` option: nothing outside this
     // subtree reads one, and each child that needs one is handed it. That
@@ -98,8 +102,20 @@ Item {
         }
     }
 
-    StyledDropShadow {
-        target: root.useSineCookie ? sineCookieLoader : roundedPolygonCookieLoader
+    // The tokens, not the component: what casts the shadow here is a twelve-
+    // or fourteen-lobed cookie, and a WidgetCard is a rounded rectangle with
+    // the dial's hands and numerals inside it - every one of which would cast
+    // a shadow of its own. The elevation shadows painted alpha, so the cookie
+    // casts a cookie.
+    //
+    // The rotation belongs to this item because it is the drawn one. The old
+    // drop shadow was the only renderer (both loaders were `visible: false`)
+    // and carried the rotation itself; the loaders are drawn again now, so the
+    // spin has to be on what contains them.
+    Expressive.WidgetElevation {
+        id: cookieBody
+        anchors.fill: parent
+        dragging: root.dragging
 
         RotationAnimation on rotation {
             running: root.constantlyRotate
@@ -109,27 +125,26 @@ Item {
             from: 360
             to: 0
         }
-    }
-    Loader {
-        id: sineCookieLoader
-        z: 0
-        visible: false // The DropShadow already draws it
-        active: root.useSineCookie
-        sourceComponent: SineCookie {
-            implicitSize: root.implicitSize
-            sides: root.sides
-            color: root.colBackground
+
+        Loader {
+            id: sineCookieLoader
+            z: 0
+            active: root.useSineCookie
+            sourceComponent: SineCookie {
+                implicitSize: root.implicitSize
+                sides: root.sides
+                color: root.colBackground
+            }
         }
-    }
-    Loader {
-        id: roundedPolygonCookieLoader
-        z: 0
-        visible: false // The DropShadow already draws it
-        active: !root.useSineCookie
-        sourceComponent: MaterialCookie {
-            implicitSize: root.implicitSize
-            sides: root.sides
-            color: root.colBackground
+        Loader {
+            id: roundedPolygonCookieLoader
+            z: 0
+            active: !root.useSineCookie
+            sourceComponent: MaterialCookie {
+                implicitSize: root.implicitSize
+                sides: root.sides
+                color: root.colBackground
+            }
         }
     }
 

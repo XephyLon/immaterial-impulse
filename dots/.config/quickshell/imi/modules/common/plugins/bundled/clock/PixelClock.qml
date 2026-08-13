@@ -7,11 +7,16 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.common.plugins.designsystem.widgets as Expressive
 
 Item {
     id: root
 
     property bool isVertical: true
+
+    // The package wrapper forwards the host's drag; the glyph grid lifts on it
+    // the same way every card does.
+    property bool dragging: false
 
     implicitWidth: isVertical ? 276 : 420
     implicitHeight: isVertical ? 252 : 150
@@ -52,160 +57,169 @@ Item {
     }
     readonly property var fringeSamples: ringSamples(16, fringeSize)
 
-    StyledDropShadow {
-        id: glyphShadow
-        target: glyphStage
-        visible: Config.options.background.widgets.enableShadows ?? false
-    }
-
-    Item {
-        id: glyphStage
+    // The tokens, not the component: four punched-out numerals overlapping each
+    // other are the body here, so the shadow has to follow painted alpha - a
+    // card behind them would be a rectangle they do not fill.
+    //
+    // The shadow this replaces was never on screen. It was gated on
+    // `Config.options.background.widgets.enableShadows`, a key no `Config.qml`
+    // has ever declared, so the `?? false` fallback resolved every time and
+    // this widget alone had no elevation at all. Folding it onto the shared one
+    // is what makes it visible - a deliberate change, not a regression.
+    Expressive.WidgetElevation {
+        id: glyphElevation
         anchors.fill: parent
-
-        component GlyphTile: Text {
-            width: root.tileW
-            height: root.tileH
-            font {
-                family: "Google Sans Flex"
-                weight: 1000
-                bold: true
-                pixelSize: root.glyphSize
-                variableAxes: ({ "wght": 1000 })
-            }
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
+        dragging: root.dragging
 
         Item {
-            id: tileAFace
+            id: glyphStage
             anchors.fill: parent
-            visible: false
+
+            component GlyphTile: Text {
+                width: root.tileW
+                height: root.tileH
+                font {
+                    family: "Google Sans Flex"
+                    weight: 1000
+                    bold: true
+                    pixelSize: root.glyphSize
+                    variableAxes: ({ "wght": 1000 })
+                }
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            Item {
+                id: tileAFace
+                anchors.fill: parent
+                visible: false
+                GlyphTile {
+                    x: root.pos0X
+                    y: root.pos0Y
+                    text: root.glyphTopLeft
+                    color: root.tintSoft
+                }
+            }
+            Item {
+                id: tileAPunch
+                anchors.fill: parent
+                visible: false
+                Repeater {
+                    model: root.fringeSamples
+                    Item {
+                        id: punchA
+                        required property var modelData
+                        anchors.fill: parent
+                        GlyphTile { x: root.pos1X + punchA.modelData.dx; y: root.pos1Y + punchA.modelData.dy; text: root.glyphTopRight; color: "black" }
+                        GlyphTile { x: root.pos2X + punchA.modelData.dx; y: root.pos2Y + punchA.modelData.dy; text: root.glyphBottomLeft; color: "black" }
+                        GlyphTile { x: root.pos3X + punchA.modelData.dx; y: root.pos3Y + punchA.modelData.dy; text: root.glyphBottomRight; color: "black" }
+                    }
+                }
+            }
+            OpacityMask {
+                anchors.fill: parent
+                source: tileAFace
+                maskSource: tileAPunch
+                invert: true
+                z: 0
+            }
+
+            Item {
+                id: tileBFace
+                anchors.fill: parent
+                visible: false
+                GlyphTile {
+                    x: root.pos1X
+                    y: root.pos1Y
+                    text: root.glyphTopRight
+                    color: root.tintBold
+                }
+            }
+            Item {
+                id: tileBPunch
+                anchors.fill: parent
+                visible: false
+                Repeater {
+                    model: root.fringeSamples
+                    Item {
+                        id: punchB
+                        required property var modelData
+                        anchors.fill: parent
+                        GlyphTile { x: root.pos2X + punchB.modelData.dx; y: root.pos2Y + punchB.modelData.dy; text: root.glyphBottomLeft; color: "black" }
+                        GlyphTile { x: root.pos3X + punchB.modelData.dx; y: root.pos3Y + punchB.modelData.dy; text: root.glyphBottomRight; color: "black" }
+                    }
+                }
+            }
+            OpacityMask {
+                anchors.fill: parent
+                source: tileBFace
+                maskSource: tileBPunch
+                invert: true
+                z: 1
+            }
+
+            Item {
+                id: tileCFace
+                anchors.fill: parent
+                visible: false
+                GlyphTile {
+                    x: root.pos2X
+                    y: root.pos2Y
+                    text: root.glyphBottomLeft
+                    color: root.tintBold
+                }
+            }
+            Item {
+                id: tileCPunch
+                anchors.fill: parent
+                visible: false
+                Repeater {
+                    model: root.fringeSamples
+                    Item {
+                        id: punchC
+                        required property var modelData
+                        anchors.fill: parent
+                        GlyphTile { x: root.pos3X + punchC.modelData.dx; y: root.pos3Y + punchC.modelData.dy; text: root.glyphBottomRight; color: "black" }
+                    }
+                }
+            }
+            OpacityMask {
+                anchors.fill: parent
+                source: tileCFace
+                maskSource: tileCPunch
+                invert: true
+                z: 2
+            }
+
             GlyphTile {
-                x: root.pos0X
-                y: root.pos0Y
-                text: root.glyphTopLeft
+                x: root.pos3X
+                y: root.pos3Y
+                text: root.glyphBottomRight
                 color: root.tintSoft
+                z: 3
             }
-        }
-        Item {
-            id: tileAPunch
-            anchors.fill: parent
-            visible: false
-            Repeater {
-                model: root.fringeSamples
-                Item {
-                    id: punchA
-                    required property var modelData
-                    anchors.fill: parent
-                    GlyphTile { x: root.pos1X + punchA.modelData.dx; y: root.pos1Y + punchA.modelData.dy; text: root.glyphTopRight; color: "black" }
-                    GlyphTile { x: root.pos2X + punchA.modelData.dx; y: root.pos2Y + punchA.modelData.dy; text: root.glyphBottomLeft; color: "black" }
-                    GlyphTile { x: root.pos3X + punchA.modelData.dx; y: root.pos3Y + punchA.modelData.dy; text: root.glyphBottomRight; color: "black" }
+
+            Column {
+                visible: !root.isVertical
+                x: root.colonX
+                y: root.pos0Y + root.tileH / 2 - height / 2
+                spacing: root.colonGap
+                z: 4
+
+                Rectangle {
+                    width: root.colonDotSize
+                    height: root.colonDotSize
+                    radius: width / 2
+                    color: root.tintBold
+                    anchors.horizontalCenter: parent.horizontalCenter
                 }
-            }
-        }
-        OpacityMask {
-            anchors.fill: parent
-            source: tileAFace
-            maskSource: tileAPunch
-            invert: true
-            z: 0
-        }
-
-        Item {
-            id: tileBFace
-            anchors.fill: parent
-            visible: false
-            GlyphTile {
-                x: root.pos1X
-                y: root.pos1Y
-                text: root.glyphTopRight
-                color: root.tintBold
-            }
-        }
-        Item {
-            id: tileBPunch
-            anchors.fill: parent
-            visible: false
-            Repeater {
-                model: root.fringeSamples
-                Item {
-                    id: punchB
-                    required property var modelData
-                    anchors.fill: parent
-                    GlyphTile { x: root.pos2X + punchB.modelData.dx; y: root.pos2Y + punchB.modelData.dy; text: root.glyphBottomLeft; color: "black" }
-                    GlyphTile { x: root.pos3X + punchB.modelData.dx; y: root.pos3Y + punchB.modelData.dy; text: root.glyphBottomRight; color: "black" }
+                Rectangle {
+                    width: root.colonDotSize
+                    height: root.colonDotSize
+                    radius: width / 2
+                    color: root.tintBold
+                    anchors.horizontalCenter: parent.horizontalCenter
                 }
-            }
-        }
-        OpacityMask {
-            anchors.fill: parent
-            source: tileBFace
-            maskSource: tileBPunch
-            invert: true
-            z: 1
-        }
-
-        Item {
-            id: tileCFace
-            anchors.fill: parent
-            visible: false
-            GlyphTile {
-                x: root.pos2X
-                y: root.pos2Y
-                text: root.glyphBottomLeft
-                color: root.tintBold
-            }
-        }
-        Item {
-            id: tileCPunch
-            anchors.fill: parent
-            visible: false
-            Repeater {
-                model: root.fringeSamples
-                Item {
-                    id: punchC
-                    required property var modelData
-                    anchors.fill: parent
-                    GlyphTile { x: root.pos3X + punchC.modelData.dx; y: root.pos3Y + punchC.modelData.dy; text: root.glyphBottomRight; color: "black" }
-                }
-            }
-        }
-        OpacityMask {
-            anchors.fill: parent
-            source: tileCFace
-            maskSource: tileCPunch
-            invert: true
-            z: 2
-        }
-
-        GlyphTile {
-            x: root.pos3X
-            y: root.pos3Y
-            text: root.glyphBottomRight
-            color: root.tintSoft
-            z: 3
-        }
-
-        Column {
-            visible: !root.isVertical
-            x: root.colonX
-            y: root.pos0Y + root.tileH / 2 - height / 2
-            spacing: root.colonGap
-            z: 4
-
-            Rectangle {
-                width: root.colonDotSize
-                height: root.colonDotSize
-                radius: width / 2
-                color: root.tintBold
-                anchors.horizontalCenter: parent.horizontalCenter
-            }
-            Rectangle {
-                width: root.colonDotSize
-                height: root.colonDotSize
-                radius: width / 2
-                color: root.tintBold
-                anchors.horizontalCenter: parent.horizontalCenter
             }
         }
     }

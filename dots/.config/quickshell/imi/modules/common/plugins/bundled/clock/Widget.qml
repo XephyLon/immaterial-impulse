@@ -25,6 +25,10 @@ Item {
     property real hostX: 0
     property color hostColText: Appearance.colors.colOnLayer0
     property bool wallpaperSafetyTriggered: false
+    // Forwarded to the two styles that draw a body of their own, so they lift
+    // while the widget is handled. A body never told about the drag silently
+    // never lifts.
+    property bool hostDragging: false
 
     // Host opt-ins (PluginNode reads these back off the item).
     //
@@ -104,6 +108,7 @@ Item {
             fade: false
             sourceComponent: CookieClock {
                 anchors.horizontalCenter: parent.horizontalCenter
+                dragging: root.hostDragging
             }
         }
 
@@ -136,6 +141,7 @@ Item {
             fade: false
             sourceComponent: PixelClock {
                 isVertical: root.pixelOrientation === "vertical"
+                dragging: root.hostDragging
             }
         }
 
