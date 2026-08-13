@@ -1293,6 +1293,19 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   which passed every hover assertion while the cursor never changed. Input areas own their
   cursors; z order guarantees the interactive thing is topmost.
   05bf3013f ("feat(media): the play button's body IS the visualizer").
+- **A layer clips at its item's bounds, so anything drawn outside needs the item grown first.** The
+  widget card's shadow (`Appearance.elevation`, one `MultiEffect` over a frame wrapping all three
+  body renderers) is taken from the BODY, never the card: over the card it would put a shadow under
+  every label and glyph inside it. That frame is inset NEGATIVELY by the bow's reach, because the
+  elastic-resize canvas deliberately draws up to `2*BOW_PX` outside the card and a layer would cut
+  it. The shadow is dropped while the card is moving and restored on settle, for the same reason the
+  frost is: re-rendering a blurred copy of the body every frame of a morph is the expensive path.
+  Verification is pixels, not source text (`test_card_shadow.py`), and two traps live there:
+  `ItemGrabResult.image` is not scriptable from QML, so analysis belongs outside; and `grabToImage`
+  captures the ITEM, so a field relying on its WINDOW's colour grabs a transparent PNG whose "white"
+  reads as black to any analyser - a measurement that looks like a catastrophic failure when nothing
+  is wrong, and would equally hide a real one.
+  4046f1854 ("feat(widgets): the card casts a shadow, and lifts when handled").
 - **A Behavior whose animation reads its tier from a binding carries the PREVIOUS transition.** The
   shared interaction model (`Appearance.interaction`, decided in `modules/common/interaction_motion.js`)
   gives every control the same five states, and each pair of states has its own duration and curve -
