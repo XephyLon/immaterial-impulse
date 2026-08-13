@@ -3,5 +3,7 @@ screenshots/
 .qmlformat.ini
 .gitignore
 *RuntimeTest.qml
+*Probe.qml
+*Playground.qml
 DesignSystemCompile.qml
 ExpandablePanelGallery.qml
