@@ -6,6 +6,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
+import "../../imi/dock/dock_geometry.js" as DockGeometry
 
 /**
  * Right-click context menu for dock app icons (ported from upstream
@@ -18,6 +19,10 @@ import qs.modules.common.functions
  */
 Item {
     id: root
+
+    readonly property string dockEdge: DockGeometry.normalizedEdge(
+        Config.options?.dock.edge ?? "bottom")
+    readonly property bool dockVertical: DockGeometry.isVertical(root.dockEdge)
 
     property var appToplevel: null
     // Authoritative app id for pin/launch actions. For pinned apps this is the
@@ -66,13 +71,19 @@ Item {
             visible: true
 
             // Away from the edge the dock is on: a menu that opens upward
-            // from a top dock is drawn off the screen.
-            readonly property bool dockAtTop: (Config.options?.dock.edge ?? "bottom") === "top"
+            // from a top dock is drawn off the screen, and one that opens
+            // upward from a side dock runs off the top of a tall strip.
+            readonly property string openSide: DockGeometry.popupGravity(root.dockEdge)
+            readonly property int openFlag: contextPopup.openSide === "top" ? Edges.Top
+                : contextPopup.openSide === "bottom" ? Edges.Bottom
+                : contextPopup.openSide === "left" ? Edges.Left : Edges.Right
             anchor {
                 item: root.targetButton
-                gravity: contextPopup.dockAtTop ? Edges.Bottom : Edges.Top
-                edges: contextPopup.dockAtTop ? Edges.Bottom : Edges.Top
-                adjustment: PopupAdjustment.SlideX
+                gravity: contextPopup.openFlag
+                edges: contextPopup.openFlag
+                // Slide along the screen edge the menu is running out of, not
+                // along the one it opened away from.
+                adjustment: root.dockVertical ? PopupAdjustment.SlideY : PopupAdjustment.SlideX
             }
 
             color: "transparent"
@@ -93,12 +104,23 @@ Item {
                 id: menuBackground
                 property real contentPadding: Appearance.spacing.space50
 
+                // The card hugs the side of its surface that faces the dock,
+                // pushed off it by the elevation margin so the shadow has
+                // somewhere to fall.
+                readonly property string dockSide: DockGeometry.outwardSide(root.dockEdge)
+                readonly property var cardMargins: DockGeometry.directedSides(
+                    root.dockEdge, 0, Appearance.sizes.elevationMargin)
                 anchors {
-                    top: contextPopup.dockAtTop ? parent.top : undefined
-                    bottom: contextPopup.dockAtTop ? undefined : parent.bottom
-                    horizontalCenter: parent.horizontalCenter
-                    topMargin: contextPopup.dockAtTop ? Appearance.sizes.elevationMargin : 0
-                    bottomMargin: contextPopup.dockAtTop ? 0 : Appearance.sizes.elevationMargin
+                    top: menuBackground.dockSide === "top" ? parent.top : undefined
+                    bottom: menuBackground.dockSide === "bottom" ? parent.bottom : undefined
+                    left: menuBackground.dockSide === "left" ? parent.left : undefined
+                    right: menuBackground.dockSide === "right" ? parent.right : undefined
+                    horizontalCenter: root.dockVertical ? undefined : parent.horizontalCenter
+                    verticalCenter: root.dockVertical ? parent.verticalCenter : undefined
+                    topMargin: menuBackground.cardMargins.top
+                    bottomMargin: menuBackground.cardMargins.bottom
+                    leftMargin: menuBackground.cardMargins.left
+                    rightMargin: menuBackground.cardMargins.right
                 }
                 color: Appearance.m3colors.m3surfaceContainer
                 radius: Appearance.rounding.normal

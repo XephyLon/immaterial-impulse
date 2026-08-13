@@ -22,6 +22,11 @@ Scope {
     readonly property string edge: DockGeometry.normalizedEdge(
         Config.options?.dock.edge ?? "bottom")
 
+    // One tree, not two modules. An orientation change reflows the icons in
+    // place, so icon state, hover state and DockLaunchTracker's bookkeeping
+    // survive it - the bar rebuilds instead, and loses all three.
+    readonly property bool vertical: DockGeometry.isVertical(root.edge)
+
     Variants {
         model: Quickshell.screens
 
@@ -67,11 +72,14 @@ Scope {
                 left: DockGeometry.anchors(root.edge).left
                 right: DockGeometry.anchors(root.edge).right
             }
-            implicitWidth: dockBackground.implicitWidth
             WlrLayershell.namespace: "quickshell:dock"
             color: "transparent"
 
-            implicitHeight: dockRoot.dockThickness
+            // The thickness lands on whichever axis the anchors left free;
+            // the other one is spanned and the compositor ignores what is
+            // asked for there.
+            implicitWidth: root.vertical ? dockRoot.dockThickness : dockBackground.implicitWidth
+            implicitHeight: root.vertical ? dockBackground.implicitHeight : dockRoot.dockThickness
 
             mask: Region { item: dockMouseArea }
 
@@ -94,27 +102,38 @@ Scope {
 
             MouseArea {
                 id: dockMouseArea
-                height: parent.height
+                // The strip fills the dock's thickness across its own axis and
+                // is sized by the icons along it.
+                width: root.vertical ? parent.width : implicitWidth
+                height: root.vertical ? implicitHeight : parent.height
                 // The reveal is one number: revealed, a sliver, or one past
                 // gone. Which margin it lands on is the edge's business.
                 readonly property var revealOffsets: DockGeometry.revealOffsets(
-                    dockRoot.implicitHeight, Config.options?.dock.hoverRegionHeight ?? 2)
+                    dockRoot.dockThickness, Config.options?.dock.hoverRegionHeight ?? 2)
                 readonly property real revealOffset: dockRoot.reveal
                     ? revealOffsets.revealed
                     : (Config.options?.dock.hoverToReveal
                         ? revealOffsets.peeking : revealOffsets.hidden)
 
-                // The offset lands on the side the dock lives on: a top dock
-                // that pushed its topMargin would slide further onto the
-                // screen to hide.
+                // The body hangs off the dock's INWARD side and the offset
+                // grows from there, so it travels toward the screen edge to
+                // leave. A dock anchored on its outward side would slide
+                // further onto the screen to hide.
+                readonly property string revealSide: DockGeometry.revealAnchorSide(root.edge)
                 anchors {
-                    top: root.edge === "bottom" ? parent.top : undefined
-                    bottom: root.edge === "top" ? parent.bottom : undefined
-                    topMargin: root.edge === "bottom" ? dockMouseArea.revealOffset : 0
-                    bottomMargin: root.edge === "top" ? dockMouseArea.revealOffset : 0
-                    horizontalCenter: parent.horizontalCenter
+                    top: dockMouseArea.revealSide === "top" ? parent.top : undefined
+                    bottom: dockMouseArea.revealSide === "bottom" ? parent.bottom : undefined
+                    left: dockMouseArea.revealSide === "left" ? parent.left : undefined
+                    right: dockMouseArea.revealSide === "right" ? parent.right : undefined
+                    topMargin: dockMouseArea.revealSide === "top" ? dockMouseArea.revealOffset : 0
+                    bottomMargin: dockMouseArea.revealSide === "bottom" ? dockMouseArea.revealOffset : 0
+                    leftMargin: dockMouseArea.revealSide === "left" ? dockMouseArea.revealOffset : 0
+                    rightMargin: dockMouseArea.revealSide === "right" ? dockMouseArea.revealOffset : 0
+                    horizontalCenter: root.vertical ? undefined : parent.horizontalCenter
+                    verticalCenter: root.vertical ? parent.verticalCenter : undefined
                 }
                 implicitWidth: dockHoverRegion.implicitWidth + Appearance.sizes.elevationMargin * 2
+                implicitHeight: dockHoverRegion.implicitHeight + Appearance.sizes.elevationMargin * 2
                 hoverEnabled: true
 
                 Behavior on anchors.topMargin {
@@ -123,23 +142,44 @@ Scope {
                 Behavior on anchors.bottomMargin {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                 }
+                Behavior on anchors.leftMargin {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+                Behavior on anchors.rightMargin {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
 
                 Item {
                     id: dockHoverRegion
                     anchors.fill: parent
                     implicitWidth: dockBackground.implicitWidth
+                    implicitHeight: dockBackground.implicitHeight
 
                     Item {
                         id: dockBackground
                         anchors {
-                            top: parent.top
-                            bottom: parent.bottom
-                            horizontalCenter: parent.horizontalCenter
+                            top: root.vertical ? undefined : parent.top
+                            bottom: root.vertical ? undefined : parent.bottom
+                            left: root.vertical ? parent.left : undefined
+                            right: root.vertical ? parent.right : undefined
+                            horizontalCenter: root.vertical ? undefined : parent.horizontalCenter
+                            verticalCenter: root.vertical ? parent.verticalCenter : undefined
                         }
-                        implicitWidth: dockRow.implicitWidth + 5 * 2
-                        height: parent.height
-                            - Appearance.sizes.elevationMargin
-                            - Appearance.sizes.hyprlandGapsOut
+                        // Along the strip the body is the icons' size plus a
+                        // 5px shoulder; across it, the dock's thickness less
+                        // the two margins the body's own anchors then apply.
+                        implicitWidth: root.vertical
+                            ? parent.width
+                                - Appearance.sizes.elevationMargin
+                                - Appearance.sizes.hyprlandGapsOut
+                            : dockRow.implicitWidth + 5 * 2
+                        implicitHeight: root.vertical
+                            ? dockRow.implicitHeight + 5 * 2
+                            : parent.height
+                                - Appearance.sizes.elevationMargin
+                                - Appearance.sizes.hyprlandGapsOut
+                        width: implicitWidth
+                        height: implicitHeight
 
                         StyledRectangularShadow {
                             target: dockVisualBackground
@@ -152,6 +192,8 @@ Scope {
                             anchors.fill: parent
                             anchors.topMargin:    dockRoot.dockMargins.top
                             anchors.bottomMargin: dockRoot.dockMargins.bottom
+                            anchors.leftMargin:   dockRoot.dockMargins.left
+                            anchors.rightMargin:  dockRoot.dockMargins.right
                             color: Config.options.dock.showBackground
                                    ? Appearance.colors.colLayer0 : "transparent"
                             border.width: Config.options.dock.showBackground ? 1 : 0
@@ -159,23 +201,38 @@ Scope {
                             radius: Appearance.rounding.normal + 6
                         }
 
-                        RowLayout {
+                        // A GridLayout with a flow rather than a RowLayout, so
+                        // the strip turns without the children being destroyed
+                        // and rebuilt: one tree, per the spec's §9 Q2. Its id
+                        // and its `padding` are reached by DYNAMIC SCOPE from
+                        // DockSeparator and DockAppButton - renaming either
+                        // yields undefined and NaN geometry, with no error.
+                        GridLayout {
                             id: dockRow
-                            anchors.top: parent.top
-                            anchors.bottom: parent.bottom
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: Appearance.spacing.space50
+                            flow: root.vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
+                            anchors.top: root.vertical ? undefined : parent.top
+                            anchors.bottom: root.vertical ? undefined : parent.bottom
+                            anchors.left: root.vertical ? parent.left : undefined
+                            anchors.right: root.vertical ? parent.right : undefined
+                            anchors.horizontalCenter: root.vertical ? undefined : parent.horizontalCenter
+                            anchors.verticalCenter: root.vertical ? parent.verticalCenter : undefined
+                            rowSpacing: Appearance.spacing.space50
+                            columnSpacing: Appearance.spacing.space50
                             property real padding: Appearance.spacing.space100
                             property bool hasPinnedApps: (Config.options?.dock.pinnedApps?.length ?? 0) > 0
 
                             VerticalButtonGroup {
-                                Layout.topMargin: Appearance.spacing.space50
-                                Layout.leftMargin:  root.pinned
-                                    ? Appearance.sizes.hyprlandGapsOut + 4
-                                    : Appearance.sizes.hyprlandGapsOut
-                                Layout.rightMargin: root.pinned
-                                    ? Appearance.sizes.hyprlandGapsOut + 4
-                                    : Appearance.sizes.hyprlandGapsOut
+                                // space50 across the dock's thickness, the
+                                // compositor's gap at both ends of the strip.
+                                readonly property var pinMargins: DockGeometry.axisMargins(
+                                    root.edge, Appearance.spacing.space50, 0,
+                                    root.pinned
+                                        ? Appearance.sizes.hyprlandGapsOut + 4
+                                        : Appearance.sizes.hyprlandGapsOut)
+                                Layout.topMargin: pinMargins.top
+                                Layout.bottomMargin: pinMargins.bottom
+                                Layout.leftMargin: pinMargins.left
+                                Layout.rightMargin: pinMargins.right
 
                                 GroupButton {
                                     baseWidth: 35; baseHeight: 35
@@ -196,17 +253,33 @@ Scope {
                             }
 
                             DockSeparator {
+                                // dockMedia.visible, not the showMedia option:
+                                // the tile is absent at a vertical edge and a
+                                // separator that reads the option instead of
+                                // the tile hides against nothing.
                                 visible: Config.options.dock.showPinButton
                                     && (dockRow.hasPinnedApps
-                                        || !(Config.options.dock.showMedia && dockMedia.hasTrack))
+                                        || !(dockMedia.visible && dockMedia.hasTrack))
                             }
 
                             DragApps {
                                 id: dragSlots
                                 visible: dockRow.hasPinnedApps
+                                // space25 across the thickness; the negative
+                                // margin is a pull-in at the LEADING end of the
+                                // strip, closing the gap an absent pin button
+                                // leaves - so it is not the symmetric pair
+                                // axisMargins() hands out.
+                                readonly property var slotInset: DockGeometry.directedSides(
+                                    root.edge, Appearance.spacing.space25, 0)
+                                readonly property real slotPull: Config.options.dock.showPinButton
+                                    ? 0 : -Appearance.spacing.space200
                                 Layout.fillHeight: false
-                                Layout.topMargin: Appearance.spacing.space25
-                                Layout.leftMargin: Config.options.dock.showPinButton ? 0 : -Appearance.spacing.space200
+                                Layout.fillWidth: false
+                                Layout.topMargin: root.vertical ? slotPull : slotInset.top
+                                Layout.bottomMargin: root.vertical ? 0 : slotInset.bottom
+                                Layout.leftMargin: root.vertical ? slotInset.left : slotPull
+                                Layout.rightMargin: root.vertical ? slotInset.right : 0
                                 pinnedApps:    Config.options?.dock.pinnedApps ?? []
                                 contextMenu:   dockContextMenu
                                 buttonPadding: dockRow.padding
@@ -215,13 +288,17 @@ Scope {
                             }
 
                             DockSeparator {
-                                visible: dockRow.hasPinnedApps && (activeAppsArea.activeUnpinned.length > 0 || (Config.options.dock.showMedia && MprisController.activePlayer !== null))
+                                visible: dockRow.hasPinnedApps
+                                    && (activeAppsArea.activeUnpinned.length > 0
+                                        || (dockMedia.visible && MprisController.activePlayer !== null))
                             }
 
                             Item {
                                 id: activeAppsArea
-                                Layout.fillHeight: true
+                                Layout.fillHeight: !root.vertical
+                                Layout.fillWidth: root.vertical
                                 Layout.topMargin: 0
+                                Layout.leftMargin: 0
                                 property bool requestDockShow: false
 
                                 property var activeUnpinned: {
@@ -233,21 +310,32 @@ Scope {
                                 }
                                 property bool hasActiveUnpinned: activeUnpinned.length > 0 || dockMedia.visible
 
-                                implicitWidth:  activeRow.implicitWidth
-                                implicitHeight: parent.height
+                                implicitWidth:  root.vertical ? parent.width : activeRow.implicitWidth
+                                implicitHeight: root.vertical ? activeRow.implicitHeight : parent.height
 
                                 Behavior on implicitWidth {
                                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                                 }
+                                Behavior on implicitHeight {
+                                    enabled: root.vertical
+                                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                }
 
-                                RowLayout {
+                                GridLayout {
                                     id: activeRow
                                     anchors.fill: parent
-                                    spacing: -Appearance.spacing.space50
+                                    flow: root.vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
+                                    rowSpacing: -Appearance.spacing.space50
+                                    columnSpacing: -Appearance.spacing.space50
 
                                     DockMedia {
                                         id: dockMedia
-                                        visible: Config.options.dock.showMedia
+                                        // A 240x60 card has no 60x240 form.
+                                        // The vertical dock omits it the way
+                                        // the vertical bar omits what does not
+                                        // fit; a richer vertical media tile is
+                                        // its own spec (§9 Q1).
+                                        visible: Config.options.dock.showMedia && !root.vertical
                                         Layout.fillHeight: true
                                         Layout.topMargin: Appearance.spacing.space150
                                         Layout.bottomMargin: Appearance.spacing.space100
@@ -260,12 +348,11 @@ Scope {
                                         delegate: DockAppButton {
                                             required property var modelData
                                             appToplevel: modelData
-                                            Layout.fillHeight: true
-                                            Layout.topMargin: Appearance.spacing.space25
                                             appListRoot: appListBridge
                                             contextMenu: dockContextMenu
-                                            topInset:    dockRow.padding + Appearance.spacing.space100
-                                            bottomInset: dockRow.padding + Appearance.spacing.space100
+                                            crossMargin: Appearance.spacing.space25
+                                            insetInward:  dockRow.padding + Appearance.spacing.space100
+                                            insetOutward: dockRow.padding + Appearance.spacing.space100
                                         }
                                     }
                                 }
@@ -279,20 +366,18 @@ Scope {
 
                             DockSeparator {
                                 visible: Config.options.dock.showAppsButton
-                                Layout.leftMargin: Config.options.dock.showAppsButton ? 0 : -Appearance.spacing.space50
                             }
 
                             DockButton {
-                                Layout.fillHeight: true
-                                Layout.topMargin: 0
+                                crossMargin: 0
                                 visible: Config.options.dock.showAppsButton
                                 onClicked: GlobalStates.overviewOpen = !GlobalStates.overviewOpen
-                                topInset:    dockRow.padding + 10
-                                bottomInset: dockRow.padding + 7
+                                insetInward:  dockRow.padding + 10
+                                insetOutward: dockRow.padding + 7
                                 contentItem: MaterialSymbol {
                                     anchors.fill: parent
                                     horizontalAlignment: Text.AlignHCenter
-                                    font.pixelSize: parent.width / 2
+                                    font.pixelSize: Math.min(parent.width, parent.height) / 2
                                     text: "apps"
                                     color: Appearance.colors.colOnLayer0
                                 }

@@ -92,6 +92,23 @@ function directedSides(edge, inward, outward) {
     return sides;
 }
 
+// A margin or inset trio said in the dock's OWN axes. ACROSS the dock is the
+// inward/outward pair above; ALONG it is the gap at both ends of the strip.
+// §1's "written in terms of along and across rather than width and height",
+// written once so a widget does not have to decide which of `topMargin` and
+// `leftMargin` its number means this time.
+function axisMargins(edge, inward, outward, along) {
+    var sides = directedSides(edge, inward, outward);
+    if (isVertical(edge)) {
+        sides.top = along;
+        sides.bottom = along;
+    } else {
+        sides.left = along;
+        sides.right = along;
+    }
+    return sides;
+}
+
 // The dock body's own margin pair, mapped onto side names, so a caller writes
 // `anchors.topMargin: Geometry.margins(edge, ...).top` and the flip costs
 // nothing.
