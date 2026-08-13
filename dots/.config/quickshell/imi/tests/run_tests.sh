@@ -263,6 +263,14 @@ if ! python3 "$SCRIPT_DIR/test_widget_resize_grip_runtime.py"; then
     exit 1
 fi
 
+# Renders real cards and reads the pixels under them: the shadow is not
+# reachable from a source-text check. Brings its own headless weston.
+echo "Running widget card shadow tests..."
+if ! python3 "$SCRIPT_DIR/test_card_shadow.py"; then
+    echo "Widget card shadow tests failed."
+    exit 1
+fi
+
 # The grip harness above reads settled sizes on purpose, so it passes whether a
 # span change is animated or instant. This one samples the size mid-change,
 # which is the only way to tell a Behavior that ticks from one that never does.
