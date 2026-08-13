@@ -233,9 +233,15 @@ Item {
 
                         RowLayout {
                             spacing: Appearance.spacing.space50
+                            // The running dots sit between the icon and the
+                            // screen edge, so they swap sides with the dock.
+                            readonly property bool dockAtTop:
+                                (Config.options?.dock.edge ?? "bottom") === "top"
                             anchors {
-                                top: appIcon.bottom
-                                topMargin: Appearance.spacing.space25
+                                top: dockAtTop ? undefined : appIcon.bottom
+                                bottom: dockAtTop ? appIcon.top : undefined
+                                topMargin: dockAtTop ? 0 : Appearance.spacing.space25
+                                bottomMargin: dockAtTop ? Appearance.spacing.space25 : 0
                                 horizontalCenter: parent.horizontalCenter
                             }
                             Repeater {

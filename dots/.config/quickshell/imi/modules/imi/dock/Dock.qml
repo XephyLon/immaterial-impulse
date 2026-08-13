@@ -17,10 +17,10 @@ Scope {
     id: root
     property bool pinned: Config.options?.dock.pinnedOnStartup ?? false
 
-    // Which edge the dock lives on. Hardcoded for now: this step moves the
-    // geometry into one derivation without changing where anything sits, so
-    // that a later step can change this one value and have the rest follow.
-    readonly property string edge: "bottom"
+    // Which edge the dock lives on. Everything positional derives from this
+    // one value; nothing below names a side directly.
+    readonly property string edge: DockGeometry.normalizedEdge(
+        Config.options?.dock.edge ?? "bottom")
 
     Variants {
         model: Quickshell.screens
@@ -104,15 +104,23 @@ Scope {
                     : (Config.options?.dock.hoverToReveal
                         ? revealOffsets.peeking : revealOffsets.hidden)
 
+                // The offset lands on the side the dock lives on: a top dock
+                // that pushed its topMargin would slide further onto the
+                // screen to hide.
                 anchors {
-                    top: parent.top
-                    topMargin: dockMouseArea.revealOffset
+                    top: root.edge === "bottom" ? parent.top : undefined
+                    bottom: root.edge === "top" ? parent.bottom : undefined
+                    topMargin: root.edge === "bottom" ? dockMouseArea.revealOffset : 0
+                    bottomMargin: root.edge === "top" ? dockMouseArea.revealOffset : 0
                     horizontalCenter: parent.horizontalCenter
                 }
                 implicitWidth: dockHoverRegion.implicitWidth + Appearance.sizes.elevationMargin * 2
                 hoverEnabled: true
 
                 Behavior on anchors.topMargin {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+                Behavior on anchors.bottomMargin {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                 }
 
