@@ -1,5 +1,6 @@
 import QtQuick
 import qs.modules.common
+import "../../designsystem/widgets" as Expressive
 import qs.modules.common.functions as Functions
 import qs.services
 import "../../designsystem/widgets/shapes/path-length.js" as PathLength
@@ -23,7 +24,7 @@ Item {
 
     // 0 = straight bar .. 1 = ring
     property real bend: root.span === "3x2" ? 0 : 1
-    Behavior on bend { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+    Behavior on bend { Expressive.SpanTravel {} }
     // 0 = circle .. 1 = cookie outline
     property real ringT: root.span === "2x1" ? 1 : 0
     // What the stroke sits ON decides its palette, not what shape it is: the
@@ -32,8 +33,8 @@ Item {
     // in on-primary. Keyed on bend, the 2x1 ring came out dark-on-dark the
     // moment the margin moved it off the body.
     property real onBody: root.span === "2x2" ? 1 : 0
-    Behavior on onBody { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveEffects } }
-    Behavior on ringT { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+    Behavior on onBody { Expressive.SpanFade {} }
+    Behavior on ringT { Expressive.SpanTravel {} }
 
     property real phase: 0
     // The travelling wave, alive only while something plays and the item is

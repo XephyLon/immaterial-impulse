@@ -213,7 +213,7 @@ Item {
                 readonly property color washColor: Appearance.colors.colOnPrimary
 
                 property real morphT: root.span === "3x2" ? 0 : 1
-                Behavior on morphT { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+                Behavior on morphT { Expressive.SpanTravel {} }
                 readonly property color bodyColor: Appearance.colors.colPrimary
 
                 // ---- the breath: VisualizerCookie's pipeline, verbatim ----
@@ -373,7 +373,7 @@ Item {
                 anchors.centerIn: parent
                 width: root.span === "2x2" ? playRoot.side * 0.66 : 0
                 height: width
-                Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+                Behavior on width { Expressive.SpanTravel {} }
                 visible: width > 1
                 property bool artLoaded: false
 
