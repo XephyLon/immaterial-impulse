@@ -277,6 +277,16 @@ if ! python3 "$SCRIPT_DIR/test_card_shadow.py"; then
     exit 1
 fi
 
+# The card above is rendered on its own. This renders the widget that composes
+# one: calendar is content-sized, so a card that failed to resolve leaves a
+# zero-size widget rather than an error, and a `dragging` that never arrives
+# leaves a shadow that never lifts. Brings its own headless weston.
+echo "Running calendar card tests..."
+if ! python3 "$SCRIPT_DIR/test_calendar_card.py"; then
+    echo "Calendar card tests failed."
+    exit 1
+fi
+
 # The grip harness above reads settled sizes on purpose, so it passes whether a
 # span change is animated or instant. This one samples the size mid-change,
 # which is the only way to tell a Behavior that ticks from one that never does.
