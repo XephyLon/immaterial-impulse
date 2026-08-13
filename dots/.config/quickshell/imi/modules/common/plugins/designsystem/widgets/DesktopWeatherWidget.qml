@@ -205,8 +205,11 @@ Item {
             // The clock is only read while the arc is on screen, so a card
             // that spent the afternoon at 1x1 comes back holding a stale
             // minute until the timer's next tick - up to a minute of the sun
-            // sitting where it was an hour ago.
-            onVisibleChanged: if (visible) sunArc.refreshNow()
+            // sitting where it was an hour ago. The repaint is the same
+            // thought for the canvas: every return from 1x1 happens to change
+            // the width, which requests one, but that is a property of 1x1
+            // being the only span of its width rather than a rule.
+            onVisibleChanged: if (visible) { sunArc.refreshNow(); sunArc.requestPaint(); }
             Timer {
                 interval: 60000
                 repeat: true
