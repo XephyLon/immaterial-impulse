@@ -111,7 +111,7 @@ Item {
         readonly property bool wanted: root.spanName === "3x2"
         active: wanted || opacity > 0.01
         opacity: wanted ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveEffects } }
+        Behavior on opacity { Expressive.SpanFade {} }
         anchors.fill: parent
         sourceComponent: Expressive.DesktopMediaWidget {
             chromeless: true
@@ -137,10 +137,10 @@ Item {
         y: root.transport ? root.transport.prev.y : 0
         width: root.transport ? root.transport.prev.width : 0
         height: root.transport ? root.transport.prev.height : 0
-        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on x { Expressive.SpanTravel {} }
+        Behavior on y { Expressive.SpanTravel {} }
+        Behavior on width { Expressive.SpanTravel {} }
+        Behavior on height { Expressive.SpanTravel {} }
     }
 
     MediaTransportButton {
@@ -164,10 +164,10 @@ Item {
         y: root.transport ? root.transport.play.y : 0
         width: root.transport ? root.transport.play.width : 0
         height: root.transport ? root.transport.play.height : 0
-        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on x { Expressive.SpanTravel {} }
+        Behavior on y { Expressive.SpanTravel {} }
+        Behavior on width { Expressive.SpanTravel {} }
+        Behavior on height { Expressive.SpanTravel {} }
     }
 
     MediaTransportButton {
@@ -181,10 +181,10 @@ Item {
         y: root.transport ? root.transport.next.y : 0
         width: root.transport ? root.transport.next.width : 0
         height: root.transport ? root.transport.next.height : 0
-        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on x { Expressive.SpanTravel {} }
+        Behavior on y { Expressive.SpanTravel {} }
+        Behavior on width { Expressive.SpanTravel {} }
+        Behavior on height { Expressive.SpanTravel {} }
     }
 
     // THE seeker - one element at every span. A wavy stroke whose baseline
@@ -200,17 +200,17 @@ Item {
         progress: root.playbackProgress
         playing: MprisController.isPlaying
         opacity: root.lyricsUp ? 0 : 1
-        Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveEffects } }
+        Behavior on opacity { Expressive.SpanFade {} }
         visible: opacity > 0
         z: 3
         x: root.progressSlot ? root.progressSlot.x : 0
         y: root.progressSlot ? root.progressSlot.y : 0
         width: root.progressSlot ? root.progressSlot.width : 0
         height: root.progressSlot ? root.progressSlot.height : 0
-        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on x { Expressive.SpanTravel {} }
+        Behavior on y { Expressive.SpanTravel {} }
+        Behavior on width { Expressive.SpanTravel {} }
+        Behavior on height { Expressive.SpanTravel {} }
     }
 
     // The time label, in the fixed slot the geometry gives it (the one
@@ -222,10 +222,10 @@ Item {
         width: root.timeSlot ? root.timeSlot.width : 0
         height: root.timeSlot ? root.timeSlot.height : 0
 
-        Behavior on x { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on y { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on width { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
-        Behavior on height { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
+        Behavior on x { Expressive.SpanTravel {} }
+        Behavior on y { Expressive.SpanTravel {} }
+        Behavior on width { Expressive.SpanTravel {} }
+        Behavior on height { Expressive.SpanTravel {} }
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         text: Functions.StringUtils.friendlyTimeForSeconds(MprisController.position)

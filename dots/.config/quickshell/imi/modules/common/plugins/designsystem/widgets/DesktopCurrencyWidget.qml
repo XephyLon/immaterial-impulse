@@ -54,16 +54,6 @@ Item {
     readonly property real spanW: root.sizeMode === "1x1" ? root.width1x1 : root.width2x1
     readonly property real spanH: root.baseHeight
 
-    component TravelBehavior: NumberAnimation {
-        duration: Appearance.animation.elementMove.duration
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
-    }
-    component FadeBehavior: NumberAnimation {
-        duration: Appearance.animation.elementMove.duration
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: Appearance.animationCurves.expressiveEffects
-    }
 
     Behavior on implicitWidth {
         NumberAnimation {
@@ -171,7 +161,7 @@ Item {
                 id: sparklineCanvas
                 anchors.fill: parent
                 opacity: root.sizeMode === "2x1" ? 0.35 : 0
-                Behavior on opacity { FadeBehavior {} }
+                Behavior on opacity { SpanFade {} }
                 visible: opacity > 0
                 onPaint: {
                     var ctx = getContext("2d");
@@ -204,10 +194,10 @@ Item {
                 y: slot.y
                 width: slot.width
                 height: slot.height
-                Behavior on x { TravelBehavior {} }
-                Behavior on y { TravelBehavior {} }
-                Behavior on width { TravelBehavior {} }
-                Behavior on height { TravelBehavior {} }
+                Behavior on x { SpanTravel {} }
+                Behavior on y { SpanTravel {} }
+                Behavior on width { SpanTravel {} }
+                Behavior on height { SpanTravel {} }
 
                 Canvas {
                     id: containerCanvas
@@ -215,7 +205,7 @@ Item {
                     property string shownShape: container.slot.shape
                     property string fromShape: container.slot.shape
                     property real morphT: 1
-                    Behavior on morphT { id: morphGate; TravelBehavior {} }
+                    Behavior on morphT { id: morphGate; SpanTravel {} }
                     readonly property string targetShape: container.slot.shape
                     onTargetShapeChanged: {
                         containerCanvas.fromShape = containerCanvas.shownShape;
@@ -267,7 +257,7 @@ Item {
                     iconSize: 18 * Appearance.effectiveScale
                     color: Appearance.colors.colOnPrimary
                     opacity: root.sizeMode === "1x1" ? 1 : 0
-                    Behavior on opacity { FadeBehavior {} }
+                    Behavior on opacity { SpanFade {} }
                     visible: opacity > 0
                 }
             }
@@ -278,16 +268,16 @@ Item {
                 readonly property var slot: Geometry.ratesLabelRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
                 x: slot.x
                 y: slot.y
-                Behavior on x { TravelBehavior {} }
-                Behavior on y { TravelBehavior {} }
+                Behavior on x { SpanTravel {} }
+                Behavior on y { SpanTravel {} }
                 text: "Rates"
                 font.pixelSize: root.sizeMode === "1x1" ? Appearance.font.pixelSize.smallest : Appearance.font.pixelSize.small
-                Behavior on font.pixelSize { TravelBehavior {} }
+                Behavior on font.pixelSize { SpanTravel {} }
                 font.weight: root.sizeMode === "1x1" ? Font.DemiBold : Font.Bold
-                Behavior on font.weight { TravelBehavior {} }
+                Behavior on font.weight { SpanTravel {} }
                 color: Appearance.colors.colOnPrimaryContainer
                 opacity: root.sizeMode === "1x1" ? 0.6 : 0.8
-                Behavior on opacity { FadeBehavior {} }
+                Behavior on opacity { SpanFade {} }
             }
 
             // ---- 1x1 only: the word "to" ----------------------------------
@@ -301,8 +291,8 @@ Item {
                 readonly property var lastSlot: slot ?? ({ x: x, y: y, size: font.pixelSize })
                 x: lastSlot.x
                 y: lastSlot.y
-                Behavior on x { TravelBehavior {} }
-                Behavior on y { TravelBehavior {} }
+                Behavior on x { SpanTravel {} }
+                Behavior on y { SpanTravel {} }
                 text: "to"
                 // It keeps its small size while it fades, so the growing code
                 // beside it does not drag it up in scale on the way out.
@@ -331,13 +321,13 @@ Item {
                 // whatever width the fading prefix still occupies, so it
                 // slides into that space instead of jumping when it vanishes.
                 property real groupX: slot.x
-                Behavior on groupX { TravelBehavior {} }
+                Behavior on groupX { SpanTravel {} }
                 x: groupX + (basePrefix.paintedWidth + 3 * Appearance.effectiveScale) * basePrefix.opacity
                 y: slot.y
-                Behavior on y { TravelBehavior {} }
+                Behavior on y { SpanTravel {} }
                 text: CurrencyService.baseCurrency
                 font.pixelSize: Math.round(slot.size)
-                Behavior on font.pixelSize { TravelBehavior {} }
+                Behavior on font.pixelSize { SpanTravel {} }
                 font.weight: Font.Bold
                 color: root.sizeMode === "1x1" ? Appearance.colors.colPrimary : Appearance.colors.colOnPrimaryContainer
                 Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
@@ -362,11 +352,11 @@ Item {
                     y: lastSlot.y
                     width: lastSlot.width
                     height: lastSlot.height
-                    Behavior on x { TravelBehavior {} }
-                    Behavior on y { TravelBehavior {} }
-                    Behavior on width { TravelBehavior {} }
+                    Behavior on x { SpanTravel {} }
+                    Behavior on y { SpanTravel {} }
+                    Behavior on width { SpanTravel {} }
                     opacity: slot !== null ? 1 : 0
-                    Behavior on opacity { FadeBehavior {} }
+                    Behavior on opacity { SpanFade {} }
                     visible: opacity > 0
                     z: 2
 
@@ -378,16 +368,16 @@ Item {
                         // the code: top-left when stacked, left-middle in a row
                         x: 0
                         y: quoteCell.lastSlot.stacked ? 0 : (quoteCell.height - height) / 2
-                        Behavior on y { TravelBehavior {} }
+                        Behavior on y { SpanTravel {} }
                         text: quoteCell.quoteCurrency
                         font.pixelSize: quoteCell.lastSlot.stacked
                             ? Appearance.font.pixelSize.smallest : Appearance.font.pixelSize.small
-                        Behavior on font.pixelSize { TravelBehavior {} }
+                        Behavior on font.pixelSize { SpanTravel {} }
                         font.weight: quoteCell.lastSlot.stacked ? Font.Bold : Font.DemiBold
                         color: quoteCell.inkColor
                         Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
                         opacity: quoteCell.lastSlot.stacked ? 1 : 0.6
-                        Behavior on opacity { FadeBehavior {} }
+                        Behavior on opacity { SpanFade {} }
                     }
                     StyledText {
                         // the value: under the code when stacked, right-aligned
@@ -398,7 +388,7 @@ Item {
                         x: 0
                         y: quoteCell.lastSlot.stacked ? 14 * Appearance.effectiveScale
                             : (quoteCell.height - height) / 2
-                        Behavior on y { TravelBehavior {} }
+                        Behavior on y { SpanTravel {} }
                         text: {
                             if (quoteCell.rateVal > 0.0) return root.formatRate(quoteCell.rateVal);
                             if (CurrencyService.loading) return "...";
