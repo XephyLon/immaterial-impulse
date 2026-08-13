@@ -35,9 +35,22 @@ StyledListView { // Scrollable window
         root.cardItems = items;
     }
 
-    // Delegates are built a beat after the count changes, so read the children
-    // once the current pass of the event loop has created them.
-    onCountChanged: Qt.callLater(root.refreshCardItems)
+    // Observe the delegates, not the model count. The set of realized delegates
+    // changes for reasons `count` cannot report, and the popup's ordinary life
+    // is one of them: a notification times out, the popup window hides, another
+    // arrives from the same app, and the app-name list ends the cycle exactly
+    // where it started - so the delegate is torn down and rebuilt while `count`
+    // reads 1 throughout. `count`'s signal is raised from the view's layout
+    // pass as well, which does not run while the popup window's surface is
+    // down, so even the 1 -> 0 -> 1 in between is never announced.
+    // Qt.callLater coalesces a burst and defers the read until the pass that
+    // built the delegates has finished.
+    Connections {
+        target: root.contentItem
+        function onChildrenChanged() {
+            Qt.callLater(root.refreshCardItems);
+        }
+    }
     Component.onCompleted: Qt.callLater(root.refreshCardItems)
 
     model: ScriptModel {
