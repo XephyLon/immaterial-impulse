@@ -40,6 +40,11 @@ ENTRY_FILES = {}
 # whose manifest declares a grid is sized by the host to the span it resolved,
 # so its wrapper names spans rather than forwarding a content size.
 SIZED_BY_THE_HOST_GRID = {"nandoroid-media", "nandoroid-weather", "nandoroid-currency"}
+# Every package whose entry point composes a card, and so must be handed the
+# host's drag. `calendar` is not in PLUGIN_DIRS above - it is a first-party
+# bundled widget with no upstream to attribute - but its card lifts like the
+# rest of them.
+TOLD_ABOUT_THE_DRAG = SIZED_BY_THE_HOST_GRID | {"nandoroid-system-monitor", "calendar"}
 
 
 def entry_file(directory):
@@ -173,7 +178,7 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         self.assertIn("item.hostDragging = Qt.binding", node)
         self.assertIn("hostDragging: rootWidget.dragging", host)
 
-        for directory in SIZED_BY_THE_HOST_GRID | {"nandoroid-system-monitor"}:
+        for directory in TOLD_ABOUT_THE_DRAG:
             wrapper = (PLUGIN_ROOT / directory / "Widget.qml").read_text(encoding="utf-8")
             self.assertIn("property bool hostDragging", wrapper, directory)
             self.assertIn("dragging: root.hostDragging", wrapper, directory)
@@ -187,6 +192,48 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             forwarded = source.count("dragging: root.dragging")
             self.assertEqual(cards, forwarded,
                              f"{name}: {cards} cards, {forwarded} told about the drag")
+
+    def test_calendar_draws_its_surface_on_the_shared_card(self):
+        """calendar was the copy that had already drifted, and it is back.
+
+        The spec (docs/superpowers/specs/2026-08-11-expressive-morphing-design.md
+        §3c) recorded it as a fourth container with a rounding token of its own
+        and no tint conditional at all, exempted from the card's lint until it
+        could be rebuilt. This is that rebuild pinned: the surface comes from
+        WidgetCard, the frost record comes from that same card so the widget
+        cannot disagree with it about where the frost goes, and the shadow is
+        the card's rather than a StyledRectangularShadow hung behind it.
+        """
+        package = PLUGIN_ROOT / "calendar"
+        widget = (package / "Widget.qml").read_text(encoding="utf-8")
+        manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+
+        self.assertIn('import "../../designsystem/widgets" as Expressive', widget)
+        self.assertIn("Expressive.WidgetCard {", widget)
+        self.assertEqual(widget.count("Expressive.WidgetCard {"), 1,
+                         "calendar composes exactly one card")
+        self.assertIn("readonly property var blurRegions: [card.blurRegion]", widget)
+        self.assertIn("managesBlurTint: true", widget)
+
+        # The shadow now comes with the card. Keeping the old one as well
+        # would draw two, which reads as one slightly wrong one. Matched as a
+        # declaration so the comment above it may still name what it replaced.
+        self.assertIsNone(re.search(r"StyledRectangularShadow\s*\{", widget),
+                          "the card casts the shadow now")
+        # ...and so does the rounding, which is the drift the spec named.
+        self.assertNotIn("rounding?.verylarge", widget,
+                         "the card owns the rounding")
+
+        # The wrapper contract, from the other side. calendar's two handles
+        # choose its size, so its manifest deliberately declares no `grid`:
+        # a span is a pixel size the host assigns on every load and would
+        # overwrite whichever size the handles last chose. A widget sized by
+        # the host reads `hostGridSize`; this one must not, and its box comes
+        # off the card it composes.
+        self.assertNotIn("grid", manifest)
+        self.assertNotIn("hostGridSize", widget)
+        self.assertIn("implicitWidth: card.implicitWidth", widget)
+        self.assertIn("implicitHeight: card.implicitHeight", widget)
 
     def test_the_card_shadows_its_body_and_drops_it_while_moving(self):
         """The shadow comes off the BODY, and goes away during motion.
