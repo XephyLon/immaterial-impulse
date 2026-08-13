@@ -265,6 +265,12 @@ fi
 
 # Renders real cards and reads the pixels under them: the shadow is not
 # reachable from a source-text check. Brings its own headless weston.
+echo "Running dock position contract tests..."
+if ! python3 "$SCRIPT_DIR/test_dock_position_contract.py"; then
+    echo "Dock position contract tests failed."
+    exit 1
+fi
+
 echo "Running widget card shadow tests..."
 if ! python3 "$SCRIPT_DIR/test_card_shadow.py"; then
     echo "Widget card shadow tests failed."
