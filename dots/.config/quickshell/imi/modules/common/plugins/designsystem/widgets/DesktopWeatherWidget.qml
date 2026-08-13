@@ -46,8 +46,9 @@ Item {
     readonly property real width1x1: baseWidth
     readonly property real width2x1: (baseWidth * 2) + gap
     readonly property real width3x1: (baseWidth * 3) + (gap * 2)
+    readonly property real height2Rows: (baseHeight * 2) + gap
 
-    implicitHeight: baseHeight
+    implicitHeight: sizeMode === "3x2" ? height2Rows : baseHeight
     implicitWidth: {
         if (sizeMode === "1x1") return width1x1;
         if (sizeMode === "2x1") return width2x1;
@@ -65,10 +66,26 @@ Item {
         if (sizeMode === "2x1") return width2x1;
         return width3x1;
     }
-    readonly property real spanH: root.baseHeight
+    readonly property real spanH: {
+        if (sizeMode === "3x2") return height2Rows;
+        return baseHeight;
+    }
     readonly property var tempSlot: Geometry.temperatureRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
     readonly property var conditionSlot: Geometry.conditionRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
     readonly property var glyphSlot: Geometry.glyphRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+
+    // The two wide spans are the only ones with a second column, and the
+    // elements that live in it (the high/low line, the pills, the column
+    // rule) fade at the narrow spans rather than travelling to them. A fade
+    // happens WHERE THE ELEMENT STANDS, so they still need somewhere to
+    // stand: resolving them against whichever wide layout the card is at or
+    // heading for gives them one, while the module keeps returning null for
+    // the narrow spans so nothing can mistake that for a home.
+    readonly property string bandSpan: root.sizeMode === "3x2" ? "3x2" : "3x1"
+    readonly property real bandH: root.bandSpan === "3x2" ? root.height2Rows : root.baseHeight
+    readonly property var highLowSlot: Geometry.highLowRect(root.bandSpan, root.width3x1, root.bandH, Appearance.effectiveScale)
+    readonly property var pillsSlot: Geometry.pillsRect(root.bandSpan, root.width3x1, root.bandH, Appearance.effectiveScale)
+    readonly property var columnRuleSlot: Geometry.columnDividerRect(root.bandSpan, root.width3x1, root.bandH, Appearance.effectiveScale)
 
     readonly property string weatherIconsDir: "../../../../assets/icons/google-weather"
     readonly property color contentColor: Appearance.m3colors.m3onSurface
@@ -240,35 +257,44 @@ Item {
         }
 
         StyledText {
-            // 3x1 only
-            x: 20 * Appearance.effectiveScale
-            y: 74 * Appearance.effectiveScale
+            // 3x1 and 3x2.
+            objectName: "weatherHighLow"
+            x: root.highLowSlot.x
+            y: root.highLowSlot.y
+            Behavior on x { SpanTravel {} }
+            Behavior on y { SpanTravel {} }
             text: `High ${root.highTemperature}° · Low ${root.lowTemperature}°`
             font.pixelSize: Appearance.font.pixelSize.smallest
             color: root.contentColor
-            opacity: root.sizeMode === "3x1" ? 0.6 : 0
+            opacity: root.sizeMode === "3x1" || root.sizeMode === "3x2" ? 0.6 : 0
             Behavior on opacity { SpanFade {} }
             visible: opacity > 0
         }
 
         Rectangle {
-            // 3x1 only: the column divider
-            x: 132 * Appearance.effectiveScale
-            y: 16 * Appearance.effectiveScale
+            // 3x1 and 3x2: the boundary between the temperature column and the
+            // condition column, which both wide spans have.
+            objectName: "weatherColumnRule"
+            x: root.columnRuleSlot.x
+            y: root.columnRuleSlot.y
             width: 1
-            height: root.spanH - 32 * Appearance.effectiveScale
+            height: root.columnRuleSlot.height
+            Behavior on y { SpanTravel {} }
+            Behavior on height { SpanTravel {} }
             color: root.contentColor
-            opacity: root.sizeMode === "3x1" ? 0.15 : 0
+            opacity: root.sizeMode === "3x1" || root.sizeMode === "3x2" ? 0.15 : 0
             Behavior on opacity { SpanFade {} }
             visible: opacity > 0
         }
 
         RowLayout {
-            // 3x1 only: the humidity and wind pills
-            x: 148 * Appearance.effectiveScale
-            y: 60 * Appearance.effectiveScale
+            // 3x1 and 3x2: the humidity and wind pills
+            objectName: "weatherPills"
+            x: root.pillsSlot.x
+            y: root.pillsSlot.y
+            Behavior on y { SpanTravel {} }
             spacing: 8 * Appearance.effectiveScale
-            opacity: root.sizeMode === "3x1" ? 1 : 0
+            opacity: root.sizeMode === "3x1" || root.sizeMode === "3x2" ? 1 : 0
             Behavior on opacity { SpanFade {} }
             visible: opacity > 0
 

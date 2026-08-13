@@ -4,7 +4,7 @@
   "capabilities": ["desktop-widget"], "permissions": ["network", "settings_read"],
   "grid": {
     "cols": 3, "rows": 1,
-    "sizes": [ { "cols": 1, "rows": 1 }, { "cols": 2, "rows": 1 }, { "cols": 3, "rows": 1 } ]
+    "sizes": [ { "cols": 1, "rows": 1 }, { "cols": 2, "rows": 1 }, { "cols": 3, "rows": 1 }, { "cols": 3, "rows": 2 } ]
   },
   "desktopWidget": { "component": "Widget.qml", "blur": false }
 }

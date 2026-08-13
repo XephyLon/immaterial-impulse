@@ -24,9 +24,15 @@ Item {
     // `width: implicitWidth` on itself AND its content, so the card snapped
     // to each span's size in one frame while the host's animated box was
     // ignored: elements travelled, the card teleported (the review).
-    readonly property int spanCols: parseInt((root.hostGridSize || "3x1")[0]) || 3
+    // Both axes come off the span name. The rows half was a literal 1 while
+    // every span this widget offered was one row tall; 3x2 is the first that
+    // is not, and a hardcoded 1 there is a card drawing half its content
+    // outside the box the host gave it.
+    readonly property var spanParts: (root.hostGridSize || "3x1").split("x")
+    readonly property int spanCols: parseInt(root.spanParts[0]) || 3
+    readonly property int spanRows: parseInt(root.spanParts[1]) || 1
     implicitWidth: Appearance.sizes.widgetGridSpanX(root.spanCols)
-    implicitHeight: Appearance.sizes.widgetGridSpanY(1)
+    implicitHeight: Appearance.sizes.widgetGridSpanY(root.spanRows)
 
     Expressive.DesktopWeatherWidget {
         id: content
