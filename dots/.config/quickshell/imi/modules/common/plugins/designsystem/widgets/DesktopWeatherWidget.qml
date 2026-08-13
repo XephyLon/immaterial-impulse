@@ -90,16 +90,6 @@ Item {
         return "cloudy"
     }
 
-    component TravelBehavior: NumberAnimation {
-        duration: Appearance.animation.elementMove.duration
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
-    }
-    component FadeBehavior: NumberAnimation {
-        duration: Appearance.animation.elementMove.duration
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: Appearance.animationCurves.expressiveEffects
-    }
 
     WidgetCard {
         id: card
@@ -120,11 +110,11 @@ Item {
             width: root.glyphSlot.width
             height: root.glyphSlot.height
             rotation: root.glyphSlot.rotation
-            Behavior on x { TravelBehavior {} }
-            Behavior on y { TravelBehavior {} }
-            Behavior on width { TravelBehavior {} }
-            Behavior on height { TravelBehavior {} }
-            Behavior on rotation { TravelBehavior {} }
+            Behavior on x { SpanTravel {} }
+            Behavior on y { SpanTravel {} }
+            Behavior on width { SpanTravel {} }
+            Behavior on height { SpanTravel {} }
+            Behavior on rotation { SpanTravel {} }
 
             Canvas {
                 id: glyphCanvas
@@ -135,7 +125,7 @@ Item {
                 property string shownShape: root.glyphSlot.shape
                 property string fromShape: root.glyphSlot.shape
                 property real morphT: 1
-                Behavior on morphT { id: morphGate; TravelBehavior {} }
+                Behavior on morphT { id: morphGate; SpanTravel {} }
                 readonly property string targetShape: root.glyphSlot.shape
                 onTargetShapeChanged: {
                     glyphCanvas.fromShape = glyphCanvas.shownShape;
@@ -190,8 +180,8 @@ Item {
                 iconFolder: root.weatherIconsDir
                 width: root.glyphSlot.icon
                 height: root.glyphSlot.icon
-                Behavior on width { TravelBehavior {} }
-                Behavior on height { TravelBehavior {} }
+                Behavior on width { SpanTravel {} }
+                Behavior on height { SpanTravel {} }
                 colorize: true
                 color: Appearance.colors.colOnPrimary
                 // The leaf slants; the glyph inside stays upright.
@@ -204,11 +194,11 @@ Item {
             objectName: "weatherTemp"
             x: root.tempSlot.x
             y: root.tempSlot.y
-            Behavior on x { TravelBehavior {} }
-            Behavior on y { TravelBehavior {} }
+            Behavior on x { SpanTravel {} }
+            Behavior on y { SpanTravel {} }
             text: root.temperature + "°"
             font.pixelSize: Math.round(root.tempSlot.size)
-            Behavior on font.pixelSize { TravelBehavior {} }
+            Behavior on font.pixelSize { SpanTravel {} }
             font.weight: Font.Bold
             color: Appearance.colors.colPrimary
         }
@@ -219,21 +209,21 @@ Item {
             x: root.conditionSlot.x
             y: root.conditionSlot.y
             width: root.conditionSlot.w
-            Behavior on x { TravelBehavior {} }
-            Behavior on y { TravelBehavior {} }
-            Behavior on width { TravelBehavior {} }
+            Behavior on x { SpanTravel {} }
+            Behavior on y { SpanTravel {} }
+            Behavior on width { SpanTravel {} }
             text: root.condition
             // The size and weight are part of the element's travel - snapped,
             // the same text visibly becomes a different text at the boundary.
             font.pixelSize: root.sizeMode === "1x1" ? Appearance.font.pixelSize.smallest
                 : root.sizeMode === "2x1" ? Appearance.font.pixelSize.normal
                 : Appearance.font.pixelSize.large
-            Behavior on font.pixelSize { TravelBehavior {} }
+            Behavior on font.pixelSize { SpanTravel {} }
             font.weight: root.sizeMode === "1x1" ? Font.Medium : Font.DemiBold
-            Behavior on font.weight { TravelBehavior {} }
+            Behavior on font.weight { SpanTravel {} }
             color: root.contentColor
             opacity: root.sizeMode === "1x1" ? 0.8 : 1
-            Behavior on opacity { FadeBehavior {} }
+            Behavior on opacity { SpanFade {} }
             elide: root.sizeMode === "1x1" ? Text.ElideNone : Text.ElideRight
             wrapMode: root.sizeMode === "1x1" ? Text.WordWrap : Text.NoWrap
             maximumLineCount: root.sizeMode === "1x1" ? 2 : 1
@@ -248,7 +238,7 @@ Item {
             font.pixelSize: Appearance.font.pixelSize.smallest
             color: root.contentColor
             opacity: root.sizeMode === "2x1" ? 0.6 : 0
-            Behavior on opacity { FadeBehavior {} }
+            Behavior on opacity { SpanFade {} }
             visible: opacity > 0
         }
 
@@ -260,7 +250,7 @@ Item {
             font.pixelSize: Appearance.font.pixelSize.smallest
             color: root.contentColor
             opacity: root.sizeMode === "3x1" ? 0.6 : 0
-            Behavior on opacity { FadeBehavior {} }
+            Behavior on opacity { SpanFade {} }
             visible: opacity > 0
         }
 
@@ -272,7 +262,7 @@ Item {
             height: root.spanH - 32 * Appearance.effectiveScale
             color: root.contentColor
             opacity: root.sizeMode === "3x1" ? 0.15 : 0
-            Behavior on opacity { FadeBehavior {} }
+            Behavior on opacity { SpanFade {} }
             visible: opacity > 0
         }
 
@@ -282,7 +272,7 @@ Item {
             y: 60 * Appearance.effectiveScale
             spacing: 8 * Appearance.effectiveScale
             opacity: root.sizeMode === "3x1" ? 1 : 0
-            Behavior on opacity { FadeBehavior {} }
+            Behavior on opacity { SpanFade {} }
             visible: opacity > 0
 
             Repeater {
