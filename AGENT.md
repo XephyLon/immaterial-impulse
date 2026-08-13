@@ -743,6 +743,28 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   publish that takes effect is the settle timer's - which is a guaranteed ~96ms of surface-up-and-
   unblurred on every open. Publish immediately *and* keep the timer. Motivated by 4a1b4f850
   ("fix(blur): stop the compositor frosting drop shadows").
+- **A blur region built from a *list* of items must observe those items, and a model count is not
+  observing them.** `WindowBlurRegion.regionItems` takes the rects a panel paints when the set is
+  not known in advance, and the notification stack is its only caller. A `Region` whose item has
+  been destroyed reports itself `empty()`, so a stale list is not a slightly-wrong blur - it is *no*
+  blur, with the region still published, nothing in any log, and QML that reads correctly.
+  `NotificationListView` refreshed its card set from `onCountChanged`, and the popup's ordinary life
+  defeats that twice over: a notification times out, the window hides, another arrives from the same
+  app, and the app-name list ends the cycle exactly where it started - so `count` reads 1 throughout
+  while the delegate is torn down and rebuilt. `count`'s signal is raised from the view's layout
+  pass as well, which does not run while the surface is down (`visible: false` destroys a layer
+  surface), so even the 1 -> 0 -> 1 in between is never announced. Measured against a real popup:
+  `countChanged` fired exactly *once* per shell session, so every notification after the first had
+  been unblurred for the whole life of the feature. Observe `contentItem`'s children, which is the
+  thing that actually changes; see
+  [State propagation is reactive](#state-propagation-is-reactive-or-it-is-a-bug-waiting) for the
+  general rule. Both halves of seeing it are worth reusing: `tests/run_notification_blur_probe.sh`
+  photographs the frost under a *nested Hyprland on its own bus* - `qmltestrunner` cannot construct
+  a `Region` and weston implements no ext-background-effect, so nothing else can - and it shoots
+  three popups because the first one is the one that works.
+  `tests/test_notification_cards_runtime.py` pins the card set itself, which headless weston can
+  reach.
+  bd69d191f ("fix(notifications): publish the cards that are on screen, not the first popup's").
 - **A window's `color` is not just a colour: an alpha of 255 permanently costs that surface its
   blur.** `QQuickWindow::setColor()` rewrites the window's *requested surface format* whenever the
   new colour's alpha crosses the 255 boundary - `fmt.setAlphaBufferSize(alpha < 255 ? 8 : -1)` then
