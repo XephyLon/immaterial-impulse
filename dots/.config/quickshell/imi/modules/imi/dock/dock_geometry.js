@@ -21,12 +21,29 @@
 
 var EDGES = ["top", "bottom", "left", "right"];
 
+// The only table in this file. INWARD and OUTWARD are the whole vocabulary,
+// and every side name below is read out of here rather than spelled again -
+// a popup's gravity, the reveal's anchor, the shadow margin and the hover
+// lift's direction are all one relation asked four different ways.
+var OPPOSITE = { top: "bottom", bottom: "top", left: "right", right: "left" };
+
 function isVertical(edge) {
     return edge === "left" || edge === "right";
 }
 
 function normalizedEdge(edge) {
     return EDGES.indexOf(edge) === -1 ? "bottom" : edge;
+}
+
+// Toward the screen edge the dock is on. Which is the edge itself - named so
+// a caller reads its intent rather than the coincidence.
+function outwardSide(edge) {
+    return normalizedEdge(edge);
+}
+
+// Toward the middle of the screen.
+function inwardSide(edge) {
+    return OPPOSITE[normalizedEdge(edge)];
 }
 
 // Which sides the layer surface anchors to: both ends of the long axis, plus
@@ -60,16 +77,27 @@ function insets(elevationMargin, gapsOut) {
     return { inward: elevationMargin, outward: gapsOut };
 }
 
-// The same pair mapped onto the anchor names an Item actually uses, so a
-// caller writes `anchors.topMargin: Geometry.margins(edge, ...).top` and the
-// flip costs nothing.
+// Any inward/outward pair mapped onto the four side names an Item actually
+// uses for its anchors, margins and insets. Sides on the dock's LONG axis get
+// zero: an inset there would eat into the strip rather than into its
+// thickness, which is the mistake that reads as "the icons drifted".
+//
+// This is the one place a direction becomes a side name. A widget that spells
+// out `topMargin` for the shadow and `bottomMargin` for the gap is correct at
+// exactly one edge and silently wrong at the other three.
+function directedSides(edge, inward, outward) {
+    var sides = { top: 0, bottom: 0, left: 0, right: 0 };
+    sides[inwardSide(edge)] = inward;
+    sides[outwardSide(edge)] = outward;
+    return sides;
+}
+
+// The dock body's own margin pair, mapped onto side names, so a caller writes
+// `anchors.topMargin: Geometry.margins(edge, ...).top` and the flip costs
+// nothing.
 function margins(edge, elevationMargin, gapsOut) {
-    var e = normalizedEdge(edge);
     var pair = insets(elevationMargin, gapsOut);
-    if (e === "bottom") return { top: pair.inward, bottom: pair.outward, left: 0, right: 0 };
-    if (e === "top") return { top: pair.outward, bottom: pair.inward, left: 0, right: 0 };
-    if (e === "left") return { left: pair.outward, right: pair.inward, top: 0, bottom: 0 };
-    return { left: pair.inward, right: pair.outward, top: 0, bottom: 0 };
+    return directedSides(edge, pair.inward, pair.outward);
 }
 
 // How far the dock is pushed off-screen when hidden, and how far it peeks
@@ -87,14 +115,59 @@ function revealOffsets(dockThickness, hoverRegion) {
     };
 }
 
+// Which side of its own surface the reveal push lands on. A dock anchors the
+// body to its INWARD side and grows the margin there to shove it out: a
+// bottom dock that pushed its bottomMargin would slide further onto the
+// screen to hide.
+function revealAnchorSide(edge) {
+    return inwardSide(edge);
+}
+
 // Which way a popup opens from a dock on this edge: away from the edge, or
 // the menu opens into it and is clipped.
 function popupGravity(edge) {
+    return inwardSide(edge);
+}
+
+// A popup anchored to the dock's whole SURFACE rather than to one button -
+// the window-preview popup - needs a corner and a direction, not one side. It
+// attaches at the start of the dock's long axis on the inward side, and grows
+// inward and along that axis.
+//
+// Side names rather than Quickshell's `Edges` flags: a `.pragma library` has
+// no QML enums in scope, so the caller maps the names. It does not get to
+// decide them.
+function popupAnchorSides(edge) {
     var e = normalizedEdge(edge);
-    if (e === "bottom") return "top";
-    if (e === "top") return "bottom";
-    if (e === "left") return "right";
-    return "left";
+    var axisStart = isVertical(e) ? "top" : "left";
+    var axisEnd = isVertical(e) ? "bottom" : "right";
+    return { edges: [inwardSide(e), axisStart], gravity: [inwardSide(e), axisEnd] };
+}
+
+// The direction a dock icon lifts on hover and bounces on launch: inward, so
+// the icon rises out of the dock rather than into the screen edge. One vector
+// instead of four call sites each choosing an axis and a sign.
+function inwardVector(edge) {
+    var toward = inwardSide(edge);
+    return {
+        x: toward === "left" ? -1 : (toward === "right" ? 1 : 0),
+        y: toward === "top" ? -1 : (toward === "bottom" ? 1 : 0)
+    };
+}
+
+// The bar's edge, said in the dock's vocabulary. The bar stores a pair of
+// booleans in which `bottom` stops meaning bottom and starts meaning RIGHT
+// once `vertical` is set (VerticalBar.qml anchors left/right off it), and
+// three files already re-derive a name from that pair.
+//
+// This is not a fourth copy of that for the bar's benefit. It exists so the
+// dock's settings row can ask whether it is being sent to an edge an
+// auto-hiding bar already owns, and a comparison between two vocabularies
+// means nothing.
+function barEdge(barVertical, barBottom) {
+    if (!barVertical)
+        return barBottom ? "bottom" : "top";
+    return barBottom ? "right" : "left";
 }
 
 // The sign the reveal travels in: a bottom dock hides DOWNWARD (positive y),
