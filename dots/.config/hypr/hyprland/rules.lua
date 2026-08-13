@@ -144,7 +144,11 @@ hl.layer_rule({ match = { namespace = "quickshell:.*" }, ignore_alpha = 0.05})
 hl.layer_rule({ match = { namespace = "quickshell:bar" }, animation = "slide"})
 hl.layer_rule({ match = { namespace = "quickshell:actionCenter" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:cheatsheet" }, animation = "slide bottom"})
-hl.layer_rule({ match = { namespace = "quickshell:dock" }, animation = "slide bottom"})
+-- Bare `slide`, like the bar above: the compositor slides toward whichever
+-- edge the surface is anchored to, so the dock's exit and entry follow its
+-- configured edge. Naming the edge here pinned it to the bottom, and a top
+-- dock then slid downward, into the screen, to leave.
+hl.layer_rule({ match = { namespace = "quickshell:dock" }, animation = "slide"})
 hl.layer_rule({ match = { namespace = "quickshell:screenCorners" }, animation = "popin 120%"})
 hl.layer_rule({ match = { namespace = "quickshell:lockWindowPusher" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:notificationPopup" }, animation = "fade"})
