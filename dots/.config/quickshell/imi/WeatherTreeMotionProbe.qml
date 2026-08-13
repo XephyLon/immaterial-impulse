@@ -67,9 +67,14 @@ ShellRoot {
         Weather.forecast = days;
     }
     function seedWeather() {
+        // Sunrise and sunset in the shape OpenWeatherMap's parser publishes
+        // them (en-US, with seconds). Without them the sun marker is correctly
+        // hidden - "0" is an unknown day, not midnight - and the shots would
+        // show a curve with nothing on it while looking perfectly fine.
         Weather.data = {
             temp: "21°C", tempFeelsLike: "19°C", tempHigh: "24°C", tempLow: "12°C",
-            description: "Light rain", humidity: "72%", wind: "12 km/h", wCode: 296
+            description: "Light rain", humidity: "72%", wind: "12 km/h", wCode: 296,
+            sunrise: "6:12:00 AM", sunset: "7:48:00 PM"
         };
         harness.seedForecast(4);
     }
