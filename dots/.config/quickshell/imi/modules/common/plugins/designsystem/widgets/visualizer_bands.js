@@ -35,6 +35,24 @@ function toLobes(values, lobes, maxValue) {
 
 // Fast attack so a beat reads on the frame it lands, slower decay so the
 // outline settles instead of boiling at cava's frame rate.
+// The envelope's tuning, and the threshold at which a lobe has arrived.
+//
+// These were VisualizerCookie's named properties. That component is gone - it
+// had no instantiation, and the one consumer that needs this pipeline paints
+// its own body (one painter owns the face, which is the whole reason it did
+// not reuse the component) - so the numbers live beside the maths they tune
+// rather than as bare literals at the call site.
+//
+// ATTACK is how fast a lobe rises toward a louder band, DECAY how slowly it
+// falls back; rising faster than it falls is what makes a beat read as a beat
+// instead of a wobble. SETTLE_EPSILON is when a lobe is close enough to be
+// snapped to its target, which is what lets the 16ms envelope timer stop
+// instead of chasing an asymptote forever.
+var ATTACK = 0.55;
+var DECAY = 0.12;
+var SETTLE_EPSILON = 0.001;
+var LOBES = 12;
+
 function envelope(current, target, attack, decay) {
     const from = isFinite(current) ? current : 0;
     const to = isFinite(target) ? target : 0;

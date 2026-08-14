@@ -216,7 +216,7 @@ Item {
                 Behavior on morphT { NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial } }
                 readonly property color bodyColor: Appearance.colors.colPrimary
 
-                // ---- the breath: VisualizerCookie's pipeline, verbatim ----
+                // ---- the breath: the lobe envelope, tuned in visualizer_bands.js ----
                 readonly property bool visualizing: root.span === "2x2"
                     && Math.abs(morphT - 1) < 0.01 && MprisController.isPlaying && root.visible
                 property list<real> levels: []
@@ -229,8 +229,10 @@ Item {
                     let moved = false;
                     for (let i = 0; i < 12; i++) {
                         const current = i < body.levels.length ? body.levels[i] : 0;
-                        const level = VisualizerBands.envelope(current, targets[i], 0.55, 0.12);
-                        const settled = Math.abs(targets[i] - level) <= 0.001 ? targets[i] : level;
+                        const level = VisualizerBands.envelope(
+                            current, targets[i], VisualizerBands.ATTACK, VisualizerBands.DECAY);
+                        const settled = Math.abs(targets[i] - level) <= VisualizerBands.SETTLE_EPSILON
+                            ? targets[i] : level;
                         if (settled !== current) moved = true;
                         next.push(settled);
                     }
@@ -327,7 +329,7 @@ Item {
                         // FIXED bounds for the breathing shape, on purpose:
                         // fitting the live bounds would rescale the whole
                         // cookie every frame, so a lobe pushing out shrinks
-                        // the other eleven (VisualizerCookie's own warning).
+                        // the other eleven.
                         // The resting cookie spans the unit box; lobes breathe
                         // within and slightly past it.
                         ? { cubics: MediaShapes.liveCookieRaw(body.levels, 12).cubics,

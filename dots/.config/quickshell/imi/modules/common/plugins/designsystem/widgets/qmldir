@@ -64,7 +64,6 @@ StyledToolTip StyledToolTip.qml
 StyledToolTipContent StyledToolTipContent.qml
 ThumbnailImage ThumbnailImage.qml
 UserProfile UserProfile.qml
-VisualizerCookie VisualizerCookie.qml
 WaveVisualizer WaveVisualizer.qml
 WavyLine WavyLine.qml
 WeatherCard WeatherCard.qml
