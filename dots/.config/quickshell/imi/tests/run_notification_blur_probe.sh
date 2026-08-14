@@ -111,9 +111,17 @@ sleep 4
 grim "${OUT%.png}_third.png"
 
 kill $QPID 2>/dev/null
-hyprctl dispatch exit >/dev/null 2>&1
-sleep 1
+# Kill the nested compositor by PID, NOT `hyprctl dispatch exit`.
+#
+# hyprctl resolves which instance to talk to from HYPRLAND_INSTANCE_SIGNATURE
+# alone - it does not consult WAYLAND_DISPLAY, and nothing here sets the
+# signature. So this line targeted whichever Hyprland the CALLER is running:
+# on a developer's desktop that is their own session, and `dispatch exit`
+# ends it. Every isolation this script builds - its own bus, its own XDG
+# dirs, its own compositor - had one hole, and it was the teardown.
 kill $HPID 2>/dev/null
+sleep 1
+kill -9 $HPID 2>/dev/null
 kill "$DBUS_SESSION_BUS_PID" 2>/dev/null
 
 grep -E "ERROR|WARN scene" "$TMP/probe.log" | head -10
