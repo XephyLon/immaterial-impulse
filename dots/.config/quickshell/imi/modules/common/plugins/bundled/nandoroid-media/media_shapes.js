@@ -105,8 +105,8 @@ function ringMeasuredAt(t, measureCubics) {
 
 // The live cookie: cookieRaw's own recipe with per-lobe inner radii, so the
 // breathing shape and the resting shape are one family in one space. Levels
-// are 0..1 per lobe; base and reach are VisualizerCookie's tuning, halved
-// into the height-1 space like everything else here.
+// are 0..1 per lobe; base and reach are the breathing cookie's tuning,
+// halved into the height-1 space like everything else here.
 function liveCookieRaw(levels, lobes) {
     var count = lobes || 12;
     var radii = [];

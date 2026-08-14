@@ -25,7 +25,7 @@ import "media_geometry.js" as Geometry
 // Unshared content - the 3x2's text/lyrics page, the 2x2's visualizer cookie
 // - has nothing to morph into, so it enters and exits behind span-gated
 // Loaders. That is the design's own rule (§6): in a reflowing tree, unloaded
-// beats invisible-but-alive, because a VisualizerCookie at 2x1 would hold a
+// beats invisible-but-alive, because a visualiser alive at 2x1 would hold a
 // cava claim for a size that shows no visualiser.
 Item {
     id: root

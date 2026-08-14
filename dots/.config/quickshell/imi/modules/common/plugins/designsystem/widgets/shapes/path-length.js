@@ -12,8 +12,9 @@
 // The cost is per geometry change, not per frame: a static shape pays it once,
 // which is what makes a progress ring stroked around a cookie's outline cost
 // nothing to animate. It lives beside rounded-polygon.js rather than inside the
-// one component that strokes today, because VisualizerCookie walks the same
-// kind of path and a layout wanting both is a change of caller, not of maths.
+// one component that strokes today, because the breathing cookie walks the
+// same kind of path and a layout wanting both is a change of caller, not of
+// maths.
 
 var DEFAULT_SAMPLES = 16;
 
