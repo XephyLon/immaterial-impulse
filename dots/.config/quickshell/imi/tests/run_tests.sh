@@ -293,6 +293,12 @@ fi
 # Enumerated, not globbed - which is why these three could exist, pass by hand
 # and be enforced by nothing. Added when a review counted the files run_tests.sh
 # names against the files on disk.
+echo "Running harness compositor-reach lint..."
+if ! python3 "$SCRIPT_DIR/lint_harness_compositor_reach.py"; then
+    echo "Harness compositor-reach lint failed."
+    exit 1
+fi
+
 echo "Running settings search index tests..."
 if ! python3 "$SCRIPT_DIR/test_settings_search_index.py"; then
     echo "Settings search index tests failed."
