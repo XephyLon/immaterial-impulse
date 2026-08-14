@@ -589,6 +589,24 @@ This is purely a manual-testing/CLI concern - IPC events, layer-shell behavior, 
 QML code touches are unaffected by this; only raw `hyprctl dispatch <dispatcher> <args>` calls typed
 by a human/agent need the Lua-call form on this particular machine.
 
+**`hyprctl` picks its target instance from `HYPRLAND_INSTANCE_SIGNATURE` and from nothing else — so
+a `hyprctl` inside a nested-compositor harness talks to the *user's* session.** `WAYLAND_DISPLAY` is
+irrelevant to it: measured, `WAYLAND_DISPLAY=wayland-99 hyprctl monitors` answers correctly for the
+real output, a bogus signature fails with `Couldn't connect to
+/run/user/1000/hypr/<sig>/.socket.sock`, and an unset one refuses outright with
+`HYPRLAND_INSTANCE_SIGNATURE not set!`. The signature is exported into every process in the session,
+and redirecting `XDG_*` or `WAYLAND_DISPLAY` does not shadow it.
+`tests/run_notification_blur_probe.sh` is the case that matters: it starts a nested Hyprland,
+exports four `XDG_*` vars and the new `WAYLAND_DISPLAY`, then ends with a bare
+`hyprctl dispatch exit` — which is aimed at the outer session. Nothing under `tests/` sets
+`HYPRLAND_INSTANCE_SIGNATURE` today. Anything driving a nested compositor must export the nested
+signature (or pass `hyprctl -i <sig>`) before its first `hyprctl`, and preferably give the nested
+instance its own `XDG_RUNTIME_DIR` as `tests/run_weather_probe.sh` already does for weston. This is
+the same family as the `pgrep -f` trap above — a process-targeting command that silently resolves to
+the caller's own session. See
+`docs/superpowers/specs/2026-08-14-integration-testing-design.md` §2.1.
+23b1e581f ("docs(specs): what an integration layer adds over the harnesses we have").
+
 **Rules registered at runtime through `hyprctl eval` do not survive, so don't build on them.**
 `hyprctl reload` resets the Lua state - every global and every rule registered from it is gone.
 The shell reapplies the Hyprland theme during its own startup, which reloads, so anything a QML
