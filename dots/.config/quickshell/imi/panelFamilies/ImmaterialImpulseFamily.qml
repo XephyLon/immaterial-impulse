@@ -26,6 +26,7 @@ import qs.modules.imi.verticalBar
 import qs.modules.imi.wallpaperSelector
 import qs.modules.imi.desktopMenu
 import qs.modules.imi.dropShelf
+import qs.modules.imi.recordingRegion
 import qs.modules.imi.screenshotResult
 
 Scope {
@@ -57,4 +58,5 @@ Scope {
     PanelLoader { component: DesktopMenu {} }
     PanelLoader { component: DropShelfPanel {} }
     PanelLoader { component: ScreenshotResultPanel {} }
+    PanelLoader { component: RecordingRegionPanel {} }
 }
