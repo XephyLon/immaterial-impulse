@@ -208,6 +208,18 @@ PanelWindow {
         }
     }
     property bool isRecording: root.action === RegionSelection.SnipAction.Record || root.action === RegionSelection.SnipAction.RecordWithSound
+
+    // Whole-output capture: the same confirm path every other target takes,
+    // handed the screen's own rect. There is no separate full-screen code -
+    // `snip()` crops the frozen frame it already has, and a region covering
+    // the output is a crop of everything.
+    function snipFullScreen() {
+        root.regionX = 0;
+        root.regionY = 0;
+        root.regionWidth = root.width;
+        root.regionHeight = root.height;
+        root.snip();
+    }
     property bool recordingShouldStop: false
     Process {
         id: checkRecordingProc
@@ -696,7 +708,9 @@ PanelWindow {
                 Synchronizer on selectionMode {
                     property alias source: root.selectionMode
                 }
+                windowTargeting: root.enableWindowRegions
                 onDismiss: if (!GlobalStates.snipCopyInFlight) root.dismiss();
+                onCaptureFullScreen: if (!GlobalStates.snipCopyInFlight) root.snipFullScreen();
             }
             ToolbarPairedFab {
                 anchors.verticalCenter: parent.verticalCenter
