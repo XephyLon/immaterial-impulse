@@ -45,6 +45,7 @@ MouseArea {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
 
+    cursorShape: Qt.PointingHandCursor
     onClicked: GlobalStates.sidebarRightOpen = true
 
     function formatSeconds(totalSeconds) {

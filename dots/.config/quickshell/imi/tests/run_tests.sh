@@ -99,6 +99,15 @@ if ! python3 "$SCRIPT_DIR/lint_disabled_opacity.py"; then
     exit 1
 fi
 
+# Static lint: a bar widget that answers a primary click says so with the
+# pointer. The shared button types always did; every hand-written MouseArea in
+# the bar forgot separately.
+echo "Running clickable-cursor lint..."
+if ! python3 "$SCRIPT_DIR/lint_clickable_cursor.py"; then
+    echo "Clickable-cursor lint failed."
+    exit 1
+fi
+
 # Static lint: a ConfigSwitch click is an intent. Assigning to `checked` - in
 # the widget or at a call site - destroys the binding every settings page hangs
 # on it, and the switch silently detaches from the config it is showing.
