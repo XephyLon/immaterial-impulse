@@ -103,6 +103,16 @@ Button {
         easing.bezierCurve: Appearance?.animationCurves.standardDecel
     }
 
+    // The pointer shape, stated as a handler rather than left to the MouseArea.
+    //
+    // A handler attaches to the item it is declared in - handlers are not
+    // Items, so a Control's contentData rules never touch them - which makes
+    // this the one way to say "this whole button is clickable" that cannot be
+    // narrowed by a subclass replacing the contentItem.
+    HoverHandler {
+        cursorShape: root.pointingHandCursor ? Qt.PointingHandCursor : Qt.ArrowCursor
+    }
+
     MouseArea {
         // Parented to the button ITSELF, not left to default parenting.
         //

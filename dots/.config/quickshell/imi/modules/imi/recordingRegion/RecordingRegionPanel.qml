@@ -82,7 +82,11 @@ Scope {
     }
 
     component RecordingControls: RowLayout {
-        spacing: Appearance.spacing.space100
+        // Wider than the toolbar's internal rhythm on purpose: the FAB is a
+        // separate object paired WITH the toolbar, not another item in it, and
+        // at the same spacing as the buttons inside it reads as a crowded
+        // fourth button that happens to be red.
+        spacing: Appearance.spacing.space150
 
         Toolbar {
             padding: Appearance.spacing.space100
@@ -92,8 +96,9 @@ Scope {
             // still when paused, so the state is readable without reading.
             Item {
                 Layout.fillHeight: true
-                Layout.leftMargin: Appearance.spacing.space50
-                implicitWidth: statusIcon.implicitWidth
+                // No extra margin: the toolbar's padding is the inset, and
+                // adding to it here made the left end wider than the right.
+                implicitWidth: statusIcon.implicitWidth + Appearance.spacing.space50
 
                 MaterialSymbol {
                     id: statusIcon
