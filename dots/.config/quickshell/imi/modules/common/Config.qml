@@ -1074,6 +1074,11 @@ Singleton {
                     // dot once a second. While it runs, only casts that hold
                     // their state longer than a capture pulse are shown.
                     property bool ignoreAmbientCapture: true
+                    // Off by default: destroying an app's capture node takes a
+                    // stream the app never offered to give up, and an app that
+                    // does not expect that can misbehave or crash. Muting, and
+                    // stopping the shell's own recording, need no such licence.
+                    property bool allowForceStop: false
                 }
                 property JsonObject indicators: JsonObject {
                     property JsonObject notifications: JsonObject {
