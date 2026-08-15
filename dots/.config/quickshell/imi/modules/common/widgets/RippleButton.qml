@@ -104,7 +104,19 @@ Button {
     }
 
     MouseArea {
-        anchors.fill: parent
+        // Parented to the button ITSELF, not left to default parenting.
+        //
+        // This is declared in the body of a Control, so Qt treats it as
+        // contentData and parents it into `contentItem`. With the default
+        // contentItem - a StyledText the Control sizes to its padded rect -
+        // that is almost the whole button and nobody noticed. Replace the
+        // contentItem with something that sizes itself, and the area collapses
+        // onto it: `IconToolbarButton` centres a 22px glyph, so every toolbar
+        // button in the shell was hoverable and clickable on the icon alone
+        // and dead across the rest of its 40px target. The pointer never
+        // changed, which is how it was found.
+        parent: root
+        anchors.fill: root
         cursorShape: root.pointingHandCursor ? Qt.PointingHandCursor : Qt.ArrowCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         onPressed: (event) => { 
