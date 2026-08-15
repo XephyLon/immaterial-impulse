@@ -52,6 +52,32 @@ Item {
         descTimeout.restart()
     }
 
+    // Entering and leaving, on the shell's expressive tiers: the spatial curve
+    // carries the scale (it overshoots slightly, so the marker arrives rather
+    // than appears) and the effects curve carries the fade, which is the same
+    // pairing the widget trees use for travel and fade. Scaled from the
+    // cursor's own corner, so it grows out of the pointer instead of the
+    // middle of the screen.
+    property bool shown: true
+    opacity: root.shown ? 1 : 0
+    scale: root.shown ? 1 : 0.7
+    visible: opacity > 0.01
+    transformOrigin: Item.TopLeft
+    Behavior on opacity {
+        NumberAnimation {
+            duration: Appearance.animation.elementMoveFast.duration
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+        }
+    }
+    Behavior on scale {
+        NumberAnimation {
+            duration: Appearance.animation.elementMoveFast.duration
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
+        }
+    }
+
     property int margins: Appearance.spacing.space100
     implicitWidth: content.implicitWidth + margins * 2
     implicitHeight: content.implicitHeight + margins * 2

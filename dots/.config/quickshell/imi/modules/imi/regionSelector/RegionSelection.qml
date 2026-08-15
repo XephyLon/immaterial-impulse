@@ -674,9 +674,15 @@ PanelWindow {
             }
         }
 
+        // While the pointer is on the chrome, the real cursor is what the user
+        // is aiming with - so the crosshair's own markers get out of the way
+        // rather than sitting on top of the buttons being pressed.
+        property bool pointerOverChrome: controlsHover.hovered
+
         // Controls
         Row {
             id: regionSelectionControls
+            HoverHandler { id: controlsHover }
             z: 10
             visible: root.phase === RegionSelection.Phase.Select
             anchors {
