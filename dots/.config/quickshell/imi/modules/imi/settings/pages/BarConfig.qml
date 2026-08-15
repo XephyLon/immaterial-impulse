@@ -311,6 +311,23 @@ ContentPage {
 
         ContentSection {
             shape: MaterialShape.Shape.Square
+            icon: "privacy_tip"
+            title: Translation.tr("Privacy")
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "block"
+                    text: Translation.tr("Allow force stopping an app's capture")
+                    // Named for what it costs, not for what it enables: the
+                    // panel takes the app's stream away without asking it, and
+                    // an app that does not expect that can misbehave.
+                    checked: Config.options.bar.privacyIndicator.allowForceStop
+                    onToggleRequested: Config.options.bar.privacyIndicator.allowForceStop = !Config.options.bar.privacyIndicator.allowForceStop
+                }
+            }
+        }
+
+        ContentSection {
+            shape: MaterialShape.Shape.Square
             icon: "inbox_customize"
             title: Translation.tr("Tray")
             GroupedList {
