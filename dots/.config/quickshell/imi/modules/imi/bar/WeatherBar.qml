@@ -15,6 +15,7 @@ MouseArea {
     implicitWidth: vertical ? 32 : (contentLoader.item?.implicitWidth ?? 0) 
     implicitHeight: vertical ? (contentLoader.item?.implicitHeight ?? 0) : Appearance.sizes.barHeight
 
+    cursorShape: Qt.PointingHandCursor
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     hoverEnabled: !Config.options.bar.tooltips.clickToShow
 

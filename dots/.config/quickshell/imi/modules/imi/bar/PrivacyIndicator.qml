@@ -126,6 +126,7 @@ MouseArea {
     // the overlay hosts it - so the widget that was clicked is what owns the
     // decision to keep it open.
     property bool controlsPinned: false
+    cursorShape: Qt.PointingHandCursor
     onClicked: root.controlsPinned = !root.controlsPinned
     // A click anywhere outside the card unpins, which is what the overlay's
     // focus grab reports.
