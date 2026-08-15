@@ -530,10 +530,11 @@ PanelWindow {
         // Samples the same frozen grim frame the crop will use - see
         // Magnifier.qml for why not a live screencopy.
         Magnifier {
+            id: magnifier
             z: 10000
             shown: root.phase === RegionSelection.Phase.Select
                 && root.screenshotReady
-                && !root.pointerOverChrome
+                && !mouseArea.pointerOverChrome
                 && Config.options.regionSelector.magnifier.enable
             source: root.screenshotSource
             pointerX: mouseArea.mouseX
@@ -549,8 +550,9 @@ PanelWindow {
 
         // The thing to the bottom-right with an icon
         CursorGuide {
+            id: cursorGuide
             z: 9999
-            shown: root.phase === RegionSelection.Phase.Select && !root.pointerOverChrome
+            shown: root.phase === RegionSelection.Phase.Select && !mouseArea.pointerOverChrome
             x: root.dragging ? root.regionX + root.regionWidth : mouseArea.mouseX
             y: root.dragging ? root.regionY + root.regionHeight : mouseArea.mouseY
             action: root.action
@@ -698,12 +700,26 @@ PanelWindow {
         // While the pointer is on the chrome, the real cursor is what the user
         // is aiming with - so the crosshair's own markers get out of the way
         // rather than sitting on top of the buttons being pressed.
-        property bool pointerOverChrome: controlsHover.hovered
+        //
+        // Keyed to the POINTER being on the row, not to the markers coming
+        // near it: they go away when the toolbar is being used, and at no
+        // other time. Hiding them on approach makes them vanish over an
+        // ordinary part of the canvas, which reads as a glitch.
+        //
+        // A point test on the row's rect rather than a HoverHandler on it,
+        // because this MouseArea holds the pointer for the whole overlay and a
+        // handler underneath it never fired. The position tested is the same
+        // mouseX/mouseY the markers are placed with, so the test cannot
+        // disagree with where they are drawn.
+        property bool pointerOverChrome: regionSelectionControls.visible
+            && mouseArea.mouseX >= regionSelectionControls.x
+            && mouseArea.mouseX <= regionSelectionControls.x + regionSelectionControls.width
+            && mouseArea.mouseY >= regionSelectionControls.y
+            && mouseArea.mouseY <= regionSelectionControls.y + regionSelectionControls.height
 
         // Controls
         Row {
             id: regionSelectionControls
-            HoverHandler { id: controlsHover }
             z: 10
             visible: root.phase === RegionSelection.Phase.Select
             anchors {
