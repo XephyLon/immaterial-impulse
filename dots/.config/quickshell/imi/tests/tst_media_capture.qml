@@ -155,4 +155,50 @@ TestCase {
         compare(names[0], "firefox");
         compare(names[1], "zoom");
     }
+
+    // --- Per-stream detail, which the privacy panel acts on ---
+
+    function test_streams_carry_the_ids_an_action_needs() {
+        // index addresses the pactl mute; object.id addresses the PipeWire node
+        // a force-stop destroys. They are different numbers for the same stream.
+        var json = JSON.stringify([{
+            index: 262920, corked: false, mute: false, client: 3,
+            properties: {
+                "application.name": "Chromium",
+                "application.process.binary": "vesktop",
+                "application.process.id": "16116",
+                "object.id": "282",
+                "media.class": "Stream/Input/Audio"
+            }
+        }]);
+        var streams = MediaCapture.parseSourceOutputs(json).streams;
+        compare(streams.length, 1);
+        compare(streams[0].name, "Vesktop");
+        compare(streams[0].index, 262920);
+        compare(streams[0].nodeId, "282");
+        compare(streams[0].pid, "16116");
+        compare(streams[0].muted, false);
+    }
+
+    function test_a_muted_stream_still_counts_as_recording() {
+        // A muted stream is still an open microphone from the app's side: the
+        // app holds the device and can unmute itself. The dot stays on, and the
+        // row shows the mute so it can be undone.
+        var json = JSON.stringify([{
+            index: 7, corked: false, mute: true, client: 1,
+            properties: { "application.name": "Zoom", "application.process.id": "9", "media.class": "Stream/Input/Audio" }
+        }]);
+        var r = MediaCapture.parseSourceOutputs(json);
+        compare(r.active, true);
+        compare(r.streams[0].muted, true);
+    }
+
+    function test_filtered_streams_do_not_reach_the_panel() {
+        // Whatever is not shown as an app must not be actionable as one either.
+        var json = JSON.stringify([
+            { index: 1, corked: true, properties: { "application.name": "Corked", "application.process.id": "1" } },
+            { index: 2, corked: false, properties: { "application.name": "Cava", "application.process.id": "2", "stream.capture.sink": "true" } }
+        ]);
+        compare(MediaCapture.parseSourceOutputs(json).streams, []);
+    }
 }
