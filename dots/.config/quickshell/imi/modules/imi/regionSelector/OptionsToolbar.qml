@@ -19,8 +19,51 @@ Toolbar {
     // Use a synchronizer on these
     property var action
     property var selectionMode
+    // Whether window regions are being offered, so the target row can show
+    // which one the click will land on.
+    property bool windowTargeting: false
     // Signals
     signal dismiss()
+    signal captureFullScreen()
+
+    // The capture KIND, read off the action rather than stored twice - the
+    // action enum already says whether this is a shot or a recording, and a
+    // second copy of that fact is a second thing to keep in step.
+    readonly property bool recording: root.action === RegionSelection.SnipAction.Record
+        || root.action === RegionSelection.SnipAction.RecordWithSound
+
+    // Shot or recording. Both then take whichever TARGET the row beside this
+    // one chooses, which is what makes six options out of two controls.
+    ToolbarTabBar {
+        id: kindBar
+        tabButtonList: [
+            {"icon": "photo_camera", "name": Translation.tr("Shot")},
+            {"icon": "videocam", "name": Translation.tr("Record")}
+        ]
+        readonly property int kindIndex: root.recording ? 1 : 0
+        onKindIndexChanged: if (currentIndex !== kindIndex) currentIndex = kindIndex
+        Component.onCompleted: currentIndex = kindIndex
+        onCurrentIndexChanged: {
+            const wanted = currentIndex === 1
+                ? RegionSelection.SnipAction.Record
+                : RegionSelection.SnipAction.Copy;
+            if (root.action !== wanted) root.action = wanted;
+        }
+    }
+
+    // The target. Region and Window are modes the selection already knows -
+    // Window is the hover-and-click targeting the selector has always had,
+    // surfaced so it is discoverable rather than found by accident. Full is
+    // an action, not a mode: there is nothing to point at, so it fires.
+    IconToolbarButton {
+        id: fullScreenButton
+        text: "fullscreen"
+        onClicked: root.captureFullScreen()
+        StyledToolTip {
+            text: root.recording ? Translation.tr("Record the whole screen")
+                                 : Translation.tr("Capture the whole screen")
+        }
+    }
 
     ToolbarTabBar {
         id: tabBar
