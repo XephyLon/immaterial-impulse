@@ -359,11 +359,24 @@ Scope {
 
             // Whatever is on the card can change size while it is shown - the
             // clock ticking a row in, NetworkSpeed's rows changing.
+            //
+            // Those are one-off changes, and deferring them by a tick lets a
+            // burst of them settle into a single retarget. A popup ANIMATING
+            // its own size is the opposite case: the size changes every frame,
+            // so a timer that is restarted every frame never fires until the
+            // animation ends, and the card would sit at its old size for the
+            // whole transition while the content grew past its clip. Those
+            // popups are retargeted on the spot.
             Connections {
                 target: overlayWindow.current?.contentItem ?? null
                 ignoreUnknownSignals: true
-                function onImplicitWidthChanged() { retargetTimer.restart() }
-                function onImplicitHeightChanged() { retargetTimer.restart() }
+                function onImplicitWidthChanged() { overlayWindow.retargetNow() }
+                function onImplicitHeightChanged() { overlayWindow.retargetNow() }
+            }
+
+            function retargetNow() {
+                if (overlayWindow.current?.contentDrivesSize) overlayWindow.retarget();
+                else retargetTimer.restart();
             }
 
             // There is no sensible interpolation between "below the top edge"
@@ -456,7 +469,11 @@ Scope {
                 border.color: Appearance.colors.colLayer0Border
 
                 Behavior on x {
-                    enabled: card.animate
+                    // Position too, for the same reason as width and height: a
+                    // right-anchored card's x is derived from its width, so
+                    // easing one while the other tracks the content puts the
+                    // card's edge where its content is not.
+                    enabled: card.animate && !(overlayWindow.current?.contentDrivesSize ?? false)
                     NumberAnimation {
                         id: xAnim
                         duration: card.motionDuration
@@ -465,7 +482,7 @@ Scope {
                     }
                 }
                 Behavior on y {
-                    enabled: card.animate
+                    enabled: card.animate && !(overlayWindow.current?.contentDrivesSize ?? false)
                     NumberAnimation {
                         id: yAnim
                         duration: card.motionDuration
@@ -474,7 +491,9 @@ Scope {
                     }
                 }
                 Behavior on width {
-                    enabled: card.animate
+                    // See StyledPopup.contentDrivesSize: a popup animating its
+                    // own size must not be chased by the card.
+                    enabled: card.animate && !(overlayWindow.current?.contentDrivesSize ?? false)
                     NumberAnimation {
                         id: widthAnim
                         duration: card.motionDuration
@@ -483,7 +502,7 @@ Scope {
                     }
                 }
                 Behavior on height {
-                    enabled: card.animate
+                    enabled: card.animate && !(overlayWindow.current?.contentDrivesSize ?? false)
                     NumberAnimation {
                         id: heightAnim
                         duration: card.motionDuration

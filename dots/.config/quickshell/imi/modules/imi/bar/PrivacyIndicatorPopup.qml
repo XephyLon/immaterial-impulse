@@ -5,16 +5,21 @@ import qs.modules.common.widgets
 import qs.services
 
 /**
- * The privacy indicator's card, in two depths of the SAME surface.
+ * The privacy indicator's card, at two depths of the SAME tree.
  *
  * Hovering reads: which devices are in use, by which apps. Clicking the pill
- * pins the card and grows it into the acting view - mute, stop, revoke - so the
- * summary is never a thing to dismiss before the controls arrive, and the
+ * pins the card and the controls arrive in it - mute, stop, revoke - so the
+ * summary is never a thing to dismiss before the controls appear, and the
  * controls are never one stray pointer-move away from vanishing mid-click.
  *
- * One tree, not two cards: the sections that both depths share are declared
- * once and the action rows appear beside them, so the card grows rather than
- * being replaced.
+ * ONE tree, not two. Every section, header, icon and label is declared once and
+ * stays put across the depth change; the only things that appear are the
+ * buttons and the permission list, and they arrive by growing out of zero width
+ * rather than by being swapped in. The first version declared each section
+ * twice and toggled `visible` between the copies, which destroyed and rebuilt
+ * the shared parts mid-transition: the header and the icons blinked out for a
+ * few frames while the buttons popped in at full size. A morph cannot happen
+ * between two trees - only within one.
  */
 StyledPopup {
     id: root
@@ -22,13 +27,178 @@ StyledPopup {
 
     readonly property bool expanded: root.pinnedOpen
 
-    // A section per active device: an icon + device header, then one line per
-    // capturing app (or a fallback line when the app name is unknown).
+    // The card this content sits on animates its own width and height, and
+    // centres the content while it does. So the content's size must travel on
+    // exactly the card's tier: slower and it is cropped by a card that has
+    // already grown, faster and it overflows a card still catching up - which
+    // is what clipped the header off the top mid-transition. Same duration,
+    // same curve, no drift.
+    readonly property int revealDuration: Appearance.animation.elementMove.duration
+    readonly property list<real> revealCurve: Appearance.animationCurves.expressiveDefaultSpatial
+    readonly property int fadeDuration: Appearance.animationCurves.expressiveEffectsDuration
+    readonly property list<real> fadeCurve: Appearance.animationCurves.expressiveEffects
+
+    // The indent that lines a row's text up under its section header's label.
+    readonly property real rowIndent: Appearance.font.pixelSize.large + Appearance.spacing.space50
+
+    // A control that grows in from nothing along the row. Width carries the
+    // layout (so the label beside it slides rather than jumps), opacity and
+    // scale carry the arrival.
+    component ActionSlot: Item {
+        id: slot
+        property bool on: false
+        default property alias content: holder.data
+        readonly property real slotSize: 30
+        implicitWidth: on ? slotSize : 0
+        implicitHeight: slotSize
+        opacity: on ? 1 : 0
+        scale: on ? 1 : 0.6
+        clip: true
+        visible: implicitWidth > 0.5
+        Behavior on implicitWidth {
+            NumberAnimation {
+                duration: root.revealDuration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: root.revealCurve
+            }
+        }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: root.fadeDuration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: root.fadeCurve
+            }
+        }
+        Behavior on scale {
+            NumberAnimation {
+                duration: root.revealDuration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: root.revealCurve
+            }
+        }
+        Item {
+            id: holder
+            width: slot.slotSize
+            height: slot.slotSize
+            anchors.centerIn: parent
+        }
+    }
+
+    // A block that opens downward rather than appearing: its height is what
+    // travels, and its contents ride along at full strength - a fade would make
+    // the text arrive separately from the row it belongs to.
+    component Reveal: Item {
+        id: reveal
+        property bool shown: false
+        default property alias content: revealColumn.data
+        Layout.fillWidth: true
+        implicitHeight: reveal.shown ? revealColumn.implicitHeight : 0
+        clip: true
+        visible: implicitHeight > 0.5
+        Behavior on implicitHeight {
+            NumberAnimation {
+                duration: root.revealDuration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: root.revealCurve
+            }
+        }
+        ColumnLayout {
+            id: revealColumn
+            anchors { left: parent.left; right: parent.right; top: parent.top }
+            spacing: Appearance.spacing.space25
+        }
+    }
+
+    component ActionButton: RippleButton {
+        id: actionButton
+        required property string symbol
+        property color symbolColor: Appearance.colors.colOnSurfaceVariant
+        anchors.fill: parent
+        buttonRadius: Appearance.rounding.full
+        MaterialSymbol {
+            anchors.centerIn: parent
+            text: actionButton.symbol
+            iconSize: Appearance.font.pixelSize.normal
+            color: actionButton.symbolColor
+        }
+    }
+
+    // One app holding one device. The name is declared once and never moves;
+    // the buttons grow in beside it when the card is pinned.
+    component AppRow: RowLayout {
+        id: appRow
+        required property string name
+        property var stream: null      // a mic stream, when there is one to act on
+        property string note: ""       // what to say when nothing can act
+        Layout.fillWidth: true
+        Layout.leftMargin: root.rowIndent
+        spacing: Appearance.spacing.space50
+
+        StyledText {
+            Layout.fillWidth: true
+            text: appRow.name
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colOnSurfaceVariant
+            // A muted app is still listed, just quieter than one that is not.
+            opacity: appRow.stream?.muted ? 0.55 : 0.75
+            font.pixelSize: Appearance.font.pixelSize.smaller
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: root.fadeDuration
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: root.fadeCurve
+                }
+            }
+        }
+
+        StyledText {
+            visible: opacity > 0.01
+            opacity: (root.expanded && appRow.note.length > 0 && appRow.stream === null) ? 0.5 : 0
+            text: appRow.note
+            color: Appearance.colors.colOnSurfaceVariant
+            font.pixelSize: Appearance.font.pixelSize.smallest
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: root.fadeDuration
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: root.fadeCurve
+                }
+            }
+        }
+
+        ActionSlot {
+            on: root.expanded && appRow.stream !== null
+            ActionButton {
+                symbol: appRow.stream?.muted ? "mic_off" : "mic"
+                symbolColor: appRow.stream?.muted
+                    ? Appearance.colors.colPrimary
+                    : Appearance.colors.colOnSurfaceVariant
+                toggled: appRow.stream?.muted ?? false
+                releaseAction: () => CaptureControl.toggleStreamMuted(appRow.stream)
+            }
+        }
+
+        ActionSlot {
+            // Only where Settings allows taking a stream the app never offered.
+            on: root.expanded && appRow.stream !== null && CaptureControl.allowForceStop
+            ActionButton {
+                symbol: "block"
+                symbolColor: Appearance.colors.colError
+                releaseAction: () => CaptureControl.forceStopStream(appRow.stream)
+            }
+        }
+    }
+
+    // A device that is in use, its apps, and what can be done about them.
+    // `streams` wins over `entries` where it exists, because a mute has to
+    // address the exact stream and two apps can share a name.
     component DeviceSection: ColumnLayout {
         id: section
         required property string icon
         required property string label
-        required property var entries // list of strings (apps, or a status line)
+        property var entries: []
+        property var streams: []
+        property string rowNote: ""
         Layout.fillWidth: true
         spacing: Appearance.spacing.space25
 
@@ -49,99 +219,38 @@ StyledPopup {
         }
 
         Repeater {
-            model: section.entries
-            delegate: StyledText {
-                required property string modelData
-                Layout.fillWidth: true
-                // Indent under the header's label (icon width + row spacing).
-                Layout.leftMargin: Appearance.font.pixelSize.large + Appearance.spacing.space50
-                text: modelData
-                wrapMode: Text.Wrap
-                color: Appearance.colors.colOnSurfaceVariant
-                opacity: 0.75
-                font.pixelSize: Appearance.font.pixelSize.smaller
+            model: section.streams.length > 0 ? section.streams : section.entries
+            delegate: AppRow {
+                required property var modelData
+                // Streams arrive as objects, plain listings as strings.
+                name: (modelData && modelData.name !== undefined) ? modelData.name : String(modelData)
+                stream: (modelData && modelData.name !== undefined) ? modelData : null
+                note: section.rowNote
             }
-        }
-    }
-
-    // A small icon button for one action on one row.
-    component ActionButton: RippleButton {
-        id: actionButton
-        required property string symbol
-        property color symbolColor: Appearance.colors.colOnSurfaceVariant
-        implicitWidth: 30
-        implicitHeight: 30
-        buttonRadius: Appearance.rounding.full
-        MaterialSymbol {
-            anchors.centerIn: parent
-            text: actionButton.symbol
-            iconSize: Appearance.font.pixelSize.normal
-            color: actionButton.symbolColor
-        }
-    }
-
-    // One app holding one device, with what can be done about it.
-    component AppRow: RowLayout {
-        id: appRow
-        required property string name
-        property var stream: null      // a mic stream, when there is one to act on
-        property string note: ""       // shown instead of buttons when nothing can act
-        Layout.fillWidth: true
-        Layout.leftMargin: Appearance.font.pixelSize.large + Appearance.spacing.space50
-        spacing: Appearance.spacing.space50
-
-        StyledText {
-            Layout.fillWidth: true
-            text: appRow.name
-            wrapMode: Text.Wrap
-            color: Appearance.colors.colOnSurfaceVariant
-            opacity: appRow.stream?.muted ? 0.55 : 0.75
-            font.pixelSize: Appearance.font.pixelSize.smaller
-        }
-
-        StyledText {
-            visible: appRow.note.length > 0 && appRow.stream === null
-            text: appRow.note
-            color: Appearance.colors.colOnSurfaceVariant
-            opacity: 0.5
-            font.pixelSize: Appearance.font.pixelSize.smallest
-        }
-
-        ActionButton {
-            visible: appRow.stream !== null
-            symbol: appRow.stream?.muted ? "mic_off" : "mic"
-            symbolColor: appRow.stream?.muted
-                ? Appearance.colors.colPrimary
-                : Appearance.colors.colOnSurfaceVariant
-            toggled: appRow.stream?.muted ?? false
-            releaseAction: () => CaptureControl.toggleStreamMuted(appRow.stream)
-        }
-
-        ActionButton {
-            // Only where Settings allows taking a stream the app never offered.
-            visible: appRow.stream !== null && CaptureControl.allowForceStop
-            symbol: "block"
-            symbolColor: Appearance.colors.colError
-            releaseAction: () => CaptureControl.forceStopStream(appRow.stream)
         }
     }
 
     Item {
-        // Grows with the depth rather than swapping card sizes, so pinning
-        // reads as the same surface opening out.
+        id: contentRoot
         implicitWidth: root.expanded ? 340 : 260
         implicitHeight: column.implicitHeight
+
+        // The card follows this size instead of easing toward it (see
+        // StyledPopup.contentDrivesSize), so this Behavior is the ONE animation
+        // in the transition: every element that exists at both depths stays on
+        // screen and travels, and nothing is clipped, because the card is
+        // exactly as big as its content on every frame.
         Behavior on implicitWidth {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            NumberAnimation {
+                duration: root.revealDuration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: root.revealCurve
+            }
         }
 
         ColumnLayout {
             id: column
-            anchors {
-                left: parent.left
-                right: parent.right
-                top: parent.top
-            }
+            anchors { left: parent.left; right: parent.right; top: parent.top }
             spacing: Appearance.spacing.space100
 
             RowLayout {
@@ -155,123 +264,56 @@ StyledPopup {
                     color: Appearance.colors.colError
                 }
                 StyledText {
-                    visible: !root.expanded
+                    // Fades rather than disappearing: it is the one label whose
+                    // job ends when the card is pinned.
+                    visible: opacity > 0.01
+                    opacity: root.expanded ? 0 : 0.5
                     text: Translation.tr("Click for controls")
                     font.pixelSize: Appearance.font.pixelSize.smallest
                     color: Appearance.colors.colOnSurfaceVariant
-                    opacity: 0.5
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: root.fadeDuration
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: root.fadeCurve
+                        }
+                    }
                 }
             }
 
-            // --- Microphone -------------------------------------------------
             DeviceSection {
-                visible: MediaCapture.micActive && !root.expanded
+                visible: MediaCapture.micActive
                 icon: "mic"
                 label: Translation.tr("Microphone")
+                streams: MediaCapture.micStreams
                 entries: MediaCapture.micApps.length > 0
                     ? MediaCapture.micApps
                     : [Translation.tr("In use")]
             }
 
-            ColumnLayout {
-                visible: MediaCapture.micActive && root.expanded
-                Layout.fillWidth: true
-                spacing: Appearance.spacing.space25
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space50
-                    MaterialSymbol {
-                        text: "mic"
-                        iconSize: Appearance.font.pixelSize.large
-                        color: Appearance.colors.colOnSurfaceVariant
-                    }
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: Translation.tr("Microphone")
-                        font.weight: Font.Medium
-                        color: Appearance.colors.colOnSurfaceVariant
-                    }
-                }
-
-                Repeater {
-                    // Streams, not names: a mute has to address the exact
-                    // stream, and two apps can share a name.
-                    model: MediaCapture.micStreams
-                    delegate: AppRow {
-                        required property var modelData
-                        name: modelData.name
-                        stream: modelData
-                    }
-                }
-
-                StyledText {
-                    // The dot is on but pactl gave nothing to act on - say that
-                    // rather than showing an empty section.
-                    visible: MediaCapture.micStreams.length === 0
-                    Layout.leftMargin: Appearance.font.pixelSize.large + Appearance.spacing.space50
-                    text: Translation.tr("In use by an app that cannot be listed")
-                    wrapMode: Text.Wrap
-                    color: Appearance.colors.colOnSurfaceVariant
-                    opacity: 0.6
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                }
-            }
-
-            // --- Camera -----------------------------------------------------
             DeviceSection {
-                visible: MediaCapture.cameraActive && !root.expanded
+                visible: MediaCapture.cameraActive
                 icon: "videocam"
                 label: Translation.tr("Camera")
                 entries: MediaCapture.cameraApps.length > 0
                     ? MediaCapture.cameraApps
                     : [Translation.tr("In use")]
+                // A camera holder is a process with /dev/video open, not a
+                // stream that can be handed back: the only lever is killing the
+                // app, which this panel does not do. Said, rather than left as
+                // a silence that would read as an assurance.
+                rowNote: Translation.tr("no stream control")
             }
 
-            ColumnLayout {
-                visible: MediaCapture.cameraActive && root.expanded
-                Layout.fillWidth: true
-                spacing: Appearance.spacing.space25
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space50
-                    MaterialSymbol {
-                        text: "videocam"
-                        iconSize: Appearance.font.pixelSize.large
-                        color: Appearance.colors.colOnSurfaceVariant
-                    }
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: Translation.tr("Camera")
-                        font.weight: Font.Medium
-                        color: Appearance.colors.colOnSurfaceVariant
-                    }
-                }
-
-                Repeater {
-                    model: MediaCapture.cameraApps
-                    delegate: AppRow {
-                        required property string modelData
-                        name: modelData
-                        // A camera holder is a process with /dev/video open,
-                        // not a stream that can be handed back: the only lever
-                        // is killing the app, which this panel does not do.
-                        note: Translation.tr("no stream control")
-                    }
-                }
-            }
-
-            // --- Screen -----------------------------------------------------
             DeviceSection {
                 visible: MediaCapture.screencastActive
                 icon: "screen_share"
                 label: Translation.tr("Screen")
-                entries: [root.expanded
-                    ? Translation.tr("Shared by another app - stop it from that app")
-                    : Translation.tr("Shared or recorded")]
+                entries: [Translation.tr("Shared or recorded")]
+                rowNote: Translation.tr("stop it from that app")
             }
 
+            // The shell's own captures, which it CAN act on.
             ColumnLayout {
                 visible: ScreenRecord.recording || ScreenRecord.replaying
                 Layout.fillWidth: true
@@ -297,7 +339,7 @@ StyledPopup {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.leftMargin: Appearance.font.pixelSize.large + Appearance.spacing.space50
+                    Layout.leftMargin: root.rowIndent
                     spacing: Appearance.spacing.space50
 
                     StyledText {
@@ -311,40 +353,44 @@ StyledPopup {
                         font.pixelSize: Appearance.font.pixelSize.smaller
                     }
 
-                    ActionButton {
-                        visible: root.expanded && ScreenRecord.recording
-                        symbol: ScreenRecord.recordPaused ? "play_arrow" : "pause"
-                        releaseAction: () => ScreenRecord.togglePauseRecord()
+                    ActionSlot {
+                        on: root.expanded && ScreenRecord.recording
+                        ActionButton {
+                            symbol: ScreenRecord.recordPaused ? "play_arrow" : "pause"
+                            releaseAction: () => ScreenRecord.togglePauseRecord()
+                        }
                     }
-                    ActionButton {
-                        visible: root.expanded && ScreenRecord.recording
-                        symbol: "stop"
-                        symbolColor: Appearance.colors.colError
-                        releaseAction: () => ScreenRecord.stopRecord()
+                    ActionSlot {
+                        on: root.expanded && ScreenRecord.recording
+                        ActionButton {
+                            symbol: "stop"
+                            symbolColor: Appearance.colors.colError
+                            releaseAction: () => ScreenRecord.stopRecord()
+                        }
                     }
-                    ActionButton {
+                    ActionSlot {
                         // The replay buffer's whole point: keep what just
                         // happened. Saving does not disarm it.
-                        visible: root.expanded && ScreenRecord.replaying
-                        symbol: "save"
-                        symbolColor: Appearance.colors.colPrimary
-                        releaseAction: () => ScreenRecord.saveReplay()
+                        on: root.expanded && ScreenRecord.replaying
+                        ActionButton {
+                            symbol: "save"
+                            symbolColor: Appearance.colors.colPrimary
+                            releaseAction: () => ScreenRecord.saveReplay()
+                        }
                     }
-                    ActionButton {
-                        visible: root.expanded && ScreenRecord.replaying
-                        symbol: "stop"
-                        symbolColor: Appearance.colors.colError
-                        releaseAction: () => ScreenRecord.toggleReplay()
+                    ActionSlot {
+                        on: root.expanded && ScreenRecord.replaying
+                        ActionButton {
+                            symbol: "stop"
+                            symbolColor: Appearance.colors.colError
+                            releaseAction: () => ScreenRecord.toggleReplay()
+                        }
                     }
                 }
             }
 
-            // --- Portal permissions -----------------------------------------
-            ColumnLayout {
-                visible: root.expanded
-                Layout.fillWidth: true
-                Layout.topMargin: Appearance.spacing.space50
-                spacing: Appearance.spacing.space25
+            Reveal {
+                shown: root.expanded
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -362,62 +408,82 @@ StyledPopup {
                     }
                 }
 
-                Repeater {
-                    model: CaptureControl.permissions
-                    delegate: ColumnLayout {
-                        id: permissionEntry
-                        required property var modelData
-                        Layout.fillWidth: true
-                        spacing: 0
-                        visible: permissionEntry.modelData.apps.length > 0
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Appearance.spacing.space25
 
-                        Repeater {
-                            model: permissionEntry.modelData.apps
-                            delegate: RowLayout {
-                                id: permissionAppRow
-                                required property var modelData
-                                Layout.fillWidth: true
-                                Layout.leftMargin: Appearance.font.pixelSize.large + Appearance.spacing.space50
-                                spacing: Appearance.spacing.space50
+                    Repeater {
+                        model: CaptureControl.permissions
+                        delegate: ColumnLayout {
+                            id: permissionEntry
+                            required property var modelData
+                            Layout.fillWidth: true
+                            spacing: 0
+                            visible: permissionEntry.modelData.apps.length > 0
 
-                                StyledText {
+                            Repeater {
+                                model: permissionEntry.modelData.apps
+                                delegate: RowLayout {
+                                    id: permissionAppRow
+                                    required property var modelData
                                     Layout.fillWidth: true
-                                    text: permissionAppRow.modelData.app
-                                    wrapMode: Text.Wrap
-                                    elide: Text.ElideMiddle
-                                    color: Appearance.colors.colOnSurfaceVariant
-                                    opacity: 0.75
-                                    font.pixelSize: Appearance.font.pixelSize.smaller
-                                }
-                                ActionButton {
-                                    symbol: "block"
-                                    symbolColor: Appearance.colors.colError
-                                    releaseAction: () => CaptureControl.revokePermission(
-                                        permissionEntry.modelData.id, permissionAppRow.modelData.app)
+                                    Layout.leftMargin: root.rowIndent
+                                    spacing: Appearance.spacing.space50
+
+                                    StyledText {
+                                        Layout.fillWidth: true
+                                        text: permissionAppRow.modelData.app
+                                        wrapMode: Text.Wrap
+                                        elide: Text.ElideMiddle
+                                        color: Appearance.colors.colOnSurfaceVariant
+                                        opacity: 0.75
+                                        font.pixelSize: Appearance.font.pixelSize.smaller
+                                    }
+                                    ActionSlot {
+                                        on: root.expanded
+                                        ActionButton {
+                                            symbol: "block"
+                                            symbolColor: Appearance.colors.colError
+                                            releaseAction: () => CaptureControl.revokePermission(
+                                                permissionEntry.modelData.id, permissionAppRow.modelData.app)
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                StyledText {
-                    // Honest about its own reach: only portal-mediated apps
-                    // have anything to revoke, so an empty list is the normal
-                    // state on a system without sandboxed apps - not a failure,
-                    // and not a claim that nothing has the microphone.
-                    visible: CaptureControl.permissions.every(p => p.apps.length === 0)
-                    Layout.fillWidth: true
-                    Layout.leftMargin: Appearance.font.pixelSize.large + Appearance.spacing.space50
-                    text: Translation.tr("Nothing granted through the desktop portal. Apps that open the device directly do not appear here.")
-                    wrapMode: Text.Wrap
-                    color: Appearance.colors.colOnSurfaceVariant
-                    opacity: 0.55
-                    font.pixelSize: Appearance.font.pixelSize.smallest
+                    StyledText {
+                        // Honest about its own reach: only portal-mediated apps
+                        // have anything to revoke, so an empty list is the
+                        // normal state on a system without sandboxed apps - not
+                        // a failure, and not a claim that nothing is recording.
+                        visible: CaptureControl.permissions.every(p => p.apps.length === 0)
+                        Layout.fillWidth: true
+                        Layout.leftMargin: root.rowIndent
+                        text: Translation.tr("Nothing granted through the desktop portal. Apps that open the device directly do not appear here.")
+                        wrapMode: Text.Wrap
+                        color: Appearance.colors.colOnSurfaceVariant
+                        opacity: 0.55
+                        font.pixelSize: Appearance.font.pixelSize.smallest
+                    }
                 }
             }
         }
     }
 
     // Read the store when the controls are actually opened, not on every hover.
-    onExpandedChanged: if (root.expanded) CaptureControl.refreshPermissions()
+    onExpandedChanged: {
+        if (root.expanded) CaptureControl.refreshPermissions();
+        // Hand the card over to the content for the length of the change, and
+        // take it back afterwards so entering and leaving the card still
+        // animate the way every other bar popup does.
+        root.contentDrivesSize = true;
+        depthSettle.restart();
+    }
+
+    property Timer depthSettle: Timer {
+        interval: root.revealDuration + 60
+        onTriggered: root.contentDrivesSize = false
+    }
 }
