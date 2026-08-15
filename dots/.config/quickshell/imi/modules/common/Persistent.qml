@@ -89,6 +89,12 @@ Singleton {
 
             property JsonObject record: JsonObject {
                 property bool enable: false
+                // The geometry a region recording was started with, "X,Y WxH",
+                // or empty for a full-screen one. Persisted beside `enable`
+                // because the recording outlives the shell: record.sh owns the
+                // process, so a shell restart mid-capture has to be able to
+                // find its way back to the rectangle being recorded.
+                property string region: ""
             }
 
             property JsonObject overlay: JsonObject {

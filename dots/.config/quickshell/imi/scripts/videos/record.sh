@@ -15,12 +15,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 cfg() { jq -r "$1 // empty" "$CONFIG_FILE" 2>/dev/null; }
 
+# Writes the whole record.* block: the flag and the region it applies to.
+#
+# One writer, deliberately. The shell also owns this file, and it rewrites it
+# wholesale from its own in-memory copy - so a region written from QML right
+# after launching this script lands on top of the `enable = true` written here
+# milliseconds earlier, and the recording indicator never comes on. The region
+# is known here anyway; it has no business making the round trip.
 set_recording_state() {
-    local state=$1 tmp
+    local state=$1 region=${2-} tmp
     mkdir -p "$(dirname "$STATE_FILE")"
     [[ -f "$STATE_FILE" ]] || echo '{}' > "$STATE_FILE"
     tmp=$(mktemp)
-    jq ".record.enable = $state" "$STATE_FILE" > "$tmp" && mv "$tmp" "$STATE_FILE"
+    jq --arg region "$region" ".record.enable = $state | .record.region = \$region" \
+        "$STATE_FILE" > "$tmp" && mv "$tmp" "$STATE_FILE"
 }
 
 # Toggle: a recording we started is running -> stop it gracefully and exit.
@@ -174,7 +182,7 @@ fi
 "${ARGS[@]}" &
 GSR_PID=$!
 echo "$GSR_PID" > "$PIDFILE"
-set_recording_state true
+set_recording_state true "$REGION"
 notify-send "Recording started" "$(basename "$OUT")" -a 'Recorder' & disown
 
 # Block until gsr exits (stop toggle, crash, or logout) so the pidfile and the
@@ -182,4 +190,4 @@ notify-send "Recording started" "$(basename "$OUT")" -a 'Recorder' & disown
 # notification comes from the -sc hook with the real path.
 wait "$GSR_PID"
 rm -f "$PIDFILE"
-set_recording_state false
+set_recording_state false ""

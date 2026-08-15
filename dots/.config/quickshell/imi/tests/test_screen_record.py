@@ -58,7 +58,18 @@ class RecordScriptTests(unittest.TestCase):
         self.assertEqual(out, "640x480+100+200")
 
     def test_maintains_recording_state_for_bar_indicator(self):
-        self.assertIn('".record.enable = $state"', self.script)
+        self.assertIn(".record.enable = $state", self.script)
+
+    def test_state_writes_the_flag_and_the_region_together(self):
+        # The shell rewrites this file wholesale from its own copy, so a region
+        # written from QML after launching the script lands on top of the
+        # `enable = true` written here and the recording indicator never comes
+        # on. One writer: the flag and the region go in the same jq update.
+        self.assertIn(".record.region = \\$region", self.script)
+        self.assertIn('jq --arg region "$region"', self.script)
+        # A full-screen capture stores no region, and must not inherit the last.
+        self.assertIn('set_recording_state true "$REGION"', self.script)
+        self.assertIn('set_recording_state false ""', self.script)
 
     def test_saved_hook_wired(self):
         self.assertIn("gsr-saved.sh", self.script)
