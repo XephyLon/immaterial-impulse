@@ -161,6 +161,13 @@ hl.layer_rule({ match = { namespace = "quickshell:popup" }, xray = false}) -- No
 hl.layer_rule({ match = { namespace = "quickshell:popup" }, ignore_alpha = 1}) -- No weird color for bar tooltips (but somehow this is necessary)
 hl.layer_rule({ match = { namespace = "quickshell:mediaControls" }, ignore_alpha = 1}) -- Same as above
 hl.layer_rule({ match = { namespace = "quickshell:reloadPopup" }, animation = "slide"})
+-- The recording controls are a small toolbar in a window that is mostly
+-- transparent: the extra room is for the toolbar's own shadow. The
+-- catch-all above blurs anything over 5% alpha, which frosts that shadow
+-- into a haze the size of the window. Same treatment as the popup and
+-- overlay surfaces, and for the same reason.
+hl.layer_rule({ match = { namespace = "quickshell:recordingRegion" }, ignore_alpha = 1})
+hl.layer_rule({ match = { namespace = "quickshell:recordingRegion" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:regionSelector" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:screenshot" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:session" }, blur = true})
