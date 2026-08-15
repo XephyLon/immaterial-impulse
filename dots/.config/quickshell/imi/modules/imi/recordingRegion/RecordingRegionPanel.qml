@@ -16,7 +16,14 @@ import "recording_region.js" as RecordingRegion
  * stop, pause and (while the replay buffer is armed) save-clip beside the
  * region, for as long as the recording runs.
  *
- * The window is exactly the size of the toolbar and sits OUTSIDE the region.
+ * Built from the same pieces as the region selector's own toolbar - `Toolbar`,
+ * `IconToolbarButton`, `ToolbarPairedFab` - so it is the shell's M3 expressive
+ * toolbar rather than a pill with icons in it: 56dp container on the surface
+ * container role, full corner, its own shadow, 22dp icons in 40dp targets, and
+ * the destructive action separated out as a paired FAB the way the selector
+ * separates its close.
+ *
+ * The window is exactly the size of the controls and sits OUTSIDE the region.
  * gsr records whatever the compositor shows inside the rectangle, so anything
  * drawn over it would be in every frame of a clip that cannot be re-taken -
  * see recording_region.js, which refuses to place the toolbar at all rather
@@ -27,6 +34,12 @@ Scope {
 
     readonly property var region: RecordingRegion.parseRegion(Persistent.states.record.region)
     readonly property bool active: ScreenRecord.recording && root.region !== null
+
+    // The room the shadows need around the controls. The window has to include
+    // it - a layer surface clips at its own bounds - and the gap to the region
+    // has to clear it too, because a soft shadow bleeding over the edge of the
+    // capture is as recorded as the toolbar itself would be.
+    readonly property real shadowMargin: Appearance.sizes.elevationMargin
 
     // The screen the region is on, by its top-left corner: a region dragged
     // across a monitor boundary belongs to the monitor it started on, which is
@@ -41,8 +54,22 @@ Scope {
         return Quickshell.screens[0] ?? null;
     }
 
-    readonly property real toolbarWidth: toolbarMetrics.implicitWidth
-    readonly property real toolbarHeight: toolbarMetrics.implicitHeight
+    // The controls' width, published by the instance inside the window.
+    //
+    // It cannot be measured out here: a layout that is not in a scene is never
+    // polished, so its implicit size stays zero, and placing the window from
+    // that would centre a zero-width toolbar. The window is therefore sized by
+    // its content and POSITIONED from the size that content reports - which is
+    // not circular, because the width does not depend on where the window is.
+    // Until the first report the window is off-centre by half its width for a
+    // frame, which is invisible: it is appearing at that moment anyway.
+    property real measuredWidth: 0
+
+    // The container height is fixed by the toolbar itself (Toolbar.qml's 56dp
+    // M3 expressive height), so the only question placement needs answered
+    // before the window exists - does it fit above or below - has a constant
+    // answer and does not wait on a measurement.
+    readonly property real controlsHeight: 56
 
     readonly property var spot: {
         if (!root.active || !root.targetScreen) return null;
@@ -50,20 +77,95 @@ Scope {
             root.region,
             { x: root.targetScreen.x, y: root.targetScreen.y,
               width: root.targetScreen.width, height: root.targetScreen.height },
-            { width: root.toolbarWidth, height: root.toolbarHeight },
-            Appearance.spacing.space100);
+            { width: root.measuredWidth, height: root.controlsHeight },
+            Appearance.spacing.space100 + root.shadowMargin);
     }
 
-    // Measured off-window so the placement has a size to work with before the
-    // window exists - the toolbar's own width decides where the window goes,
-    // and a window cannot be positioned by something it contains.
-    Item {
-        id: toolbarMetrics
-        visible: false
-        implicitWidth: Appearance.spacing.space100 * 2
-            + 36 * (2 + (ScreenRecord.replaying ? 1 : 0))
-            + Appearance.spacing.space50 * (1 + (ScreenRecord.replaying ? 1 : 0))
-        implicitHeight: 44
+    component RecordingControls: RowLayout {
+        spacing: Appearance.spacing.space100
+
+        Toolbar {
+            padding: Appearance.spacing.space100
+
+            // Non-interactive: what the capture is doing, in the one place the
+            // capture cannot show it. It breathes while running and holds
+            // still when paused, so the state is readable without reading.
+            Item {
+                Layout.fillHeight: true
+                Layout.leftMargin: Appearance.spacing.space50
+                implicitWidth: statusIcon.implicitWidth
+
+                MaterialSymbol {
+                    id: statusIcon
+                    anchors.centerIn: parent
+                    text: ScreenRecord.recordPaused ? "pause_circle" : "screen_record"
+                    iconSize: 22
+                    color: ScreenRecord.recordPaused
+                        ? Appearance.colors.colOnSurfaceVariant
+                        : Appearance.colors.colError
+                    animateChange: true
+
+                    SequentialAnimation on opacity {
+                        running: !ScreenRecord.recordPaused
+                        loops: Animation.Infinite
+                        alwaysRunToEnd: true
+                        NumberAnimation {
+                            to: 0.4
+                            duration: Appearance.animationCurves.expressiveDefaultSpatialDuration
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+                        }
+                        NumberAnimation {
+                            to: 1
+                            duration: Appearance.animationCurves.expressiveDefaultSpatialDuration
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+                        }
+                    }
+                }
+            }
+
+            IconToolbarButton {
+                text: ScreenRecord.recordPaused ? "play_arrow" : "pause"
+                toggled: ScreenRecord.recordPaused
+                releaseAction: () => ScreenRecord.togglePauseRecord()
+                StyledToolTip {
+                    text: ScreenRecord.recordPaused
+                        ? Translation.tr("Resume recording")
+                        : Translation.tr("Pause recording")
+                }
+            }
+
+            IconToolbarButton {
+                // Only while the replay ring buffer is armed: this dumps the
+                // last N seconds to their own clip and leaves both the buffer
+                // and this recording running.
+                visible: ScreenRecord.replaying
+                text: "save"
+                releaseAction: () => ScreenRecord.saveReplay()
+                StyledToolTip {
+                    text: Translation.tr("Save replay clip")
+                }
+            }
+        }
+
+        ToolbarPairedFab {
+            // Paired off to the side, the way the selector pairs its close: it
+            // ends the thing the rest of the toolbar is adjusting, so it should
+            // not sit in the same row of equals. Error rather than tertiary,
+            // because stopping is the one action here that cannot be undone.
+            Layout.alignment: Qt.AlignVCenter
+            iconText: "stop"
+            baseSize: 48
+            colBackground: Appearance.colors.colErrorContainer
+            colBackgroundHover: Appearance.colors.colErrorContainerHover
+            colRipple: Appearance.colors.colErrorContainerActive
+            colOnBackground: Appearance.colors.colOnErrorContainer
+            onClicked: ScreenRecord.stopRecord()
+            StyledToolTip {
+                text: Translation.tr("Stop recording")
+            }
+        }
     }
 
     LazyLoader {
@@ -78,84 +180,31 @@ Scope {
             WlrLayershell.layer: WlrLayer.Overlay
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
             exclusionMode: ExclusionMode.Ignore
-            implicitWidth: root.toolbarWidth
-            implicitHeight: root.toolbarHeight
+            implicitWidth: controls.implicitWidth + root.shadowMargin * 2
+            implicitHeight: controls.implicitHeight + root.shadowMargin * 2
             // Anchored to the corner and pushed out by the margin, because a
             // layer surface has no coordinates of its own. The margins are
-            // screen-relative; the placement is in global coordinates.
+            // screen-relative and back off by the shadow inset, so the controls
+            // themselves land exactly where the placement put them.
             anchors { top: true; left: true }
             margins {
-                top: (root.spot?.y ?? 0) - (root.targetScreen?.y ?? 0)
-                left: (root.spot?.x ?? 0) - (root.targetScreen?.x ?? 0)
+                top: (root.spot?.y ?? 0) - (root.targetScreen?.y ?? 0) - root.shadowMargin
+                left: (root.spot?.x ?? 0) - (root.targetScreen?.x ?? 0) - root.shadowMargin
             }
 
-            Rectangle {
-                anchors.fill: parent
-                radius: Appearance.rounding.full
-                color: Appearance.colors.colLayer0
-                border.width: Appearance.borderWidth.standard
-                border.color: Appearance.colors.colLayer0Border
+            RecordingControls {
+                id: controls
+                anchors.centerIn: parent
+            }
 
-                RowLayout {
-                    anchors.centerIn: parent
-                    spacing: Appearance.spacing.space50
-
-                    // Says which of the two states the capture is in, in a
-                    // place where the recording itself cannot show it.
-                    MaterialSymbol {
-                        Layout.leftMargin: Appearance.spacing.space50
-                        text: ScreenRecord.recordPaused ? "pause_circle" : "screen_record"
-                        iconSize: Appearance.font.pixelSize.large
-                        color: ScreenRecord.recordPaused
-                            ? Appearance.colors.colOnSurfaceVariant
-                            : Appearance.colors.colError
-                    }
-
-                    RippleButton {
-                        implicitWidth: 36
-                        implicitHeight: 36
-                        buttonRadius: Appearance.rounding.full
-                        releaseAction: () => ScreenRecord.togglePauseRecord()
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: ScreenRecord.recordPaused ? "play_arrow" : "pause"
-                            iconSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnSurfaceVariant
-                        }
-                    }
-
-                    RippleButton {
-                        // Stop keeps the file - record.sh writes it out on
-                        // stop, so there is no separate save for a recording.
-                        implicitWidth: 36
-                        implicitHeight: 36
-                        buttonRadius: Appearance.rounding.full
-                        releaseAction: () => ScreenRecord.stopRecord()
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "stop"
-                            iconSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colError
-                        }
-                    }
-
-                    RippleButton {
-                        // Only while the replay ring buffer is armed: this
-                        // dumps the last N seconds to their own clip and
-                        // leaves both the buffer and this recording running.
-                        visible: ScreenRecord.replaying
-                        implicitWidth: 36
-                        implicitHeight: 36
-                        buttonRadius: Appearance.rounding.full
-                        releaseAction: () => ScreenRecord.saveReplay()
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "save"
-                            iconSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colPrimary
-                        }
-                    }
-                }
+            // Reported back out so the placement can centre the window on the
+            // region. A Binding rather than an assignment, so the value tracks
+            // a toolbar that changes width - save-clip appearing when the
+            // replay buffer is armed mid-recording.
+            Binding {
+                target: root
+                property: "measuredWidth"
+                value: controls.implicitWidth
             }
         }
     }
