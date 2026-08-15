@@ -121,8 +121,20 @@ MouseArea {
         }
     }
 
-    // Hover popup listing what's in use, instead of a cramped multi-line tooltip.
+    // Hover reads, click acts. The pinned state lives here rather than inside
+    // the popup because the popup is a declaration with no surface of its own -
+    // the overlay hosts it - so the widget that was clicked is what owns the
+    // decision to keep it open.
+    property bool controlsPinned: false
+    onClicked: root.controlsPinned = !root.controlsPinned
+    // A click anywhere outside the card unpins, which is what the overlay's
+    // focus grab reports.
+    onShownChanged: if (!shown) root.controlsPinned = false
+
     PrivacyIndicatorPopup {
+        id: privacyPopup
         hoverTarget: root
+        pinnedOpen: root.controlsPinned
+        onDismissRequested: root.controlsPinned = false
     }
 }
