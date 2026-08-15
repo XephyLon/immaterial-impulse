@@ -526,10 +526,31 @@ PanelWindow {
             }
         }
 
+        // The loupe, so an edge can be framed by the pixel rather than by eye.
+        // Samples the same frozen grim frame the crop will use - see
+        // Magnifier.qml for why not a live screencopy.
+        Magnifier {
+            z: 10000
+            shown: root.phase === RegionSelection.Phase.Select
+                && root.screenshotReady
+                && !root.pointerOverChrome
+                && Config.options.regionSelector.magnifier.enable
+            source: root.screenshotSource
+            pointerX: mouseArea.mouseX
+            pointerY: mouseArea.mouseY
+            frameWidth: root.width
+            frameHeight: root.height
+            zoom: Config.options.regionSelector.magnifier.zoom
+            // The shape says what a click would take: a region being dragged,
+            // or the window the pointer has locked onto.
+            framing: root.dragging
+            onWindow: !root.dragging && root.targetedRegionValid()
+        }
+
         // The thing to the bottom-right with an icon
         CursorGuide {
             z: 9999
-            visible: root.phase === RegionSelection.Phase.Select
+            shown: root.phase === RegionSelection.Phase.Select && !root.pointerOverChrome
             x: root.dragging ? root.regionX + root.regionWidth : mouseArea.mouseX
             y: root.dragging ? root.regionY + root.regionHeight : mouseArea.mouseY
             action: root.action

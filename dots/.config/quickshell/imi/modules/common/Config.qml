@@ -1315,6 +1315,11 @@ Singleton {
                     property real contentRegionOpacity: 0.8
                     property int selectionPadding: 5
                 }
+                // The loupe shown at the cursor while a region is framed.
+                property JsonObject magnifier: JsonObject {
+                    property bool enable: true
+                    property real zoom: 6
+                }
                 property JsonObject rect: JsonObject {
                     property bool showAimLines: true
                 }
