@@ -79,14 +79,36 @@ Scope {
     // answer and does not wait on a measurement.
     readonly property real controlsHeight: 56
 
-    readonly property var spot: {
+    // Two placements, split on purpose.
+    //
+    // `fit` answers "is there room, and on which side" using only the fixed
+    // container height, so it does NOT depend on the measured width - and the
+    // window's existence depends only on `fit`. Feeding the loader from a
+    // value that the loader's own content produces is a cycle, and QML said so:
+    // "Binding loop detected for property spot".
+    //
+    // `spot` then adds the horizontal placement, which does use the measured
+    // width. Nothing gates on it, so a width that arrives a frame later moves
+    // the window instead of re-creating it.
+    readonly property var fit: {
         if (!root.active || !root.targetScreen) return null;
         return RecordingRegion.placeToolbar(
             root.region,
             { x: root.targetScreen.x, y: root.targetScreen.y,
               width: root.targetScreen.width, height: root.targetScreen.height },
+            { width: 0, height: root.controlsHeight },
+            Appearance.spacing.space100 + root.shadowMargin);
+    }
+
+    readonly property var spot: {
+        if (!root.fit || !root.targetScreen) return null;
+        const placed = RecordingRegion.placeToolbar(
+            root.region,
+            { x: root.targetScreen.x, y: root.targetScreen.y,
+              width: root.targetScreen.width, height: root.targetScreen.height },
             { width: root.measuredWidth, height: root.controlsHeight },
             Appearance.spacing.space100 + root.shadowMargin);
+        return placed ?? root.fit;
     }
 
     component RecordingControls: RowLayout {
@@ -171,7 +193,7 @@ Scope {
     }
 
     LazyLoader {
-        active: root.active && root.spot !== null
+        active: root.active && root.fit !== null
 
         PanelWindow {
             id: toolbarWindow
