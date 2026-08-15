@@ -12,12 +12,15 @@ Singleton {
 
     property bool micActive: false
     property var micApps: []
+    // Per-stream detail for the privacy panel's actions: name, pactl index,
+    // PipeWire node id, pid, mute state.
+    property var micStreams: []
     property bool cameraActive: false
     property var cameraApps: []
 
     function parseSourceOutputs(text: string): var {
         const raw = (text ?? "").trim();
-        if (raw.length === 0) return { active: false, apps: [] };
+        if (raw.length === 0) return { active: false, apps: [], streams: [] };
         try {
             const arr = JSON.parse(raw);
             if (Array.isArray(arr)) return root._fromJsonSourceOutputs(arr);
@@ -35,6 +38,7 @@ Singleton {
 
     function _fromJsonSourceOutputs(arr: var): var {
         const apps = [];
+        const streams = [];
         for (const item of arr) {
             if (!item || item.corked === true) continue;
             const props = item.properties ?? {};
@@ -44,13 +48,22 @@ Singleton {
             if (!isClientStream) continue;
             const rawName = props["application.name"] ?? props["media.name"] ?? props["node.name"];
             const name = root.resolveAppName(rawName, props["application.process.binary"]);
-            if (name && apps.indexOf(name) === -1) apps.push(name);
+            if (!name) continue;
+            if (apps.indexOf(name) === -1) apps.push(name);
+            streams.push({
+                name: name,
+                index: item.index,
+                nodeId: props["object.id"] ?? null,
+                pid: props["application.process.id"] ?? null,
+                muted: item.mute === true,
+            });
         }
-        return { active: apps.length > 0, apps: apps };
+        return { active: apps.length > 0, apps: apps, streams: streams };
     }
 
     function _fromTextSourceOutputs(text: string): var {
         const apps = [];
+        const streams = [];
         const blocks = text.split(/Source Output #/).slice(1);
         for (const block of blocks) {
             if (!/Corked:\s*no/i.test(block)) continue;
@@ -65,9 +78,20 @@ Singleton {
             const binaryMatch = block.match(/application\.process\.binary\s*=\s*"([^"]*)"/);
             const name = root.resolveAppName(nameMatch ? nameMatch[1] : null,
                 binaryMatch ? binaryMatch[1] : null);
-            if (name && apps.indexOf(name) === -1) apps.push(name);
+            if (!name) continue;
+            if (apps.indexOf(name) === -1) apps.push(name);
+            const indexMatch = block.match(/^\s*(\d+)/);
+            const nodeMatch = block.match(/object\.id\s*=\s*"(\d+)"/);
+            const pidMatch = block.match(/application\.process\.id\s*=\s*"(\d+)"/);
+            streams.push({
+                name: name,
+                index: indexMatch ? parseInt(indexMatch[1], 10) : null,
+                nodeId: nodeMatch ? nodeMatch[1] : null,
+                pid: pidMatch ? pidMatch[1] : null,
+                muted: /Mute:\s*yes/i.test(block),
+            });
         }
-        return { active: apps.length > 0, apps: apps };
+        return { active: apps.length > 0, apps: apps, streams: streams };
     }
 
     function parsePids(text: string): var {
