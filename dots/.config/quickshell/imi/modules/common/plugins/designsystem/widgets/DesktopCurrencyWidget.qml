@@ -285,7 +285,22 @@ Item {
                 id: basePrefix
                 objectName: "currencyBasePrefix"
                 readonly property var slot: Geometry.basePrefixRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
-                readonly property var lastSlot: slot ?? ({ x: x, y: y, size: font.pixelSize })
+                // The last settled slot, HELD rather than read back off the
+                // item. `slot ?? ({ ..., size: font.pixelSize })` looks like
+                // the same thing, but while the slot is null the fallback
+                // reads the very property it feeds - QML reported the loop on
+                // font.pixelSize. Holding the values means the element still
+                // fades out from exactly where it was, without asking itself
+                // where that is.
+                property real heldX: 0
+                property real heldY: 0
+                property real heldSize: font.pixelSize
+                onSlotChanged: if (slot !== null) {
+                    heldX = slot.x;
+                    heldY = slot.y;
+                    heldSize = slot.size;
+                }
+                readonly property var lastSlot: slot ?? ({ x: heldX, y: heldY, size: heldSize })
                 x: lastSlot.x
                 y: lastSlot.y
                 Behavior on x { SpanTravel {} }
