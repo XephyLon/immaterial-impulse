@@ -23,6 +23,14 @@ import "recording_region.js" as RecordingRegion
  * the destructive action separated out as a paired FAB the way the selector
  * separates its close.
  *
+ * No tooltips on these buttons, deliberately. A StyledToolTip is a Controls
+ * Popup, and a Popup renders in the overlay of the window it belongs to - which
+ * here is a window the exact size of the toolbar. The tooltip has nowhere to go
+ * except on top of the buttons, it arrives with no delay, and while it is up it
+ * takes the pointer: arrow cursor, clicks swallowed. The selector's toolbar gets
+ * away with tooltips because its window is the whole screen and they have room
+ * above. If these controls ever need labels, they need a surface of their own.
+ *
  * The window is exactly the size of the controls and sits OUTSIDE the region.
  * gsr records whatever the compositor shows inside the rectangle, so anything
  * drawn over it would be in every frame of a clip that cannot be re-taken -
@@ -134,11 +142,6 @@ Scope {
                 text: ScreenRecord.recordPaused ? "play_arrow" : "pause"
                 toggled: ScreenRecord.recordPaused
                 releaseAction: () => ScreenRecord.togglePauseRecord()
-                StyledToolTip {
-                    text: ScreenRecord.recordPaused
-                        ? Translation.tr("Resume recording")
-                        : Translation.tr("Pause recording")
-                }
             }
 
             IconToolbarButton {
@@ -148,9 +151,6 @@ Scope {
                 visible: ScreenRecord.replaying
                 text: "save"
                 releaseAction: () => ScreenRecord.saveReplay()
-                StyledToolTip {
-                    text: Translation.tr("Save replay clip")
-                }
             }
         }
 
@@ -167,9 +167,6 @@ Scope {
             colRipple: Appearance.colors.colErrorContainerActive
             colOnBackground: Appearance.colors.colOnErrorContainer
             onClicked: ScreenRecord.stopRecord()
-            StyledToolTip {
-                text: Translation.tr("Stop recording")
-            }
         }
     }
 
