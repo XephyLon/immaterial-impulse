@@ -16,6 +16,19 @@ QtObject {
     // Interactive popups can remain open after the pointer leaves the bar.
     // Passive users retain the original hover-only behavior.
     property bool pinnedOpen: false
+
+    // Set while this popup is animating its OWN size - a card that changes
+    // depth in place, rather than one being swapped for another.
+    //
+    // The card normally eases its width and height to whatever it is showing.
+    // If the content is easing too, the card's Behavior is chasing a value that
+    // is still moving: it trails the whole way, and since the content is
+    // centred in the card, the parts that overhang get clipped - a header
+    // vanishing off the top for the length of the transition. While this is
+    // set the card takes the content's size directly, so the single animation
+    // is the content's own and the card is exactly as big as what it holds on
+    // every frame.
+    property bool contentDrivesSize: false
     readonly property bool targetHovered: hoverTarget?.containsMouse ?? false
     property bool popupHovered: false
     property bool hoverHeld: false
