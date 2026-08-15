@@ -27,10 +27,30 @@ Toolbar {
     signal captureFullScreen()
 
     // The capture KIND, read off the action rather than stored twice - the
-    // action enum already says whether this is a shot or a recording, and a
-    // second copy of that fact is a second thing to keep in step.
-    readonly property bool recording: root.action === RegionSelection.SnipAction.Record
-        || root.action === RegionSelection.SnipAction.RecordWithSound
+    // action enum already says whether this is a shot or a recording.
+    //
+    // Recomputed in a handler rather than bound. `action` is a two-way
+    // Synchronizer property: this toolbar writes it and the selector writes it
+    // back, so a binding derived from it has its own dependency reassigned
+    // partway through the chain it starts - which is what QML was reporting as
+    // a binding loop on this property and on the tab bars' index below.
+    property bool recording: false
+    function kindFromAction() {
+        root.recording = root.action === RegionSelection.SnipAction.Record
+            || root.action === RegionSelection.SnipAction.RecordWithSound;
+        const index = root.recording ? 1 : 0;
+        if (kindBar.currentIndex !== index) kindBar.currentIndex = index;
+    }
+    function modeFromSelection() {
+        const index = root.selectionMode === RegionSelection.SelectionMode.RectCorners ? 0 : 1;
+        if (tabBar.currentIndex !== index) tabBar.currentIndex = index;
+    }
+    onActionChanged: root.kindFromAction()
+    onSelectionModeChanged: root.modeFromSelection()
+    Component.onCompleted: {
+        root.kindFromAction();
+        root.modeFromSelection();
+    }
 
     // Shot or recording. Both then take whichever TARGET the row beside this
     // one chooses, which is what makes six options out of two controls.
@@ -40,9 +60,6 @@ Toolbar {
             {"icon": "photo_camera", "name": Translation.tr("Shot")},
             {"icon": "videocam", "name": Translation.tr("Record")}
         ]
-        readonly property int kindIndex: root.recording ? 1 : 0
-        onKindIndexChanged: if (currentIndex !== kindIndex) currentIndex = kindIndex
-        Component.onCompleted: currentIndex = kindIndex
         onCurrentIndexChanged: {
             const wanted = currentIndex === 1
                 ? RegionSelection.SnipAction.Record
@@ -71,13 +88,9 @@ Toolbar {
             {"icon": "activity_zone", "name": Translation.tr("Rect")},
             {"icon": "gesture", "name": Translation.tr("Circle")}
         ]
-        // currentIndex aliases TabBar's own property, which the TabBar writes to
-        // as well, so binding it here while also writing back from the change
-        // handler is a binding loop. Sync both directions imperatively instead.
-        readonly property int modeIndex: root.selectionMode === RegionSelection.SelectionMode.RectCorners ? 0 : 1
-
-        onModeIndexChanged: if (currentIndex !== modeIndex) currentIndex = modeIndex
-        Component.onCompleted: currentIndex = modeIndex
+        // Driven from the toolbar's own handlers (see modeFromSelection): the
+        // index is never bound to `selectionMode`, only assigned to it and
+        // from it, so neither direction is a binding that can loop.
         onCurrentIndexChanged: {
             const newMode = currentIndex === 0 ? RegionSelection.SelectionMode.RectCorners : RegionSelection.SelectionMode.Circle;
             if (root.selectionMode !== newMode)
