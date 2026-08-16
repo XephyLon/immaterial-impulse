@@ -70,6 +70,18 @@ before it lands.** Every estimate below includes the check the change would need
 
 ## 2. What they have that we do not
 
+> **Re-verify the "Ours" column before you act on a row.** This survey read their
+> tree far more carefully than it read ours, and the tables are asymmetric because
+> of it: every claim about *their* code came from opening the file, while a good
+> number of "none"s in the Ours column came from a search that did not find
+> something. Three were wrong and are corrected in place — the OLED saver (§2.4),
+> the Bluetooth connect UI (§2.2) and the quick-toggle editor (§3.3 #3, where a
+> pattern of ours was called a defect that this repo had already measured and
+> cleared). Two more were undercounts. Nothing here says the remaining rows are
+> wrong; it says they carry less evidence than they look like they do. Before
+> porting anything, grep our tree for the capability under a name we would have
+> chosen, not under theirs, and read the module you find.
+
 ### 2.1 The dynamic island — their signature feature
 
 `modules/ii/dynamicIsland/` — 18 files, **8,068 lines**. First commit `P3DROVFX`,
@@ -701,7 +713,30 @@ Their repository was cloned to `/tmp/p3drovfx` — outside this repo and any
 worktree. Six parallel read-only investigations covered the dynamic island and
 popup cluster; the search launcher; phone and audio devices; window management and
 session behaviour; settings and configuration infrastructure; and the long tail of
-integrations. Every claim above is grounded in a file that was opened; the four
-findings in §3.3 were each re-verified by hand in our tree.
+integrations. Every claim about *their* tree is grounded in a file that was
+opened; the four findings in §3.3 were each re-verified by hand in ours.
+
+**Where the method was weak, stated plainly: the "Ours" column.** Their side was
+read; our side was largely searched. That produced two distinct failures, both
+corrected above and both worth naming because they will recur in the next survey.
+
+- **A search that finds nothing became "none".** §2.4 priced their OLED saver as a
+  new module for us while `modules/imi/screensaver/` was sitting in the tree —
+  per-screen, OLED-purposed in its own comment, with IPC verbs — and the row
+  contradicted itself in the same cell without that being noticed. §2.2's Bluetooth
+  row did the same thing one step further along: it opened *a* file of ours
+  (`services/BluetoothStatus.qml`), correctly observed no connect signals there,
+  and concluded we cannot connect, when the UI does it through Quickshell's own
+  `BluetoothDevice`. Search our tree for the *capability* under a name we would
+  have chosen, and when a search comes back empty, say "not found" rather than
+  "none".
+- **Reading a pattern is not knowing its history.** §3.3 #3 confirmed that the
+  quick-toggle editor's code says what the finding said it says, and stopped —
+  inheriting a premise about QML list notification that this repo had already
+  measured and disproved, in commits a `git log -S` over the same file would have
+  surfaced. `CONTRIBUTING.md`'s "A missing thing is a decision until proven
+  otherwise" applies to a shape that looks wrong as much as to a thing that is
+  absent: before calling one a defect, find out whether someone already changed it
+  and why it changed back.
 
 `tests/run_tests.sh` on this branch: **757 passed, 0 failed, 0 skipped**.
