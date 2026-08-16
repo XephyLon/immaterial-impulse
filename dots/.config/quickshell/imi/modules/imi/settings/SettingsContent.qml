@@ -129,10 +129,16 @@ Item {
             if (GlobalStates.settingsPage === "") return
             
             let parts = GlobalStates.settingsPage.split(":");
-            let pageName = parts[0];
+            let pageId = parts[0];
             let searchTerm = parts.length > 1 ? parts[1] : "";
 
-            const idx = root.pages.findIndex(p => p.name.toLowerCase() === pageName.toLowerCase());
+            // Addressed by the page's stable `id`, never by its `name`: every
+            // name in the catalogue is a Translation.tr() call, so a link
+            // matched on one resolves only while the shell is in English. In any
+            // other language findIndex returns -1, the handler below clears
+            // GlobalStates.settingsPage regardless, and the window opens on
+            // whatever page was last shown - no error, no log line, no retry.
+            const idx = root.pages.findIndex(p => p.id === pageId);
 
             if (idx >= 0) {
                 root.currentPage = idx;

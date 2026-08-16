@@ -60,7 +60,7 @@ Singleton {
     Process {
         id: keywordHarvester
         property var pendingPages: []
-        property string currentPageName: ""
+        property string currentPageId: ""
         
         function startHarvesting() {
             root.settingsKeywordsCache = {}; 
@@ -82,7 +82,7 @@ Singleton {
             
             command = ["bash", "-c", rawCommand];
             
-            keywordHarvester.currentPageName = currentPage.page;
+            keywordHarvester.currentPageId = currentPage.id;
             running = true;
         }
 
@@ -93,7 +93,7 @@ Singleton {
         stdout: SplitParser {
             onRead: data => {
                 let cache = root.settingsKeywordsCache;
-                cache[keywordHarvester.currentPageName] = (cache[keywordHarvester.currentPageName] || "") + " " + data;
+                cache[keywordHarvester.currentPageId] = (cache[keywordHarvester.currentPageId] || "") + " " + data;
                 root.settingsKeywordsCache = cache;
             }
         }
@@ -120,29 +120,28 @@ Singleton {
 
     property var settingsKeywordsCache: ({})
 
-    // One entry per page SettingsContent actually declares, named exactly as it
-    // names them. Three of the eight entries this replaces ("Bar", "Desktop",
-    // "Interface") matched no page in that catalogue, so their results opened
-    // the settings window on whatever page was last shown; "Interface" also
-    // pointed the keyword harvest at InterfaceConfig.qml, which has not existed
-    // for some time - a grep over a missing file exits non-zero with no output,
-    // and the harvester ignores its exit code, so that page contributed no
-    // section keywords and said nothing about it.
+    // One entry per page SettingsContent declares. `id` is the address - its
+    // stable page id - while `name` is what the user reads and types at, so a
+    // translated shell still matches on the noun on screen and the link itself
+    // does not move with the language. `path` is only the file the section
+    // keywords are harvested from; a grep over a missing file writes nothing
+    // and the harvester ignores its exit code, so a stale path here reads
+    // exactly like a page with no sections.
     property var settingsIndex: [
-        { page: "Quick",               path: "QuickConfig.qml" },
-        { page: "Appearance",          path: "AppearanceConfig.qml" },
-        { page: "Cursor",              path: "CursorConfig.qml" },
-        { page: "Wallpaper & Desktop", path: "BackgroundConfig.qml" },
-        { page: "Bar & Dock",          path: "BarConfig.qml" },
-        { page: "Sidebars & Panels",   path: "SidebarsPanelsConfig.qml" },
-        { page: "Notifications",       path: "NotificationsConfig.qml" },
-        { page: "Lock & Idle",         path: "LockIdleConfig.qml" },
-        { page: "Capture",             path: "CaptureConfig.qml" },
-        { page: "General",             path: "GeneralConfig.qml" },
-        { page: "Services",            path: "ServicesConfig.qml" },
-        { page: "Widgets",             path: "PluginsPage.qml" },
-        { page: "Hyprland",            path: "HyprlandConfig.qml" },
-        { page: "About",               path: "About.qml" },
+        { id: "quick",             name: Translation.tr("Quick"),               path: "QuickConfig.qml" },
+        { id: "appearance",        name: Translation.tr("Appearance"),          path: "AppearanceConfig.qml" },
+        { id: "cursor",            name: Translation.tr("Cursor"),              path: "CursorConfig.qml" },
+        { id: "wallpaper-desktop", name: Translation.tr("Wallpaper & Desktop"), path: "BackgroundConfig.qml" },
+        { id: "bar-dock",          name: Translation.tr("Bar & Dock"),          path: "BarConfig.qml" },
+        { id: "sidebars-panels",   name: Translation.tr("Sidebars & Panels"),   path: "SidebarsPanelsConfig.qml" },
+        { id: "notifications",     name: Translation.tr("Notifications"),       path: "NotificationsConfig.qml" },
+        { id: "lock-idle",         name: Translation.tr("Lock & Idle"),         path: "LockIdleConfig.qml" },
+        { id: "capture",           name: Translation.tr("Capture"),             path: "CaptureConfig.qml" },
+        { id: "general",           name: Translation.tr("General"),             path: "GeneralConfig.qml" },
+        { id: "services",          name: Translation.tr("Services"),            path: "ServicesConfig.qml" },
+        { id: "widgets",           name: Translation.tr("Widgets"),             path: "PluginsPage.qml" },
+        { id: "hyprland",          name: Translation.tr("Hyprland"),            path: "HyprlandConfig.qml" },
+        { id: "about",             name: Translation.tr("About"),               path: "About.qml" },
     ]
 
     // Load user action scripts from ~/.config/immaterial-impulse/actions/
@@ -540,14 +539,14 @@ Singleton {
         const settingsQuery = root.query.toLowerCase().trim();
 
         const settingsResults = root.settingsIndex.reduce((acc, page) => {
-            const dynamicKeywords = (root.settingsKeywordsCache[page.page] || "").toLowerCase();
+            const dynamicKeywords = (root.settingsKeywordsCache[page.id] || "").toLowerCase();
             const query = root.query.toLowerCase().trim();
             if (query === "") return acc;
 
-            if (page.page.toLowerCase().includes(query) || dynamicKeywords.includes(query)) {
+            if (page.name.toLowerCase().includes(query) || dynamicKeywords.includes(query)) {
                 acc.push(resultComp.createObject(null, {
-                    name: page.page,
-                    comment: dynamicKeywords.includes(query) ? "Section: " + query : "Settings for " + page.page,
+                    name: page.name,
+                    comment: dynamicKeywords.includes(query) ? "Section: " + query : "Settings for " + page.name,
                     verb: Translation.tr("Go"),
                     type: Translation.tr("Settings"),
                     iconName: "settings",
@@ -555,7 +554,7 @@ Singleton {
                     execute: () => {
                         GlobalStates.settingsOpen = true;
                         Qt.callLater(() => {
-                            GlobalStates.settingsPage = page.page + ":" + query;
+                            GlobalStates.settingsPage = page.id + ":" + query;
                         });
                         root.query = "";
                     }
