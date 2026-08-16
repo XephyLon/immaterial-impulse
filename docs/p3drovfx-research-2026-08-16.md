@@ -496,6 +496,15 @@ them:
 - `modules/common/PanelSchedule.qml` (42) + the `PanelLoader` ticket gate. Pure
   scheduling; touches nothing visual.
 - ~~`modules/ii/oledSaver/OledSaver.qml` (178)~~ — **not a port at all; see §2.4.**
+  **Landed.** All three deltas are closed against our own module, with nothing
+  taken from theirs: a `GlobalShortcut` bound to `CTRL+SUPER+L`, a per-monitor
+  state list beside the all-screens idle flag, and an idle inhibitor held only
+  by the deliberate path. The one thing the survey did not predict is that the
+  inhibitor must *not* be held by the idle path, which their single-mode saver
+  has no way to express. afb1c7ea5 ("feat(screensaver): blank one named
+  monitor, not every screen"), a6c57a0b2 ("feat(screensaver): give the
+  on-demand blank a key that reaches it"), 83544dedb ("feat(idle): a
+  deliberately blanked monitor holds the keep-awake").
   We already have the module, and it is the same shape: one `GlobalStates`
   property, a `Variants` blackout window, an `IpcHandler`. Dropping their file in
   would ship a second screensaver. What is worth taking is the two pieces ours
@@ -614,7 +623,7 @@ Ordered by value to the user per unit of work. Sizes are new-code estimates for
 | 9 | **EasyEffects state verification** | Fixes a toggle of ours that lies when the launch fails | Tiny, ~70-line diff |
 | 10 | **Local plugin registration + reload IPC verb** | The friction that keeps third-party widgets from existing; does not weaken our installer's security model | Small-medium, ~200 lines |
 | 11 | **Idle: timed keep-awake sessions** | Composes with our `autoOnExternalMonitor`; the absolute-epoch-deadline detail is worth copying verbatim | Small, ~180 net-new + chips UI |
-| 12 | **OLED saver: finish the one we have** (§2.4) | Not a new module — bind a key to the `show`/`hide`/`toggle` verbs `modules/imi/screensaver/` already exposes, let it target one monitor instead of all of them, and give it an idle inhibitor so a deliberate blank does not fall through hypridle's lock/DPMS/suspend ladder. Ranked here, not at 8: that rank priced it as a new module on a survey row that wrongly read "none" | Small, ~80–120 lines against an existing module |
+| 12 | ~~**OLED saver: finish the one we have**~~ (§2.4) — **done**, see below | Not a new module — bind a key to the `show`/`hide`/`toggle` verbs `modules/imi/screensaver/` already exposes, let it target one monitor instead of all of them, and give it an idle inhibitor so a deliberate blank does not fall through hypridle's lock/DPMS/suspend ladder. Ranked here, not at 8: that rank priced it as a new module on a survey row that wrongly read "none" | Small, ~80–120 lines against an existing module |
 | 13 | **`CommandsService` + a cheatsheet page** | A genuinely new feature with no equivalent anywhere in ours | Medium, ~550 lines |
 | 14 | **In-UI update log via `systemd-run`** | Solves the shell-kills-its-own-updater problem properly and removes hardcoded `kitty`/`fish`. Pair with an update-available indicator, which is *easier* for us since we keep a real checkout | Medium, ~330 lines |
 | 15 | **Scratchpad-empty overlay** | Cheapest self-contained module in their tree | Small, ~170 lines |
