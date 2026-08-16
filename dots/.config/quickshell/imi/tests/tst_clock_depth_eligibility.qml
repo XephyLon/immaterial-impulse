@@ -19,6 +19,7 @@ TestCase {
             enable: true,
             maskPath: "/cache/clock-depth/abc.png",
             optedOut: false,
+            selecting: false,
             weActive: false,
             wallpaperIsVideo: false,
             centeredWallpaper: false,
@@ -50,6 +51,25 @@ TestCase {
         // The decline marker and the mask are files beside each other, and a
         // mask left there must not outvote the user's last word.
         compare(showing({ optedOut: true }), false);
+    }
+
+    function test_an_armed_desktop_selection_refuses() {
+        // The selection surface draws the CANDIDATE over the same widgets at
+        // the same geometry. Left on, the accepted mask underneath it would be
+        // a second silhouette, and wherever the two disagree the difference
+        // reads as the candidate having claimed something it did not - a
+        // verdict given against a composite of two masks.
+        compare(showing({ selecting: true }), false);
+    }
+
+    function test_an_armed_selection_refuses_even_with_everything_else_perfect() {
+        // Deliberately separate from the case above: `selecting` is checked
+        // BEFORE the mask, so a state with no mask would refuse anyway and the
+        // check above would pass with the clause deleted if the fixture drifted.
+        compare(ClockDepth.eligible({
+            enable: true, maskPath: "/cache/clock-depth/abc.png",
+            optedOut: false, selecting: true
+        }), false);
     }
 
     function test_a_live_wallpaper_engine_project_refuses() {

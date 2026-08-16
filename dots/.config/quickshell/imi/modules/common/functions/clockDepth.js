@@ -27,6 +27,12 @@ function eligible(state) {
     // The per-wallpaper opt-out. Checked before the mask, so a declined mask
     // left on disk beside its marker cannot come back.
     if (s.optedOut) return false;
+    // The desktop selector is drawing the CANDIDATE at full size over these
+    // same widgets. The accepted mask underneath it would be a second
+    // silhouette arguing with the one being judged, and where the two disagree
+    // the difference reads as the candidate having claimed something it did
+    // not - which is a verdict given against the wrong picture.
+    if (s.selecting) return false;
     if (!s.maskPath) return false;
     // A live Wallpaper Engine project is a moving surface with no file to
     // segment, and a mask of the frozen greeter still would be a stale
