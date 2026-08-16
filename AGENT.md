@@ -422,6 +422,13 @@ services/                  Singletons wrapping external state/processes - one pe
                               flatpak): without Prism the script never runs, `available` stays
                               false, and the '%' prefix plus its settings row disappear. Launches
                               by instance FOLDER name, which is not the display name
+  AppUsage.qml                 Launch history for the launcher's frecency ranking, in
+                              Directories.appUsagePath. The arithmetic is services/frecency.js
+                              (five time-window buckets over a bounded per-app timestamp list);
+                              this owns the file, the atomic write and the degradation. Keyed on
+                              the DESKTOP-ENTRY id, which is not services/DockLaunchTracker.qml's
+                              Wayland app_id - the two stores stay separate, and the dock's launch
+                              buttons record here through the desktop entry they already hold
   Notifications.qml            org.freedesktop.Notifications server + notification history
   Notes.qml                    The note store: a JSON array in Directories.notesPath. Sole owner -
                               the bundled `notes` desktop plugin (one instance per monitor) and the
@@ -1109,6 +1116,43 @@ two places. `cavaBands.js` averages the source bands falling in each output band
 and interpolates when upsampling, and returns zeros at the requested length for an absent spectrum
 so a consumer's bar model keeps its shape while cava is not running.
 bcf5f9ca1 ("refactor(cava): move every band consumer onto the one service").
+
+**A side effect inside a binding runs once per re-evaluation, and a binding that reads what the
+side effect produces re-evaluates because of it.** `services/LauncherSearch.qml` spawned `qalc`
+from inside the `results` binding, which re-evaluates on every keystroke — and again when
+`mathResult` lands, because the same binding reads the property the spawned process writes. So
+every non-prefixed query started a calculator, repeatedly, to be told that an application name is
+not a number: measured with a counting stub first on `PATH`, typing "firefox" started **8**
+processes and "2+2\*10" started **7**, the extra one in each being the feedback re-fire. The file
+search next to it already knew better and says so in a comment — the scan is kicked from
+`onQueryChanged` precisely because calling it from the binding would loop. The general rule is
+that anything a results binding *starts* belongs in the handler for the input that justifies
+starting it, and the decision has to be answerable from that input alone (`services/math_query.js`,
+which inspects characters and deliberately does not `eval()` the query to find out whether it is
+arithmetic). ("feat(search): decide whether a query is arithmetic before spawning qalc").
+
+**A property that a change handler reads must not be a binding on the same source the handler
+hangs off.** Nothing orders a `onXChanged` handler against the re-evaluation of a
+`readonly property bool` derived from `x`, so the handler sees the *previous* value. A gate
+written as `readonly property bool queryIsMath: isMathQuery(query, ...)` and read from
+`onQueryChanged` was one keystroke stale: the first character of every expression was dropped and
+"2+2\*10" reached qalc as "2+", "2+2", … It reads as a debounce, not as a bug. Call the predicate
+where it is needed instead of binding it. ("feat(search): decide whether a query is arithmetic
+before spawning qalc").
+
+**Turning a binding into a `Qt.callLater` rebuild buys coalescing and costs the dependency
+tracking, so the tracking has to be written out and checked.** `LauncherSearch.results` is a plain
+property now — every row is a `createObject`, and as a binding the whole list was rebuilt once per
+input change rather than once per user action (a keystroke, the desktop-entry registry populating,
+fourteen asynchronous settings-keyword greps, an fd scan and a qalc answer were five rebuilds
+around one edit). What replaces QML's own tracking is `resultInputs`, a binding that touches every
+value the builder reads and schedules the rebuild when any of them moves; be generous with it,
+because firing is one array of references. Under-observation here is silent — the list simply
+stops refreshing when that source answers, which for the asynchronous ones is the entire reason to
+observe them — so `tests/test_launcher_result_inputs.py` fails the suite on a singleton the builder
+reads that the tracker does not name, or forces it into a reviewed exemption. Only values read
+while *building* belong there; what a row's `execute` closure reads is read when the user picks the
+row. ("perf(search): rebuild the launcher results once per turn, not per input change").
 
 ## Dynamic/data-driven QML gotchas
 
