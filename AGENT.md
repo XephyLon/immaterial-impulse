@@ -2315,19 +2315,54 @@ inset into the containers' `x`/`y` instead would fold a second meaning into the
 four properties the parallax animates, the frost samples by and every clamp
 measures against, which is b710ef731's defect in a new place. Three things the
 mode is built out of are worth not re-deriving:
-- **The inset is derived, not chosen** (`modules/common/functions/edit_mode.js`):
-  the desktop shrinks by exactly the drawer's declared width plus a margin, so
-  the drawer opens into space that already exists. It takes the drawer's WIDTH
-  and has no input for whether the drawer is open — a viewport that changed size
+- **The SIZE is derived and the POSITION is dead centre, and keeping those two
+  apart is the whole of it** (`modules/common/functions/edit_mode.js`). The
+  desktop shrinks by at least the drawer's declared width plus a margin, so the
+  drawer opens into space that already exists; it takes the drawer's WIDTH and
+  has no input for whether the drawer is open — a viewport that changed size
   mid-edit would rescale every widget under the cursor and hand every `Behavior`
-  carrying the box a moving target.
+  carrying the box a moving target. But the reservation is spent when the drawer
+  arrives, not held back from the start: a geometry that put it into the resting
+  `x` made the entry a slide as well as a shrink, symmetric on no frame
+  including the last, and no choice of pre-drawer inset repairs that because the
+  asymmetry is in the shape of the animation. A centred geometry's offset is
+  linear in `(1 - scale)`, so `atProgress` multiplying it by the same `t` as the
+  scale is exactly the centring offset of the intermediate scale — the margins
+  are equal in pairs on every frame, which `tst_edit_mode.qml` asserts as
+  arithmetic and `test_edit_mode_chrome.py` measures off the drawn desktop at
+  half progress. **And the scale has a ceiling** (`MAX_SCALE`): the derivation
+  is right while the drawer is a meaningful fraction of the width and stops
+  being one as the screen widens — 380px of drawer on 5120px left the desktop at
+  92%, which is the mode's whole signal spent on a border. A ceiling cannot
+  break the derivation, because shrinking further only makes the drawer's slot
+  larger.
 - **The blurred backdrop cannot be the lock's `blurLoader` with a second gate**,
   which is what the spec asked for: that loader is a *child* of
   `parallaxViewport`, so it takes the edit transform and shrinks along with the
-  desktop it is meant to sit behind. It is a sibling `Loader` at `z: -1` sharing
-  one `WallpaperBlurBackdrop` component with the lock's, and it works because a
+  desktop it is meant to sit behind. It is a sibling `Loader` sharing one
+  `WallpaperBlurBackdrop` component with the lock's, and it works because a
   `ShaderEffectSource` renders its source item in that item's OWN coordinates —
   a transformed wallpaper still yields an untransformed texture.
+- **That backdrop is drawn ABOVE the desktop, cut out to a rounded rect, and
+  that is the only cheap way to round the desktop's corner**
+  (`modules/imi/background/EditModeCard.qml`). QML has no rounded clip and the
+  desktop is three separately transformed siblings, so no property on any of
+  them rounds a corner, and wrapping all three in one masked layer pushes the
+  wallpaper through an effect for every frame of the shrink — the cost the
+  transform was chosen to avoid. Covering the corner with what is behind it is
+  identical to drawing the backdrop behind everywhere except the four corners,
+  and it gives the drop shadow somewhere honest to live: inside the same cut,
+  over the backdrop, so only the half outside the card survives and its interior
+  never darkens the desktop it is lifting. Two things measured rather than
+  argued while building it. The shadow stays `StyledRectangularShadow` at the
+  magnitude the component defines — raising `blur` from 9 to 40 on a 4403px card
+  spreads the same darkness over four times the distance and the two renders are
+  indistinguishable, because the edge contrast comes from `colShadow`'s alpha
+  and most of a `RectangularShadow` sits under its target, which the cut
+  removes. And the chrome stands down through **two** gates, the Loader's
+  `active` and its `opacity`: either alone hides it, so a frame comparison
+  passes on a tree with one of them deleted, which is why
+  `test_edit_mode_contract.py` names both.
 - **The per-widget frost is stood down for the mode, not aligned to it**
   (`PluginWidget.frostSuspended`, the generalisation of what used to be
   `lockCoversFrost`). Measured on a live desktop with a Wallpaper Engine scene:
@@ -2335,9 +2370,23 @@ mode is built out of are worth not re-deriving:
   transform, because the frost's sample rect is computed from three frames the
   transform does not move together. Suspending it is the difference between a
   deliberate look and a broken one nothing logs — and it is why proxy
-  rectangles, the spec's fallback, are not needed.
+  rectangles, the spec's fallback, are not needed. It is also the one thing the
+  mode changes in a single frame rather than easing, deliberately: a frost is a
+  sample rect that stops being valid the instant the transform starts, so fading
+  it out fades out a picture that is wrong for the whole fade.
+- **The lattice is a substrate, and it says so** (`WidgetCanvas.qml`'s `lattice`
+  item at `z: -1`). The desktop widgets arrive as EXTERNAL children of the
+  canvas — `Background.qml`'s `Repeater` over the plugin manifests — so nothing
+  in `WidgetCanvas.qml` decides whether they are drawn over the grid; the order
+  is a consequence of when each `Repeater`'s model filled. A widget whose panel
+  is translucent, which every desktop widget is and which this mode makes more
+  so by standing the frost down, then has a crisp full-strength line running
+  across it, and a line is a foreground cue whatever is really in front.
 (feat(editMode): shrink the desktop into a viewport on the background surface,
-feat(editMode): stand the per-widget frost down for the mode.)
+feat(editMode): stand the per-widget frost down for the mode,
+feat(editMode): draw the shrunk desktop as a card, not as a cropped screenshot,
+feat(editMode): shrink the desktop about dead centre, and move it only for the drawer,
+feat(widgetCanvas): the lattice is a substrate, and it dissolves at the edges.)
 
 **The clock depth layer is the counter-case to that rule, and it is why it is a
 FOURTH sibling.** `widgetCanvas` sits at `z: 2` as a sibling of
@@ -2756,6 +2805,23 @@ freezes the shell (this is exactly what a bulk token migration did to `ConfigRow
 (run by `tests/run_tests.sh` and CI) guards against reintroducing it.
 
 **Strict UI Guidelines:** See [`docs/M3_GUIDELINES.md`](docs/M3_GUIDELINES.md) for the definitive rules on tokens, rounding, layering, and expressive motion that all new components must follow.
+
+**Take a motion tier whole, because half of one is silently a generic curve.**
+`NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration }` reads as compliant —
+it names a token, it has no literal — and leaves `easing.type` at Qt's default, which is
+`Easing.Linear`: exactly the generic curve `docs/M3_GUIDELINES.md` §2 forbids. Every resize grip in
+the shell faded in linearly that way beside neighbours easing on `expressiveEffects`, and nothing
+about the source shows it. Use the tier's own component
+(`animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)`), which
+carries the duration, the type and the curve together. Two neighbouring shapes of the same mistake:
+a duration written as a literal that happens to match a *different* tier's number (Edit Mode's entry
+was `duration: 400` beside `expressiveDefaultSpatial`, which is 500ms's curve at 400ms's clock — a
+third timing nothing else in the shell moves at), and an element given no transition at all beside
+ones that have them, which is what "not M3E-compliant" usually turns out to mean when someone says
+it about a screen rather than about a line. Note `elementMoveEnter`/`elementMoveExit` both carry
+`alwaysRunToEnd`, so they are wrong for anything the user can reverse mid-flight — a mode toggled
+twice inside its own duration finishes arriving before it starts leaving.
+(fix(editMode): take the motion tiers whole instead of half of one each.)
 
 **The sidebar's bottom widget group has a fixed height, and that is load-bearing.**
 `BottomWidgetGroup.qml`'s `expandedHeight` is a constant (352) rather than a binding on its
