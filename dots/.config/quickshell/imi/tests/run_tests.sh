@@ -324,6 +324,15 @@ if ! python3 "$SCRIPT_DIR/lint_harness_compositor_reach.py"; then
     exit 1
 fi
 
+# A harness that stopped checking still reports `failures: 0`, and its driver
+# still passes. Every verdict therefore states how many checks ran, and every
+# driver asserts that number as a literal it holds itself.
+echo "Running harness check-count lint..."
+if ! python3 "$SCRIPT_DIR/lint_harness_check_counts.py"; then
+    echo "Harness check-count lint failed."
+    exit 1
+fi
+
 echo "Running settings search index tests..."
 if ! python3 "$SCRIPT_DIR/test_settings_search_index.py"; then
     echo "Settings search index tests failed."
