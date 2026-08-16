@@ -258,14 +258,16 @@ Scope {
                             // Hover opens the quick submenu; a CLICK goes to the
                             // full Settings page. It used to just close the menu -
                             // a dead click on a row drawn like a button.
-                            // settingsPage is matched by page NAME in
-                            // SettingsContent (an index here goes stale the day a
-                            // page is inserted - the plugin context menu shipped
-                            // that bug with a hardcoded index).
+                            // settingsPage carries the page's stable `id` from
+                            // SettingsContent's catalogue - not its display name,
+                            // which is translated, and not an index, which goes
+                            // stale the day a page is inserted (the plugin
+                            // context menu shipped that bug with a hardcoded
+                            // index).
                             onClicked: {
                                 GlobalStates.desktopMenuOpen = false
                                 GlobalStates.settingsOpen = true
-                                GlobalStates.settingsPage = "Wallpaper & Desktop"
+                                GlobalStates.settingsPage = "wallpaper-desktop"
                             }
                         }
 
@@ -304,7 +306,7 @@ Scope {
                             onClicked: {
                                 GlobalStates.desktopMenuOpen = false
                                 GlobalStates.settingsOpen = true
-                                GlobalStates.settingsPage = "Widgets"
+                                GlobalStates.settingsPage = "widgets"
                             }
                         }
 
