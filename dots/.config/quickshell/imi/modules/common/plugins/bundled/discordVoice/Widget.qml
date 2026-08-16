@@ -124,8 +124,6 @@ Rectangle {
                         fill: DiscordVoice.muted ? 1 : 0
                         color: DiscordVoice.muted ? Appearance.colors.colErrorContainer : Appearance.colors.colSecondaryContainer
                         colSymbol: DiscordVoice.muted ? Appearance.colors.colOnErrorContainer : Appearance.colors.colOnSecondaryContainer
-                        scale: parent?.down ? 0.88 : (parent?.hovered ? 1.08 : 1)
-                        Behavior on scale { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutBack } }
                     }
                     StyledToolTip { text: DiscordVoice.muted ? "Unmute" : "Mute" }
                 }
@@ -145,8 +143,6 @@ Rectangle {
                         fill: DiscordVoice.deafened ? 1 : 0
                         color: DiscordVoice.deafened ? Appearance.colors.colErrorContainer : Appearance.colors.colTertiaryContainer
                         colSymbol: DiscordVoice.deafened ? Appearance.colors.colOnErrorContainer : Appearance.colors.colOnTertiaryContainer
-                        scale: parent?.down ? 0.88 : (parent?.hovered ? 1.08 : 1)
-                        Behavior on scale { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutBack } }
                     }
                     StyledToolTip { text: DiscordVoice.deafened ? "Undeafen" : "Deafen" }
                 }
