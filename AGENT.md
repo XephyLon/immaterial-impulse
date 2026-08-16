@@ -305,6 +305,58 @@ Four things around that are worth not re-deriving:
   both *and* whose 3×3 neighbourhood is uniform (which kills subpixel edges), and report RMSE plus
   what code 255 became.
 
+**A sound event is one `pw-play` on a path the shell resolved, and neither half of that sentence
+was true before.** `Audio.playSystemSound()` built
+`/usr/share/sounds/<theme>/stereo/<event>.oga` and the same with `.ogg`, spawned an `ffplay` at
+each, and let the wrong one fail silently. Measured against the six themes on this machine, that
+guess is wrong in four distinguishable ways at once, and none of them reaches a log: no theme ships
+both extensions for the same event, so the second spawn is *always* wasted (~50 ms, ~38 ms CPU,
+53 MiB peak, 165 shared objects mapped, to print `No such file or directory`); `oxygen` and
+`harmony2` are `.ogg`-only while the other four are `.oga`, so which of the two is the wasted one is
+a property of the theme; `Pop` declares `Directories=stereo/alert stereo/action stereo/notification`
+and keeps every file under those, so a hardcoded `stereo/` reached 0 of its 25 sounds and that theme
+was **entirely silent**; and with no `Inherits=` walk, `oxygen` — which ships neither `complete` nor
+`suspend-error` — lost the battery-charged chime and the suspend-failure alert even with
+`freedesktop` installed beside it. `~/.local/share/sounds` was never searched at all.
+
+Three things about the replacement generalise past sound.
+
+- **Playback stays a process spawn even though QtMultimedia works here.** Probed with `qml6`: it
+  decodes and plays a `.oga` fine. It also takes a bare QtQuick process from 65 MiB / 133 mapped
+  shared objects to **113 MiB / 238** and keeps it there for the life of the shell whether or not a
+  sound is ever played, writes a three-line ffmpeg `Input #0, ogg, from '<path>'` decode banner to
+  stderr on *every* play, and floods five multi-kilobyte `spaVisitChoice: parse error` lines from
+  PipeWire when the first player is constructed — all of it into the `log.log` this document tells
+  you to tail. A spawn is 6.3 ms of CPU, freed on exit, and is a command list a test can read. Prefer
+  the mechanism you can observe.
+- **`pw-play`, not `ffplay`, and the reason is dependency declaration rather than taste.** `pw-play`
+  ships in `pipewire-audio`, a hard dependency of the `pipewire-pulse` that `sdata/deps-info.md`
+  lists; `ffplay` comes from `ffmpeg`, which this repo installs only inside the Wallpaper Engine
+  build's dependency list and names nowhere as a shell dependency. It is also 7.4x cheaper (15
+  mapped libraries against 165). Before adding a `Process` command here, check `sdata/deps-info.md`
+  for the binary rather than for whether your machine happens to have it.
+- **The engine is three pieces so that the decisions are testable.** `scripts/sounds/
+  scan-sound-themes.py` reports what is on disk and judges nothing — it does not even filter by
+  extension, because "that file is not a sound" is a judgement and `ocean` ships
+  `power-unplug.oga.license` beside its sounds to catch anyone making it loosely.
+  `services/sound_theme.js` makes every decision and touches no disk. `services/SoundTheme.qml`
+  owns only the process lifetimes. That split is what lets `tests/tst_sound_theme.qml` cover the
+  `Inherits=` walk (breadth-first with a visited set, so a cycle terminates and a diamond is visited
+  once), the implicit fallback to the default theme, the per-theme subdirectory list, and the
+  `.disabled` marker — which stops the walk rather than falling through, since inheriting past it
+  plays a *wrong* sound rather than a missing one.
+
+`SoundTheme` is also a live instance of the "a singleton is constructed on first use" trap under
+[Runtime model](#runtime-model--read-this-before-assuming-anything-about-building-or-compiling): the
+only thing that reaches it is a `play()` call, so the theme scan has not *started* when the first
+sound is asked for. Measured with a `qs -p` probe — a `play()` from `Component.onCompleted` reports
+`ready=false pending=1`, and a moment later `ready=true pending=0` with one `pw-play` carrying the
+resolved path. It holds up to four events and flushes them from the scan's `onExited` rather than
+from a successful parse, so a scan that fails outright still clears the queue.
+8b31496c3 ("feat(sounds): a testable XDG sound-theme resolver"),
+cbd8e707e ("feat(sounds): scan the sound-theme roots into one catalogue"),
+a3a8f65cf ("fix(sounds): play one resolved file instead of two guessed ones").
+
 ## The suite checkout, and why the updater cannot just reset it
 
 `get.sh` keeps the whole suite in `~/.local/share/immaterial-impulse/src` (`Directories.suiteSrc`),
@@ -400,7 +452,15 @@ modules/imi/                 The "imi" (Immaterial Impulse) panel family - one d
   sessionScreen/, onScreenKeyboard/, wallpaperSelector/, verticalBar/, desktopMenu/
 
 services/                  Singletons wrapping external state/processes - one per concern:
-  Audio.qml                  PipeWire default sink/source wrapper (Quickshell.Services.Pipewire)
+  Audio.qml                  PipeWire default sink/source wrapper (Quickshell.Services.Pipewire).
+                              Devices and volume only - it does not play sounds
+  SoundTheme.qml             The shell's sound events, as an XDG sound-theme engine. Three pieces
+                              on purpose: scripts/sounds/scan-sound-themes.py reports what is on
+                              disk and decides nothing, services/sound_theme.js decides everything
+                              and touches no disk (event name -> file, the Inherits= walk, the
+                              subdirectory and extension rules, the .disabled marker), and this
+                              singleton owns the process lifetimes. Playback is a spawned
+                              `pw-play` - see "External binaries the shell drives"
   ResourceUsage.qml           Polls /proc/meminfo, /proc/stat, df, nvidia-smi on a timer
   HyprlandData.qml            Polls `hyprctl clients/monitors/layers/workspaces -j` on Hyprland IPC
                               events - the source of truth for "what does hyprctl currently see",
