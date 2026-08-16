@@ -17,25 +17,31 @@ import QtQuick
  * reporting it when they stop - which is the `activeStill` shape.
  *
  * `status` is stdlib-only and loads no model, so a query costs a ~35ms process
- * spawn and never reaches ONNX Runtime. Segmentation is only ever reached from
- * an explicit user action; nothing here can start one.
+ * spawn and never reaches ONNX Runtime. `runModel` is the only thing that loads
+ * one, it costs seconds and a gigabyte, and it is reachable only from the
+ * wallpaper selector's picker - nothing reactive here can start a run.
  *
- * Nothing runs at all while `background.clockDepth.enable` is false, which is
- * the default - so a machine that has never turned the feature on pays nothing
- * for it, and neither does a wallpaper that has no mask once it is on.
+ * Nothing runs at all until either `background.clockDepth.enable` (default
+ * false) or the picker is open, so a machine that has never used depth pays
+ * nothing for it, and neither does a wallpaper that has no mask once it is on.
  */
 Singleton {
     id: root
 
     readonly property bool enabled: Config.options.background.clockDepth?.enable ?? false
+    // Set by the picker while it is on screen. The cache is queried while EITHER
+    // this or the global switch is on: with only the switch, opening the picker
+    // on a machine that has never enabled depth would show nothing and be unable
+    // to accept anything - which is the one order every new user arrives in.
+    property bool picking: false
+    readonly property bool watching: root.enabled || root.picking
 
     // The wallpaper on screen, not the one in the config: the selector previews
     // by path while the user arrows through the grid, and a mask belonging to
     // the previous wallpaper drawn over this one is a silhouette in the wrong
     // place rather than a missing effect.
-    readonly property string wallpaperPath: root.enabled
-        ? (Wallpapers.previewPath || Wallpapers.confirmedPath || Config.options.background.wallpaperPath)
-        : ""
+    readonly property string wallpaperPath:
+        Wallpapers.previewPath || Wallpapers.confirmedPath || Config.options.background.wallpaperPath
 
     // One of: "" (nothing asked yet), "absent", "candidate", "none",
     // "accepted", "declined", "unreadable", "error".
@@ -53,6 +59,55 @@ Singleton {
 
     property string queriedPath: ""
 
+    // The picker's side. Everything below is reached only from a button.
+    readonly property list<string> models: ["isnet-anime", "isnet-general-use"]
+    // "" while nothing is running, otherwise the model being segmented. The
+    // picker disables itself on this rather than on a bare boolean, so it can
+    // say WHICH model is running - a run is 1.3 to 4.5 seconds and a button that
+    // only greys out reads as a hang.
+    property string running: ""
+    property string lastError: ""
+    // model -> "candidate" | "none", for models this session has run or found.
+    property var results: ({})
+
+    signal runFinished(string model, string state)
+
+    // Deliberately not driven by anything reactive. Segmentation costs ~1GB of
+    // transient RSS and produces an unusable mask about a third of the time, so
+    // it is a user action and can only ever be one; nothing observes a wallpaper
+    // change and starts one.
+    function runModel(model: string): void {
+        if (root.running !== "" || root.wallpaperPath === "")
+            return
+        root.lastError = ""
+        root.running = model
+        maskProcess.command = ["bash", "-c",
+            `source "\${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV}/bin/activate" && ` +
+            `python3 '${Directories.scriptPath}/background/subject_mask.py' run ` +
+            `'${StringUtils.shellSingleQuoteEscape(root.wallpaperPath)}' --model ${model}`]
+        maskProcess.running = true
+    }
+
+    function acceptModel(model: string): void {
+        root.verdict(["accept", "--model", model])
+    }
+
+    function declineWallpaper(): void {
+        root.verdict(["decline"])
+    }
+
+    function verdict(args: list<string>): void {
+        if (root.wallpaperPath === "")
+            return
+        // python3 rather than the venv: both verdicts only move files around,
+        // and a venv that has not been built must not be what stops the user
+        // saying no to a mask.
+        verdictProcess.command = ["python3",
+            `${Directories.scriptPath}/background/subject_mask.py`,
+            args[0], root.wallpaperPath].concat(args.slice(1))
+        verdictProcess.running = true
+    }
+
     function refresh(): void {
         // Unconditional by design, and cheap because of it: the picker pokes
         // this after an accept or a decline, where the path has not changed but
@@ -61,15 +116,29 @@ Singleton {
         queryDebounce.restart()
     }
 
+    function forget(): void {
+        root.state = ""
+        root.key = ""
+        root.maskPath = ""
+        root.candidates = ({})
+        root.results = ({})
+        root.queriedPath = ""
+    }
+
     onWallpaperPathChanged: {
-        if (root.wallpaperPath === "") {
-            root.state = ""
-            root.key = ""
-            root.maskPath = ""
-            root.candidates = ({})
-            return
-        }
+        // Both halves matter. A new wallpaper has a different key, so every
+        // cached answer here is about the wrong picture until the next query
+        // says otherwise - and clearing rather than keeping means the moment
+        // between the two draws nothing instead of the previous subject.
+        root.forget()
         queryDebounce.restart()
+    }
+
+    onWatchingChanged: {
+        if (root.watching)
+            queryDebounce.restart()
+        else
+            root.forget()
     }
 
     Timer {
@@ -80,7 +149,8 @@ Singleton {
         id: queryDebounce
         interval: 200
         onTriggered: {
-            if (root.wallpaperPath === "" || root.wallpaperPath === root.queriedPath)
+            if (!root.watching || root.wallpaperPath === ""
+                || root.wallpaperPath === root.queriedPath)
                 return
             root.queriedPath = root.wallpaperPath
             statusProcess.running = false
@@ -118,6 +188,56 @@ Singleton {
                 root.key = parsed.key ?? ""
                 root.maskPath = parsed.state === "accepted" ? (parsed.mask ?? "") : ""
                 root.candidates = parsed.candidates ?? ({})
+            }
+        }
+    }
+
+    Process {
+        id: maskProcess
+        stdout: StdioCollector {
+            id: maskCollector
+            onStreamFinished: {
+                const model = root.running
+                root.running = ""
+                let parsed = null
+                try {
+                    parsed = JSON.parse(maskCollector.text)
+                } catch (error) {
+                    parsed = null
+                }
+                if (!parsed || parsed.state === "error") {
+                    root.lastError = parsed?.error
+                        ?? Translation.tr("Could not run the segmentation model.")
+                    root.runFinished(model, "error")
+                    return
+                }
+                // A copy rather than a mutation: assigning into a `var` object
+                // in place raises no change signal, so the picker would keep
+                // showing the state before the run it just triggered.
+                const next = Object.assign({}, root.results)
+                next[model] = parsed.state === "none" ? "none" : "candidate"
+                root.results = next
+                root.refresh()
+                root.runFinished(model, parsed.state)
+            }
+        }
+    }
+
+    Process {
+        id: verdictProcess
+        stdout: StdioCollector {
+            id: verdictCollector
+            onStreamFinished: {
+                let parsed = null
+                try {
+                    parsed = JSON.parse(verdictCollector.text)
+                } catch (error) {
+                    parsed = null
+                }
+                if (!parsed || parsed.state === "error")
+                    root.lastError = parsed?.error
+                        ?? Translation.tr("Could not record that choice.")
+                root.refresh()
             }
         }
     }

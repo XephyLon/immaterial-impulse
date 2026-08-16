@@ -24,6 +24,7 @@ MouseArea {
     property bool filterFieldFocused: false
     property string wallpaperEngineSearch: ""
     property bool workshopLoadedThisOpen: false
+    property bool depthPickerOpen: false
 
     function loadWorkshopOnce() {
         if (source !== "wallpaperEngine" || workshopLoadedThisOpen)
@@ -494,6 +495,29 @@ MouseArea {
                     Layout.fillHeight: true
 
                     Loader {
+                        id: depthPickerLoader
+                        anchors.fill: parent
+                        // Loaded on demand, and it is what sets ClockDepth.picking:
+                        // the cache is not queried at all until either this is open
+                        // or the feature is switched on, so a machine that has never
+                        // used depth spawns nothing for it.
+                        active: root.depthPickerOpen
+                        visible: active
+                        z: 3
+                        sourceComponent: ClockDepthPicker {
+                            // The preview has to be cropped the way the desktop
+                            // crops it, or the user accepts a mask against a
+                            // frame the wallpaper is never shown in.
+                            screenAspect: Screen.height > 0
+                                ? Screen.width / Screen.height
+                                : 16 / 9
+                            Component.onCompleted: ClockDepth.picking = true
+                            Component.onDestruction: ClockDepth.picking = false
+                            onCloseRequested: root.depthPickerOpen = false
+                        }
+                    }
+
+                    Loader {
                         id: gridLoader
                         anchors.fill: parent
                         sourceComponent: root.source === "local"
@@ -583,6 +607,20 @@ MouseArea {
                                     implicitWidth: height
                                     onClicked: root.updateThumbnails()
                                     text: "reset_image"
+                                }
+                                IconToolbarButton {
+                                    implicitWidth: height
+                                    // The only way into segmentation. Nothing
+                                    // else in the shell can start a run: it
+                                    // costs seconds and a gigabyte, and it
+                                    // produces an unusable mask often enough
+                                    // that a human has to look at the result.
+                                    onClicked: root.depthPickerOpen = !root.depthPickerOpen
+                                    toggled: root.depthPickerOpen
+                                    text: "layers"
+                                    StyledToolTip {
+                                        text: Translation.tr("Put the widgets behind this wallpaper's subject")
+                                    }
                                 }
                                 ToolbarTextField {
                                     id: filterField
