@@ -269,17 +269,26 @@ PanelWindow {
 
                 ColumnLayout {
                     spacing: 0
+                    // Bounded, and both lines elide: a wallpaper's file name is
+                    // arbitrary and the instruction is a sentence, so without a
+                    // ceiling the toolbar grows past the screen it is centred
+                    // on and its buttons leave with it.
+                    Layout.maximumWidth: 420
 
                     StyledText {
                         // Which picture is being cut, said outright. The mode is
                         // entered from a surface that has just closed, and the
                         // clicks are stored against this file's cache key.
+                        Layout.fillWidth: true
+                        elide: Text.ElideMiddle
                         text: Translation.tr("Depth for %1")
                             .arg(ClockDepth.wallpaperPath.split("/").pop())
                         font.pixelSize: Appearance.font.pixelSize.normal
                         color: Appearance.colors.colOnLayer0
                     }
                     StyledText {
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
                         // The whole instruction set, on the surface the gesture
                         // is aimed at, because there is nowhere else a person
                         // would look for it.
@@ -316,6 +325,15 @@ PanelWindow {
                 DialogButton {
                     id: inspectButton
                     toggled: root.inspect
+                    // RippleButton fills a toggled button with colPrimary and
+                    // DialogButton writes its label in colPrimary, so a toggle
+                    // left to the defaults reads its own text off its own
+                    // background. Set through colEnabled rather than colText,
+                    // which is the alias that would take the disabled dim with
+                    // it.
+                    colEnabled: root.inspect
+                        ? Appearance.colors.colOnPrimary
+                        : Appearance.colors.colPrimary
                     buttonText: Translation.tr("Inspect")
                     onClicked: root.inspect = !root.inspect
                 }
