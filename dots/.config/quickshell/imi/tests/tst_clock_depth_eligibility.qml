@@ -126,6 +126,45 @@ TestCase {
         fuzzyCompare(r.width / r.height, 3840 / 1594, 0.0001);
     }
 
+    function test_a_mask_at_the_pictures_own_aspect_lands_unstretched() {
+        // Confirmed rather than assumed, because `coverRect` exists precisely
+        // BECAUSE the salient models' masks are square while the wallpaper is
+        // not - so a mask that is not square is the case the function was never
+        // written for, and the obvious guess is that it needs a second path.
+        //
+        // It does not, and the reason is that the rect is a rectangle for the
+        // WALLPAPER: the function never reads the mask's dimensions at all.
+        // Stretching a mask into it lands every mask's own extent onto the
+        // picture's own extent, so a mask that already carries the picture's
+        // aspect is scaled by the same factor on both axes - it is not squashed
+        // and then unsquashed, it is simply not squashed.
+        const r = ClockDepth.coverRect(3840, 1594, 5120, 1440);
+        // What MobileSAM returns for that picture: the longest side at 1024,
+        // the aspect kept. tests/test_clock_depth_cache.py pins the producer to
+        // exactly this size.
+        const maskW = 1024, maskH = 425;
+        fuzzyCompare(r.width / maskW, r.height / maskH, 0.005);
+    }
+
+    function test_the_square_mask_and_the_picture_shaped_one_share_one_rect() {
+        // The half that would break if anyone "fixed" coverRect to take the
+        // mask's size: one wallpaper has one cover rect, and both kinds of mask
+        // are stretched into it. A per-mask rect is a second registration, and
+        // the picker and the desktop layer draw through the same component
+        // precisely so there cannot be two.
+        // A 3.56:1 picture into a 4:3 box, deliberately: at a matching aspect
+        // the box IS the cover rect and every registration bug is invisible,
+        // which is the hole test_clock_depth_compositing.qml's fixture had.
+        const wide = ClockDepth.coverRect(7680, 2160, 1600, 1200);
+        const again = ClockDepth.coverRect(7680, 2160, 1600, 1200);
+        compare(wide.width, again.width);
+        compare(wide.height, again.height);
+        // A square mask stretched into it is squashed by the picture's own
+        // aspect ratio; a 1024x288 one is not. Both cover the same rectangle.
+        fuzzyCompare(wide.width / wide.height, 7680 / 2160, 0.0001);
+        fuzzyCompare(wide.width / 1024, wide.height / 288, 0.005);
+    }
+
     function test_an_unloaded_image_yields_the_box_rather_than_NaN() {
         // An Image's implicit size reads 0 until its source resolves, and a NaN
         // on x/y/width/height does not misplace the mask - it stops the item
