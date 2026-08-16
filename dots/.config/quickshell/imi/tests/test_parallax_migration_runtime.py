@@ -33,6 +33,12 @@ SHIPPED_DEFAULT = ROOT / "defaults/config.json"
 TUNED_ZOOM = 1.42
 
 
+# The harness prints how many checks it ran. This number is a literal rather
+# than anything read back from that output: a harness whose step list shrinks
+# must redden here instead of reporting `failures: 0` for a shorter run.
+EXPECTED_CHECKS = 6
+
+
 def _runtime_available():
     return bool(os.environ.get("WAYLAND_DISPLAY")) and shutil.which("qs") is not None
 
@@ -70,7 +76,7 @@ class ParallaxMigrationRuntimeTest(unittest.TestCase):
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
-        self.assertIn("[Parallax] failures: 0", output,
+        self.assertIn(f"[Parallax] checks: {EXPECTED_CHECKS} failures: 0", output,
                       f"harness did not finish cleanly:\n{output}")
         return output
 

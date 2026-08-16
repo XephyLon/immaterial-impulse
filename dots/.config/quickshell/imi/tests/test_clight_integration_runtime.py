@@ -87,6 +87,14 @@ exit 0
 """
 
 
+# How many checks the harness runs, per shape it is launched in. Literals
+# rather than anything read back from the harness's own output: a harness
+# whose step list shrinks must redden here instead of reporting
+# `failures: 0` for a shorter run.
+EXPECTED_CHECKS_DAEMON_UP = 11
+EXPECTED_CHECKS_DEGRADED = 3
+
+
 def _stop(proc):
     proc.terminate()
     try:
@@ -173,7 +181,7 @@ class ClightIntegrationRuntimeTest(unittest.TestCase):
             "night": {"temperatureActive": True},
         }, indent=2))
 
-    def launch(self, installed, available, temp_switch_after=None):
+    def launch(self, installed, available, checks, temp_switch_after=None):
         (self.clight_state / "bl").write_text("0.5\n")
         env = dict(self.env)
         env["XDG_CONFIG_HOME"] = str(self.config_home)
@@ -192,7 +200,7 @@ class ClightIntegrationRuntimeTest(unittest.TestCase):
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
-        self.assertIn("[ClightIntegration] failures: 0", output,
+        self.assertIn(f"[ClightIntegration] checks: {checks} failures: 0", output,
                       f"harness did not finish cleanly:\n{output}")
         return output
 
@@ -208,7 +216,8 @@ class ClightIntegrationRuntimeTest(unittest.TestCase):
         self.fake_binaries(clight_installed=True)
         self.seed()
 
-        self.launch(installed=True, available=True, temp_switch_after=6)
+        self.launch(installed=True, available=True, temp_switch_after=6,
+                    checks=EXPECTED_CHECKS_DAEMON_UP)
 
         calls = self.invocations()
         incbl = [c for c in calls if " org.clight.clight IncBl d " in c]
@@ -230,7 +239,8 @@ class ClightIntegrationRuntimeTest(unittest.TestCase):
         self.fake_binaries(clight_installed=True)
         self.seed()
 
-        self.launch(installed=True, available=True, temp_switch_after=6)
+        self.launch(installed=True, available=True, temp_switch_after=6,
+                    checks=EXPECTED_CHECKS_DAEMON_UP)
 
         calls = self.invocations()
         self.assertIn("busctl --user set-property org.clight.clight "
@@ -249,7 +259,8 @@ class ClightIntegrationRuntimeTest(unittest.TestCase):
         self.fake_binaries(clight_installed=True)
         self.seed()
 
-        self.launch(installed=True, available=True, temp_switch_after=6)
+        self.launch(installed=True, available=True, temp_switch_after=6,
+                    checks=EXPECTED_CHECKS_DAEMON_UP)
 
         calls = self.invocations()
         self.assertIn(f"hyprsunset --temperature {NIGHT_TEMPERATURE}", calls,
@@ -262,7 +273,7 @@ class ClightIntegrationRuntimeTest(unittest.TestCase):
         self.fake_binaries(clight_installed=False)
         self.seed()
 
-        self.launch(installed=False, available=False)
+        self.launch(installed=False, available=False, checks=EXPECTED_CHECKS_DEGRADED)
 
         calls = self.invocations()
         self.assertIn("brightnessctl --class backlight s 80% --quiet", calls,
@@ -276,7 +287,7 @@ class ClightIntegrationRuntimeTest(unittest.TestCase):
         self.fake_binaries(clight_installed=True)
         self.seed()
 
-        self.launch(installed=True, available=False)
+        self.launch(installed=True, available=False, checks=EXPECTED_CHECKS_DEGRADED)
 
         calls = self.invocations()
         self.assertIn("brightnessctl --class backlight s 80% --quiet", calls,

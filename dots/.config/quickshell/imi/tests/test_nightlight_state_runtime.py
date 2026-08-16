@@ -54,6 +54,14 @@ __BODY__
 """
 
 
+# How many checks the harness runs, per shape it is launched in. Literals
+# rather than anything read back from the harness's own output: a harness
+# whose step list shrinks must redden here instead of reporting
+# `failures: 0` for a shorter run.
+EXPECTED_CHECKS_RESTORED = 2
+EXPECTED_CHECKS_TOGGLED = 4
+
+
 def _stop(proc):
     proc.terminate()
     try:
@@ -137,7 +145,7 @@ class NightLightStateRuntimeTest(unittest.TestCase):
             "night": {"temperatureActive": temperature_active},
         }, indent=2))
 
-    def launch(self, expect_active, toggle=""):
+    def launch(self, expect_active, checks, toggle=""):
         env = dict(self.env)
         env["XDG_CONFIG_HOME"] = str(self.config_home)
         env["XDG_STATE_HOME"] = str(self.state_home)
@@ -151,7 +159,7 @@ class NightLightStateRuntimeTest(unittest.TestCase):
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
-        self.assertIn("[NightLightState] failures: 0", output,
+        self.assertIn(f"[NightLightState] checks: {checks} failures: 0", output,
                       f"harness did not finish cleanly:\n{output}")
         return output
 
@@ -176,7 +184,7 @@ class NightLightStateRuntimeTest(unittest.TestCase):
         self.fake_binaries(daemon_running=False)
         self.seed(temperature_active=False)
 
-        self.launch(expect_active=False)
+        self.launch(expect_active=False, checks=EXPECTED_CHECKS_RESTORED)
 
         calls = self.invocations()
         self.assertIn("hyprsunset --identity", calls, f"no neutral launch in {calls}")
@@ -192,7 +200,7 @@ class NightLightStateRuntimeTest(unittest.TestCase):
         self.fake_binaries(daemon_running=False)
         self.seed(temperature_active=True)
 
-        self.launch(expect_active=True)
+        self.launch(expect_active=True, checks=EXPECTED_CHECKS_RESTORED)
 
         calls = self.invocations()
         self.assertIn(f"hyprsunset --temperature {NIGHT_TEMPERATURE}", calls,
@@ -208,7 +216,7 @@ class NightLightStateRuntimeTest(unittest.TestCase):
         self.fake_binaries(daemon_running=True)
         self.seed(temperature_active=True)
 
-        self.launch(expect_active=True)
+        self.launch(expect_active=True, checks=EXPECTED_CHECKS_RESTORED)
 
         calls = self.invocations()
         self.assertIn(f"hyprctl hyprsunset temperature {NIGHT_TEMPERATURE}", calls,
@@ -225,7 +233,7 @@ class NightLightStateRuntimeTest(unittest.TestCase):
         self.fake_binaries(daemon_running=True)
         self.seed(temperature_active=True)
 
-        self.launch(expect_active=True, toggle="off")
+        self.launch(expect_active=True, toggle="off", checks=EXPECTED_CHECKS_TOGGLED)
 
         self.assertIn("hyprctl hyprsunset identity", self.invocations())
         self.assertFalse(self.stored_state(), "the off state never reached states.json")
@@ -234,7 +242,7 @@ class NightLightStateRuntimeTest(unittest.TestCase):
         self.fake_binaries(daemon_running=True)
         self.seed(temperature_active=False)
 
-        self.launch(expect_active=False, toggle="on")
+        self.launch(expect_active=False, toggle="on", checks=EXPECTED_CHECKS_TOGGLED)
 
         self.assertIn(f"hyprctl hyprsunset temperature {NIGHT_TEMPERATURE}",
                       self.invocations())

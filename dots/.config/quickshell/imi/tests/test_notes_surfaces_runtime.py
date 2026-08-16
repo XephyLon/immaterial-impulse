@@ -29,6 +29,12 @@ HARNESS = ROOT / "NotesSurfacesRuntimeTest.qml"
 SOCKET = "wayland-imi-notes-surfaces"
 
 
+# The harness prints how many checks it ran. This number is a literal rather
+# than anything read back from that output: a harness whose step list shrinks
+# must redden here instead of reporting `failures: 0` for a shorter run.
+EXPECTED_CHECKS = 19
+
+
 def _stop(proc):
     proc.terminate()
     try:
@@ -77,7 +83,7 @@ class NotesSurfacesRuntimeTest(unittest.TestCase):
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
-        self.assertIn("[NotesSurfaces] failures: 0", output,
+        self.assertIn(f"[NotesSurfaces] checks: {EXPECTED_CHECKS} failures: 0", output,
                       f"harness did not finish cleanly:\n{output}")
 
         # The harness deletes everything it made, so what is left on disk is

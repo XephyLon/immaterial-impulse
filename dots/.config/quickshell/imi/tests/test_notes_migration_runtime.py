@@ -34,6 +34,12 @@ LEGACY_NOTES = json.dumps([
 ])
 
 
+# The harness prints how many checks it ran. This number is a literal rather
+# than anything read back from that output: a harness whose step list shrinks
+# must redden here instead of reporting `failures: 0` for a shorter run.
+EXPECTED_CHECKS = 7
+
+
 def _runtime_available():
     return bool(os.environ.get("WAYLAND_DISPLAY")) and shutil.which("qs") is not None
 
@@ -79,7 +85,7 @@ class NotesMigrationRuntimeTest(unittest.TestCase):
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
-        self.assertIn("[NotesMigration] failures: 0", output,
+        self.assertIn(f"[NotesMigration] checks: {EXPECTED_CHECKS} failures: 0", output,
                       f"harness did not finish cleanly:\n{output}")
         return output
 

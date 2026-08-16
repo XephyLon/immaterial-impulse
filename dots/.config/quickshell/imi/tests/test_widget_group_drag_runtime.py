@@ -34,6 +34,12 @@ HARNESS = ROOT / "WidgetGroupDragRuntimeTest.qml"
 SOCKET = "wayland-imi-widget-group-drag"
 
 
+# The harness prints how many checks it ran. This number is a literal rather
+# than anything read back from that output: a harness whose step list shrinks
+# must redden here instead of reporting `failures: 0` for a shorter run.
+EXPECTED_CHECKS = 26
+
+
 def _stop(proc):
     proc.terminate()
     try:
@@ -82,7 +88,7 @@ class WidgetGroupDragRuntimeTest(unittest.TestCase):
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
-        self.assertIn("[WidgetGroupDrag] failures: 0", output,
+        self.assertIn(f"[WidgetGroupDrag] checks: {EXPECTED_CHECKS} failures: 0", output,
                       f"harness did not finish cleanly:\n{output}")
 
         # A follower whose x binding died mid-group-drag, or a halo that got

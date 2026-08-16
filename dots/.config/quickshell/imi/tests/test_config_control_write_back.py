@@ -40,6 +40,12 @@ RANGED_CONTROLS = ("ConfigSpinBox", "ConfigSlider")
 WIDGET_DIR = ROOT / "modules/common/widgets"
 
 
+# The harness prints how many checks it ran. This number is a literal rather
+# than anything read back from that output: a harness whose step list shrinks
+# must redden here instead of reporting `failures: 0` for a shorter run.
+EXPECTED_CHECKS = 7
+
+
 def _stop(proc):
     proc.terminate()
     try:
@@ -182,7 +188,7 @@ class ConfigControlWriteBackRuntimeTest(unittest.TestCase):
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
-        self.assertIn("[ConfigControlWriteBack] failures: 0", output,
+        self.assertIn(f"[ConfigControlWriteBack] checks: {EXPECTED_CHECKS} failures: 0", output,
                       f"harness did not finish cleanly:\n{output}")
 
         # The harness asserts against the in-memory Config; this asserts
