@@ -236,6 +236,37 @@ Singleton {
         property int full: 9999
         property int screenRounding: large
         property int windowRounding: 18
+
+        // Material 3's own names for three tiers this ladder already has. The
+        // vendored design system (modules/common/plugins/designsystem, whose
+        // ExpressiveTokens exposes `Appearance.rounding` as `shape`) speaks the
+        // M3 shape-scale dialect, so its call sites ask for `button`, `card` and
+        // `extraLarge`; none of the three was ever ported with them. They are
+        // aliases rather than new numbers on purpose - a tier with two values
+        // is the drift AGENT.md's one-source rule exists to stop, while a tier
+        // with two names cannot disagree with itself. `screenRounding: large`
+        // is the same pattern.
+        //
+        // Which tier each one is, per docs/M3_GUIDELINES.md's ladder:
+        //   button     -> small (12), "small chips, standard buttons". This is
+        //                 also the default the *mainline* RippleButton already
+        //                 carries (`Appearance?.rounding?.small ?? 4`), and the
+        //                 design system's RippleButton is a fork of it; two
+        //                 copies of one control must not disagree about the
+        //                 shape they hand an un-overridden call site.
+        //   card       -> normal (17), "standard cards, list items, menus".
+        //                 ResourceCard and GroupedList.bigRadius - the shell's
+        //                 own card primitives - are already this value.
+        //   extraLarge -> verylarge (30), "prominent dialogs, major distinct UI
+        //                 blocks". M3 calls its top non-`full` tier "extra
+        //                 large"; this ladder calls that tier `verylarge`. The
+        //                 surface reading it is a floating wallpaper carousel
+        //                 container, and all three in-house hosts of that same
+        //                 block (DesktopMenu, BackgroundConfig) round at
+        //                 `verylarge` already.
+        property int button: small
+        property int card: normal
+        property int extraLarge: verylarge
     }
 
     spacing: QtObject {
