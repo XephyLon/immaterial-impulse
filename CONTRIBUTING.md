@@ -267,6 +267,17 @@ bug in anything that qualifies:
   three modules shipped as silent no-ops precisely because nobody checked that.
 - **Prove a new static check can fail.** These checks match source text; a pattern with baked-in
   indentation passes vacuously after any reformat.
+- **A runtime harness states how many checks it ran, and its driver asserts the number.** The
+  verdict is `[Tag] checks: ${harness.checksRun} failures: ${harness.failures}`, with `checksRun`
+  incremented inside the harness's own `check()`; the driver holds the expected count in a
+  module-level `EXPECTED_CHECKS` (one per shape, where it launches the harness in more than one)
+  and asserts the whole line. Neither half is optional: `failures: 0` is what a harness that ran
+  *nothing* prints, so a loop that stops iterating or a step deleted from a list used to shrink
+  the suite in silence — and a count read back out of the harness's own output would agree with
+  itself by construction. The count must come from the counter rather than from a constant, or a
+  harness that gives up half way still reports the full number.
+  `tests/lint_harness_check_counts.py` fails the suite on either half.
+  0b3a900f4 ("test(lint): fail on a harness verdict that states no check count").
 - **Plant mutations only in a clean tree.** Proving a check can fail means planting a bad input and
   reverting it — and `git checkout -- <file>` reverts to HEAD, destroying every uncommitted edit in
   that file along with the mutation. That exact trap has fired three times in two days, most
