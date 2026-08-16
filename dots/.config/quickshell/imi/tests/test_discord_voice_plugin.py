@@ -366,8 +366,20 @@ class DiscordVoicePluginSafetyTests(unittest.TestCase):
         self.assertIn("onStarted: root.flushPendingMessages()", service)
 
     def test_native_bar_route_is_click_only_and_closes_on_focus_loss(self):
-        host = (ROOT / "modules/imi/bar/BarContent.qml").read_text()
-        self.assertIn('name === "plugin:discord_voice"', host)
+        # Which file draws a bar widget is one mapping both bars ask now, so
+        # the native route is pinned there - and holds for the vertical bar
+        # too, which could not draw this widget at all before. a47462fcc
+        # ("fix(verticalBar): render plugin bar widgets instead of an empty
+        # stub").
+        mapping = (ROOT / "modules/imi/bar/bar_widget_source.js").read_text()
+        self.assertRegex(
+            mapping, r'["\']discord_voice["\']\s*:\s*["\']DiscordVoicePlugin\.qml["\']')
+        for bar_file in ("modules/imi/bar/BarContent.qml",
+                         "modules/imi/verticalBar/VerticalBarContent.qml"):
+            self.assertIn(
+                "BarWidgetSource.fileNameFor", (ROOT / bar_file).read_text(),
+                f"{bar_file} resolves widget files itself again, so the "
+                f"mapping pinned above is not the one it uses")
         adapter = (ROOT / "modules/imi/bar/DiscordVoicePlugin.qml").read_text()
         self.assertIn("hoverEnabled: false", adapter)
         self.assertIn("cursorShape: Qt.PointingHandCursor", adapter)
