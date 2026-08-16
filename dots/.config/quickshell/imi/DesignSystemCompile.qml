@@ -109,7 +109,19 @@ ShellRoot {
                 Quickshell.shellPath("modules/common/widgets/DockSeparator.qml"),
                 Quickshell.shellPath("modules/common/widgets/DockIconMotion.qml"),
                 Quickshell.shellPath("modules/common/widgets/DockContextMenu.qml"),
-                Quickshell.shellPath("modules/common/widgets/DragApps.qml")
+                Quickshell.shellPath("modules/common/widgets/DragApps.qml"),
+
+                // The two other places something is dragged into order.
+                // DocktoPanel is a bar widget the bar loads BY URL, so nothing
+                // above reaches it - it compiles for the first time on the
+                // desktop of whoever puts it in their bar.
+                // AndroidQuickToggleButton sits behind a quick-toggle style
+                // that is not the default, which is the dock's argument above:
+                // a FINAL override or a missing import there passes every test
+                // until someone switches the style on.
+                Quickshell.shellPath("modules/imi/bar/DocktoPanel.qml"),
+                Quickshell.shellPath(
+                    "modules/imi/sidebarRight/quickToggles/androidStyle/AndroidQuickToggleButton.qml")
             ]);
             for (const path of paths) {
                 const component = Qt.createComponent(`file://${path}`, Component.PreferSynchronous);
