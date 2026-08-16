@@ -117,7 +117,15 @@ AbstractWidget {
     function clampX(v) { return Math.max(0, Math.min(v, scaledScreenWidth - clampWidth)); }
     function clampY(v) { return Math.max(0, Math.min(v, scaledScreenHeight - clampHeight)); }
 
-    onReleased: root.commitPosition()
+    // A cancelled gesture swallows exactly its own release: see dragCancelled
+    // in AbstractWidget for why the release still arrives at all.
+    onReleased: {
+        if (root.dragCancelled) {
+            root.dragCancelled = false;
+            return;
+        }
+        root.commitPosition();
+    }
 
     // The one write-back path for a finished move. A real release runs it via
     // the handler above; a group drag runs it on every follower through
