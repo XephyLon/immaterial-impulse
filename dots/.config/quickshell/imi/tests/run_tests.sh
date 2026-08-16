@@ -922,6 +922,12 @@ if ! python3 "$SCRIPT_DIR/test_we_still.py"; then
     exit 1
 fi
 
+echo "Running clock depth cache tests..."
+if ! python3 "$SCRIPT_DIR/test_clock_depth_cache.py"; then
+    echo "Clock depth cache tests failed."
+    exit 1
+fi
+
 echo "Running greeter sync tests..."
 if ! python3 "$SCRIPT_DIR/test_greeter_sync.py"; then
     echo "Greeter sync tests failed."
