@@ -310,6 +310,42 @@ Scope {
                             }
                         }
 
+                        // Edit layout. A verb, so no submenu and no chevron:
+                        // unlike Wallpaper & style and Widgets, this row has no
+                        // quick-settings half and no Settings page behind it.
+                        //
+                        // The same row is also the way out, which is not what
+                        // the toolbar's Done will be - it stands in for it until
+                        // stage 4 draws one. Escape is the other exit and it
+                        // depends on the compositor delivering keys to a
+                        // Bottom-layer surface, which is not established here;
+                        // a mode whose only way out is unproven is not one to
+                        // ship.
+                        RippleButton {
+                            implicitHeight: 40
+                            colBackground: "transparent"
+                            colBackgroundHover: Appearance.colors.colLayer2
+                            contentItem: RowLayout {
+                                anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }
+                                spacing: Appearance.spacing.space150
+                                MaterialSymbol {
+                                    text: GlobalStates.editMode ? "done" : "edit"
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: Appearance.colors.colOnLayer1
+                                }
+                                StyledText {
+                                    Layout.fillWidth: true
+                                    text: GlobalStates.editMode ? "Done editing" : "Edit layout"
+                                    font.pixelSize: Appearance.font.pixelSize.normal
+                                    color: Appearance.colors.colOnLayer1
+                                }
+                            }
+                            onClicked: {
+                                GlobalStates.desktopMenuOpen = false
+                                GlobalStates.editMode = !GlobalStates.editMode
+                            }
+                        }
+
                         RippleButton {
                             implicitHeight: 40
                             colBackground: "transparent"
