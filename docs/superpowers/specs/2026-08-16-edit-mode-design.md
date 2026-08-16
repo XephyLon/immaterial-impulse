@@ -222,10 +222,10 @@ specific ways that could turn out true, both listed in §11.4 as probes to run *
 
 1. **The frost.** Each desktop widget draws an in-shell frost — a `ShaderEffectSource` over the
    wallpaper, sampled at a rect computed by `ParallaxMath.sampleOrigin` from the canvas offset, the
-   widget position and the wallpaper rect (`PluginWidget.qml:50-65`, `WallpaperBlurSurface.qml:98-117`).
-   A scale on the canvas changes the relationship between those three frames. §2.4 argues this is
-   already solved; if it is not, and the frost must stay live during the mode, that is a point for
-   proxies.
+   widget position and the wallpaper rect (`PluginWidget.qml:50-65`,
+   `WallpaperBlurSurface.qml:98-117`). A scale on the canvas changes the relationship between
+   those three frames. §2.4 argues this is already solved; if it is not, and the frost must stay
+   live during the mode, that is a point for proxies.
 2. **The compositor's alpha map.** `Background.qml:1186-1189` says, in its own words: *"Keep the
    loader untransformed. Hyprland derives live background blur from this surface's alpha map;
    wrapping plugin widgets in a Scale transform offsets that map from the live Wallpaper Engine
@@ -386,12 +386,13 @@ affordance than a button. The chrome may carry a shortcut *to* that row.
   through `bar_widget_source.js`'s `fileNameFor`, which answers with a file name and knows nothing
   about which widgets exist. A drawer would be a third list. Promote it to `BarWidgets.qml`, a
   singleton beside `PluginManager` exposing `available` and `nameFor(id)` — a move, not a redesign.
-- **Also real: `VerticalBarContent.getWidgetUrl` does not handle the `plugin:` prefix.** It
-  resolves `"../bar/" + Capitalise(name) + ".qml"` with no branch for `plugin:`, so a plugin bar
-  widget in a vertical bar resolves to `../bar/Plugin:docker_plugin.qml`. This is latent today (you
-  have to add a plugin widget while the bar is vertical) and Edit Mode makes it one drag away. It is
-  a bug to fix in its own commit before the bar stage lands, not something for Edit Mode to route
-  around.
+- **Already done: the `plugin:` prefix.** The merged version of this document listed
+  `VerticalBarContent.getWidgetUrl` resolving `../bar/Plugin:docker_plugin.qml` as a bug to fix
+  before the bar stage. It was fixed before this document was written: both bars now call
+  `BarWidgetSource.fileNameFor(name)` (`BarContent.qml:61-64`, `VerticalBarContent.qml:66-69`) and
+  `tests/test_bar_widget_parity.py` fails the suite on either bar deciding for itself.
+  a47462fcc ("fix(verticalBar): render plugin bar widgets instead of an empty stub"),
+  06d31aabc ("test(bar): pin the two bars to one widget-url resolution"). Nothing to do.
 
 **One trap inherited.** `DockSeparator.qml` and `DockAppButton.qml` reach `dockRow.padding` and
 `dockVisualBackground.margin` by QML dynamic scope. Edit-mode chrome that reparents anything in the
@@ -818,9 +819,9 @@ control's hover and press motion comes from one place:
 `InteractionMotion` control, so the lint is blind to it by construction. Edit Mode gives every
 widget a visible handle, and a handle that also scales on press would compose with that 1.05 the way
 discordVoice's glyphs composed with the model. **The lift while dragging belongs to
-`WidgetElevation`**, which owns the numbers, is already driven by `hostDragging` through the
-duck-typed path, and which `test_expressive_design_system.py` pins as the only file allowed to read
-`Appearance.elevation`.
+`WidgetElevation`** (`modules/common/plugins/designsystem/widgets/WidgetElevation.qml`), which owns
+the numbers, is already driven by `hostDragging` through the duck-typed path, and which
+`test_expressive_design_system.py` pins as the only file allowed to read `Appearance.elevation`.
 
 **And the viewport's own scale composites with all of it.** `Item.scale` multiplies down the scene
 graph exactly the way `opacity` does. The viewport transform sits above every widget, so a widget's
@@ -835,9 +836,9 @@ The reorder gesture has been written four times and does not agree with itself:
 `LayoutSection.qml:51-85` is 2-D euclidean nearest-centre over a `Flow`, committing with a
 `splice`-out-`splice`-in; `DragApps.qml:343-378` projects onto one axis chosen by the dock's edge
 and commits with an **adjacent swap** (`swapSlots`, `:65-74`); `DocktoPanel.qml:170-182` is a third
-copy of the second; `AndroidQuickToggleButton.qml:216-220` is a fourth, and swaps too. A fifth copy written
-for Edit Mode is exactly the failure AGENT.md's `CavaService` entry describes — *"two names for one
-thing let one of them rot silently"*.
+copy of the second; `AndroidQuickToggleButton.qml:216-220` is a fourth, and swaps too. A fifth
+copy written for Edit Mode is exactly the failure AGENT.md's `CavaService` entry describes —
+*"two names for one thing let one of them rot silently"*.
 
 `modules/common/functions/layout_ops.js`, a `.pragma library`:
 
@@ -872,9 +873,18 @@ card will live on")). Its four load-bearing properties are not optional:
 3. **Collapse the mask to 0x0 when the mode is off.** `build()` on a 0x0 item yields an empty region
    and `onPolished` then sets `Qt::WindowTransparentForInput`, which is the only thing making a
    permanently-mapped full-screen `Overlay` surface harmless.
-4. **Reuse `quickshell:popup`, do not mint a namespace.** A new namespace falls through to the
-   catch-all `0.05`, under which a full-screen surface's *transparent* pixels clear the threshold
-   and the compositor is asked to blur the entire screen.
+4. **Mint a namespace and add it to `rules.lua`'s computed-threshold loop.** Note this corrects the
+   merged version of this document, which said to reuse `quickshell:popup`.
+   `BarPopupOverlay.qml:53-69` records why that was tried and abandoned: `quickshell:popup` carries
+   `ignore_alpha = 1`, and once tray items moved onto the shared card their context menus —
+   xdg-popups of *this* surface — inherited that 1 and stopped being blurred at all. The surface
+   has its own namespace (`quickshell:barPopup`, `:70`) listed in the generated-threshold loop in
+   `dots/.config/hypr/hyprland/rules.lua:230-238`, whose value `services/PopupBlurThreshold.qml`
+   computes so it sits above the shadow and below the faintest body. **A namespace absent from that
+   loop falls through the catch-all `ignore_alpha = 0.05`
+   (`dots/.config/hypr/hyprland/rules.lua:143`), under which a full-screen surface's transparent
+   pixels clear the threshold and the compositor is asked to blur the whole screen.** A new chrome
+   surface repeats that exercise in full.
 
 **Anything on the chrome that resizes morphs in one tree.** The toolbar changes width when its
 contents change, and this repo's rule for that — enforced by `test_expressive_design_system.py` — is
@@ -901,8 +911,8 @@ sequential list of 138 `if ! python3 …` blocks in `tests/run_tests.sh`. Python
 JavaScript; it reads source text. And CI has no weston, no `qs` and no compositor, so everything in
 §11.3 is a local gate only.
 
-(On the headline: "757 passing" is the `qmltestrunner` Totals line alone. The Python tier
-is roughly twice that and is invisible in it. A change that keeps 757 green has said nothing about
+(On the headline: the `qmltestrunner` Totals line on `gh/main` is **767 passing**. The Python tier
+is roughly twice that and is invisible in it. A change that keeps 767 green has said nothing about
 the other tier. Note also that weston harnesses die with `The Wayland connection broke` when several
 run at once — that is contention, not failure.)
 
@@ -949,8 +959,12 @@ shell can.
   directories divides or multiplies by the viewport scale to recover a screen coordinate.
 - **The chrome surface is static** — no `margins`, no `implicitWidth`/`implicitHeight`, all four
   anchors — and **its mask collapses** to 0x0 when the mode is off.
+- **The chrome surface's namespace is in `rules.lua`'s threshold loop.** A source contract across
+  the QML and the Lua, because the failure (the compositor asked to blur the whole screen) is loud
+  on screen and silent everywhere else.
 - **No second motion.** No scale-family property in the chrome bound to a raw hover/press flag, and
-  no `MultiEffect` shadow reading `Appearance.elevation` outside `WidgetElevation.qml`.
+  no `MultiEffect` shadow reading `Appearance.elevation` outside `WidgetElevation.qml`
+  (`modules/common/plugins/designsystem/widgets/`).
 - **The exit ladder is wired to the module**, not open-coded in a `Keys.onEscapePressed`.
 - **Ending the mode mid-drag calls the cancel path**, i.e. `restoreXYBinding` and not
   `commitPosition`.
@@ -1084,9 +1098,8 @@ user-visible value; **stage 3 is the first one a user would call "Edit Mode"**.
 6. **Per-widget context menu and the Size stepper.** Right-click on a widget opens Remove / Pin /
    Size instead of toggling the global lock; Size indexes `offeredGridSizes`. *§5's rule, and its
    contract.*
-7. **`BarWidgets` catalogue promoted out of `BarConfig.qml:49-71`**, plus the `plugin:` fix in
-   `VerticalBarContent.getWidgetUrl`. *Ships as a bug fix plus a move; `BarConfig` reads the
-   singleton and looks identical.*
+7. **`BarWidgets` catalogue promoted out of `BarConfig.qml:49-71`.** *Ships as a move; `BarConfig`
+   reads the singleton and looks identical.*
 8. **The bar and the dock, in place.** Auto-hide suspended by adding a term to `mustShow`, widgets
    inert, remove badges, `ReorderDragArea` across the three buckets, visible bucket boundaries, add
    from `BarWidgets` and `DesktopEntries`. *Test: the runtime harness's along/across drag pair.* Two
@@ -1108,9 +1121,10 @@ user-visible value; **stage 3 is the first one a user would call "Edit Mode"**.
   written objection to the whole design, and §11.4's probe 1 exists for it. Do not reason it away.
 - **A full-screen `Overlay` surface that forgets to collapse its mask eats every click on the
   desktop.** The mode being *off* is the dangerous state, because that is the one nobody looks at.
-- **The chrome surface's namespace decides whether the compositor blurs the whole screen.** Too low
-  a threshold and a full-screen surface's transparent pixels frost everything; too high and the
-  chrome's own body goes flat. The failure directions are opposite and neither logs anything.
+- **A namespace missing from `rules.lua`'s threshold loop asks the compositor to blur the whole
+  screen** (`dots/.config/hypr/hyprland/rules.lua:143`, and the loop at `:230-238`). The failure
+  directions are opposite — too low and the whole screen frosts, too high and the chrome's own body
+  goes flat — and neither logs anything.
 - **The dock's dynamic-scope lookups** resolve `dockRow` and `dockVisualBackground` by name through
   the dock's tree. Chrome that reparents anything there yields `undefined` → NaN geometry → a
   relayout that never converges and a pegged core, with no error.
