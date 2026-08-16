@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell
-import Qt5Compat.GraphicalEffects
+import qs.modules.imi.background
 import "modules/common/functions/clockDepth.js" as ClockDepthLogic
 
 /*
@@ -121,43 +121,16 @@ ShellRoot {
                     transitionInFlight: false
                 }) ? 1 : 0
 
-                Image {
-                    id: clockDepthWallpaper
+                // The shipping component, not a copy of it. The LAYER is
+                // re-declared here because Background.qml's lives inside a
+                // wlr-layer-shell PanelWindow and weston implements none; the
+                // registration inside it is the real one, so a probe that
+                // rebuilt it would be scoring its own arithmetic.
+                ClockDepthCutout {
+                    id: clockDepthCutout
                     anchors.fill: parent
-                    source: wallpaper.source
-                    fillMode: Image.PreserveAspectCrop
-                    cache: true
-                    smooth: true
-                    asynchronous: false
-                    visible: false
-                }
-
-                Item {
-                    id: clockDepthMaskSurface
-                    anchors.fill: parent
-                    visible: false
-                    clip: true
-
-                    Image {
-                        id: clockDepthMask
-                        readonly property var coverRect: ClockDepthLogic.coverRect(
-                            clockDepthWallpaper.implicitWidth, clockDepthWallpaper.implicitHeight,
-                            clockDepthMaskSurface.width, clockDepthMaskSurface.height)
-                        x: clockDepthMask.coverRect.x
-                        y: clockDepthMask.coverRect.y
-                        width: clockDepthMask.coverRect.width
-                        height: clockDepthMask.coverRect.height
-                        source: harness.activeMask === "" ? "" : `file://${harness.activeMask}`
-                        fillMode: Image.Stretch
-                        smooth: true
-                        asynchronous: false
-                    }
-                }
-
-                OpacityMask {
-                    anchors.fill: parent
-                    source: clockDepthWallpaper
-                    maskSource: clockDepthMaskSurface
+                    wallpaperSource: wallpaper.source
+                    maskPath: harness.activeMask
                 }
             }
         }
@@ -209,8 +182,8 @@ ShellRoot {
         interval: 300
         onTriggered: {
             harness.check("a mask file that has gone still leaves the layer eligible",
-                clockDepthLayer.opacity === 1 && clockDepthMask.status === Image.Error,
-                `opacity=${clockDepthLayer.opacity} maskStatus=${clockDepthMask.status}`);
+                clockDepthLayer.opacity === 1 && clockDepthCutout.maskStatus === Image.Error,
+                `opacity=${clockDepthLayer.opacity} maskStatus=${clockDepthCutout.maskStatus}`);
             if (harness.brokenShot !== "")
                 field.grabToImage(result => {
                     result.saveToFile(harness.brokenShot);
@@ -261,7 +234,7 @@ ShellRoot {
             harness.check("the wallpaper decoded",
                 wallpaper.status === Image.Ready, `status=${wallpaper.status}`);
             harness.check("the mask decoded",
-                clockDepthMask.status === Image.Ready, `status=${clockDepthMask.status}`);
+                clockDepthCutout.maskStatus === Image.Ready, `status=${clockDepthCutout.maskStatus}`);
             harness.check("the layer sits above the widget canvas",
                 clockDepthLayer.z > widgetCanvas.z,
                 `layer.z=${clockDepthLayer.z} canvas.z=${widgetCanvas.z}`);
@@ -275,15 +248,17 @@ ShellRoot {
             // wallpaper would be drawn unmasked over the widgets) and carries
             // the wallpaper's aspect rather than the box's, which is the whole
             // of the un-squash.
-            const wallpaperAspect = clockDepthWallpaper.implicitWidth / clockDepthWallpaper.implicitHeight;
+            const maskRect = clockDepthCutout.maskRect;
+            const sourceSize = clockDepthCutout.wallpaperSourceSize;
+            const wallpaperAspect = sourceSize.width / sourceSize.height;
             harness.check("the mask covers the box on both axes",
-                clockDepthMask.width >= parallaxViewport.width - 0.001
-                    && clockDepthMask.height >= parallaxViewport.height - 0.001,
-                `mask=${clockDepthMask.width.toFixed(1)}x${clockDepthMask.height.toFixed(1)} `
+                maskRect.width >= parallaxViewport.width - 0.001
+                    && maskRect.height >= parallaxViewport.height - 0.001,
+                `mask=${maskRect.width.toFixed(1)}x${maskRect.height.toFixed(1)} `
                     + `box=${parallaxViewport.width}x${parallaxViewport.height}`);
             harness.check("the mask is un-squashed to the wallpaper's aspect",
-                Math.abs(clockDepthMask.width / clockDepthMask.height - wallpaperAspect) < 0.001,
-                `mask=${(clockDepthMask.width / clockDepthMask.height).toFixed(3)} `
+                Math.abs(maskRect.width / maskRect.height - wallpaperAspect) < 0.001,
+                `mask=${(maskRect.width / maskRect.height).toFixed(3)} `
                     + `wallpaper=${wallpaperAspect.toFixed(3)}`);
             harness.check("the layer starts level with the viewport",
                 clockDepthLayer.x === parallaxViewport.x && clockDepthLayer.y === parallaxViewport.y);
