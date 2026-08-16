@@ -193,8 +193,8 @@ ShellRoot {
 
     // Everything the pixel half needs to know where to look, so it holds no
     // copy of the geometry it is scoring.
-    function reportGeometry(): void {
-        console.log(`[EditModeLook] geometry: screen=${harness.screenWidth},${harness.screenHeight}`
+    function reportGeometry(tag): void {
+        console.log(`[EditModeLook] ${tag}: screen=${harness.screenWidth},${harness.screenHeight}`
             + ` card=${harness.card.x},${harness.card.y},${harness.card.width},${harness.card.height}`
             + ` radius=${harness.cardRadius} scale=${harness.applied.scale}`
             + ` marker=${cornerMarker.x},${cornerMarker.y},${cornerMarker.width},${cornerMarker.height}`
@@ -247,17 +247,42 @@ ShellRoot {
             harness.applied.scale <= EditMode.MAX_SCALE + 1e-9
                 && harness.applied.scale > EditMode.MIN_SCALE,
             `scale=${harness.applied.scale.toFixed(3)}`);
-        // Every side, because a shrink that only opened one edge is a crop.
-        harness.check("...on every side, with the drawer's slot still to the right",
-            harness.card.x >= harness.margin - 0.5
-                && harness.card.y >= harness.margin - 0.5
-                && harness.card.y + harness.card.height <= harness.screenHeight - harness.margin + 0.5
-                && harness.screenWidth - (harness.card.x + harness.card.width)
-                    >= harness.drawerWidth + harness.margin - 0.5,
+        // Dead centre, with room on each side for the drawer to translate the
+        // desktop into later. A shrink that opened one edge is a crop, and one
+        // that opened three is the desktop being shoved aside.
+        const freeX = harness.screenWidth - (harness.card.x + harness.card.width);
+        const freeY = harness.screenHeight - (harness.card.y + harness.card.height);
+        harness.check("...about dead centre, with room for the drawer on each side",
+            Math.abs(harness.card.x - freeX) < 0.5
+                && Math.abs(harness.card.y - freeY) < 0.5
+                && harness.card.x >= harness.drawerWidth / 2 + harness.margin - 0.5
+                && harness.card.y >= harness.margin - 0.5,
             `card=${harness.card.x.toFixed(1)},${harness.card.y.toFixed(1)}`
                 + ` ${harness.card.width.toFixed(1)}x${harness.card.height.toFixed(1)}`);
-        harness.reportGeometry();
+        harness.reportGeometry("geometry");
         harness.shoot("editing", () => {
+            harness.editProgress = 0.5;
+            harness.after(harness.midway);
+        });
+    }
+
+    function midway(): void {
+        // The correction the centring is for is about the ENTRY, not about
+        // where the desktop ends up: a geometry that reserved the drawer's
+        // width on one side was symmetric nowhere, and the frames nobody looks
+        // at are the ones in between. Held at half progress and photographed,
+        // so the pixel half can measure where the desktop is actually drawn
+        // rather than read the number back out of the same function.
+        const freeX = harness.screenWidth - (harness.card.x + harness.card.width);
+        const freeY = harness.screenHeight - (harness.card.y + harness.card.height);
+        harness.check("half way in, the desktop is still dead centre",
+            Math.abs(harness.card.x - freeX) < 0.5 && Math.abs(harness.card.y - freeY) < 0.5
+                && harness.applied.scale > harness.viewport.scale
+                && harness.applied.scale < 1,
+            `card=${harness.card.x.toFixed(1)},${harness.card.y.toFixed(1)}`
+                + ` scale=${harness.applied.scale.toFixed(3)}`);
+        harness.reportGeometry("midGeometry");
+        harness.shoot("midway", () => {
             harness.editProgress = 0;
             harness.after(harness.left);
         });
