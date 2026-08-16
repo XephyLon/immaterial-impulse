@@ -965,6 +965,12 @@ if ! python3 "$SCRIPT_DIR/lint_clock_depth_geometry.py"; then
     exit 1
 fi
 
+echo "Running clock depth desktop selector contract tests..."
+if ! python3 "$SCRIPT_DIR/test_clock_depth_select_contract.py"; then
+    echo "Clock depth desktop selector contract tests failed."
+    exit 1
+fi
+
 echo "Running clock depth compositing tests..."
 if ! python3 "$SCRIPT_DIR/test_clock_depth_compositing.py"; then
     echo "Clock depth compositing tests failed."
