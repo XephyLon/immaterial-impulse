@@ -157,39 +157,29 @@ Scope {
 
                     Item {
                         id: dockBackground
-                        anchors {
-                            top: root.vertical ? undefined : parent.top
-                            bottom: root.vertical ? undefined : parent.bottom
-                            left: root.vertical ? parent.left : undefined
-                            right: root.vertical ? parent.right : undefined
-                            horizontalCenter: root.vertical ? undefined : parent.horizontalCenter
-                            verticalCenter: root.vertical ? parent.verticalCenter : undefined
-                        }
-                        // Along the strip the body is the icons' size plus a
-                        // 5px shoulder; across it, the dock's thickness less
-                        // the two margins the body's own anchors then apply.
-                        // Across the strip: the dock's own thickness less the
-                        // two margins, taken from the SAME derivation the
-                        // window is sized by rather than from `parent`.
-                        //
-                        // Reading the parent here was a cycle - the parent's
-                        // implicit size comes from this item - and QML broke it
-                        // by leaving the size stale, which is why the dock drew
-                        // as a full-width black band instead of a centred pill.
-                        // dockThickness is dockHeight + elevation + gaps, so
-                        // this is the configured dock height, arrived at
-                        // through the one derivation everything else uses.
-                        readonly property real crossAxis: dockRoot.dockThickness
-                            - Appearance.sizes.elevationMargin
-                            - Appearance.sizes.hyprlandGapsOut
-                        implicitWidth: root.vertical
-                            ? crossAxis
-                            : dockRow.implicitWidth + 5 * 2
-                        implicitHeight: root.vertical
-                            ? dockRow.implicitHeight + 5 * 2
-                            : crossAxis
-                        width: implicitWidth
-                        height: implicitHeight
+                        // One anchor at every edge, because the turn is a
+                        // change of size rather than of anchors. The body used
+                        // to anchor both ends of its across axis and centre on
+                        // the other, which means the SET of anchors changes
+                        // when the dock turns - and Qt refuses the moment when
+                        // left, right and horizontalCenter are all live rather
+                        // than re-applying once the third clears. It kept both
+                        // orientations' anchors and filled the surface in both
+                        // axes: a full-screen pill with the icons spread over
+                        // 5120px, of which a side edge shows 75.
+                        anchors.centerIn: parent
+
+                        // The dock's whole thickness across its own axis - the
+                        // visual background insets the two margins out of it -
+                        // and the icons plus a 5px shoulder along the strip.
+                        readonly property var box: DockGeometry.contentBox(
+                            root.edge, dockRoot.dockThickness,
+                            dockRow.implicitWidth + 5 * 2,
+                            dockRow.implicitHeight + 5 * 2)
+                        implicitWidth: box.width
+                        implicitHeight: box.height
+                        width: box.width
+                        height: box.height
 
                         StyledRectangularShadow {
                             target: dockVisualBackground
@@ -220,12 +210,16 @@ Scope {
                         GridLayout {
                             id: dockRow
                             flow: root.vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
-                            anchors.top: root.vertical ? undefined : parent.top
-                            anchors.bottom: root.vertical ? undefined : parent.bottom
-                            anchors.left: root.vertical ? parent.left : undefined
-                            anchors.right: root.vertical ? parent.right : undefined
-                            anchors.horizontalCenter: root.vertical ? undefined : parent.horizontalCenter
-                            anchors.verticalCenter: root.vertical ? parent.verticalCenter : undefined
+                            // Same reasoning as the body above: the strip is
+                            // centred at every edge and takes its size from
+                            // the module, so no anchor has to appear or
+                            // disappear when the dock turns.
+                            anchors.centerIn: parent
+                            readonly property var box: DockGeometry.contentBox(
+                                root.edge, dockRoot.dockThickness,
+                                implicitWidth, implicitHeight)
+                            width: box.width
+                            height: box.height
                             rowSpacing: Appearance.spacing.space50
                             columnSpacing: Appearance.spacing.space50
                             property real padding: Appearance.spacing.space100
