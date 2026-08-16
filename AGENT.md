@@ -1013,6 +1013,32 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   `GlobalStates.settingsHeldForRegionSelector` so Settings can remain visible in screenshots without
   racing surface creation. Because clearing the grab also empties its dismissable list, Settings
   must re-register itself when selection ends even though its own `visible` property never changed.
+- **`WlrKeyboardFocus.Exclusive` is a session-wide grab, so a per-monitor surface must not take
+  it.** A fullscreen overlay covering every screen can hold the keyboard — that is what makes the
+  idle screensaver wake on any key without leaking the keystroke into whatever was focused. The
+  same surface on *one* monitor cannot: the grab is not scoped to that output, so it swallows what
+  the user types on the screen they moved to, and a saver that dismisses on a keypress therefore
+  dismisses itself on their first letter. `modules/imi/screensaver/Screensaver.qml` picks
+  `Exclusive` for the all-screens idle path and `None` for a deliberately blanked monitor. The
+  pointer half of the same rule: getting back to work means moving the pointer *off* that monitor,
+  which is motion across the surface being escaped, so a deliberate blank ignores motion and takes
+  a click. afb1c7ea5 ("feat(screensaver): blank one named monitor, not every screen").
+- **An idle inhibitor belongs to the *deliberate* half of a feature, never to the idle half.** The
+  screensaver has two ways in — hypridle's 240s listener (`ipc call screensaver show`) and a
+  keybind — and only the second holds `services/Idle.qml`'s inhibitor. Holding it on the idle path
+  would mean a user who walks away is blanked at 240s and then never reaches lock (300s), DPMS off
+  (600s) or suspend (900s): the ladder hypridle exists for, disabled by the thing that fires first
+  in it. That is why the two paths are separate state (`GlobalStates.screensaverActive` vs
+  `screensaverScreens`) rather than one flag with a mode. Two things generalise. The hold is a
+  third bit ORed into the one existing `IdleInhibitor` rather than a second one — that window's own
+  comment records a 0x0 surface mapping unreliably enough that Hyprland's ext-idle-notify ignored
+  the inhibitor, and a second copy would re-learn it while giving "is the system awake" two answers
+  to disagree about. And it is **derived** from the blanked-screen list rather than stored as a
+  flag someone sets and clears, so it has no release path to forget: every way the saver comes down
+  empties the list, and emptying the list *is* the release. If the shell dies while a screen is
+  blanked, nothing leaks — a `zwp_idle_inhibitor` is destroyed with the `wl_surface` it was created
+  on, and a client's surfaces die with its Wayland connection. 83544dedb ("feat(idle): a
+  deliberately blanked monitor holds the keep-awake").
 
 ## State propagation is reactive, or it is a bug waiting
 
