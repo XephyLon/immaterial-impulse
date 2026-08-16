@@ -62,6 +62,11 @@ ShellRoot {
                 // someone clicks its toolbar button - which on a shell where
                 // nobody has is never.
                 Quickshell.shellPath("modules/imi/wallpaperSelector/ClockDepthPicker.qml"),
+                // Same shape one step on: the desktop subject selector's
+                // surface is behind a Loader that stays inactive until somebody
+                // arms the mode from that picker, so an ordinary run never
+                // compiles it.
+                Quickshell.shellPath("modules/imi/clockDepthSelect/ClockDepthSelectSurface.qml"),
                 // The cheatsheet only compiles when the user presses Super+/,
                 // and the keybind editor only when a row's pencil is clicked.
                 Quickshell.shellPath("modules/imi/cheatsheet/CheatsheetKeybinds.qml"),
