@@ -67,13 +67,13 @@ TestCase {
         // horizontal slack grows - and it grows on the drawer's side, which is
         // where extra room is wanted. A geometry that took only the horizontal
         // ratio would put the desktop's top and bottom edges off the screen.
-        const short = EditMode.viewportGeometry({
+        const panel = EditMode.viewportGeometry({
             screenWidth: 1280, screenHeight: 400, drawerWidth: 120, margin: 40
         });
-        fuzzyCompare(short.scale, (400 - 80) / 400, 1e-9);
-        verify(short.scale < (1280 - 120 - 80) / 1280);
-        verify(short.height <= 400 - 80 + 0.5);
-        verify(short.width <= 1280 - 120 - 80 + 0.5);
+        fuzzyCompare(panel.scale, (400 - 80) / 400, 1e-9);
+        verify(panel.scale < (1280 - 120 - 80) / 1280);
+        verify(panel.height <= 400 - 80 + 0.5);
+        verify(panel.width <= 1280 - 120 - 80 + 0.5);
     }
 
     function test_the_inset_does_not_depend_on_the_drawer_being_open() {
