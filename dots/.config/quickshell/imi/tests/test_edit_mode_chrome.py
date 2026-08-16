@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Edit Mode's desktop, scored in pixels: the corner, the substrate, the exit.
+"""Edit Mode's desktop, scored in pixels: the shrink, the corner, the substrate.
 
 `EditModeLookProbe.qml` re-declares the mode's four-sibling arrangement under a
-headless weston and saves three frames - before the mode, during it, and after
-leaving it. This module scores them. The split is forced rather than chosen:
-`ItemGrabResult.image` is a QImage and a QImage is not scriptable from QML, so
-the analysis lives outside, the same way `test_card_shadow.py` runs.
+headless weston and saves four frames - before the mode, settled in it, held
+half way in, and after leaving it. This module scores them. The split is forced
+rather than chosen: `ItemGrabResult.image` is a QImage and a QImage is not
+scriptable from QML, so the analysis lives outside, the same way
+`test_card_shadow.py` runs.
 
-Three things are checked here and nowhere else, because each of them is a
+Four things are checked here and nowhere else, because each of them is a
 question about pixels that reads as correct in every source file:
 
 - **the chrome stands down completely on exit.** The frame taken before the mode
@@ -26,6 +27,11 @@ question about pixels that reads as correct in every source file:
   children of the canvas, so nothing in `WidgetCanvas.qml` decides whether they
   are drawn over the grid - the order is a consequence of when each Repeater's
   model filled. An opaque widget must hide every line under it.
+- **the shrink is concentric, on the frames nobody looks at.** A viewport that
+  reserved the drawer's width inside its resting geometry scaled about the
+  top-left and slid, and it settled somewhere plausible - which is what let it
+  ship. The desktop's position is measured off the drawn marker at half
+  progress, not read back out of the function that placed it.
 
 The fixture is a flat colour so that "is this pixel a grid line" is answerable
 at all; the check that the lattice is drawn in the first place is what stops the
@@ -54,10 +60,10 @@ WALLPAPER_RGB = (58, 96, 140)
 # The harness states how many checks it ran; this is the literal it must state.
 # Read back out of its own output it would agree with itself by construction,
 # and `failures: 0` is also what a harness that ran nothing prints.
-EXPECTED_CHECKS = 6
+EXPECTED_CHECKS = 7
 
 GEOMETRY = re.compile(
-    r"geometry: screen=([\d.]+),([\d.]+) card=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
+    r"(geometry|midGeometry): screen=([\d.]+),([\d.]+) card=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
     r"radius=([\d.]+) scale=([\d.]+) marker=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
     r"panel=([\d.]+),([\d.]+),([\d.]+),([\d.]+) markerColor=(\S+) panelColor=(\S+)")
 
@@ -100,19 +106,34 @@ class EditModeChromeTest(unittest.TestCase):
         self.assertIn(f"[EditModeLook] checks: {EXPECTED_CHECKS} failures: 0", self.output,
                       f"the harness did not finish cleanly:\n{self.output}")
 
-        match = GEOMETRY.search(self.output)
-        self.assertIsNotNone(match, f"the harness reported no geometry:\n{self.output}")
-        values = match.groups()
-        self.card = tuple(float(v) for v in values[2:6])
-        self.radius = float(values[6])
-        self.scale = float(values[7])
-        self.marker = tuple(float(v) for v in values[8:12])
-        self.panel = tuple(float(v) for v in values[12:16])
-        self.marker_rgb = _hex_to_rgb(values[16])
-        self.panel_rgb = _hex_to_rgb(values[17])
+        self.reported = {}
+        for match in GEOMETRY.finditer(self.output):
+            values = match.groups()
+            self.reported[values[0]] = {
+                "screen": tuple(float(v) for v in values[1:3]),
+                "card": tuple(float(v) for v in values[3:7]),
+                "radius": float(values[7]),
+                "scale": float(values[8]),
+                "marker": tuple(float(v) for v in values[9:13]),
+                "panel": tuple(float(v) for v in values[13:17]),
+                "markerColor": _hex_to_rgb(values[17]),
+                "panelColor": _hex_to_rgb(values[18]),
+            }
+        for tag in ("geometry", "midGeometry"):
+            self.assertIn(tag, self.reported,
+                          f"the harness reported no {tag}:\n{self.output}")
+        settled = self.reported["geometry"]
+        self.screen = settled["screen"]
+        self.card = settled["card"]
+        self.radius = settled["radius"]
+        self.scale = settled["scale"]
+        self.marker = settled["marker"]
+        self.panel = settled["panel"]
+        self.marker_rgb = settled["markerColor"]
+        self.panel_rgb = settled["panelColor"]
 
         self.frames = {}
-        for name in ("rest", "editing", "after"):
+        for name in ("rest", "editing", "midway", "after"):
             path = self.tmp / f"{name}.png"
             self.assertTrue(path.exists(), f"the harness saved no {name} frame")
             self.frames[name] = Image.open(path).convert("RGB")
@@ -141,6 +162,76 @@ class EditModeChromeTest(unittest.TestCase):
             (differing, worst), (0, 0),
             "the mode left something applied to the live desktop: "
             f"{differing} sampled pixels differ, worst by {worst}/255")
+
+    def test_the_transform_returns_the_desktop_to_its_own_coordinates(self):
+        # The other half of standing down, and the half the frame comparison
+        # above cannot see: both frames are taken at progress 0, so a transform
+        # whose identity is not the identity is wrong in both of them equally.
+        # The marker is 220 canvas pixels square at the canvas's origin, so at
+        # rest its edge is at exactly 220 - and a scale of 0.98 or an offset of
+        # a few pixels left over moves it.
+        edge = round(self.marker[2])
+        for name in ("rest", "after"):
+            frame = self.frames[name]
+            self.assertEqual(frame.getpixel((edge - 2, edge - 2)), self.marker_rgb,
+                             f"{name}: the desktop is not drawn at its own scale")
+            self.assertNotEqual(frame.getpixel((edge + 2, edge + 2)), self.marker_rgb,
+                                f"{name}: the desktop is not drawn at its own scale")
+
+    # ---- the shrink is concentric ----------------------------------------
+
+    def test_the_desktop_shrinks_about_dead_centre_mid_animation(self):
+        # The correction this exists for is about the frames nobody looks at.
+        # A viewport that reserved the drawer's width on one side scaled about
+        # the top-left and slid, so at half progress the desktop sat hard
+        # against one edge - and it settled somewhere plausible, which is what
+        # made it survive. Measured off the drawn marker rather than read back
+        # out of the same function that positions it.
+        mid = self.reported["midGeometry"]
+        frame = self.frames["midway"]
+        screen_w, screen_h = mid["screen"]
+        marker_rgb = mid["markerColor"]
+
+        # Past the rounded corner on both axes, so the arc cannot decide where
+        # the marker is judged to start.
+        probe_y = round(mid["card"][1] + mid["radius"] * 2)
+        probe_x = round(mid["card"][0] + mid["radius"] * 2)
+
+        row = [x for x in range(round(screen_w)) if frame.getpixel((x, probe_y)) == marker_rgb]
+        column = [y for y in range(round(screen_h)) if frame.getpixel((probe_x, y)) == marker_rgb]
+        self.assertTrue(row and column, "the desktop is not drawn mid-animation at all")
+
+        # The marker is a known square at the canvas's origin, so its drawn
+        # width is the scale the desktop is really being painted at. Measured to
+        # a pixel over 220, so it is worth a couple of percent and no more -
+        # enough to say "this is the transform that was reported" and not enough
+        # to locate the desktop's far edge, which is what the reported scale is
+        # for below.
+        drawn_scale = (row[-1] - row[0] + 1) / mid["marker"][2]
+        self.assertAlmostEqual(drawn_scale, mid["scale"], delta=0.02)
+        # ...and it is genuinely mid-flight, or this is the settled check again.
+        self.assertGreater(drawn_scale, self.scale + 0.01)
+        self.assertLess(drawn_scale, 0.99)
+
+        # The origin comes from the marker's CENTRE rather than from its leading
+        # edge: a scaled edge is antialiased, so the first pixel that is exactly
+        # the marker's colour sits a pixel or two inside it, and that bias lands
+        # entirely on one side of the symmetry being measured. A centre cancels
+        # it.
+        left = (row[0] + row[-1] + 1) / 2 - mid["marker"][2] / 2 * mid["scale"]
+        top = (column[0] + column[-1] + 1) / 2 - mid["marker"][3] / 2 * mid["scale"]
+        right = left + screen_w * mid["scale"]
+        bottom = top + screen_h * mid["scale"]
+        self.assertAlmostEqual(left, mid["card"][0], delta=2)
+        self.assertAlmostEqual(top, mid["card"][1], delta=2)
+        # Three pixels: an edge measured off a scaled, antialiased marker is
+        # good to about one, and the symmetry doubles that. The failure this
+        # guards is a scale about the top-left, which puts the error at the
+        # width of a whole margin - 60px here - not at three.
+        self.assertAlmostEqual(left, screen_w - right, delta=3,
+                               msg="the desktop is not centred horizontally mid-animation")
+        self.assertAlmostEqual(top, screen_h - bottom, delta=3,
+                               msg="the desktop is not centred vertically mid-animation")
 
     # ---- the corner ------------------------------------------------------
 

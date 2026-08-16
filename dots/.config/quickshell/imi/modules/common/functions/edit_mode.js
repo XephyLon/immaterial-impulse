@@ -55,9 +55,28 @@ var MIN_SCALE = 0.2;
 // screen where it is the tighter constraint it still decides.
 var MAX_SCALE = 0.86;
 
-// The viewport's inset is DERIVED, not chosen: the desktop shrinks by at least
-// what the drawer will need, so the drawer opens into space that already
-// exists rather than covering the desktop or resizing it (spec §1.2, §1.3).
+// The SIZE is derived, not chosen: the desktop shrinks by at least what the
+// drawer will need, so the drawer opens into space that already exists rather
+// than covering the desktop or resizing it (spec §1.2, §1.3).
+//
+// The POSITION is dead centre, and the two are deliberately separate. Entering
+// the mode is a concentric shrink - the desktop gets smaller where it is, and
+// nothing slides - because reserving the drawer's width inside the resting
+// geometry makes the entry asymmetric from its first frame: the desktop drifts
+// toward one edge on the way in, which reads as being shoved aside rather than
+// lifted off the wallpaper, and it does it whether or not a drawer exists yet.
+// The drawer's width is still what decides how far the desktop moves when the
+// drawer OPENS; that is a translation applied at that point, in stage 5, on top
+// of the `x` this returns.
+//
+// The arithmetic that lets those two coexist: a centred desktop has
+// `(screenWidth - width) / 2` free on each side, and the scale below holds
+// `width <= screenWidth - drawerWidth - 2 * margin`, so each side has at least
+// `drawerWidth / 2 + margin`. Opening a drawer of `drawerWidth + margin` on the
+// right therefore needs the desktop to travel at most `drawerWidth / 2` left,
+// which leaves exactly `margin` on its other side. The reservation is real; it
+// is just spent when the drawer arrives instead of being held back from the
+// start.
 //
 // `drawerWidth` is passed whether or not the drawer is open, and this function
 // has no input for the open state on purpose. A desktop that was full width
@@ -66,15 +85,10 @@ var MAX_SCALE = 0.86;
 // flight finds its target a different size than when it was grabbed, and every
 // Behavior carrying the box is handed a moving target, which per b710ef731
 // ("fix(plugins): stop the position Behavior swallowing the parallax
-// cancellation") means it restarts every frame and never ticks. Opening the
-// drawer translates the desktop instead, which is stage 5's `x` offset on top
-// of the `x` this returns.
+// cancellation") means it restarts every frame and never ticks.
 //
-// `margin` is one token: the desktop is inset by it on the left, on the top and
-// on the bottom, and the space reserved on the right is the drawer's own width
-// plus one more of it - the gap between the desktop and the drawer. What the
-// drawer does inside that slot is stage 5's business; the desktop's geometry
-// does not depend on it.
+// `margin` is one token: the gap between the desktop and the screen's edge, and
+// the gap between the desktop and the drawer's slot once there is a drawer.
 function viewportGeometry(input) {
     const screenWidth = (input && input.screenWidth) || 0;
     const screenHeight = (input && input.screenHeight) || 0;
@@ -91,26 +105,18 @@ function viewportGeometry(input) {
     const scale = Math.max(MIN_SCALE,
         Math.min(MAX_SCALE, roomX / screenWidth, roomY / screenHeight));
     const width = screenWidth * scale;
-
-    // Whatever is left over once the desktop, its own margin and the drawer's
-    // slot are accounted for. It is zero on a screen where the drawer decides
-    // the scale, and it is most of a drawer's width again on a wide one, where
-    // the ceiling does - so before this the desktop hugged the left edge of a
-    // 5120px screen with 693px of empty blur on its right, which reads as the
-    // desktop having been shoved aside rather than lifted off the wallpaper.
-    const surplus = Math.max(0, (screenWidth - margin - width) - (drawerWidth + margin));
+    const height = screenHeight * scale;
 
     return {
         scale: scale,
-        // The left margin, plus half of anything spare. Half rather than all,
-        // because the other half stays on the drawer's side: the slot to the
-        // right is `drawerWidth + margin + surplus / 2`, which is still at
-        // least what the drawer asked for, so the derivation stage 5 plugs into
-        // holds whichever of the two constraints decided the scale.
-        x: margin + surplus / 2,
-        y: (screenHeight - screenHeight * scale) / 2,
+        // Centred on both axes, which is what makes `atProgress` a concentric
+        // shrink rather than a slide: the offset is linear in the scale, so
+        // `x * t` is exactly the centring offset of the intermediate scale and
+        // the four margins stay equal in pairs on every frame of the entry.
+        x: (screenWidth - width) / 2,
+        y: (screenHeight - height) / 2,
         width: width,
-        height: screenHeight * scale
+        height: height
     };
 }
 
@@ -120,6 +126,13 @@ function viewportGeometry(input) {
 // straight line, and it means the transform's inputs move together or not at
 // all - there is no frame in which the scale has arrived and the offset has
 // not.
+//
+// The offset is scaled by the SAME t as the scale, and that is what makes the
+// shrink concentric rather than merely centred at the end: a centred geometry's
+// `x` is `screenWidth * (1 - scale) / 2`, which is linear in `(1 - scale)`, so
+// `x * t` is the exact centring offset for the intermediate scale
+// `1 + (scale - 1) * t`. The desktop's four margins are therefore equal in
+// pairs at every point of the animation and not only at rest.
 function atProgress(geometry, progress) {
     const t = Math.max(0, Math.min(1, progress || 0));
     return {

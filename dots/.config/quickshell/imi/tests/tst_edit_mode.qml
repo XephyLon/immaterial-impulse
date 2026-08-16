@@ -57,8 +57,6 @@ TestCase {
         // the width is the promise.
         fuzzyCompare(narrow.width, 1152, 0.5);
         fuzzyCompare(narrow.scale, 1152 / 1600, 1e-9);
-        // The space left over on the right is the drawer plus its gap.
-        fuzzyCompare(1600 - (narrow.x + narrow.width), 400 + 24, 0.5);
     }
 
     function test_a_wide_screen_shrinks_by_the_ceiling_instead() {
@@ -70,45 +68,40 @@ TestCase {
         verify(wide.scale < (5120 - 400 - 48) / 5120);
     }
 
-    function test_the_ceiling_can_only_give_the_drawer_more_room_than_it_asked_for() {
-        // The invariant the derivation exists for, asserted across both
-        // regimes: whatever decides the scale, the slot to the right of the
-        // desktop still holds the drawer plus its gap. A ceiling that shrank the
-        // desktop by moving its left edge, or that capped the scale without
-        // re-centring, would break this while looking fine on one screen.
-        for (const [width, geometry] of [[5120, wide], [1600, narrow]]) {
-            verify(width - (geometry.x + geometry.width) >= 400 + 24 - 0.5);
-            verify(geometry.x >= 24 - 1e-9);
+    function test_the_desktop_rests_dead_centre_on_both_axes() {
+        // The reservation for the drawer is in the SIZE, never in the resting
+        // position: a geometry that held the drawer's width back on one side
+        // makes the entry asymmetric from its first frame, which reads as the
+        // desktop being shoved aside rather than shrinking where it is.
+        for (const [screen, geometry] of [[[5120, 1440], wide], [[1600, 1000], narrow]]) {
+            fuzzyCompare(geometry.x, (screen[0] - geometry.width) / 2, 1e-9);
+            fuzzyCompare(geometry.y, (screen[1] - geometry.height) / 2, 1e-9);
+            fuzzyCompare(geometry.height / geometry.width, screen[1] / screen[0], 1e-9);
         }
     }
 
-    function test_the_desktop_keeps_its_aspect_and_is_centred_vertically() {
-        fuzzyCompare(wide.height / wide.width, 1440 / 5120, 1e-9);
-        fuzzyCompare(wide.y, (1440 - wide.height) / 2, 0.5);
-        // On a screen where the drawer is what binds, the desktop sits at the
-        // margin exactly and every spare pixel is the drawer's.
-        fuzzyCompare(narrow.x, 24, 1e-9);
-    }
-
-    function test_room_the_drawer_did_not_ask_for_is_split_rather_than_all_given_to_it() {
-        // The ceiling leaves a wide screen with far more space beside the
-        // desktop than the drawer needs, and putting all of it on one side sits
-        // the desktop against the screen edge with a drawer's width of empty
-        // blur opposite - which reads as the desktop having been shoved aside.
-        // Half each: the left inset grows and the drawer's slot never shrinks
-        // below what it asked for.
-        const slot = 5120 - (wide.x + wide.width);
-        const surplus = (5120 - 24 - wide.width) - (400 + 24);
-        verify(surplus > 0);
-        fuzzyCompare(wide.x, 24 + surplus / 2, 0.5);
-        fuzzyCompare(slot, 400 + 24 + surplus / 2, 0.5);
+    function test_a_centred_desktop_still_leaves_the_drawer_room_to_open_into() {
+        // What the reservation buys, now that it is spent later rather than
+        // held back: each side has at least half a drawer plus a margin free,
+        // so opening a drawer of `drawerWidth + margin` on the right needs the
+        // desktop to travel at most half a drawer left and still leaves a
+        // margin behind it. Asserted in both regimes, because on a wide screen
+        // it is the ceiling rather than the drawer that decides the scale.
+        for (const [screen, geometry] of [[5120, wide], [1600, narrow]]) {
+            const free = (screen - geometry.width) / 2;
+            verify(free >= 400 / 2 + 24 - 0.5);
+            // What stage 5 will have to move the desktop by, and what is left
+            // on the other side of it once it has.
+            const travel = Math.max(0, (400 + 24) - free);
+            verify(free - travel >= 24 - 0.5);
+        }
     }
 
     function test_a_short_screen_is_bound_by_its_height_instead() {
         // On a wide, short panel the vertical margins bind first, so the
-        // horizontal slack grows - and it grows on the drawer's side, which is
-        // where extra room is wanted. A geometry that took only the horizontal
-        // ratio would put the desktop's top and bottom edges off the screen.
+        // horizontal slack grows - and it grows on both sides, because the
+        // desktop is centred. A geometry that took only the horizontal ratio
+        // would put the desktop's top and bottom edges off the screen.
         const panel = EditMode.viewportGeometry({
             screenWidth: 1280, screenHeight: 400, drawerWidth: 120, margin: 40
         });
@@ -116,6 +109,7 @@ TestCase {
         verify(panel.scale < (1280 - 120 - 80) / 1280);
         verify(panel.height <= 400 - 80 + 0.5);
         verify(panel.width <= 1280 - 120 - 80 + 0.5);
+        fuzzyCompare(panel.y, 40, 0.5);
     }
 
     function test_the_inset_does_not_depend_on_the_drawer_being_open() {
@@ -175,6 +169,22 @@ TestCase {
         // in on an overshooting curve; it clamps rather than magnifying.
         compare(EditMode.atProgress(wide, 1.4).scale, wide.scale);
         compare(EditMode.atProgress(wide, -0.3).scale, 1);
+    }
+
+    function test_the_shrink_is_concentric_on_every_frame_and_not_only_at_rest() {
+        // The correction this exists for: a geometry that reserved the drawer's
+        // width on one side made the entry a slide as well as a shrink, and it
+        // was symmetric nowhere - including at rest. The margins are equal in
+        // pairs at every progress because the offset is linear in the scale and
+        // takes the same `t`, so this fails on any transform that centres only
+        // at the end.
+        for (const t of [0, 0.15, 0.5, 0.83, 1]) {
+            const at = EditMode.atProgress(wide, t);
+            const card = EditMode.cardRect(wide, t, 5120, 1440);
+            fuzzyCompare(card.x, 5120 - (card.x + card.width), 1e-6);
+            fuzzyCompare(card.y, 1440 - (card.y + card.height), 1e-6);
+            fuzzyCompare(at.scale, card.width / 5120, 1e-9);
+        }
     }
 
     function test_the_card_is_the_whole_screen_until_the_mode_starts() {
