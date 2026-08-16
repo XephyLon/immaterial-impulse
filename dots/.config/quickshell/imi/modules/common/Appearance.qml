@@ -700,6 +700,16 @@ Singleton {
         property real searchWidth: 360
         property real sidebarWidth: 460
         property real sidebarWidthExtended: 750
+        // Edit Mode's viewport is inset by exactly what the drawer will need,
+        // so the drawer opens into space that already exists rather than
+        // covering the desktop or resizing it (spec §1.2). The drawer itself
+        // does not exist until stage 5; this is the one number both it and the
+        // inset read, so it plugs in here rather than restating a width the
+        // desktop has already been shrunk by.
+        property real editModeDrawerWidth: 380
+        // The gap outside the shrunk desktop on its three free sides, and
+        // between it and the drawer's slot on the fourth.
+        property real editModeMargin: root.spacing.space300
         property real baseVerticalBarWidth: 46
         property real verticalBarWidth: Config.options.bar.cornerStyle === 1 ? 
             (baseVerticalBarWidth + root.sizes.hyprlandGapsOut * 2) : baseVerticalBarWidth
