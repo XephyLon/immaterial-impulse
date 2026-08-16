@@ -134,6 +134,7 @@ Item {
                             label: modelData.name
                             onClicked: {
                                 DockLaunchTracker.markLaunching(root.menuAppId)
+                                AppUsage.recordLaunch(root.desktopEntry?.id)
                                 modelData.execute()
                                 root.close()
                             }
@@ -154,6 +155,7 @@ Item {
                         enabled: root.desktopEntry !== null
                         onClicked: {
                             DockLaunchTracker.markLaunching(root.menuAppId)
+                            AppUsage.recordLaunch(root.desktopEntry?.id)
                             root.desktopEntry?.execute()
                             root.close()
                         }

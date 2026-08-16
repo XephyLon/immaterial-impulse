@@ -194,6 +194,7 @@ Item {
                     const entry = slotItem.appEntry
                     if (!entry || entry.toplevels.length === 0) {
                         DockLaunchTracker.markLaunching(slotItem.appId)
+                        AppUsage.recordLaunch(slotItem.deskEntry?.id)
                         slotItem.deskEntry?.execute()
                         return
                     }
@@ -204,6 +205,7 @@ Item {
 
                 middleClickAction: () => {
                     DockLaunchTracker.markLaunching(slotItem.appId)
+                    AppUsage.recordLaunch(slotItem.deskEntry?.id)
                     slotItem.deskEntry?.execute()
                 }
                 altAction:         () => {
