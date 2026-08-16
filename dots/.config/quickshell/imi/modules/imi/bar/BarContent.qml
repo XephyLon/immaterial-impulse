@@ -9,6 +9,7 @@ import qs.modules.common
 import qs.modules.common.plugins
 import qs.modules.common.widgets
 import qs.modules.common.functions
+import "bar_widget_source.js" as BarWidgetSource
 
 Item {
     id: root
@@ -48,12 +49,7 @@ Item {
             if (name === "sysTray" && !trayHasItems) return false;
             if (root.suppressDockerForMemoryTest
                     && (name === "dockerPlugin" || name === "plugin:docker_plugin")) return false;
-            // A plugin's bar widget tracks its enabled state: disabling (or
-            // uninstalling) a plugin drops its id from plugins.enabled, so its
-            // bar entry disappears with it. The layout token still holds the id
-            // (plugin:<id>), so re-enabling restores the widget in place.
-            if (name.startsWith("plugin:") && !Config.options.plugins.enabled.includes(name.substring(7)))
-                return false;
+            if (BarWidgetSource.isDisabledPlugin(name, Config.options.plugins.enabled)) return false;
             return true;
         });
     }
@@ -63,16 +59,8 @@ Item {
     readonly property var effectiveRightLayout:  filterLayout(Config.options.bar.layouts.rightLayout)
 
     function getWidgetUrl(name) {
-        if (!name) return "";
-        // Bundled native plugins use a direct component just like WeatherBar.
-        // The generic package Loader remains available for installed plugins,
-        // but must not sit in Docker's bar geometry path: forcing that Loader
-        // to fill its implicit-size host caused multi-gigabyte relayout loops.
-        if (name === "plugin:docker_plugin") return Qt.resolvedUrl("./DockerPlugin.qml");
-        if (name === "plugin:discord_voice") return Qt.resolvedUrl("./DiscordVoicePlugin.qml");
-        if (name.startsWith("plugin:")) return Qt.resolvedUrl("./PluginBarWidget.qml");
-        let formattedName = name.charAt(0).toUpperCase() + name.slice(1);
-        return Qt.resolvedUrl("./" + formattedName + ".qml");
+        const fileName = BarWidgetSource.fileNameFor(name);
+        return fileName ? Qt.resolvedUrl("./" + fileName) : "";
     }
 
     function getMirroredForIndex(layout, idx) {
