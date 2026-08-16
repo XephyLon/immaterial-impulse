@@ -1,6 +1,7 @@
 import QtQuick
 import qs
 import qs.modules.common
+import "../../functions/edit_mode.js" as EditMode
 
 MouseArea {
     id: root
@@ -50,13 +51,35 @@ MouseArea {
     property real marqueeAnchorX: 0
     property real marqueeAnchorY: 0
 
-    // Escape is the keyboard way out of a selection. The desktop's layer
-    // surface only takes keys while it is OnDemand, so a live selection also
-    // registers as a keyboard-focus requester alongside the widgets above.
+    // Escape is the keyboard way out of a selection, and Edit Mode may not take
+    // it from that or from a grip resize (PluginWidget handles its own, which
+    // gets the key first because the grip has focus during the gesture). The
+    // ladder resolves in order and the first match wins; the module owns the
+    // precedence so it is checkable without a canvas.
+    //
+    // The desktop's layer surface only takes keys while it is OnDemand, so a
+    // live selection - and the mode - register as keyboard-focus requesters
+    // alongside the widgets above. Whether the compositor then delivers the key
+    // to a Bottom-layer surface is not established, which is why the mode has a
+    // pointer way out as well and no feature depends on this alone.
     focus: root.selectionEnabled
-    Keys.onEscapePressed: root.clearSelection()
+    Keys.onEscapePressed: {
+        const action = EditMode.resolveEscape({
+            gestureInFlight: root.draggingWidget() !== null,
+            selectionCount: root.selectedWidgets.length,
+            tab: EditMode.DESKTOP_TAB
+        })
+        if (action === "cancelGesture") root.cancelActiveDrag()
+        else if (action === "clearSelection") root.clearSelection()
+        else if (root.editMode) GlobalStates.editMode = false
+    }
+    readonly property bool keyboardFocusHeld: root.selectedWidgets.length > 0 || root.editMode
+    onKeyboardFocusHeldChanged: {
+        root.setKeyboardFocusRequest(root, root.keyboardFocusHeld)
+        if (root.keyboardFocusHeld) root.forceActiveFocus()
+    }
     onSelectedWidgetsChanged: {
-        root.setKeyboardFocusRequest(root, root.selectedWidgets.length > 0)
+        root.setKeyboardFocusRequest(root, root.keyboardFocusHeld)
         if (root.selectedWidgets.length > 0) root.forceActiveFocus()
     }
 
