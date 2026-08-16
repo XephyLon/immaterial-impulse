@@ -2405,6 +2405,7 @@ Four things about that column generalise past it:
   — would be unusable. `tests/test_clock_depth_cache.py` pins the pair as two
   files, and pins that a cached embedding comes back with the encoder file absent
   and `onnxruntime` raising on import.
+  (feat(background): a third model that answers a click instead of the picture.)
 - **The prompt lives inside the mask, in a PNG text chunk.** A SAM mask is a
   function of the clicks as well as the picture, so something has to record them
   — and every other place to put them is a pair that has to agree. In the key
@@ -2417,6 +2418,7 @@ Four things about that column generalise past it:
   outlive it, `accept` carries it for free, and the accepted copy keeps saying
   what it was cut with after the candidate is refined further. `status` reads it
   back with a hand-written chunk reader, because that path may not import Pillow.
+  (test(clock-depth): pin the prompt, its home in the mask, and the embedding cache.)
 - **`coverRect` needed no new case, and that was confirmed rather than assumed.**
   A prompted mask comes out at the picture's own aspect (SAM resizes the longest
   side and pads) where a salient one is square (isnet squashes), and `coverRect`
@@ -2427,6 +2429,7 @@ Four things about that column generalise past it:
   whole extent. `tst_clock_depth_eligibility.qml` pins both halves, and its
   second case uses a 3.56:1 picture in a 4:3 box on purpose — at a matching
   aspect the box IS the cover rect and every registration bug is invisible.
+  (test(clock-depth): confirm a picture-shaped mask needs no new registration.)
 - **A file rewritten at the same path is not reloaded, and neither clearing the
   source nor `cache: false` fixes it.** Qt keys its pixmap cache on the URL, so
   an `Image` whose file changes underneath it keeps drawing the old bytes for
@@ -2444,6 +2447,7 @@ Four things about that column generalise past it:
   `tests/lint_clock_depth_geometry.py` fails on a depth layer that names the
   mask path without it. Anything else here that writes a file the shell is
   already displaying has the same question to answer.
+  (fix(background): bust Qt's pixmap cache when a mask is rewritten in place.)
 - **A click that finds nothing must not write a `.none` marker, and it does not
   use the detectors' floor either.** That marker means "this model looked at this
   picture and there is nothing in it" and is worth not re-learning at 4.5s a
@@ -2455,6 +2459,7 @@ Four things about that column generalise past it:
   76000-pixel object on a 7680x2160 wallpaper as "nothing there", and it was not
   buying the refusal it looked like it was for, since a click on flat sky comes
   back at 1.6-10% because SAM answers with the sky.
+  (fix(background): a click's floor is not the detectors' floor.)
 
 **A segmentation model returning nothing is usually the wrong model, not an empty
 picture.** `isnet-anime` and `isnet-general-use` are complementary and neither is
