@@ -307,6 +307,12 @@ if ! python3 "$SCRIPT_DIR/test_widget_resize_grip_runtime.py"; then
     exit 1
 fi
 
+echo "Running edit mode contract tests..."
+if ! python3 "$SCRIPT_DIR/test_edit_mode_contract.py"; then
+    echo "Edit mode contract tests failed."
+    exit 1
+fi
+
 # Whether a drag still lands where the pointer put it once the desktop is drawn
 # at a scale. Nothing static can see that: the drag is hand-computed and the
 # transform is only SUPPOSED to cancel itself out. Brings its own weston.
