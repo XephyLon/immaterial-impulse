@@ -9,6 +9,7 @@ import Qt.labs.folderlistmodel
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import "math_query.js" as MathQuery
 import ".."
 
 Singleton {
@@ -16,14 +17,41 @@ Singleton {
 
     property string query: ""
 
-    // Drive the file-search scan imperatively (never from the results binding,
-    // which would loop). Only scans while a file-prefixed query is active.
+    // Drive the external searches imperatively (never from the results
+    // binding, which would loop). Only scans while a file-prefixed query is
+    // active; only calculates while the query is arithmetic at all.
     onQueryChanged: {
         const filePrefix = Config.options.search.prefix.file ?? "~";
         if (root.query.startsWith(filePrefix))
             FileSearch.search(StringUtils.cleanPrefix(root.query, filePrefix));
         else
             FileSearch.reset();
+        root.refreshMathResult();
+    }
+
+    // Called, never bound. A `readonly property bool queryIsMath` read from
+    // onQueryChanged is one keystroke stale - the handler and the binding both
+    // hang off `query` and nothing orders them, so the gate answered for the
+    // previous query and the first character of every expression was dropped
+    // (measured: "2+2*10" reached qalc as "2+", "2+2", ...). The predicate is a
+    // regex on a short string; call it where it is needed.
+    function queryIsMath() {
+        return MathQuery.isMathQuery(root.query, Config.options.search.prefix.math);
+    }
+
+    // The qalc spawn used to be fired from inside the `results` binding, which
+    // re-evaluates on every keystroke AND again when `mathResult` lands - so
+    // typing "firefox" started eight qalc processes to be told eight times
+    // that "firefox" is not a number. Decide here, from the query alone,
+    // before anything is spawned.
+    function refreshMathResult() {
+        if (!root.queryIsMath()) {
+            nonAppResultsTimer.stop();
+            mathProc.running = false;
+            root.mathResult = "";
+            return;
+        }
+        nonAppResultsTimer.restart();
     }
 
     // One shape for a modpack result, built in both places that need it: the
@@ -285,11 +313,9 @@ Singleton {
         id: nonAppResultsTimer
         interval: Config.options.search.nonAppResultDelay
         onTriggered: {
-            let expr = root.query;
-            if (expr.startsWith(Config.options.search.prefix.math)) {
-                expr = expr.slice(Config.options.search.prefix.math.length);
-            }
-            mathProc.calculateExpression(expr);
+            if (!root.queryIsMath())
+                return;
+            mathProc.calculateExpression(MathQuery.expressionFor(root.query, Config.options.search.prefix.math));
         }
     }
 
@@ -480,8 +506,11 @@ Singleton {
         }
 
         ////////////////// Init ///////////////////
-        nonAppResultsTimer.restart();
-        const mathResultObject = resultComp.createObject(null, {
+        // No spawn from here - onQueryChanged owns that, see refreshMathResult().
+        // The row exists only once qalc has actually answered a query that was
+        // arithmetic to begin with; it used to be built unconditionally and so
+        // rendered qalc's opinion of whatever application name was being typed.
+        const mathResultObject = (root.queryIsMath() && root.mathResult.length > 0) ? resultComp.createObject(null, {
             name: root.mathResult,
             verb: Translation.tr("Copy"),
             type: Translation.tr("Math result"),
@@ -491,7 +520,7 @@ Singleton {
             execute: () => {
                 Quickshell.clipboardText = root.mathResult;
             }
-        });
+        }) : null;
         const appResultObjects = AppSearch.fuzzyQuery(StringUtils.cleanPrefix(root.query, Config.options.search.prefix.app)).map(entry => {
             return resultComp.createObject(null, {
                 type: Translation.tr("App"),
@@ -616,7 +645,7 @@ Singleton {
         const startsWithMathPrefix = root.query.startsWith(Config.options.search.prefix.math);
         const startsWithShellCommandPrefix = root.query.startsWith(Config.options.search.prefix.shellCommand);
         const startsWithWebSearchPrefix = root.query.startsWith(Config.options.search.prefix.webSearch);
-        if (startsWithNumber || startsWithMathPrefix) {
+        if ((startsWithNumber || startsWithMathPrefix) && mathResultObject) {
             result.push(mathResultObject);
         } else if (startsWithShellCommandPrefix) {
             result.push(commandResultObject);
@@ -640,7 +669,7 @@ Singleton {
         if (Config.options.search.prefix.showDefaultActionsWithoutPrefix) {
             if (!startsWithShellCommandPrefix)
                 result.push(commandResultObject);
-            if (!startsWithNumber && !startsWithMathPrefix)
+            if (!startsWithNumber && !startsWithMathPrefix && mathResultObject)
                 result.push(mathResultObject);
             if (!startsWithWebSearchPrefix)
                 result.push(webSearchResultObject);
