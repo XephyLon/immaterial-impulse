@@ -931,6 +931,12 @@ if ! python3 "$SCRIPT_DIR/test_clock_depth_compositing.py"; then
     exit 1
 fi
 
+echo "Running clock depth no-op tests..."
+if ! python3 "$SCRIPT_DIR/test_clock_depth_noop.py"; then
+    echo "Clock depth no-op tests failed."
+    exit 1
+fi
+
 echo "Running greeter sync tests..."
 if ! python3 "$SCRIPT_DIR/test_greeter_sync.py"; then
     echo "Greeter sync tests failed."
