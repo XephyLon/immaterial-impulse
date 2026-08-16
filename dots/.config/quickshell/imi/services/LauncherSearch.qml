@@ -120,15 +120,29 @@ Singleton {
 
     property var settingsKeywordsCache: ({})
 
+    // One entry per page SettingsContent actually declares, named exactly as it
+    // names them. Three of the eight entries this replaces ("Bar", "Desktop",
+    // "Interface") matched no page in that catalogue, so their results opened
+    // the settings window on whatever page was last shown; "Interface" also
+    // pointed the keyword harvest at InterfaceConfig.qml, which has not existed
+    // for some time - a grep over a missing file exits non-zero with no output,
+    // and the harvester ignores its exit code, so that page contributed no
+    // section keywords and said nothing about it.
     property var settingsIndex: [
-        { page: "General",   path: "GeneralConfig.qml" },
-        { page: "Bar",       path: "BarConfig.qml" },
-        { page: "Desktop",   path: "BackgroundConfig.qml" },
-        { page: "Interface", path: "InterfaceConfig.qml" },
-        { page: "Services",  path: "ServicesConfig.qml" },
-        { page: "Hyprland",  path: "HyprlandConfig.qml" },
-        { page: "About",     path: "About.qml" },
-        { page: "Quick",     path: "QuickConfig.qml" },
+        { page: "Quick",               path: "QuickConfig.qml" },
+        { page: "Appearance",          path: "AppearanceConfig.qml" },
+        { page: "Cursor",              path: "CursorConfig.qml" },
+        { page: "Wallpaper & Desktop", path: "BackgroundConfig.qml" },
+        { page: "Bar & Dock",          path: "BarConfig.qml" },
+        { page: "Sidebars & Panels",   path: "SidebarsPanelsConfig.qml" },
+        { page: "Notifications",       path: "NotificationsConfig.qml" },
+        { page: "Lock & Idle",         path: "LockIdleConfig.qml" },
+        { page: "Capture",             path: "CaptureConfig.qml" },
+        { page: "General",             path: "GeneralConfig.qml" },
+        { page: "Services",            path: "ServicesConfig.qml" },
+        { page: "Widgets",             path: "PluginsPage.qml" },
+        { page: "Hyprland",            path: "HyprlandConfig.qml" },
+        { page: "About",               path: "About.qml" },
     ]
 
     // Load user action scripts from ~/.config/immaterial-impulse/actions/
