@@ -4,7 +4,12 @@ import qs.modules.common
 
 MouseArea {
     id: root
-    property int gridSize: 24
+    // The drawn lattice is the one the drag snaps to (AbstractWidget's 12px),
+    // with every second line emphasised so the 24px rhythm this used to draw is
+    // still readable. Drawing 24 while snapping 12 was honest enough while the
+    // grid was only up during a drag; with it up for the whole of Edit Mode, a
+    // widget landing between two lines reads as broken snapping.
+    property int gridSize: 12
     property bool showGrid: false
     readonly property bool isWidgetCanvas: true
     readonly property bool gridVisible: showGrid && Config.options.background.showGrid
@@ -221,6 +226,11 @@ MouseArea {
         root.centerYActive = yActive
     }
 
+    // Every second line at full strength, the ones between it fainter: the fine
+    // lattice is what the drag actually lands on, and the emphasis is what
+    // keeps a screen's worth of 12px lines readable rather than grey.
+    readonly property real fineGridOpacity: 0.4
+
     Repeater {
         model: root.gridVisible ? Math.ceil(root.width / root.gridSize) : 0
         delegate: Rectangle {
@@ -228,6 +238,7 @@ MouseArea {
             x: index * root.gridSize
             width: 1
             height: root.height
+            opacity: index % 2 === 0 ? 1 : root.fineGridOpacity
             color: Appearance.colors.colLayer0Border
         }
     }
@@ -239,6 +250,7 @@ MouseArea {
             y: index * root.gridSize
             width: root.width
             height: 1
+            opacity: index % 2 === 0 ? 1 : root.fineGridOpacity
             color: Appearance.colors.colLayer0Border
         }
     }
