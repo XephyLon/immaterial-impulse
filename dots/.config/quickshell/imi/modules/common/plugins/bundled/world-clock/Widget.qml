@@ -8,6 +8,7 @@ import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.modules.common.plugins
 import qs.modules.common.plugins.designsystem.widgets as Expressive
+import "world_clock_geometry.js" as Geometry
 
 Item {
     id: root
@@ -22,6 +23,10 @@ Item {
     // The host's drag, forwarded to the card so it lifts while it is handled.
     // A card never told about the drag silently never lifts.
     property bool hostDragging: false
+    // ...and the host's own box animation, which is always false here: the
+    // host only reports motion for a box it sizes itself, and this widget
+    // declares no `grid`. It publishes its own `boxInMotion` below.
+    property bool hostBoxInMotion: false
 
     // The card fills the whole widget, so the host's default region already has
     // the right extent - but not the right corner radius (it falls back to
@@ -59,18 +64,39 @@ Item {
 
     property string sizeMode: root.normalizeSizeMode(PluginState.option("world-clock", "sizeMode", "2x2"))
 
-    property real widgetWidth:  sizeMode === "2x2" ? Appearance.sizes.widgetGridSpanX(2) : Appearance.sizes.widgetGridSpanX(3)
-    property real widgetHeight: sizeMode === "2x2" ? Appearance.sizes.widgetGridSpanY(2) : Appearance.sizes.widgetGridSpanY(1)
+    // ---- the span, and the box travelling towards it ---------------------
+    //
+    // Geometry evaluates at the span's SETTLED box; the Behaviors below carry
+    // the travel. Reading `implicitWidth` here instead would retarget every
+    // element on every frame, and a Behavior whose target keeps moving never
+    // converges (test_geometry_rects_come_from_the_settled_span_not_the_
+    // animating_box).
+    function spanWidthOf(span) {
+        return span === "3x1"
+            ? Appearance.sizes.widgetGridSpanX(3) : Appearance.sizes.widgetGridSpanX(2);
+    }
+    function spanHeightOf(span) {
+        return span === "3x1"
+            ? Appearance.sizes.widgetGridSpanY(1) : Appearance.sizes.widgetGridSpanY(2);
+    }
+    readonly property real spanW: root.spanWidthOf(root.sizeMode)
+    readonly property real spanH: root.spanHeightOf(root.sizeMode)
+    readonly property real uiScale: Appearance.effectiveScale
+
+    property real widgetWidth: root.spanW
+    property real widgetHeight: root.spanH
+    Behavior on widgetWidth { Expressive.SpanTravel {} }
+    Behavior on widgetHeight { Expressive.SpanTravel {} }
+
+    readonly property bool boxInMotion: Math.abs(root.widgetWidth - root.spanW) > 0.5
+        || Math.abs(root.widgetHeight - root.spanH) > 0.5
+
+    implicitWidth: root.widgetWidth
+    implicitHeight: root.widgetHeight
 
     // The card's own padding, shared by the 2x2 face and its settings back.
-    // The wide mode deliberately does not use it - see the 3x1 layout below.
+    // The wide mode deliberately does not use it - see world_clock_geometry.js.
     readonly property real cardInset: Appearance.spacing.space150
-
-    Behavior on widgetWidth  { animation: Appearance.animation.elementResize.numberAnimation.createObject(this) }
-    Behavior on widgetHeight { animation: Appearance.animation.elementResize.numberAnimation.createObject(this) }
-
-    implicitWidth:  widgetWidth
-    implicitHeight: widgetHeight
 
     property string localCityName: Weather.data?.city ?? "..."
     property string localTime: DateTime.time
@@ -82,6 +108,11 @@ Item {
     // PluginState directly.
     property var worldCities: WorldClock.entries
     property bool showingSettings: false
+
+    // The settings face is reachable only from the 2x2's own settings button,
+    // and it is drawn at the 2x2 box. Leaving it up while the card becomes a
+    // row of dials would show four timezone pickers inside a 108px strip.
+    onSizeModeChanged: if (root.sizeMode !== "2x2") root.showingSettings = false
 
     function toggleFlip() { flipAnim.start() }
 
@@ -121,193 +152,314 @@ Item {
         // rectangle filling the widget with everything drawn inside it. It
         // takes the component rather than only the tokens, so its surface,
         // its rounding and its shadow are the ones every other card has.
+        //
+        // `clipContent`, because a one-tree widget's elements do not stop
+        // existing when the card shrinks past them: the local time, the date
+        // and the bottom row of chips all fade out below a 3x1 card's bottom
+        // edge, and an unclipped fade paints them onto the wallpaper for the
+        // length of the morph.
         Expressive.WidgetCard {
             id: contentRect
             anchors.fill: parent
+            clipContent: true
             tint: Appearance.colors.colPrimaryContainer
             useBlurBackground: root.blurEnabled
             backgroundOpacity: root.backgroundOpacity
             dragging: root.hostDragging
-            radius: Appearance.rounding?.verylarge ?? 30
+            hostMotionActive: root.hostBoxInMotion || root.boxInMotion
 
-            // 2x2. Two steps of the scale: cardInset (space150) at the card
-            // edge, space100 between the three blocks inside it. The inset is
-            // what keeps the four city chips clear of a 30px corner radius -
-            // at the space100 it had, the bottom two chips ran into the
-            // rounding.
+            // ---- the 2x2's own chrome ------------------------------------
             //
-            // This side has always been over-budget: at the built-in's 252 the
-            // content came to 258, and at 228 it came to 234, so the bottom
-            // row of chips sat 2px off the card edge instead of on the margin.
-            // Two things fix that rather than shaving gaps again. The chip
-            // grid is Layout.fillHeight, so it takes whatever is left over
-            // instead of pushing past the bottom margin whenever a font is a
-            // little taller than the one this was tuned against; and the local
-            // time drops 42 -> 36, which is where the room actually comes from.
-            // It is still 2.4x the largest text under it, so it still reads as
-            // the hero.
-            ColumnLayout {
-                id: mainColumn
-                anchors { fill: parent; margins: root.cardInset }
-                spacing: Appearance.spacing.space100
-                visible: root.sizeMode === "2x2" && !root.showingSettings
+            // Place, time and date have no home on a row of dials, so they
+            // fade - and a fade happens where the element stands, which is why
+            // this block is pinned to the 2x2 box rather than anchored to a
+            // card that is on its way to 420x108. Anchored, it would reflow
+            // through every intermediate size while fading out, which reads as
+            // the text being squeezed rather than as it leaving.
+            Item {
+                id: localChrome
+                width: root.spanWidthOf("2x2")
+                height: root.spanHeightOf("2x2")
+                opacity: (root.sizeMode === "2x2" && !root.showingSettings) ? 1 : 0
+                Behavior on opacity { Expressive.SpanFade {} }
+                visible: opacity > 0
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space50
-
-                    MaterialSymbol {
-                        iconSize: Appearance.font.pixelSize.hugeass
-                        text: "location_on"
-                        color: Appearance.colors.colOnPrimaryContainer
-                        opacity: 0.6
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: -Appearance.spacing.space25
-                        StyledText {
-                            // Carries the weather provider's own city string, so
-                            // it must not be parsed as markup.
-                            textFormat: Text.PlainText
-                            font.pixelSize: Appearance.font.pixelSize.normal
-                            font.weight: Font.Medium
-                            color: Appearance.colors.colOnPrimaryContainer
-                            text: root.localCityName
-                        }
-                    }
-                    Item { Layout.fillWidth: true }
-                    Rectangle {
-                        id: settingsButton
-                        radius: Appearance.rounding.full
-                        color: root.tinted(Appearance.colors.colSurfaceContainerLow)
-                        implicitWidth: 24; implicitHeight: 24
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            iconSize: Appearance.font.pixelSize.normal
-                            text: "settings"
-                            color: Appearance.colors.colOnSurfaceVariant
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.toggleFlip()
-                        }
-                    }
-                }
-
+                // Two steps of the scale: cardInset (space150) at the card
+                // edge, space100 between the blocks inside it. The inset is
+                // what keeps the four city chips clear of a 30px corner radius
+                // - at the space100 it had, the bottom two chips ran into the
+                // rounding.
+                //
+                // The local time is 36 rather than the 42 it was: at 42 the
+                // content came to 234 in a 228 card and the bottom row of chips
+                // sat 2px off the card edge. It is still 2.4x the largest text
+                // under it, so it still reads as the hero.
                 ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignRight
-                    spacing: -Appearance.spacing.space50
-                    StyledText {
-                        Layout.alignment: Qt.AlignRight
-                        font.pixelSize: 36; font.weight: Font.Bold
-                        font.features: { "tnum": 1 }
-                        color: Appearance.colors.colOnPrimaryContainer
-                        text: root.localTime
-                    }
-                    StyledText {
-                        Layout.alignment: Qt.AlignRight
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        color: Appearance.colors.colOnPrimaryContainer
-                        opacity: 0.7
-                        text: root.localDate
-                    }
-                }
+                    id: mainColumn
+                    anchors { fill: parent; margins: root.cardInset }
+                    spacing: Appearance.spacing.space100
 
-                // The chips used to be a fixed 120px wide, centred - 246px of
-                // grid inside 260px of content, so they sat 7px inboard of the
-                // header and the time above them and nothing lined up down
-                // either edge. They divide the content width instead now, and
-                // take the column's leftover height rather than a fixed 50,
-                // which is what stops the bottom row overshooting the margin.
-                GridLayout {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    columns: 2
-                    rowSpacing: Appearance.spacing.space75
-                    columnSpacing: Appearance.spacing.space75
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Appearance.spacing.space50
 
-                    Repeater {
-                        model: root.worldCities
-                        delegate: Rectangle {
-                            id: cityCard
-                            required property var modelData
-                            required property int index
+                        MaterialSymbol {
+                            iconSize: Appearance.font.pixelSize.hugeass
+                            text: "location_on"
+                            color: Appearance.colors.colOnPrimaryContainer
+                            opacity: 0.6
+                        }
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            radius: Appearance.rounding.normal
-                            color: root.tinted(cityCard.modelData.isDay
-                                ? Appearance.colors.colPrimary
-                                : Appearance.colors.colSurfaceContainerLow)
-                            property color fg: cityCard.modelData.isDay
-                                ? Appearance.colors.colOnPrimary
-                                : Appearance.colors.colOnLayer0
-                            Behavior on color { ColorAnimation { duration: 400 } }
-
-                            ColumnLayout {
-                                // A chip inside the card, so its padding is a
-                                // step under the card's own inset. The two text
-                                // rows carry their own leading, so they need no
-                                // gap between them on top of that.
-                                //
-                                // Horizontally it takes a step more than that:
-                                // the chip's `normal` radius is 17px, so at a
-                                // uniform space75 the city name and the offset
-                                // start inside the corner curve and read as
-                                // stuck to the edge. space150 clears the arc.
-                                anchors {
-                                    fill: parent
-                                    topMargin: Appearance.spacing.space75
-                                    bottomMargin: Appearance.spacing.space75
-                                    leftMargin: Appearance.spacing.space150
-                                    rightMargin: Appearance.spacing.space150
-                                }
-                                spacing: Appearance.spacing.space0
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    StyledText {
-                                        Layout.fillWidth: true
-                                        // Derived from a timezone id in the user's
-                                        // config, so it must not render as markup.
-                                        textFormat: Text.PlainText
-                                        font.pixelSize: Appearance.font.pixelSize.smaller
-                                        font.weight: Font.Medium
-                                        color: cityCard.fg
-                                        text: cityCard.modelData.name
-                                        elide: Text.ElideRight
-                                    }
-                                    StyledText {
-                                        font.pixelSize: Appearance.font.pixelSize.smallest
-                                        color: cityCard.fg; opacity: 0.6
-                                        text: cityCard.modelData.offset
-                                    }
-                                }
-                                RowLayout {
-                                    Layout.fillWidth: true; spacing: Appearance.spacing.space50
-                                    StyledText {
-                                        font.pixelSize: Appearance.font.pixelSize.normal
-                                        font.weight: Font.Bold
-                                        font.features: { "tnum": 1 }
-                                        color: cityCard.fg
-                                        text: cityCard.modelData.time
-                                    }
-                                    Item { Layout.fillWidth: true }
-                                    MaterialSymbol {
-                                        iconSize: Appearance.font.pixelSize.smaller
-                                        text: cityCard.modelData.isDay ? "wb_sunny" : "bedtime"
-                                        color: cityCard.fg
-                                    }
-                                }
+                            spacing: -Appearance.spacing.space25
+                            StyledText {
+                                // Carries the weather provider's own city string, so
+                                // it must not be parsed as markup.
+                                textFormat: Text.PlainText
+                                font.pixelSize: Appearance.font.pixelSize.normal
+                                font.weight: Font.Medium
+                                color: Appearance.colors.colOnPrimaryContainer
+                                text: root.localCityName
                             }
                         }
+                        Item { Layout.fillWidth: true }
+                        Rectangle {
+                            id: settingsButton
+                            radius: Appearance.rounding.full
+                            color: root.tinted(Appearance.colors.colSurfaceContainerLow)
+                            implicitWidth: 24; implicitHeight: 24
+                            MaterialSymbol {
+                                anchors.centerIn: parent
+                                iconSize: Appearance.font.pixelSize.normal
+                                text: "settings"
+                                color: Appearance.colors.colOnSurfaceVariant
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.toggleFlip()
+                            }
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignRight
+                        spacing: -Appearance.spacing.space50
+                        StyledText {
+                            Layout.alignment: Qt.AlignRight
+                            font.pixelSize: 36; font.weight: Font.Bold
+                            font.features: { "tnum": 1 }
+                            color: Appearance.colors.colOnPrimaryContainer
+                            text: root.localTime
+                        }
+                        StyledText {
+                            Layout.alignment: Qt.AlignRight
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            color: Appearance.colors.colOnPrimaryContainer
+                            opacity: 0.7
+                            text: root.localDate
+                        }
+                    }
+
+                    // The chip grid used to be the third child and took the
+                    // leftover height; the chips are absolutely placed elements
+                    // of the one tree now, so something still has to absorb it
+                    // or the two blocks above are stretched down the card.
+                    Item { Layout.fillWidth: true; Layout.fillHeight: true }
+                }
+            }
+
+            // ---- the four cities, which are the morph ---------------------
+            //
+            // One tile per city, declared once: a chip in the 2x2's grid and a
+            // dial in the 3x1's row are the same element in two places, so the
+            // surface travels and changes shape while the words it carries fade
+            // out and the hands fade in.
+            Repeater {
+                model: Geometry.TILES
+                delegate: Item {
+                    id: cityTile
+                    required property int index
+                    readonly property var city: root.worldCities[cityTile.index] ?? null
+
+                    function tileBox(span) {
+                        return Geometry.cityTileRect(cityTile.index, span,
+                            root.spanWidthOf(span), root.spanHeightOf(span), root.uiScale);
+                    }
+                    readonly property var slot: cityTile.tileBox(root.sizeMode)
+                    readonly property var chipBox: cityTile.tileBox("2x2")
+
+                    readonly property bool isDay: cityTile.city?.isDay ?? true
+                    readonly property color ink: cityTile.isDay
+                        ? Appearance.colors.colOnPrimary
+                        : Appearance.colors.colOnLayer0
+
+                    x: slot.x
+                    y: slot.y
+                    width: slot.width
+                    height: slot.height
+                    Behavior on x { Expressive.SpanTravel {} }
+                    Behavior on y { Expressive.SpanTravel {} }
+                    Behavior on width { Expressive.SpanTravel {} }
+                    Behavior on height { Expressive.SpanTravel {} }
+
+                    // The offset's own width decides where the name has to
+                    // stop, and it has to be the SETTLED width - a ruler at the
+                    // chip's font, not the label itself, which is mid-fade
+                    // exactly when the name is deciding where to sit.
+                    StyledText {
+                        id: offsetRuler
+                        visible: false
+                        text: cityTile.city?.offset ?? ""
+                        font.pixelSize: Math.round(Geometry.OFFSET_FONT * root.uiScale)
+                    }
+
+                    Rectangle {
+                        id: tileSurface
+                        anchors.fill: parent
+                        property real corner: cityTile.slot.radius
+                        Behavior on corner { Expressive.SpanTravel {} }
+                        radius: tileSurface.corner
+                        color: root.tinted(cityTile.isDay
+                            ? Appearance.colors.colPrimary
+                            : Appearance.colors.colSurfaceContainerLow)
+                        Behavior on color { ColorAnimation { duration: 400 } }
+                    }
+
+                    // The hands. They have a rect at both spans - the chip's
+                    // own box at 2x2 - so they grow out of the tile rather than
+                    // arriving at full size over one that is still small.
+                    AndroidClock {
+                        id: dial
+                        readonly property var slot: Geometry.dialRect(root.sizeMode,
+                            cityTile.slot.width, cityTile.slot.height, root.uiScale)
+                        x: dial.slot.x
+                        y: dial.slot.y
+                        width: dial.slot.width
+                        height: dial.slot.height
+                        Behavior on width { Expressive.SpanTravel {} }
+                        Behavior on height { Expressive.SpanTravel {} }
+
+                        // The tile paints the surface and carries the name, so
+                        // the component draws neither: its own label band would
+                        // be a second copy of an element that already travels.
+                        backgroundColor: "transparent"
+                        label: ""
+                        contentInset: Geometry.DIAL_INSET * root.uiScale
+                        handColor: cityTile.ink
+                        centerDotColor: cityTile.ink
+                        autoTime: false
+                        hourAngle: {
+                            if (!cityTile.city?.time) return 0;
+                            const parts = cityTile.city.time.split(":");
+                            return (parseInt(parts[0]) % 12) * 30 + parseInt(parts[1]) * 0.5;
+                        }
+                        minuteAngle: {
+                            if (!cityTile.city?.time) return 0;
+                            const parts = cityTile.city.time.split(":");
+                            return parseInt(parts[1]) * 6;
+                        }
+                        opacity: Geometry.dialShown(root.sizeMode) ? 1 : 0
+                        Behavior on opacity { Expressive.SpanFade {} }
+                        visible: opacity > 0
+                    }
+
+                    // The city name: the one thing a chip and a dial both say,
+                    // and so the one element inside the tile that travels.
+                    StyledText {
+                        id: cityName
+                        objectName: "worldClockCityName" + cityTile.index
+                        readonly property var slot: Geometry.tileNameRect(root.sizeMode,
+                            cityTile.slot.width, cityTile.slot.height, root.uiScale,
+                            offsetRuler.paintedWidth)
+                        x: cityName.slot.x
+                        y: cityName.slot.y
+                        width: cityName.slot.width
+                        height: cityName.slot.height
+                        Behavior on x { Expressive.SpanTravel {} }
+                        Behavior on y { Expressive.SpanTravel {} }
+                        Behavior on width { Expressive.SpanTravel {} }
+
+                        // Derived from a timezone id in the user's config, so it
+                        // must not render as markup.
+                        textFormat: Text.PlainText
+                        text: cityTile.city?.name ?? ""
+                        elide: Text.ElideRight
+                        horizontalAlignment: cityName.slot.centred
+                            ? Text.AlignHCenter : Text.AlignLeft
+                        font.pixelSize: Math.round(cityName.slot.size)
+                        Behavior on font.pixelSize { Expressive.SpanTravel {} }
+                        // A chip names its city in the same weight as the
+                        // reading beside it; the dial's own label was drawn at
+                        // the family's default, and matching it is what keeps
+                        // the settled 3x1 the picture it always was.
+                        font.weight: cityName.slot.centred ? Font.Normal : Font.Medium
+                        Behavior on font.weight { Expressive.SpanTravel {} }
+                        color: cityTile.ink
+                        opacity: cityName.slot.centred ? 0.75 : 1
+                        Behavior on opacity { Expressive.SpanFade {} }
+                    }
+
+                    // ---- what only a chip says ------------------------------
+                    StyledText {
+                        id: cityOffset
+                        readonly property var slot: Geometry.tileOffsetRect("2x2",
+                            cityTile.chipBox.width, cityTile.chipBox.height, root.uiScale,
+                            offsetRuler.paintedWidth)
+                        x: cityOffset.slot.x
+                        y: cityOffset.slot.y
+                        height: cityOffset.slot.height
+                        text: cityTile.city?.offset ?? ""
+                        font.pixelSize: Math.round(cityOffset.slot.size)
+                        color: cityTile.ink
+                        opacity: root.sizeMode === "2x2" ? 0.6 : 0
+                        Behavior on opacity { Expressive.SpanFade {} }
+                        visible: opacity > 0
+                    }
+
+                    StyledText {
+                        id: cityTime
+                        readonly property var slot: Geometry.tileTimeRect("2x2",
+                            cityTile.chipBox.width, cityTile.chipBox.height, root.uiScale)
+                        x: cityTime.slot.x
+                        y: cityTime.slot.y
+                        height: cityTime.slot.height
+                        text: cityTile.city?.time ?? ""
+                        font.pixelSize: Math.round(cityTime.slot.size)
+                        font.weight: Font.Bold
+                        font.features: { "tnum": 1 }
+                        color: cityTile.ink
+                        opacity: root.sizeMode === "2x2" ? 1 : 0
+                        Behavior on opacity { Expressive.SpanFade {} }
+                        visible: opacity > 0
+                    }
+
+                    MaterialSymbol {
+                        id: cityDayIcon
+                        readonly property var slot: Geometry.tileIconRect("2x2",
+                            cityTile.chipBox.width, cityTile.chipBox.height, root.uiScale)
+                        x: cityDayIcon.slot.x
+                        y: cityDayIcon.slot.y
+                        iconSize: Appearance.font.pixelSize.smaller
+                        text: cityTile.isDay ? "wb_sunny" : "bedtime"
+                        color: cityTile.ink
+                        opacity: root.sizeMode === "2x2" ? 1 : 0
+                        Behavior on opacity { Expressive.SpanFade {} }
+                        visible: opacity > 0
                     }
                 }
             }
 
+            // ---- the settings back, which the flip shows -------------------
+            //
+            // Gated on the flip alone: it is reachable only from the 2x2's
+            // settings button, and `sizeMode` clears it on the way out of 2x2.
+            // Pinned to the 2x2 box for the same reason the front chrome is.
             Item {
-                anchors.fill: parent
-                visible: root.sizeMode === "2x2" && root.showingSettings
+                width: root.spanWidthOf("2x2")
+                height: root.spanHeightOf("2x2")
+                visible: root.showingSettings
 
                 // Four 40px pickers plus a 24px header row is 184px of content
                 // that cannot shrink, which leaves 20px to spend inside a 228
@@ -384,57 +536,6 @@ Item {
                 }
             }
 
-            // 3x1. Deliberately *not* cardInset: the dials are full-bleed
-            // tiles rather than content on a surface, and at space100 the
-            // card's 30px rounding minus the inset (22) lands on the dial's
-            // own `large` radius (23), so the four tiles nest concentrically
-            // in the corners. At cardInset they would be 30-12=18 against 23
-            // and the corners would visibly fight.
-            RowLayout {
-                anchors { fill: parent; margins: Appearance.spacing.space100 }
-                spacing: Appearance.spacing.space100
-                visible: root.sizeMode !== "2x2"
-
-                Repeater {
-                    model: Math.min(root.worldCities.length, 4)
-                    delegate: AndroidClock {
-                        required property int index
-                        property var cityData: root.worldCities[index] ?? null
-
-                        Layout.fillHeight: true
-                        Layout.fillWidth:  true
-
-                        backgroundColor: root.tinted(cityData?.isDay ?? true
-                            ? Appearance.colors.colPrimary
-                            : Appearance.colors.colSurfaceContainerLow)
-                        handColor: cityData?.isDay ?? true
-                            ? Appearance.colors.colOnPrimary
-                            : Appearance.colors.colOnLayer0
-                        centerDotColor: cityData?.isDay ?? true
-                            ? Appearance.colors.colOnPrimary
-                            : Appearance.colors.colOnLayer0
-                        label:       cityData?.name ?? ""
-                        labelColor:  Qt.rgba(
-                            (cityData?.isDay ?? true ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0).r,
-                            (cityData?.isDay ?? true ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0).g,
-                            (cityData?.isDay ?? true ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0).b,
-                            0.75)
-                        labelSpacing: Appearance.spacing.space75
-                        autoTime:    false
-                        hourAngle: {
-                            if (!cityData?.time) return 0
-                            const p = cityData.time.split(":")
-                            return (parseInt(p[0]) % 12) * 30 + parseInt(p[1]) * 0.5
-                        }
-                        minuteAngle: {
-                            if (!cityData?.time) return 0
-                            const p = cityData.time.split(":")
-                            return parseInt(p[1]) * 6
-                        }
-                    }
-                }
-            }
-
             Rectangle {
                 id: toggleHandle
                 width: 16; height: 16; radius: Appearance.rounding.unsharpenslight
@@ -457,11 +558,8 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (root.showingSettings) root.showingSettings = false
-                        PluginState.setOption("world-clock", "sizeMode",
-                            root.sizeMode === "2x2" ? "3x1" : "2x2")
-                    }
+                    onClicked: PluginState.setOption("world-clock", "sizeMode",
+                        root.sizeMode === "2x2" ? "3x1" : "2x2")
                 }
             }
         }

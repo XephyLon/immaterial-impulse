@@ -141,22 +141,36 @@ class RootSizesGoThroughTheGridHelpers(unittest.TestCase):
 class PortedWidgetsDeclareTheSpansTheyActuallyOccupy(unittest.TestCase):
     """The two widgets this test was written for, pinned mode by mode."""
 
-    def test_world_clock_is_2x2_or_3x1(self):
-        src = (BUNDLED / "world-clock/Widget.qml").read_text(encoding="utf-8")
+    # `widgetWidth`/`widgetHeight` used to name the spans on their own line.
+    # They are the ANIMATING box now - both widgets morph in one tree, so the
+    # box travels towards a settled span rather than snapping to it - and the
+    # span helpers moved one step back, into the `spanWidthOf`/`spanHeightOf`
+    # every element's geometry is evaluated at. Both halves are still pinned:
+    # the file reaches the lattice through the helpers, and the animating box
+    # follows a span rather than a literal.
+    def assertBoxFollowsTheSpan(self, src, name):
         width = re.search(r"property real widgetWidth:\s*(.+)", src).group(1)
         height = re.search(r"property real widgetHeight:\s*(.+)", src).group(1)
-        self.assertIn("widgetGridSpanX(2)", width)
-        self.assertIn("widgetGridSpanX(3)", width,
+        self.assertEqual(width.strip(), "root.spanW",
+                         f"{name}'s animating box must follow the settled span")
+        self.assertEqual(height.strip(), "root.spanH", name)
+
+    def test_world_clock_is_2x2_or_3x1(self):
+        src = (BUNDLED / "world-clock/Widget.qml").read_text(encoding="utf-8")
+        self.assertIn("widgetGridSpanX(2)", src)
+        self.assertIn("widgetGridSpanX(3)", src,
                       "the wide mode is 420px, which is three columns")
-        self.assertIn("widgetGridSpanY(2)", height)
-        self.assertIn("widgetGridSpanY(1)", height,
+        self.assertIn("widgetGridSpanY(2)", src)
+        self.assertIn("widgetGridSpanY(1)", src,
                       "the wide mode is one row, so 108 tall - not 120")
+        self.assertBoxFollowsTheSpan(src, "world-clock")
 
     def test_calendar_is_1x1_2x1_or_2x2(self):
         src = (BUNDLED / "calendar/Widget.qml").read_text(encoding="utf-8")
         for call in ("widgetGridSpanX(1)", "widgetGridSpanX(2)",
                      "widgetGridSpanY(1)", "widgetGridSpanY(2)"):
             self.assertIn(call, src, f"calendar must size through {call}")
+        self.assertBoxFollowsTheSpan(src, "calendar")
 
 
 class ManifestFloorsAreRealSpans(unittest.TestCase):
