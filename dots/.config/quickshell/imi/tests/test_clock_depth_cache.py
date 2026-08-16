@@ -438,6 +438,24 @@ class ContractTest(unittest.TestCase):
                       "run needs a session; without the pin the venv has none and "
                       "the picker fails at the moment the user clicks it")
 
+    def test_onnxruntime_reaches_the_file_the_installer_actually_installs(self):
+        """The declaration and the lock are two files, and only one is installed.
+
+        `sdata/lib/package-installers.sh` runs `uv pip install -r
+        requirements.txt`; `requirements.in` is the input a human edits and
+        nothing reads at install time. onnxruntime was added to the `.in` when
+        the producer landed and the lock was never recompiled, so every venv the
+        installer has ever built lacks it - and the only symptom is a raw
+        `ModuleNotFoundError` at the moment the user clicks Run in the picker,
+        on a machine where the feature has never worked. The old version of this
+        check read the `.in` and was green throughout.
+        """
+        lock = ROOT.parents[3] / "sdata/uv/requirements.txt"
+        self.assertRegex(lock.read_text(), r"(?m)^onnxruntime==",
+                         "the installer installs the compiled lock, not the .in - "
+                         "recompile with `uv pip compile requirements.in -o "
+                         "requirements.txt` after adding a dependency")
+
     def test_the_script_does_not_import_onnxruntime_at_module_scope(self):
         source = SCRIPT.read_text()
         head = source.split("def segment(", 1)[0]
