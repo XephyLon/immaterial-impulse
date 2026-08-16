@@ -2377,7 +2377,7 @@ colour the picture already contains.
 (refactor(background): one cutout for the layer and the picker to draw.)
 
 **And when both models return nothing, the answer is a different QUESTION, not a
-lower threshold.** Swept over the 91 wallpapers in this library, the two salient
+lower threshold.** Swept over the 94 wallpapers in this library, the two salient
 detectors leave 45 of them at `none` — half the library, with the picker
 correctly reporting that neither found a subject and nothing to be done about it.
 The tempting read is that `EMPTY_FOREGROUND = 0.005` and the `mask > 0.5`
