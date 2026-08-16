@@ -149,14 +149,6 @@ function revealOffsets(dockThickness, hoverRegion) {
     };
 }
 
-// Which side of its own surface the reveal push lands on. A dock anchors the
-// body to its INWARD side and grows the margin there to shove it out: a
-// bottom dock that pushed its bottomMargin would slide further onto the
-// screen to hide.
-function revealAnchorSide(edge) {
-    return inwardSide(edge);
-}
-
 // Which way a popup opens from a dock on this edge: away from the edge, or
 // the menu opens into it and is clipped.
 function popupGravity(edge) {

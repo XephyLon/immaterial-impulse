@@ -58,7 +58,8 @@ class DockPositionContractTest(unittest.TestCase):
         self.assertIn("dock_geometry.js", source)
         for derived in ("DockGeometry.thickness(", "DockGeometry.exclusiveZone(",
                         "DockGeometry.anchors(", "DockGeometry.margins(",
-                        "DockGeometry.revealOffsets(", "DockGeometry.revealAnchorSide("):
+                        "DockGeometry.revealOffsets(", "DockGeometry.hideDirection(",
+                        "DockGeometry.contentBox("):
             self.assertIn(derived, source, f"{derived} is spelled out again")
         # The arithmetic itself may not reappear in the QML.
         self.assertNotIn("anchors { bottom: true; left: true; right: true }", source,
