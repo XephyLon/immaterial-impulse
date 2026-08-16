@@ -442,6 +442,10 @@ modules/imi/                 The "imi" (Immaterial Impulse) panel family - one d
   screenCorners/              Decorative fake screen-rounding + corner hover/click zones that open
                               the sidebars
   background/                 Desktop background + the canvas the draggable desktop widgets sit on.
+                              ClockDepthCutout.qml is the wallpaper's subject cut out by its mask -
+                              the ONE place the mask's registration is computed, drawn both by the
+                              depth layer and by the picker that judges it (see the clock-depth
+                              notes below).
                               The widgets themselves are all bundled plugins now (see
                               modules/common/plugins/bundled/); background/widgets/ holds only
                               AbstractBackgroundWidget.qml, which is the plugin host's base class.
@@ -2224,6 +2228,74 @@ in `modules/common/functions/clockDepth.js` beside the eligibility predicate for
 the same reason `ParallaxMath.sampleOrigin` is: nothing about the rendered layer
 is reachable from `qmltestrunner`, so the arithmetic has to be.
 (feat(background): draw the wallpaper's subject over the desktop widgets.)
+
+**Two captures separated in wall-clock time on a desktop somebody is using are
+not an A/B test, and the thing that changes between them becomes your signal.**
+The clock depth layer was reported as making the wallpaper's quality "drop
+completely", measured with two `grim -o DP-1` shots taken minutes apart with the
+feature toggled between them, and scored at 97.8% of pixels differing with a mean
+absolute difference of 48.5/255 over the whole frame. That was read as the masked
+copy landing off by a scale factor, and a whole geometry hypothesis was built on
+it. **The user had changed the wallpaper between the two captures.** The diff was
+two different pictures. Nothing about the numbers looked wrong — they were
+enormous, consistent, and reproduced the reported symptom exactly, which is what
+made them convincing. Before diffing two frames of a live desktop, ask what else
+could have moved; if the answer is "anything", the measurement belongs in one
+process with the inputs pinned.
+
+The repair generalises past this feature: **find the invariant that turns the
+question into an oracle.** The depth layer paints the wallpaper's own pixels back
+over the wallpaper, so where no widget sits it draws a picture over itself —
+which means with an empty widget canvas, depth on and depth off must be the same
+frame *whatever the mask contains*. `tests/test_clock_depth_noop.py` runs exactly
+that: one `qs` process, one wallpaper nothing can swap, only the depth flag moving
+between the two grabs. On the current code it is bit-identical on its synthetic
+fixture and differs by at most one least-significant bit on 0.18% of pixels
+against the real 3840x1594 wallpaper — the source making a round trip through the
+effect's intermediate buffer — so the alignment question is settled rather than
+argued. Its fixture's wallpaper aspect is deliberately nothing like its
+viewport's, because at a matching aspect `PreserveAspectCrop` is the identity and
+every crop bug is invisible; the sibling compositing probe's 2:1-into-2:1 fixture
+has that hole, which is why "the fixture actually crops" is a check there rather
+than a comment. Note the half the oracle cannot see: a mask registered to the
+wrong pixels still passes, because masking the wallpaper with the wrong shape
+still draws the wallpaper over the wallpaper.
+(test(background): score the depth layer's no-op invariant in pixels.)
+
+**A visualizer that computes its own geometry is a visualizer that can lie about
+the thing it exists to judge.** The wallpaper selector's depth picker is where
+the accept/decline verdict is given, and it drew its preview from its own copy of
+the layer's stack — the same `coverRect` call, the same clipping surface, the
+same `OpacityMask`. Two hand-written copies of a registration is the shape this
+repo keeps paying for, except worse in this direction: a picker whose crop drifts
+from the layer's certifies a mask against a geometry the desktop never draws, and
+the drift is invisible precisely because both look plausible. They are one
+`modules/imi/background/ClockDepthCutout.qml` now, and the rule the lint enforces
+is the deliverable rather than the component — `coverRect` may be called from
+that file and from its own unit test and nowhere else, so a second caller
+reddens the suite instead of becoming a second opinion.
+
+Three things about building the inspection view on top of it. The veil that dims
+what the model did *not* claim is `OpacityMask { invert: true }` over the **same**
+surface the cutout is masked by, so the lit region and the drawn region cannot be
+a pixel apart. The contour is a `Glow` with `transparentBorder: true`, because
+without it the blur clamps at the item's edge and a subject touching the bottom of
+the frame smears into a band across it — which reads as a defect in the mask being
+judged rather than in the instrument judging it. And its colour is hardcoded,
+which is the one place in this shell that is right: every `Appearance` token is
+generated *from* the wallpaper on screen, so a token there is guaranteed to be a
+colour the picture already contains.
+(refactor(background): one cutout for the layer and the picker to draw.)
+
+**A segmentation model returning nothing is usually the wrong model, not an empty
+picture.** `isnet-anime` and `isnet-general-use` are complementary and neither is
+a superset — measured, `isnet-anime` returns `none` on `cat_upscayl_2x…png` where
+`isnet-general-use` returns a foreground of 0.143, and the pair swap on other
+wallpapers. So a UI that reports one model's refusal as "no subject found" states
+a verdict on the image that the evidence does not support, and a user who reads it
+stops. Both models are offered side by side, at the same size, and a refusal
+points at the other column.
+(feat(wallpapers): give the depth picker an inspect mode.)
 
 **A sample rect and the item it samples must be in the same coordinate space —
 and "it samples the real thing" is not evidence that they are.** The desktop
