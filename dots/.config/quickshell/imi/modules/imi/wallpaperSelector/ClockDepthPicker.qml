@@ -5,7 +5,6 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.imi.background
-import "../../common/functions/clockDepth.js" as ClockDepthLogic
 
 /**
  * Where the quality gate lives, and it is a human - so this is the instrument
@@ -34,13 +33,16 @@ import "../../common/functions/clockDepth.js" as ClockDepthLogic
  * answers a different question: not "what is the subject of this picture" but
  * "what is the thing at this point". So the user points at it.
  *
- * Its whole interaction is the preview: left-click adds a point the cutout must
- * contain, right-click one it must not, and the mask redraws per click because
- * the picture is encoded once and each click only decodes - 1.6s for the first
- * and 0.3s for every one after it. Both gestures are said on the preview
- * itself, because a click surface with its instructions somewhere else is a
- * click surface nobody discovers. The clicks are drawn back on as plus and
- * minus discs so a correction is aimed at a thing rather than at a memory.
+ * That column is NOT clicked here. The gesture used to live on this preview and
+ * it was the wrong surface for it: the mask is judged at screen size against
+ * real widgets and was being authored against a ~300px thumbnail, where a click
+ * landing on a character's shoulder is several hundred pixels off by the time
+ * anyone sees the result - and a mis-aimed click comes back as a perfectly good
+ * mask of the wrong thing. Selecting happens on the desktop itself
+ * (modules/imi/clockDepthSelect), on the wallpaper as it is actually drawn, and
+ * this column is the way in and the record of what came back: the clicks are
+ * drawn on as plus and minus discs, and the cutout they produced sits under
+ * them.
  *
  * All three columns are the same width, which is the point of the layout: the
  * cutouts are being compared, and the clickable one is not more important than
@@ -95,7 +97,7 @@ Item {
             // perfectly good thing to stand in front of the clock. It is a
             // verdict on the two models that answer on their own, and the
             // column that answers a click is what it points at.
-            return Translation.tr("Neither detector found a subject. Click the one you want in the third preview.")
+            return Translation.tr("Neither detector found a subject. Pick the one you want on the desktop itself.")
         case "candidate":
             return Translation.tr("A cutout is ready to judge. Nothing is drawn until you keep one.")
         case "unreadable":
@@ -107,6 +109,10 @@ Item {
     }
 
     signal closeRequested()
+    // The way into the desktop selector. Raised rather than acted on, because
+    // getting there means closing this dialog AND the wallpaper selector around
+    // it, and neither is this component's to close.
+    signal selectOnDesktopRequested()
 
     Rectangle {
         anchors.fill: parent
@@ -460,43 +466,6 @@ Item {
                             }
                         }
 
-                        // The gesture. Declared after everything it points at so
-                        // it is on top, and only for the prompted column - the
-                        // salient ones answer the picture and have nothing to
-                        // aim.
-                        MouseArea {
-                            id: pointArea
-                            anchors.fill: parent
-                            // Gated on the wallpaper having DECODED, not merely
-                            // on a path. An Image's implicit size reads 0 until
-                            // its source resolves, and `coverRect` answers a
-                            // zero-sized source with the box itself - so a click
-                            // arriving in that window would be measured against
-                            // a frame the picture does not occupy and sent to
-                            // the producer as a point somewhere else entirely.
-                            enabled: candidate.prompted && root.wallpaper !== ""
-                                && previewCutout.wallpaperStatus === Image.Ready
-                            visible: enabled
-                            acceptedButtons: Qt.LeftButton | Qt.RightButton
-                            cursorShape: Qt.CrossCursor
-                            onClicked: mouse => {
-                                // The cutout's own mask rectangle is where the
-                                // whole wallpaper sits inside this preview, so
-                                // the click's fraction along it IS the point in
-                                // the picture. Worked out in clockDepth.js
-                                // because it is the one part of this gesture a
-                                // test can reach, and because a click sent to
-                                // the wrong part of the picture comes back as a
-                                // perfectly good mask of the wrong thing.
-                                const point = ClockDepthLogic.normalisedPoint(
-                                    previewCutout.maskRect, mouse.x, mouse.y)
-                                if (!point)
-                                    return
-                                ClockDepth.addPoint(point.x, point.y,
-                                    mouse.button === Qt.LeftButton)
-                            }
-                        }
-
                         // Along the bottom edge rather than centred: the middle
                         // of the preview is where the clock is, and a status
                         // label printed across it is sitting on the one thing
@@ -533,18 +502,20 @@ Item {
                                             ? Translation.tr("Cutting…")
                                             : Translation.tr("Looking for a subject…")
                                     if (candidate.prompted) {
+                                        if (!ClockDepth.selectable)
+                                            return Translation.tr("Apply this wallpaper to pick on the desktop")
                                         if (candidate.points.length === 0)
-                                            return Translation.tr("Click the subject")
+                                            return Translation.tr("Pick the subject on the desktop")
                                         if (candidate.maskPath === "")
-                                            return Translation.tr("Nothing there — click on the subject itself")
-                                        return Translation.tr("Right-click to exclude what it grabbed")
+                                            return Translation.tr("Nothing found there yet")
+                                        return Translation.tr("Refine it on the desktop")
                                     }
                                     if (candidate.maskPath !== "")
                                         return ""
                                     return candidate.refused
                                         ? (candidate.otherFound
                                             ? Translation.tr("Nothing here — another column found something")
-                                            : Translation.tr("Nothing here — try clicking the subject"))
+                                            : Translation.tr("Nothing here — try picking it on the desktop"))
                                         : Translation.tr("Not run yet")
                                 }
                                 font.pixelSize: Appearance.font.pixelSize.small
@@ -566,50 +537,32 @@ Item {
                                 : Translation.tr("Run")
                             onClicked: ClockDepth.runModel(candidate.modelName)
                         }
-                        // The prompted column's two corrections, as glyphs
-                        // rather than as labelled buttons: a third of the
-                        // dialog's width already carries an accept button, and
-                        // the words that would go on these are the ones the
-                        // preview's own line is saying.
-                        RippleButton {
-                            id: undoButton
-                            visible: candidate.prompted
-                            enabled: !root.busy && candidate.points.length > 0
-                            implicitWidth: 36
-                            implicitHeight: 36
-                            buttonRadius: height / 2
-                            onClicked: ClockDepth.undoPoint()
-                            contentItem: MaterialSymbol {
-                                anchors.centerIn: parent
-                                text: "undo"
-                                iconSize: Appearance.font.pixelSize.larger
-                                color: Appearance.colors.colOnLayer0
-                            }
-                            StyledToolTip {
-                                text: Translation.tr("Take back the last click")
-                            }
-                        }
-                        RippleButton {
-                            id: clearButton
-                            visible: candidate.prompted
-                            enabled: !root.busy && candidate.points.length > 0
-                            implicitWidth: 36
-                            implicitHeight: 36
-                            buttonRadius: height / 2
-                            onClicked: ClockDepth.clearPoints()
-                            contentItem: MaterialSymbol {
-                                anchors.centerIn: parent
-                                text: "backspace"
-                                iconSize: Appearance.font.pixelSize.larger
-                                color: Appearance.colors.colOnLayer0
-                            }
-                            StyledToolTip {
-                                text: Translation.tr("Start this selection over")
-                            }
-                        }
                         Item { Layout.fillWidth: true }
+                        // The prompted column's one action, and it leaves this
+                        // dialog: the clicking, the undo, the start-over and
+                        // the verdict all live on the desktop now, where the
+                        // cutout is the size it will be judged at and the
+                        // widgets it has to hide behind are the real ones.
+                        // Refusing when the desktop is showing something else -
+                        // a preview this dialog's own grid is about to revert,
+                        // a live Wallpaper Engine project - is the difference
+                        // between selecting on the wallpaper and selecting on
+                        // whatever happens to be there afterwards.
+                        DialogButton {
+                            id: selectOnDesktopButton
+                            visible: candidate.prompted
+                            enabled: !root.busy && ClockDepth.selectable
+                            colBackground: Appearance.colors.colPrimary
+                            colBackgroundHover: Appearance.colors.colPrimaryHover
+                            colText: Appearance.colors.colOnPrimary
+                            buttonText: candidate.points.length > 0
+                                ? Translation.tr("Refine on desktop")
+                                : Translation.tr("Pick on desktop")
+                            onClicked: root.selectOnDesktopRequested()
+                        }
                         DialogButton {
                             id: acceptButton
+                            visible: !candidate.prompted
                             enabled: !root.busy && candidate.maskPath !== ""
                             colBackground: Appearance.colors.colPrimary
                             colBackgroundHover: Appearance.colors.colPrimaryHover
