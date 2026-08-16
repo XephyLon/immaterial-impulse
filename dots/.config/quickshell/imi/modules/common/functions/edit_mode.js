@@ -90,14 +90,26 @@ function viewportGeometry(input) {
     const roomY = screenHeight - margin * 2;
     const scale = Math.max(MIN_SCALE,
         Math.min(MAX_SCALE, roomX / screenWidth, roomY / screenHeight));
+    const width = screenWidth * scale;
+
+    // Whatever is left over once the desktop, its own margin and the drawer's
+    // slot are accounted for. It is zero on a screen where the drawer decides
+    // the scale, and it is most of a drawer's width again on a wide one, where
+    // the ceiling does - so before this the desktop hugged the left edge of a
+    // 5120px screen with 693px of empty blur on its right, which reads as the
+    // desktop having been shoved aside rather than lifted off the wallpaper.
+    const surplus = Math.max(0, (screenWidth - margin - width) - (drawerWidth + margin));
 
     return {
         scale: scale,
-        // The left margin is fixed; whatever slack the other axis leaves
-        // accumulates on the right, which is the side the drawer is on.
-        x: margin,
+        // The left margin, plus half of anything spare. Half rather than all,
+        // because the other half stays on the drawer's side: the slot to the
+        // right is `drawerWidth + margin + surplus / 2`, which is still at
+        // least what the drawer asked for, so the derivation stage 5 plugs into
+        // holds whichever of the two constraints decided the scale.
+        x: margin + surplus / 2,
         y: (screenHeight - screenHeight * scale) / 2,
-        width: screenWidth * scale,
+        width: width,
         height: screenHeight * scale
     };
 }
