@@ -108,10 +108,20 @@ class DockerMemorySafetyTests(unittest.TestCase):
         self.assertNotIn("enableDockerForMemoryTest", bar)
         self.assertNotRegex(
             bar, r'name\s*===\s*["\']plugin:docker_plugin["\']\s*\)\s*return\s+false')
+        # Which file draws a bar widget is one mapping both bars ask now, so
+        # the pin follows it there - and covers the vertical bar for free,
+        # where before Docker could have been pointed at the generic package
+        # host there without this noticing. a47462fcc ("fix(verticalBar):
+        # render plugin bar widgets instead of an empty stub").
+        mapping = self.text("modules/imi/bar/bar_widget_source.js")
         self.assertRegex(
-            bar,
-            r'if \(name === "plugin:docker_plugin"\)[\s\S]*?return Qt\.resolvedUrl\("\./DockerPlugin\.qml"\)',
-        )
+            mapping, r'["\']docker_plugin["\']\s*:\s*["\']DockerPlugin\.qml["\']')
+        for bar_file in ("modules/imi/bar/BarContent.qml",
+                         "modules/imi/verticalBar/VerticalBarContent.qml"):
+            self.assertIn(
+                "BarWidgetSource.fileNameFor", self.text(bar_file),
+                f"{bar_file} resolves widget files itself again, so the "
+                f"mapping pinned above is not the one it uses")
 
     def test_runtime_harness_exercises_repeated_popup_lifecycle(self):
         harness = self.text("DockerRuntimeTest.qml")

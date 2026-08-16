@@ -103,16 +103,22 @@ if re.search(
         bar_content):
     failures.append(
         "modules/imi/bar/BarContent.qml: Docker native adapter must remain visible for testing")
-if not re.search(
-        r'name\s*===\s*["\']plugin:docker_plugin["\'].*DockerPlugin\.qml',
-        bar_content, re.DOTALL):
-    failures.append(
-        "modules/imi/bar/BarContent.qml: bundled Docker must use its direct native bar component")
 if re.search(
         r'Layout\.preferredWidth\s*:\s*modelData\s*===\s*["\']plugin:docker_plugin["\']',
         bar_content):
     failures.append(
         "modules/imi/bar/BarContent.qml: Docker must use the same content-driven sizing as native widgets")
+
+# Which file draws a bar widget moved out of BarContent.qml and into the module
+# both bars ask, so the pin follows it - and now covers the vertical bar too,
+# which used to be able to point Docker at the generic host without this
+# noticing. a47462fcc ("fix(verticalBar): render plugin bar widgets instead of
+# an empty stub").
+bar_source = (ROOT / "modules/imi/bar/bar_widget_source.js").read_text(encoding="utf-8")
+if not re.search(
+        r'["\']docker_plugin["\']\s*:\s*["\']DockerPlugin\.qml["\']', bar_source):
+    failures.append(
+        "modules/imi/bar/bar_widget_source.js: bundled Docker must use its direct native bar component")
 
 docker_adapter = (ROOT / "modules/imi/bar/DockerPlugin.qml").read_text(encoding="utf-8")
 docker_adapter_code = re.sub(r"//.*", "", docker_adapter)
