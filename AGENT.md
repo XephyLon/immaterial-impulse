@@ -513,6 +513,13 @@ services/                  Singletons wrapping external state/processes - one pe
                               builds every Material variant from it. Cached against the wallpaper
                               and the dark/light mode, so refresh() is free while those hold and
                               nothing recomputes while no picker is on screen
+  ClockDepth.qml               What the subject-mask cache holds for the wallpaper on screen, for
+                              the desktop clock's depth mode. Asks
+                              scripts/background/subject_mask.py - the shell never computes a cache
+                              key of its own - and queries nothing at all until either
+                              background.clockDepth.enable or the picker is open. The `run` half is
+                              reached ONLY from the wallpaper selector's picker; nothing reactive
+                              can start segmentation
   MprisController.qml         The one answer to "which player is the media UI showing". It filters
                               the bus list (proxies always, duplicates by setting) through
                               MprisSelection.js - a .pragma library kept pure so the rules are
@@ -528,6 +535,14 @@ panelFamilies/              PanelLoader.qml (thin LazyLoader) + ImmaterialImpuls
                             actual list of panels for the "imi" family)
 
 scripts/                   Standalone helper scripts (Python/bash) invoked via Process/Quickshell.execDetached
+  background/subject_mask.py  Segments a wallpaper's subject through ONNX Runtime (isnet-anime or
+                              isnet-general-use, fetched on first use, ~1.3-4.5s and ~1GB RSS per
+                              run) and owns the mask cache in ${Directories.cache}/clock-depth. It
+                              owns the CACHE KEY too - path/mtime/size - and the shell never
+                              computes one, so an in-place wallpaper edit invalidates its mask, its
+                              opt-out and its candidates together. `status` and `sweep` are
+                              stdlib-only and load no model; `run` needs the uv venv
+                              (subject-mask-venv.sh)
 translations/              i18n string tables (Translation.tr(...) singleton)
 assets/                    Static images/fonts bundled with the shell
 ```
@@ -2195,6 +2210,50 @@ of the `suppressContents` fullscreen gate, which the viewport carries for its ow
 Sizing is deliberately screen-derived rather than wallpaper-derived: a live WE project reports no
 intrinsic size, and `PreserveAspectCrop` already covers a still, so one rule serves both.
 (feat(background): revive wallpaper parallax, for stills and Wallpaper Engine.)
+
+**The clock depth layer is the counter-case to that rule, and it is why it is a
+FOURTH sibling.** `widgetCanvas` sits at `z: 2` as a sibling of
+`parallaxViewport`, so a child's `z` can only reorder it against its viewport
+siblings and can never lift it above the desktop widgets — `weTransition` at
+`z: 1` is exactly that case. Anything that must draw *over* the widgets while
+tracking the wallpaper therefore cannot live in the viewport at all: it is a
+sibling at `z: 3` that reconstructs the pan by binding `x`/`y`/`width`/`height`
+to `parallaxViewport`'s **live** properties (never `bgRoot.parallaxOffsets`,
+which is the 600ms Behavior's destination — the frost's `wallpaperRect` reads the
+same four for the same reason), carries its own `visible: !bgRoot.suppressContents`,
+and declares `enabled: false` because `desktopRightClickArea` at `z: -2` works
+only while everything above it lets clicks through.
+`tests/lint_clock_depth_geometry.py` pins all of that;
+`tests/test_clock_depth_compositing.py` renders it under headless weston and
+samples the pan mid-animation, because a layer bound to the destination settles
+in exactly the right place and passes every settled check.
+(feat(background): draw the wallpaper's subject over the desktop widgets.)
+
+**`OpacityMask` masks by the mask's ALPHA channel and nothing else, so a
+grayscale mask is opaque everywhere.** The obvious artifact for a segmentation
+mask is an "L" PNG — white subject, black background, and a mask you can look at
+— and handed to `OpacityMask` it lets the *whole* source through, because black
+at alpha 255 is as opaque as white. The clock depth layer drew the entire
+wallpaper flat over the clock that way, with correct geometry throughout and
+nothing in any log. `scripts/background/subject_mask.py` writes "LA" — the same
+plane in both channels — so the alpha masks and the luminance keeps the file
+inspectable. Anything else here that reaches for `OpacityMask` has the same
+question to answer about what its mask's alpha actually is.
+(fix(background): write the subject mask into its alpha channel too.)
+
+**A mask cut at the model's square input is not the wallpaper's aspect, and
+filling it into the same box is not the same crop.** `isnet-anime` squashes the
+whole picture to 1024² (padding is measurably worse — with black bars the model
+returns the entire picture as the subject), so the stored mask is square while
+the wallpaper is drawn `PreserveAspectCrop`. Filling both into the viewport
+stretches them differently — by 3.5× on this monitor. `ClockDepthLogic.coverRect`
+returns the rectangle the whole wallpaper would occupy if nothing clipped it; the
+mask is `Image.Stretch`ed into that and the surface clips it back, which is
+undoing the squash and re-applying the crop in one step. Kept as a pure function
+in `modules/common/functions/clockDepth.js` beside the eligibility predicate for
+the same reason `ParallaxMath.sampleOrigin` is: nothing about the rendered layer
+is reachable from `qmltestrunner`, so the arithmetic has to be.
+(feat(background): draw the wallpaper's subject over the desktop widgets.)
 
 **A sample rect and the item it samples must be in the same coordinate space —
 and "it samples the real thing" is not evidence that they are.** The desktop
