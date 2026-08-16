@@ -37,7 +37,25 @@ function resolveEscape(state) {
 // alternative answers are a zero or a negative scale.
 var MIN_SCALE = 0.2;
 
-// The viewport's inset is DERIVED, not chosen: the desktop shrinks by exactly
+// ...and a desktop scaled ABOVE this is not an object on the screen either: it
+// is the screen with four thin strips of blur around it.
+//
+// The drawer-derived inset below is the right answer while the drawer is a
+// meaningful fraction of the width, and it stops being one as the screen
+// widens - 380px of drawer plus two 24px margins on a 5120px monitor leaves the
+// desktop at 92%, which spends the whole mode signal on a border. The shrink IS
+// the signal (spec §1.1: there is no scrim), so it has to be legible at every
+// screen size and not only at the one where the arithmetic happens to bite.
+//
+// A ceiling rather than a second inset, because a ceiling cannot break the
+// derivation stage 5 plugs into: the space reserved on the right of the desktop
+// is `screenWidth - margin - width`, which the drawer term already holds at or
+// above `drawerWidth + margin`, and lowering the scale further can only make it
+// larger. So the drawer still opens into space that already exists, and on a
+// screen where it is the tighter constraint it still decides.
+var MAX_SCALE = 0.86;
+
+// The viewport's inset is DERIVED, not chosen: the desktop shrinks by at least
 // what the drawer will need, so the drawer opens into space that already
 // exists rather than covering the desktop or resizing it (spec §1.2, §1.3).
 //
@@ -71,7 +89,7 @@ function viewportGeometry(input) {
     const roomX = screenWidth - drawerWidth - margin * 2;
     const roomY = screenHeight - margin * 2;
     const scale = Math.max(MIN_SCALE,
-        Math.min(1, roomX / screenWidth, roomY / screenHeight));
+        Math.min(MAX_SCALE, roomX / screenWidth, roomY / screenHeight));
 
     return {
         scale: scale,
@@ -96,5 +114,27 @@ function atProgress(geometry, progress) {
         scale: 1 + (geometry.scale - 1) * t,
         x: geometry.x * t,
         y: geometry.y * t
+    };
+}
+
+// Where the desktop is ON SCREEN at a given progress - the rectangle the mode's
+// chrome frames.
+//
+// It comes from the same `atProgress` the transform is built out of rather than
+// from the transform's own terms, so the card's corner, its border and its
+// shadow cannot end up a pixel off the desktop they belong to. That is the same
+// rule ClockDepthCutout is one component for: two hand-written copies of a
+// registration drift, and the drift is invisible because both look plausible.
+//
+// At progress 0 this is the whole screen at 0,0, which is what makes "the
+// chrome stands down completely on exit" a property of the arithmetic rather
+// than of a `visible` binding someone has to remember.
+function cardRect(geometry, progress, screenWidth, screenHeight) {
+    const applied = atProgress(geometry, progress);
+    return {
+        x: applied.x,
+        y: applied.y,
+        width: screenWidth * applied.scale,
+        height: screenHeight * applied.scale
     };
 }
