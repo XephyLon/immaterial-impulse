@@ -1328,14 +1328,31 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   surface a widget paints**: calendar still thins its 1x1 banner, its month pill, its day grid and
   today's highlight so the frost reads through the whole widget, and it does that with
   `transparentize` rather than the card's `applyAlpha` because `colLayer1` already carries an alpha
-  the widget must *scale* rather than overwrite — `lint_widget_card_tint.py` reserves the card's
-  spelling and deliberately does not match that one. And **the card routes children into its own
+  the widget must *scale* rather than overwrite — `lint_widget_card_tint.py` leaves a content tint
+  alone, and the next entry is how it now tells one from the card's own. And **the card routes children into its own
   content item**, so anything that anchored to the old `Rectangle` by id (calendar's two corner
   handles did) has to anchor to `parent` instead: an anchor may only name a parent or a sibling, and
   the card is now the grandparent. Neither of those is caught by the tint lint;
   `test_expressive_design_system.py` pins the composition and `test_calendar_card.py` renders it,
   because a content-sized widget whose card failed to resolve is a zero-size widget rather than an
   error. 486272dbe ("feat(calendar): draw the widget's surface on the shared card").
+- **A widget that paints its own root surface hides the card, so it has no shadow at all — and a
+  carve-out written as a spelling stops being a rule the moment someone spells it differently.**
+  `notes` and `image-converter` were both a root `Rectangle` painting
+  `blurEnabled ? transparentize(colSecondaryContainer, ...)`: the card's own surface, written in the
+  *content* tint's dialect. `lint_widget_card_tint.py` matched only
+  `useBlurBackground ? applyAlpha(` and waved both through, so they shipped as the two widgets on a
+  twelve-widget desktop casting no shadow — and neither could have lifted on hover or drag if one
+  had been added, since neither declared `hostDragging`. Note the cost is not the redundancy the
+  card was extracted to remove: a root surface is painted *over* the card, which is why the symptom
+  is absence rather than a second slightly-different tuning. The lint now decides by **position**
+  rather than by helper name — it reads the root object of every desktop widget's entry point,
+  found from the manifests' `desktop-widget` capability (so `discordVoice`, a bar/overlay panel and
+  not a desktop card, is out of scope by the data rather than by an allowlist), follows one level of
+  `color: root.someProperty` indirection, and flags a blur-gated tint there whichever helper it
+  calls. Content tints, which are surfaces *inside* the card, stay free.
+  test(lint): the card-tint carve-out is scoped to content, not to a spelling,
+  fix(notes): draw the widget's surface on the shared card.
 - **The resize grip accumulates tension; it does not pick the nearest span.** A widget holds its
   span while pull builds, gives one offered span per 60px breakaway with the remainder carried, and
   rubber-bands at a wall. `resize-tension.js` owns every constant and all of the arithmetic; the
