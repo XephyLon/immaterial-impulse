@@ -93,6 +93,15 @@ if ! python3 "$SCRIPT_DIR/lint_spacing.py"; then
     exit 1
 fi
 
+# Static lint: an Appearance token a QML file reads must be declared. An
+# undeclared one is `undefined`, which renders 0 after a single warning - or
+# NaN, with no warning at all, where the call site does arithmetic on it.
+echo "Running Appearance token lint..."
+if ! python3 "$SCRIPT_DIR/lint_appearance_tokens.py"; then
+    echo "Appearance token lint failed."
+    exit 1
+fi
+
 echo "Running disabled-opacity lint..."
 if ! python3 "$SCRIPT_DIR/lint_disabled_opacity.py"; then
     echo "Disabled-opacity lint failed."
