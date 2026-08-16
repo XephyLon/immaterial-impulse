@@ -368,6 +368,28 @@ named in one place. A manifest's `defaultWidth`/`defaultHeight` floor is a size 
 the smallest span the widget can actually take, or the floor pins the widget off-grid no
 matter what the QML says.
 
+**Omitting `grid` also opts the widget out of the host's resize animation, so it has to bring
+its own.** `PluginWidget`'s `Behavior on width`/`height` is `enabled: gridResizeAnimated`
+(`gridSized && PluginState.ready`), and `boxInMotion` compares the drawn box with
+`settledWidth`/`settledHeight` — which for a content-sized widget *are* the widget's current
+width and height, so it never reports motion. A `grid`-less widget that changes size therefore
+snapped between its modes, and its card kept a live drop shadow through the change, until each
+of them animated its own implicit size towards the settled span and published its own
+`boxInMotion`:
+
+```qml
+readonly property real spanW: root.spanWidthOf(root.sizeMode)   // the settled span
+property real widgetWidth: root.spanW                            // the box travelling to it
+Behavior on widgetWidth { Expressive.SpanTravel {} }
+readonly property bool boxInMotion: Math.abs(root.widgetWidth - root.spanW) > 0.5 || ...
+implicitWidth: root.widgetWidth
+```
+
+The split matters beyond the animation: everything a one-tree widget places reads the **settled**
+span and never the travelling box, or the Behaviors carrying each element chase a target that
+moves every frame and never converge
+(`test_geometry_rects_come_from_the_settled_span_not_the_animating_box`).
+
 **A widget-owned `sizeMode` is not the same thing as the retired manifest option, and a
 migration keyed on the name alone destroys it.** `world-clock` and `calendar` declare no
 `grid` and drive a `sizeMode` of their own from their own toggles, so for them the key is
