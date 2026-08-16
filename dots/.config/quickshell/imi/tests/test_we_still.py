@@ -44,9 +44,33 @@ def code_only(text):
     explaining the renderer's removal as the offence, and the lossless check
     failed on the very line saying why .jpg is wrong. Same trap each time;
     this helper exists so the fourth test cannot hand-roll it wrong.
+
+    A fourth instance arrived anyway, through the one comment shape this did not
+    know: `/** ... */`, whose body lines start with `*`. A new service's doc
+    block cited activeStill as the cautionary example - which is exactly what
+    AGENT.md asks such a comment to do - and was reported as writing the field.
+    Block comments are stripped too now.
     """
-    return "\n".join(line for line in text.splitlines()
-                     if not line.lstrip().startswith(("//", "#")))
+    kept = []
+    in_block = False
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        if in_block:
+            if "*/" in line:
+                in_block = False
+                # Whatever follows the terminator on that line is code.
+                kept.append(line.split("*/", 1)[1])
+            continue
+        if stripped.startswith("/*"):
+            if "*/" in stripped[2:]:
+                kept.append(stripped.split("*/", 1)[1])
+            else:
+                in_block = True
+            continue
+        if stripped.startswith(("//", "#")):
+            continue
+        kept.append(line)
+    return "\n".join(kept)
 
 
 class NoSecondRendererTests(unittest.TestCase):

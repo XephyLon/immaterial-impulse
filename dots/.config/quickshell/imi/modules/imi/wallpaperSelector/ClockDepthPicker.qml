@@ -114,7 +114,7 @@ Item {
                     required property string modelData
 
                     readonly property string maskPath: ClockDepth.candidates?.[candidate.modelData] ?? ""
-                    // Absent from `candidates` and absent from `results` are
+                    // Absent from `candidates` and present-but-null in it are
                     // different things and must read differently: the first is a
                     // model nobody has run, the second is a model that ran and
                     // found nothing. Collapsing them is how a picker ends up
