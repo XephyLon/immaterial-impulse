@@ -119,6 +119,22 @@ ShellRoot {
         driver.mouseRelease(slots, p.x + dx, p.y + dy, Qt.LeftButton);
     }
 
+    // The gesture a move and a swap answer differently: the pointer arrives
+    // two slots away in one event, so the reorder has to cross a neighbour it
+    // was never nearest to. `dragSlot` above cannot see the difference - it
+    // steps one slot at a time, and a run of adjacent swaps is a move.
+    //
+    // The first move is only there to arm the grab; it stays inside the
+    // neighbouring slot so nothing has reordered before the jump.
+    function flickSlot(index, dx, dy) {
+        const p = harness.slotCenter(index);
+        driver.mousePress(slots, p.x, p.y, Qt.LeftButton);
+        driver.mouseMove(slots, p.x + Math.sign(dx) * 15, p.y + Math.sign(dy) * 15,
+                         20, Qt.LeftButton);
+        driver.mouseMove(slots, p.x + dx, p.y + dy, 20, Qt.LeftButton);
+        driver.mouseRelease(slots, p.x + dx, p.y + dy, Qt.LeftButton);
+    }
+
     // ---- the checks ------------------------------------------------------
 
     // A slot is recognised by the property that places it, so a harness that
@@ -154,7 +170,7 @@ ShellRoot {
         // The control, and the proof events are arriving at all.
         () => harness.scoreLayout("a bottom dock", false),
         () => harness.dragSlot(0, 60, 0),
-        () => harness.scoreReordered("dragging along a row swaps",
+        () => harness.scoreReordered("dragging along a row reorders",
                                      ["beta", "alpha", "gamma"]),
 
         () => { harness.resetOrder(); Config.options.dock.edge = "left"; },
@@ -162,7 +178,7 @@ ShellRoot {
 
         // The half a plausible-looking column silently loses.
         () => harness.dragSlot(0, 0, 60),
-        () => harness.scoreReordered("dragging along a column swaps",
+        () => harness.scoreReordered("dragging along a column reorders",
                                      ["beta", "alpha", "gamma"]),
 
         // ...and the half the old x-only comparison got wrong in the other
@@ -178,8 +194,17 @@ ShellRoot {
         () => { harness.resetOrder(); Config.options.dock.edge = "bottom"; },
         () => harness.scoreLayout("back at the bottom", false),
         () => harness.dragSlot(1, -60, 0),
-        () => harness.scoreReordered("and a row still swaps after the round trip",
-                                     ["beta", "alpha", "gamma"])
+        () => harness.scoreReordered("and a row still reorders after the round trip",
+                                     ["beta", "alpha", "gamma"]),
+
+        // The reorder is a move: alpha travels to the end and the two it was
+        // carried past keep their order one slot earlier. An exchange answers
+        // gamma,beta,alpha here - beta never moves, and gamma lands where the
+        // gesture began rather than where it went.
+        () => harness.resetOrder(),
+        () => harness.flickSlot(0, 100, 0),
+        () => harness.scoreReordered("a pointer that outruns the events shifts the run it passed",
+                                     ["beta", "gamma", "alpha"])
     ]
 
     property int stepIndex: 0
