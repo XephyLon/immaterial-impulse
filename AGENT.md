@@ -395,6 +395,24 @@ a tempdir; the clean-checkout case asserts the update stays *silent*, which is t
 the fix from becoming a nuisance for everyone who has no local work.
 d5d2f69b0 ("fix(get.sh): rescue local work before resetting the update checkout").
 
+**A Python dependency is declared in `sdata/uv/requirements.in` and installed
+from `sdata/uv/requirements.txt`, and adding it to the first does nothing.**
+`install-python-packages` runs `uv pip install -r requirements.txt`, which is a
+compiled lock; the `.in` is the input a human edits and nothing at install time
+reads. `onnxruntime` was added to the `.in` when the subject-mask producer landed
+and the lock was never recompiled, so **every venv the installer has ever built
+lacks it** — and the only symptom is a raw `ModuleNotFoundError` surfacing in the
+depth picker at the moment the user presses a button, on a machine where that
+path has never once worked. It ran on the author's machine because it had been
+installed by hand. Recompile with the existing lock as preferences
+(`uv pip compile requirements.in -o requirements.txt` in that directory, with
+`requirements.txt` already present) rather than from scratch, or the diff for one
+package moves every pin in the file — and this venv exists precisely because a
+moving `numpy` is what breaks segmentation stacks (the design doc's own §1.1
+finding). A check that reads the `.in` is checking the wrong file and stays green
+for the whole life of the bug; `tests/test_clock_depth_cache.py` reads both now.
+(fix(install): put onnxruntime in the lock the installer actually installs.)
+
 ## Directory map
 
 ```
@@ -521,9 +539,11 @@ services/                  Singletons wrapping external state/processes - one pe
                               the desktop clock's depth mode. Asks
                               scripts/background/subject_mask.py - the shell never computes a cache
                               key of its own - and queries nothing at all until either
-                              background.clockDepth.enable or the picker is open. The `run` half is
-                              reached ONLY from the wallpaper selector's picker; nothing reactive
-                              can start segmentation
+                              background.clockDepth.enable or the picker is open. The `run` and
+                              `select` halves are reached ONLY from the wallpaper selector's
+                              picker; nothing reactive can start segmentation. It also holds the
+                              prompted model's clicks for the wallpaper on screen, restored from
+                              the cache once per wallpaper rather than on every status
   MprisController.qml         The one answer to "which player is the media UI showing". It filters
                               the bus list (proxies always, duplicates by setting) through
                               MprisSelection.js - a .pragma library kept pure so the rules are
@@ -539,13 +559,19 @@ panelFamilies/              PanelLoader.qml (thin LazyLoader) + ImmaterialImpuls
                             actual list of panels for the "imi" family)
 
 scripts/                   Standalone helper scripts (Python/bash) invoked via Process/Quickshell.execDetached
-  background/subject_mask.py  Segments a wallpaper's subject through ONNX Runtime (isnet-anime or
-                              isnet-general-use, fetched on first use, ~1.3-4.5s and ~1GB RSS per
-                              run) and owns the mask cache in ${Directories.cache}/clock-depth. It
-                              owns the CACHE KEY too - path/mtime/size - and the shell never
-                              computes one, so an in-place wallpaper edit invalidates its mask, its
-                              opt-out and its candidates together. `status` and `sweep` are
-                              stdlib-only and load no model; `run` needs the uv venv
+  background/subject_mask.py  Segments a wallpaper's subject through ONNX Runtime and owns the mask
+                              cache in ${Directories.cache}/clock-depth. Two kinds of model: the
+                              salient detectors (isnet-anime, isnet-general-use) answer the PICTURE
+                              and are asked with `run` (~1.3-4.5s, ~1GB RSS); mobile-sam answers a
+                              POINT and is asked with `select --point x,y[,label]` (~1.6s for the
+                              first click, ~0.3s for every one after, because the image embedding
+                              is cached at the key). It owns the CACHE KEY too - path/mtime/size -
+                              and the shell never computes one, so an in-place wallpaper edit
+                              invalidates its mask, its opt-out, its candidates and its embedding
+                              together. It also reports the model list, so the picker holds no copy
+                              of it. `status` and `sweep` are stdlib-only and load no model - a
+                              prompted mask's clicks live in a PNG text chunk it parses by hand for
+                              exactly that reason; `run` and `select` need the uv venv
                               (subject-mask-venv.sh)
 translations/              i18n string tables (Translation.tr(...) singleton)
 assets/                    Static images/fonts bundled with the shell
@@ -2349,6 +2375,63 @@ which is the one place in this shell that is right: every `Appearance` token is
 generated *from* the wallpaper on screen, so a token there is guaranteed to be a
 colour the picture already contains.
 (refactor(background): one cutout for the layer and the picker to draw.)
+
+**And when both models return nothing, the answer is a different QUESTION, not a
+lower threshold.** Swept over the 91 wallpapers in this library, the two salient
+detectors leave 45 of them at `none` — half the library, with the picker
+correctly reporting that neither found a subject and nothing to be done about it.
+The tempting read is that `EMPTY_FOREGROUND = 0.005` and the `mask > 0.5`
+binarisation are throwing away a faint answer. They are not, and the measurement
+is what settles it: before any threshold, on `aishot-3263.jpg`,
+`isnet-general-use` claims 2.78% of the frame at 0.1 confidence and 0.28% at 0.5,
+`isnet-anime` 0.07% and 0.00%; on `aishot-1206.jpg` it is 1.20%/0.19% and
+0.00%/0.00%. Admitting a claim that small admits noise. These are salient-object
+detectors — one dominant object against a separable background — and a full-bleed
+wallpaper has no background to separate from, so the model is being asked a
+question the picture does not answer. `mobile-sam` is asked a different one
+("what is the thing at this point"), which is why it is a third column in the
+picker rather than a fourth detector, and why the user clicking is not a fallback
+but the mechanism. (feat(background): a third model that answers a click instead
+of the picture.)
+
+Four things about that column generalise past it:
+
+- **The encoder/decoder split is a contract, not an implementation detail.**
+  Encoding the picture costs seconds and depends only on the picture; decoding a
+  mask from clicks reads the embedding and costs milliseconds. Measured on a
+  7680x2160 wallpaper: 1.63s for the first click, 0.34s for the second, of which
+  0.24s is starting Python. A fused single-file export would charge the first
+  click's price for every click, and refinement — which is the entire interaction
+  — would be unusable. `tests/test_clock_depth_cache.py` pins the pair as two
+  files, and pins that a cached embedding comes back with the encoder file absent
+  and `onnxruntime` raising on import.
+- **The prompt lives inside the mask, in a PNG text chunk.** A SAM mask is a
+  function of the clicks as well as the picture, so something has to record them
+  — and every other place to put them is a pair that has to agree. In the key
+  they mint an entry per click, so a five-click refinement leaves five masks and
+  needs a sixth file to say which was accepted. In a sidecar they are two files a
+  sweep, a copy or a crash can separate, and `accept` is a byte copy so the
+  sidecar would have to be copied by hand in the one place forgetting is silent.
+  In `Config` they are a map keyed by a runtime path, which the `JsonAdapter`
+  cannot hold. Inside the file the prompt cannot arrive without its mask or
+  outlive it, `accept` carries it for free, and the accepted copy keeps saying
+  what it was cut with after the candidate is refined further. `status` reads it
+  back with a hand-written chunk reader, because that path may not import Pillow.
+- **`coverRect` needed no new case, and that was confirmed rather than assumed.**
+  A prompted mask comes out at the picture's own aspect (SAM resizes the longest
+  side and pads) where a salient one is square (isnet squashes), and `coverRect`
+  exists precisely because of that squash — so the obvious guess is that a
+  non-square mask needs a second path. It does not: the rect is a rectangle for
+  the WALLPAPER and the function never reads the mask's dimensions at all, so
+  stretching any mask into it maps that mask's whole extent onto the picture's
+  whole extent. `tst_clock_depth_eligibility.qml` pins both halves, and its
+  second case uses a 3.56:1 picture in a 4:3 box on purpose — at a matching
+  aspect the box IS the cover rect and every registration bug is invisible.
+- **A click that finds nothing must not write a `.none` marker.** That marker
+  means "this model looked at this picture and there is nothing in it" and is
+  worth not re-learning at 4.5s a time. A click that lands on flat sky is one
+  attempt, and recording it as a refusal tells the picker to stop offering the
+  one column the user aims.
 
 **A segmentation model returning nothing is usually the wrong model, not an empty
 picture.** `isnet-anime` and `isnet-general-use` are complementary and neither is
