@@ -678,6 +678,28 @@ whose `minimumSize` equals its `maximumSize` is floated, sized and centred by Hy
 purely from the fixed size hints. Prefer that over a runtime rule. It also keeps the window title
 free to stay translated, since nothing is matching on it.
 
+**A Hyprland option the shell sets is reported back as set whether or not it did anything, and the
+complaint is on the screen rather than in the log.** `decoration:screen_shader` is the measured
+case, against 0.56.2 in a nested instance. `CHyprOpenGLImpl::applyScreenShader` calls
+`m_finalScreenShader->destroy()` **before** it checks the path, so a path naming nothing turns the
+previous shader off; it then queues `Screen shader parser: Failed to check screen shader path: No
+such file or directory` into `errorOverlay/Overlay.cpp`, which paints a red-bordered banner across
+the focused monitor with no timeout, clearing only when a later reload supplies a shader that
+loads. Nothing reaches Hyprland's log, so the `tail | grep -iE 'error|WARN scene'` loop in
+CONTRIBUTING.md sees a clean run. The compositor does not crash.
+
+Two consequences generalise past shaders. **`hyprctl getoption` answers with the value Hyprland was
+handed, not with the value that took effect** - the bogus path came back with `set: true` - so a
+service deriving its own state from `getoption` (`HyprlandConfigOption`, and every quick toggle
+built on it) will report a feature as on while it is doing nothing. And **an option written into
+`shellOverrides/main.lua` is applied on Hyprland's own reload**, i.e. after the shell has stopped
+watching, so there is no return path for a failure even in principle. Where a value the shell writes
+names a file, the file's existence is checkable statically and should be checked there:
+`tests/lint_shader_paths.py` resolves every static shader path declared in QML against disk, which
+is what would have caught the anti-flashbang weak shader that was named for the whole life of its
+service and never existed. dea752d04 ("fix(antiFlashbang): give the weak rung the shader it has
+always named"), b50018e4a ("test(lint): fail on a QML file naming a shader that is not on disk").
+
 **hyprsunset has no state query at all, so the shell owns night light's on/off state.** Checked
 against 0.4.0, not assumed: `hyprctl hyprsunset --help` lists exactly three requests -
 `temperature <temp>`, `identity`, `gamma <gamma>` - bare `hyprctl hyprsunset` answers
