@@ -1,4 +1,5 @@
 pragma Singleton
+import qs
 import qs.modules.common
 import qs.services
 import QtQuick
@@ -9,7 +10,7 @@ import "../modules/common/functions/monitorDetection.js" as MonitorDetection
 /**
  * Keep-awake (idle inhibitor) state.
  *
- * Two inputs are ORed into the actual Wayland inhibitor:
+ * Three inputs are ORed into the actual Wayland inhibitor:
  * - `inhibit`: the manual "Keep system awake" toggle (persisted per Hyprland
  *   instance via Persistent.states.idle.inhibit).
  * - auto keep-awake (ported from end-4/dots-hyprland PR #2109): while
@@ -19,6 +20,9 @@ import "../modules/common/functions/monitorDetection.js" as MonitorDetection
  *   switching it off while a monitor is connected is honored (no forced
  *   re-toggle); the automatic part is stopped by unplugging the monitor or
  *   disabling the config option.
+ * - `screensaverHold`: a monitor the user deliberately blanked. Each input owns
+ *   its own bit and none of them writes another's, so a deliberate blank cannot
+ *   flip the manual toggle back on the way out.
  */
 Singleton {
     id: root
@@ -30,7 +34,21 @@ Singleton {
     readonly property bool autoOnExternalMonitor: Config.options.idleInhibitor.autoOnExternalMonitor
     readonly property bool hasExternalMonitor: MonitorDetection.hasExternal(Quickshell.screens.map(s => s.name))
     readonly property bool autoInhibitActive: root.autoOnExternalMonitor && root.hasExternalMonitor
-    readonly property bool effectiveInhibit: root.inhibit || root.autoInhibitActive
+
+    // A monitor blanked on purpose keeps hypridle's ladder (lock 300s, DPMS off
+    // 600s, suspend 900s) from running out from under a user who is working on
+    // another screen. An *idle*-raised screensaver deliberately holds nothing:
+    // there the ladder is the point.
+    //
+    // Derived from the screen list rather than stored as a flag the screensaver
+    // sets and clears, because a stored bit has a release path to get wrong and
+    // this has none. If the shell dies while a monitor is blanked the inhibitor
+    // goes with it either way - a zwp_idle_inhibitor is destroyed with the
+    // wl_surface it was created on, and the client's surfaces die with the
+    // connection, so the compositor drops the inhibit without anyone asking.
+    readonly property bool screensaverHold: GlobalStates.screensaverScreens.length > 0
+
+    readonly property bool effectiveInhibit: root.inhibit || root.autoInhibitActive || root.screensaverHold
 
     onAutoInhibitActiveChanged: {
         // Only announce when the automatic part actually changes the effective
