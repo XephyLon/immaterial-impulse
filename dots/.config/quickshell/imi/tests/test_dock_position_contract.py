@@ -55,6 +55,18 @@ ANCHOR_LINES = ("top", "bottom", "left", "right",
 AXES = (({"left", "right"}, "horizontalCenter"),
         ({"top", "bottom"}, "verticalCenter"))
 
+# One anchor line and whatever it is bound to.
+ANCHOR_LINE_BINDING = re.compile(
+    r"(?:^|\n)\s*(?:anchors\.)?(" + "|".join(ANCHOR_LINES) + r")\s*:([^\n]*)")
+# ...bound to something that varies with the dock's edge. `Side` catches the
+# derived names (outwardSide, dotSide, revealSide, dockSide); `vertical` needs
+# its word boundary or it matches `verticalCenter`.
+EDGE_DEPENDENT = re.compile(r"\b(vertical|dockVertical|dockEdge|edge)\b|Side\b")
+# The layer surface's own anchors are the exception: booleans the compositor
+# applies to a surface, not QQuickAnchors, and the one thing that genuinely
+# does have to change with the edge.
+SURFACE_ANCHORS = "DockGeometry.anchors("
+
 
 def anchor_groups(source):
     """The anchor-line names each item binds, one set per declaration site."""
@@ -198,6 +210,29 @@ class DockPositionContractTest(unittest.TestCase):
                         self.fail(
                             f"{path.name} anchors {sorted(names & ends)} and "
                             f"{centre} on one axis:\n{block.strip()}")
+
+    def test_no_anchor_in_the_dock_changes_with_the_edge(self):
+        # The general form of the rule above, and the one that catches the
+        # second way an anchor ruins a property: an anchor WRITES whatever it
+        # pins, so one that appears when the dock turns overwrites the binding
+        # that owns that coordinate, and the binding never runs again to take
+        # it back. The window-preview card's `x` was left at 0 that way - it
+        # had been written by an `anchors.left` that only exists while the dock
+        # is on a side edge, and afterwards the card sat at the end of the
+        # strip instead of under the icon the pointer was on.
+        #
+        # So: the turn is a size, an offset or a coordinate, never an anchor.
+        # The layer surface's own anchors are exempt - those are booleans the
+        # compositor applies, and they are the one thing that has to change.
+        for path in EDGE_AWARE:
+            source = path.read_text(encoding="utf-8")
+            for line, expression in ANCHOR_LINE_BINDING.findall(source):
+                if SURFACE_ANCHORS in expression:
+                    continue
+                self.assertIsNone(
+                    EDGE_DEPENDENT.search(expression),
+                    f"{path.name} makes the `{line}` anchor follow the edge:"
+                    f"{expression}")
 
     # ---- the vertical layout --------------------------------------------
 
