@@ -294,6 +294,12 @@ if ! python3 "$SCRIPT_DIR/test_settings_search_shortcuts.py"; then
     exit 1
 fi
 
+echo "Running settings page id tests..."
+if ! python3 "$SCRIPT_DIR/test_settings_page_ids.py"; then
+    echo "Settings page id tests failed."
+    exit 1
+fi
+
 # A column of dock icons can lay out perfectly and still refuse to reorder,
 # because every slot centre shares an x - only real mouse events see that.
 # Brings its own headless weston.
