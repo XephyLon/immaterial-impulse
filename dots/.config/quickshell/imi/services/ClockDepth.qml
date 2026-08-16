@@ -76,7 +76,6 @@ Singleton {
         { "name": "isnet-general-use", "kind": "salient" },
         { "name": "mobile-sam", "kind": "prompted" }
     ]
-    readonly property var models: root.modelSpecs.map(spec => spec.name)
     // "" while nothing is running, otherwise the model being segmented. The
     // picker disables itself on this rather than on a bare boolean, so it can
     // say WHICH model is running - a run is 1.3 to 4.5 seconds and a button that
@@ -111,6 +110,10 @@ Singleton {
     // is the gesture continued rather than an unexplained cutout.
     property var prompts: ({})
     property var acceptedPrompt: []
+
+    function looksLikeList(value): bool {
+        return value !== null && value !== undefined && typeof value.length === "number"
+    }
 
     function addPoint(x: real, y: real, include: bool): void {
         if (root.promptedModel === "")
@@ -276,7 +279,12 @@ Singleton {
                 root.acceptedModel = parsed.acceptedModel ?? ""
                 root.prompts = parsed.prompts ?? ({})
                 root.acceptedPrompt = parsed.acceptedPrompt ?? []
-                if (Array.isArray(parsed.models) && parsed.models.length > 0)
+                // Array-LIKENESS rather than Array.isArray, here and below: a
+                // list that has been through a `property var` is a QVariantList
+                // on the way back and keeps its indices and its length while
+                // losing the brand, which is the same trap a manifest's
+                // grid.sizes hit crossing a model boundary.
+                if (root.looksLikeList(parsed.models) && parsed.models.length > 0)
                     root.modelSpecs = parsed.models
                 if (root.promptRestoredFor !== root.queriedPath) {
                     root.promptRestoredFor = root.queriedPath
@@ -287,8 +295,8 @@ Singleton {
                     // produced what is on screen rather than an empty preview
                     // with no way back into it.
                     const candidate = root.prompts?.[root.promptedModel]
-                    root.points = Array.isArray(candidate) ? candidate
-                        : (Array.isArray(root.acceptedPrompt) ? root.acceptedPrompt : [])
+                    root.points = root.looksLikeList(candidate) ? candidate
+                        : (root.looksLikeList(root.acceptedPrompt) ? root.acceptedPrompt : [])
                 }
             }
         }
