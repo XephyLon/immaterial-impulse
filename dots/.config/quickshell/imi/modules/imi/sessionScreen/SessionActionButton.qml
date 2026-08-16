@@ -11,7 +11,15 @@ RippleButton {
     property bool keyboardDown: false
     property real size: 120
 
-    buttonRadius: (button.focus || button.down) ? size / 2 : Appearance.rounding.verylarge
+    // Focus only. `focus` is this grid's keyboard cursor and the shared model
+    // has no state for it, so the button still owns that shape - but the press
+    // belongs to RippleButton, which tightens `buttonRadius` by
+    // `pressRadiusScale` through the model's animated `pressProgress`. Naming
+    // `down` here too drove the same channel from two places and they pulled
+    // opposite ways: measured, a press took the corner 30 -> 51 (the button's
+    // own jump to a circle, then the model's 0.85 on top of it) where every
+    // other control in the shell tightens.
+    buttonRadius: button.focus ? size / 2 : Appearance.rounding.verylarge
     colBackground: button.keyboardDown ? Appearance.colors.colSecondaryContainerActive : 
         button.focus ? Appearance.colors.colPrimary : 
         Appearance.colors.colSecondaryContainer
