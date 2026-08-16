@@ -7,6 +7,7 @@ import qs.modules.common.widgets
 import qs.modules.common.widgets.widgetCanvas
 import qs.modules.common.functions as CF
 import "../../common/functions/parallax.js" as ParallaxMath
+import "../../common/functions/clockDepth.js" as ClockDepthLogic
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
@@ -1242,6 +1243,133 @@ Variants {
                                 parallaxViewport.width, parallaxViewport.height)
                     }
                 }
+            }
+        }
+
+        // Clock depth: the wallpaper's subject, painted back over the desktop
+        // widgets, so the clock sits behind the person in the photo.
+        //
+        // A FOURTH sibling, not a child of the viewport. A child's z only
+        // reorders it against its viewport siblings and can never lift it above
+        // widgetCanvas (weTransition at z 1 is exactly that case), so a cutout
+        // declared inside the viewport would be drawn UNDER the clock - which
+        // is the effect the shell already has. Being a sibling means it
+        // inherits nothing, and each of the three things it reconstructs below
+        // is a bug this file has already been through once.
+        Item {
+            id: clockDepthLayer
+            // The viewport's LIVE geometry, not bgRoot.parallaxOffsets. Those
+            // are the 600ms Behavior's destination: bound to them, the subject
+            // would jump to the new position while the wallpaper under it took
+            // 600ms to arrive - detached from its own image for the whole of
+            // every workspace switch. Same mistake as #157, and the frost's
+            // wallpaperRect one screen up reads these four for the same reason.
+            x: parallaxViewport.x
+            y: parallaxViewport.y
+            width: parallaxViewport.width
+            height: parallaxViewport.height
+            // Above widgetCanvas (z 2), which is the whole point.
+            z: 3
+            // Its own copy of the fullscreen gate. The viewport carries one for
+            // its children and widgetCanvas carries a second because it moved
+            // out; a fourth sibling needs a fourth, or the subject floats over
+            // fullscreen video with the wallpaper gone.
+            visible: !bgRoot.suppressContents && clockDepthLayer.opacity > 0
+            // Takes no input, ever. desktopRightClickArea sits at z -2, below
+            // everything, and works only because every layer above it lets
+            // clicks fall through; a MouseArea or a HoverHandler anywhere in
+            // here would silently kill the desktop menu, every widget drag and
+            // the drop shelf. This root is a plain Item, so the gate cascades.
+            enabled: false
+            opacity: ClockDepthLogic.eligible({
+                enable: ClockDepth.enabled,
+                maskPath: ClockDepth.maskPath,
+                optedOut: ClockDepth.optedOut,
+                weActive: bgRoot.weActive,
+                wallpaperIsVideo: bgRoot.wallpaperIsVideo,
+                centeredWallpaper: bgRoot.centeredWallpaperEnabled,
+                screenLocked: GlobalStates.screenLocked,
+                transitionInFlight: bgRoot.transitionProgress < 1
+            }) ? 1 : 0
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Appearance.animation.elementMove.duration
+                    easing.type: Appearance.animation.elementMove.type
+                    easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                }
+            }
+
+            Image {
+                id: clockDepthWallpaper
+                anchors.fill: parent
+                // Every one of these matches the `wallpaper` item inside the
+                // viewport on purpose. Same source, same size, same fill mode
+                // means the per-screen crop matches with no geometry of its own
+                // - and it means Qt's image cache serves both from ONE decode:
+                // a fill mode's aspect flags are part of the request, so a
+                // Stretch copy of the same file would decode all over again.
+                //
+                // The wallpaper item's own source is assigned imperatively, so
+                // a switch can snapshot the old frame before reloading; reading
+                // bgRoot.wallpaperPath here instead would put the incoming
+                // image under the outgoing image's mask for the length of it.
+                source: wallpaper.source
+                fillMode: Image.PreserveAspectCrop
+                cache: true
+                smooth: true
+                asynchronous: true
+                // Drawn by the OpacityMask below, not by itself.
+                visible: false
+            }
+
+            Item {
+                id: clockDepthMaskSurface
+                anchors.fill: parent
+                visible: false
+                // The mask is drawn oversized and offset (see coverRect), and
+                // this is what crops it back to the wallpaper's box - the same
+                // crop PreserveAspectCrop applies to the image it masks.
+                clip: true
+
+                Image {
+                    id: clockDepthMask
+                    // The mask is the model's own output: the whole picture
+                    // squashed to a square. So it is NOT the wallpaper's aspect,
+                    // and filling it into the same box would stretch it
+                    // differently from the image it masks - by 3.5x on this
+                    // monitor. Stretched into the rectangle the whole wallpaper
+                    // would occupy if nothing clipped it, undoing the squash and
+                    // re-applying the crop are the same operation.
+                    //
+                    // What masks is this file's ALPHA - Qt's OpacityMask reads
+                    // nothing else, so the producer writes the mask into the
+                    // alpha channel as well as the luminance. A plain grayscale
+                    // mask is opaque everywhere and lets the whole wallpaper
+                    // through, which draws the picture flat over the clock
+                    // rather than the subject behind it.
+                    readonly property var coverRect: ClockDepthLogic.coverRect(
+                        clockDepthWallpaper.implicitWidth, clockDepthWallpaper.implicitHeight,
+                        clockDepthMaskSurface.width, clockDepthMaskSurface.height)
+                    x: clockDepthMask.coverRect.x
+                    y: clockDepthMask.coverRect.y
+                    width: clockDepthMask.coverRect.width
+                    height: clockDepthMask.coverRect.height
+                    source: ClockDepth.maskPath === "" ? "" : `file://${ClockDepth.maskPath}`
+                    fillMode: Image.Stretch
+                    smooth: true
+                    asynchronous: true
+                }
+            }
+
+            // The one thing that paints. A missing or corrupt mask leaves this
+            // with an Image.Error maskSource, which shows nothing rather than
+            // showing everything - the right failure direction, and the reason
+            // the layer degrades to today's flat clock instead of to a
+            // wallpaper pasted over it.
+            OpacityMask {
+                anchors.fill: parent
+                source: clockDepthWallpaper
+                maskSource: clockDepthMaskSurface
             }
         }
 
