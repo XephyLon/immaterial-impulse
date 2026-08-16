@@ -100,31 +100,123 @@ ColumnLayout {
     // Every host row reads as one group rather than as more of the widget's own
     // settings. The same rows appear for every widget - that is the point, and
     // it is exactly why they should not sit among the plugin's.
+    //
+    // ...and it is also why they are a bar rather than rows. Six booleans as
+    // six full-width switch rows spent 196px of a popup whose scarce axis is
+    // vertical, on six settings whose entire content is on/off - the icon, the
+    // label and the track were three columns of chrome per bit. As icon
+    // toggles they are one 40px line: the selected container carries the
+    // state, and the caption under the bar carries the naming a glyph cannot.
     ContentSubsection {
+        id: behaviourSection
         title: Translation.tr("Widget behaviour")
 
-        // Not a pluginOption on purpose: preset application replaces those, and
-        // this flag decides whether they get replaced (see presets.sh --apply).
-        ConfigSwitch {
-            id: presetPersistSwitch
+        readonly property string presetPersistLabel: Translation.tr("Keep settings across presets")
+
+        // Written by whichever toggle the pointer is over, read by the caption.
+        // Cleared only by the toggle that wrote it: a pointer crossing from one
+        // toggle to the next delivers the leave and the enter in an order
+        // nothing here controls, so an unconditional clear on a leave blanks
+        // the label the enter just wrote.
+        property string hoveredLabel: ""
+
+        // What the six labels used to say without being pointed at: which of
+        // these are on. The selected container answers that too, but only once
+        // six glyphs have been learned, and this is the settings surface where
+        // they are met for the first time.
+        readonly property string enabledLabels: {
+            const on = [];
+            if (PluginState.presetPersisted(root.manifest.id))
+                on.push(behaviourSection.presetPersistLabel);
+            for (let index = 0; index < root.behaviourRows.length; ++index) {
+                const behaviourRow = root.behaviourRows[index];
+                if (PluginState.option(root.manifest.id, behaviourRow.key, behaviourRow.default))
+                    on.push(behaviourRow.label);
+            }
+            return on.join("  ·  ");
+        }
+
+        FlowButtonGroup {
+            id: behaviourBar
             Layout.fillWidth: true
-            leftPadding: 0
-            rightPadding: 0
-            buttonIcon: "push_pin"
-            text: Translation.tr("Keep settings across presets")
-            checked: PluginState.presetPersisted(root.manifest.id)
-            onToggleRequested: PluginState.setPresetPersist(root.manifest.id,
-                !PluginState.presetPersisted(root.manifest.id))
+            spacing: Appearance.spacing.space50
+
+            // Not a pluginOption on purpose: preset application replaces those,
+            // and this flag decides whether they get replaced (see
+            // presets.sh --apply). It leads the bar because it governs whether
+            // the rest of it survives a preset.
+            BehaviourToggle {
+                id: presetPersistToggle
+                label: behaviourSection.presetPersistLabel
+                buttonIcon: "push_pin"
+                toggled: PluginState.presetPersisted(root.manifest.id)
+                onClicked: PluginState.setPresetPersist(root.manifest.id,
+                    !PluginState.presetPersisted(root.manifest.id))
+            }
+
+            Repeater {
+                model: root.behaviourRows
+                delegate: BehaviourToggle {
+                    required property var modelData
+                    label: modelData.label
+                    buttonIcon: modelData.icon
+                    toggled: PluginState.option(root.manifest.id, modelData.key, modelData.default)
+                    onClicked: PluginState.setOption(root.manifest.id, modelData.key,
+                        !PluginState.option(root.manifest.id, modelData.key, modelData.default))
+                }
+            }
+        }
+
+        StyledText {
+            id: behaviourCaption
+            Layout.fillWidth: true
+            font.pixelSize: Appearance.font.pixelSize.smaller
+            color: Appearance.colors.colSubtext
+            elide: Text.ElideRight
+            // One label channel, not two. A tooltip answers "what is this one"
+            // and nothing else, after a hover apiece, drawn over the toggles
+            // beside it; this answers the same question in a fixed place while
+            // the pointer sweeps the bar, and answers the other one - which of
+            // these are on - while the pointer is nowhere near it.
+            text: behaviourSection.hoveredLabel.length > 0
+                ? behaviourSection.hoveredLabel
+                : (behaviourSection.enabledLabels.length > 0
+                    ? Translation.tr("On: %1").arg(behaviourSection.enabledLabels)
+                    : Translation.tr("Nothing on"))
         }
 
         Repeater {
             model: root.sizeRows
             delegate: optionRow
         }
+    }
 
-        Repeater {
-            model: root.behaviourRows
-            delegate: optionRow
+    // Composed, not written: `IconToolbarButton` is already an icon-only button
+    // whose `toggled` container states are M3's selected/unselected pair, and
+    // the `RippleButton` under it already owns the pointer shape and the single
+    // application of the shared interaction motion. Nothing here adds a hover
+    // scale or an enabled-dim of its own - both compose rather than replace,
+    // and both are lints (lint_interaction_motion_double, lint_disabled_opacity).
+    //
+    // The click is an intent in the same sense a ConfigSwitch's is: `toggled`
+    // is a pure binding on the store and the handler flips the value at its
+    // source, so nothing here can detach the toggle from what it displays.
+    component BehaviourToggle: IconToolbarButton {
+        id: toggle
+        // A glyph cannot label itself, and these six are not self-evident.
+        // The bar's caption names whichever one the pointer is over; this is
+        // the name it shows.
+        property string label: ""
+        property string buttonIcon: "tune"
+
+        implicitHeight: 40
+        text: toggle.buttonIcon
+
+        onHoveredChanged: {
+            if (toggle.hovered)
+                behaviourSection.hoveredLabel = toggle.label;
+            else if (behaviourSection.hoveredLabel === toggle.label)
+                behaviourSection.hoveredLabel = "";
         }
     }
 
