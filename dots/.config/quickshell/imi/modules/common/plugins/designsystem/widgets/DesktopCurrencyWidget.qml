@@ -352,7 +352,33 @@ Item {
                     id: quoteCell
                     required property int index
                     readonly property var slot: Geometry.quoteCellRect(index, root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
-                    readonly property var lastSlot: slot ?? ({ x: x, y: y, width: width, height: height, stacked: true })
+                    // Held, not read back. The fallback used to be
+                    // `{ x: x, y: y, width: width, height: height }` - the very
+                    // four properties it feeds - so while the slot was null the
+                    // cell's geometry depended on itself. `quoteCellRect`
+                    // returns null for cells 3 and 4 at 1x1
+                    // (currency_geometry.js:51), so that state is reached every
+                    // time the widget is shrunk, not in theory.
+                    //
+                    // Same fault, same file: the "to" label fifty lines up was
+                    // fixed and this sibling was missed. Holding the last
+                    // settled rect lets the cell fade out from where it was
+                    // without asking itself where that is.
+                    property real heldX: 0
+                    property real heldY: 0
+                    property real heldWidth: 0
+                    property real heldHeight: 0
+                    property bool heldStacked: true
+                    onSlotChanged: if (slot !== null) {
+                        heldX = slot.x;
+                        heldY = slot.y;
+                        heldWidth = slot.width;
+                        heldHeight = slot.height;
+                        heldStacked = slot.stacked ?? true;
+                    }
+                    readonly property var lastSlot: slot ?? ({
+                        x: heldX, y: heldY, width: heldWidth, height: heldHeight, stacked: heldStacked
+                    })
                     readonly property string quoteCurrency:
                         index === 0 ? CurrencyService.quote1
                         : index === 1 ? CurrencyService.quote2
