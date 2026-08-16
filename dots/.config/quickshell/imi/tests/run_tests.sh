@@ -278,6 +278,12 @@ if ! python3 "$SCRIPT_DIR/test_dock_position_contract.py"; then
     exit 1
 fi
 
+echo "Running settings search shortcut tests..."
+if ! python3 "$SCRIPT_DIR/test_settings_search_shortcuts.py"; then
+    echo "Settings search shortcut tests failed."
+    exit 1
+fi
+
 # A column of dock icons can lay out perfectly and still refuse to reorder,
 # because every slot centre shares an x - only real mouse events see that.
 # Brings its own headless weston.
