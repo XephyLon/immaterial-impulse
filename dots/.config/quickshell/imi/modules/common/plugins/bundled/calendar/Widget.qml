@@ -1,12 +1,12 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Layouts
 import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.modules.common.plugins
 import "../../designsystem/widgets" as Expressive
+import "calendar_geometry.js" as Geometry
 
 Item {
     id: root
@@ -26,6 +26,9 @@ Item {
     property bool hostDragging: false
     // Set by the host while its own box is animating; the cards drop their
     // shadow for the duration rather than re-blurring into a resizing FBO.
+    // It is always false here - the host only animates a box it sizes itself,
+    // and this widget declares no `grid` - so the widget publishes its own
+    // `boxInMotion` below and the card takes both.
     property bool hostBoxInMotion: false
 
     // The card fills the whole widget, so the host's default frost region has
@@ -40,7 +43,7 @@ Item {
     readonly property var blurRegions: [card.blurRegion]
 
     // The card's own surface is the card's business now; this stays for the
-    // surfaces drawn *inside* it - the 1x1 banner, the month pill, the day
+    // surfaces drawn *inside* it - the month band, the month pill, the day
     // grid and today's highlight - which thin with the card so the frost
     // reads through the whole widget rather than through its edges only.
     // `transparentize` rather than the card's `applyAlpha` because two of
@@ -89,33 +92,44 @@ Item {
         PluginState.setOption("calendar", "sizeMode", mode);
     }
 
-    property real widgetWidth: {
-        switch (root.sizeMode) {
-        case "1x1":
-            return root.snapWidth1;
-        case "2x1":
-            return root.snapWidth2;
-        default:
-            return root.snapWidth2;
-        }
+    // The month steppers only exist at 2x2, and the two smaller spans are both
+    // about *today* - the hero date and the current week. Leaving a shift on
+    // when the card shrinks would show a week of some other month with today's
+    // date nowhere in it, and would leave the hero cell with no home at all.
+    onSizeModeChanged: if (root.sizeMode !== "2x2") root.monthShift = 0
+
+    // ---- the span, and the box travelling towards it ---------------------
+    //
+    // Geometry evaluates at the span's SETTLED box; the Behaviors below carry
+    // the travel. Reading `implicitWidth` here instead would retarget every
+    // element on every frame, and a Behavior whose target keeps moving never
+    // converges (test_geometry_rects_come_from_the_settled_span_not_the_
+    // animating_box).
+    function spanWidthOf(span) {
+        return span === "1x1" ? root.snapWidth1 : root.snapWidth2;
     }
+    function spanHeightOf(span) {
+        return span === "2x2" ? root.tallHeight : root.shortHeight;
+    }
+    readonly property real spanW: root.spanWidthOf(root.sizeMode)
+    readonly property real spanH: root.spanHeightOf(root.sizeMode)
+    readonly property real uiScale: Appearance.effectiveScale
 
-    // One padding for every mode, so the three sizes read as the same card at
-    // different scales. space150 rather than the space200 the notes tile uses:
-    // a 228-tall card has to seat a title row, a weekday strip and six week
-    // rows, and the 8px space200 would take comes straight off the day grid,
-    // which has less of it to give than the card edge does.
-    readonly property real cardInset: Appearance.spacing.space150
+    property real widgetWidth: root.spanW
+    property real widgetHeight: root.spanH
+    Behavior on widgetWidth { Expressive.SpanTravel {} }
+    Behavior on widgetHeight { Expressive.SpanTravel {} }
 
-    // Padding between the day-grid surface and the block of day pills inside
-    // it. The pills are centred in their columns, so the *visible* gap is this
-    // plus half a column's slack; space50 lands that at roughly the same 7px
-    // the compressed row pitch leaves above and below (see twoByTwoContent).
-    readonly property real dayGridInset: Appearance.spacing.space50
+    // The host publishes `boxInMotion` only for a box it sizes itself, and a
+    // content-sized widget's box is this one - so the card would never drop its
+    // shadow for the one motion that reallocates the layer every frame.
+    readonly property bool boxInMotion: Math.abs(root.widgetWidth - root.spanW) > 0.5
+        || Math.abs(root.widgetHeight - root.spanH) > 0.5
 
-    // Column width for the wide-short mode, which has no inner surface: the
-    // card's own content width split seven ways.
-    readonly property real weekColumnWidth: (root.snapWidth2 - root.cardInset * 2) / 7
+    implicitWidth: root.widgetWidth
+    implicitHeight: root.widgetHeight
+
+    // ---- the month matrix ------------------------------------------------
 
     property int monthShift: 0
     readonly property var today: new Date()
@@ -153,36 +167,46 @@ Item {
         }
 
         let nextDay = 1;
-        while (cells.length < 42) {
+        while (cells.length < Geometry.CELLS)
             cells.push({
                 day: nextDay++,
                 currentMonth: false,
                 isToday: false
             });
-        }
-
-        let weeks = [];
-        for (let i = 0; i < cells.length; i += 7)
-            weeks.push(cells.slice(i, i + 7));
-        return weeks;
+        return cells;
     }
 
-    function getCurrentWeek() {
-        const matrix = getMonthMatrix(viewingDate);
-        for (let w = 0; w < matrix.length; w++) {
-            if (matrix[w].some(c => c.isToday))
-                return matrix[w];
-        }
-        return matrix[0];
+    // A flat forty-two, because the cells are the shared elements: the same
+    // delegate has to be the one in the month grid, the one in the week strip
+    // and - for today's - the hero date. A model of six week rows would give
+    // each span a different set of items to destroy and rebuild, which is the
+    // whole thing this replaces.
+    property var cells: root.getMonthMatrix(root.viewingDate)
+
+    readonly property int todayIndex: {
+        for (let i = 0; i < root.cells.length; i++)
+            if (root.cells[i].isToday)
+                return i;
+        return -1;
     }
+    // The row the 2x1 span keeps. Today's, whenever today is on the card at
+    // all; the first otherwise, which is what the destroyed layout's
+    // `getCurrentWeek()` fell back to.
+    readonly property int weekRow: root.todayIndex >= 0
+        ? Math.floor(root.todayIndex / Geometry.COLUMNS) : 0
 
-    property var weeks: getMonthMatrix(viewingDate)
+    readonly property string monthLongText: root.viewingDate.toLocaleDateString(Qt.locale(), "MMMM yyyy")
 
-    implicitWidth: card.implicitWidth
-    implicitHeight: card.implicitHeight
-
-    Behavior on widgetWidth {
-        animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
+    // The pill hugs its label, so it needs the label's width at the pill's OWN
+    // font rather than at the animating one a morph is part-way through. Same
+    // component and so the same metrics, which a TextMetrics with hand-copied
+    // font settings would only approximate.
+    StyledText {
+        id: monthPillRuler
+        visible: false
+        text: root.monthLongText
+        font.pixelSize: Math.round(Geometry.MONTH_FONT_PILL * root.uiScale)
+        font.weight: Font.Bold
     }
 
     // The host (PluginWidget) is the MouseArea that drags this widget; a
@@ -191,359 +215,285 @@ Item {
         id: widgetHover
     }
 
-    component DayCell: Rectangle {
-        id: dayCell
-        property int day: 0
-        property bool currentMonth: true
-        property bool isToday: false
-        property bool bold: false
-        // Set by the caller so today's pill frosts with the rest of the card.
-        property color highlightColor: Appearance.colors.colPrimary
-
-        implicitWidth: 28
-        implicitHeight: 28
-        radius: Appearance.rounding.full
-        color: dayCell.isToday ? dayCell.highlightColor : "transparent"
-
-        StyledText {
-            anchors.centerIn: parent
-            text: dayCell.day
-            font.pixelSize: Appearance.font.pixelSize.smaller
-            font.weight: dayCell.bold || dayCell.isToday ? Font.Bold : Font.Normal
-            color: dayCell.isToday ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
-            opacity: dayCell.currentMonth ? 1.0 : 0.3
-        }
-    }
-
     // The surface every other desktop widget already composes. It owns the
     // tint pair, the rounding (this widget's own `verylarge` was the token the
     // shared card's 30 had drifted from), the frost record above, and the drop
-    // shadow with its hover and drag lift - which is what replaces the flat
-    // StyledRectangularShadow that used to hang behind this rectangle.
+    // shadow with its hover and drag lift.
+    //
+    // `clipContent`, because a one-tree widget's elements do not stop existing
+    // when the card shrinks past them: the day grid's surface and five of its
+    // six rows fade out below a 2x1 card's bottom edge, and an unclipped fade
+    // paints them onto the wallpaper for the length of the morph.
     //
     // No `tensionX`/`tensionY`: the manifest declares no `grid`, so the host
     // draws no resize grip here and there is never a bow to render.
     Expressive.WidgetCard {
         id: card
-        implicitWidth: root.widgetWidth
-        implicitHeight: root.sizeMode === "1x1" ? root.shortHeight : root.sizeMode === "2x1" ? root.shortHeight : root.tallHeight
+        anchors.fill: parent
+        clipContent: true
         tint: Appearance.colors.colPrimaryContainer
         useBlurBackground: root.blurEnabled
         backgroundOpacity: root.backgroundOpacity
         dragging: root.hostDragging
-        hostMotionActive: root.hostBoxInMotion
+        hostMotionActive: root.hostBoxInMotion || root.boxInMotion
 
-        Loader {
-            anchors.fill: parent
-            sourceComponent: {
-                if (root.sizeMode === "1x1")
-                    return oneByOneContent;
-                if (root.sizeMode === "2x1")
-                    return twoByOneContent;
-                return twoByTwoContent;
+        // ---- the month surface: the 1x1 band, the 2x1 pill ---------------
+        //
+        // One element with two homes and one absence. At 2x2 the month is a
+        // plain title on the card, so the surface fades out where it stood
+        // rather than travelling to a place it does not have.
+        Rectangle {
+            id: monthSurface
+            readonly property bool present: root.sizeMode !== "2x2"
+            readonly property string homeSpan: root.sizeMode === "2x2" ? "2x1" : root.sizeMode
+            readonly property var slot: Geometry.monthSurfaceRect(
+                monthSurface.homeSpan,
+                root.spanWidthOf(monthSurface.homeSpan),
+                root.spanHeightOf(monthSurface.homeSpan),
+                root.uiScale,
+                monthPillRuler.paintedWidth,
+                card.radius)
+
+            x: slot.x
+            y: slot.y
+            width: slot.width
+            height: slot.height
+            Behavior on x { Expressive.SpanTravel {} }
+            Behavior on y { Expressive.SpanTravel {} }
+            Behavior on width { Expressive.SpanTravel {} }
+            Behavior on height { Expressive.SpanTravel {} }
+
+            // The corners ARE the morph: a band whose top corners are the
+            // card's own and whose bottom edge is square becomes a stadium.
+            property real cornerTop: monthSurface.slot.radiusTop
+            property real cornerBottom: monthSurface.slot.radiusBottom
+            Behavior on cornerTop { Expressive.SpanTravel {} }
+            Behavior on cornerBottom { Expressive.SpanTravel {} }
+            topLeftRadius: monthSurface.cornerTop
+            topRightRadius: monthSurface.cornerTop
+            bottomLeftRadius: monthSurface.cornerBottom
+            bottomRightRadius: monthSurface.cornerBottom
+
+            color: root.tinted(Appearance.colors.colPrimary)
+            opacity: monthSurface.present ? 1 : 0
+            Behavior on opacity { Expressive.SpanFade {} }
+            visible: opacity > 0
+
+            // The band's own label, which says the month in short form beside
+            // the weekday. It is not the long month name travelling in from
+            // 2x1 - one element cannot swap its text mid-morph without a
+            // content snap - so it is its own pair, riding the surface.
+            Row {
+                anchors.centerIn: parent
+                spacing: Appearance.spacing.space50
+                opacity: root.sizeMode === "1x1" ? 1 : 0
+                Behavior on opacity { Expressive.SpanFade {} }
+                visible: opacity > 0
+
+                StyledText {
+                    text: root.today.toLocaleDateString(Qt.locale(), "MMM").toUpperCase()
+                    font.pixelSize: Appearance.font.pixelSize.normal
+                    font.weight: Font.Bold
+                    color: Appearance.colors.colOnPrimary
+                }
+                StyledText {
+                    text: root.today.toLocaleDateString(Qt.locale(), "ddd").toUpperCase()
+                    font.pixelSize: Appearance.font.pixelSize.normal
+                    font.weight: Font.Bold
+                    color: Appearance.colors.colOnPrimary
+                    opacity: 0.7
+                }
             }
         }
 
-        // 1x1. Two full-bleed bands, so there is no card inset here - the
-        // banner is the padding. Its height is its own label plus space100
-        // above and below rather than a fraction of the card: a fraction
-        // silently re-tunes the banner's padding every time the card is
-        // resized, which is how it survived being sized to a 120px cell that
-        // was really 108 without anyone noticing.
-        Component {
-            id: oneByOneContent
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: Appearance.spacing.space0
+        // ---- the long month name, out of the pill and up to the title ----
+        StyledText {
+            id: monthLabel
+            objectName: "calendarMonthLabel"
+            readonly property bool present: root.sizeMode !== "1x1"
+            readonly property string homeSpan: root.sizeMode === "1x1" ? "2x2" : root.sizeMode
+            readonly property var slot: Geometry.monthLabelRect(
+                monthLabel.homeSpan,
+                root.spanWidthOf(monthLabel.homeSpan),
+                root.spanHeightOf(monthLabel.homeSpan),
+                root.uiScale)
 
-                Rectangle {
-                    Layout.fillWidth: true
-                    implicitHeight: bannerRow.implicitHeight + Appearance.spacing.space100 * 2
-                    color: root.tinted(Appearance.colors.colPrimary)
-                    topLeftRadius: card.radius
-                    topRightRadius: card.radius
+            x: slot.x
+            y: slot.y
+            height: slot.height
+            Behavior on x { Expressive.SpanTravel {} }
+            Behavior on y { Expressive.SpanTravel {} }
+            Behavior on height { Expressive.SpanTravel {} }
 
-                    RowLayout {
-                        id: bannerRow
-                        anchors.centerIn: parent
-                        spacing: Appearance.spacing.space50
-                        StyledText {
-                            text: root.today.toLocaleDateString(Qt.locale(), "MMM").toUpperCase()
-                            font.pixelSize: Appearance.font.pixelSize.normal
-                            font.weight: Font.Bold
-                            color: Appearance.colors.colOnPrimary
-                        }
-                        StyledText {
-                            text: root.today.toLocaleDateString(Qt.locale(), "ddd").toUpperCase()
-                            font.pixelSize: Appearance.font.pixelSize.normal
-                            font.weight: Font.Bold
-                            color: Appearance.colors.colOnPrimary
-                            opacity: 0.7
-                        }
-                    }
-                }
-
-                Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-
-                    StyledText {
-                        anchors.centerIn: parent
-                        text: root.today.getDate()
-                        font.pixelSize: 54
-                        font.weight: Font.Bold
-                        color: Appearance.colors.colOnPrimaryContainer
-                    }
-                }
-            }
+            text: root.monthLongText
+            font.pixelSize: Math.round(monthLabel.slot.size)
+            Behavior on font.pixelSize { Expressive.SpanTravel {} }
+            font.weight: root.sizeMode === "2x2" ? Font.Medium : Font.Bold
+            Behavior on font.weight { Expressive.SpanTravel {} }
+            color: root.sizeMode === "2x1"
+                ? Appearance.colors.colOnPrimary
+                : Appearance.colors.colOnPrimaryContainer
+            Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
+            opacity: monthLabel.present ? 1 : 0
+            Behavior on opacity { Expressive.SpanFade {} }
+            visible: opacity > 0
         }
 
-        // 2x1. The same three-step rhythm as the 2x2: cardInset (space150)
-        // around the card, space100 between the month pill and the week strip
-        // it heads, space50 between the weekday letters and the day row they
-        // label. That comes to 84px of content, and the column is *centred*
-        // rather than filled so the remaining 24px lands as 12 above and 12
-        // below - exactly the card inset - instead of piling up under a
-        // trailing fillHeight spacer and leaving the card bottom-heavy.
-        Component {
-            id: twoByOneContent
-            Item {
-                anchors.fill: parent
+        // ---- the two month steppers, 2x2 only ----------------------------
+        Repeater {
+            model: 2
+            delegate: Rectangle {
+                id: navButton
+                required property int index
+                readonly property bool present: root.sizeMode === "2x2"
+                readonly property var slot: Geometry.navButtonRect(
+                    navButton.index, "2x2", root.snapWidth2, root.tallHeight, root.uiScale)
 
-                ColumnLayout {
+                x: slot.x
+                y: slot.y
+                width: slot.width
+                height: slot.height
+                Behavior on x { Expressive.SpanTravel {} }
+                Behavior on y { Expressive.SpanTravel {} }
+
+                radius: Appearance.rounding.full
+                color: "transparent"
+                border.width: Appearance.borderWidth.standard
+                border.color: Appearance.colors.colPrimary
+                opacity: navButton.present ? 1 : 0
+                Behavior on opacity { Expressive.SpanFade {} }
+                visible: opacity > 0
+
+                MaterialSymbol {
                     anchors.centerIn: parent
-                    width: parent.width - root.cardInset * 2
-                    spacing: Appearance.spacing.space100
-
-                    Rectangle {
-                        implicitHeight: 28
-                        implicitWidth: monthText.implicitWidth + Appearance.spacing.space150 * 2
-                        radius: Appearance.rounding.full
-                        color: root.tinted(Appearance.colors.colPrimary)
-
-                        StyledText {
-                            id: monthText
-                            anchors.centerIn: parent
-                            text: root.today.toLocaleDateString(Qt.locale(), "MMMM yyyy")
-                            font.pixelSize: Appearance.font.pixelSize.small
-                            font.weight: Font.Bold
-                            color: Appearance.colors.colOnPrimary
-                        }
-                    }
-
-                    Grid {
-                        columns: 7
-                        rowSpacing: Appearance.spacing.space50
-                        columnSpacing: Appearance.spacing.space0
-                        Layout.fillWidth: true
-
-                        Repeater {
-                            model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-                            delegate: Item {
-                                id: weekdayHeaderCell
-                                required property var modelData
-                                implicitWidth: root.weekColumnWidth
-                                implicitHeight: 16
-                                StyledText {
-                                    anchors.centerIn: parent
-                                    text: weekdayHeaderCell.modelData
-                                    font.pixelSize: Appearance.font.pixelSize.smaller
-                                    font.weight: Font.Bold
-                                    color: Appearance.colors.colOnPrimaryContainer
-                                    opacity: 0.5
-                                }
-                            }
-                        }
-
-                        Repeater {
-                            model: root.getCurrentWeek()
-                            delegate: Item {
-                                id: weekDayCell
-                                required property var modelData
-                                implicitWidth: root.weekColumnWidth
-                                implicitHeight: 28
-
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 28
-                                    height: 28
-                                    radius: Appearance.rounding.full
-                                    color: weekDayCell.modelData.isToday ? root.tinted(Appearance.colors.colPrimary) : "transparent"
-
-                                    StyledText {
-                                        anchors.centerIn: parent
-                                        text: weekDayCell.modelData.day
-                                        font.pixelSize: Appearance.font.pixelSize.smaller
-                                        font.weight: weekDayCell.modelData.isToday ? Font.Bold : Font.Normal
-                                        color: weekDayCell.modelData.isToday ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
-                                        opacity: weekDayCell.modelData.currentMonth ? 1.0 : 0.3
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    text: navButton.index === 0 ? "chevron_left" : "chevron_right"
+                    iconSize: Appearance.font.pixelSize.normal
+                    color: Appearance.colors.colOnPrimaryContainer
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.monthShift += navButton.index === 0 ? -1 : 1
                 }
             }
         }
 
-        // 2x2. Three consecutive steps of the scale, each one naming a real
-        // relationship rather than whatever made the pixels add up:
+        // ---- the seven weekday letters -----------------------------------
+        Repeater {
+            model: Geometry.COLUMNS
+            delegate: StyledText {
+                id: weekdayHeader
+                required property int index
+                readonly property bool present: root.sizeMode !== "1x1"
+                readonly property string homeSpan: root.sizeMode === "1x1" ? "2x2" : root.sizeMode
+                readonly property var slot: Geometry.weekdayHeaderRect(
+                    weekdayHeader.index, weekdayHeader.homeSpan,
+                    root.spanWidthOf(weekdayHeader.homeSpan),
+                    root.spanHeightOf(weekdayHeader.homeSpan),
+                    root.uiScale)
+
+                x: slot.x
+                y: slot.y
+                width: slot.width
+                height: slot.height
+                Behavior on x { Expressive.SpanTravel {} }
+                Behavior on y { Expressive.SpanTravel {} }
+                Behavior on width { Expressive.SpanTravel {} }
+
+                horizontalAlignment: Text.AlignHCenter
+                text: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"][weekdayHeader.index]
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                font.weight: Font.Bold
+                color: Appearance.colors.colOnPrimaryContainer
+                opacity: weekdayHeader.present ? (root.sizeMode === "2x2" ? 0.6 : 0.5) : 0
+                Behavior on opacity { Expressive.SpanFade {} }
+                visible: opacity > 0
+            }
+        }
+
+        // ---- the surface the month grid is drawn on, 2x2 only ------------
+        Rectangle {
+            id: dayGridSurface
+            readonly property var slot: Geometry.dayGridSurfaceRect(
+                "2x2", root.snapWidth2, root.tallHeight, root.uiScale, card.radius)
+
+            x: slot.x
+            y: slot.y
+            width: slot.width
+            height: slot.height
+            radius: slot.radius
+            color: root.tinted(Appearance.colors.colLayer1)
+            opacity: root.sizeMode === "2x2" ? 1 : 0
+            Behavior on opacity { Expressive.SpanFade {} }
+            visible: opacity > 0
+        }
+
+        // ---- the forty-two day cells -------------------------------------
         //
-        //   space150  cardInset - the card's edge padding
-        //   space100  between the month title block and the calendar block
-        //   space50   between the weekday letters and the grid they label
-        //
-        // Grouping the weekday strip with the grid inside one column is what
-        // makes those last two different: the strip is a header for the grid,
-        // not a third peer of the title, and reading it as a peer is why every
-        // gap in here used to be the same space50.
-        Component {
-            id: twoByTwoContent
-            ColumnLayout {
-                anchors {
-                    fill: parent
-                    margins: root.cardInset
-                }
-                spacing: Appearance.spacing.space100
+        // The morph itself. Every cell has a home at 2x2; the current week's
+        // seven travel up into the 2x1 row while the other thirty-five fade
+        // where they stand; and at 1x1 today's alone survives, growing into
+        // the hero date as its highlight shrinks away under it.
+        Repeater {
+            model: Geometry.CELLS
+            delegate: Item {
+                id: dayCell
+                required property int index
+                readonly property var cell: root.cells[dayCell.index]
+                readonly property var slot: Geometry.dayCellRect(
+                    dayCell.index, root.sizeMode, root.spanW, root.spanH,
+                    root.uiScale, root.weekRow, root.todayIndex)
+                readonly property bool present: dayCell.slot !== null
+                // A fade happens where the element stands, so a cell with no
+                // home still needs somewhere to be - and 2x2 is where every
+                // cell has one, which is also the span the corner handle
+                // reaches from 1x1.
+                readonly property var homeSlot: dayCell.present ? dayCell.slot
+                    : Geometry.dayCellRect(dayCell.index, "2x2", root.snapWidth2,
+                        root.tallHeight, root.uiScale, root.weekRow, root.todayIndex)
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space50
+                x: homeSlot.x
+                y: homeSlot.y
+                width: homeSlot.width
+                height: homeSlot.height
+                Behavior on x { Expressive.SpanTravel {} }
+                Behavior on y { Expressive.SpanTravel {} }
+                Behavior on width { Expressive.SpanTravel {} }
+                Behavior on height { Expressive.SpanTravel {} }
+                opacity: dayCell.present ? 1 : 0
+                Behavior on opacity { Expressive.SpanFade {} }
+                visible: opacity > 0
 
-                    StyledText {
-                        Layout.fillWidth: true
-                        font.pixelSize: Appearance.font.pixelSize.normal
-                        font.weight: Font.Medium
-                        color: Appearance.colors.colOnPrimaryContainer
-                        text: root.viewingDate.toLocaleDateString(Qt.locale(), "MMMM yyyy")
-                    }
-
-                    Rectangle {
-                        implicitWidth: 24
-                        implicitHeight: 24
-                        radius: Appearance.rounding.full
-                        color: "transparent"
-                        border.width: Appearance.borderWidth.standard
-                        border.color: Appearance.colors.colPrimary
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "chevron_left"
-                            iconSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnPrimaryContainer
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.monthShift--
-                        }
-                    }
-
-                    Rectangle {
-                        implicitWidth: 24
-                        implicitHeight: 24
-                        radius: Appearance.rounding.full
-                        color: "transparent"
-                        border.width: Appearance.borderWidth.standard
-                        border.color: Appearance.colors.colPrimary
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "chevron_right"
-                            iconSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnPrimaryContainer
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.monthShift++
-                        }
-                    }
+                // Today's highlight, which is a box rather than a flag: on the
+                // way to the hero date it shrinks to nothing under the growing
+                // number instead of blinking off at the far end of the morph.
+                Rectangle {
+                    id: todayPill
+                    property real pill: dayCell.homeSlot.pill
+                    Behavior on pill { Expressive.SpanTravel {} }
+                    anchors.centerIn: parent
+                    width: todayPill.pill
+                    height: todayPill.pill
+                    radius: Appearance.rounding.full
+                    color: root.tinted(Appearance.colors.colPrimary)
+                    visible: dayCell.cell.isToday && todayPill.pill > 0.5
                 }
 
-                // The weekday strip and the grid it labels, as one block.
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    spacing: Appearance.spacing.space50
-
-                    // Seven equal columns across the full content width, inset
-                    // by dayGridInset so the letters sit exactly over the day
-                    // columns inside the surface below. They used to be a
-                    // fixed 28px block centred in a much wider row, which left
-                    // the strip and the grid on two different column pitches.
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: root.dayGridInset
-                        Layout.rightMargin: root.dayGridInset
-                        spacing: Appearance.spacing.space0
-                        Repeater {
-                            model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-                            delegate: StyledText {
-                                id: weekdayHeader
-                                required property var modelData
-                                Layout.fillWidth: true
-                                horizontalAlignment: Text.AlignHCenter
-                                font.pixelSize: Appearance.font.pixelSize.smaller
-                                font.weight: Font.Bold
-                                color: Appearance.colors.colOnPrimaryContainer
-                                opacity: 0.6
-                                text: weekdayHeader.modelData
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        color: root.tinted(Appearance.colors.colLayer1)
-                        // Nested inside the card at cardInset, so the corners
-                        // stay concentric with the card's own.
-                        radius: card.radius - root.cardInset
-
-                        ColumnLayout {
-                            anchors {
-                                left: parent.left
-                                right: parent.right
-                                verticalCenter: parent.verticalCenter
-                                leftMargin: root.dayGridInset
-                                rightMargin: root.dayGridInset
-                            }
-                            // Six 28px day pills do not fit in the 150-odd px
-                            // this surface gets, so the rows deliberately
-                            // overlap: the pill is a 28px hit/highlight target
-                            // but the row *pitch* is 22. The glyphs are 12px
-                            // and centred, so they still clear each other, and
-                            // only today's pill is ever filled. The negated
-                            // token is the documented form for this.
-                            spacing: -Appearance.spacing.space75
-
-                            Repeater {
-                                model: root.weeks
-                                delegate: RowLayout {
-                                    id: weekRow
-                                    required property var modelData
-                                    Layout.fillWidth: true
-                                    spacing: Appearance.spacing.space0
-                                    Repeater {
-                                        model: weekRow.modelData
-                                        delegate: Item {
-                                            id: dayColumn
-                                            required property var modelData
-                                            Layout.fillWidth: true
-                                            implicitHeight: 28
-
-                                            DayCell {
-                                                anchors.centerIn: parent
-                                                day: dayColumn.modelData.day
-                                                currentMonth: dayColumn.modelData.currentMonth
-                                                isToday: dayColumn.modelData.isToday
-                                                highlightColor: root.tinted(Appearance.colors.colPrimary)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                StyledText {
+                    anchors.centerIn: parent
+                    text: dayCell.cell.day
+                    font.pixelSize: Math.round(dayCell.homeSlot.size)
+                    Behavior on font.pixelSize { Expressive.SpanTravel {} }
+                    font.weight: dayCell.cell.isToday ? Font.Bold : Font.Normal
+                    // Off the SETTLED slot, not off the shrinking pill: keyed
+                    // on the live one the ink would hold its on-primary colour
+                    // over a highlight that is already most of the way gone,
+                    // and flip in the last frames of the morph.
+                    color: dayCell.cell.isToday && dayCell.present && dayCell.slot.pill > 0
+                        ? Appearance.colors.colOnPrimary
+                        : Appearance.colors.colOnPrimaryContainer
+                    Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
+                    opacity: dayCell.cell.currentMonth ? 1.0 : 0.3
                 }
             }
         }
@@ -580,7 +530,10 @@ Item {
                 property real startWidth: 0
                 property real startX: 0
                 onPressed: mouse => {
-                    resizeArea.startWidth = root.widgetWidth;
+                    // The SETTLED width, never the animating one: a press
+                    // landing mid-morph would otherwise measure the gesture
+                    // against a box that is still moving.
+                    resizeArea.startWidth = root.spanW;
                     resizeArea.startX = resizeArea.mapToItem(null, mouse.x, mouse.y).x;
                 }
                 onPositionChanged: mouse => {

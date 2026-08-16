@@ -281,12 +281,18 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         # choose its size, so its manifest deliberately declares no `grid`:
         # a span is a pixel size the host assigns on every load and would
         # overwrite whichever size the handles last chose. A widget sized by
-        # the host reads `hostGridSize`; this one must not, and its box comes
-        # off the card it composes.
+        # the host reads `hostGridSize`; this one must not.
         self.assertNotIn("grid", manifest)
         self.assertNotIn("hostGridSize", widget)
-        self.assertIn("implicitWidth: card.implicitWidth", widget)
-        self.assertIn("implicitHeight: card.implicitHeight", widget)
+        # The box used to be read back off the card (`implicitWidth:
+        # card.implicitWidth`), which was right while the card held a per-span
+        # Loader and was the only thing that knew how big a mode was. It is the
+        # wrong direction for one tree: the span decides the box, the box
+        # animates towards it, and the card fills whatever the box currently is
+        # - so the card cannot also be the thing that reports it.
+        self.assertIn("implicitWidth: root.widgetWidth", widget)
+        self.assertIn("implicitHeight: root.widgetHeight", widget)
+
     def test_the_five_folded_widgets_are_told_when_they_are_handled(self):
         """The same chain, for the widgets that were never cards.
 
