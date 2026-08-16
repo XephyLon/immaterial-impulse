@@ -84,6 +84,45 @@ function coverRect(sourceWidth, sourceHeight, boxWidth, boxHeight) {
     return { x: (bw - width) / 2, y: (bh - height) / 2, width: width, height: height };
 }
 
+// A click on a preview, as a point in the picture's own frame.
+//
+// The inverse of what `coverRect` returns, and it takes that rectangle rather
+// than recomputing one: the mask surface is where the whole wallpaper sits
+// inside the preview box, so a click's fraction ALONG that rectangle is the same
+// fraction of the picture whatever the preview's size or the monitor's aspect.
+// Anything that worked the crop out again here would be a second registration,
+// which is what ClockDepthCutout exists to prevent.
+//
+// Kept here rather than inline in the handler because it is the one part of the
+// gesture a test can reach - nothing about a rendered preview is reachable from
+// qmltestrunner - and because a click sent to the wrong part of the picture
+// produces a perfectly good mask of the wrong thing, with nothing to show that
+// anything went wrong.
+//
+// Clamped, not rejected: the producer refuses a point outside the picture, and a
+// rounding error at the very edge of a frame would come back to the user as an
+// error about a click that looked entirely ordinary. Returns null only for a
+// rect with no area, where there is no picture to have clicked on.
+function normalisedPoint(rect, x, y) {
+    const r = rect || {};
+    const width = positive(r.width);
+    const height = positive(r.height);
+    if (width === 0 || height === 0)
+        return null;
+    const originX = (typeof r.x === "number" && isFinite(r.x)) ? r.x : 0;
+    const originY = (typeof r.y === "number" && isFinite(r.y)) ? r.y : 0;
+    if (!isFinite(x) || !isFinite(y))
+        return null;
+    return {
+        x: clamp01((x - originX) / width),
+        y: clamp01((y - originY) / height)
+    };
+}
+
+function clamp01(value) {
+    return value < 0 ? 0 : (value > 1 ? 1 : value);
+}
+
 function positive(value) {
     return (typeof value === "number" && isFinite(value) && value > 0) ? value : 0;
 }

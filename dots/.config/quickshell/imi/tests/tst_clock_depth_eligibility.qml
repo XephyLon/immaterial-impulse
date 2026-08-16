@@ -165,6 +165,59 @@ TestCase {
         fuzzyCompare(wide.width / 1024, wide.height / 288, 0.005);
     }
 
+    // normalisedPoint: a click on a preview, as a point in the picture.
+
+    function test_a_click_in_the_middle_of_the_picture_is_the_middle() {
+        const r = ClockDepth.coverRect(3840, 1594, 5120, 1440);
+        const p = ClockDepth.normalisedPoint(r, 2560, 720);
+        fuzzyCompare(p.x, 0.5, 0.0001);
+        fuzzyCompare(p.y, 0.5, 0.0001);
+    }
+
+    function test_the_crop_is_undone_by_the_same_rect_that_applied_it() {
+        // The registration, run backwards. The picture overflows the box, so a
+        // click at the box's left edge is NOT the picture's left edge - it is
+        // wherever the crop starts, and getting this wrong sends the click to a
+        // part of the wallpaper the user cannot see. Round-tripping is the check
+        // that cannot be satisfied by a plausible-looking wrong formula.
+        const r = ClockDepth.coverRect(3840, 1594, 5120, 1440);
+        const cases = [[0.1, 0.2], [0.5, 0.5], [0.87, 0.04], [1, 1], [0, 0]];
+        for (let i = 0; i < cases.length; i++) {
+            const nx = cases[i][0], ny = cases[i][1];
+            const p = ClockDepth.normalisedPoint(r,
+                r.x + nx * r.width, r.y + ny * r.height);
+            fuzzyCompare(p.x, nx, 0.0001, "x for " + cases[i]);
+            fuzzyCompare(p.y, ny, 0.0001, "y for " + cases[i]);
+        }
+    }
+
+    function test_a_click_at_the_boxs_edge_is_inside_the_picture_not_at_its_edge() {
+        // 3840x1594 into 5120x1440 crops the top and bottom away, so the top of
+        // the box is somewhere down the picture. A mapping that ignored the
+        // rect's origin would answer 0 here and put every click too high.
+        const r = ClockDepth.coverRect(3840, 1594, 5120, 1440);
+        const p = ClockDepth.normalisedPoint(r, 0, 0);
+        compare(p.x, 0);
+        verify(p.y > 0.05, "top of the box maps to the top of the picture: " + p.y);
+    }
+
+    function test_a_click_outside_the_picture_is_clamped_rather_than_refused() {
+        // The producer refuses a point outside the picture, so an off-by-a-pixel
+        // at the frame's edge would reach the user as an error message about a
+        // click that looked entirely ordinary.
+        const r = ClockDepth.coverRect(1000, 1000, 500, 500);
+        const p = ClockDepth.normalisedPoint(r, -40, 9000);
+        compare(p.x, 0);
+        compare(p.y, 1);
+    }
+
+    function test_an_empty_rect_answers_null_rather_than_a_point() {
+        verify(ClockDepth.normalisedPoint({ x: 0, y: 0, width: 0, height: 0 }, 5, 5) === null);
+        verify(ClockDepth.normalisedPoint(undefined, 5, 5) === null);
+        verify(ClockDepth.normalisedPoint({ x: 0, y: 0, width: 100, height: 100 },
+            NaN, 5) === null);
+    }
+
     function test_an_unloaded_image_yields_the_box_rather_than_NaN() {
         // An Image's implicit size reads 0 until its source resolves, and a NaN
         // on x/y/width/height does not misplace the mask - it stops the item
