@@ -754,19 +754,25 @@ AbstractBackgroundWidget {
             // being untrue again.
             preventStealing: true
 
-            // The pointer is tracked in scene coordinates against its position
-            // at the press, because the grip is anchored to a widget that
-            // resizes underneath it: a delta read from this moving item would
-            // fold the resize back into the gesture.
-            property real pressSceneX: 0
-            property real pressSceneY: 0
+            // The pointer is tracked in the widget's PARENT frame against its
+            // position at the press. Two things decide that frame. It must not
+            // be this item or the widget, which resize underneath the gesture -
+            // a delta read from a moving item folds the resize back into it.
+            // And it must not be the scene either, once Edit Mode draws the
+            // canvas under a scale transform: a scene delta is in screen
+            // pixels, so the same gesture would resize by 1/scale as much as
+            // the pointer travelled over the widget. The parent is static in
+            // both senses, and it is the frame AbstractWidget's drag already
+            // computes in.
+            property real pressFrameX: 0
+            property real pressFrameY: 0
             property real pressWidth: 0
             property real pressHeight: 0
 
             onPressed: mouse => {
-                const scenePoint = resizeArea.mapToItem(null, mouse.x, mouse.y);
-                resizeArea.pressSceneX = scenePoint.x;
-                resizeArea.pressSceneY = scenePoint.y;
+                const pressPoint = resizeArea.mapToItem(rootWidget.parent, mouse.x, mouse.y);
+                resizeArea.pressFrameX = pressPoint.x;
+                resizeArea.pressFrameY = pressPoint.y;
                 // The span being animated to, not the frame's width: pressing
                 // the grip again while the last resize is still travelling
                 // would otherwise measure the gesture from a size the widget
@@ -779,10 +785,10 @@ AbstractBackgroundWidget {
             }
             onPositionChanged: mouse => {
                 if (!rootWidget.resizingGrid) return;
-                const scenePoint = resizeArea.mapToItem(null, mouse.x, mouse.y);
+                const point = resizeArea.mapToItem(rootWidget.parent, mouse.x, mouse.y);
                 rootWidget.previewGridResize(
-                    resizeArea.pressWidth + scenePoint.x - resizeArea.pressSceneX,
-                    resizeArea.pressHeight + scenePoint.y - resizeArea.pressSceneY);
+                    resizeArea.pressWidth + point.x - resizeArea.pressFrameX,
+                    resizeArea.pressHeight + point.y - resizeArea.pressFrameY);
             }
             // A release after Escape commits nothing: the cancel already
             // cleared the preview, and endGridResize has nothing to store.
