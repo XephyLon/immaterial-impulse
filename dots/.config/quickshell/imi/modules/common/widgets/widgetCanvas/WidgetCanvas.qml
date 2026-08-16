@@ -310,67 +310,128 @@ MouseArea {
     // keeps a screen's worth of 12px lines readable rather than grey.
     readonly property real fineGridOpacity: 0.4
 
-    Repeater {
-        model: root.gridVisible ? Math.ceil(root.width / root.gridSize) : 0
-        delegate: Rectangle {
-            required property int index
-            x: index * root.gridSize
-            width: 1
+    // The lattice dissolves toward the canvas edges rather than being sliced off
+    // at them. Two halves, and both are needed: a gradient ALONG each line so it
+    // fades at its own two ends, and a per-line opacity ACROSS the lattice so
+    // the lines nearest an edge are the faintest. Either one alone leaves the
+    // other axis running full strength into the boundary, which is what read as
+    // the grid ending abruptly - a texture pasted onto the desktop rather than
+    // something the surface has.
+    readonly property real gridFadeFraction: 0.07
+    function edgeFade(position, extent) {
+        const band = extent * root.gridFadeFraction
+        if (band <= 0) return 1
+        const distance = Math.min(position, extent - position)
+        return distance >= band ? 1 : Math.max(0, distance / band)
+    }
+
+    // One gradient object shared by every line on that axis rather than one
+    // declared inside each delegate: a screen's worth of 12px lines is several
+    // hundred delegates, and four GradientStops apiece is a few thousand objects
+    // built at the moment the mode is entered.
+    //
+    // The far ends are the line's own colour at zero alpha, not "transparent" -
+    // a stop interpolating toward #00000000 walks the colour through black on
+    // the way, which draws a dark smudge at exactly the edge this exists to
+    // make quiet.
+    readonly property color gridLineColor: Appearance.colors.colLayer0Border
+    readonly property color gridLineFadeColor: Qt.rgba(root.gridLineColor.r,
+        root.gridLineColor.g, root.gridLineColor.b, 0)
+    readonly property Gradient gridFadeAlongY: Gradient {
+        GradientStop { position: 0; color: root.gridLineFadeColor }
+        GradientStop { position: root.gridFadeFraction; color: root.gridLineColor }
+        GradientStop { position: 1 - root.gridFadeFraction; color: root.gridLineColor }
+        GradientStop { position: 1; color: root.gridLineFadeColor }
+    }
+    readonly property Gradient gridFadeAlongX: Gradient {
+        orientation: Gradient.Horizontal
+        GradientStop { position: 0; color: root.gridLineFadeColor }
+        GradientStop { position: root.gridFadeFraction; color: root.gridLineColor }
+        GradientStop { position: 1 - root.gridFadeFraction; color: root.gridLineColor }
+        GradientStop { position: 1; color: root.gridLineFadeColor }
+    }
+
+    // The lattice is a SUBSTRATE: widgets sit on it. That order is declared here
+    // rather than left to the order the children happen to be built in, because
+    // nothing in this file decides it - the desktop widgets arrive as EXTERNAL
+    // children of this canvas (Background.qml's Repeater over the plugin
+    // manifests), so which of the two ends up on top is a consequence of when a
+    // Repeater's model filled rather than of anything anybody chose. A widget
+    // whose panel is translucent - which every desktop widget is, and which the
+    // mode makes more so by standing the frost down - then has a crisp full
+    // strength line running across it, and reads as being under the grid.
+    Item {
+        id: lattice
+        anchors.fill: parent
+        z: -1
+        // Cannot take input, ever. The canvas's own press is what anchors the
+        // marquee and what a widget's drag is measured against.
+        enabled: false
+
+        Repeater {
+            model: root.gridVisible ? Math.ceil(root.width / root.gridSize) : 0
+            delegate: Rectangle {
+                required property int index
+                x: index * root.gridSize
+                width: 1
+                height: root.height
+                opacity: (index % 2 === 0 ? 1 : root.fineGridOpacity)
+                    * root.edgeFade(x, root.width)
+                gradient: root.gridFadeAlongY
+            }
+        }
+
+        Repeater {
+            model: root.gridVisible ? Math.ceil(root.height / root.gridSize) : 0
+            delegate: Rectangle {
+                required property int index
+                y: index * root.gridSize
+                width: root.width
+                height: 1
+                opacity: (index % 2 === 0 ? 1 : root.fineGridOpacity)
+                    * root.edgeFade(y, root.height)
+                gradient: root.gridFadeAlongX
+            }
+        }
+
+        Rectangle {
+            id: centerLineV
+            visible: root.gridVisible
+            x: root.width / 2 - width / 2
+            width: root.centerXActive ? 2 : 1
             height: root.height
-            opacity: index % 2 === 0 ? 1 : root.fineGridOpacity
-            color: Appearance.colors.colLayer0Border
-        }
-    }
+            color: root.centerXActive ? Appearance.colors.colPrimary : Appearance.colors.colLayer0Border
+            opacity: root.centerXActive ? 1 : 0.6
 
-    Repeater {
-        model: root.gridVisible ? Math.ceil(root.height / root.gridSize) : 0
-        delegate: Rectangle {
-            required property int index
-            y: index * root.gridSize
+            Behavior on color {
+                animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+            }
+            Behavior on width {
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
+            Behavior on opacity {
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
+        }
+
+        Rectangle {
+            id: centerLineH
+            visible: root.gridVisible
+            y: root.height / 2 - height / 2
             width: root.width
-            height: 1
-            opacity: index % 2 === 0 ? 1 : root.fineGridOpacity
-            color: Appearance.colors.colLayer0Border
-        }
-    }
+            height: root.centerYActive ? 2 : 1
+            color: root.centerYActive ? Appearance.colors.colPrimary : Appearance.colors.colLayer0Border
+            opacity: root.centerYActive ? 1 : 0.6
 
-    Rectangle {
-        id: centerLineV
-        visible: root.gridVisible
-        x: root.width / 2 - width / 2
-        width: root.centerXActive ? 2 : 1
-        height: root.height
-        color: root.centerXActive ? Appearance.colors.colPrimary : Appearance.colors.colLayer0Border
-        opacity: root.centerXActive ? 1 : 0.6
-
-        Behavior on color {
-            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-        }
-        Behavior on width {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-        Behavior on opacity {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-    }
-
-    Rectangle {
-        id: centerLineH
-        visible: root.gridVisible
-        y: root.height / 2 - height / 2
-        width: root.width
-        height: root.centerYActive ? 2 : 1
-        color: root.centerYActive ? Appearance.colors.colPrimary : Appearance.colors.colLayer0Border
-        opacity: root.centerYActive ? 1 : 0.6
-
-        Behavior on color {
-            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-        }
-        Behavior on height {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-        Behavior on opacity {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            Behavior on color {
+                animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+            }
+            Behavior on height {
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
+            Behavior on opacity {
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
         }
     }
 
