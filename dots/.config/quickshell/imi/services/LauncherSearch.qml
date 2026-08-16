@@ -359,7 +359,7 @@ Singleton {
     readonly property var resultInputs: [
         root.query, root.mathResult, root.settingsIndex, root.settingsKeywordsCache,
         root.allActions, root.clipboardWorkSafetyActive,
-        AppSearch.preppedNames, AppSearch.sloppySearch,
+        AppSearch.preppedNames, AppSearch.sloppySearch, AppUsage.revision,
         Cliphist.entries, Cliphist.pins, Cliphist.sloppySearch,
         Emojis.list,
         FileSearch.results,
@@ -577,6 +577,7 @@ Singleton {
                 iconType: LauncherSearchResult.IconType.System,
                 verb: Translation.tr("Open"),
                 execute: () => {
+                    AppUsage.recordLaunch(entry.id);
                     if (!entry.runInTerminal)
                         entry.execute();
                     else {
@@ -594,6 +595,9 @@ Singleton {
                         iconName: action.icon,
                         iconType: LauncherSearchResult.IconType.System,
                         execute: () => {
+                            // A desktop action ("New Private Window") is a
+                            // launch of the app it belongs to, and ranks as one.
+                            AppUsage.recordLaunch(entry.id);
                             if (!action.runInTerminal)
                                 action.execute();
                             else {

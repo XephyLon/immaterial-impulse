@@ -86,6 +86,7 @@ DockButton {
     onClicked: {
         if (appToplevel.toplevels.length === 0) {
             DockLaunchTracker.markLaunching(appToplevel.appId);
+            AppUsage.recordLaunch(root.desktopEntry?.id);
             root.desktopEntry?.execute();
             return;
         }
@@ -95,6 +96,7 @@ DockButton {
 
     middleClickAction: () => {
         DockLaunchTracker.markLaunching(appToplevel.appId);
+        AppUsage.recordLaunch(root.desktopEntry?.id);
         root.desktopEntry?.execute();
     }
 
