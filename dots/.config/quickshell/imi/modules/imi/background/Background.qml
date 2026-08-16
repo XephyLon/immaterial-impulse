@@ -573,6 +573,11 @@ Variants {
         // list composes in is exactly the kind of thing that is wrong by a
         // factor of the scale and still looks plausible. Row-major, so a point
         // maps to (s*x + tx, s*y + ty).
+        //
+        // What it DRAWS is a scale about the CENTRE, and that is the geometry's
+        // doing rather than this matrix's: the offset edit_mode.js hands in is
+        // the centring offset for the scale beside it, on every frame. A centred
+        // scale is a different matrix, not a different structure.
         readonly property matrix4x4 editMatrix: Qt.matrix4x4(
             bgRoot.editTransform.scale, 0, 0, bgRoot.editTransform.x,
             0, bgRoot.editTransform.scale, 0, bgRoot.editTransform.y,
