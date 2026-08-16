@@ -573,6 +573,20 @@ Variants {
             0, bgRoot.editTransform.scale, 0, bgRoot.editTransform.y,
             0, 0, 1, 0,
             0, 0, 0, 1)
+        // Where that transform puts the desktop, for the chrome drawn around
+        // it. Out of the module rather than off the matrix's own terms: the
+        // corner, the outline and the shadow have to sit on the desktop's edge
+        // exactly, and a second derivation of a registration is the drift
+        // ClockDepthCutout exists as one component to prevent.
+        readonly property rect editCard: EditMode.cardRect(bgRoot.editViewport,
+            bgRoot.editProgress, bgRoot.width, bgRoot.height)
+        // The corner grows with the shrink, so a desktop at rest has no radius
+        // applied to it at all rather than one that happens to be hidden. The
+        // ladder's own name for the tier, per docs/M3_GUIDELINES.md - a whole
+        // desktop is the "major distinct UI block" that tier is for, and the
+        // `extraLarge` alias exists for the vendored design system's call sites
+        // rather than for mainline ones.
+        readonly property real editCardRadius: Appearance.rounding.verylarge * bgRoot.editProgress
 
         property bool shouldBlur: (GlobalStates.screenLocked && Config.options.lock.blur.enable)
         property color dominantColor: Appearance.colors.colPrimary
@@ -1423,12 +1437,12 @@ Variants {
             }
         }
 
-        // Edit Mode's backdrop: the wallpaper, blurred, behind the shrunk
-        // desktop. That blur plus the shrink IS the mode signal - there is no
-        // scrim - so it is not optional and is not gated on the lock's own blur
-        // preference; only its radius is borrowed from there, since it is the
-        // same picture and a second setting for it would be a second thing to
-        // disagree.
+        // Edit Mode's chrome: the wallpaper blurred around the shrunk desktop,
+        // the desktop's corner, its outline and its shadow. That blur plus the
+        // shrink IS the mode signal - there is no scrim - so it is not optional
+        // and is not gated on the lock's own blur preference; only its radius is
+        // borrowed from there, since it is the same picture and a second setting
+        // for it would be a second thing to disagree.
         //
         // A SIBLING of the viewport rather than a second gate on the lock's
         // blurLoader, which is what the spec asked for and which cannot work:
@@ -1437,18 +1451,26 @@ Variants {
         // desktop it is supposed to sit behind. Sourcing the wallpaper item is
         // unaffected - a ShaderEffectSource renders its source item in that
         // item's own coordinates, not the scene's.
+        //
+        // ABOVE the desktop rather than behind it, which is what rounds the
+        // corner: see EditModeCard for why covering the corner with the picture
+        // behind it is the only cheap way to round three separately transformed
+        // siblings. Above the clock depth layer at z 3, and non-interactive,
+        // because desktopRightClickArea at z -2 works only while everything
+        // over it lets clicks through.
         Loader {
-            id: editBackdrop
+            id: editChrome
             active: bgRoot.editProgress > 0 && !bgRoot.suppressContents
             anchors.fill: parent
-            // Below every wallpaper layer and the widgets (all z 0..3), above
-            // the desktop's right-click area at z -2.
-            z: -1
+            z: 4
+            enabled: false
             opacity: bgRoot.editProgress
-            sourceComponent: WallpaperBlurBackdrop {
-                source: bgRoot.liveWallpaperLayer
-                radius: Config.options.lock.blur.radius
-                samples: Config.options.lock.blur.size
+            sourceComponent: EditModeCard {
+                wallpaperLayer: bgRoot.liveWallpaperLayer
+                blurRadius: Config.options.lock.blur.radius
+                blurSamples: Config.options.lock.blur.size
+                card: bgRoot.editCard
+                cardRadius: bgRoot.editCardRadius
             }
         }
 
