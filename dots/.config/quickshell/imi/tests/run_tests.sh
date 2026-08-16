@@ -145,6 +145,12 @@ if ! python3 "$SCRIPT_DIR/lint_qmldir_registration.py"; then
     exit 1
 fi
 
+echo "Running shader path lint..."
+if ! python3 "$SCRIPT_DIR/lint_shader_paths.py"; then
+    echo "Shader path lint failed."
+    exit 1
+fi
+
 echo "Running widget card tint lint..."
 if ! python3 "$SCRIPT_DIR/lint_widget_card_tint.py"; then
     echo "Widget card tint lint failed."
