@@ -118,6 +118,16 @@ if ! python3 "$SCRIPT_DIR/lint_interaction_motion_double.py"; then
     exit 1
 fi
 
+# Static lint: a drag that reorders a list reorders it through layout_ops.js.
+# Four surfaces had written that out for themselves and two of the four
+# exchanged the two entries instead of moving one - the same list for a step of
+# one and a different list for anything longer, which is why nobody saw it.
+echo "Running reorder-arithmetic lint..."
+if ! python3 "$SCRIPT_DIR/lint_reorder_arithmetic.py"; then
+    echo "Reorder-arithmetic lint failed."
+    exit 1
+fi
+
 # Static lint: a bar widget that answers a primary click says so with the
 # pointer. The shared button types always did; every hand-written MouseArea in
 # the bar forgot separately.
