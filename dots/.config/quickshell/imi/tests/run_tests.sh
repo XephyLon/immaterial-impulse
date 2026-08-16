@@ -591,6 +591,12 @@ if ! python3 "$SCRIPT_DIR/test_cursor_theme_apply.py"; then
     exit 1
 fi
 
+echo "Running sound theme scanner tests..."
+if ! python3 "$SCRIPT_DIR/test_sound_theme_scan.py"; then
+    echo "Sound theme scanner tests failed."
+    exit 1
+fi
+
 echo "Running default config tests..."
 if ! python3 "$SCRIPT_DIR/test_default_config.py"; then
     echo "Default config tests failed."
