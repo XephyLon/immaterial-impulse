@@ -12,7 +12,15 @@ MouseArea {
     property int gridSize: 12
     property bool showGrid: false
     readonly property bool isWidgetCanvas: true
-    readonly property bool gridVisible: showGrid && Config.options.background.showGrid
+    // Handed in by the surface that owns this canvas - the desktop's, and only
+    // the desktop's. The overlay reuses this component and has its own store
+    // and its own dismissal, so it must not follow the mode.
+    property bool editMode: false
+    // Edit Mode's whole purpose is that the affordances stop hiding, so the
+    // grid is up for the mode rather than for the gesture. It overrides the
+    // config switch, whose meaning is "draw the grid while I drag".
+    readonly property bool gridVisible: root.editMode
+        || (showGrid && Config.options.background.showGrid)
 
     // Desktop widgets sit on the background layer surface, which only accepts
     // keyboard input while GlobalStates.desktopWidgetKeyboardFocus flips it to
@@ -59,7 +67,11 @@ MouseArea {
     // - a zero-size band over nothing draggable - is the click-away deselect.
     onPressed: (mouse) => {
         if (!root.selectionEnabled || mouse.button !== Qt.LeftButton) return
-        if (Config.options.background.widgetsLocked) return
+        // The mode subtracts the global lock rather than writing it: the stored
+        // preference is untouched and the desktop is locked again on the way
+        // out. AbstractBackgroundWidget's `interactionLocked` does the same for
+        // the widgets themselves.
+        if (!root.editMode && Config.options.background.widgetsLocked) return
         root.marqueeAnchorX = mouse.x
         root.marqueeAnchorY = mouse.y
         root.marqueeActive = true
@@ -133,7 +145,9 @@ MouseArea {
     Connections {
         target: Config.options.background
         function onWidgetsLockedChanged() {
-            if (Config.options.background.widgetsLocked) root.clearSelection()
+            // Not while editing: the mode suppresses that lock, so the widgets
+            // are still live and a cleared selection would be a lie about them.
+            if (Config.options.background.widgetsLocked && !root.editMode) root.clearSelection()
         }
     }
 

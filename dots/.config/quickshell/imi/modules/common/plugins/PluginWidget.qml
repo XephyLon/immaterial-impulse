@@ -718,7 +718,12 @@ AbstractBackgroundWidget {
             bottom: parent.bottom
             margins: Appearance.spacing.space100
         }
-        opacity: (rootWidget.containsMouse || resizeArea.containsMouse || rootWidget.resizingGrid)
+        // Hover-revealed normally; up for the whole of Edit Mode, which is the
+        // mode's point - a widget whose only sign that it can be resized is a
+        // corner that appears when the pointer is already on it is not a
+        // discoverable one.
+        opacity: (GlobalStates.editMode || rootWidget.containsMouse
+                || resizeArea.containsMouse || rootWidget.resizingGrid)
             ? 0.5 : 0
         visible: opacity > 0 && rootWidget.gridResizable && !rootWidget.interactionLocked
 
