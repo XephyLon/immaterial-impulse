@@ -7,16 +7,28 @@ import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.modules.common.plugins
+import "../../designsystem/widgets" as Expressive
 
-Rectangle {
+Item {
     id: root
 
     // Frost handling mirrors the other desktop widgets: the host PluginWidget
-    // blurs the wallpaper region behind us, and this card supplies the tint on
-    // top. With no custom blurRegions the host frosts the whole card.
+    // blurs the wallpaper region behind us, and the card below supplies the
+    // tint on top. The region comes from that same card, so the widget cannot
+    // disagree with its own surface about where the frost goes - the host's
+    // fallback is `Appearance.rounding.large`, 7px tighter than the card's own
+    // corner, which leaves blurred slivers outside all four of them.
     readonly property bool blurEnabled: PluginState.option("image-converter", "blurEnabled", false)
     readonly property real backgroundOpacity: PluginState.effectiveBackgroundOpacity("image-converter")
     readonly property bool managesBlurTint: true
+    readonly property var blurRegions: [card.blurRegion]
+
+    // Set by the host while this widget is being dragged, and handed straight
+    // to the card: the shadow lifts on hover and lifts further on a drag.
+    property bool hostDragging: false
+    // Set by the host while its own box is animating; the card drops its
+    // shadow for the duration rather than re-blurring into a resizing FBO.
+    property bool hostBoxInMotion: false
 
     property list<var> formatOptions: [
         { displayName: "PNG",  icon: "image",            value: "png"  },
@@ -48,10 +60,6 @@ Rectangle {
     implicitWidth: Appearance.sizes.widgetGridSpanX(2)
     implicitHeight: Appearance.sizes.widgetGridSpanY(2)
     anchors.fill: parent
-    radius: Appearance.rounding.verylarge
-    color: root.blurEnabled
-        ? ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 1 - root.backgroundOpacity)
-        : Appearance.colors.colPrimaryContainer
 
     Process {
         id: converter
@@ -155,176 +163,198 @@ Rectangle {
         converter.running = true
     }
 
-    ColumnLayout {
-        id: columnLayout
+    // The surface every other desktop widget already composes. It owns the
+    // tint pair, the rounding (this widget's own `verylarge` was the same 30
+    // spelled twice), the frost record above, and the drop shadow with its
+    // hover and drag lift - which is what this widget had none of while the
+    // root Rectangle painted the card's surface over the top of it.
+    //
+    // No `tensionX`/`tensionY`: the manifest offers one span, so the host
+    // draws no resize grip here and there is never a bow to render.
+    Expressive.WidgetCard {
+        id: card
         anchors.fill: parent
-        anchors.margins: Appearance.spacing.space200
-        spacing: Appearance.spacing.space150
+        tint: Appearance.colors.colPrimaryContainer
+        useBlurBackground: root.blurEnabled
+        backgroundOpacity: root.backgroundOpacity
+        dragging: root.hostDragging
+        hostMotionActive: root.hostBoxInMotion
 
-        StyledText {
-            Layout.fillWidth: true
-            horizontalAlignment: Text.AlignHCenter
-            font.pixelSize: Appearance.font.pixelSize.smaller
-            color: Appearance.colors.colOnPrimaryContainer
-            opacity: 0.4
-            text: "PNG · JPG · WEBP · AVIF · BMP · PDF · TIFF"
-        }
-
-        Rectangle {
-            id: dropZone
-            Layout.fillWidth: true
-            // The built-in pinned this to 144px inside a 252px card. Filling the
-            // remaining height instead keeps the card on the grid span without
-            // moving anything else in the column.
-            Layout.fillHeight: true
-            radius: Appearance.rounding.large
-
-            // Split out from `color` so the frost tint can be applied to
-            // whichever state colour is current without repeating the switch.
-            readonly property color baseColor: {
-                switch (root.dropStatus) {
-                    case "hover":      return Appearance.colors.colPrimaryContainer
-                    case "converting": return Appearance.colors.colSecondaryContainer
-                    case "done":       return Appearance.colors.colTertiaryContainer
-                    case "error":      return Qt.rgba(
-                                            Appearance.colors.colError.r,
-                                            Appearance.colors.colError.g,
-                                            Appearance.colors.colError.b, 0.15)
-                    default:           return Appearance.colors.colSurfaceContainerLow
-                }
-            }
-            color: root.blurEnabled
-                ? ColorUtils.transparentize(dropZone.baseColor, 1 - root.backgroundOpacity)
-                : dropZone.baseColor
-            border.color: {
-                switch (root.dropStatus) {
-                    case "hover":      return Appearance.colors.colPrimary
-                    case "converting": return Appearance.colors.colSecondary
-                    case "done":       return Appearance.colors.colTertiary
-                    case "error":      return Appearance.colors.colError
-                    default:           return Appearance.colors.colOnPrimaryContainer
-                }
-            }
-            border.width: root.dropStatus === "hover" ? 2 : 1
-
-            Behavior on color        { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
-            Behavior on border.color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
-
-            MaterialLoadingIndicator {
-                anchors.centerIn: parent
-                anchors.verticalCenterOffset: -14
-                visible: root.dropStatus === "converting"
-                loading: root.dropStatus === "converting"
-                colBg: Appearance.colors.colPrimary
-                colShape: Appearance.colors.colOnPrimary
-                implicitSize: 48
-            }
-
-            MaterialSymbol {
-                anchors.centerIn: parent
-                anchors.verticalCenterOffset: -14
-                visible: root.dropStatus !== "converting"
-                iconSize: 32
-                fill: root.dropStatus === "done" ? 1 : 0
-                color: {
-                    switch (root.dropStatus) {
-                        case "hover": return Appearance.colors.colPrimary
-                        case "done":  return Appearance.colors.colTertiary
-                        case "error": return Appearance.colors.colError
-                        default:      return Appearance.colors.colOnLayer1
-                    }
-                }
-                text: {
-                    switch (root.dropStatus) {
-                        case "hover": return "download"
-                        case "done":  return "check_circle"
-                        case "error": return "error"
-                        default:      return root.selectedFormat === "pdf" ? "picture_as_pdf" : "image"
-                    }
-                }
-            }
+        ColumnLayout {
+            id: columnLayout
+            anchors.fill: parent
+            anchors.margins: Appearance.spacing.space200
+            spacing: Appearance.spacing.space150
 
             StyledText {
-                anchors.centerIn: parent
-                anchors.verticalCenterOffset: 22
-                horizontalAlignment: Text.AlignHCenter
-                font.pixelSize: Appearance.font.pixelSize.small
-                width: parent.width - 24
-                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                color: {
-                    switch (root.dropStatus) {
-                        case "hover":  return Appearance.colors.colPrimary
-                        case "done":   return Appearance.colors.colTertiary
-                        case "error":  return Appearance.colors.colError
-                        default:       return Appearance.colors.colOnLayer1
-                    }
-                }
-                opacity: root.dropStatus === "idle" ? 0.6 : 1.0
-                text: {
-                    switch (root.dropStatus) {
-                        case "idle":       return "Drop image(s) here\nto convert to ." + root.selectedFormat.toUpperCase()
-                        case "hover":      return "Release to convert to ." + root.selectedFormat.toUpperCase()
-                        case "converting": return root.statusMessage
-                        case "done":       return root.statusMessage
-                        case "error":      return root.statusMessage
-                        default:           return ""
-                    }
-                }
-                Behavior on opacity { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
-            }
-
-            DropArea {
-                anchors.fill: parent
-                keys: ["text/uri-list"]
-                onEntered: (drag) => {
-                    drag.accept(Qt.CopyAction)
-                    root.dropStatus = "hover"
-                }
-                onExited: {
-                    if (root.dropStatus === "hover")
-                        root.dropStatus = "idle"
-                }
-                onDropped: (drop) => {
-                    if (drop.hasUrls && drop.urls.length > 0) {
-                        root.enqueueFiles(drop.urls)
-                    } else {
-                        root.dropStatus = "error"
-                        root.statusMessage = "Could not read file path."
-                        resetTimer.start()
-                    }
-                }
-            }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Appearance.spacing.space100
-
-            StyledText {
-                Layout.leftMargin: Appearance.spacing.space50
-                text: "Convert to:"
-                font.pixelSize: Appearance.font.pixelSize.small
-                color: Appearance.colors.colOnLayer1
-                opacity: 0.7
-                Layout.alignment: Qt.AlignVCenter
-            }
-
-            StyledComboBox {
                 Layout.fillWidth: true
-                model: root.formatOptions
-                colBackground: Appearance.colors.colSurfaceContainerLow
-                colBackgroundHover: Appearance.colors.colSurfaceContainerLow
-                colBackgroundActive: Appearance.colors.colSurfaceContainerLow // same color, the hover was distracting
-                textRole: "displayName"
-                valueRole: "value"
-                currentIndex: {
-                    for (var i = 0; i < model.length; i++) {
-                        if (model[i].value === root.selectedFormat) return i;
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                color: Appearance.colors.colOnPrimaryContainer
+                opacity: 0.4
+                text: "PNG · JPG · WEBP · AVIF · BMP · PDF · TIFF"
+            }
+
+            Rectangle {
+                id: dropZone
+                Layout.fillWidth: true
+                // The built-in pinned this to 144px inside a 252px card. Filling the
+                // remaining height instead keeps the card on the grid span without
+                // moving anything else in the column.
+                Layout.fillHeight: true
+                radius: Appearance.rounding.large
+
+                // Split out from `color` so the frost tint can be applied to
+                // whichever state colour is current without repeating the
+                // switch. This is a *content* tint - the drop well drawn inside
+                // the card, thinning with it so the frost reads through the
+                // whole widget - not the card's own surface, which is the
+                // card's business now.
+                readonly property color baseColor: {
+                    switch (root.dropStatus) {
+                        case "hover":      return Appearance.colors.colPrimaryContainer
+                        case "converting": return Appearance.colors.colSecondaryContainer
+                        case "done":       return Appearance.colors.colTertiaryContainer
+                        case "error":      return Qt.rgba(
+                                                Appearance.colors.colError.r,
+                                                Appearance.colors.colError.g,
+                                                Appearance.colors.colError.b, 0.15)
+                        default:           return Appearance.colors.colSurfaceContainerLow
                     }
-                    return 0;
                 }
-                onActivated: (index) => {
-                    root.selectedFormat = model[index].value
+                color: root.blurEnabled
+                    ? ColorUtils.transparentize(dropZone.baseColor, 1 - root.backgroundOpacity)
+                    : dropZone.baseColor
+                border.color: {
+                    switch (root.dropStatus) {
+                        case "hover":      return Appearance.colors.colPrimary
+                        case "converting": return Appearance.colors.colSecondary
+                        case "done":       return Appearance.colors.colTertiary
+                        case "error":      return Appearance.colors.colError
+                        default:           return Appearance.colors.colOnPrimaryContainer
+                    }
+                }
+                border.width: root.dropStatus === "hover" ? 2 : 1
+
+                Behavior on color        { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
+                Behavior on border.color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
+
+                MaterialLoadingIndicator {
+                    anchors.centerIn: parent
+                    anchors.verticalCenterOffset: -14
+                    visible: root.dropStatus === "converting"
+                    loading: root.dropStatus === "converting"
+                    colBg: Appearance.colors.colPrimary
+                    colShape: Appearance.colors.colOnPrimary
+                    implicitSize: 48
+                }
+
+                MaterialSymbol {
+                    anchors.centerIn: parent
+                    anchors.verticalCenterOffset: -14
+                    visible: root.dropStatus !== "converting"
+                    iconSize: 32
+                    fill: root.dropStatus === "done" ? 1 : 0
+                    color: {
+                        switch (root.dropStatus) {
+                            case "hover": return Appearance.colors.colPrimary
+                            case "done":  return Appearance.colors.colTertiary
+                            case "error": return Appearance.colors.colError
+                            default:      return Appearance.colors.colOnLayer1
+                        }
+                    }
+                    text: {
+                        switch (root.dropStatus) {
+                            case "hover": return "download"
+                            case "done":  return "check_circle"
+                            case "error": return "error"
+                            default:      return root.selectedFormat === "pdf" ? "picture_as_pdf" : "image"
+                        }
+                    }
+                }
+
+                StyledText {
+                    anchors.centerIn: parent
+                    anchors.verticalCenterOffset: 22
+                    horizontalAlignment: Text.AlignHCenter
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    width: parent.width - 24
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                    color: {
+                        switch (root.dropStatus) {
+                            case "hover":  return Appearance.colors.colPrimary
+                            case "done":   return Appearance.colors.colTertiary
+                            case "error":  return Appearance.colors.colError
+                            default:       return Appearance.colors.colOnLayer1
+                        }
+                    }
+                    opacity: root.dropStatus === "idle" ? 0.6 : 1.0
+                    text: {
+                        switch (root.dropStatus) {
+                            case "idle":       return "Drop image(s) here\nto convert to ." + root.selectedFormat.toUpperCase()
+                            case "hover":      return "Release to convert to ." + root.selectedFormat.toUpperCase()
+                            case "converting": return root.statusMessage
+                            case "done":       return root.statusMessage
+                            case "error":      return root.statusMessage
+                            default:           return ""
+                        }
+                    }
+                    Behavior on opacity { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
+                }
+
+                DropArea {
+                    anchors.fill: parent
+                    keys: ["text/uri-list"]
+                    onEntered: (drag) => {
+                        drag.accept(Qt.CopyAction)
+                        root.dropStatus = "hover"
+                    }
+                    onExited: {
+                        if (root.dropStatus === "hover")
+                            root.dropStatus = "idle"
+                    }
+                    onDropped: (drop) => {
+                        if (drop.hasUrls && drop.urls.length > 0) {
+                            root.enqueueFiles(drop.urls)
+                        } else {
+                            root.dropStatus = "error"
+                            root.statusMessage = "Could not read file path."
+                            resetTimer.start()
+                        }
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Appearance.spacing.space100
+
+                StyledText {
+                    Layout.leftMargin: Appearance.spacing.space50
+                    text: "Convert to:"
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    color: Appearance.colors.colOnLayer1
+                    opacity: 0.7
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                StyledComboBox {
+                    Layout.fillWidth: true
+                    model: root.formatOptions
+                    colBackground: Appearance.colors.colSurfaceContainerLow
+                    colBackgroundHover: Appearance.colors.colSurfaceContainerLow
+                    colBackgroundActive: Appearance.colors.colSurfaceContainerLow // same color, the hover was distracting
+                    textRole: "displayName"
+                    valueRole: "value"
+                    currentIndex: {
+                        for (var i = 0; i < model.length; i++) {
+                            if (model[i].value === root.selectedFormat) return i;
+                        }
+                        return 0;
+                    }
+                    onActivated: (index) => {
+                        root.selectedFormat = model[index].value
+                    }
                 }
             }
         }
