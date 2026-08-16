@@ -2444,11 +2444,17 @@ Four things about that column generalise past it:
   `tests/lint_clock_depth_geometry.py` fails on a depth layer that names the
   mask path without it. Anything else here that writes a file the shell is
   already displaying has the same question to answer.
-- **A click that finds nothing must not write a `.none` marker.** That marker
-  means "this model looked at this picture and there is nothing in it" and is
-  worth not re-learning at 4.5s a time. A click that lands on flat sky is one
-  attempt, and recording it as a refusal tells the picker to stop offering the
-  one column the user aims.
+- **A click that finds nothing must not write a `.none` marker, and it does not
+  use the detectors' floor either.** That marker means "this model looked at this
+  picture and there is nothing in it" and is worth not re-learning at 4.5s a
+  time. A click that lands on flat sky is one attempt, and recording it as a
+  refusal tells the picker to stop offering the one column the user aims. The
+  threshold is a separate constant for the same reason: `EMPTY_FOREGROUND`
+  (0.005) divides a model's own answer from a stray fragment, while a click is
+  the user asserting there is something there — measured, reusing it discarded a
+  76000-pixel object on a 7680x2160 wallpaper as "nothing there", and it was not
+  buying the refusal it looked like it was for, since a click on flat sky comes
+  back at 1.6-10% because SAM answers with the sky.
 
 **A segmentation model returning nothing is usually the wrong model, not an empty
 picture.** `isnet-anime` and `isnet-general-use` are complementary and neither is
