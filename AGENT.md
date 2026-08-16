@@ -1643,6 +1643,36 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   plain `undefined` property read, not an error. When a feature is gated on config, grep `Config.qml`
   for the key rather than trusting the expression, and prefer a gate whose absence is loud.
   ("feat(clock): the cookie and the pixel grid take the shared elevation").
+- **The same hole is open on `Appearance`, and there arithmetic on the missing token is *quieter*
+  than reading it.** `Appearance.rounding.button`, `.card` and `.extraLarge` were read by six
+  design-system call sites from the day that library was ported and were never declared. Measured
+  side by side against the real singleton, the two spellings fail differently and the difference is
+  the whole lesson: `radius: Appearance.rounding.card` is rejected at the assignment boundary, so it
+  costs one `Unable to assign [undefined] to double` and stores **0** — a square corner that reads as
+  a design choice — while `Appearance.rounding.extraLarge - 10` is **NaN**, which is a legal double
+  that no boundary rejects, nothing logs at all, and that survives every arithmetic downstream.
+  `Math.max(0, NaN)` is NaN, so the clamp anyone reaches for does not repair it either; the guard has
+  to be a comparison (`x > 0 ? x : 0`). Neither the QML suite nor `DesignSystemCompile.qml` can see
+  any of it — the first never builds these widgets and the second only *compiles* components, and a
+  binding is evaluated by neither. `tests/lint_appearance_tokens.py` resolves every `Appearance.`
+  chain in the tree against a parsed `Appearance.qml`; its first run found twelve more names the same
+  port left behind, which sit in that file's `QUARANTINE` register until each gets a value decision
+  rather than a plausible number. Note the general shape: a token, a config key and a service
+  property that were never declared all read as `undefined`, and `undefined` is a value.
+  ("fix(appearance): declare the three shape tokens the design system reads"),
+  ("test(lint): fail on a QML file reading an Appearance token that is not declared").
+- **A number chosen to silence that check is worse than the bug, because it renders.** The three
+  tokens above are declared as *aliases* onto tiers `Appearance.rounding` already had (`button:
+  small`, `card: normal`, `extraLarge: verylarge`), each picked against
+  [`docs/M3_GUIDELINES.md`](docs/M3_GUIDELINES.md)'s ladder and against what the in-house siblings
+  already do — the mainline `RippleButton` defaults to `small`, `ResourceCard` and
+  `GroupedList.bigRadius` are `normal`, and every in-house host of the carousel block is `verylarge`.
+  Aliases rather than fresh numbers on purpose: a tier with two values is the drift the one-source
+  rule exists to stop, while a tier with two names cannot disagree with itself, and
+  `screenRounding: large` was already the precedent. `tst_spacing_scale.qml` pins both the ladder's
+  numbers and the aliases, so giving `card` a fourth independent number reddens rather than shipping
+  two subtly different card radii.
+  ("test(appearance): pin the rounding ladder and the three tokens it aliases").
 - **Scoring a shadow on a widget that is not a rectangle wants the widget's own twin, not a band.**
   `test_card_shadow.py` reads a strip below a card, which works because a card's bottom edge is
   where the box says it is. It measures a different thing for a cookie (whose bottom is a valley),
