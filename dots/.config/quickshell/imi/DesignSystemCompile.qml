@@ -57,6 +57,11 @@ ShellRoot {
                 Quickshell.shellPath("modules/common/plugins/PluginWidget.qml"),
                 Quickshell.shellPath("modules/common/widgets/AutostartApps.qml"),
                 Quickshell.shellPath("modules/common/widgets/WallpaperSubmenu.qml"),
+                // The clock depth picker sits behind an inactive Loader in the
+                // wallpaper selector, so it compiles for the first time when
+                // someone clicks its toolbar button - which on a shell where
+                // nobody has is never.
+                Quickshell.shellPath("modules/imi/wallpaperSelector/ClockDepthPicker.qml"),
                 // The cheatsheet only compiles when the user presses Super+/,
                 // and the keybind editor only when a row's pencil is clicked.
                 Quickshell.shellPath("modules/imi/cheatsheet/CheatsheetKeybinds.qml"),
