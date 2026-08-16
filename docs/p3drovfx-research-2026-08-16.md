@@ -356,8 +356,10 @@ all.
    only on `Config.ready`.
 3. **Stable settings-page ids.** Theirs are strings; ours are translated display
    names. See §3.3.
-4. **The quick-toggle draft/commit controller.** A real transaction boundary with
-   validation and cancel, against our in-place array mutation. See §3.3.
+4. **The quick-toggle draft/commit controller.** A real transaction boundary —
+   validation and a cancel path — where each of our editor's gestures is its own
+   write straight to the config. A capability we lack, not a bug of ours; see
+   §3.3, which spells out why the in-place mutation itself is *not* the finding.
 5. **`services/AppUsage.qml` frecency.** Our app search ranks purely on edit
    distance. 190 lines and five call sites for a launcher that stops offering the
    wrong Firefox.
@@ -391,7 +393,9 @@ all.
 ### 3.3 Findings in *our* tree, surfaced by the comparison
 
 None of these were fixed here — this is a research branch. Each is worth its own
-issue.
+issue. Note that #1, #2 and #4 are defects; **#3 is a gap in our design, not a
+defect**, and an earlier draft of this section got that wrong — the correction is
+written out there because it is the kind of finding that gets re-raised.
 
 1. **The anti-flashbang weak shader does not exist.**
    `services/HyprlandAntiFlashbangShader.qml:13` declares
@@ -407,14 +411,48 @@ issue.
    and every `p.name` at `:167-183` is a `Translation.tr(...)`. Any stored or
    IPC-supplied `GlobalStates.settingsPage` value — `"Bar & Dock"` — stops
    resolving the moment the user switches language.
-3. **The quick-toggle editor mutates the config array in place.**
+3. **The quick-toggle layout editor has no validation and no cancel path.**
    `modules/imi/sidebarRight/quickToggles/androidStyle/AndroidQuickToggleButton.qml`
-   does `toggleList[myIdx] = toggleList[sibIdx]` (:217-219), `toggleList.push(...)`
-   (:260) and `toggleList.splice(idx, 1)` (:302) on the array handed out by the
-   `JsonObject`, with no reassignment, no validation and no cancel path. Given
-   `AGENT.md`'s `JsonAdapter` notes, "it appears to work today" is not the same as
-   "the write boundary is defined" — this wants a look regardless of whether the
-   full draft/commit controller is ever ported.
+   edits `Config.options.sidebar.quickToggles.android.toggles` at four sites — a
+   swap (`:217-219`), an add (`:262`), a delete (`:304`) and a resize (`:363`) —
+   and each gesture is its own write straight to the config. Nothing sits between
+   the drag and the stored layout: no shape or duplicate check, no legality check
+   against the catalog, no batching of a session of edits, and no way to abandon
+   one. Their `QuickToggleEditController`'s `beginTransaction`/`persist`/`rejected`
+   boundary is therefore a **feature we do not have**, worth considering on its own
+   merits. It is not a repair for a defect.
+
+   **Explicitly not a finding: the in-place mutation.** An earlier draft of this
+   section read "the quick-toggle editor mutates the config array in place" and
+   called the missing reassignment a defect. It is not, and this repo already
+   settled it. 031cd3d32 ("fix(sidebar): make quick toggle edits actually notify")
+   made exactly the change that framing recommends — an `updateToggles()` helper
+   that copies the list, applies the edit and assigns the result back, at all four
+   sites — and 26b625905 reverted it, having measured against a real `Config` that
+   a QML list property **does** notify on in-place mutation: `push`, `splice`,
+   element assignment, mutating a property of an element, and whole-list assignment
+   all emit the change signal. The revert also deleted
+   `tests/lint_config_list_mutation.py`, added by the same series, as a lint
+   enforcing a rule that does not exist and rejecting correct code. (That revert's
+   own subject carries quotes, so it is not written here in the usual
+   `<sha> ("<subject>")` citation form; it is
+   `Revert "fix(sidebar): make quick toggle edits actually notify" and follow-ups`.)
+
+   The bug that series was chasing — every tile rendering the *previous* tile's
+   icon, name and action — was the delegate.
+   81379796b ("fix(sidebar): choose a delegate for the toggle each row entry now holds")
+   is the fix: `DelegateChooser` picks a component only when a delegate is
+   *created* and never re-picks for one that survives, while `ScriptModel` exists
+   precisely to keep delegates alive across updates, so a row entry that changed
+   identity in place kept the old component while carrying the new entry's data.
+   The row `ScriptModel`s became plain array models, which reset the `Repeater`.
+   e4a0a1f3f ("test(sidebar): render the quick toggle panel through real layout edits")
+   covers it by driving the real panel through the edits that reflow rows — a
+   cross-row swap of differently sized toggles, a resize, a remove and an add
+   (`tests/test_quick_toggles_layout_runtime.py` + `QuickTogglesLayoutRuntimeTest.qml`).
+   So: reassigning the array is a change that was tried, measured and undone.
+   Anything ported here adds a transaction boundary for validation and cancel; it
+   must not be justified as fixing the mutation.
 4. **`get.sh` can silently discard local commits.** `get.sh:29-31` does
    `git fetch --depth 1 origin "$REF"` then `git reset --hard FETCH_HEAD` into
    `~/.local/share/immaterial-impulse/src`. Anyone who has committed in that
@@ -505,7 +543,8 @@ them:
   is `{type, size}`, single-page. A full port needs a config migration and lands at
   2,500–3,500 lines. A *staged* version — the `EditController`'s draft/commit
   boundary wrapped around our existing swap-and-splice, no pages, no 2-D resize —
-  is 400–600 lines and fixes the part that actually bites (§3.3 item 3).
+  is 400–600 lines and adds the part we genuinely lack (§3.3 item 3): validation
+  and a cancel. It repairs nothing — our swap-and-splice is correct as written.
 - **`wrappedFrame`.** 443 lines that read cheap and are the most coupled item
   surveyed: it imports their bar modules, reads `BarThemes`/`barBackgroundStyle`,
   and depends on eight `GlobalStates` properties (`animatedLeftSidebarWidth`,
