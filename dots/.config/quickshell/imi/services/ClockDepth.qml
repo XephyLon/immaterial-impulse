@@ -59,6 +59,13 @@ Singleton {
     // overwrites its candidate. Derived by the producer from the bytes rather
     // than recorded anywhere, so it cannot drift from the file the shell draws.
     property string acceptedModel: ""
+    // Cache-busting tokens for the mask files, owned by the producer like the
+    // key. Qt caches a pixmap by URL and both of these files are rewritten in
+    // place - the candidate on every click, the accepted mask when a second
+    // candidate is accepted for the same wallpaper - so without them the
+    // picture on screen is whichever mask happened to load first.
+    property string maskRevision: ""
+    property var revisions: ({})
 
     readonly property bool optedOut: root.state === "declined"
 
@@ -204,6 +211,8 @@ Singleton {
         root.maskPath = ""
         root.candidates = ({})
         root.acceptedModel = ""
+        root.maskRevision = ""
+        root.revisions = ({})
         root.queriedPath = ""
         root.prompts = ({})
         root.acceptedPrompt = []
@@ -270,6 +279,8 @@ Singleton {
                     root.maskPath = ""
                     root.candidates = ({})
                     root.acceptedModel = ""
+                    root.maskRevision = ""
+                    root.revisions = ({})
                     return
                 }
                 root.state = parsed.state ?? "error"
@@ -277,6 +288,8 @@ Singleton {
                 root.maskPath = parsed.state === "accepted" ? (parsed.mask ?? "") : ""
                 root.candidates = parsed.candidates ?? ({})
                 root.acceptedModel = parsed.acceptedModel ?? ""
+                root.maskRevision = parsed.maskRevision ?? ""
+                root.revisions = parsed.revisions ?? ({})
                 root.prompts = parsed.prompts ?? ({})
                 root.acceptedPrompt = parsed.acceptedPrompt ?? []
                 // Array-LIKENESS rather than Array.isArray, here and below: a

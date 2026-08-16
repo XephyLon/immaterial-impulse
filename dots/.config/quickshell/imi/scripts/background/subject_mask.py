@@ -248,6 +248,14 @@ def read_png_text(path, keyword):
         return None
 
 
+def file_revision(path):
+    """A token that changes whenever this file's bytes might have."""
+    try:
+        return str(Path(path).stat().st_mtime_ns)
+    except OSError:
+        return ""
+
+
 def read_prompt(path):
     """The clicks a prompted mask was cut with, or None for a salient one."""
     raw = read_png_text(path, PROMPT_CHUNK)
@@ -324,6 +332,19 @@ def status(root, wallpaper):
         elif (root / f"{key}.{model}.none").exists():
             candidates[model] = None
     result["candidates"] = candidates
+    # A token that changes whenever a mask's bytes do. Qt caches a pixmap by its
+    # URL, so a mask rewritten at the same path is served from the cache
+    # FOREVER - measured with a qml6 probe: a 32x8 image rewritten at 99x17 and
+    # re-assigned to the identical URL still reported 32x8, and clearing the
+    # source first did not help. Every click after the first would appear to do
+    # nothing. The shell hangs this on the URL as a fragment, which Qt leaves out
+    # of the filename and keeps in the cache key.
+    #
+    # A string because these are nanoseconds: 1.8e18 does not survive a JSON
+    # round trip through a double, and a revision that quietly stops changing is
+    # the bug this exists to prevent.
+    result["revisions"] = {model: file_revision(path)
+                           for model, path in candidates.items() if path}
     # The clicks each prompted candidate was cut with, read back out of the mask
     # itself. The picker draws them so re-opening on a wallpaper shows what was
     # clicked rather than an unexplained cutout with no way back into the
@@ -342,6 +363,11 @@ def status(root, wallpaper):
     elif accepted.exists():
         result["state"] = "accepted"
         result["mask"] = str(accepted)
+        # The accepted mask is rewritten in place when a second candidate is
+        # accepted for the same wallpaper, so the desktop layer needs the same
+        # token the picker does - without it, accepting the other column's
+        # cutout changes the file and nothing on screen.
+        result["maskRevision"] = file_revision(accepted)
         result["acceptedModel"] = accepted_model(root, key, candidates)
         # The accepted mask's OWN prompt, not the live candidate's. Accept is a
         # byte copy, so the clicks travelled with the pixels they produced and

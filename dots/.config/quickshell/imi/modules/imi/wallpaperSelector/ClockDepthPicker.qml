@@ -403,6 +403,7 @@ Item {
                             anchors.fill: parent
                             wallpaperSource: previewWallpaper.source
                             maskPath: candidate.maskPath
+                            maskRevision: ClockDepth.revisions?.[candidate.modelName] ?? ""
                             visible: candidate.maskPath !== ""
                         }
 
