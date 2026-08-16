@@ -93,11 +93,17 @@ class TheHostOwnsTheMechanism(unittest.TestCase):
         deliberately pinned.
         """
         expr = binding(BASE, "interactionLocked")
-        self.assertNotIn("&&", expr, "the locks must OR, never AND")
         self.assertEqual(expr.count("||"), 2, "all three locks must be joined")
         for term in ("clickThrough", "positionLocked",
                      "Config.options.background.widgetsLocked"):
             self.assertIn(term, expr)
+        # Exactly one `&&` is allowed and only inside the global term: Edit
+        # Mode subtracts that lock for the length of the mode, and subtracts
+        # only that one, so a widget the user pinned stays pinned. Any other
+        # `&&` is two locks AND-ed, which is the inversion this check is for.
+        remainder = expr.replace(
+            "Config.options.background.widgetsLocked && !GlobalStates.editMode", "")
+        self.assertNotIn("&&", remainder, "the locks must OR, never AND")
 
     def test_draggable_reads_the_combined_lock(self):
         """Leaving `draggable` on the raw global toggle is the silent failure
