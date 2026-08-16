@@ -176,7 +176,7 @@ that it has no shell-injection surface; do not regress that.
 
 | Feature | Their files | Lines (core / total) | Provenance | Ours |
 |---|---|---|---|---|
-| **OLED saver** — a key blacks out one monitor as a true-black layer surface, holding its own sleep inhibitor separate from the user's keep-awake | `modules/ii/oledSaver/OledSaver.qml` | 178 / 280 | Scrimas, 2026-07-14 | none. Our `modules/imi/screensaver/` is idle-triggered, not on-demand per-monitor |
+| **OLED saver** — a key blacks out one monitor as a true-black layer surface, holding its own sleep inhibitor separate from the user's keep-awake | `modules/ii/oledSaver/OledSaver.qml` | 178 / 280 | Scrimas, 2026-07-14 | **we have this** — `modules/imi/screensaver/` (`Screensaver.qml` 103 + `ScreensaverContent.qml`), an OLED blackout by design (`ScreensaverContent.qml:22`: "pixels off for OLED burn-in protection in both modes"), already one `Overlay` surface per screen (`Variants` over `Quickshell.screens`, namespace `quickshell:screensaver`, `WlrKeyboardFocus.Exclusive`), with a black/drifting-clock pixel-shift mode, an arming timer so mapping it under the cursor cannot self-dismiss it, config at `Config.qml:1257` and a settings row at `LockIdleConfig.qml:177`, **and** `show`/`hide`/`toggle` IPC verbs (`Screensaver.qml:83-102`). Three real deltas: (1) nothing binds those verbs to a key — no `GlobalShortcut` in the module and no `screensaver` binding anywhere in `dots/.config/hypr/`, so the only caller today is `hypridle.conf`'s 240s listener; (2) it arms every screen at once, not one chosen monitor; (3) it holds no idle inhibitor, so hypridle's ladder (lock 300s, DPMS off 600s, suspend 900s) runs on underneath it |
 | **Tiling assistant** — KDE-style snap zones on `SUPER`+drag, keyboard tiling, divider drag | `services/TilingAssistant.qml`, `modules/common/functions/tiling.js` (659), `modules/ii/tilingAssistant/`, `scripts/hyprland/drag_monitor.py` (538) | 1,125 / ~3,600 | Scrimas, 2026-08-03 | none |
 | **Touch gestures** — edge swipes on a physical touchscreen with a follow-the-finger overlay | `services/TouchGestureService.qml`, `modules/common/TouchGestureActionRegistry.qml` (250), Rust helper (601) | 867 / ~3,160 | P3DROVFX, 2026-08-14 | none |
 | **Workspace profiles** — snapshot/restore named window layouts | `services/WorkspaceProfileService.qml`, Rust `workspace_profile_manager` (951) | 533 / ~4,600 | Scrimas, 2026-06-19 | none |
@@ -483,9 +483,12 @@ them:
 
 - `modules/common/PanelSchedule.qml` (42) + the `PanelLoader` ticket gate. Pure
   scheduling; touches nothing visual.
-- `modules/ii/oledSaver/OledSaver.qml` (178). One `GlobalStates` property, a
-  `Variants` blackout window, its own `IdleInhibitor`, a `GlobalShortcut` and an
-  `IpcHandler`.
+- ~~`modules/ii/oledSaver/OledSaver.qml` (178)~~ — **not a port at all; see §2.4.**
+  We already have the module, and it is the same shape: one `GlobalStates`
+  property, a `Variants` blackout window, an `IpcHandler`. Dropping their file in
+  would ship a second screensaver. What is worth taking is the two pieces ours
+  lacks — their `IdleInhibitor` and their `GlobalShortcut` — plus a monitor
+  selector, moved into `modules/imi/screensaver/`.
 - `services/DnsOverTls.qml` (321) + the polkit rule. No UI beyond a quick toggle.
 - `services/AppUsage.qml` (190). Pure logic, atomic writes, trivially unit-testable
   — which our rules will want anyway.
