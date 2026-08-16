@@ -67,10 +67,6 @@ Singleton {
     // only greys out reads as a hang.
     property string running: ""
     property string lastError: ""
-    // model -> "candidate" | "none", for models this session has run or found.
-    property var results: ({})
-
-    signal runFinished(string model, string state)
 
     // Deliberately not driven by anything reactive. Segmentation costs ~1GB of
     // transient RSS and produces an unusable mask about a third of the time, so
@@ -121,7 +117,6 @@ Singleton {
         root.key = ""
         root.maskPath = ""
         root.candidates = ({})
-        root.results = ({})
         root.queriedPath = ""
     }
 
@@ -197,7 +192,6 @@ Singleton {
         stdout: StdioCollector {
             id: maskCollector
             onStreamFinished: {
-                const model = root.running
                 root.running = ""
                 let parsed = null
                 try {
@@ -208,17 +202,13 @@ Singleton {
                 if (!parsed || parsed.state === "error") {
                     root.lastError = parsed?.error
                         ?? Translation.tr("Could not run the segmentation model.")
-                    root.runFinished(model, "error")
                     return
                 }
-                // A copy rather than a mutation: assigning into a `var` object
-                // in place raises no change signal, so the picker would keep
-                // showing the state before the run it just triggered.
-                const next = Object.assign({}, root.results)
-                next[model] = parsed.state === "none" ? "none" : "candidate"
-                root.results = next
+                // The run wrote a candidate or a refusal marker; `status` is
+                // what turns either into what the picker draws, so the answer
+                // comes back through the one reader rather than being mirrored
+                // here into a second notion of the same state.
                 root.refresh()
-                root.runFinished(model, parsed.state)
             }
         }
     }

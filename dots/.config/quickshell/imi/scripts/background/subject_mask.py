@@ -77,15 +77,6 @@ def cache_key(wallpaper):
     return hashlib.sha256(material).hexdigest()[:32]
 
 
-def key_files(root, key):
-    """Every cache file belonging to one key, whatever its suffix."""
-    found = []
-    for entry in root.glob(f"{key}.*"):
-        if entry.is_file():
-            found.append(entry)
-    return found
-
-
 def status(root, wallpaper):
     """What the shell asks. Reads directory entries; loads nothing."""
     try:
