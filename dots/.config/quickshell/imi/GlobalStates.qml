@@ -98,6 +98,17 @@ Singleton {
     onOverviewOpenChanged: if (root.overviewOpen) root.editMode = false
     onSessionOpenChanged: if (root.sessionOpen) root.editMode = false
 
+    // Edit Mode and subject picking are both full-screen modes over the same
+    // desktop, and each shrinks or covers what the other needs at full size:
+    // picking must click the wallpaper at the size it is masked at, which a
+    // shrunk desktop is not, and Edit Mode's affordances would sit under the
+    // picker's surface. They land from separate branches, so the exclusion is
+    // stated once here rather than as a gate inside either mode - a mode that
+    // gated on the other's key would read `undefined` on the base that does not
+    // declare it yet and take its fallback forever.
+    onEditModeChanged: if (root.editMode) root.clockDepthSelectOpen = false
+    onClockDepthSelectOpenChanged: if (root.clockDepthSelectOpen) root.editMode = false
+
     onSidebarRightOpenChanged: {
         if (GlobalStates.sidebarRightOpen) {
             Notifications.timeoutAll();

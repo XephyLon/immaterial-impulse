@@ -376,6 +376,23 @@ class TheDesktopHandsOverItsGeometry(unittest.TestCase):
         self.assertIn("property bool clockDepthSelectOpen: false", self.states)
         self.assertIn("property var clockDepthViewports: ({})", self.states)
 
+    def test_the_two_full_screen_modes_exclude_each_other(self):
+        # Edit Mode shrinks the desktop; picking must click the wallpaper at the
+        # size it is masked at. Either arriving while the other is up leaves a
+        # mode half-armed - a picker surface over a shrunk desktop maps every
+        # click through geometry that is no longer on screen.
+        #
+        # Stated once in GlobalStates rather than as a gate inside either mode,
+        # because the two landed from separate branches and a gate reading the
+        # other's key resolves to `undefined` on a base that has not declared it
+        # yet, and then takes its fallback forever.
+        self.assertRegex(
+            self.states,
+            r"onEditModeChanged:\s*if\s*\(root\.editMode\)\s*root\.clockDepthSelectOpen = false")
+        self.assertRegex(
+            self.states,
+            r"onClockDepthSelectOpenChanged:\s*if\s*\(root\.clockDepthSelectOpen\)\s*root\.editMode = false")
+
     def test_the_depth_layer_stands_down_while_a_selection_is_live(self):
         # The surface draws the candidate over the same widgets at the same
         # geometry. Left on, the accepted mask underneath would be a second
