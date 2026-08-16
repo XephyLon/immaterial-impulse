@@ -24,7 +24,19 @@ Item {
     property bool wheelEnabled: true
     property bool dragEnabled: true
 
+    // The mask nests inside the host's rounded container: a child inset by N
+    // from a parent of radius R must round at R - N or its corners cut the
+    // parent's. `10` is DesktopContextMenu's own `anchors.margins`.
     property real clipRadius: Appearance.rounding.extraLarge - (10 * Appearance.effectiveScale)
+    // A radius that is NaN is not a radius that renders 0. Arithmetic on an
+    // absent token yields NaN, which is a legal double, so nothing rejects it
+    // at the assignment boundary the way `undefined` is rejected - measured,
+    // the undefined form costs one `Unable to assign [undefined] to double` and
+    // stores 0, while this form logs nothing at all and stores NaN. It then
+    // survives every arithmetic downstream of it, and `Math.max(0, NaN)` is
+    // NaN, so the obvious clamp does not repair it either. Resolve it to a
+    // number here, where the comparison is written the one way that works.
+    readonly property real effectiveClipRadius: root.clipRadius > 0 ? root.clipRadius : 0
     property bool showFooter: false
     property bool isOpen: true
 
@@ -70,7 +82,7 @@ Item {
             id: _listMask
             width: listView.width
             height: listView.height
-            radius: root.clipRadius
+            radius: root.effectiveClipRadius
             visible: false
         }
 
