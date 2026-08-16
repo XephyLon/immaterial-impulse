@@ -144,6 +144,16 @@ hl.layer_rule({ match = { namespace = "quickshell:.*" }, ignore_alpha = 0.05})
 hl.layer_rule({ match = { namespace = "quickshell:bar" }, animation = "slide"})
 hl.layer_rule({ match = { namespace = "quickshell:actionCenter" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:cheatsheet" }, animation = "slide bottom"})
+-- The subject selector: a full-screen surface that is transparent everywhere
+-- except one toolbar, because the wallpaper and the widgets it is judging are
+-- the real ones underneath it. Under the catch-all above that is the worst
+-- possible case - a screen-sized surface asking the compositor to blur the
+-- entire screen behind it - so its blur is scoped to the toolbar's own rect
+-- through a region, the same way the bar's and the sidebars' are. It also opens
+-- and closes on a button, so a map animation on something this size reads as
+-- the desktop lurching.
+hl.layer_rule({ match = { namespace = "quickshell:clockDepthSelect" }, no_anim = true})
+hl.layer_rule({ match = { namespace = "quickshell:clockDepthSelect" }, blur = false})
 -- Bare `slide`, like the bar above: the compositor slides toward whichever
 -- edge the surface is anchored to, so the dock's exit and entry follow its
 -- configured edge. Naming the edge here pinned it to the bottom, and a top

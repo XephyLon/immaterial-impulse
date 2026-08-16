@@ -5,6 +5,7 @@ import qs.modules.common
 import qs.modules.imi.background
 import qs.modules.imi.cheatsheet
 import qs.modules.imi.bar
+import qs.modules.imi.clockDepthSelect
 import qs.modules.imi.dock
 import qs.modules.imi.lock
 import qs.modules.imi.mediaControls
@@ -36,6 +37,7 @@ Scope {
     PanelLoader { component: BarPopupOverlay {} }
     PanelLoader { component: Background {} }
     PanelLoader { component: Cheatsheet {} }
+    PanelLoader { component: ClockDepthSelect {} }
     PanelLoader { extraCondition: Config.options.dock.enable; component: Dock {} }
     PanelLoader { component: Lock {} }
     PanelLoader { component: MediaControls {} }
