@@ -10,6 +10,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Widgets
+import "../../common/functions/layout_ops.js" as LayoutOps
 
 Item {
     id: root
@@ -126,12 +127,7 @@ Item {
             tgt < _workOrder.length &&
             src !== tgt) {
 
-            var arr = _workOrder.slice()
-
-            var item = arr[src]
-            arr.splice(src, 1)
-            arr.splice(tgt, 0, item)
-
+            var arr = LayoutOps.move(_workOrder, src, tgt)
             _workOrder = arr
             Config.options.dock.pinnedApps = arr
         }
@@ -166,15 +162,6 @@ Item {
     implicitHeight: vertical
         ? pill.implicitHeight
         : Appearance.sizes.barHeight
-
-    function swapSlots(from, to) {
-        if (from === to) return
-        if (from < 0 || from >= _workOrder.length) return
-        if (to   < 0 || to   >= _workOrder.length) return
-        let arr = _workOrder.slice()
-        let tmp = arr[from]; arr[from] = arr[to]; arr[to] = tmp
-        _workOrder = arr
-    }
 
     function commitOrder() {
         Config.options.dock.pinnedApps = _workOrder.slice()
