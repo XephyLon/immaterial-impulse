@@ -1645,6 +1645,20 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
     ("Dock: the body and the icon strip stop re-anchoring on the turn"),
     ("Dock: the reveal becomes an offset, not an anchor that moves"),
     ("Dock: one axis, one anchor - checked, because it was silent").
+  - **A `PopupAnchor` given a `window` and no `rect` anchors to a POINT, so all four of its
+    `edges` mean the same place.** The window-preview popup names the corner it wants
+    (`popupAnchorSides()` — the inward side plus the start of the long axis) and got the window's
+    origin every time. That is correct at exactly two edges out of four, which is what made it
+    read as a vertical-dock bug: a bottom dock asks for top-LEFT and a right dock for left-TOP,
+    and both of those *are* (0, 0), while a left dock wants `(width, 0)` and a top dock
+    `(0, height)` — so on those two the popup opened **on top of the dock**, covering the icons it
+    belongs to (measured: a 247x1440 surface placed at x=0 against a 75x1440 dock). Every other
+    popup here passes an `item` as well, which is why none of them showed it. Pass an explicit
+    `rect` whenever the anchor is a window and the edges are meant to differ. Note the second,
+    separate fault stacked on top of it: the card *inside* that popup wrote one coordinate as a
+    binding and let an anchor write the other, and which axis is which swaps with the edge — see
+    the anchor-writes-a-property note above. ("Dock: the preview popup anchors to the dock's rect,
+    not to a point"), ("Dock: the preview card's own coordinates stop being half anchor").
 
   The same contract test carries the "one derivation" lint (the analogue of
   `lint_bar_popup_overlay_static.py`'s rule for `barEdge`): a file may read
