@@ -2427,6 +2427,23 @@ Four things about that column generalise past it:
   whole extent. `tst_clock_depth_eligibility.qml` pins both halves, and its
   second case uses a 3.56:1 picture in a 4:3 box on purpose — at a matching
   aspect the box IS the cover rect and every registration bug is invisible.
+- **A file rewritten at the same path is not reloaded, and neither clearing the
+  source nor `cache: false` fixes it.** Qt keys its pixmap cache on the URL, so
+  an `Image` whose file changes underneath it keeps drawing the old bytes for
+  the life of the process. Measured with a `qml6` probe: a 32x8 PNG rewritten on
+  disk at 99x17 and re-assigned to the identical URL still reported
+  `implicitWidth` 32, and setting `source = ""` first and re-assigning did not
+  help; with a `#<token>` fragment appended it loaded the new bytes, and the
+  fragment is not part of the filename so nothing else about the load changes.
+  This bites twice here — the prompted candidate is rewritten on every click and
+  the accepted mask whenever a second candidate is accepted for the same
+  wallpaper — and both failures look like the feature ignoring the user rather
+  than like a cache. `ClockDepthCutout.maskRevision` carries the producer's
+  token (the file's mtime in nanoseconds, as a **string**: 1.8e18 does not
+  survive a JSON round trip through a double), and
+  `tests/lint_clock_depth_geometry.py` fails on a depth layer that names the
+  mask path without it. Anything else here that writes a file the shell is
+  already displaying has the same question to answer.
 - **A click that finds nothing must not write a `.none` marker.** That marker
   means "this model looked at this picture and there is nothing in it" and is
   worth not re-learning at 4.5s a time. A click that lands on flat sky is one
