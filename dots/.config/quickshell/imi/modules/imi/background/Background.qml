@@ -1299,77 +1299,19 @@ Variants {
                 }
             }
 
-            Image {
-                id: clockDepthWallpaper
+            // The registration lives in the component, not here, because the
+            // wallpaper selector's picker draws the same cutout to ask whether
+            // it is any good - and a picker that computed its own crop could
+            // certify a mask against a geometry the desktop never uses.
+            ClockDepthCutout {
+                id: clockDepthCutout
                 anchors.fill: parent
-                // Every one of these matches the `wallpaper` item inside the
-                // viewport on purpose. Same source, same size, same fill mode
-                // means the per-screen crop matches with no geometry of its own
-                // - and it means Qt's image cache serves both from ONE decode:
-                // a fill mode's aspect flags are part of the request, so a
-                // Stretch copy of the same file would decode all over again.
-                //
-                // The wallpaper item's own source is assigned imperatively, so
-                // a switch can snapshot the old frame before reloading; reading
-                // bgRoot.wallpaperPath here instead would put the incoming
+                // The wallpaper ITEM, not bgRoot.wallpaperPath: a switch
+                // assigns that source imperatively so it can snapshot the
+                // outgoing frame, and reading the path would put the incoming
                 // image under the outgoing image's mask for the length of it.
-                source: wallpaper.source
-                fillMode: Image.PreserveAspectCrop
-                cache: true
-                smooth: true
-                asynchronous: true
-                // Drawn by the OpacityMask below, not by itself.
-                visible: false
-            }
-
-            Item {
-                id: clockDepthMaskSurface
-                anchors.fill: parent
-                visible: false
-                // The mask is drawn oversized and offset (see coverRect), and
-                // this is what crops it back to the wallpaper's box - the same
-                // crop PreserveAspectCrop applies to the image it masks.
-                clip: true
-
-                Image {
-                    id: clockDepthMask
-                    // The mask is the model's own output: the whole picture
-                    // squashed to a square. So it is NOT the wallpaper's aspect,
-                    // and filling it into the same box would stretch it
-                    // differently from the image it masks - by 3.5x on this
-                    // monitor. Stretched into the rectangle the whole wallpaper
-                    // would occupy if nothing clipped it, undoing the squash and
-                    // re-applying the crop are the same operation.
-                    //
-                    // What masks is this file's ALPHA - Qt's OpacityMask reads
-                    // nothing else, so the producer writes the mask into the
-                    // alpha channel as well as the luminance. A plain grayscale
-                    // mask is opaque everywhere and lets the whole wallpaper
-                    // through, which draws the picture flat over the clock
-                    // rather than the subject behind it.
-                    readonly property var coverRect: ClockDepthLogic.coverRect(
-                        clockDepthWallpaper.implicitWidth, clockDepthWallpaper.implicitHeight,
-                        clockDepthMaskSurface.width, clockDepthMaskSurface.height)
-                    x: clockDepthMask.coverRect.x
-                    y: clockDepthMask.coverRect.y
-                    width: clockDepthMask.coverRect.width
-                    height: clockDepthMask.coverRect.height
-                    source: ClockDepth.maskPath === "" ? "" : `file://${ClockDepth.maskPath}`
-                    fillMode: Image.Stretch
-                    smooth: true
-                    asynchronous: true
-                }
-            }
-
-            // The one thing that paints. A missing or corrupt mask leaves this
-            // with an Image.Error maskSource, which shows nothing rather than
-            // showing everything - the right failure direction, and the reason
-            // the layer degrades to today's flat clock instead of to a
-            // wallpaper pasted over it.
-            OpacityMask {
-                anchors.fill: parent
-                source: clockDepthWallpaper
-                maskSource: clockDepthMaskSurface
+                wallpaperSource: wallpaper.source
+                maskPath: ClockDepth.maskPath
             }
         }
 
