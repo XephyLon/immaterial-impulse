@@ -99,6 +99,16 @@ if ! python3 "$SCRIPT_DIR/lint_disabled_opacity.py"; then
     exit 1
 fi
 
+# Static lint: the same rule for the interaction model's transform. A scale
+# composites exactly the way an opacity does, and the lint above recognises a
+# doubled dim by its opacity EXPRESSION - so the doubled scale discordVoice
+# shipped was invisible to it for the whole life of the widget.
+echo "Running interaction-motion lint..."
+if ! python3 "$SCRIPT_DIR/lint_interaction_motion_double.py"; then
+    echo "Interaction-motion lint failed."
+    exit 1
+fi
+
 # Static lint: a bar widget that answers a primary click says so with the
 # pointer. The shared button types always did; every hand-written MouseArea in
 # the bar forgot separately.
