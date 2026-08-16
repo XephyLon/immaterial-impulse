@@ -3,6 +3,7 @@ import qs.modules.common.widgets
 import qs.services
 import QtQuick
 import QtQuick.Layouts
+import "../functions/layout_ops.js" as LayoutOps
 
 ContentSubsection {
     id: root
@@ -48,24 +49,25 @@ ContentSubsection {
                             id: dragHandler
                             target: null
 
-                            function findNewIndex(dragX, dragY) {
-                                let newIndex = index
-                                let minDist = Infinity
-
+                            // The dragged chip's own slot is a hole rather than
+                            // a candidate: it is still laid out where it
+                            // started, so it would be its own nearest for most
+                            // of the gesture.
+                            function slotCentres() {
+                                const centres = []
                                 for (let i = 0; i < itemRepeater.count; i++) {
-                                    if (i === index) continue
-                                    const child = itemRepeater.itemAt(i)
-                                    if (!child) continue
-                                    const childCenter = child.mapToItem(null, child.width / 2, child.height / 2)
-                                    const dx = dragX - childCenter.x
-                                    const dy = dragY - childCenter.y
-                                    const dist = Math.sqrt(dx * dx + dy * dy)
-                                    if (dist < minDist) {
-                                        minDist = dist
-                                        newIndex = i
-                                    }
+                                    const child = i === index ? null : itemRepeater.itemAt(i)
+                                    centres.push(child
+                                        ? child.mapToItem(null, child.width / 2, child.height / 2)
+                                        : null)
                                 }
-                                return newIndex
+                                return centres
+                            }
+
+                            function findNewIndex(dragX, dragY) {
+                                const nearest = LayoutOps.indexAt(
+                                    slotCentres(), Qt.point(dragX, dragY), null)
+                                return nearest === -1 ? index : nearest
                             }
 
                             onActiveChanged: {
@@ -75,12 +77,8 @@ ContentSubsection {
                                     const dragX = dragHandler.centroid.scenePosition.x
                                     const dragY = dragHandler.centroid.scenePosition.y
                                     const newIndex = findNewIndex(dragX, dragY)
-                                    if (newIndex !== index) {
-                                        let list = root.layout.slice()
-                                        const item = list.splice(index, 1)[0]
-                                        list.splice(newIndex, 0, item)
-                                        root.onUpdate(list)
-                                    }
+                                    if (newIndex !== index)
+                                        root.onUpdate(LayoutOps.move(root.layout, index, newIndex))
                                 }
                             }
 
@@ -109,11 +107,7 @@ ContentSubsection {
                             }
                         }
 
-                        onClicked: {
-                            let list = root.layout.slice()
-                            list.splice(index, 1)
-                            root.onUpdate(list)
-                        }
+                        onClicked: root.onUpdate(LayoutOps.remove(root.layout, index))
                     }
                 }
             }
@@ -197,9 +191,8 @@ ContentSubsection {
                         buttonText: modelData.name
                         buttonIcon: modelData.icon ?? ""  
                         onClicked: {
-                            let list = root.layout.slice()
-                            list.push(modelData.id)
-                            root.onUpdate(list)
+                            root.onUpdate(LayoutOps.insert(
+                                root.layout, modelData.id, root.layout.length))
                             const keepOpen = ["visualizer", "divisor"]
                             if (!keepOpen.includes(modelData.id)) {
                                 Qt.callLater(() => { dropdown.dropdownOpen = false })
