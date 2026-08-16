@@ -103,49 +103,51 @@ Scope {
             MouseArea {
                 id: dockMouseArea
                 // The strip fills the dock's thickness across its own axis and
-                // is sized by the icons along it.
-                width: root.vertical ? parent.width : implicitWidth
-                height: root.vertical ? implicitHeight : parent.height
+                // is sized by the icons along it. Across the axis that is
+                // exactly the surface, so centring is the same placement the
+                // reveal anchor used to give - with a membership that never
+                // changes.
+                readonly property var box: DockGeometry.contentBox(
+                    root.edge, dockRoot.dockThickness, implicitWidth, implicitHeight)
+                width: box.width
+                height: box.height
+
                 // The reveal is one number: revealed, a sliver, or one past
-                // gone. Which margin it lands on is the edge's business.
+                // gone. Which way it travels is the edge's business.
                 readonly property var revealOffsets: DockGeometry.revealOffsets(
                     dockRoot.dockThickness, Config.options?.dock.hoverRegionHeight ?? 2)
                 readonly property real revealOffset: dockRoot.reveal
                     ? revealOffsets.revealed
                     : (Config.options?.dock.hoverToReveal
                         ? revealOffsets.peeking : revealOffsets.hidden)
+                // Toward the screen edge the dock is on, so it travels off the
+                // screen to leave. A push the other way would slide it
+                // further ONTO the screen to hide.
+                readonly property real revealPush: dockMouseArea.revealOffset
+                    * DockGeometry.hideDirection(root.edge)
 
-                // The body hangs off the dock's INWARD side and the offset
-                // grows from there, so it travels toward the screen edge to
-                // leave. A dock anchored on its outward side would slide
-                // further onto the screen to hide.
-                readonly property string revealSide: DockGeometry.revealAnchorSide(root.edge)
-                anchors {
-                    top: dockMouseArea.revealSide === "top" ? parent.top : undefined
-                    bottom: dockMouseArea.revealSide === "bottom" ? parent.bottom : undefined
-                    left: dockMouseArea.revealSide === "left" ? parent.left : undefined
-                    right: dockMouseArea.revealSide === "right" ? parent.right : undefined
-                    topMargin: dockMouseArea.revealSide === "top" ? dockMouseArea.revealOffset : 0
-                    bottomMargin: dockMouseArea.revealSide === "bottom" ? dockMouseArea.revealOffset : 0
-                    leftMargin: dockMouseArea.revealSide === "left" ? dockMouseArea.revealOffset : 0
-                    rightMargin: dockMouseArea.revealSide === "right" ? dockMouseArea.revealOffset : 0
-                    horizontalCenter: root.vertical ? undefined : parent.horizontalCenter
-                    verticalCenter: root.vertical ? parent.verticalCenter : undefined
-                }
+                // The strip used to anchor to its inward side and grow that
+                // margin to push itself out, which means the anchor moves to
+                // another side when the dock turns. During the turn the new
+                // side and the old centre anchor are both live on ONE axis,
+                // and Qt answers `right` + `horizontalCenter` by WRITING the
+                // item's width (2 * (right - hcenter)) - measured at 5120 on
+                // a surface that was already 75 wide. That write outlives the
+                // binding it clobbered, because `box` has finished changing
+                // by then and never re-evaluates. Centre at every edge and
+                // push with an offset instead: same placement, one membership.
+                anchors.centerIn: parent
+                anchors.horizontalCenterOffset: root.vertical ? dockMouseArea.revealPush : 0
+                anchors.verticalCenterOffset: root.vertical ? 0 : dockMouseArea.revealPush
+
                 implicitWidth: dockHoverRegion.implicitWidth + Appearance.sizes.elevationMargin * 2
                 implicitHeight: dockHoverRegion.implicitHeight + Appearance.sizes.elevationMargin * 2
                 hoverEnabled: true
 
-                Behavior on anchors.topMargin {
+                Behavior on anchors.horizontalCenterOffset {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                 }
-                Behavior on anchors.bottomMargin {
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                }
-                Behavior on anchors.leftMargin {
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                }
-                Behavior on anchors.rightMargin {
+                Behavior on anchors.verticalCenterOffset {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                 }
 

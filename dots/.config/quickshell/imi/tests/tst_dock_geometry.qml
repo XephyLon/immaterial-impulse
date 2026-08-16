@@ -159,15 +159,15 @@ TestCase {
         compare(Geometry.inwardSide("bottom"), "top");
         compare(Geometry.inwardSide("left"), "right");
         compare(Geometry.outwardSide("left"), "left");
-        // The reveal anchors inward and pushes the body outward from there; a
-        // dock that anchored its outward side would slide ONTO the screen to
-        // hide.
-        for (const edge of ["top", "bottom", "left", "right"])
-            compare(Geometry.revealAnchorSide(edge), Geometry.inwardSide(edge),
-                    edge + " reveals along its inward side");
-        // ...and a popup opens the same way, so neither can drift.
-        for (const edge of ["top", "bottom", "left", "right"])
+        // The reveal pushes the body OUTWARD from where it rests, and a popup
+        // opens inward, so the two are one relation read in both directions.
+        for (const edge of ["top", "bottom", "left", "right"]) {
             compare(Geometry.popupGravity(edge), Geometry.inwardSide(edge));
+            const push = Geometry.hideDirection(edge);
+            const outward = Geometry.outwardSide(edge);
+            compare(push > 0, outward === "bottom" || outward === "right",
+                    edge + " hides toward its own edge, not onto the screen");
+        }
     }
 
     function test_a_directed_pair_never_touches_the_long_axis() {
