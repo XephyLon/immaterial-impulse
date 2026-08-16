@@ -408,9 +408,9 @@ written out there because it is the kind of finding that gets re-raised.
 2. **Settings deep links compare translated page names.**
    `modules/imi/settings/SettingsContent.qml:135` does
    `root.pages.findIndex(p => p.name.toLowerCase() === pageName.toLowerCase())`,
-   and every `p.name` at `:167-183` is a `Translation.tr(...)`. Any stored or
-   IPC-supplied `GlobalStates.settingsPage` value — `"Bar & Dock"` — stops
-   resolving the moment the user switches language.
+   and every `p.name` in the page list at `:169-182` is a `Translation.tr(...)`.
+   Any stored or IPC-supplied `GlobalStates.settingsPage` value — `"Bar & Dock"` —
+   stops resolving the moment the user switches language.
 3. **The quick-toggle layout editor has no validation and no cancel path.**
    `modules/imi/sidebarRight/quickToggles/androidStyle/AndroidQuickToggleButton.qml`
    edits `Config.options.sidebar.quickToggles.android.toggles` at four sites — a
