@@ -15,7 +15,14 @@ Singleton {
     property bool sidebarRightOpen: false
     property bool mediaControlsOpen: false
     property bool sysTrayOverflowOpen: false
+    // The idle path: hypridle's listener blanks every screen, and the ladder
+    // behind it (lock, DPMS, suspend) is meant to keep running underneath.
     property bool screensaverActive: false
+    // The deliberate path: monitor names the user blacked out on purpose. Kept
+    // apart from the flag above because only this one holds an idle inhibitor
+    // (services/Idle.qml) - blanking a panel to work on another must not walk
+    // the session into a lock, and going idle still must.
+    property var screensaverScreens: []
     property bool osdBrightnessOpen: false
     property bool settingsOpen: false
     property bool osdVolumeOpen: false
