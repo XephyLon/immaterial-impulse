@@ -1810,6 +1810,25 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   transform, press scale included, cancels out — and set the target to pressStart + delta, as
   `widgetCanvas/AbstractWidget.qml` now does. d2ebb5aeb ("fix(widgetCanvas): compute the drag by
   hand - MouseArea.drag cannot track it").
+- **The two bars load the same widget files out of `modules/imi/bar/`, and each used to decide
+  which file for itself.** `Config.options.bar.layouts.*` is shared and Settings > Bar offers a
+  plugin's bar widget whatever the orientation, but only `BarContent.qml` ever learned the
+  `plugin:` branch 2a3801a62 ("feat(plugins): support installable QML packages") added.
+  `VerticalBarContent.qml`'s fallback capitalises a widget name into a file name, so
+  `plugin:docker_plugin` resolved to `Plugin:docker_plugin.qml` - measured with a `qml6` probe, the
+  `Loader` reaches `Loader.Error` with a null `item`, and the only evidence is one
+  `No such file or directory` line per widget. That is neither a `WARN scene:` nor an `ERROR:`, so
+  the configuration still loads and the bar simply draws the empty `BarGroup` stub around nothing.
+  `modules/imi/bar/bar_widget_source.js` is the one mapping now; it answers with a **file name**
+  and the caller prepends its own directory, because the two bars reach that directory by different
+  relative paths and a `.pragma library` has no engine context to assume for `Qt.resolvedUrl`.
+  `tests/test_bar_widget_parity.py` fails on either bar deciding for itself and on the two
+  `getWidgetUrl` bodies differing by anything except that directory literal;
+  `tests/tst_bar_widget_source.qml` pins the mapping. The orientation API a plugin gets is one
+  duck-typed `property bool vertical` on the entry point's root, which the host writes - and a
+  widget that declares none is rendered anyway rather than omitted, since omitting it is the same
+  silent disappearance this fixed. a47462fcc ("fix(verticalBar): render plugin bar widgets instead
+  of an empty stub"), 06d31aabc ("test(bar): pin the two bars to one widget-url resolution").
 - **A `Process`'s `onExited` handler that ignores its `exitCode` argument will happily act on stale
   data.** `TempScreenshotProcess` writes to a deterministic path (`image-${screen.name}`), so a failed
   `grim` run used to leave the *previous* successful capture sitting there untouched - the region
