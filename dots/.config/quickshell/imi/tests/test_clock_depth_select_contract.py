@@ -495,3 +495,56 @@ class ThePickerIsTheWayInNotThePlaceToAuthor(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheClickHistoryIsWholeStates(unittest.TestCase):
+    """Undo and redo over the selection gesture.
+
+    The history keeps whole point lists rather than a stack of "remove the last
+    click", because start-over has to be one undo away like every other step. A
+    pop-the-last-point stack cannot express it: clearing four points would cost
+    four undos, or be unrecoverable, and both read as the history having lost
+    the gesture.
+    """
+
+    def setUp(self):
+        self.service = text(SERVICE)
+        self.surface = text(SURFACE)
+
+    def test_every_edit_goes_through_one_commit(self):
+        # If an edit writes root.points directly it is invisible to undo, and
+        # the failure is silent - the button simply skips a step.
+        for name in ("addPoint", "clearPoints"):
+            body = re.search(r"function %s\(.*?\n    \}" % name, self.service, re.DOTALL)
+            self.assertIsNotNone(body, "%s is gone" % name)
+            self.assertIn("commitPoints", body.group(0),
+                          "%s edits the points without the history seeing it" % name)
+
+    def test_adopting_a_stored_prompt_is_not_an_undoable_step(self):
+        # Reading a prompt off disk is where a gesture starts. If it were a
+        # step, undo would walk back into a previous session's clicks.
+        body = re.search(r"function adoptPoints\(.*?\n    \}", self.service, re.DOTALL)
+        self.assertIsNotNone(body, "adoptPoints is gone")
+        self.assertIn("root.pointHistory = []", body.group(0))
+        self.assertIn("root.pointFuture = []", body.group(0))
+
+    def test_a_new_click_forgets_the_redo_branch(self):
+        body = re.search(r"function commitPoints\(.*?\n    \}", self.service, re.DOTALL)
+        self.assertIsNotNone(body, "commitPoints is gone")
+        self.assertIn("root.pointFuture = []", body.group(0))
+
+    def test_both_chords_reach_the_service(self):
+        keys = re.search(r"Keys\.onPressed:.*?\n        \}", self.surface, re.DOTALL)
+        self.assertIsNotNone(keys, "the surface handles no keys")
+        block = keys.group(0)
+        self.assertIn("Qt.ControlModifier", block)
+        self.assertIn("Qt.ShiftModifier", block)
+        self.assertIn("ClockDepth.undoPoint()", block)
+        self.assertIn("ClockDepth.redoPoint()", block)
+
+    def test_undo_is_offered_while_there_is_history_not_while_there_are_points(self):
+        # After "Start over" there are no points and undo must still be live.
+        undo = re.search(r"id: undoButton.*?\n                \}", self.surface, re.DOTALL)
+        self.assertIsNotNone(undo, "the undo button is gone")
+        self.assertIn("ClockDepth.pointHistory.length > 0", undo.group(0))
+        self.assertNotIn("root.points.length", undo.group(0))

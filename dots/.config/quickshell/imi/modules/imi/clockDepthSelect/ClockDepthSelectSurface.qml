@@ -96,6 +96,24 @@ PanelWindow {
             if (event.key === Qt.Key_Escape) {
                 root.cancelled()
                 event.accepted = true
+                return
+            }
+            // Handled here rather than as a `Shortcut`: a Shortcut is scoped to
+            // its window and this surface is one per output, so the same chord
+            // would be declared on every screen and Qt would call the match
+            // ambiguous. Keys go to whichever surface holds focus, which is the
+            // screen the user is picking on.
+            if (event.modifiers & Qt.ControlModifier) {
+                if (event.key === Qt.Key_Z) {
+                    if (event.modifiers & Qt.ShiftModifier)
+                        ClockDepth.redoPoint()
+                    else
+                        ClockDepth.undoPoint()
+                    event.accepted = true
+                } else if (event.key === Qt.Key_Y) {
+                    ClockDepth.redoPoint()
+                    event.accepted = true
+                }
             }
         }
 
@@ -310,11 +328,21 @@ PanelWindow {
                     }
                 }
 
+                // Gated on the history rather than on the points, so "Start
+                // over" stays undoable - after it there are no points left, and
+                // a button reading `points.length` would disable itself exactly
+                // when the user most wants it back.
                 DialogButton {
                     id: undoButton
-                    enabled: !root.busy && root.points.length > 0
+                    enabled: !root.busy && ClockDepth.pointHistory.length > 0
                     buttonText: Translation.tr("Undo")
                     onClicked: ClockDepth.undoPoint()
+                }
+                DialogButton {
+                    id: redoButton
+                    enabled: !root.busy && ClockDepth.pointFuture.length > 0
+                    buttonText: Translation.tr("Redo")
+                    onClicked: ClockDepth.redoPoint()
                 }
                 DialogButton {
                     id: clearButton

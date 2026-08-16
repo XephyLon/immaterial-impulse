@@ -144,23 +144,60 @@ Singleton {
         return value !== null && value !== undefined && typeof value.length === "number"
     }
 
-    function addPoint(x: real, y: real, include: bool): void {
-        if (root.promptedModel === "")
-            return
-        root.points = root.points.concat([{ "x": x, "y": y, "label": include ? 1 : 0 }])
+    // History keeps whole point lists rather than a stack of "remove the last
+    // click", so that start-over is one undo away like every other step. A
+    // pop-the-last-point stack cannot express it: clearing four points would
+    // cost four undos or be silently unrecoverable, and both read as the
+    // history having lost the gesture.
+    property var pointHistory: []
+    property var pointFuture: []
+
+    // Every deliberate edit goes through here, so no path can move the points
+    // without the history seeing it.
+    function commitPoints(next): void {
+        root.pointHistory = root.pointHistory.concat([root.points])
+        root.pointFuture = []
+        root.points = next
         root.selectPoints()
     }
 
-    function undoPoint(): void {
-        if (root.points.length === 0)
+    // Adopting a prompt off disk is where a gesture starts, not a step in one,
+    // so it resets the history instead of becoming undoable into someone
+    // else's clicks.
+    function adoptPoints(next): void {
+        root.pointHistory = []
+        root.pointFuture = []
+        root.points = next
+    }
+
+    function addPoint(x: real, y: real, include: bool): void {
+        if (root.promptedModel === "")
             return
-        root.points = root.points.slice(0, root.points.length - 1)
+        root.commitPoints(root.points.concat([{ "x": x, "y": y, "label": include ? 1 : 0 }]))
+    }
+
+    function undoPoint(): void {
+        if (root.pointHistory.length === 0)
+            return
+        root.pointFuture = root.pointFuture.concat([root.points])
+        root.points = root.pointHistory[root.pointHistory.length - 1]
+        root.pointHistory = root.pointHistory.slice(0, root.pointHistory.length - 1)
+        root.selectPoints()
+    }
+
+    function redoPoint(): void {
+        if (root.pointFuture.length === 0)
+            return
+        root.pointHistory = root.pointHistory.concat([root.points])
+        root.points = root.pointFuture[root.pointFuture.length - 1]
+        root.pointFuture = root.pointFuture.slice(0, root.pointFuture.length - 1)
         root.selectPoints()
     }
 
     function clearPoints(): void {
-        root.points = []
-        root.selectPoints()
+        if (root.points.length === 0)
+            return
+        root.commitPoints([])
     }
 
     function selectPoints(): void {
@@ -238,7 +275,7 @@ Singleton {
         root.queriedPath = ""
         root.prompts = ({})
         root.acceptedPrompt = []
-        root.points = []
+        root.adoptPoints([])
         root.promptRestoredFor = ""
         root.selectPending = false
     }
@@ -330,8 +367,8 @@ Singleton {
                     // produced what is on screen rather than an empty preview
                     // with no way back into it.
                     const candidate = root.prompts?.[root.promptedModel]
-                    root.points = root.looksLikeList(candidate) ? candidate
-                        : (root.looksLikeList(root.acceptedPrompt) ? root.acceptedPrompt : [])
+                    root.adoptPoints(root.looksLikeList(candidate) ? candidate
+                        : (root.looksLikeList(root.acceptedPrompt) ? root.acceptedPrompt : []))
                 }
             }
         }
