@@ -32,6 +32,7 @@ ShellRoot {
     id: harness
 
     property int failures: 0
+    property int checksRun: 0
     property int elapsed: 0
 
     // The state seeded into states.json, i.e. what the shell must come back up
@@ -44,13 +45,14 @@ ShellRoot {
     readonly property string toggleTo: Quickshell.env("NIGHTLIGHT_TOGGLE") ?? ""
 
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[NightLightState] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
     }
 
     function finish() {
-        console.log(`[NightLightState] failures: ${harness.failures}`);
+        console.log(`[NightLightState] checks: ${harness.checksRun} failures: ${harness.failures}`);
         Qt.exit(harness.failures === 0 ? 0 : 1);
     }
 

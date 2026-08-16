@@ -45,11 +45,13 @@ ShellRoot {
     id: harness
 
     property int failures: 0
+    property int checksRun: 0
     readonly property string testScreen: "MOTION-TEST"
     readonly property int screenW: 1200
     readonly property int screenH: 700
 
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[WidgetResizeMotion] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
@@ -419,7 +421,7 @@ ShellRoot {
         onTriggered: {
             console.log(`[WidgetResizeMotion] FAIL: gave up at step ${harness.stepIndex}`
                         + ` of ${harness.steps.length}`);
-            console.log(`[WidgetResizeMotion] failures: ${harness.failures + 1}`);
+            console.log(`[WidgetResizeMotion] checks: ${harness.checksRun} failures: ${harness.failures + 1}`);
             Qt.exit(1);
         }
     }
@@ -434,7 +436,7 @@ ShellRoot {
         onTriggered: {
             if (harness.stepIndex >= harness.steps.length) {
                 runner.running = false;
-                console.log(`[WidgetResizeMotion] failures: ${harness.failures}`);
+                console.log(`[WidgetResizeMotion] checks: ${harness.checksRun} failures: ${harness.failures}`);
                 Qt.exit(harness.failures === 0 ? 0 : 1);
                 return;
             }

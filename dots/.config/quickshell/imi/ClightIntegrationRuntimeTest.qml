@@ -30,6 +30,7 @@ ShellRoot {
     id: harness
 
     property int failures: 0
+    property int checksRun: 0
     property int elapsed: 0
     property int temperatureSignals: 0
 
@@ -37,13 +38,14 @@ ShellRoot {
     readonly property bool expectAvailable: (Quickshell.env("CLIGHT_EXPECT_AVAILABLE") ?? "false") === "true"
 
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[ClightIntegration] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
     }
 
     function finish() {
-        console.log(`[ClightIntegration] failures: ${harness.failures}`);
+        console.log(`[ClightIntegration] checks: ${harness.checksRun} failures: ${harness.failures}`);
         Qt.exit(harness.failures === 0 ? 0 : 1);
     }
 

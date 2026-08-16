@@ -20,7 +20,9 @@ ShellRoot {
     readonly property string testScreen: "probe-screen"
 
     property int failures: 0
+    property int checksRun: 0
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[WeatherTreeMotion] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok) harness.failures++;
     }
@@ -365,7 +367,7 @@ ShellRoot {
     } }
 
     Timer { id: finish; interval: 200; onTriggered: {
-        console.log(`[WeatherTreeMotion] failures: ${harness.failures}`);
+        console.log(`[WeatherTreeMotion] checks: ${harness.checksRun} failures: ${harness.failures}`);
         Qt.quit();
     } }
 

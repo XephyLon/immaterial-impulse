@@ -33,6 +33,7 @@ ShellRoot {
     id: harness
 
     property int failures: 0
+    property int checksRun: 0
     property int desktopMenuHits: 0
     // Clicks that reached a MouseArea the widget declares for itself.
     property int contentAreaHits: 0
@@ -41,13 +42,14 @@ ShellRoot {
     readonly property string bundledRoot: Quickshell.shellPath("modules/common/plugins/bundled")
 
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[WidgetInteraction] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
     }
 
     function finish() {
-        console.log(`[WidgetInteraction] failures: ${harness.failures}`);
+        console.log(`[WidgetInteraction] checks: ${harness.checksRun} failures: ${harness.failures}`);
         Qt.exit(harness.failures === 0 ? 0 : 1);
     }
 

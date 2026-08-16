@@ -31,10 +31,12 @@ ShellRoot {
     id: harness
 
     property int failures: 0
+    property int checksRun: 0
     readonly property string testScreen: "GRIP-TEST"
     readonly property string bundledRoot: Quickshell.shellPath("modules/common/plugins/bundled")
 
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[WidgetGripLock] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
@@ -277,7 +279,7 @@ ShellRoot {
         onTriggered: {
             if (harness.stepIndex >= harness.steps.length) {
                 runner.running = false;
-                console.log(`[WidgetGripLock] failures: ${harness.failures}`);
+                console.log(`[WidgetGripLock] checks: ${harness.checksRun} failures: ${harness.failures}`);
                 Qt.exit(harness.failures === 0 ? 0 : 1);
                 return;
             }

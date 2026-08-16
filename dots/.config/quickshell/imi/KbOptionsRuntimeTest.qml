@@ -24,18 +24,20 @@ ShellRoot {
     id: harness
 
     property int failures: 0
+    property int checksRun: 0
     property int elapsed: 0
 
     readonly property string expected: Quickshell.env("KBOPT_EXPECT") ?? ""
 
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[KbOptions] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
     }
 
     function finish() {
-        console.log(`[KbOptions] failures: ${harness.failures}`);
+        console.log(`[KbOptions] checks: ${harness.checksRun} failures: ${harness.failures}`);
         Qt.exit(harness.failures === 0 ? 0 : 1);
     }
 

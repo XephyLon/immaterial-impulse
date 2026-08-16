@@ -29,9 +29,11 @@ ShellRoot {
     id: harness
 
     property int failures: 0
+    property int checksRun: 0
     property var expectedIcon: ({})
 
     function check(label, ok, detail) {
+        harness.checksRun++;
         console.log(`[QuickToggles] ${label}: ${ok ? "ok" : "FAIL"}${ok ? "" : " - " + detail}`);
         if (!ok) harness.failures++;
     }
@@ -110,7 +112,7 @@ ShellRoot {
                         harness.editToggles(list => list.push({ type: "mic", size: 2 }));
                         Qt.callLater(() => {
                             harness.verify("adding a toggle back keeps every icon");
-                            console.log(`[QuickToggles] failures: ${harness.failures}`);
+                            console.log(`[QuickToggles] checks: ${harness.checksRun} failures: ${harness.failures}`);
                             Qt.exit(harness.failures === 0 ? 0 : 1);
                         });
                     });

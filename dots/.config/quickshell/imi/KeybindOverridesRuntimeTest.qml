@@ -22,10 +22,12 @@ ShellRoot {
     id: harness
 
     property int failures: 0
+    property int checksRun: 0
     property int elapsed: 0
     readonly property string expectStatus: Quickshell.env("KEYBIND_EXPECT_STATUS") ?? "ok"
 
     function check(name, cond, detail) {
+        harness.checksRun++;
         if (cond) {
             console.log(`[KeybindOverridesRuntime] PASS ${name}`);
         } else {
@@ -95,7 +97,7 @@ ShellRoot {
               userConflict.length === 1 && userConflict[0].source === "user",
               JSON.stringify(userConflict));
 
-        console.log(`[KeybindOverridesRuntime] failures: ${harness.failures}`);
+        console.log(`[KeybindOverridesRuntime] checks: ${harness.checksRun} failures: ${harness.failures}`);
         Qt.quit();
     }
 }
