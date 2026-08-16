@@ -136,12 +136,27 @@ Item {
                     wrapMode: Text.WordWrap
                 }
             }
-            IconToolbarButton {
+            // A RippleButton rather than the IconToolbarButton this started as:
+            // ToolbarButton carries `Layout.fillHeight: true` for the toolbars
+            // it was written for, and IconToolbarButton derives its width from
+            // its height - so in a header row it stretches to the row and comes
+            // out as a circle a third of the dialog wide, which is also what
+            // made the row that tall. It is the close button's twin now.
+            RippleButton {
                 id: inspectButton
+                implicitWidth: 36
                 implicitHeight: 36
-                onClicked: root.inspect = !root.inspect
+                buttonRadius: height / 2
                 toggled: root.inspect
-                text: "chrome_reader_mode"
+                onClicked: root.inspect = !root.inspect
+                contentItem: MaterialSymbol {
+                    anchors.centerIn: parent
+                    text: "chrome_reader_mode"
+                    iconSize: Appearance.font.pixelSize.larger
+                    color: inspectButton.toggled
+                        ? Appearance.colors.colOnPrimary
+                        : Appearance.colors.colOnLayer0
+                }
                 StyledToolTip {
                     text: Translation.tr("Dim everything the model did not pick, and trace its edge")
                 }
@@ -188,9 +203,14 @@ Item {
                     // returns nothing is usually the wrong model rather than an
                     // empty picture, so an empty result has to point at its
                     // neighbour instead of reading as a verdict on the image.
-                    readonly property bool otherFound: ClockDepth.models.some(other =>
-                        other !== candidate.modelData
-                        && (ClockDepth.candidates?.[other] ?? "") !== "")
+                    readonly property bool otherFound: {
+                        const results = ClockDepth.candidates ?? ({})
+                        for (const other in results) {
+                            if (other !== candidate.modelData && (results[other] ?? "") !== "")
+                                return true
+                        }
+                        return false
+                    }
                     // Gated on the mask having DECODED, not merely on a path:
                     // the veil masks by the inverse of the mask surface, so an
                     // Image.Error or a not-yet-loaded mask is a transparent
@@ -203,7 +223,6 @@ Item {
 
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.alignment: Qt.AlignTop
                     // Both columns take half the row whatever their content is
                     // wider than. Without a preferred width a RowLayout hands
                     // fillWidth children their implicit widths first, so the
@@ -418,6 +437,13 @@ Item {
                             }
                         }
                     }
+
+                    // The preview's height is locked to the screen's aspect, so
+                    // a tall dialog has height nothing wants. It falls here
+                    // rather than being shared out above the label, which would
+                    // float the two cutouts in the middle of the dialog away
+                    // from the buttons that act on them.
+                    Item { Layout.fillHeight: true }
                 }
             }
         }
