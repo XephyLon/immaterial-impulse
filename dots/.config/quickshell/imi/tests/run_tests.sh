@@ -330,6 +330,15 @@ if ! python3 "$SCRIPT_DIR/test_launcher_qalc_runtime.py"; then
     exit 1
 fi
 
+# Writes and reads a real launch-history store, and ranks the machine's own
+# desktop entries through it: whether AppSearch consults AppUsage at all is
+# invisible to a pure-logic test. Brings its own headless weston.
+echo "Running app usage store runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_app_usage_runtime.py"; then
+    echo "App usage store runtime tests failed."
+    exit 1
+fi
+
 # Renders real cards and reads the pixels under them: the shadow is not
 # reachable from a source-text check. Brings its own headless weston.
 echo "Running widget card shadow tests..."
