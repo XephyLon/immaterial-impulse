@@ -739,8 +739,15 @@ AbstractBackgroundWidget {
             ? 0.5 : 0
         visible: opacity > 0 && rootWidget.gridResizable && !rootWidget.interactionLocked
 
+        // The whole tier, not just its duration. Taking the number and leaving
+        // the curve hands the animation Qt's default, which is Easing.Linear -
+        // a generic curve, which docs/M3_GUIDELINES.md §2 forbids outright - so
+        // every grip in this shell has faded linearly beside neighbours easing
+        // on expressiveEffects. Entering Edit Mode reveals every resizable
+        // widget's grip at once, which is where one linear fade stops being one
+        // control's private detail.
         Behavior on opacity {
-            NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration }
+            animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)
         }
 
         Keys.onEscapePressed: event => {
