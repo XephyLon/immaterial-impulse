@@ -62,17 +62,18 @@ TestCase {
         fuzzyCompare(wide.x, 24, 1e-9);
     }
 
-    function test_a_tall_screen_is_bound_by_its_height_instead() {
-        // The vertical margins bind first here, so the horizontal slack grows -
-        // and it grows on the drawer's side, which is where the extra room is
-        // wanted. A geometry that took only the horizontal ratio would put the
-        // desktop's top and bottom edges off the screen.
-        const tall = EditMode.viewportGeometry({
-            screenWidth: 1080, screenHeight: 1920, drawerWidth: 100, margin: 40
+    function test_a_short_screen_is_bound_by_its_height_instead() {
+        // On a wide, short panel the vertical margins bind first, so the
+        // horizontal slack grows - and it grows on the drawer's side, which is
+        // where extra room is wanted. A geometry that took only the horizontal
+        // ratio would put the desktop's top and bottom edges off the screen.
+        const short = EditMode.viewportGeometry({
+            screenWidth: 1280, screenHeight: 400, drawerWidth: 120, margin: 40
         });
-        fuzzyCompare(tall.scale, (1920 - 80) / 1920, 1e-9);
-        verify(tall.height <= 1920 - 80 + 0.5);
-        verify(tall.width <= 1080 - 100 - 80 + 0.5);
+        fuzzyCompare(short.scale, (400 - 80) / 400, 1e-9);
+        verify(short.scale < (1280 - 120 - 80) / 1280);
+        verify(short.height <= 400 - 80 + 0.5);
+        verify(short.width <= 1280 - 120 - 80 + 0.5);
     }
 
     function test_the_inset_does_not_depend_on_the_drawer_being_open() {
