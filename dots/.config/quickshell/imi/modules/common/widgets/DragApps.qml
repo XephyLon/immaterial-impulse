@@ -438,6 +438,16 @@ Item {
 
         anchor {
             window: root.QsWindow.window
+            // The edges below are edges OF THIS RECT, and without it the rect
+            // is the window's origin - a point - so all four "edges" are the
+            // same place and only a corner that happens to be (0, 0) lands
+            // right. A bottom dock anchors top-left and a right dock
+            // left-top, so those two were correct by accident; a left dock
+            // wants (width, 0) and a top dock (0, height), and both opened
+            // ON TOP of the dock instead of beside it.
+            rect: Qt.rect(0, 0,
+                root.QsWindow.window?.width ?? 0,
+                root.QsWindow.window?.height ?? 0)
             adjustment: PopupAdjustment.None
             gravity: previewPopup.edgeFlags(previewPopup.anchorSides.gravity)
             edges: previewPopup.edgeFlags(previewPopup.anchorSides.edges)
