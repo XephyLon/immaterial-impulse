@@ -22,6 +22,16 @@ MouseArea {
     // config switch, whose meaning is "draw the grid while I drag".
     readonly property bool gridVisible: root.editMode
         || (showGrid && Config.options.background.showGrid)
+    // ...and it arrives and leaves rather than appearing. The lattice used to be
+    // a Repeater model going straight from 0 to a screen's worth of lines, so it
+    // popped on while the desktop eased into the mode beside it - the reading of
+    // "not M3E-compliant" that costs nothing to fix. An effects tier because
+    // this is an opacity, which is what elementMoveFast is for and what the
+    // centre lines in this same file already animate on.
+    property real gridStrength: root.gridVisible ? 1 : 0
+    Behavior on gridStrength {
+        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+    }
 
     // Desktop widgets sit on the background layer surface, which only accepts
     // keyboard input while GlobalStates.desktopWidgetKeyboardFocus flips it to
@@ -364,12 +374,15 @@ MouseArea {
         id: lattice
         anchors.fill: parent
         z: -1
+        // The delegates outlive the flag so the fade-out has something to fade.
+        opacity: root.gridStrength
+        visible: root.gridStrength > 0
         // Cannot take input, ever. The canvas's own press is what anchors the
         // marquee and what a widget's drag is measured against.
         enabled: false
 
         Repeater {
-            model: root.gridVisible ? Math.ceil(root.width / root.gridSize) : 0
+            model: root.gridStrength > 0 ? Math.ceil(root.width / root.gridSize) : 0
             delegate: Rectangle {
                 required property int index
                 x: index * root.gridSize
@@ -382,7 +395,7 @@ MouseArea {
         }
 
         Repeater {
-            model: root.gridVisible ? Math.ceil(root.height / root.gridSize) : 0
+            model: root.gridStrength > 0 ? Math.ceil(root.height / root.gridSize) : 0
             delegate: Rectangle {
                 required property int index
                 y: index * root.gridSize
@@ -396,7 +409,6 @@ MouseArea {
 
         Rectangle {
             id: centerLineV
-            visible: root.gridVisible
             x: root.width / 2 - width / 2
             width: root.centerXActive ? 2 : 1
             height: root.height
@@ -416,7 +428,6 @@ MouseArea {
 
         Rectangle {
             id: centerLineH
-            visible: root.gridVisible
             y: root.height / 2 - height / 2
             width: root.width
             height: root.centerYActive ? 2 : 1

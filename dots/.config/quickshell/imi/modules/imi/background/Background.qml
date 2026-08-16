@@ -555,12 +555,17 @@ Variants {
         // cannot arrive on different frames. It moves once per mode change, not
         // per frame, which is what makes a Behavior legitimate here at all.
         property real editProgress: GlobalStates.editMode ? 1 : 0
+        // The shell's default spatial move, taken whole rather than spelled out
+        // - the duration used to be a literal 400 beside the spatial curve,
+        // which is neither of the two tiers docs/M3_GUIDELINES.md offers (500ms
+        // expressiveDefaultSpatial for a spatial move, 400ms emphasizedDecel for
+        // an entrance) and so is a third timing nothing else in the shell moves
+        // at. `elementMove` and not `elementMoveEnter`/`Exit`, because those two
+        // carry `alwaysRunToEnd` and this toggle has to be able to reverse
+        // mid-flight: a mode entered and left again inside 400ms would otherwise
+        // finish arriving before it started leaving.
         Behavior on editProgress {
-            NumberAnimation {
-                duration: 400
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
-            }
+            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
         }
         readonly property var editTransform: EditMode.atProgress(bgRoot.editViewport, bgRoot.editProgress)
         // A scale about the top-left followed by a translation, written as one
