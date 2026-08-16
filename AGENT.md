@@ -2019,6 +2019,36 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   6b082ea16 ("feat(dock): the geometry module answers for the two side edges"),
   8e608cb61 ("feat(dock): the dock strip lays out along whichever edge it is on"),
   c7efc6db4 ("test(dock): the vertical edges get a contract and a real drag").
+- **A drag reorders a list by MOVING the dragged item, and a swap is the same answer only for a
+  step of one.** Four surfaces reorder by dragging — the bar's chip editor
+  (`modules/common/widgets/LayoutSection.qml`), the dock strip (`DragApps.qml`), the bar's copy of
+  that strip (`modules/imi/bar/DocktoPanel.qml`) and the Android quick toggles
+  (`AndroidQuickToggleButton.qml`) — and all four had the arithmetic written out locally. The
+  duplication was not the defect; the disagreement was. Two took the item out and put it back at
+  the drop index, so everything between shifted one place along. Two exchanged the two entries, so
+  a drag past three neighbours displaced exactly one of them and sent it back to where the drag
+  began, several slots from anything the pointer touched, while the three the user had just dragged
+  past did not move. Nobody saw it because an adjacent move and an adjacent swap produce the same
+  list, and a drag that keeps up with the pointer steps one slot at a time — the difference only
+  appears when the pointer outruns the events or crosses a wider icon.
+  `modules/common/functions/layout_ops.js` is the one answer now: `move`/`moveInPlace`, `insert`,
+  `remove`, and `indexAt` for the nearest-slot scan, which takes the axis from the caller because
+  only the caller knows which way its slots run (a column compared on x is the inert-comparison
+  case one entry up) and takes a **hole** for the dragged slot, which is still laid out where the
+  drag began and would otherwise be its own nearest neighbour. Two spellings of the move, not two
+  reorders: the quick toggles mutate the live `Config` array on purpose, and re-measured against a
+  real `property list<var>`, a splice-out and a splice-in on the live property both take effect and
+  notify — 26b625905 ("Revert \"fix(sidebar): make quick toggle edits actually notify\" and
+  follow-ups"). The store stays with the call site, because where a list lives and when it is
+  written back genuinely differ between the four and only the arithmetic is shared.
+  `tests/lint_reorder_arithmetic.py` scopes itself by gesture rather than by name — a QML file
+  declaring a `DragHandler` — which is what lets `DesktopContextMenu.qml`'s Fisher-Yates wallpaper
+  shuffle keep the element-exchange idiom without an allowlist, and it fails if one of the four
+  stops reaching the module rather than sweeping an empty set.
+  a8d6aa4fc ("feat(layout): one module for the reorder four surfaces each worked out"),
+  0bc44f475 ("fix(dock): a dragged icon moves to where it was dropped, it does not swap"),
+  52da8b43e ("fix(quickToggles): a dropped toggle moves into place instead of swapping"),
+  893bfc31a ("test(lint): fail on a reorder spelled out beside a DragHandler").
 - **`MouseArea.drag` cannot accurately drag a target the MouseArea itself follows.** QQuickDrag
   rebases its press origin when the grab is established, silently swallowing the arming move's
   delta — a few threshold pixels under a real pointer, invisible behind the widget lattice's 12px
