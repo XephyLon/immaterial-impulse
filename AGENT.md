@@ -461,12 +461,18 @@ modules/imi/                 The "imi" (Immaterial Impulse) panel family - one d
                               the sidebars
   background/                 Desktop background + the canvas the draggable desktop widgets sit on.
                               ClockDepthCutout.qml is the wallpaper's subject cut out by its mask -
-                              the ONE place the mask's registration is computed, drawn both by the
-                              depth layer and by the picker that judges it (see the clock-depth
-                              notes below).
+                              the ONE place the mask's registration is computed, drawn by the depth
+                              layer, by the picker that shows per-wallpaper state, and by the
+                              desktop selector that authors it (see the clock-depth notes below).
                               The widgets themselves are all bundled plugins now (see
                               modules/common/plugins/bundled/); background/widgets/ holds only
                               AbstractBackgroundWidget.qml, which is the plugin host's base class.
+  clockDepthSelect/           Picking that subject ON the desktop: a transparent, screen-sized
+                              Overlay surface per output that draws the candidate cutout into the
+                              box Background publishes, over the live widgets, and turns a click
+                              into a MobileSAM prompt. It redraws neither the wallpaper nor the
+                              widgets - both are already on screen, which is what makes the pixels
+                              clicked the pixels the depth layer will mask
   overview/                   Workspace/window overview (like GNOME Activities)
   notificationPopup/          Desktop notification popups
   settings/                   The in-shell settings UI (pages/ = one file per settings category)
@@ -539,11 +545,14 @@ services/                  Singletons wrapping external state/processes - one pe
                               the desktop clock's depth mode. Asks
                               scripts/background/subject_mask.py - the shell never computes a cache
                               key of its own - and queries nothing at all until either
-                              background.clockDepth.enable or the picker is open. The `run` and
-                              `select` halves are reached ONLY from the wallpaper selector's
-                              picker; nothing reactive can start segmentation. It also holds the
-                              prompted model's clicks for the wallpaper on screen, restored from
-                              the cache once per wallpaper rather than on every status
+                              background.clockDepth.enable, the picker, or the desktop selector is
+                              open. `run` is reached ONLY from the wallpaper selector's picker and
+                              `select` ONLY from the desktop selector; nothing reactive can start
+                              segmentation. It also holds the prompted model's clicks for the
+                              wallpaper on screen, restored from the cache once per wallpaper
+                              rather than on every status, and `selectable` - whether the desktop
+                              is currently showing the still image it is asking about, which is
+                              the precondition both of those surfaces gate the gesture on
   MprisController.qml         The one answer to "which player is the media UI showing". It filters
                               the bus list (proxies always, duplicates by setting) through
                               MprisSelection.js - a .pragma library kept pure so the rules are
@@ -2516,6 +2525,74 @@ Four things about that column generalise past it:
   buying the refusal it looked like it was for, since a click on flat sky comes
   back at 1.6-10% because SAM answers with the sky.
   (fix(background): a click's floor is not the detectors' floor.)
+
+**And the click belongs on the desktop, because a mask judged at screen size
+cannot be authored on a thumbnail.** The gesture shipped on a ~300px preview
+inside the depth picker, which is a structural mismatch rather than a matter of
+taste: the mask is scored against real widgets at 5120x1440 and was being aimed
+at a postage stamp, so a click landing on a character's shoulder in the preview
+is several hundred pixels off in the thing being judged - and nothing reports it,
+because a mis-aimed click comes back as a perfectly good mask of the wrong thing.
+`modules/imi/clockDepthSelect/` is a transparent, screen-sized `Overlay` surface
+per output; the picker keeps the two detector columns, this wallpaper's verdict
+and the way in. Four things about it generalise.
+
+- **Nothing on that surface redraws anything, and that is the whole design.**
+  The wallpaper is already on screen at exactly the size and crop the mask has
+  to line up with, and the widgets are already under it, so the pixels clicked
+  are the pixels the depth layer will mask by construction rather than by
+  arithmetic, and the cutout drawn over the widgets IS the occlusion being
+  judged. A second copy of either is a second chance to be misaligned, in a
+  feature that already spent an evening on a misalignment that turned out not to
+  exist (see the two-captures entry above). `test_clock_depth_select_contract.py`
+  fails the suite on an `Image` appearing in that file at all.
+- **A layer surface cannot read another window's items, so the geometry is
+  PUBLISHED rather than re-derived.** The wallpaper viewport is oversized and
+  offset by the parallax pan, and `ParallaxMath.offsets` is right there and
+  pure - reconstructing it on the selector's side would look like reuse and be a
+  second derivation of the one number `ClockDepthCutout` exists to have only one
+  of. `Background.qml` publishes the depth layer's own live box per screen into
+  `GlobalStates.clockDepthViewports` (including the wallpaper ITEM's source, not
+  the config path, for the reason the layer reads the item), the surface draws
+  its cutout into that box, and the click is measured against the rectangle that
+  same cutout publishes. The binding is null while the mode is disarmed, so it is
+  a comparison rather than a fresh object per frame of every pan for the rest of
+  the session. Note which coordinate space that leaves: a click arrives in SCREEN
+  coordinates and the registration is expressed inside the box, so
+  `clockDepth.js`'s `promptFromScreen` composes the translation - and the
+  translation is exactly the term that is zero with parallax off, i.e. correct on
+  the first screen anyone tries it on and wrong on every workspace but the middle
+  one.
+- **Two flags meaning "somebody is picking" is one flag too many.** `ClockDepth`
+  drops every cached answer the moment nothing is `watching`, and the picker's
+  claim (`picking`) dies with the picker as the wallpaper selector closes. Giving
+  the new mode a second write of that same bool means whichever surface goes away
+  last clears it, on an ordering nothing controls - and clearing it forgets the
+  candidate the user walked out to judge. `watching` reads
+  `GlobalStates.clockDepthSelectOpen` directly instead, and the entry point arms
+  BEFORE either surface closes.
+- **The predicate for "can this be picked on" is deliberately not a subset of
+  `eligible`.** Two of that function's refusals - no mask, and the per-wallpaper
+  opt-out - are precisely the states picking exists to change, so inheriting them
+  would make the feature unreachable from the half of the library it was built
+  for. `selectable` refuses the other thing they have in common: a desktop whose
+  pixels are not the still image the producer is being asked about (a preview the
+  wallpaper selector reverts on close, a live Wallpaper Engine project, centred
+  mode, the lock screen). `eligible` gains one refusal of its own, `selecting`,
+  because the accepted mask drawn under a candidate is a second silhouette and
+  wherever the two disagree the difference reads as the candidate having claimed
+  something it did not.
+
+  Two smaller ones. The surface takes `OnDemand` keyboard focus, never
+  `Exclusive` - there is one per output and an Exclusive grab is session-wide,
+  the trap `Screensaver.qml` records. And its namespace needs `blur = false` plus
+  a region over its toolbar rather than falling through to the catch-all
+  `ignore_alpha = 0.05`, under which a screen-sized surface of transparent pixels
+  asks the compositor to blur the entire screen.
+  3869f90e9 ("feat(clockDepthSelect): pick the wallpaper's subject on the desktop itself"),
+  e3f0f7e00 ("feat(background): stand the depth layer down while a pick is live, and hand over its box"),
+  3e30a844b ("feat(clockDepth): answer where a desktop click lands, and when one is allowed"),
+  5ad1db2be ("refactor(wallpapers): make the depth picker the way in, not the place to author").
 
 **A segmentation model returning nothing is usually the wrong model, not an empty
 picture.** `isnet-anime` and `isnet-general-use` are complementary and neither is
