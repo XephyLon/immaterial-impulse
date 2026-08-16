@@ -1211,6 +1211,20 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   *temporarily* inert (`enabledWhen`), which is a different thing.
   a03f1b266 ("feat(plugins): show a widget's own options above the host's"),
   008e51dc9 ("feat(plugins): offer a resizable widget's span as a settings row").
+  **The host's booleans in that section are a toggle bar, not rows — a new one is a
+  `behaviourRows` entry and nothing else.** Six `ConfigSwitch`es spent 212px of the card on six
+  bits; a `FlowButtonGroup` of `IconToolbarButton`s spends 72px, so adding a seventh host boolean
+  as a row would be both inconsistent and the expensive spelling. Two things about the bar do not
+  generalise from a row and are checked: a glyph cannot label itself, so every toggle carries a
+  `label` and the caption under the bar shows the hovered one — and, off-hover, which of them are
+  on, which is the half of a switch row's label that selected-state colour does not replace; and
+  the hovered label is cleared only by the toggle that wrote it, because a pointer crossing
+  between two toggles delivers the leave and the enter in an order nothing here controls. The
+  toggle is composed from `IconToolbarButton` precisely so the cursor, the toggled container
+  states and the *single* application of the interaction motion come from the control rather than
+  being re-earned (see the composites rules under
+  [Dynamic/data-driven QML gotchas](#dynamicdata-driven-qml-gotchas)).
+  b89908fef ("feat(plugins): draw the widget behaviour section as a toggle bar").
 - **A desktop widget opts out of the parallax pan by cancelling it, not by being offset less.**
   The widget canvas is one item whose `x`/`y` *are* the widget parallax (`Background.qml`), so
   every widget on it travels because its parent does. `followParallax: false` therefore adds
