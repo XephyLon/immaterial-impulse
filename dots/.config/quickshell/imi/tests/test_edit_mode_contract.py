@@ -187,6 +187,43 @@ def test_the_frost_names_its_condition_rather_than_one_of_its_causes():
     assert "!rootWidget.frostSuspended" in text, "the blur Repeater ignores the gate"
 
 
+def test_the_chrome_stands_down_through_two_gates_and_not_one():
+    # Both are load-bearing and the pixel probe cannot see it: with the Loader
+    # gated and the opacity not, the chrome is gone anyway, and vice versa - so
+    # a frame comparison passes on a tree with one of them left. Which is
+    # exactly why the second one gets deleted as redundant one day.
+    text = read(BACKGROUND)
+    chrome = re.search(r"Loader \{\s*id: editChrome(.*?)\n        \}", text, re.S)
+    assert chrome, "the mode's chrome loader is gone"
+    body = chrome.group(1)
+    assert re.search(r"active:\s*bgRoot\.editProgress > 0", body), \
+        "the chrome must not exist while the mode is off"
+    assert re.search(r"opacity:\s*bgRoot\.editProgress", body), \
+        "the chrome must be transparent while the mode is off"
+    # ...and its geometry is the module's answer, not a second one.
+    assert "card: bgRoot.editCard" in body and "cardRadius: bgRoot.editCardRadius" in body
+    assert "EditMode.cardRect(" in text, \
+        "the card's rectangle must come from the same arithmetic as the transform"
+
+
+def test_the_lattice_declares_where_it_sits_rather_than_inheriting_it():
+    # The desktop widgets are EXTERNAL children of the canvas, so declaration
+    # order decides nothing here; a grid Rectangle at the canvas's root is back
+    # to the stacking being whatever each Repeater's model happened to fill
+    # first.
+    text = read(CANVAS)
+    lattice = re.search(r"Item \{\s*id: lattice(.*?)\n    \}", text, re.S)
+    assert lattice, "the lattice is not one item any more"
+    assert re.search(r"^\s*z: -1\s*$", lattice.group(1), re.M), \
+        "the lattice must declare that it sits below the widgets"
+    for match in re.finditer(r"gridSize\b", text):
+        line_start = text.rfind("\n", 0, match.start()) + 1
+        if not re.match(r"\s*(x|y|model):", text[line_start:match.start() + 8]):
+            continue
+        assert lattice.start() < match.start() < lattice.end(), \
+            "a line of the lattice is drawn outside the item that owns its order"
+
+
 def test_the_inset_is_derived_from_one_declared_drawer_width():
     module = read(MODULE)
     assert "function viewportGeometry" in module
