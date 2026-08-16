@@ -65,13 +65,91 @@ Singleton {
     property string queriedPath: ""
 
     // The picker's side. Everything below is reached only from a button.
-    readonly property list<string> models: ["isnet-anime", "isnet-general-use"]
+    //
+    // The producer names the models and says what each is asked with, so the
+    // picker does not carry a second copy of the list. This is the value it
+    // answers with today, kept only so the picker's columns are drawn on the
+    // frame it opens rather than 200ms later - `tests/test_clock_depth_models.py`
+    // fails the suite when it stops matching what the producer reports.
+    property var modelSpecs: [
+        { "name": "isnet-anime", "kind": "salient" },
+        { "name": "isnet-general-use", "kind": "salient" },
+        { "name": "mobile-sam", "kind": "prompted" }
+    ]
+    readonly property var models: root.modelSpecs.map(spec => spec.name)
     // "" while nothing is running, otherwise the model being segmented. The
     // picker disables itself on this rather than on a bare boolean, so it can
     // say WHICH model is running - a run is 1.3 to 4.5 seconds and a button that
     // only greys out reads as a hang.
     property string running: ""
     property string lastError: ""
+
+    // The clicks the prompted column is working from, in the picture's own
+    // normalised frame. One list rather than one per model because there is one
+    // prompted model; the producer refuses the verb for the others.
+    property var points: []
+    // Restoration is keyed on the wallpaper rather than done on every status,
+    // because a click that finds nothing writes no candidate - so re-reading the
+    // prompt off the cache after one would silently discard the click the user
+    // just made, along with any way to undo or refine it.
+    property string promptRestoredFor: ""
+    // A click that arrived while the previous one was still decoding. Dropping
+    // it would be the natural thing and the wrong one: the whole gesture is
+    // adding points, and at ~0.3s per decode a user placing three of them
+    // outruns it.
+    property bool selectPending: false
+
+    readonly property string promptedModel: {
+        for (const spec of root.modelSpecs) {
+            if (spec.kind === "prompted")
+                return spec.name
+        }
+        return ""
+    }
+    // What the prompted column was cut with, whether or not it is the one the
+    // desktop draws. The picker shows these back so re-opening on a wallpaper
+    // is the gesture continued rather than an unexplained cutout.
+    property var prompts: ({})
+    property var acceptedPrompt: []
+
+    function addPoint(x: real, y: real, include: bool): void {
+        if (root.promptedModel === "")
+            return
+        root.points = root.points.concat([{ "x": x, "y": y, "label": include ? 1 : 0 }])
+        root.selectPoints()
+    }
+
+    function undoPoint(): void {
+        if (root.points.length === 0)
+            return
+        root.points = root.points.slice(0, root.points.length - 1)
+        root.selectPoints()
+    }
+
+    function clearPoints(): void {
+        root.points = []
+        root.selectPoints()
+    }
+
+    function selectPoints(): void {
+        if (root.wallpaperPath === "" || root.promptedModel === "")
+            return
+        if (root.running !== "") {
+            root.selectPending = true
+            return
+        }
+        root.lastError = ""
+        root.selectPending = false
+        root.running = root.promptedModel
+        const args = root.points.map(point =>
+            `--point ${point.x.toFixed(4)},${point.y.toFixed(4)},${point.label}`).join(" ")
+        selectProcess.command = ["bash", "-c",
+            `source "\${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV}/bin/activate" && ` +
+            `python3 '${Directories.scriptPath}/background/subject_mask.py' select ` +
+            `'${StringUtils.shellSingleQuoteEscape(root.wallpaperPath)}' ` +
+            `--model ${root.promptedModel} ${args}`]
+        selectProcess.running = true
+    }
 
     // Deliberately not driven by anything reactive. Segmentation costs ~1GB of
     // transient RSS and produces an unusable mask about a third of the time, so
@@ -124,6 +202,11 @@ Singleton {
         root.candidates = ({})
         root.acceptedModel = ""
         root.queriedPath = ""
+        root.prompts = ({})
+        root.acceptedPrompt = []
+        root.points = []
+        root.promptRestoredFor = ""
+        root.selectPending = false
     }
 
     onWallpaperPathChanged: {
@@ -191,6 +274,22 @@ Singleton {
                 root.maskPath = parsed.state === "accepted" ? (parsed.mask ?? "") : ""
                 root.candidates = parsed.candidates ?? ({})
                 root.acceptedModel = parsed.acceptedModel ?? ""
+                root.prompts = parsed.prompts ?? ({})
+                root.acceptedPrompt = parsed.acceptedPrompt ?? []
+                if (Array.isArray(parsed.models) && parsed.models.length > 0)
+                    root.modelSpecs = parsed.models
+                if (root.promptRestoredFor !== root.queriedPath) {
+                    root.promptRestoredFor = root.queriedPath
+                    // The candidate's clicks first: that is the working state,
+                    // and it exists whenever the user has clicked at all. The
+                    // accepted mask's are the fallback, so re-opening on a
+                    // wallpaper whose cutout was kept shows the gesture that
+                    // produced what is on screen rather than an empty preview
+                    // with no way back into it.
+                    const candidate = root.prompts?.[root.promptedModel]
+                    root.points = Array.isArray(candidate) ? candidate
+                        : (Array.isArray(root.acceptedPrompt) ? root.acceptedPrompt : [])
+                }
             }
         }
     }
@@ -217,6 +316,38 @@ Singleton {
                 // comes back through the one reader rather than being mirrored
                 // here into a second notion of the same state.
                 root.refresh()
+            }
+        }
+    }
+
+    Process {
+        id: selectProcess
+        stdout: StdioCollector {
+            id: selectCollector
+            onStreamFinished: {
+                root.running = ""
+                let parsed = null
+                try {
+                    parsed = JSON.parse(selectCollector.text)
+                } catch (error) {
+                    parsed = null
+                }
+                if (!parsed || parsed.state === "error") {
+                    root.lastError = parsed?.error
+                        ?? Translation.tr("Could not cut a mask from those points.")
+                    root.selectPending = false
+                    return
+                }
+                if (parsed.state === "empty")
+                    root.lastError = Translation.tr(
+                        "Nothing there. Click on the subject itself, or right-click to exclude what it grabbed.")
+                // Same discipline as a run: the select wrote a candidate or
+                // removed one, and `status` is what turns either into what the
+                // picker draws - so the answer comes back through the one
+                // reader rather than being mirrored into a second notion of it.
+                root.refresh()
+                if (root.selectPending)
+                    root.selectPoints()
             }
         }
     }
