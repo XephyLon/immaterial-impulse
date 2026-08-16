@@ -56,6 +56,21 @@ Always use predefined rounding values from `Appearance.rounding`. Never use hard
 - `verylarge` (30px): Prominent dialogs, major distinct UI blocks.
 - `full` (9999px): Circular elements, full-bleed pills, FABs.
 
+Three rungs carry a second, Material-3-spelled name, because the vendored design system under
+`modules/common/plugins/designsystem` speaks the M3 shape-scale dialect (its `ExpressiveTokens`
+exposes `Appearance.rounding` as `shape`). They are aliases, not extra values - a tier with two
+names cannot disagree with itself, the way a tier with two numbers eventually does:
+
+- `button` = `small` (12px).
+- `card` = `normal` (17px).
+- `extraLarge` = `verylarge` (30px) - M3 calls its top non-`full` tier "extra large".
+
+Prefer the ladder's own name in new mainline code; the aliases exist so the vendored library's call
+sites resolve. All three were read for the whole life of that port without being declared, which
+renders as a 0 radius (or a NaN, where the call site does arithmetic on it) rather than as an
+error - `tests/lint_appearance_tokens.py` now fails the suite on an undeclared token, and
+`tests/tst_spacing_scale.qml` pins both the ladder and the three aliases.
+
 A radius that is deliberately *computed* from a parent's radius (e.g. a child nested inside a
 rounded parent, sized to the parent's radius minus its inset so the corners nest correctly) is not
 a violation of this rule - keep the computed expression rather than snapping it to a token.
