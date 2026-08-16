@@ -370,7 +370,10 @@ class MaskFileTest(unittest.TestCase):
         image = self.written()
         luminance = image.getchannel("L")
         alpha = image.getchannel("A")
-        self.assertEqual(list(luminance.getdata()), list(alpha.getdata()),
+        # tobytes() rather than getdata(): Pillow is deprecating the latter,
+        # and a warning printed by a green test is the noise that hides the
+        # next real one.
+        self.assertEqual(luminance.tobytes(), alpha.tobytes(),
                          "the file is meant to be looked at as well as masked with")
 
     def test_the_mask_keeps_the_models_own_resolution(self):
