@@ -167,18 +167,23 @@ DockButton {
                     // into its neighbour rather than out of the dock.
                     readonly property string dotSide: DockGeometry.outwardSide(root.dockEdge)
                     flow: root.dockVertical ? Flow.TopToBottom : Flow.LeftToRight
-                    anchors {
-                        top: dotSide === "bottom" ? iconImageLoader.bottom : undefined
-                        bottom: dotSide === "top" ? iconImageLoader.top : undefined
-                        left: dotSide === "right" ? iconImageLoader.right : undefined
-                        right: dotSide === "left" ? iconImageLoader.left : undefined
-                        topMargin: dotSide === "bottom" ? Appearance.spacing.space25 : 0
-                        bottomMargin: dotSide === "top" ? Appearance.spacing.space25 : 0
-                        leftMargin: dotSide === "right" ? Appearance.spacing.space25 : 0
-                        rightMargin: dotSide === "left" ? Appearance.spacing.space25 : 0
-                        horizontalCenter: root.dockVertical ? undefined : parent.horizontalCenter
-                        verticalCenter: root.dockVertical ? parent.verticalCenter : undefined
-                    }
+                    // Hung off the icon by an OFFSET rather than by an anchor
+                    // on the outward side. The anchor version moved between
+                    // sides when the dock turned, and for that turn the new
+                    // side and the centre anchor it replaces share one axis -
+                    // which Qt answers by writing the item's own width from
+                    // the two anchors instead of by ignoring one of them. See
+                    // Dock.qml's own strip, where the same pair left a 5120px
+                    // wide item inside a 75px surface.
+                    readonly property real dotPushX:
+                        (iconImageLoader.width + width) / 2 + Appearance.spacing.space25
+                    readonly property real dotPushY:
+                        (iconImageLoader.height + height) / 2 + Appearance.spacing.space25
+                    anchors.centerIn: parent
+                    anchors.horizontalCenterOffset: dotSide === "right" ? dotPushX
+                        : (dotSide === "left" ? -dotPushX : 0)
+                    anchors.verticalCenterOffset: dotSide === "bottom" ? dotPushY
+                        : (dotSide === "top" ? -dotPushY : 0)
                     Repeater {
                         model: Math.min(appToplevel.toplevels.length, 3)
                         delegate: Rectangle {

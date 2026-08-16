@@ -274,18 +274,20 @@ Item {
                             // a change made only there.
                             readonly property string dotSide: DockGeometry.outwardSide(root.dockEdge)
                             flow: root.vertical ? Flow.TopToBottom : Flow.LeftToRight
-                            anchors {
-                                top: dotSide === "bottom" ? appIcon.bottom : undefined
-                                bottom: dotSide === "top" ? appIcon.top : undefined
-                                left: dotSide === "right" ? appIcon.right : undefined
-                                right: dotSide === "left" ? appIcon.left : undefined
-                                topMargin: dotSide === "bottom" ? Appearance.spacing.space25 : 0
-                                bottomMargin: dotSide === "top" ? Appearance.spacing.space25 : 0
-                                leftMargin: dotSide === "right" ? Appearance.spacing.space25 : 0
-                                rightMargin: dotSide === "left" ? Appearance.spacing.space25 : 0
-                                horizontalCenter: root.vertical ? undefined : parent.horizontalCenter
-                                verticalCenter: root.vertical ? parent.verticalCenter : undefined
-                            }
+                            // The icon is centred in this slot, so hanging the
+                            // dots off it is a push from the same centre - and
+                            // an offset, unlike an anchor, cannot land on an
+                            // axis that already holds one when the dock turns.
+                            // See DockAppButton, which carries the other copy.
+                            readonly property real dotPushX:
+                                (appIcon.width + width) / 2 + Appearance.spacing.space25
+                            readonly property real dotPushY:
+                                (appIcon.height + height) / 2 + Appearance.spacing.space25
+                            anchors.centerIn: parent
+                            anchors.horizontalCenterOffset: dotSide === "right" ? dotPushX
+                                : (dotSide === "left" ? -dotPushX : 0)
+                            anchors.verticalCenterOffset: dotSide === "bottom" ? dotPushY
+                                : (dotSide === "top" ? -dotPushY : 0)
                             Repeater {
                                 model: Math.min(slotItem.appEntry?.toplevels?.length ?? 0, 3)
                                 delegate: Rectangle {
@@ -492,19 +494,20 @@ Item {
                 color: Appearance.m3colors.m3surfaceContainer
                 radius: Appearance.rounding.normal
                 // Pushed off the side facing the dock by the elevation margin,
-                // so the shadow has somewhere to fall.
-                readonly property var cardMargins: DockGeometry.directedSides(
-                    root.dockEdge, 0, Appearance.sizes.elevationMargin)
-                anchors.bottom: popupMouseArea.dockSide === "bottom" ? parent.bottom : undefined
-                anchors.top: popupMouseArea.dockSide === "top" ? parent.top : undefined
-                anchors.left: popupMouseArea.dockSide === "left" ? parent.left : undefined
-                anchors.right: popupMouseArea.dockSide === "right" ? parent.right : undefined
-                anchors.bottomMargin: cardMargins.bottom
-                anchors.topMargin: cardMargins.top
-                anchors.leftMargin: cardMargins.left
-                anchors.rightMargin: cardMargins.right
-                anchors.horizontalCenter: root.vertical ? undefined : parent.horizontalCenter
-                anchors.verticalCenter: root.vertical ? parent.verticalCenter : undefined
+                // so the shadow has somewhere to fall - said as a push from
+                // the centre rather than as an anchor on that side, for the
+                // reason the running dots above carry: the side an anchor
+                // lands on moves when the dock turns, and it moves onto the
+                // axis the centre anchor was holding.
+                readonly property real cardPushX:
+                    (parent.width - width) / 2 - Appearance.sizes.elevationMargin
+                readonly property real cardPushY:
+                    (parent.height - height) / 2 - Appearance.sizes.elevationMargin
+                anchors.centerIn: parent
+                anchors.horizontalCenterOffset: popupMouseArea.dockSide === "right" ? cardPushX
+                    : (popupMouseArea.dockSide === "left" ? -cardPushX : 0)
+                anchors.verticalCenterOffset: popupMouseArea.dockSide === "bottom" ? cardPushY
+                    : (popupMouseArea.dockSide === "top" ? -cardPushY : 0)
                 implicitHeight: previewRowLayout.implicitHeight + padding * 2
                 implicitWidth:  previewRowLayout.implicitWidth  + padding * 2
                 Behavior on implicitWidth {

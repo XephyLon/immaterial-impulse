@@ -104,24 +104,13 @@ Item {
                 id: menuBackground
                 property real contentPadding: Appearance.spacing.space50
 
-                // The card hugs the side of its surface that faces the dock,
-                // pushed off it by the elevation margin so the shadow has
-                // somewhere to fall.
-                readonly property string dockSide: DockGeometry.outwardSide(root.dockEdge)
-                readonly property var cardMargins: DockGeometry.directedSides(
-                    root.dockEdge, 0, Appearance.sizes.elevationMargin)
-                anchors {
-                    top: menuBackground.dockSide === "top" ? parent.top : undefined
-                    bottom: menuBackground.dockSide === "bottom" ? parent.bottom : undefined
-                    left: menuBackground.dockSide === "left" ? parent.left : undefined
-                    right: menuBackground.dockSide === "right" ? parent.right : undefined
-                    horizontalCenter: root.dockVertical ? undefined : parent.horizontalCenter
-                    verticalCenter: root.dockVertical ? parent.verticalCenter : undefined
-                    topMargin: menuBackground.cardMargins.top
-                    bottomMargin: menuBackground.cardMargins.bottom
-                    leftMargin: menuBackground.cardMargins.left
-                    rightMargin: menuBackground.cardMargins.right
-                }
+                // The surface is the card plus an elevation margin on every
+                // side, so centring IS the old "hug the side facing the dock
+                // and push off it by the elevation margin" - it lands on the
+                // same pixel at all four edges, and it does so without an
+                // anchor that has to move to another side when the dock turns
+                // (see Dock.qml's strip for what that costs).
+                anchors.centerIn: parent
                 color: Appearance.m3colors.m3surfaceContainer
                 radius: Appearance.rounding.normal
                 implicitWidth: menuColumn.implicitWidth + contentPadding * 2
