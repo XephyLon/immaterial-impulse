@@ -169,6 +169,39 @@ class StatusTest(unittest.TestCase):
         self.assertIsNone(result["candidates"][models[0]])
         self.assertIsNotNone(result["candidates"][models[1]])
 
+    def test_every_mask_is_reported_with_a_revision_that_moves_with_its_bytes(self):
+        """Qt caches a pixmap by URL, and both mask files are rewritten in place.
+
+        Measured with a qml6 probe: a 32x8 PNG rewritten at 99x17 and
+        re-assigned to the identical URL still reported 32x8, and clearing the
+        source to "" first did not help. So without a token that changes, a
+        click-refined candidate and a re-accepted mask both keep drawing
+        whichever version loaded first, for the rest of the session, with
+        nothing in any log. A string, because these are nanoseconds and 1.8e18
+        does not survive a JSON round trip through a double.
+        """
+        candidate = self.cache / f"{self.key}.mobile-sam.png"
+        candidate.write_bytes(b"first")
+        accepted = self.cache / f"{self.key}.png"
+        accepted.write_bytes(b"first")
+        before = self.status()
+        self.assertIsInstance(before["revisions"]["mobile-sam"], str)
+        self.assertIsInstance(before["maskRevision"], str)
+
+        later = time.time() + 120
+        candidate.write_bytes(b"second")
+        os.utime(candidate, (later, later))
+        accepted.write_bytes(b"second")
+        os.utime(accepted, (later, later))
+        after = self.status()
+        self.assertNotEqual(before["revisions"]["mobile-sam"],
+                            after["revisions"]["mobile-sam"])
+        self.assertNotEqual(before["maskRevision"], after["maskRevision"])
+
+    def test_a_refusal_carries_no_revision_because_it_has_no_file(self):
+        (self.cache / f"{self.key}.isnet-anime.none").write_text("")
+        self.assertNotIn("isnet-anime", self.status()["revisions"])
+
     def test_an_unreadable_wallpaper_answers_rather_than_crashing(self):
         result = subject_mask.status(self.cache, self.dir / "not-here.png")
         self.assertEqual(result["state"], "unreadable")

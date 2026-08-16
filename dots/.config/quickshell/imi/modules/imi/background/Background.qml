@@ -1312,6 +1312,7 @@ Variants {
                 // image under the outgoing image's mask for the length of it.
                 wallpaperSource: wallpaper.source
                 maskPath: ClockDepth.maskPath
+                maskRevision: ClockDepth.maskRevision
             }
         }
 

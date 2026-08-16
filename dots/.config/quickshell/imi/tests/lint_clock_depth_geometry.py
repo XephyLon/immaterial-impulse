@@ -246,6 +246,18 @@ def check(raw, cutout_raw=None):
              f"{WALLPAPER_ID + '.source'!r}: it must draw whatever the wallpaper "
              f"item is drawing, not whatever the config currently names")
 
+    # Qt caches a pixmap by URL, and the accepted mask is rewritten AT THE SAME
+    # PATH whenever a second candidate is accepted for the same wallpaper - so a
+    # layer that names the path without the producer's revision token draws
+    # whichever mask happened to load first, for the rest of the session, with
+    # nothing in any log. Measured with a qml6 probe: re-assigning the identical
+    # URL after the file changed still served the old bytes, and clearing the
+    # source to "" first did not help.
+    revision_binding = declaration(cutout_use, "maskRevision") if cutout_use else None
+    if not revision_binding:
+        fail(f"{CUTOUT_TYPE} is given no maskRevision: the accepted mask is "
+             f"rewritten in place, and Qt would keep serving the cached one")
+
     # Without the mask the layer is a copy of the wallpaper drawn at full
     # opacity over the clock - the loudest possible version of this feature's
     # own failure, and one that nothing else here would notice, because every
@@ -287,6 +299,7 @@ Item {
         anchors.fill: parent
         wallpaperSource: wallpaper.source
         maskPath: ClockDepth.maskPath
+        maskRevision: ClockDepth.maskRevision
     }
 }
 Image {
@@ -393,8 +406,11 @@ def self_check():
             "wallpaperSource: wallpaper.source", "wallpaperSource: bgRoot.wallpaperPath"),
         "the layer rebuilding the cutout itself": SELF_CHECK_BACKGROUND.replace(
             "    ClockDepthCutout {\n        id: clockDepthCutout\n        anchors.fill: parent\n"
-            "        wallpaperSource: wallpaper.source\n        maskPath: ClockDepth.maskPath\n    }",
+            "        wallpaperSource: wallpaper.source\n        maskPath: ClockDepth.maskPath\n"
+            "        maskRevision: ClockDepth.maskRevision\n    }",
             "    Image { id: hand; source: wallpaper.source }"),
+        "the mask cache-buster dropped": SELF_CHECK_BACKGROUND.replace(
+            "        maskRevision: ClockDepth.maskRevision\n", ""),
     }
     cutout_mutations = {
         "the mask dropped entirely": re.sub(

@@ -27,6 +27,16 @@ Item {
     // outgoing image's mask for the length of every switch.
     property url wallpaperSource
     property string maskPath: ""
+    // A token that changes when the mask file's bytes do, hung on the URL as a
+    // fragment. Qt caches a pixmap by URL and a mask is rewritten at the SAME
+    // path twice over - once per click while a subject is being selected, and
+    // again when a second candidate is accepted for the same wallpaper.
+    // Measured with a qml6 probe: a 32x8 image rewritten at 99x17 and
+    // re-assigned to the identical URL still reported 32x8, and clearing the
+    // source to "" first did not help either; with a fragment it loaded the new
+    // bytes. The fragment is not part of the filename, so nothing else about
+    // the load changes. The producer owns the token, as it owns the key.
+    property string maskRevision: ""
 
     // The registered mask surface, exposed so an inspector can draw over the
     // SAME item rather than rebuild a second one from the same numbers - which
@@ -89,7 +99,8 @@ Item {
             y: mask.coverRect.y
             width: mask.coverRect.width
             height: mask.coverRect.height
-            source: root.maskPath === "" ? "" : `file://${root.maskPath}`
+            source: root.maskPath === "" ? ""
+                : `file://${root.maskPath}${root.maskRevision === "" ? "" : "#" + root.maskRevision}`
             fillMode: Image.Stretch
             smooth: true
             asynchronous: true
