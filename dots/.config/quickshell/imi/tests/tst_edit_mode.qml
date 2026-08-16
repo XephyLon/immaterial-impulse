@@ -78,14 +78,30 @@ TestCase {
         // re-centring, would break this while looking fine on one screen.
         for (const [width, geometry] of [[5120, wide], [1600, narrow]]) {
             verify(width - (geometry.x + geometry.width) >= 400 + 24 - 0.5);
-            fuzzyCompare(geometry.x, 24, 1e-9);
+            verify(geometry.x >= 24 - 1e-9);
         }
     }
 
     function test_the_desktop_keeps_its_aspect_and_is_centred_vertically() {
         fuzzyCompare(wide.height / wide.width, 1440 / 5120, 1e-9);
         fuzzyCompare(wide.y, (1440 - wide.height) / 2, 0.5);
-        fuzzyCompare(wide.x, 24, 1e-9);
+        // On a screen where the drawer is what binds, the desktop sits at the
+        // margin exactly and every spare pixel is the drawer's.
+        fuzzyCompare(narrow.x, 24, 1e-9);
+    }
+
+    function test_room_the_drawer_did_not_ask_for_is_split_rather_than_all_given_to_it() {
+        // The ceiling leaves a wide screen with far more space beside the
+        // desktop than the drawer needs, and putting all of it on one side sits
+        // the desktop against the screen edge with a drawer's width of empty
+        // blur opposite - which reads as the desktop having been shoved aside.
+        // Half each: the left inset grows and the drawer's slot never shrinks
+        // below what it asked for.
+        const slot = 5120 - (wide.x + wide.width);
+        const surplus = (5120 - 24 - wide.width) - (400 + 24);
+        verify(surplus > 0);
+        fuzzyCompare(wide.x, 24 + surplus / 2, 0.5);
+        fuzzyCompare(slot, 400 + 24 + surplus / 2, 0.5);
     }
 
     function test_a_short_screen_is_bound_by_its_height_instead() {
