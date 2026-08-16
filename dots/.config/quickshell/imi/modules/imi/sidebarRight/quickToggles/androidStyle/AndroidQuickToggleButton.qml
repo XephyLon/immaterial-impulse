@@ -5,6 +5,7 @@ import qs.modules.common
 import qs.modules.common.models.quickToggles
 import qs.modules.common.functions
 import qs.modules.common.widgets
+import "../../../../common/functions/layout_ops.js" as LayoutOps
 
 GroupButton {
     id: root
@@ -180,23 +181,17 @@ GroupButton {
                 return siblings;
             }
 
+            // The dragged tile is a hole rather than a candidate: it stays
+            // where it was laid out for the whole gesture, so it would be its
+            // own nearest neighbour.
             function findNearest(sceneX, sceneY) {
                 const siblings = getAllSiblings();
-                let nearest = null;
-                let minDist = Infinity;
-                for (let i = 0; i < siblings.length; i++) {
-                    const sib = siblings[i];
-                    if (sib.buttonData.type === root.buttonData.type) continue;
-                    const sibScene = sib.mapToItem(null, sib.width / 2, sib.height / 2);
-                    const dx = sceneX - sibScene.x;
-                    const dy = sceneY - sibScene.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        nearest = sib;
-                    }
-                }
-                return nearest;
+                const centres = siblings.map(sib =>
+                    sib.buttonData.type === root.buttonData.type
+                        ? null
+                        : sib.mapToItem(null, sib.width / 2, sib.height / 2));
+                const nearest = LayoutOps.indexAt(centres, Qt.point(sceneX, sceneY), null);
+                return nearest === -1 ? null : siblings[nearest];
             }
 
             onActiveChanged: {
@@ -213,11 +208,15 @@ GroupButton {
                         const sibType = nearest.buttonData.type;
                         const myIdx = toggleList.findIndex(t => t.type === myType);
                         const sibIdx = toggleList.findIndex(t => t.type === sibType);
-                        if (myIdx !== -1 && sibIdx !== -1 && myIdx !== sibIdx) {
-                            const temp = toggleList[myIdx];
-                            toggleList[myIdx] = toggleList[sibIdx];
-                            toggleList[sibIdx] = temp;
-                        }
+                        // Mutated in place, deliberately: 26b625905 measured
+                        // that every mutation form notifies and reverted the
+                        // copy-and-reassign indirection added on the belief
+                        // that they do not. Only the arithmetic changes here -
+                        // the dragged toggle travels to the tile it was
+                        // dropped on and the ones it passed shift back one,
+                        // instead of the two exchanging places and the other
+                        // one landing wherever the drag began.
+                        LayoutOps.moveInPlace(toggleList, myIdx, sibIdx);
                     }
                 }
             }
