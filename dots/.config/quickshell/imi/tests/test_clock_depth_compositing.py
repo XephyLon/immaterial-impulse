@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROBE = ROOT / "tests/run_clock_depth_probe.sh"
 
-EXPECTED_CHECKS = 13
+EXPECTED_CHECKS = 14
 
 # Fixture geometry, and the arithmetic the assertions rest on. The wallpaper is
 # 2:1 into a 2:1 viewport, so the picture fills the box exactly and the mask's
@@ -96,13 +96,14 @@ class ClockDepthCompositingTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
             wallpaper, mask = write_fixtures(tmp)
-            shots = {name: tmp / f"{name}.png" for name in ("rest", "pan", "flat")}
+            shots = {name: tmp / f"{name}.png" for name in ("rest", "pan", "flat", "broken")}
             env = dict(os.environ,
                        CLOCK_DEPTH_WALLPAPER=str(wallpaper),
                        CLOCK_DEPTH_MASK=str(mask),
                        CLOCK_DEPTH_REST_SHOT=str(shots["rest"]),
                        CLOCK_DEPTH_PAN_SHOT=str(shots["pan"]),
-                       CLOCK_DEPTH_FLAT_SHOT=str(shots["flat"]))
+                       CLOCK_DEPTH_FLAT_SHOT=str(shots["flat"]),
+                       CLOCK_DEPTH_BROKEN_SHOT=str(shots["broken"]))
             result = subprocess.run([str(PROBE)], capture_output=True, text=True,
                                     timeout=180, env=env)
             output = result.stdout + result.stderr
@@ -131,6 +132,16 @@ class ClockDepthCompositingTest(unittest.TestCase):
                 self.assertTrue(close_to(pixel(shots["flat"], x, row), CLOCK_RGB),
                                 "with no mask the clock must be drawn flat on top, "
                                 f"got {pixel(shots['flat'], x, row)} at x={x}")
+
+            # An accepted mask whose file has gone. The predicate cannot see
+            # this - the layer is eligible and fully opaque - so the failure
+            # direction is decided entirely by what an Image.Error maskSource
+            # does, and it must mask everything away rather than nothing.
+            for x in (unmasked_x, masked_x):
+                self.assertTrue(close_to(pixel(shots["broken"], x, row), CLOCK_RGB),
+                                "a mask file that has gone must degrade to the flat "
+                                f"clock, not to the wallpaper over it: got "
+                                f"{pixel(shots['broken'], x, row)} at x={x}")
 
             # Mid-pan: the occlusion boundary has moved with the wallpaper, and
             # has NOT arrived at the pan's destination. A layer bound to

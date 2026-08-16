@@ -38,12 +38,13 @@ ShellRoot {
     readonly property string restShot: Quickshell.env("CLOCK_DEPTH_REST_SHOT") || ""
     readonly property string panShot: Quickshell.env("CLOCK_DEPTH_PAN_SHOT") || ""
     readonly property string flatShot: Quickshell.env("CLOCK_DEPTH_FLAT_SHOT") || ""
+    readonly property string brokenShot: Quickshell.env("CLOCK_DEPTH_BROKEN_SHOT") || ""
 
     // Driven by the probe, and the only thing that moves.
     property real panTarget: 0
     readonly property real panDistance: -200
-    // Cleared for the last shot, to score the degradation: a wallpaper with no
-    // mask must render exactly as it does today.
+    // Repointed for the last two shots, to score both degradations: a wallpaper
+    // with no mask at all, and an accepted mask whose file has gone.
     property string activeMask: harness.maskFile
 
     FloatingWindow {
@@ -182,6 +183,37 @@ ShellRoot {
             if (harness.panShot !== "")
                 field.grabToImage(result => {
                     result.saveToFile(harness.panShot);
+                    brokenStep.start();
+                });
+            else
+                brokenStep.start();
+        }
+    }
+
+    // A mask the cache still names but whose file has gone. The predicate cannot
+    // see this - status said "accepted", so the layer is eligible and fully
+    // opaque - and it is the one failure whose direction is not obvious: an
+    // Image.Error maskSource must mask EVERYTHING away, leaving today's flat
+    // clock, rather than mask nothing and paste the wallpaper over it.
+    Timer {
+        id: brokenStep
+        interval: 900
+        onTriggered: {
+            harness.activeMask = "/nonexistent/clock-depth/mask.png";
+            settleBroken.start();
+        }
+    }
+
+    Timer {
+        id: settleBroken
+        interval: 300
+        onTriggered: {
+            harness.check("a mask file that has gone still leaves the layer eligible",
+                clockDepthLayer.opacity === 1 && clockDepthMask.status === Image.Error,
+                `opacity=${clockDepthLayer.opacity} maskStatus=${clockDepthMask.status}`);
+            if (harness.brokenShot !== "")
+                field.grabToImage(result => {
+                    result.saveToFile(harness.brokenShot);
                     flatStep.start();
                 });
             else
@@ -191,7 +223,7 @@ ShellRoot {
 
     Timer {
         id: flatStep
-        interval: 900
+        interval: 300
         onTriggered: {
             harness.activeMask = "";
             harness.check("a wallpaper with no mask hides the layer entirely",

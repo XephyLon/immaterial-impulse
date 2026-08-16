@@ -17,6 +17,7 @@ DBUS_SESSION_BUS_ADDRESS="unix:path=/nonexistent" WAYLAND_DISPLAY="$SOCKET" \
     CLOCK_DEPTH_REST_SHOT="${CLOCK_DEPTH_REST_SHOT:-}" \
     CLOCK_DEPTH_PAN_SHOT="${CLOCK_DEPTH_PAN_SHOT:-}" \
     CLOCK_DEPTH_FLAT_SHOT="${CLOCK_DEPTH_FLAT_SHOT:-}" \
+    CLOCK_DEPTH_BROKEN_SHOT="${CLOCK_DEPTH_BROKEN_SHOT:-}" \
     timeout 60 qs -p "$(dirname "$0")/../ClockDepthProbe.qml" 2>&1 | grep "ClockDepth"
 kill $WPID 2>/dev/null
 rm -rf "$TMP"
