@@ -78,6 +78,27 @@ TestCase {
         verify(Geometry.hideDirection("left") < 0);
     }
 
+    function test_the_turn_is_a_size_rather_than_a_set_of_anchors() {
+        // contentBox exists so an item that spans the dock's thickness never
+        // has to change WHICH anchors it uses when the dock turns: the
+        // thickness lands across the dock's own axis and the item's own
+        // implicit size along it.
+        const horizontal = Geometry.contentBox("bottom", 75, 613, 397);
+        compare(horizontal.width, 613, "along the strip it is the icons' size");
+        compare(horizontal.height, 75, "across it, the dock's whole thickness");
+        const vertical = Geometry.contentBox("left", 75, 613, 397);
+        compare(vertical.width, 75);
+        compare(vertical.height, 397);
+        // The two axes genuinely swap - the same call at opposite edges must
+        // not agree on either dimension.
+        verify(horizontal.width !== vertical.width
+               && horizontal.height !== vertical.height);
+        // An unknown edge is the dock we already ship, here too.
+        const nonsense = Geometry.contentBox("diagonal", 75, 613, 397);
+        compare(nonsense.width, horizontal.width);
+        compare(nonsense.height, horizontal.height);
+    }
+
     function test_a_popup_opens_away_from_the_edge() {
         compare(Geometry.popupGravity("bottom"), "top");
         compare(Geometry.popupGravity("top"), "bottom");
