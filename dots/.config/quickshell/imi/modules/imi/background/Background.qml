@@ -8,6 +8,7 @@ import qs.modules.common.widgets.widgetCanvas
 import qs.modules.common.functions as CF
 import "../../common/functions/parallax.js" as ParallaxMath
 import "../../common/functions/clockDepth.js" as ClockDepthLogic
+import "../../common/functions/edit_mode.js" as EditMode
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
@@ -520,6 +521,42 @@ Variants {
                 ? weLoader.item
                 : (bgRoot.wallpaperAnimation === "" ? wallpaper : transitionEffect))
 
+        // ---- Edit Mode's viewport ----------------------------------------
+        //
+        // The desktop stops being the whole screen and becomes an object on it:
+        // the wallpaper viewport, the widget canvas and the clock-depth layer
+        // all take one transform, so what the user is arranging keeps its
+        // proportions and its coordinates. Derived, never chosen - see
+        // edit_mode.js for why the drawer's width is the input.
+        readonly property var editViewport: EditMode.viewportGeometry({
+            screenWidth: bgRoot.width,
+            screenHeight: bgRoot.height,
+            drawerWidth: Appearance.sizes.editModeDrawerWidth,
+            margin: Appearance.sizes.editModeMargin
+        })
+        // One animated scalar for the whole entry, so the scale and the offset
+        // cannot arrive on different frames. It moves once per mode change, not
+        // per frame, which is what makes a Behavior legitimate here at all.
+        property real editProgress: GlobalStates.editMode ? 1 : 0
+        Behavior on editProgress {
+            NumberAnimation {
+                duration: 400
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
+            }
+        }
+        readonly property var editTransform: EditMode.atProgress(bgRoot.editViewport, bgRoot.editProgress)
+        // A scale about the top-left followed by a translation, written as one
+        // matrix rather than as a [Scale, Translate] pair: the order a transform
+        // list composes in is exactly the kind of thing that is wrong by a
+        // factor of the scale and still looks plausible. Row-major, so a point
+        // maps to (s*x + tx, s*y + ty).
+        readonly property matrix4x4 editMatrix: Qt.matrix4x4(
+            bgRoot.editTransform.scale, 0, 0, bgRoot.editTransform.x,
+            0, bgRoot.editTransform.scale, 0, bgRoot.editTransform.y,
+            0, 0, 1, 0,
+            0, 0, 0, 1)
+
         property bool shouldBlur: (GlobalStates.screenLocked && Config.options.lock.blur.enable)
         property color dominantColor: Appearance.colors.colPrimary
         property bool dominantColorIsDark: dominantColor.hslLightness < 0.5
@@ -679,6 +716,15 @@ Variants {
             // Everything the background draws hangs off here, so this is what
             // `hideWhenFullscreen` switches off - see suppressContents above.
             visible: !bgRoot.suppressContents
+
+            // Edit Mode shrinks the wallpaper and the widgets on it by the same
+            // transform, so the desktop reads as one object. A transform and
+            // not x/y/width: those four are what the parallax animates, what
+            // every widget's clamp measures against and what the frost samples
+            // by, and folding a second meaning into them is the mistake
+            // b710ef731 ("fix(plugins): stop the position Behavior swallowing
+            // the parallax cancellation") cost a store full of walked positions.
+            transform: Matrix4x4 { matrix: bgRoot.editMatrix }
 
             // Slower than a workspace switch on purpose: the wallpaper trails
             // the workspace animation rather than racing it, which is what reads
@@ -1163,6 +1209,17 @@ Variants {
             // The desktop is the canvas the marquee exists for: rubber-band
             // several widgets, then drag any of them to move the cluster.
             selectionEnabled: true
+            // The one desktop canvas is the one that edits. The overlay reuses
+            // this component and must never enter the mode, so the flag is
+            // handed in here rather than read from GlobalStates inside it.
+            editMode: GlobalStates.editMode
+            // The same transform the wallpaper takes. `scale` is a render-time
+            // transform and touches none of x, y, width or height, so every
+            // stored position still means the same point, every clamp range is
+            // unchanged, and the hand-computed drag stays exact - it maps the
+            // pointer through the moving item into this frame, and the current
+            // transform cancels itself out (AbstractWidget).
+            transform: Matrix4x4 { matrix: bgRoot.editMatrix }
 
             transitions: Transition {
                 PropertyAnimation {
@@ -1273,6 +1330,11 @@ Variants {
             height: parallaxViewport.height
             // Above widgetCanvas (z 2), which is the whole point.
             z: 3
+            // A fourth thing that reconstructs the viewport, so a fourth copy
+            // of the edit transform: this layer paints the wallpaper's own
+            // pixels back over the widgets, and a subject drawn at full size
+            // over a shrunk desktop is a picture of a different wallpaper.
+            transform: Matrix4x4 { matrix: bgRoot.editMatrix }
             // Its own copy of the fullscreen gate. The viewport carries one for
             // its children and widgetCanvas carries a second because it moved
             // out; a fourth sibling needs a fourth, or the subject floats over
@@ -1316,6 +1378,35 @@ Variants {
                 wallpaperSource: wallpaper.source
                 maskPath: ClockDepth.maskPath
                 maskRevision: ClockDepth.maskRevision
+            }
+        }
+
+        // Edit Mode's backdrop: the wallpaper, blurred, behind the shrunk
+        // desktop. That blur plus the shrink IS the mode signal - there is no
+        // scrim - so it is not optional and is not gated on the lock's own blur
+        // preference; only its radius is borrowed from there, since it is the
+        // same picture and a second setting for it would be a second thing to
+        // disagree.
+        //
+        // A SIBLING of the viewport rather than a second gate on the lock's
+        // blurLoader, which is what the spec asked for and which cannot work:
+        // that loader is a CHILD of parallaxViewport, so it takes the edit
+        // transform with everything else in there and shrinks along with the
+        // desktop it is supposed to sit behind. Sourcing the wallpaper item is
+        // unaffected - a ShaderEffectSource renders its source item in that
+        // item's own coordinates, not the scene's.
+        Loader {
+            id: editBackdrop
+            active: bgRoot.editProgress > 0 && !bgRoot.suppressContents
+            anchors.fill: parent
+            // Below every wallpaper layer and the widgets (all z 0..3), above
+            // the desktop's right-click area at z -2.
+            z: -1
+            opacity: bgRoot.editProgress
+            sourceComponent: WallpaperBlurBackdrop {
+                source: bgRoot.liveWallpaperLayer
+                radius: Config.options.lock.blur.radius
+                samples: Config.options.lock.blur.size
             }
         }
 
