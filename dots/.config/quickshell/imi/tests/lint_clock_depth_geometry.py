@@ -36,7 +36,7 @@ WALLPAPER_ID = "wallpaper"
 
 INPUT_TYPES = ("MouseArea", "MultiPointTouchArea", "Flickable", "HoverHandler",
                "TapHandler", "DragHandler", "PointHandler", "WheelHandler",
-               "PinchHandler", "MouseArea")
+               "PinchHandler")
 
 # Properties that must be copied from the wallpaper item, because a difference
 # in any of them is a different crop or a different image request.
