@@ -13,6 +13,7 @@ import Quickshell
 import Quickshell.Widgets
 import Quickshell.Wayland
 import "../../imi/dock/dock_geometry.js" as DockGeometry
+import "../functions/layout_ops.js" as LayoutOps
 
 Item {
     id: root
@@ -62,15 +63,13 @@ Item {
         return root.vertical ? centre.y : centre.x
     }
 
-    function swapSlots(fromPos, toPos) {
-        if (fromPos === toPos) return
-        if (fromPos < 0 || fromPos >= _workOrder.length) return
-        if (toPos   < 0 || toPos   >= _workOrder.length) return
-        let arr = _workOrder.slice()
-        let tmp = arr[fromPos]
-        arr[fromPos] = arr[toPos]
-        arr[toPos]   = tmp
-        _workOrder = arr
+    // A move, not an exchange: an icon carried past three others has to leave
+    // those three in their own order one slot behind it, which is what the
+    // gesture looks like. Exchanging sent whichever icon happened to be at the
+    // drop slot back to where the dragged one started, several places away
+    // from anything the pointer touched.
+    function moveSlot(fromPos, toPos) {
+        root._workOrder = LayoutOps.move(root._workOrder, fromPos, toPos)
     }
 
     function commitOrder() {
@@ -339,9 +338,24 @@ Item {
                 // are laid out along. Comparing x in a column is not a subtly
                 // wrong reorder, it is an inert one - every centre has the
                 // same x, so the nearest slot is always whichever the loop
-                // reached first and nothing ever swaps.
+                // reached first and nothing ever moves.
+                readonly property string axis: root.vertical ? "y" : "x"
                 function alongAxis(point) {
-                    return root.vertical ? point.y : point.x
+                    return point[axis]
+                }
+
+                // The dragged slot is a hole rather than a candidate: it is
+                // still laid out at the position it is being carried away
+                // from, so it would be its own nearest neighbour.
+                function slotCentres(skipIndex) {
+                    const centres = []
+                    for (let i = 0; i < slotRepeater.count; i++) {
+                        const child = i === skipIndex ? null : slotRepeater.itemAt(i)
+                        centres.push(child
+                            ? child.mapToItem(null, child.width / 2, child.height / 2)
+                            : null)
+                    }
+                    return centres
                 }
 
                 onCentroidChanged: {
@@ -350,31 +364,22 @@ Item {
                     if (currentVisualIdx < 0) return
 
                     const dragPos = alongAxis(dragHandler.centroid.scenePosition)
-                    let minDist    = Infinity
-                    let nearestIdx = currentVisualIdx
+                    const centres = slotCentres(currentVisualIdx)
+                    const nearestIdx = LayoutOps.indexAt(
+                        centres, dragHandler.centroid.scenePosition, axis)
+                    if (nearestIdx === -1 || nearestIdx === currentVisualIdx) return
 
-                    for (let i = 0; i < slotRepeater.count; i++) {
-                        if (i === currentVisualIdx) continue
-                        const child = slotRepeater.itemAt(i)
-                        if (!child) continue
-                        const cc   = child.mapToItem(null, child.width / 2, child.height / 2)
-                        const dist = Math.abs(dragPos - alongAxis(cc))
-                        if (dist < minDist) { minDist = dist; nearestIdx = i }
-                    }
+                    // Nearest is not enough on its own: the pointer has to have
+                    // reached the slot it is nearest to, or the strip reorders
+                    // itself while the gesture is still between two icons.
+                    const nc = alongAxis(centres[nearestIdx])
+                    const crossed = (nearestIdx > currentVisualIdx)
+                        ? (dragPos >= nc)
+                        : (dragPos <= nc)
 
-                    if (nearestIdx !== currentVisualIdx) {
-                        const neighbor = slotRepeater.itemAt(nearestIdx)
-                        if (!neighbor) return
-                        const nc = alongAxis(
-                            neighbor.mapToItem(null, neighbor.width / 2, neighbor.height / 2))
-                        const shouldSwap = (nearestIdx > currentVisualIdx)
-                            ? (dragPos >= nc)
-                            : (dragPos <= nc)
-
-                        if (shouldSwap) {
-                            root.swapSlots(currentVisualIdx, nearestIdx)
-                            root.activeDragVisualIndex = nearestIdx
-                        }
+                    if (crossed) {
+                        root.moveSlot(currentVisualIdx, nearestIdx)
+                        root.activeDragVisualIndex = nearestIdx
                     }
                 }
             }
