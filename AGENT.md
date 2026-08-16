@@ -1951,11 +1951,14 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
     simply refuse to move past each other. `DragApps` chooses the axis once (`alongAxis`), and
     the check that can see it is `DockEdgeRuntimeTest.qml` (driven by
     `tests/test_dock_edge_runtime.py`, headless weston, in `run_tests.sh`): it drags ALONG the
-    strip and requires a swap, then ACROSS it and requires none, with the horizontal edge first
-    as the control — "nothing happened" is also what a harness that stopped delivering events
-    reports. It reaches the dock's *content* tree only; weston implements no wlr-layer-shell, so
-    anchors, the exclusive zone, the reveal push and the compositor's inferred slide are all
-    invisible to it.
+    strip and requires a reorder, then ACROSS it and requires none, with the horizontal edge
+    first as the control — "nothing happened" is also what a harness that stopped delivering
+    events reports. It reaches the dock's *content* tree only; weston implements no
+    wlr-layer-shell, so anchors, the exclusive zone, the reveal push and the compositor's
+    inferred slide are all invisible to it. Its last gesture is the one that jumps two slots in
+    a single event, because every other drag in the file steps one slot at a time and a run of
+    adjacent swaps is indistinguishable from a move — see the reorder entry below.
+    40c64996b ("test(dock): drive the drag that a move and a swap answer differently").
   - **A control sized "width from height" cannot be turned.** `DockButton` derived its width from
     its height minus the *vertical* insets, which in a column is the axis the layout owns. Both
     axes are now written out against a span, so there is no direction to get backwards, and the
