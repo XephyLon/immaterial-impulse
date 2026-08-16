@@ -548,6 +548,24 @@ Consequences for making changes:
 currently open, is the bar in autoHide-triggered-show state, etc.) - don't add ephemeral UI state to
 `Config`, and don't add persisted settings to `GlobalStates`.
 
+**Nothing addresses a settings page by its name, because every name in the catalogue is a
+`Translation.tr(...)` call.** `SettingsContent.qml`'s `pages` list gives each page a `name` (what the
+sidebar draws) *and* a stable untranslated `id` (what a link carries).
+`GlobalStates.settingsPage` — written by the desktop menu's two rows and by every settings hit in the
+launcher, in the form `"<id>"` or `"<id>:<search term>"` — is resolved against `id` alone. Resolving
+it against the display name, which is how it shipped, meant every deep link in the shell stopped
+working the moment the user changed language, and stopped **silently**: `findIndex` returns -1, the
+handler clears the request regardless, and the window opens on whichever page was last shown. The
+same trap is why an *index* is not the alternative — a hardcoded one went stale the day a page was
+inserted. Search is pinned the other way on purpose: `pageMatches()`, `navigateFirstMatch()` and the
+launcher's own filter all compare the query against the translated `name`, because that is the text
+the user is reading when they type it. `tests/test_settings_page_ids.py` fails the suite on a page
+declared without an id, on an id that goes through `Translation.tr`, on either half of the resolver
+reading `name`, and on any `GlobalStates.settingsPage` write in the tree whose value is not a
+declared id — the realistic regression is a fifteenth page or a third deep link copied from whatever
+sits beside it, not someone rewriting the resolver.
+1c674c8f5 ("fix(settings): address a settings deep link by page id, not by its label").
+
 ## Hyprland integration
 
 **Hyprland only.** `README.md`'s "Compositor support" section is policy, not aspiration: there are no
