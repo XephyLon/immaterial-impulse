@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -75,6 +76,44 @@ Item {
         anchors.fill: parent
         visible: !root.showingStore
         forceWidth: true
+
+        ContentSection {
+            icon: "widgets"
+            shape: MaterialShape.Shape.Pill
+            title: Translation.tr("Placement & canvas")
+
+            ContentSubsection {
+                title: Translation.tr("Show widgets on")
+                visible: Hyprland.monitors.values.length > 1
+                Layout.bottomMargin: Appearance.spacing.space150
+
+                WidgetsMonitorSelector {
+                    configEntry: Config.options.background
+                }
+            }
+
+            ContentSubsection {
+                title: Translation.tr("Canvas")
+                Layout.bottomMargin: Appearance.spacing.space150
+
+                GroupedList {
+                    ConfigSwitch {
+                        Layout.fillWidth: true
+                        buttonIcon: "grid_4x4"
+                        text: Translation.tr("Show alignment grid while dragging")
+                        checked: Config.options.background.showGrid
+                        onToggleRequested: Config.options.background.showGrid = !Config.options.background.showGrid
+                    }
+                    ConfigSwitch {
+                        Layout.fillWidth: true
+                        buttonIcon: "align_horizontal_center"
+                        text: Translation.tr("Show snap lines when dropping")
+                        checked: Config.options.background.showSnapLines
+                        onToggleRequested: Config.options.background.showSnapLines = !Config.options.background.showSnapLines
+                    }
+                }
+            }
+        }
 
         // Settings that apply to widgets as a class, kept apart from the
         // browse controls below: frost, opacity and install-from-URL describe
