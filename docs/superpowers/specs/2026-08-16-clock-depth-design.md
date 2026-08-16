@@ -422,3 +422,98 @@ its whole design depends on having looked at stage 1's real output.
 **Stage 4 — lock screen.** `lockWall` and `lock.centerClock`, if wanted.
 
 Start with **Stage 1: the subject-mask producer and its cache.**
+
+---
+
+## 8. Wallpaper Engine — designed, not landed
+
+§4 refused a live Wallpaper Engine project on the reasoning that it is "a moving
+surface with no file to segment". The first half is true and the second is not:
+the shell already photographs every WE project it renders. This section is what
+that opens, what it costs, and where it stops being honest — written now because
+WE support is wanted, and stated as a design rather than shipped because none of
+it is reachable from a headless harness.
+
+### 8.1 There is already a static input, and it registers for free
+
+`Background.captureGreeterStill` (`Background.qml:381-404`) grabs `weLoader.item`
+into `${Directories.wallpaperEngineStills}/${activeProject}.png`, 600 ms after the
+surface reports its first frame, once per project load, on the first screen only.
+
+Two measured properties of those files decide most of the design. There are 16 on
+this machine, at 5120x1440 and 5478x1540 — **the viewport's own size**, because
+the WE layer is `anchors.fill: parent` inside `parallaxViewport`. So a still's
+aspect *is* the viewport's aspect, `coverRect` degenerates to the identity, and a
+mask cut from a still registers 1:1 onto the layer with no new geometry at all.
+The zoom is baked in, but only as a scale factor on both axes, which `coverRect`
+already absorbs.
+
+`web` projects never arrive here: `weActive` (`:274`) excludes them and they fall
+back to the static wallpaper, which this feature already supports.
+
+### 8.2 The cache key cannot be the still's stat triple
+
+`cache_key` hashes path, mtime and size. The still is re-grabbed on **every load
+of the project**, so its mtime moves every session — measured, four of the 16
+stills on this machine were rewritten today. Keying on the file would therefore
+mint a new key per session, which does not merely re-run a 1.3 s job: the
+acceptance lives at the key (`<key>.png`), so **the user's verdict would be lost
+on every restart**, silently, and the feature would read as "it forgets".
+
+So the producer needs a caller-supplied identity — `--identity we:<projectId>` —
+hashed in place of the stat triple, with the still passed as the image to
+segment. Roughly fifteen lines and a handful of cases in
+`test_clock_depth_cache.py`. The trade it makes is the mirror image of §3's: an
+identity keyed on the project id does **not** notice the user editing the
+project, so a changed scene keeps its old mask until the picker is re-run. That
+is the right way round — a stale mask over an edited *file* is §3's worst
+failure because nothing prompts the user, whereas changing a WE project is
+something the user did on purpose and can re-judge from the picker.
+
+### 8.3 Mask the live surface, never the still
+
+The obvious implementation — draw the still, masked — is wrong. It would put a
+frozen frame over a moving scene, so every animated pixel inside the silhouette
+would be visibly stale.
+
+The layer should mask the **live** surface instead:
+`ShaderEffectSource { sourceItem: weLoader.item }`, which this file already
+builds as `weLiveSource` (`:753`) for the WE transition, sized to the same
+viewport. Then the pixels are live and only the *silhouette* is static.
+`ClockDepthCutout` grows a `liveSource` alternative to `wallpaperSource` and
+hands whichever is set to the `OpacityMask`; the lint's "shares the wallpaper's
+image request" rule stays scoped to the still-image path, since there is no
+second decode to share on the live one.
+
+### 8.4 Where it stops being honest, and what the UI must say
+
+A static mask over a live scene is correct exactly while the subject does not
+move within the frame. A character standing in a parallaxing scene is the case
+that works, and it is the common case in this library. A scene whose subject
+walks, turns or is occluded by its own animation will drift out of its silhouette
+— the clock will be covered by nothing, or uncovered by something.
+
+There is no way to detect that automatically (the same finding as §1.2, one level
+up: judging whether a mask holds across a scene's motion is exactly as
+unautomatable as judging whether it is a good mask). So it belongs in the picker
+next to the verdict, in the same place the mask's own quality is judged, and the
+inspect mode added since §6 is what makes it judgeable: dim what the model did
+not claim, then let the scene run for a few seconds and watch whether the
+subject leaves its own outline.
+
+### 8.5 Two availability edges
+
+A project that has not rendered in a session with the shell up has **no still**,
+so the picker must say "show this wallpaper first" rather than fail. And the
+still belongs to the first screen only, which is fine — one mask serves every
+monitor, per §2 — but it means a project that has only ever been shown while the
+first screen was suppressed has none either.
+
+### 8.6 Why this is a separate landing
+
+None of §8 can be verified where the rest of this feature is verified. Weston
+runs no Wallpaper Engine renderer and the WE module is a separate build, so the
+probes cannot reach any of it; it has to be judged on the real desktop, by
+looking at a moving scene. That is a different kind of change from the ones this
+PR carries, all of which are pinned headlessly — and the instrument §8.4 depends
+on is the inspect mode this PR adds, so the order is the right way round.
