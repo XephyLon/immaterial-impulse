@@ -234,6 +234,62 @@ class SweepTest(unittest.TestCase):
         self.assertEqual(result, {"kept": 0, "removed": 0})
 
 
+class MaskFileTest(unittest.TestCase):
+    """The mask has to mask, and only its alpha channel can do that.
+
+    Qt's OpacityMask reads the maskSource's alpha and nothing else, so a plain
+    grayscale mask - the obvious thing to write, and what a mask looks like - is
+    opaque everywhere. The layer then paints the whole wallpaper flat over the
+    clock: the loudest possible version of this feature's own failure, and one
+    that no amount of correct geometry prevents.
+    """
+    def setUp(self):
+        try:
+            import numpy  # noqa: F401
+            from PIL import Image  # noqa: F401
+        except ImportError:
+            self.skipTest("needs numpy and pillow (the shell's uv venv)")
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def written(self):
+        import numpy as np
+        from PIL import Image
+
+        mask = np.zeros((8, 8), dtype="float32")
+        mask[:, 4:] = 1.0
+        mask[:, 2] = 0.5
+        path = Path(self.tmp.name) / "mask.png"
+        subject_mask.write_mask(path, mask)
+        return Image.open(path)
+
+    def test_the_mask_carries_an_alpha_channel(self):
+        image = self.written()
+        self.assertIn("A", image.getbands(),
+                      "a mask with no alpha is opaque everywhere, and the depth "
+                      "layer would draw the whole wallpaper over the clock")
+
+    def test_the_alpha_is_the_mask(self):
+        image = self.written()
+        alpha = image.getchannel("A")
+        self.assertEqual(alpha.getpixel((0, 0)), 0, "background must be transparent")
+        self.assertEqual(alpha.getpixel((7, 0)), 255, "subject must be opaque")
+        # Not a number: the edge is the one thing that must not be thresholded,
+        # since a hard boundary against a clock is what reads as a sticker.
+        self.assertTrue(0 < alpha.getpixel((2, 0)) < 255,
+                        f"a soft edge must stay soft, got {alpha.getpixel((2, 0))}")
+
+    def test_the_luminance_matches_the_alpha(self):
+        image = self.written()
+        luminance = image.getchannel("L")
+        alpha = image.getchannel("A")
+        self.assertEqual(list(luminance.getdata()), list(alpha.getdata()),
+                         "the file is meant to be looked at as well as masked with")
+
+    def test_the_mask_keeps_the_models_own_resolution(self):
+        self.assertEqual(self.written().size, (8, 8))
+
+
 class ContractTest(unittest.TestCase):
     def test_every_model_declares_a_url_and_a_checksum(self):
         for model, spec in subject_mask.MODELS.items():

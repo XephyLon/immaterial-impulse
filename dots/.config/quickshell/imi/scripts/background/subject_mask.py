@@ -210,15 +210,34 @@ def run(root, wallpaper, model, force=False):
         negative.write_text("")
         return {"state": "none", "key": key, "model": model, "foreground": foreground}
 
-    # Stored at model resolution. Upscaling to 5120px is a smooth texture fetch
-    # the GPU does for free; a wallpaper-resolution grayscale PNG costs 3MB and
-    # nearly a second of write time to store information the mask does not have.
+    write_mask(candidate, mask)
+    return {"state": "produced", "key": key, "model": model,
+            "mask": str(candidate), "foreground": foreground}
+
+
+def write_mask(path, mask):
+    """Save a mask at model resolution, carrying it in BOTH channels.
+
+    Model resolution rather than the wallpaper's: upscaling to 5120px is a smooth
+    texture fetch the GPU does for free, while a wallpaper-resolution mask costs
+    3MB and nearly a second of write time to store information the mask does not
+    have.
+
+    Grayscale AND alpha, both the same plane. The alpha is what the shell masks
+    with - Qt's OpacityMask reads the mask's alpha channel and nothing else, so a
+    plain "L" PNG is opaque everywhere and lets the whole wallpaper through,
+    which paints the picture flat over the clock instead of the subject behind
+    it. The luminance is kept beside it so the file is still a mask to look at,
+    which is the point of the producer shipping as a CLI.
+
+    A function of its own rather than four lines inside `run`, because it is the
+    only part of the produced artifact that is testable without a model.
+    """
     import numpy as np
     from PIL import Image
 
-    Image.fromarray((np.clip(mask, 0.0, 1.0) * 255).astype("uint8"), "L").save(candidate)
-    return {"state": "produced", "key": key, "model": model,
-            "mask": str(candidate), "foreground": foreground}
+    plane = (np.clip(np.asarray(mask, dtype="float32"), 0.0, 1.0) * 255).astype("uint8")
+    Image.fromarray(np.dstack([plane, plane]), "LA").save(path)
 
 
 def sweep(root, keep=SWEEP_KEEP_KEYS):
