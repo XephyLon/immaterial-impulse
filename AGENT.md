@@ -305,6 +305,44 @@ Four things around that are worth not re-deriving:
   both *and* whose 3×3 neighbourhood is uniform (which kills subpixel edges), and report RMSE plus
   what code 255 became.
 
+## The suite checkout, and why the updater cannot just reset it
+
+`get.sh` keeps the whole suite in `~/.local/share/immaterial-impulse/src` (`Directories.suiteSrc`),
+clones it once and re-uses it for every update — Settings > About > **Update Dots** spawns a kitty
+running the same script. That directory is a **normal git repository the user can work in**, and
+someone hacking on their own shell does exactly that, so the update path may not simply make it
+match `$REF`: `git checkout -f` + `git reset --hard FETCH_HEAD` destroy commits made there,
+uncommitted edits, and any untracked file the incoming tree carries a path for (`-f` overwrites
+those; untracked files it does *not* name, and stashes, both survive a reset untouched).
+
+It still resets — landing on `$REF` is the updater's whole job, and aborting on a dirty tree would
+tax every user who has no local work for the sake of the one who does. What it does first is move
+whatever those two commands would eat somewhere git can name it back: the old HEAD onto
+`imi-rescue/<short-sha>` (named for the commit, so re-running does not litter the checkout with one
+ref per update), and the at-risk working-tree paths into a stash.
+
+Three non-obvious pieces:
+
+- **In a `--depth 1` checkout, ancestry cannot answer "does this HEAD belong to the remote".** Both
+  HEAD and the incoming tip are grafted, so `merge-base --is-ancestor` walks nothing and says "not
+  an ancestor" for a checkout that is merely a few commits *behind* — indistinguishable from one
+  that is ahead. The script therefore records what it installed in `refs/imi/installed` and trusts
+  a HEAD equal to that marker; the ancestry test stays as the answer for the full-clone fallback.
+  A checkout predating the marker gets rescued conservatively, once.
+- **A stash needs a git identity, and a machine being installed for the first time often has
+  none** — git then refuses to write the stash commit. `get.sh` borrows one (`git var
+  GIT_COMMITTER_IDENT` is the probe) rather than losing the work. Any other stash failure aborts
+  the update, because proceeding *is* the data loss.
+- **Printing the rescue to the terminal is not telling the user.** `setup`'s whiptail menu paints
+  over the scrollback seconds later, in a terminal the shell spawned, so the same text is appended
+  to `rescued-local-work.log` beside the checkout and — when stdin is a tty — the script waits for
+  Enter before handing off.
+
+`tests/test_get_sh_preserves_local_work.py` drives all of it against throwaway origin/DEST repos in
+a tempdir; the clean-checkout case asserts the update stays *silent*, which is the half that keeps
+the fix from becoming a nuisance for everyone who has no local work.
+d5d2f69b0 ("fix(get.sh): rescue local work before resetting the update checkout").
+
 ## Directory map
 
 ```
