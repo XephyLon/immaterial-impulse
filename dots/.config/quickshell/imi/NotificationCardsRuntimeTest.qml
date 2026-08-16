@@ -34,19 +34,21 @@ ShellRoot {
     id: harness
 
     property int failures: 0
+    property int checksRun: 0
     property int elapsed: 0
     property var firstCard: null
     property int seenPopups: 0
     property bool wentDown: false
 
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[NotifCards] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
     }
 
     function finish() {
-        console.log(`[NotifCards] failures: ${harness.failures}`);
+        console.log(`[NotifCards] checks: ${harness.checksRun} failures: ${harness.failures}`);
         Qt.exit(harness.failures === 0 ? 0 : 1);
     }
 

@@ -29,16 +29,18 @@ ShellRoot {
     id: harness
 
     property int failures: 0
+    property int checksRun: 0
     readonly property string testScreen: "GROUP-TEST"
 
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[WidgetGroupDrag] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
     }
 
     function finish() {
-        console.log(`[WidgetGroupDrag] failures: ${harness.failures}`);
+        console.log(`[WidgetGroupDrag] checks: ${harness.checksRun} failures: ${harness.failures}`);
         Qt.exit(harness.failures === 0 ? 0 : 1);
     }
 

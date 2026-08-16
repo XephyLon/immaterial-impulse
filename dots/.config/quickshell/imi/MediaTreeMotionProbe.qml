@@ -23,7 +23,9 @@ ShellRoot {
     readonly property string testScreen: "probe-screen"
 
     property int failures: 0
+    property int checksRun: 0
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[MediaTreeMotion] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok) harness.failures++;
     }
@@ -264,7 +266,7 @@ ShellRoot {
         if (harness.pointerIndex < harness.pointerSpans.length) {
             pointerSweep.start();
         } else {
-            console.log(`[MediaTreeMotion] failures: ${harness.failures}`);
+            console.log(`[MediaTreeMotion] checks: ${harness.checksRun} failures: ${harness.failures}`);
             Qt.quit();
         }
     } }

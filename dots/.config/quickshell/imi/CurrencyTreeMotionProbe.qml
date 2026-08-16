@@ -20,7 +20,9 @@ ShellRoot {
     readonly property string testScreen: "probe-screen"
 
     property int failures: 0
+    property int checksRun: 0
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[CurrencyTreeMotion] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok) harness.failures++;
     }
@@ -155,7 +157,7 @@ ShellRoot {
         if (harness.transitionIndex < harness.transitions.length) {
             nextTimer.start();
         } else {
-            console.log(`[CurrencyTreeMotion] failures: ${harness.failures}`);
+            console.log(`[CurrencyTreeMotion] checks: ${harness.checksRun} failures: ${harness.failures}`);
             Qt.quit();
         }
     } }

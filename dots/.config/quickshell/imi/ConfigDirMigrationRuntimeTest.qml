@@ -31,6 +31,7 @@ ShellRoot {
     id: harness
 
     property int failures: 0
+    property int checksRun: 0
     property int elapsed: 0
     property double startedAt: Date.now()
 
@@ -48,6 +49,7 @@ ShellRoot {
     readonly property string mode: Quickshell.env("CONFIGDIR_MODE") ?? "gated"
 
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[ConfigDirMigration] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
@@ -75,7 +77,7 @@ ShellRoot {
 
     function finish() {
         console.log(`[ConfigDirMigration] migration finished after ${harness.dirReadyAfterMs}ms, Config ready after ${harness.configReadyAfterMs}ms`);
-        console.log(`[ConfigDirMigration] failures: ${harness.failures}`);
+        console.log(`[ConfigDirMigration] checks: ${harness.checksRun} failures: ${harness.failures}`);
         Qt.exit(harness.failures === 0 ? 0 : 1);
     }
 

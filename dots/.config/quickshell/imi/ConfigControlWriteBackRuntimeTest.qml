@@ -37,16 +37,18 @@ ShellRoot {
     readonly property int stepSize: 100
 
     property int failures: 0
+    property int checksRun: 0
     property var timeoutSpinBox: null
 
     function check(label, ok) {
+        harness.checksRun++;
         console.log(`[ConfigControlWriteBack] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
     }
 
     function finish() {
-        console.log(`[ConfigControlWriteBack] failures: ${harness.failures}`);
+        console.log(`[ConfigControlWriteBack] checks: ${harness.checksRun} failures: ${harness.failures}`);
         Qt.exit(harness.failures === 0 ? 0 : 1);
     }
 
