@@ -218,6 +218,48 @@ MouseArea {
         }
     }
 
+    // The cancel half of the drag, which nothing needed until the mode could
+    // end in the middle of one. A release COMMITS - clamped and written to the
+    // store - and the drag is deliberately unclamped until then, so committing
+    // a gesture the user never finished stores an overshoot: exactly the defect
+    // 705e9006d ("fix(plugins): stop a widget's stored position disagreeing
+    // with where it is drawn") fixed, where a real store held a widget at
+    // x: -852 on a 5120px screen.
+    function widgetDragCancelled(widget) {
+        const group = root.groupDrag
+        if (group && group.leader === widget) root.groupDrag = null
+        widget.groupDragMinX = -Infinity
+        widget.groupDragMaxX = Infinity
+        widget.groupDragMinY = -Infinity
+        widget.groupDragMaxY = Infinity
+        if (!group || group.leader !== widget) return
+        for (const entry of group.followers) {
+            entry.widget.groupDragging = false
+            // Put the follower back and rebind, rather than committing it the
+            // way widgetDragEnded does: a follower never gets a release event,
+            // so this is the only path that can undo its imperative move.
+            entry.widget.x = entry.startX
+            entry.widget.y = entry.startY
+            if (entry.widget.restoreXYBinding) entry.widget.restoreXYBinding()
+        }
+    }
+
+    function draggingWidget() {
+        for (const widget of root.widgetsUnder(root, []))
+            if (widget.dragging) return widget
+        return null
+    }
+
+    function cancelActiveDrag() {
+        const widget = root.draggingWidget()
+        if (widget && widget.cancelDrag) widget.cancelDrag()
+    }
+
+    // Leaving the mode mid-drag cancels the gesture. It cannot commit: a widget
+    // is only clamped on release, and the mode ending is not the user letting
+    // go of anything.
+    onEditModeChanged: if (!root.editMode) root.cancelActiveDrag()
+
     Connections {
         target: root.groupDrag ? root.groupDrag.leader : null
         function onXChanged() { root.syncGroupFollowers() }

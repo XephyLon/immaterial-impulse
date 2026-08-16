@@ -94,6 +94,7 @@ MouseArea {
     // canvas captures cannot bake a first-step jump into the cluster.
     onPressed: (mouse) => {
         if (mouse.button !== Qt.LeftButton || !root.draggable) return
+        root.dragCancelled = false
         const p = root.mapToItem(root.parent, mouse.x, mouse.y)
         root.dragPressParentX = p.x
         root.dragPressParentY = p.y
@@ -132,6 +133,35 @@ MouseArea {
         root.dragActive = false
         const canvas = findCanvas(root.parent)
         if (canvas && canvas.widgetDragEnded) canvas.widgetDragEnded(root)
+    }
+
+    // Put the widget back where the press found it and commit nothing. Called
+    // when something ends the gesture that is not the user finishing it - Edit
+    // Mode being left mid-drag, and Escape while dragging.
+    //
+    // Restoring the BINDING is what returns the position: only a commit writes
+    // targetX/targetY, so re-binding x/y through them is the pre-press place.
+    // A widget with no such binding (the overlay's) is put back by hand.
+    property bool dragCancelling: false
+    // The pointer is still GRABBED when a gesture is cancelled - the mode ended,
+    // the user did not let go - so a release is still coming, and a release
+    // commits. It has to commit nothing: what it would write is wherever the
+    // restore animation happened to be at that moment, which is a position the
+    // widget is not at and the user never chose.
+    property bool dragCancelled: false
+    function cancelDrag() {
+        if (!root.dragActive) return
+        root.dragCancelling = true
+        root.dragCancelled = true
+        root.dragActive = false
+        const canvas = findCanvas(root.parent)
+        if (canvas && canvas.widgetDragCancelled) canvas.widgetDragCancelled(root)
+        if (root.restoreXYBinding) root.restoreXYBinding()
+        else {
+            root.x = root.dragStartX
+            root.y = root.dragStartY
+        }
+        root.dragCancelling = false
     }
 
     function center() {
@@ -232,7 +262,9 @@ MouseArea {
             if (Math.abs(widgetCenterY - canvas.height / 2) < root.gridSize / 2)
                 horizontalLines.push(canvas.height / 2)
 
-            if (Config.options.background.showSnapLines)
+            // A cancelled drag flashes nothing: the lines say "this is where it
+            // landed", and it did not land anywhere.
+            if (Config.options.background.showSnapLines && !root.dragCancelling)
                 canvas.flashLines(verticalLines, horizontalLines)
         }
 
