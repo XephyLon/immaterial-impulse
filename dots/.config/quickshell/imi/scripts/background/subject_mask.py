@@ -496,11 +496,12 @@ def image_embedding(root, wallpaper, model, key):
 
     This is the whole reason SAM is the right tool here rather than a fourth
     salient detector. Encoding is the expensive half and depends only on the
-    picture - measured on this machine at 2.6s for a 3840x1594 wallpaper -
-    while decoding a mask from a set of clicks reads the embedding and takes
-    milliseconds. Cached, the first click pays for the encode and every click
-    after it is effectively free; encoding per click would put a 2.6s wait
-    between every attempt and refinement is the entire interaction.
+    picture; decoding a mask from a set of clicks reads the embedding and is
+    over an order of magnitude cheaper. Measured on a 7680x2160 wallpaper:
+    encode 1.04s, load the cached embedding 0.004s, decode 0.128s - so the
+    first click costs 1.6s end to end and every one after it 0.34s, most of
+    which is starting Python. Encoding per click would put the first click's
+    price on every attempt, and refinement is the entire interaction.
 
     Stored as float16. The array is 256x64x64, which is 4MB at float32 and 2MB
     halved, and it is consumed by a decoder that immediately blurs it through a
