@@ -700,6 +700,15 @@ if ! python3 "$SCRIPT_DIR/test_installer_file_sync.py"; then
     exit 1
 fi
 
+# get.sh resets the update checkout onto $REF, and that checkout is a repo the
+# user can commit in. Drives throwaway origin/DEST repos inside a tempdir, so
+# it can never reach the machine's real one.
+echo "Running get.sh local-work preservation tests..."
+if ! python3 "$SCRIPT_DIR/test_get_sh_preserves_local_work.py"; then
+    echo "get.sh local-work preservation tests failed."
+    exit 1
+fi
+
 echo "Running installer legacy migration tests..."
 if ! python3 "$SCRIPT_DIR/test_installer_legacy_migration.py"; then
     echo "installer legacy migration tests failed."
