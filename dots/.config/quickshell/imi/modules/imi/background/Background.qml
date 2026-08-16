@@ -250,6 +250,23 @@ Variants {
             ? ParallaxMath.offsets(bgRoot.parallaxState)
             : ({ x: 0, y: 0 })
 
+        // Hands the depth layer's live box to the subject selector, which is a
+        // layer surface of its own and therefore in another window. Keyed by
+        // screen name and written per screen rather than as one rect, because
+        // the same wallpaper is cropped differently on every output and a
+        // cutout drawn into the wrong screen's box is a silhouette in the wrong
+        // place. Removing the entry on disarm rather than leaving a stale one
+        // behind keeps the map's contents equal to "the screens currently
+        // publishing", which is what the surface tests to know it can draw.
+        function publishDepthViewport(viewport): void {
+            const published = Object.assign({}, GlobalStates.clockDepthViewports)
+            if (viewport === null)
+                delete published[bgRoot.screen.name]
+            else
+                published[bgRoot.screen.name] = viewport
+            GlobalStates.clockDepthViewports = published
+        }
+
         property string effectiveWallpaperPath: {
             if (GlobalStates.screenLocked && Config.options.background.lockWall !== "")
                 return Config.options.background.lockWall
@@ -1350,6 +1367,10 @@ Variants {
                 enable: ClockDepth.enabled,
                 maskPath: ClockDepth.maskPath,
                 optedOut: ClockDepth.optedOut,
+                // The selection surface draws the candidate over these same
+                // widgets while it is up; two cutouts arguing is not a thing
+                // anyone can give a verdict on.
+                selecting: GlobalStates.clockDepthSelectOpen,
                 weActive: bgRoot.weActive,
                 wallpaperIsVideo: bgRoot.wallpaperIsVideo,
                 centeredWallpaper: bgRoot.centeredWallpaperEnabled,
@@ -1363,6 +1384,27 @@ Variants {
                     easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
                 }
             }
+
+            // What the selection surface has to be handed to draw the same
+            // cutout on the same pixels. It is a separate layer surface in a
+            // separate window, so it can read neither this item nor the
+            // wallpaper item - and reconstructing the pan from parallax.js on
+            // the other side would be a second derivation of the one number
+            // this whole component exists to have only one of.
+            //
+            // Null while the mode is disarmed, so the binding is a comparison
+            // rather than a fresh object on every frame of every pan for the
+            // rest of the session.
+            readonly property var publishedViewport: GlobalStates.clockDepthSelectOpen
+                ? ({
+                    x: clockDepthLayer.x,
+                    y: clockDepthLayer.y,
+                    width: clockDepthLayer.width,
+                    height: clockDepthLayer.height,
+                    source: String(wallpaper.source)
+                })
+                : null
+            onPublishedViewportChanged: bgRoot.publishDepthViewport(clockDepthLayer.publishedViewport)
 
             // The registration lives in the component, not here, because the
             // wallpaper selector's picker draws the same cutout to ask whether
