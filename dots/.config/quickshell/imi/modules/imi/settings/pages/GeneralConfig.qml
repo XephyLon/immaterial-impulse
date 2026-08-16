@@ -313,6 +313,34 @@ ContentPage {
                     checked: Config.options.sounds.pomodoro
                     onToggleRequested: Config.options.sounds.pomodoro = !Config.options.sounds.pomodoro
                 }
+                ConfigComboBox {
+                    id: soundThemeCombo
+                    Layout.fillWidth: true
+                    buttonIcon: "graphic_eq"
+                    text: Translation.tr("Sound theme")
+                    description: Translation.tr("Where the shell's alert sounds come from. An event a theme does not ship falls back to the default theme.")
+                    fieldWidth: 240
+                    // A theme name the config holds that is no longer installed
+                    // still resolves (through the default theme), so it stays in
+                    // the list rather than being silently replaced by whatever
+                    // the picker would otherwise land on - ConfigComboBox lands
+                    // on index 0 for a value its model does not carry.
+                    model: {
+                        const installed = SoundTheme.themes.map(theme => ({
+                            displayName: theme.displayName,
+                            value: theme.id
+                        }));
+                        const stored = Config.options.sounds.theme;
+                        if (installed.some(theme => theme.value === stored))
+                            return installed;
+                        return [{ displayName: stored, value: stored }, ...installed];
+                    }
+                    textRole: "displayName"
+                    currentValue: Config.options.sounds.theme
+                    onSelected: newValue => {
+                        Config.options.sounds.theme = newValue;
+                    }
+                }
             }
         }
 
