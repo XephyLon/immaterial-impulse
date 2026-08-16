@@ -240,6 +240,50 @@ def write_mask(path, mask):
     Image.fromarray(np.dstack([plane, plane]), "LA").save(path)
 
 
+def accept(root, wallpaper, model):
+    """Promote one model's candidate to the mask the shell draws.
+
+    A copy rather than a link or a rename: the candidate stays where it is so the
+    picker can offer it again after a decline, and a link would leave the shell
+    drawing through a file the sweep may collect from under it.
+
+    Clears the opt-out in the same call. Accepting while a `.off` is on disk and
+    leaving it there would be a mask the shell refuses to draw for a reason the
+    user has just overruled - and the refusal is deliberately checked first, so
+    the two would not merely disagree, the accept would do nothing at all.
+    """
+    if model not in MODELS:
+        raise SystemExit(f"unknown model {model!r}; expected one of {', '.join(MODELS)}")
+    key = cache_key(wallpaper)
+    candidate = root / f"{key}.{model}.png"
+    if not candidate.exists():
+        raise RuntimeError(f"no {model} candidate to accept for this wallpaper")
+    accepted = root / f"{key}.png"
+    # Written beside the target and renamed, so the shell never sees a
+    # half-written mask through a FileView that is watching for one.
+    fd, tmp = tempfile.mkstemp(dir=str(root), suffix=".part")
+    with os.fdopen(fd, "wb") as out:
+        out.write(candidate.read_bytes())
+    os.rename(tmp, accepted)
+    (root / f"{key}.off").unlink(missing_ok=True)
+    return {"state": "accepted", "key": key, "model": model, "mask": str(accepted)}
+
+
+def decline(root, wallpaper):
+    """Record that this wallpaper gets no depth, and drop any accepted mask.
+
+    A file beside the mask rather than a config entry: a per-wallpaper map keyed
+    by a runtime path is exactly what Config.qml's JsonAdapter cannot hold, and
+    keeping the marker at the key means it invalidates with the key - edit the
+    wallpaper in place and the refusal goes with the mask it was about.
+    """
+    key = cache_key(wallpaper)
+    root.mkdir(parents=True, exist_ok=True)
+    (root / f"{key}.off").write_text("")
+    (root / f"{key}.png").unlink(missing_ok=True)
+    return {"state": "declined", "key": key}
+
+
 def sweep(root, keep=SWEEP_KEEP_KEYS):
     """Drop the oldest keys whole.
 
@@ -285,6 +329,13 @@ def main(argv=None):
     p_run.add_argument("--force", action="store_true",
                        help="re-run even when a candidate is already cached")
 
+    p_accept = sub.add_parser("accept", help="draw this model's candidate from now on")
+    p_accept.add_argument("wallpaper")
+    p_accept.add_argument("--model", required=True, choices=sorted(MODELS))
+
+    p_decline = sub.add_parser("decline", help="this wallpaper gets no depth")
+    p_decline.add_argument("wallpaper")
+
     p_sweep = sub.add_parser("sweep", help="drop the oldest keys")
     p_sweep.add_argument("--keep", type=int, default=SWEEP_KEEP_KEYS)
 
@@ -296,6 +347,10 @@ def main(argv=None):
             result = status(root, args.wallpaper)
         elif args.command == "run":
             result = run(root, args.wallpaper, args.model, force=args.force)
+        elif args.command == "accept":
+            result = accept(root, args.wallpaper, args.model)
+        elif args.command == "decline":
+            result = decline(root, args.wallpaper)
         else:
             result = sweep(root, keep=args.keep)
     except Exception as exc:  # noqa: BLE001 - the shell needs a parseable failure

@@ -180,6 +180,92 @@ class StatusTest(unittest.TestCase):
         self.assertEqual(payload["mask"], str(candidate))
 
 
+class AcceptDeclineTest(unittest.TestCase):
+    """The picker's two verdicts, and the transitions between them.
+
+    Both are files at the key rather than config entries, so they invalidate with
+    the key: edit the wallpaper in place and the decision goes with the mask it
+    was about. That is only true if each verdict also clears the other - which is
+    where this can go silently wrong, because `status` checks the opt-out FIRST,
+    so an accept that left a `.off` behind would do nothing at all.
+    """
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+        self.cache = self.dir / "cache"
+        self.cache.mkdir()
+        self.wallpaper = self.dir / "wall.png"
+        self.wallpaper.write_bytes(b"wallpaper")
+        self.key = subject_mask.cache_key(self.wallpaper)
+        self.candidate = self.cache / f"{self.key}.isnet-anime.png"
+        self.candidate.write_bytes(b"a candidate mask")
+        self.addCleanup(self.tmp.cleanup)
+
+    def test_accepting_makes_the_candidate_the_mask_the_shell_draws(self):
+        result = subject_mask.accept(self.cache, self.wallpaper, "isnet-anime")
+        self.assertEqual(result["state"], "accepted")
+        accepted = self.cache / f"{self.key}.png"
+        self.assertEqual(accepted.read_bytes(), self.candidate.read_bytes())
+        self.assertEqual(subject_mask.status(self.cache, self.wallpaper)["mask"],
+                         str(accepted))
+
+    def test_the_candidate_survives_being_accepted(self):
+        subject_mask.accept(self.cache, self.wallpaper, "isnet-anime")
+        self.assertTrue(self.candidate.exists(),
+                        "the picker must be able to offer it again after a decline")
+
+    def test_accepting_clears_a_previous_decline(self):
+        subject_mask.decline(self.cache, self.wallpaper)
+        subject_mask.accept(self.cache, self.wallpaper, "isnet-anime")
+        self.assertEqual(subject_mask.status(self.cache, self.wallpaper)["state"],
+                         "accepted",
+                         "an opt-out left beside a fresh accept makes the accept "
+                         "a no-op, because the refusal is checked first")
+
+    def test_declining_clears_a_previous_accept(self):
+        subject_mask.accept(self.cache, self.wallpaper, "isnet-anime")
+        subject_mask.decline(self.cache, self.wallpaper)
+        self.assertEqual(subject_mask.status(self.cache, self.wallpaper)["state"],
+                         "declined")
+        self.assertFalse((self.cache / f"{self.key}.png").exists())
+
+    def test_accepting_a_candidate_that_does_not_exist_fails_loudly(self):
+        with self.assertRaises(RuntimeError):
+            subject_mask.accept(self.cache, self.wallpaper, "isnet-general-use")
+
+    def test_the_verdict_moves_with_the_wallpaper_file(self):
+        subject_mask.accept(self.cache, self.wallpaper, "isnet-anime")
+        later = time.time() + 120
+        os.utime(self.wallpaper, (later, later))
+        self.assertEqual(subject_mask.status(self.cache, self.wallpaper)["state"],
+                         "absent",
+                         "a wallpaper edited in place must not keep the mask that "
+                         "was cut from what it used to be")
+
+    def test_neither_verdict_leaves_a_partial_file_behind(self):
+        subject_mask.accept(self.cache, self.wallpaper, "isnet-anime")
+        subject_mask.decline(self.cache, self.wallpaper)
+        leftovers = [p.name for p in self.cache.iterdir() if p.name.endswith(".part")]
+        self.assertEqual(leftovers, [])
+
+    def test_the_cli_exposes_both_verdicts(self):
+        proc = run_cli("--cache-dir", str(self.cache), "accept", str(self.wallpaper),
+                       "--model", "isnet-anime")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(json.loads(proc.stdout)["state"], "accepted")
+        proc = run_cli("--cache-dir", str(self.cache), "decline", str(self.wallpaper))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(json.loads(proc.stdout)["state"], "declined")
+
+    def test_a_failed_accept_still_answers_in_json(self):
+        proc = run_cli("--cache-dir", str(self.cache), "accept", str(self.wallpaper),
+                       "--model", "isnet-general-use")
+        self.assertEqual(proc.returncode, 1)
+        self.assertEqual(json.loads(proc.stdout)["state"], "error",
+                         "the picker parses stdout; a traceback on stderr is a "
+                         "button that does nothing with no explanation")
+
+
 class SweepTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -261,7 +347,8 @@ class MaskFileTest(unittest.TestCase):
         mask[:, 2] = 0.5
         path = Path(self.tmp.name) / "mask.png"
         subject_mask.write_mask(path, mask)
-        return Image.open(path)
+        with Image.open(path) as opened:
+            return opened.copy()
 
     def test_the_mask_carries_an_alpha_channel(self):
         image = self.written()
