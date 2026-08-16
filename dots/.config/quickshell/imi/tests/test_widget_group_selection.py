@@ -162,8 +162,18 @@ class GroupDragIsRigid(unittest.TestCase):
         path, or the reverse. The base class releases through commitPosition
         and PluginWidget overrides that one function.
         """
-        self.assertIn("onReleased: root.commitPosition()", uncommented(BASE))
-        self.assertIn("function commitPosition()", uncommented(BASE))
+        base = uncommented(BASE)
+        release = re.search(r"(?m)^    onReleased: \{(.*?)^    \}", base, re.S)
+        assert release, "the base class no longer releases"
+        body = release.group(1)
+        self.assertIn("root.commitPosition();", body)
+        # The only thing the handler may do besides committing is decline to,
+        # for the release that follows a cancelled gesture. A write-back
+        # spelled out here would be the second copy this check exists to stop.
+        for writeback in ("configEntry.x", "setPosition", "targetX ="):
+            self.assertNotIn(writeback, body,
+                             "the release path must write back through commitPosition alone")
+        self.assertIn("function commitPosition()", base)
         host = uncommented(HOST)
         self.assertIn("function commitPosition()", host)
         # Anchored to the host's own scope. A nested MouseArea - the grid
