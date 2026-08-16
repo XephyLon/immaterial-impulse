@@ -218,6 +218,147 @@ TestCase {
             NaN, 5) === null);
     }
 
+    // promptFromScreen: a click on the DESKTOP, as a point in the picture.
+    //
+    // The desktop selector is a screen-sized layer surface of its own, so its
+    // clicks arrive in screen coordinates while the registration is expressed
+    // inside the wallpaper viewport's box - which is bigger than the screen and
+    // negatively offset by the parallax pan. The translation between the two is
+    // the only new arithmetic the mode adds, and it is exactly the part that is
+    // zero on a machine with parallax switched off.
+
+    // The desktop this repository is developed on: 5120x1440 at the default
+    // 1.1 workspace zoom, so the viewport is 5632x1584 and the pan slides it
+    // between 0 and -512 / -144. The wallpaper is 3840x1594, whose aspect
+    // matches neither the screen's nor the viewport's - at a matching aspect
+    // the box IS the cover rect and every registration bug is invisible.
+    readonly property var panned: ({ x: -412, y: -101, width: 5632, height: 1584 })
+    readonly property var atRest: ({ x: -256, y: -72, width: 5632, height: 1584 })
+
+    function pictureRectFor(box) {
+        return ClockDepth.coverRect(3840, 1594, box.width, box.height);
+    }
+
+    function screenPointFor(box, nx, ny) {
+        // Where a given point in the picture is drawn, in screen coordinates:
+        // the box's own origin, plus where the picture sits inside the box,
+        // plus the fraction along it. The forward direction of what
+        // promptFromScreen undoes, spelled out here rather than reusing the
+        // function under test.
+        const r = pictureRectFor(box);
+        return { x: box.x + r.x + nx * r.width, y: box.y + r.y + ny * r.height };
+    }
+
+    function test_a_desktop_click_round_trips_through_the_pan_and_the_crop() {
+        const cases = [[0.1, 0.2], [0.5, 0.5], [0.87, 0.04], [0.33, 0.91]];
+        for (let i = 0; i < cases.length; i++) {
+            const nx = cases[i][0], ny = cases[i][1];
+            const hit = screenPointFor(panned, nx, ny);
+            const p = ClockDepth.promptFromScreen(panned, pictureRectFor(panned),
+                hit.x, hit.y);
+            fuzzyCompare(p.x, nx, 0.0001, "x for " + cases[i]);
+            fuzzyCompare(p.y, ny, 0.0001, "y for " + cases[i]);
+        }
+    }
+
+    function test_the_same_click_means_different_points_at_different_pans() {
+        // The check a dropped translation cannot pass. The pan is the whole
+        // reason the origin is there, and a version that ignored it would give
+        // one answer for both - which is right on precisely the workspace where
+        // the viewport happens to sit at the origin, and wrong everywhere else.
+        const rest = ClockDepth.promptFromScreen(atRest, pictureRectFor(atRest), 2560, 720);
+        const moved = ClockDepth.promptFromScreen(panned, pictureRectFor(panned), 2560, 720);
+        verify(Math.abs(rest.x - moved.x) > 0.02,
+            "the pan did not move the point: " + rest.x + " vs " + moved.x);
+        verify(Math.abs(rest.y - moved.y) > 0.005,
+            "the pan did not move the point vertically: " + rest.y + " vs " + moved.y);
+    }
+
+    function test_the_pictures_own_aspect_survives_the_screens() {
+        // The registration this whole rect exists for, checked from the click
+        // side: 3840x1594 into 5632x1584 crops top and bottom, so a click at
+        // the top of the SCREEN is well down the picture, and one at the left
+        // edge is not at the picture's left edge either once the pan has slid
+        // it. A mapping that measured against the screen instead of the picture
+        // would answer 0 for both.
+        const p = ClockDepth.promptFromScreen(atRest, pictureRectFor(atRest), 0, 0);
+        verify(p.y > 0.05, "top of the screen maps to the top of the picture: " + p.y);
+        verify(p.x > 0.02, "left of the screen maps to the left of the picture: " + p.x);
+        verify(p.x < 0.2, "left of the screen is nowhere near the middle: " + p.x);
+    }
+
+    function test_a_box_with_no_origin_is_read_as_the_screens_own() {
+        // Parallax off: the viewport is the screen, sitting at (0, 0), and the
+        // published box carries no offsets. That is the case where a missing
+        // translation is invisible, so it is checked rather than assumed.
+        const box = { width: 5120, height: 1440 };
+        const r = ClockDepth.coverRect(3840, 1594, 5120, 1440);
+        const p = ClockDepth.promptFromScreen(box, r, r.x + 0.4 * r.width,
+            r.y + 0.6 * r.height);
+        fuzzyCompare(p.x, 0.4, 0.0001);
+        fuzzyCompare(p.y, 0.6, 0.0001);
+    }
+
+    function test_a_missing_box_or_a_non_finite_click_answers_null_not_a_guess() {
+        // The surface only enables its click area once the box has arrived and
+        // the wallpaper has decoded, but a refusal is what the arithmetic owes
+        // regardless: a guessed point comes back as a good mask of the wrong
+        // thing, which is the one failure nothing on screen reports.
+        const r = ClockDepth.coverRect(3840, 1594, 5632, 1584);
+        verify(ClockDepth.promptFromScreen(panned, r, NaN, 10) === null);
+        verify(ClockDepth.promptFromScreen(panned, undefined, 10, 10) === null);
+        verify(ClockDepth.promptFromScreen(undefined, r, 10, 10) !== null);
+    }
+
+    // selectable: whether the desktop is showing the picture being asked about.
+
+    function picking(overrides) {
+        const state = {
+            wallpaperPath: "/home/user/Pictures/Wallpapers/aishot-3263.jpg",
+            previewing: false,
+            weActive: false,
+            centeredWallpaper: false,
+            screenLocked: false
+        };
+        for (const key in overrides)
+            state[key] = overrides[key];
+        return ClockDepth.selectable(state);
+    }
+
+    function test_a_still_wallpaper_on_screen_can_be_picked_on() {
+        compare(picking({}), true);
+    }
+
+    function test_no_mask_and_a_standing_refusal_do_not_stop_a_pick() {
+        // The half that must NOT be inherited from `eligible`. Selecting exists
+        // for the wallpapers that have no mask and for the ones whose owner
+        // said no once - gating it on those would make the feature unreachable
+        // from exactly the half of the library it was built for.
+        compare(picking({ maskPath: "", optedOut: true }), true);
+    }
+
+    function test_a_preview_the_selector_is_about_to_revert_refuses() {
+        compare(picking({ previewing: true }), false);
+    }
+
+    function test_a_live_wallpaper_engine_project_cannot_be_picked_on() {
+        compare(picking({ weActive: true }), false);
+    }
+
+    function test_centred_mode_cannot_be_picked_on() {
+        compare(picking({ centeredWallpaper: true }), false);
+    }
+
+    function test_a_locked_screen_cannot_be_picked_on() {
+        compare(picking({ screenLocked: true }), false);
+    }
+
+    function test_no_wallpaper_at_all_cannot_be_picked_on() {
+        compare(picking({ wallpaperPath: "" }), false);
+        compare(ClockDepth.selectable({}), false);
+        compare(ClockDepth.selectable(undefined), false);
+    }
+
     function test_an_unloaded_image_yields_the_box_rather_than_NaN() {
         // An Image's implicit size reads 0 until its source resolves, and a NaN
         // on x/y/width/height does not misplace the mask - it stops the item

@@ -119,8 +119,59 @@ function normalisedPoint(rect, x, y) {
     };
 }
 
+// A click on the DESKTOP, as a point in the picture's own frame.
+//
+// The selection surface is a separate, screen-sized layer surface sitting over
+// the wallpaper, so a click arrives in screen coordinates while the
+// registration - `normalisedPoint` and the rectangle it consumes - is expressed
+// inside the box the cutout is drawn in. That box is the wallpaper viewport,
+// which is oversized and negatively offset whenever parallax is on.
+//
+// Composed here rather than at the call site for the same reason
+// `normalisedPoint` exists at all: the offset is the part that is silently
+// zero for whoever writes it. A viewport at rest with parallax switched off
+// sits at exactly (0, 0), so a translation that has been left out entirely is
+// correct on the first screen anyone tries it on and wrong by up to the whole
+// zoom overflow on every workspace but the middle one - and the wrong answer
+// is still a perfectly good mask, of the wrong thing.
+function promptFromScreen(box, pictureRect, screenX, screenY) {
+    const b = box || {};
+    if (!isFinite(screenX) || !isFinite(screenY))
+        return null;
+    return normalisedPoint(pictureRect, screenX - origin(b.x), screenY - origin(b.y));
+}
+
+// May a subject be picked on the desktop right now?
+//
+// A narrower question than `eligible`, and deliberately not a subset of it:
+// two of that predicate's refusals - no mask, and the per-wallpaper opt-out -
+// are exactly the states selecting exists to change, so gating the gesture on
+// them would make the feature unreachable from the half of the library it was
+// built for. What both refuse is the same underlying thing: a desktop whose
+// pixels are not the still image the producer is being asked about.
+function selectable(state) {
+    const s = state || {};
+    if (!s.wallpaperPath) return false;
+    // The wallpaper selector reverts a preview the moment it closes, and the
+    // gesture is entered by closing it - so the picture under the click would
+    // not be the picture the clicks get stored against.
+    if (s.previewing) return false;
+    // A live Wallpaper Engine project owns the screen; the still this service
+    // names is not what is being drawn, so a cutout of it is a sticker.
+    if (s.weActive) return false;
+    // Centred mode draws the wallpaper at its own size in its own shape, which
+    // is not the geometry the cutout is registered against.
+    if (s.centeredWallpaper) return false;
+    if (s.screenLocked) return false;
+    return true;
+}
+
 function clamp01(value) {
     return value < 0 ? 0 : (value > 1 ? 1 : value);
+}
+
+function origin(value) {
+    return (typeof value === "number" && isFinite(value)) ? value : 0;
 }
 
 function positive(value) {

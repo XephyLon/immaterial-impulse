@@ -1,12 +1,14 @@
 pragma Singleton
 pragma ComponentBehavior: Bound
 
+import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.functions
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import "../modules/common/functions/clockDepth.js" as ClockDepthLogic
 
 /**
  * What the subject-mask cache holds for the wallpaper that is on screen.
@@ -34,7 +36,14 @@ Singleton {
     // on a machine that has never enabled depth would show nothing and be unable
     // to accept anything - which is the one order every new user arrives in.
     property bool picking: false
+    // The desktop selector counts as picking for every purpose here, and it is
+    // read off the flag rather than given a `picking` write of its own: the
+    // picker is destroyed as the wallpaper selector closes and the mode arms,
+    // so one bool with two writers would be cleared by the surface that is
+    // going away, on an ordering nothing here controls - and clearing it
+    // forgets the candidate the user is about to judge.
     readonly property bool watching: root.enabled || root.picking
+        || GlobalStates.clockDepthSelectOpen
 
     // The wallpaper on screen, not the one in the config: the selector previews
     // by path while the user arrows through the grid, and a mask belonging to
@@ -68,6 +77,19 @@ Singleton {
     property var revisions: ({})
 
     readonly property bool optedOut: root.state === "declined"
+
+    // Whether the desktop is currently showing the still image this service is
+    // asking about, which is the precondition for picking a subject on it.
+    // Assembled here because two windows read it - the picker's way in, and the
+    // selection mode's own guard against the ground moving under it - and two
+    // copies of a predicate are two answers waiting to disagree.
+    readonly property bool selectable: ClockDepthLogic.selectable({
+        wallpaperPath: root.wallpaperPath,
+        previewing: Wallpapers.previewPath !== "",
+        weActive: (Config.options.wallpaperSelector.wallpaperEngine.activePath ?? "") !== "",
+        centeredWallpaper: Config.options.background.centeredWallpaper ?? false,
+        screenLocked: GlobalStates.screenLocked
+    })
 
     property string queriedPath: ""
 
