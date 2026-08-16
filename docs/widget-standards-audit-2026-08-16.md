@@ -263,6 +263,19 @@ doubles the model's press tightening in the radius channel and is tangled with a
 model has no state for; and the design system's own `RippleButton.qml:208` hand-rolls a state layer
 beside the model it drives (already recorded in §6).
 
+**Update — the first of those two is fixed, and the lint that named it now fails on it.** Recording
+a neighbour in prose beside a check that cannot see it is how this survived: the lint knew only the
+`scale` channel, on the reasoning that a `pressProgress`-driven radius "composites with nothing",
+which is true of the scene graph and false of the control — `RippleButton.buttonEffectiveRadius` is
+computed *from* `buttonRadius`, so the button's own jump to `size / 2` on `down` was then
+multiplied by `pressRadiusScale`. Measured on the real component, a press took the corner **30 →
+51** where every other control tightens; it is 30 → 25.5 now, and the `focus` shape (this grid's
+keyboard cursor, which the model has no state for) stayed. The lint is per *channel* now and reddens
+on the pre-fix line. The design-system state layer at `RippleButton.qml:208` is still open: it is
+the tint/opacity channel rather than a geometry one, and it lives in the vendored population §6
+covers. fix(sessionScreen): let RippleButton own the session button's press,
+test(lint): fail on a hover/press radius inside a control that already tightens.
+
 ### G5 — custom-image's resize animates a target that moves every frame (standard 4, *unverified at runtime*)
 
 `bundled/custom-image/Widget.qml:92-101`:
