@@ -514,6 +514,17 @@ MouseArea {
                             Component.onCompleted: ClockDepth.picking = true
                             Component.onDestruction: ClockDepth.picking = false
                             onCloseRequested: root.depthPickerOpen = false
+                            // The mode is armed BEFORE either surface closes.
+                            // ClockDepth keeps its cache answers only while
+                            // something is watching, and destroying the picker
+                            // drops its claim - so arming afterwards would let
+                            // the service forget the candidate in between and
+                            // re-query for it from an empty state.
+                            onSelectOnDesktopRequested: {
+                                GlobalStates.clockDepthSelectOpen = true;
+                                root.depthPickerOpen = false;
+                                GlobalStates.wallpaperSelectorOpen = false;
+                            }
                         }
                     }
 
