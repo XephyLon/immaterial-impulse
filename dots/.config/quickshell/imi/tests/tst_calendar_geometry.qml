@@ -133,11 +133,14 @@ TestCase {
     function test_the_surviving_week_travels_up_into_one_row() {
         const rows = [];
         for (let column = 0; column < Geometry.COLUMNS; column++) {
-            const wide = day(14 + column, "2x2");
-            const short = day(14 + column, "2x1");
-            rows.push(short.y);
-            verify(short.y < wide.y, "column " + column + " travels up");
-            compare(short.width, wide.width, "and keeps its size");
+            const inGrid = day(14 + column, "2x2");
+            // Not `short`: it is a future-reserved word that this Qt's QML
+            // parser accepts and the CI runner's rejects, with an error that
+            // names the file and not the line.
+            const inRow = day(14 + column, "2x1");
+            rows.push(inRow.y);
+            verify(inRow.y < inGrid.y, "column " + column + " travels up");
+            compare(inRow.width, inGrid.width, "and keeps its size");
         }
         for (const y of rows)
             compare(y, rows[0], "the seven land on one line");
