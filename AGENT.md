@@ -1927,7 +1927,25 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   `TestCase` sends it to the focused item of *its own* window, so a driver parented outside any
   window cannot deliver one. What no such harness can answer is the background *layer surface's*
   keyboard focus, since weston gives it no wlr-layer-shell. 2c8ccae70 ("test(widgets): drive the
-  resize grip with real mouse events").
+  resize grip with real mouse events"). `EditModeRuntimeTest.qml` is the same shape with the
+  canvas under Edit Mode's transform, and it drives every gesture in **canvas** coordinates,
+  which `TestCase` maps through that transform on the way to the window: the same drive numbers
+  at two scales must store the same position and cover a *different* amount of screen, and both
+  halves are asserted because "the widget moved" is satisfied by a drag that reads raw scene
+  deltas and lands the scale's worth short. (test(editMode): drive the desktop at the mode's own
+  scale.)
+- **A gesture has three ends now, not two: released, cancelled, and the release that follows a
+  cancel.** `AbstractWidget.cancelDrag()` exists because Edit Mode can end mid-drag, and a
+  release *commits* — clamped and written to the store — while the drag itself is deliberately
+  unclamped until then, so committing an unfinished gesture stores an overshoot (705e9006d's
+  defect). Three things about it do not generalise from the release path: the pre-press position
+  comes back by restoring the x/y **binding** rather than by assignment, since only a commit
+  writes `targetX`/`targetY`; a group drag needs its own cancel (`WidgetCanvas.widgetDragCancelled`)
+  because `widgetDragEnded` commits every follower, a follower never getting a release of its
+  own being the whole reason it does; and the pointer is still **grabbed**, so a release is still
+  coming and `dragCancelled` has to swallow exactly that one — measured, what it would otherwise
+  write is wherever the restore animation had reached. (feat(editMode): leaving mid-drag cancels
+  the gesture instead of committing it.)
 - **"The frost is gated on the toggle" is not "the surface is gated on the toggle."**
   `appearance.transparency.enable` removed every desktop widget's blur — `PluginWidget`'s blur
   `Repeater` reads the flag — while the widgets' panel alpha kept coming from
@@ -2273,6 +2291,44 @@ of the `suppressContents` fullscreen gate, which the viewport carries for its ow
 Sizing is deliberately screen-derived rather than wallpaper-derived: a live WE project reports no
 intrinsic size, and `PreserveAspectCrop` already covers a still, so one rule serves both.
 (feat(background): revive wallpaper parallax, for stills and Wallpaper Engine.)
+
+**Edit Mode shrinks that viewport, and it does it with a TRANSFORM — never with
+x/y/width/height.** `GlobalStates.editMode` scales and insets three of the
+background surface's siblings at once (`parallaxViewport`, `widgetCanvas`, the
+clock depth layer), all from one `bgRoot.editMatrix`, so the desktop becomes an
+object on the screen over its own wallpaper blurred. The transform is what makes
+the whole thing cost nothing: `scale` leaves `x`, `y`, `width` and `height`
+alone, so every clamp range, every position in `plugin-state.json` and the
+hand-computed drag are untouched — the drag maps the pointer through the moving
+widget into the canvas frame and the transform cancels itself out, which
+`EditModeRuntimeTest.qml` drives at two scales rather than assuming. Writing the
+inset into the containers' `x`/`y` instead would fold a second meaning into the
+four properties the parallax animates, the frost samples by and every clamp
+measures against, which is b710ef731's defect in a new place. Three things the
+mode is built out of are worth not re-deriving:
+- **The inset is derived, not chosen** (`modules/common/functions/edit_mode.js`):
+  the desktop shrinks by exactly the drawer's declared width plus a margin, so
+  the drawer opens into space that already exists. It takes the drawer's WIDTH
+  and has no input for whether the drawer is open — a viewport that changed size
+  mid-edit would rescale every widget under the cursor and hand every `Behavior`
+  carrying the box a moving target.
+- **The blurred backdrop cannot be the lock's `blurLoader` with a second gate**,
+  which is what the spec asked for: that loader is a *child* of
+  `parallaxViewport`, so it takes the edit transform and shrinks along with the
+  desktop it is meant to sit behind. It is a sibling `Loader` at `z: -1` sharing
+  one `WallpaperBlurBackdrop` component with the lock's, and it works because a
+  `ShaderEffectSource` renders its source item in that item's OWN coordinates —
+  a transformed wallpaper still yields an untransformed texture.
+- **The per-widget frost is stood down for the mode, not aligned to it**
+  (`PluginWidget.frostSuspended`, the generalisation of what used to be
+  `lockCoversFrost`). Measured on a live desktop with a Wallpaper Engine scene:
+  cards that are visibly frosted at rest render as flat tinted panels under the
+  transform, because the frost's sample rect is computed from three frames the
+  transform does not move together. Suspending it is the difference between a
+  deliberate look and a broken one nothing logs — and it is why proxy
+  rectangles, the spec's fallback, are not needed.
+(feat(editMode): shrink the desktop into a viewport on the background surface,
+feat(editMode): stand the per-widget frost down for the mode.)
 
 **The clock depth layer is the counter-case to that rule, and it is why it is a
 FOURTH sibling.** `widgetCanvas` sits at `z: 2` as a sibling of
