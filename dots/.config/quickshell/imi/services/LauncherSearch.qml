@@ -128,6 +128,7 @@ Singleton {
     }
 
     Component.onCompleted: {
+        root.rebuildResults();
         keywordHarvester.startHarvesting();
         // Constructs the Prism service so its detection runs now rather than
         // on the user's first keystroke - see the note on reload().
@@ -334,7 +335,53 @@ Singleton {
         }
     }
 
-    property list<var> results: {
+    // A plain property, rebuilt once per turn of the event loop - not a live
+    // binding. Every result is a QML object built by `resultComp.createObject`,
+    // and as a binding this list was rebuilt once per input change: a keystroke
+    // that moves `query`, the app list, the settings keyword cache (fourteen
+    // asynchronous greps at startup) and a qalc answer landing were four
+    // separate rebuilds where the user made one edit. `Qt.callLater` coalesces
+    // whatever arrives in the same turn into one.
+    property list<var> results: []
+
+    // What a manual rebuild costs: the automatic dependency tracking a binding
+    // came with. Under-observation here is a stale result list, so this is the
+    // list of everything `buildResults()` reads, touched in a binding so QML
+    // still decides when to fire - generously, because firing is one array of
+    // references and rebuilding an empty query returns immediately.
+    //
+    // Only the values read while BUILDING belong here. Everything a result's
+    // `execute` closure reads (`apps.terminal`, `search.engineBaseUrl`,
+    // `search.excludedSites`) is read when the user picks the row, and pinning
+    // those would rebuild the list for settings that cannot change what it
+    // shows. `tests/test_launcher_result_inputs.py` fails the suite on a
+    // singleton the builder reads and this list does not name.
+    readonly property var resultInputs: [
+        root.query, root.mathResult, root.settingsIndex, root.settingsKeywordsCache,
+        root.allActions, root.clipboardWorkSafetyActive,
+        AppSearch.preppedNames, AppSearch.sloppySearch,
+        Cliphist.entries, Cliphist.pins, Cliphist.sloppySearch,
+        Emojis.list,
+        FileSearch.results,
+        HyprlandKeybinds.keybinds,
+        MaterialSymbolsSearch.allSymbols,
+        PrismLauncher.available, PrismLauncher.instances,
+        Translation.translations,
+        Config.options.search.prefix.showDefaultActionsWithoutPrefix,
+        Config.options.search.prefix.action, Config.options.search.prefix.app,
+        Config.options.search.prefix.clipboard, Config.options.search.prefix.emojis,
+        Config.options.search.prefix.keybinds, Config.options.search.prefix.symbols,
+        Config.options.search.prefix.math, Config.options.search.prefix.shellCommand,
+        Config.options.search.prefix.webSearch, Config.options.search.prefix.file,
+        Config.options.search.prefix.prism,
+    ]
+    onResultInputsChanged: Qt.callLater(root.rebuildResults)
+
+    function rebuildResults() {
+        root.results = root.buildResults();
+    }
+
+    function buildResults() {
         // Search results are handled here
         ////////////////// Skip? //////////////////
         if (root.query == "")

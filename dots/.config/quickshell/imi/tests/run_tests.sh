@@ -300,6 +300,12 @@ if ! python3 "$SCRIPT_DIR/test_settings_search_shortcuts.py"; then
     exit 1
 fi
 
+echo "Running launcher result input observation check..."
+if ! python3 "$SCRIPT_DIR/test_launcher_result_inputs.py"; then
+    echo "Launcher result input observation check failed."
+    exit 1
+fi
+
 echo "Running settings page id tests..."
 if ! python3 "$SCRIPT_DIR/test_settings_page_ids.py"; then
     echo "Settings page id tests failed."
