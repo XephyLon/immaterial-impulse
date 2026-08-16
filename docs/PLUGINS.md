@@ -110,6 +110,14 @@ Component paths must be relative, remain inside the package, and must not contai
 entry points are `barWidget`, `desktopWidget`, `controlCenterWidget`, `launcherProvider`, `panel`,
 and `settingsUi`. Bar entries use the stable `plugin:<id>` layout identifier.
 
+`barWidget` is drawn by both bars — the horizontal one and the vertical one share
+`Config.options.bar.layouts.*`, so a widget placed on one is placed on the other. The whole
+orientation API is one duck-typed property: declare `property bool vertical: false` on the entry
+point's root and the host writes it (`true` in the vertical bar), as `docker`'s `DockerWidget.qml`
+and `discordVoice`'s `BarWidget.qml` do. There is nothing to opt out of — a widget that declares no
+`vertical` is still rendered in a vertical bar, laid out as it was written, because a widget the
+user placed and then cannot find is exactly the failure this replaced.
+
 `desktopWidget` additionally takes three optional booleans — `blur`, `locked` and `clickThrough`.
 None of them is a setting: each **seeds the default** of the matching per-plugin option in
 `plugin-state.json` (`blurEnabled`, `positionLocked`, `clickThrough`), so a widget can ship an
