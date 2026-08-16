@@ -47,6 +47,40 @@ SIDE_BOUND_TOKEN = re.compile(
     r"(top|bottom|left|right)(Margin|Inset)\s*:[^\n]*"
     r"(elevationMargin|hyprlandGapsOut)")
 
+# The anchor LINES, which decide an item's geometry. `centerIn`, the margins
+# and the two centre offsets are deliberately absent: they are numbers and a
+# whole-item shorthand, and neither can put two anchors on one axis.
+ANCHOR_LINES = ("top", "bottom", "left", "right",
+                "horizontalCenter", "verticalCenter")
+AXES = (({"left", "right"}, "horizontalCenter"),
+        ({"top", "bottom"}, "verticalCenter"))
+
+
+def anchor_groups(source):
+    """The anchor-line names each item binds, one set per declaration site."""
+    for opening in re.finditer(r"\banchors\s*\{", source):
+        index, depth = opening.end(), 1
+        while depth and index < len(source):
+            depth += {"{": 1, "}": -1}.get(source[index], 0)
+            index += 1
+        block = source[opening.end():index - 1]
+        yield ({name for name in ANCHOR_LINES
+                if re.search(rf"(?:^|\n)\s*{name}\s*:", block)}, block)
+
+    # ...and the same declarations written out one `anchors.x:` line at a
+    # time, which is one item's anchors exactly when the lines are adjacent.
+    names, lines = set(), []
+    for line in source.splitlines() + [""]:
+        dotted = re.match(r"\s*anchors\.(\w+)\s*:", line)
+        if dotted:
+            if dotted.group(1) in ANCHOR_LINES:
+                names.add(dotted.group(1))
+            lines.append(line)
+            continue
+        if names:
+            yield names, "\n".join(lines)
+        names, lines = set(), []
+
 
 class DockPositionContractTest(unittest.TestCase):
     def qml_sources(self):
@@ -134,6 +168,36 @@ class DockPositionContractTest(unittest.TestCase):
                 offender,
                 f"{path.name} binds the elevation/gap pair to a side: "
                 f"{offender.group(0) if offender else ''}")
+
+    def test_the_turn_never_moves_an_anchor_onto_an_occupied_axis(self):
+        # The dock's body, its strip and its hover area each anchored the two
+        # ends of whichever axis they spanned and centred on the other, so the
+        # SET of anchors changed when the dock turned. Qt does not merely
+        # ignore an axis holding two anchors during that turn:
+        #
+        #   left + right + horizontalCenter is refused outright, and the item
+        #   keeps the anchors of BOTH orientations - measured at 5120x1440
+        #   inside a 75x1440 surface, which is a full-height dark band with
+        #   the icons spread over a screen's width, of which a side edge shows
+        #   75px;
+        #
+        #   right + horizontalCenter alone makes the ANCHOR write the item's
+        #   width (2 * (right - hcenter)) - measured at 5120 against a content
+        #   item that was already 75 wide - and that write outlives the size
+        #   binding it clobbered, because the binding has finished changing by
+        #   then and never re-evaluates.
+        #
+        # Both are silent: no error, no binding loop, and QML that reads
+        # correctly. So the check is structural - one axis, one anchor - and
+        # the turn is expressed as a size (DockGeometry.contentBox) and an
+        # offset (DockGeometry.hideDirection) instead.
+        for path in EDGE_AWARE:
+            for names, block in anchor_groups(path.read_text(encoding="utf-8")):
+                for ends, centre in AXES:
+                    if centre in names and names & ends:
+                        self.fail(
+                            f"{path.name} anchors {sorted(names & ends)} and "
+                            f"{centre} on one axis:\n{block.strip()}")
 
     # ---- the vertical layout --------------------------------------------
 
