@@ -168,16 +168,26 @@ Scope {
                         // Along the strip the body is the icons' size plus a
                         // 5px shoulder; across it, the dock's thickness less
                         // the two margins the body's own anchors then apply.
+                        // Across the strip: the dock's own thickness less the
+                        // two margins, taken from the SAME derivation the
+                        // window is sized by rather than from `parent`.
+                        //
+                        // Reading the parent here was a cycle - the parent's
+                        // implicit size comes from this item - and QML broke it
+                        // by leaving the size stale, which is why the dock drew
+                        // as a full-width black band instead of a centred pill.
+                        // dockThickness is dockHeight + elevation + gaps, so
+                        // this is the configured dock height, arrived at
+                        // through the one derivation everything else uses.
+                        readonly property real crossAxis: dockRoot.dockThickness
+                            - Appearance.sizes.elevationMargin
+                            - Appearance.sizes.hyprlandGapsOut
                         implicitWidth: root.vertical
-                            ? parent.width
-                                - Appearance.sizes.elevationMargin
-                                - Appearance.sizes.hyprlandGapsOut
+                            ? crossAxis
                             : dockRow.implicitWidth + 5 * 2
                         implicitHeight: root.vertical
                             ? dockRow.implicitHeight + 5 * 2
-                            : parent.height
-                                - Appearance.sizes.elevationMargin
-                                - Appearance.sizes.hyprlandGapsOut
+                            : crossAxis
                         width: implicitWidth
                         height: implicitHeight
 
