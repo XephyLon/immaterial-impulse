@@ -895,6 +895,12 @@ if ! python3 "$SCRIPT_DIR/test_dropshelf_summon.py"; then
     exit 1
 fi
 
+echo "Running screensaver on-demand tests..."
+if ! python3 "$SCRIPT_DIR/test_screensaver_on_demand.py"; then
+    echo "Screensaver on-demand tests failed."
+    exit 1
+fi
+
 echo "Running event-loop safety tests..."
 if ! python3 "$SCRIPT_DIR/test_event_loop_safety_contract.py"; then
     echo "Event-loop safety tests failed."
