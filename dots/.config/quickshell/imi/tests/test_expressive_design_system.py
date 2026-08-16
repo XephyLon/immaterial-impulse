@@ -67,18 +67,35 @@ def span_declarations(source):
     CONTRIBUTING.md warns every source-text check about.
     """
     for match in SPAN_DECLARATION.finditer(source):
-        rest = source[match.end():]
-        body = rest.lstrip(" \t")
-        if not body.startswith("{"):
-            yield match.group(1), rest.split("\n", 1)[0]
-            continue
-        opening = len(rest) - len(body)
-        depth = 0
-        for index in range(opening, len(rest)):
-            depth += {"{": 1, "}": -1}.get(rest[index], 0)
-            if depth == 0:
-                yield match.group(1), rest[:index + 1]
-                break
+        yield match.group(1), whole_binding(source, match.end())
+
+
+def whole_binding(source, start):
+    """The whole right-hand side of a binding starting at `start`.
+
+    Brace-balanced when the value is a block, the rest of the line otherwise.
+    Extracted from `span_declarations` because the same question - is the value
+    a line or a block? - decides whether every other source-text check over a
+    QML binding in this file is real or vacuous.
+    """
+    rest = source[start:]
+    body = rest.lstrip(" \t")
+    if not body.startswith("{"):
+        return rest.split("\n", 1)[0]
+    opening = len(rest) - len(body)
+    depth = 0
+    for index in range(opening, len(rest)):
+        depth += {"{": 1, "}": -1}.get(rest[index], 0)
+        if depth == 0:
+            return rest[:index + 1]
+    return rest
+
+
+# A widget that owns its own size names it here; the host's own spans arrive as
+# `hostGridSize` instead.
+OWN_SIZE_MODE = re.compile(r"^[ \t]*property\s+string\s+sizeMode\s*:", re.M)
+# The two ways a span used to decide what EXISTS rather than where it sits.
+SPAN_DISPATCH = re.compile(r"^[ \t]*(sourceComponent|visible)\s*:", re.M)
 
 
 class ExpressiveDesignSystemTest(unittest.TestCase):
@@ -210,6 +227,46 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
                         f"{declaration.strip()}")
         self.assertEqual(sorted(path.name for path in known - swept), [],
                          "the sweep stopped seeing a tree that declares a span")
+
+    def test_a_widget_that_owns_its_span_morphs_in_one_tree(self):
+        """A span may decide where an element sits, never whether it exists.
+
+        docs/widget-standards-audit-2026-08-16.md's gap #1: calendar dispatched
+        three whole `Component`s through one `Loader` keyed on `sizeMode`, and
+        world-clock switched three subtrees with `visible`. Both destroy the
+        content and rebuild it in a single frame in the middle of a resize,
+        which is the interaction those widgets are used through - and both were
+        invisible to every check here, because
+        `test_the_media_tree_answers_the_blur_contract_itself` names the media
+        package and nothing else.
+
+        So this sweeps instead of naming: any widget declaring its own
+        `sizeMode` must not let that name reach a `sourceComponent` or a
+        `visible`. Read whole rather than by line, because calendar's Loader
+        wrote its dispatch as a block and a line-scoped check would have seen
+        `sourceComponent: {` and passed.
+
+        `opacity` is deliberately not on the list. An element with no home at a
+        span fades where it stands, which is the mechanism this asks for; what
+        it forbids is the element ceasing to exist.
+        """
+        swept = {}
+        for path in sorted(PLUGIN_ROOT.rglob("Widget.qml")):
+            source = path.read_text(encoding="utf-8")
+            if not OWN_SIZE_MODE.search(source):
+                continue
+            package = path.parent.name
+            swept[package] = path
+            for match in SPAN_DISPATCH.finditer(source):
+                binding = whole_binding(source, match.end())
+                self.assertNotIn(
+                    "sizeMode", binding,
+                    f"{package}/{path.name}: `{match.group(1)}` is decided by "
+                    f"the span, so the span destroys and rebuilds the content:"
+                    f"\n{binding.strip()}")
+
+        self.assertEqual(sorted(swept), ["calendar", "world-clock"],
+                         "the sweep stopped seeing a widget that owns its span")
 
     def test_every_card_is_told_when_its_widget_is_handled(self):
         """A card that never receives `dragging` silently never lifts.
@@ -445,8 +502,14 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
             list((PLUGIN_ROOT / "nandoroid-media").glob("*.qml"))
             + [DESIGN_SYSTEM / "widgets/DesktopWeatherWidget.qml",
                DESIGN_SYSTEM / "widgets/DesktopCurrencyWidget.qml",
-               DESIGN_SYSTEM / "widgets/DesktopMediaWidget.qml"])
-        self.assertGreaterEqual(len(swept), 6, "the sweep found nothing to check")
+               DESIGN_SYSTEM / "widgets/DesktopMediaWidget.qml",
+               # The two that stopped rebuilding per span. They join the sweep
+               # rather than each carrying a private copy of the curve, which
+               # is how a fifth tree would end up moving at its own speed
+               # beside four that agree.
+               PLUGIN_ROOT / "calendar/Widget.qml",
+               PLUGIN_ROOT / "world-clock/Widget.qml"])
+        self.assertGreaterEqual(len(swept), 8, "the sweep found nothing to check")
         carriers = 0
         for path in swept:
             source = path.read_text(encoding="utf-8")
