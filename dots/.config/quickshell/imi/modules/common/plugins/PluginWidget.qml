@@ -603,16 +603,28 @@ AbstractBackgroundWidget {
     // In-shell frost: sample + blur the wallpaper region behind each blur region.
     // The sample tracks rootWidget.x/y live so it stays aligned while dragging.
     //
-    // While the screen is locked AND the lock blurs the wallpaper
-    // (Background.qml's blurLoader shows a blurred + zoomed wallpaper), skip our
-    // own blur surface - the widget's translucent panel then shows that lock
-    // background through it, keeping the frost consistent with the lock screen.
-    // If the lock does NOT blur the wallpaper, keep blurring per widget so a
+    // Two states stand the per-widget frost down, and naming the condition
+    // rather than either cause is what let the second one join without a second
+    // gate.
+    //
+    // The lock, while it blurs the wallpaper (Background.qml's blurLoader shows
+    // a blurred + zoomed wallpaper): the widget's translucent panel then shows
+    // that lock background through it, so the frost stays consistent with the
+    // lock screen. If the lock does NOT blur, keep blurring per widget so a
     // blur-enabled widget stays frosted against the sharp wallpaper.
-    readonly property bool lockCoversFrost: GlobalStates.screenLocked
-        && Config.options.lock.blur.enable
+    //
+    // Edit Mode, unconditionally: the whole desktop is drawn under a scale
+    // transform there, and a frost is a ShaderEffectSource sampling the
+    // wallpaper at a rect computed from three frames that the transform does
+    // not move together. Measured on a live desktop with a Wallpaper Engine
+    // scene, cards that are visibly frosted at rest render as flat tinted
+    // panels under the transform - so this is not a frost the mode is choosing
+    // to give up, it is one it would only appear to have.
+    readonly property bool frostSuspended: (GlobalStates.screenLocked
+            && Config.options.lock.blur.enable)
+        || GlobalStates.editMode
     Repeater {
-        model: rootWidget.frostBlur && rootWidget.blurEnabled && !rootWidget.lockCoversFrost
+        model: rootWidget.frostBlur && rootWidget.blurEnabled && !rootWidget.frostSuspended
             && rootWidget.hasBlurSurface
             && (Config.options.appearance.transparency.enable || rootWidget.keepTranslucent)
             ? (pluginNode.hasCustomBlurRegions
