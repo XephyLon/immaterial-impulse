@@ -17,13 +17,33 @@ import qs.modules.imi.background
  * per-wallpaper artifact the user accepts once, with segmentation proposing
  * candidates.
  *
- * Two models, because neither is a superset of the other: `isnet-anime` carries
- * most of this library and returns nothing at all on the semi-photographic
- * minority that `isnet-general-use` handles best. So a model that finds nothing
- * usually means the WRONG MODEL rather than no subject - measured on
- * `cat_upscayl_2x…png`, where the illustration model returns `none` and the
- * photographic one returns a foreground of 0.143 - and the two are shown side
- * by side, at the same size, for exactly that reason.
+ * Two detectors, because neither is a superset of the other: `isnet-anime`
+ * carries most of this library and returns nothing at all on the
+ * semi-photographic minority that `isnet-general-use` handles best. So a model
+ * that finds nothing usually means the WRONG MODEL rather than no subject -
+ * measured on `cat_upscayl_2x…png`, where the illustration model returns `none`
+ * and the photographic one returns a foreground of 0.143 - and the two are
+ * shown side by side, at the same size, for exactly that reason.
+ *
+ * A THIRD column, because on this library "the wrong model" is usually still
+ * the answer after trying both: swept over the 91 wallpapers here, 45 return
+ * nothing from either detector. Those are not empty pictures - they are
+ * landscapes and full-bleed illustrations with plenty to stand in front of a
+ * clock and no single salient object to find. That column is MobileSAM and it
+ * answers a different question: not "what is the subject of this picture" but
+ * "what is the thing at this point". So the user points at it.
+ *
+ * Its whole interaction is the preview: left-click adds a point the cutout must
+ * contain, right-click one it must not, and the mask redraws per click because
+ * the picture is encoded once and each click only decodes - 1.6s for the first
+ * and 0.3s for every one after it. Both gestures are said on the preview
+ * itself, because a click surface with its instructions somewhere else is a
+ * click surface nobody discovers. The clicks are drawn back on as plus and
+ * minus discs so a correction is aimed at a thing rather than at a memory.
+ *
+ * All three columns are the same width, which is the point of the layout: the
+ * cutouts are being compared, and the clickable one is not more important than
+ * the two it is being compared against.
  *
  * The preview is composited the way the desktop is - the wallpaper cropped as it
  * will be, with a clock over it and the cutout on top - rather than shown as a
@@ -69,14 +89,19 @@ Item {
         case "declined":
             return Translation.tr("This wallpaper is set to no depth. Accepting a cutout below undoes that.")
         case "none":
-            return Translation.tr("Neither model found a subject in this wallpaper yet.")
+            // Not "there is no subject in this wallpaper" - that was a verdict
+            // on the picture, and half this library reaches it while holding a
+            // perfectly good thing to stand in front of the clock. It is a
+            // verdict on the two models that answer on their own, and the
+            // column that answers a click is what it points at.
+            return Translation.tr("Neither detector found a subject. Click the one you want in the third preview.")
         case "candidate":
             return Translation.tr("A cutout is ready to judge. Nothing is drawn until you keep one.")
         case "unreadable":
         case "error":
             return Translation.tr("Could not read this wallpaper's cache entry.")
         default:
-            return Translation.tr("No cutout for this wallpaper yet. Run a model, then keep it only if the edge looks right where your widgets sit.")
+            return Translation.tr("No cutout for this wallpaper yet. Run a detector or click the subject, then keep it only if the edge looks right where your widgets sit.")
         }
     }
 
@@ -181,24 +206,31 @@ Item {
             spacing: Appearance.spacing.space150
 
             Repeater {
-                model: ClockDepth.models
+                model: ClockDepth.modelSpecs
 
                 ColumnLayout {
                     id: candidate
-                    required property string modelData
+                    required property var modelData
 
-                    readonly property string maskPath: ClockDepth.candidates?.[candidate.modelData] ?? ""
+                    readonly property string modelName: candidate.modelData.name ?? ""
+                    // The producer says which models answer a click and which
+                    // answer the picture; this column is the same shape either
+                    // way and differs only in how it is asked.
+                    readonly property bool prompted: candidate.modelData.kind === "prompted"
+                    readonly property var points: candidate.prompted ? (ClockDepth.points ?? []) : []
+
+                    readonly property string maskPath: ClockDepth.candidates?.[candidate.modelName] ?? ""
                     // Absent from `candidates` and present-but-null in it are
                     // different things and must read differently: the first is a
                     // model nobody has run, the second is a model that ran and
                     // found nothing. Collapsing them is how a picker ends up
                     // inviting the user to spend 4.5 seconds re-learning that
                     // there is no one in the picture.
-                    readonly property bool refused: candidate.modelData in (ClockDepth.candidates ?? ({}))
+                    readonly property bool refused: candidate.modelName in (ClockDepth.candidates ?? ({}))
                         && candidate.maskPath === ""
-                    readonly property bool thisRunning: ClockDepth.running === candidate.modelData
+                    readonly property bool thisRunning: ClockDepth.running === candidate.modelName
                     readonly property bool chosen: ClockDepth.state === "accepted"
-                        && ClockDepth.acceptedModel === candidate.modelData
+                        && ClockDepth.acceptedModel === candidate.modelName
                     // Whether the OTHER column found something. A model that
                     // returns nothing is usually the wrong model rather than an
                     // empty picture, so an empty result has to point at its
@@ -206,7 +238,7 @@ Item {
                     readonly property bool otherFound: {
                         const results = ClockDepth.candidates ?? ({})
                         for (const other in results) {
-                            if (other !== candidate.modelData && (results[other] ?? "") !== "")
+                            if (other !== candidate.modelName && (results[other] ?? "") !== "")
                                 return true
                         }
                         return false
@@ -236,9 +268,11 @@ Item {
                         spacing: Appearance.spacing.space50
 
                         StyledText {
-                            text: candidate.modelData === "isnet-anime"
-                                ? Translation.tr("Illustration")
-                                : Translation.tr("Photographic")
+                            text: candidate.prompted
+                                ? Translation.tr("Click to select")
+                                : candidate.modelName === "isnet-anime"
+                                    ? Translation.tr("Illustration")
+                                    : Translation.tr("Photographic")
                             font.pixelSize: Appearance.font.pixelSize.normal
                             color: Appearance.colors.colOnLayer0
                         }
@@ -255,7 +289,7 @@ Item {
                         }
                         Item { Layout.fillWidth: true }
                         StyledText {
-                            text: candidate.modelData
+                            text: candidate.modelName
                             font.pixelSize: Appearance.font.pixelSize.smallest
                             color: Appearance.colors.colSubtext
                         }
@@ -371,6 +405,93 @@ Item {
                             visible: candidate.maskPath !== ""
                         }
 
+                        // Where the clicks landed, drawn back onto the picture.
+                        //
+                        // Positioned through the cutout's OWN mask rectangle
+                        // rather than from a second crop worked out here: that
+                        // rect is where the whole wallpaper sits inside this
+                        // box, so a normalised point in the picture is a
+                        // fraction along it. Anything else would put the dot
+                        // somewhere other than where the click was sent, which
+                        // is the one thing that would make this gesture
+                        // unteachable.
+                        Repeater {
+                            model: candidate.points
+
+                            Item {
+                                id: marker
+                                required property var modelData
+                                readonly property rect frame: previewCutout.maskRect
+                                readonly property bool include: (marker.modelData.label ?? 1) === 1
+
+                                width: 18
+                                height: 18
+                                x: marker.frame.x + marker.modelData.x * marker.frame.width
+                                    - width / 2
+                                y: marker.frame.y + marker.modelData.y * marker.frame.height
+                                    - height / 2
+                                visible: candidate.prompted
+
+                                // Black and white, and hardcoded, for the same
+                                // reason the inspect contour is: every
+                                // Appearance colour is generated FROM this
+                                // wallpaper, so a token here is a colour the
+                                // picture is guaranteed to contain. A disc
+                                // against its own outline reads on any image.
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: width / 2
+                                    color: marker.include ? "#ffffff" : "#101010"
+                                    border.width: 2
+                                    border.color: marker.include ? "#101010" : "#ffffff"
+
+                                    MaterialSymbol {
+                                        anchors.centerIn: parent
+                                        // The glyph is the whole explanation of
+                                        // what a right-click did, on the object
+                                        // it did it to.
+                                        text: marker.include ? "add" : "remove"
+                                        iconSize: 12
+                                        color: marker.include ? "#101010" : "#ffffff"
+                                    }
+                                }
+                            }
+                        }
+
+                        // The gesture. Declared after everything it points at so
+                        // it is on top, and only for the prompted column - the
+                        // salient ones answer the picture and have nothing to
+                        // aim.
+                        MouseArea {
+                            id: pointArea
+                            anchors.fill: parent
+                            // Gated on the wallpaper having DECODED, not merely
+                            // on a path. An Image's implicit size reads 0 until
+                            // its source resolves, and `coverRect` answers a
+                            // zero-sized source with the box itself - so a click
+                            // arriving in that window would be measured against
+                            // a frame the picture does not occupy and sent to
+                            // the producer as a point somewhere else entirely.
+                            enabled: candidate.prompted && root.wallpaper !== ""
+                                && previewCutout.wallpaperStatus === Image.Ready
+                            visible: enabled
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            cursorShape: Qt.CrossCursor
+                            onClicked: mouse => {
+                                const frame = previewCutout.maskRect
+                                if (frame.width <= 0 || frame.height <= 0)
+                                    return
+                                // Clamped rather than passed through: the
+                                // producer refuses a point outside the picture,
+                                // and a rounding error at the very edge of the
+                                // frame would come back as an error message
+                                // about a click that looked perfectly ordinary.
+                                const nx = Math.max(0, Math.min(1, (mouse.x - frame.x) / frame.width))
+                                const ny = Math.max(0, Math.min(1, (mouse.y - frame.y) / frame.height))
+                                ClockDepth.addPoint(nx, ny, mouse.button === Qt.LeftButton)
+                            }
+                        }
+
                         // Along the bottom edge rather than centred: the middle
                         // of the preview is where the clock is, and a status
                         // label printed across it is sitting on the one thing
@@ -380,12 +501,15 @@ Item {
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
                             implicitHeight: statusLabel.implicitHeight + Appearance.spacing.space100
-                            visible: candidate.maskPath === "" || candidate.thisRunning
+                            visible: statusLabel.text !== ""
                             color: Appearance.colors.colLayer0
 
                             StyledText {
                                 id: statusLabel
                                 anchors.centerIn: parent
+                                width: parent.width - Appearance.spacing.space100
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideRight
                                 // "No subject found" was a verdict on the
                                 // picture and it is usually a verdict on the
                                 // model: measured, the illustration model
@@ -393,13 +517,31 @@ Item {
                                 // the other model cuts out cleanly. A user who
                                 // reads the first sentence stops; a user who
                                 // reads this one runs the other column.
-                                text: candidate.thisRunning
-                                    ? Translation.tr("Looking for a subject…")
-                                    : candidate.refused
+                                //
+                                // The prompted column's line is the whole of
+                                // its instructions, and it is on the surface
+                                // the gesture is aimed at, because there is
+                                // nowhere else a person would look for it.
+                                text: {
+                                    if (candidate.thisRunning)
+                                        return candidate.prompted
+                                            ? Translation.tr("Cutting…")
+                                            : Translation.tr("Looking for a subject…")
+                                    if (candidate.prompted) {
+                                        if (candidate.points.length === 0)
+                                            return Translation.tr("Click the subject")
+                                        if (candidate.maskPath === "")
+                                            return Translation.tr("Nothing there — click on the subject itself")
+                                        return Translation.tr("Right-click to exclude what it grabbed")
+                                    }
+                                    if (candidate.maskPath !== "")
+                                        return ""
+                                    return candidate.refused
                                         ? (candidate.otherFound
                                             ? Translation.tr("Nothing here — the other model found something")
-                                            : Translation.tr("Nothing here — try the other model"))
+                                            : Translation.tr("Nothing here — try clicking the subject"))
                                         : Translation.tr("Not run yet")
+                                }
                                 font.pixelSize: Appearance.font.pixelSize.small
                                 color: Appearance.colors.colOnLayer0
                             }
@@ -412,11 +554,53 @@ Item {
 
                         DialogButton {
                             id: runButton
+                            visible: !candidate.prompted
                             enabled: !root.busy && root.wallpaper !== ""
                             buttonText: candidate.maskPath !== "" || candidate.refused
                                 ? Translation.tr("Run again")
                                 : Translation.tr("Run")
-                            onClicked: ClockDepth.runModel(candidate.modelData)
+                            onClicked: ClockDepth.runModel(candidate.modelName)
+                        }
+                        // The prompted column's two corrections, as glyphs
+                        // rather than as labelled buttons: a third of the
+                        // dialog's width already carries an accept button, and
+                        // the words that would go on these are the ones the
+                        // preview's own line is saying.
+                        RippleButton {
+                            id: undoButton
+                            visible: candidate.prompted
+                            enabled: !root.busy && candidate.points.length > 0
+                            implicitWidth: 36
+                            implicitHeight: 36
+                            buttonRadius: height / 2
+                            onClicked: ClockDepth.undoPoint()
+                            contentItem: MaterialSymbol {
+                                anchors.centerIn: parent
+                                text: "undo"
+                                iconSize: Appearance.font.pixelSize.larger
+                                color: Appearance.colors.colOnLayer0
+                            }
+                            StyledToolTip {
+                                text: Translation.tr("Take back the last click")
+                            }
+                        }
+                        RippleButton {
+                            id: clearButton
+                            visible: candidate.prompted
+                            enabled: !root.busy && candidate.points.length > 0
+                            implicitWidth: 36
+                            implicitHeight: 36
+                            buttonRadius: height / 2
+                            onClicked: ClockDepth.clearPoints()
+                            contentItem: MaterialSymbol {
+                                anchors.centerIn: parent
+                                text: "backspace"
+                                iconSize: Appearance.font.pixelSize.larger
+                                color: Appearance.colors.colOnLayer0
+                            }
+                            StyledToolTip {
+                                text: Translation.tr("Start this selection over")
+                            }
                         }
                         Item { Layout.fillWidth: true }
                         DialogButton {
@@ -427,7 +611,7 @@ Item {
                             colText: Appearance.colors.colOnPrimary
                             buttonText: Translation.tr("Use this")
                             onClicked: {
-                                ClockDepth.acceptModel(candidate.modelData)
+                                ClockDepth.acceptModel(candidate.modelName)
                                 // Accepting a mask while the feature is switched
                                 // off would put the artifact on disk and change
                                 // nothing on screen, which reads as the button
