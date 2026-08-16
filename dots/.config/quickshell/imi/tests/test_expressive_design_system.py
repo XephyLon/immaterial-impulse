@@ -51,6 +51,36 @@ def entry_file(directory):
     return PLUGIN_ROOT / directory / ENTRY_FILES.get(directory, "Widget.qml")
 
 
+# A `spanW`/`spanH` property declaration, however it is qualified.
+SPAN_DECLARATION = re.compile(
+    r"^[ \t]*(?:readonly\s+)?property\s+\w+\s+(spanW|spanH)\s*:", re.M)
+
+
+def span_declarations(source):
+    """Yield (name, the WHOLE declaration) for each spanW/spanH property.
+
+    The whole one, because two of the three trees write the span as a block
+    (`readonly property real spanW: { if (sizeMode === "1x1") ... }`) and a
+    check that reads only the line carrying the declaration sees nothing but
+    an opening brace. It would pass on `return root.implicitWidth;` sitting
+    one line below - which is the same vacuous-by-formatting failure
+    CONTRIBUTING.md warns every source-text check about.
+    """
+    for match in SPAN_DECLARATION.finditer(source):
+        rest = source[match.end():]
+        body = rest.lstrip(" \t")
+        if not body.startswith("{"):
+            yield match.group(1), rest.split("\n", 1)[0]
+            continue
+        opening = len(rest) - len(body)
+        depth = 0
+        for index in range(opening, len(rest)):
+            depth += {"{": 1, "}": -1}.get(rest[index], 0)
+            if depth == 0:
+                yield match.group(1), rest[:index + 1]
+                break
+
+
 class ExpressiveDesignSystemTest(unittest.TestCase):
     def test_library_is_not_a_plugin(self):
         self.assertFalse((DESIGN_SYSTEM / "manifest.json").exists())
@@ -147,23 +177,39 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
         currency panel and its cells) crawled behind the card instead of
         travelling with it. The settled span's width is a function of the
         span name alone.
+
+        Swept rather than enumerated, and read whole rather than by line.
+        The first version named the three trees that existed and looked only
+        at the line carrying the declaration - so a fourth tree was invisible
+        to it, and weather, whose span is a block, was checked against the
+        text `readonly property real spanW: {` and nothing else. Both halves
+        are the failure this file already records one method down: a check
+        that enumerates its subjects only ever guards the subjects someone
+        remembered, and one with a baked-in shape passes vacuously the moment
+        the shape changes.
         """
-        trees = [
-            PLUGIN_ROOT / "nandoroid-media/Widget.qml",
-            DESIGN_SYSTEM / "widgets/DesktopWeatherWidget.qml",
-            DESIGN_SYSTEM / "widgets/DesktopCurrencyWidget.qml",
-        ]
-        for tree in trees:
-            source = tree.read_text(encoding="utf-8")
-            self.assertIn("spanW", source, f"{tree.name} declares a span width")
-            for line in source.splitlines():
-                if "property real spanW" in line or "property real spanH" in line:
-                    # `root.width1x1` and friends are settled constants; the
-                    # live box is `root.width` / `root.implicitWidth` exactly.
-                    for live in (r"\bimplicitWidth\b", r"\bimplicitHeight\b",
-                                 r"\broot\.width\b", r"\broot\.height\b"):
-                        self.assertIsNone(re.search(live, line),
-                                          f"{tree.name}: {line.strip()}")
+        known = {
+            (PLUGIN_ROOT / "nandoroid-media/Widget.qml").resolve(),
+            (DESIGN_SYSTEM / "widgets/DesktopWeatherWidget.qml").resolve(),
+            (DESIGN_SYSTEM / "widgets/DesktopCurrencyWidget.qml").resolve(),
+        }
+        swept = set()
+        for path in sorted(ROOT.rglob("*.qml")):
+            if "tests" in path.relative_to(ROOT).parts:
+                continue
+            for name, declaration in span_declarations(
+                    path.read_text(encoding="utf-8")):
+                swept.add(path.resolve())
+                # `root.width1x1` and friends are settled constants; the
+                # live box is `root.width` / `root.implicitWidth` exactly.
+                for live in (r"\bimplicitWidth\b", r"\bimplicitHeight\b",
+                             r"\broot\.width\b", r"\broot\.height\b"):
+                    self.assertIsNone(
+                        re.search(live, declaration),
+                        f"{path.name}: {name} reads the animating box:\n"
+                        f"{declaration.strip()}")
+        self.assertEqual(sorted(path.name for path in known - swept), [],
+                         "the sweep stopped seeing a tree that declares a span")
 
     def test_every_card_is_told_when_its_widget_is_handled(self):
         """A card that never receives `dragging` silently never lifts.
