@@ -83,12 +83,111 @@ class TheTwoGroupsStaySeparate(unittest.TestCase):
                         "the widget's own options must render above the shared "
                         "section - they are what the page was opened for")
 
-    def test_one_delegate_serves_every_repeater(self):
-        """Two copies of the row delegate is how the groups drift apart."""
+    def test_one_delegate_serves_every_group_of_rows(self):
+        """Two copies of the row delegate is how the groups drift apart.
+
+        The host's booleans are a toggle bar rather than rows now, so the
+        count is against the groups still drawn AS rows - the plugin's own
+        options and the size row - rather than against every Repeater in the
+        file.
+        """
         self.assertEqual(self.source.count("id: optionRow"), 1)
-        self.assertEqual(self.source.count("delegate: optionRow"),
-                         self.source.count("Repeater {"),
+        for model in ("root.widgetOptions", "root.sizeRows"):
+            self.assertRegex(
+                self.source,
+                rf"model: {re.escape(model)}\s*\n\s*delegate: optionRow",
+                f"{model} no longer draws through the shared row delegate")
+        self.assertEqual(self.source.count("delegate: optionRow"), 2,
                          "every group of rows draws through the one delegate")
+
+
+class TheHostBooleansAreAToggleBar(unittest.TestCase):
+    """Six booleans were six full-width switch rows - icon, label and track per
+    bit, 212px of a popup whose scarce axis is vertical. They are one wrapping
+    bar of icon toggles now (72px measured, five of the six rows' worth
+    reclaimed), which only works while three things hold: the toggles are
+    composed from the existing control rather than hand-rolled, a click stays
+    an intent, and every glyph is still named by something.
+    """
+
+    def setUp(self):
+        self.source = OPTIONS.read_text(encoding="utf-8")
+        start, end = block_extent(self.source, "ContentSubsection {")
+        self.section = self.source[start:end]
+
+    def test_the_bar_wraps(self):
+        """A row of six 40px toggles fits the settings card today and does not
+        fit every surface this page could end up on. `FlowButtonGroup` is a
+        Flow - a plain RowLayout would push the last toggles off the edge."""
+        self.assertIn("FlowButtonGroup {", self.section,
+                      "the toggles need a container that wraps")
+        bar_start, bar_end = block_extent(self.section, "FlowButtonGroup {")
+        bar = self.section[bar_start:bar_end]
+        self.assertIn("model: root.behaviourRows", bar,
+                      "every host boolean belongs in the one wrapping bar")
+
+    def test_the_toggle_is_composed_not_written(self):
+        """`IconToolbarButton` is already an icon-only button whose `toggled`
+        container states are M3's selected/unselected pair, and the
+        `RippleButton` under it already owns the pointer shape and the ONE
+        application of the shared interaction motion. A hand-rolled control
+        here would have to re-earn all three."""
+        self.assertIn("component BehaviourToggle: IconToolbarButton", self.source)
+
+    def test_the_toggles_add_no_motion_of_their_own(self):
+        """`lint_interaction_motion_double` and `lint_disabled_opacity` both
+        fail on this, and both key on an idiom - so pin it here too, where the
+        reason is written down."""
+        start, end = block_extent(self.source, "component BehaviourToggle: IconToolbarButton {")
+        toggle = self.source[start:end]
+        for doubled in ("scale:", "opacity:"):
+            self.assertNotIn(doubled, toggle,
+                             "the control already applies the interaction "
+                             "model; a second one composites with it")
+
+    def test_a_click_is_still_an_intent(self):
+        """The ConfigSwitch rule survives the control swap: `toggled` is a
+        pure binding on the store and the handler flips the value at its
+        source. An assignment to `toggled` would destroy that binding and
+        detach the toggle from what it displays, exactly as #158 did."""
+        self.assertIsNone(
+            re.search(r"\btoggled\s*=(?![=~])", self.source),
+            "a toggle assigns to `toggled` - that is the binding destroyed by hand")
+        self.assertIn("toggled: PluginState.option(root.manifest.id, modelData.key, "
+                      "modelData.default)", self.section)
+        self.assertIn("PluginState.setOption(root.manifest.id, modelData.key,", self.section)
+        self.assertIn("toggled: PluginState.presetPersisted(root.manifest.id)", self.section)
+        self.assertIn("PluginState.setPresetPersist(root.manifest.id,", self.section)
+
+    def test_no_host_boolean_is_a_row_any_more(self):
+        """The preset-persist switch was the sixth of them and the only one
+        not synthesized into `behaviourRows`; leaving it as a row would put a
+        full-width switch beside a bar of toggles that mean the same kind of
+        thing."""
+        self.assertNotIn("ConfigSwitch", self.section)
+
+    def test_every_toggle_carries_the_name_its_glyph_cannot(self):
+        """A pin, a grid, a lock, a hand, a droplet and a frame are not
+        self-evident. The caption below the bar names whichever one the pointer
+        is over, so a toggle with no `label` is an unlabelable control."""
+        self.assertIn("label: behaviourSection.presetPersistLabel", self.section)
+        self.assertIn("label: modelData.label", self.section)
+        self.assertIn("behaviourSection.hoveredLabel = toggle.label", self.source)
+
+    def test_the_caption_falls_back_to_what_is_on(self):
+        """Off-hover the caption answers the other question the six labels
+        used to answer for free: which of these are on. Selected-state colour
+        answers it too, but only once six glyphs have been learned."""
+        self.assertIn("readonly property string enabledLabels", self.section)
+        self.assertIn("behaviourSection.hoveredLabel.length > 0", self.section)
+        self.assertIn("behaviourSection.enabledLabels.length > 0", self.section)
+
+    def test_the_hover_label_is_cleared_only_by_the_toggle_that_wrote_it(self):
+        """A pointer crossing from one toggle to the next delivers the leave
+        and the enter in an order nothing here controls, so an unconditional
+        clear on a leave blanks the label the enter just wrote."""
+        self.assertIn(
+            "else if (behaviourSection.hoveredLabel === toggle.label)", self.source)
 
 
 if __name__ == "__main__":
