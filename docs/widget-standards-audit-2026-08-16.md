@@ -138,6 +138,14 @@ inferred". I read `currency_geometry.js`; it does return null. The finding stand
 
 ### G2 — `notes` and `image-converter` are the two desktop widgets with no shadow at all (standard 3)
 
+**Fixed.** Both widgets are an `Item` root composing one `Expressive.WidgetCard` now, with the
+frost record taken from that card and the host's drag and box-motion forwarded to it, and the lint
+below has been rescoped so the spelling that hid them cannot hide the next one
+(fix(notes): draw the widget's surface on the shared card,
+fix(image-converter): draw the widget's surface on the shared card,
+test(lint): the card-tint carve-out is scoped to content, not to a spelling). The reading that
+follows is what was there.
+
 `bundled/notes/Widget.qml:13,36-40` and `bundled/image-converter/Widget.qml:11,51-54` are both a
 `Rectangle` root painting their own surface:
 
@@ -586,3 +594,12 @@ Proven to fail, in a clean tree, on two plants, each reverted:
 The rule this does **not** mechanise, and why: tightening `lint_widget_card_tint.py` to catch G2's
 `blurEnabled ? transparentize(...)` spelling would redden the suite on two real files, and fixing
 those is a refactor rather than an audit. It is the right second lint, immediately after G2 lands.
+
+**That second lint has since landed with G2's fix**, and not as the wider spelling match this
+paragraph imagined — matching `transparentize` everywhere would redden every legitimate content
+tint (calendar's four, world-clock's, user-card's two, and `image-converter`'s own drop well). It
+decides by position instead: the ROOT object of each desktop widget's entry point, enumerated from
+the manifests declaring a `desktop-widget` capability, may not paint a blur-gated tint whichever
+helper it names, while a tint on a surface *inside* the card stays free. Proven to fail on the two
+widgets as they stood before the fix, and to pass after
+(test(lint): the card-tint carve-out is scoped to content, not to a spelling).
