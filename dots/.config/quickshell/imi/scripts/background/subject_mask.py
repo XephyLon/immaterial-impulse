@@ -109,6 +109,22 @@ MODELS = {
 # answer and must be recorded rather than recomputed on every visit.
 EMPTY_FOREGROUND = 0.005
 
+# A click's floor is far lower, and it has to be a different number rather than
+# the same one reused. The salient threshold answers "did this model find a
+# subject in this picture", where 0.5% of the frame is a plausible dividing line
+# between an answer and a stray fragment. A click is the user ASSERTING there is
+# something there and pointing at it, so the only thing left to detect is a
+# decoder that returned nothing at all.
+#
+# Measured, and this is not theoretical: excluding part of a hillside on
+# `aishot-1206.jpg` left a mask at 0.46% of the frame - on that 7680x2160
+# wallpaper, 76000 pixels, a plainly visible object - and the salient floor threw
+# it away as "nothing there". Meanwhile a click on flat sky comes back at 1.6-10%
+# because SAM answers with the sky, so the high floor was not buying a refusal
+# for the case it looked like it was for. 0.0002 is about a 57x57 blob at that
+# resolution, which is the smallest thing worth compositing over a clock.
+EMPTY_PROMPTED_FOREGROUND = 0.0002
+
 # Keys, not files: dropping a key's `.off` while keeping its `.png` would
 # resurrect a mask the user declined.
 SWEEP_KEEP_KEYS = 200
@@ -617,7 +633,7 @@ def select(root, wallpaper, model, points):
     mask = decode_mask(root, model, embedding, resized, points)
     foreground = float((mask > 0.5).mean())
 
-    if foreground < EMPTY_FOREGROUND:
+    if foreground < EMPTY_PROMPTED_FOREGROUND:
         candidate.unlink(missing_ok=True)
         return {"state": "empty", "key": key, "model": model,
                 "foreground": foreground, "prompt": points}

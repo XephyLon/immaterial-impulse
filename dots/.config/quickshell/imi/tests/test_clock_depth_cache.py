@@ -717,6 +717,30 @@ class PromptedCacheTest(unittest.TestCase):
         subject_mask.select(self.cache, self.wallpaper, "mobile-sam", [])
         self.assertFalse((self.cache / f"{self.key}.mobile-sam.none").exists())
 
+    def test_a_click_keeps_a_subject_the_detectors_floor_would_discard(self):
+        """The two floors answer different questions and must not be one number.
+
+        The salient floor divides "this model found a subject in this picture"
+        from "it found a stray fragment", and 0.5% of the frame is a plausible
+        place to put that. A click is the user asserting there IS something and
+        pointing at it, so the only thing left to detect is a decoder that
+        returned nothing.
+
+        Measured rather than argued: excluding part of a hillside on
+        `aishot-1206.jpg` left a mask at 0.46% of the frame - 76000 pixels on
+        that 7680x2160 wallpaper, a plainly visible object - which the salient
+        floor discarded as "nothing there". And a click on flat sky comes back
+        at 1.6-10% because SAM answers with the sky, so the high floor was not
+        even buying the refusal it looked like it was for.
+        """
+        self.assertLess(subject_mask.EMPTY_PROMPTED_FOREGROUND,
+                        subject_mask.EMPTY_FOREGROUND / 10)
+        self.assertGreater(subject_mask.EMPTY_PROMPTED_FOREGROUND, 0,
+                           "a decoder returning nothing must still be refused")
+        # The case that was thrown away, at the size it actually came back.
+        self.assertGreater(0.0046, subject_mask.EMPTY_PROMPTED_FOREGROUND)
+        self.assertLess(0.0046, subject_mask.EMPTY_FOREGROUND)
+
     def test_the_two_kinds_of_model_refuse_each_others_verb(self):
         with self.assertRaises(RuntimeError):
             subject_mask.select(self.cache, self.wallpaper, "isnet-anime",
