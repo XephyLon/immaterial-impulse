@@ -272,12 +272,18 @@ ShellRoot {
         // ---- the grip, shown by the mode and driven at scale ---------------
         //
         // No hover first: in the mode the grip is already out, so the press
-        // reaches it. That is both the affordance check and the one that scores
-        // the grip's delta in the right frame - it is read in the widget's
-        // parent frame, and a scene-space delta here would resize by the
-        // scale's worth less than the pointer travelled.
+        // reaches it. That is the affordance half.
+        //
+        // The 160px pull is the frame half, and it is chosen to be
+        // discriminating rather than merely large. Shrinking needs the target
+        // to come inside the smaller span's edge, which is 144px away
+        // (3x2 -> 2x2), so 160 canvas pixels give one span - while the same
+        // gesture measured in SCENE pixels is 160 x the mode's scale, which
+        // falls short of 144 and gives none. Measured: a 150px pull committed
+        // 2x2 under BOTH frames, so the first version of this check was
+        // vacuous exactly the way a probe taken at a wall is.
         () => { harness.placeWidgets(); },
-        () => harness.dragGripBy(resizableWidget, -150, 0),
+        () => harness.dragGripBy(resizableWidget, -160, 0),
         () => {
             harness.check("the grip is out for the mode and resizes at scale",
                           harness.storedSize("edit-resize-probe") === "2x2");
