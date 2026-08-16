@@ -25,6 +25,18 @@ OPTIONS = ROOT / "modules/common/plugins/PluginOptions.qml"
 SUBSECTION_TITLE = "Widget behaviour"
 
 
+def without_comments(source):
+    """Source with `//` comments dropped.
+
+    A check that matches source text matches a commented-out line just as
+    happily as a live one - which is exactly how a mutation that deletes a
+    binding by commenting it out passes the check guarding that binding.
+    Proven by planting that mutation; the first version of this file did not
+    redden for it.
+    """
+    return re.sub(r"//[^\n]*", "", source)
+
+
 def block_extent(source, opener):
     """[start, end) of the QML block introduced by `opener` ("Foo {")."""
     start = source.index(opener)
@@ -111,7 +123,7 @@ class TheHostBooleansAreAToggleBar(unittest.TestCase):
     """
 
     def setUp(self):
-        self.source = OPTIONS.read_text(encoding="utf-8")
+        self.source = without_comments(OPTIONS.read_text(encoding="utf-8"))
         start, end = block_extent(self.source, "ContentSubsection {")
         self.section = self.source[start:end]
 
