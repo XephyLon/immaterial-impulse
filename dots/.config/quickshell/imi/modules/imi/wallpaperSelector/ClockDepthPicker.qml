@@ -231,10 +231,10 @@ Item {
                     readonly property bool thisRunning: ClockDepth.running === candidate.modelName
                     readonly property bool chosen: ClockDepth.state === "accepted"
                         && ClockDepth.acceptedModel === candidate.modelName
-                    // Whether the OTHER column found something. A model that
+                    // Whether ANY other column found something. A model that
                     // returns nothing is usually the wrong model rather than an
                     // empty picture, so an empty result has to point at its
-                    // neighbour instead of reading as a verdict on the image.
+                    // neighbours instead of reading as a verdict on the image.
                     readonly property bool otherFound: {
                         const results = ClockDepth.candidates ?? ({})
                         for (const other in results) {
@@ -255,11 +255,11 @@ Item {
 
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    // Both columns take half the row whatever their content is
-                    // wider than. Without a preferred width a RowLayout hands
-                    // fillWidth children their implicit widths first, so the
-                    // column whose button labels are longer gets a bigger
-                    // preview - and the two cutouts are being compared.
+                    // Every column takes an equal share of the row whatever
+                    // its content is wider than. Without a preferred width a
+                    // RowLayout hands fillWidth children their implicit widths
+                    // first, so the column whose button labels are longer gets a
+                    // bigger preview - and the cutouts are being compared.
                     Layout.preferredWidth: 1
                     spacing: Appearance.spacing.space100
 
@@ -538,7 +538,7 @@ Item {
                                         return ""
                                     return candidate.refused
                                         ? (candidate.otherFound
-                                            ? Translation.tr("Nothing here — the other model found something")
+                                            ? Translation.tr("Nothing here — another column found something")
                                             : Translation.tr("Nothing here — try clicking the subject"))
                                         : Translation.tr("Not run yet")
                                 }
