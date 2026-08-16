@@ -117,6 +117,23 @@ function margins(edge, elevationMargin, gapsOut) {
     return directedSides(edge, pair.inward, pair.outward);
 }
 
+// The box of anything that spans the dock's thickness and is sized by its
+// content along the strip: the thickness ACROSS the dock's own axis, the
+// item's own implicit size ALONG it.
+//
+// This exists so the turn is a change of SIZE. An item that anchors the two
+// ends of its across axis and centres on the other has to change WHICH
+// anchors it uses when the dock turns, and Qt refuses a set that is
+// momentarily {left, right, horizontalCenter} instead of re-applying it once
+// the third clears - the item keeps the anchors of both orientations and
+// fills the whole surface. Handing the size over means the anchors can stay
+// `centerIn: parent` at every edge, which is a membership that never changes.
+function contentBox(edge, thickness, alongWidth, alongHeight) {
+    return isVertical(edge)
+        ? { width: thickness, height: alongHeight }
+        : { width: alongWidth, height: thickness };
+}
+
 // How far the dock is pushed off-screen when hidden, and how far it peeks
 // when the pointer is near. Both are the INWARD margin's value, so the reveal
 // is one animated number at every edge.
