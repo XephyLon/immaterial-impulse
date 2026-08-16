@@ -1617,6 +1617,34 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
     deliberately unchanged: a failed lookup there is `undefined`, then NaN geometry, then a
     relayout that never converges and a pegged core — see the Design-language note on the missing
     `import qs.modules.common`. Restructure above them and nothing warns.
+  - **An item that turns must express the turn as a SIZE, never as a different set of anchors —
+    Qt punishes an axis holding two anchors in two different ways and neither is loud.** Writing
+    `left`/`right` for one orientation and `horizontalCenter` for the other reads as mutually
+    exclusive and is not: during the turn all three are live for a moment. `QQuickAnchors` then
+    **refuses the whole horizontal update and reverts the anchor it was setting**, so the item
+    keeps the anchors of *both* orientations and fills its parent in both axes — measured at
+    5120x1440 inside a 75x1440 layer surface, i.e. a full-height dark band with the icons spread
+    over a screen's width of which a side edge shows 75px. The only log line is `Cannot specify
+    left, right, and horizontalCenter anchors at the same time`, which names an item, not a
+    consequence. The *pair* is worse than the triple, because Qt honours it: `right` +
+    `horizontalCenter` is a legal way to state a width, so the anchor **writes** the item's width
+    as `2 * (right - hcenter)` — evaluated while the surface is still the size it had before the
+    compositor reconfigured it — and that write latches, because the size binding it clobbered has
+    finished changing by then and never re-evaluates to overwrite it. Nothing at all is logged for
+    that one: no binding loop, no warning, and QML that reads correctly. Which axis is ruined
+    depends on which one the turn landed on, so it presents as intermittent and as two unrelated
+    bugs. Everything in the dock now centres at every edge and takes its box from
+    `DockGeometry.contentBox()`, with the reveal push as a `horizontalCenterOffset`/
+    `verticalCenterOffset` times `DockGeometry.hideDirection()`; a centre offset is a number and
+    cannot occupy an axis. `tests/test_dock_position_contract.py` fails on any item in the dock's
+    tree binding a centre anchor together with either edge anchor of the same axis — its first run
+    found four more copies of the idiom (both sets of running dots, the window-preview card, the
+    context menu's card) that nobody had looked at. Note what this cost before it was found: the
+    dark band is also exactly what an empty layer surface looks like under the compositor's blur,
+    and two attempts went after `rules.lua` instead.
+    ("Dock: the body and the icon strip stop re-anchoring on the turn"),
+    ("Dock: the reveal becomes an offset, not an anchor that moves"),
+    ("Dock: one axis, one anchor - checked, because it was silent").
 
   The same contract test carries the "one derivation" lint (the analogue of
   `lint_bar_popup_overlay_static.py`'s rule for `barEdge`): a file may read
