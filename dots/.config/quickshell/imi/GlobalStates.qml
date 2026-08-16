@@ -31,6 +31,18 @@ Singleton {
     property bool overviewOpen: false
     property bool regionSelectorOpen: false
     property bool settingsHeldForRegionSelector: false
+    // Picking the wallpaper's subject on the desktop itself, at full size, over
+    // the real widgets - rather than on a 300px thumbnail in the wallpaper
+    // selector, where a click landing on a shoulder is several hundred pixels
+    // off by the time the mask is judged at screen size.
+    property bool clockDepthSelectOpen: false
+    // Per screen name: where the wallpaper's whole box sits in that screen's
+    // coordinates, plus the source the wallpaper item is actually drawing.
+    // Published by Background.qml while the selector above is armed, because the
+    // selection surface is a different window and cannot read that item. It
+    // draws its cutout into this box and measures its clicks against the same
+    // rectangle, so the pixels it judges are the pixels the depth layer masks.
+    property var clockDepthViewports: ({})
     // True while a copy snip's crop/clipboard pipeline runs; cancel paths
     // must not dismiss (and thereby kill) the in-flight process.
     property bool snipCopyInFlight: false
