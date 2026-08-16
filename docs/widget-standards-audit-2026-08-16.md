@@ -176,6 +176,12 @@ the "anchor to `parent`, not to the card by id" trap `486272dbe` records for cal
 
 ### G3 — calendar and world-clock resize by destroy-and-rebuild (standard 1)
 
+**Fixed.** Both widgets morph in one tree now, off a geometry module each
+(`calendar_geometry.js`, `world_clock_geometry.js`), and both animate their own box; the line
+numbers below describe the code as it was. What closed it is recorded under §8.
+feat(calendar): morph the calendar in one tree instead of rebuilding it,
+feat(world-clock): morph the world clock in one tree instead of rebuilding it.
+
 `bundled/calendar/Widget.qml:236-245` dispatches three whole `Component`s through one `Loader`:
 
 ```qml
@@ -532,10 +538,10 @@ block is `visible: !root.chromeless` while the only instantiation of `DesktopMed
 
 ## 5. Ranked: what to fix first, by user-visible impact
 
-1. **G3 — calendar and world-clock resize by destroy-and-rebuild.** Two of twelve desktop widgets
-   cut where the other three morph, on the most-used interaction those widgets have, and their box
-   snaps as well because nothing animates it. Largest fix in the list and still first: it is the one
-   gap a user sees every time they touch the widget.
+1. ~~**G3 — calendar and world-clock resize by destroy-and-rebuild.**~~ **Done** — see §8. Two of
+   twelve desktop widgets cut where the other three morph, on the most-used interaction those
+   widgets have, and their box snapped as well because nothing animated it. Largest fix in the
+   list and still first: it is the one gap a user sees every time they touch the widget.
 2. **G2 — `notes` and `image-converter` cast no shadow.** Always on screen, no interaction needed.
    Two widgets sit flat on the wallpaper beside ten that do not.
 3. **G4 — discordVoice's doubled scale.** Every mute and deafen click, at five times the intended
@@ -612,3 +618,46 @@ the manifests declaring a `desktop-widget` capability, may not paint a blur-gate
 helper it names, while a tint on a surface *inside* the card stays free. Proven to fail on the two
 widgets as they stood before the fix, and to pass after
 (test(lint): the card-tint carve-out is scoped to content, not to a spelling).
+---
+
+## 8. What closed G3
+
+Both widgets are one tree now. Elements are declared once and travel between the rects a geometry
+module answers for, on the shared `SpanTravel`/`SpanFade` curves — no `Loader` keyed on the span,
+no `visible`-swapped duplicate subtree, and no element that stops existing between one span and
+the next.
+
+**calendar** (`calendar_geometry.js`, unit-tested in `tests/tst_calendar_geometry.qml`):
+
+| element | 1x1 | 2x1 | 2x2 |
+|---|---|---|---|
+| month surface | full-bleed band, card's top corners | pill | — (fades; the 2x2 title is plain) |
+| short month + weekday | in the band | — | — |
+| long month name | — | in the pill | on the card inset, a step larger |
+| month steppers | — | — | right of the title |
+| weekday letters | — | over the card's seven columns | over the day grid's seven |
+| day-grid surface | — | — | the `colLayer1` panel |
+| day cells (42) | today's alone, as the hero date | the current week's seven, in a row | all of them, in six rows |
+
+**world-clock** (`world_clock_geometry.js`, `tests/tst_world_clock_geometry.qml`): the four city
+tiles are the shared elements. A chip in the 2x2 grid and a dial in the 3x1 row are the same tile,
+carrying its surface, its colour and its city name; the offset, the digital time and the day/night
+glyph fade, and the hands fade in out of the chip's own box. The local place/time/date block and
+the settings back are pinned to the 2x2 box while they fade rather than anchored to a card on its
+way to 420x108.
+
+Two things the audit named as aggravating are also gone. Both widgets animate their own box, which
+the host does not do for a widget declaring no `grid` (see `docs/widget-grid.md`), and both publish
+their own `boxInMotion` so the card stops re-blurring its body into a reallocating layer for the
+length of the resize.
+
+Verified frame by frame on the running shell (`grim` bursts at ~36ms across each transition):
+every shared element stays on screen and travels, and nothing blinks out and reappears.
+
+One thing those bursts exposed that is **not** this gap: the desktop frost drops out for the
+length of any box animation, and the same burst on `nandoroid-weather` shows it identically. It
+predates the one-tree work and was simply invisible while these two snapped. Recorded in AGENT.md
+with the suspected mechanism and the way to settle it.
+
+`test_a_widget_that_owns_its_span_morphs_in_one_tree` is the guard: any widget declaring its own
+`sizeMode` may not let that name reach a `sourceComponent` or a `visible`.

@@ -1512,6 +1512,38 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   below. Any source-text check over a QML property has the same question to answer: is the value a
   line or a block?
   test(widgets): sweep for the settled-span rule instead of naming three files.
+- **A widget the host does not size gets neither of the host's two resize services, and the
+  absence of both is silent.** `PluginWidget`'s `Behavior on width`/`height` is
+  `enabled: gridResizeAnimated`, which is `gridSized && PluginState.ready`, and `boxInMotion`
+  compares the drawn box against `settledWidth`/`settledHeight` — which for a content-sized
+  widget *are* `rootWidget.width`/`height`, so it is false forever. A widget that declares no
+  manifest `grid` because its own handles own its size (calendar, world-clock) therefore snaps
+  between sizes **and** keeps its card's shadow re-blurring a copy of the body into a
+  reallocating layer for every frame of whatever motion it does perform — the exact cost
+  e5d243c5e removed for span widgets. Both halves belong to the widget: it animates its own
+  implicit size towards the settled span, and publishes its own `boxInMotion` for the card
+  (`hostMotionActive: root.hostBoxInMotion || root.boxInMotion`, so a host that ever does report
+  it still wins).
+  feat(calendar): morph the calendar in one tree instead of rebuilding it.
+- **A one-tree widget needs `WidgetCard.clipContent`, and a per-span Loader did not.** A
+  destroyed subtree stops existing when the card shrinks; a faded one does not. Calendar's day
+  grid and five of its six rows, and the world clock's local time and date, all sit below a short
+  card's bottom edge while they fade, and unclipped they paint onto the wallpaper for the whole
+  morph. The corollary is the reason a fading block must also **stand still**: pin it to its own
+  span's box rather than anchoring it to the card, or it reflows through every intermediate size
+  on the way out, which reads as the content being squeezed rather than as it leaving.
+  feat(world-clock): morph the world clock in one tree instead of rebuilding it.
+- **A desktop widget's frost drops out for the length of any box animation, and it is not the
+  morph's fault.** Measured frame by frame on the desktop: through a span change the card body
+  goes to its bare tint over a *sharp* wallpaper and the blur comes back only once the box
+  settles. This predates the one-tree work — the same burst on `nandoroid-weather`, which has
+  animated its box since fa1e2a8b5, shows it identically — it was simply invisible while calendar
+  and world-clock snapped. The likely mechanism is that `PluginWidget`'s frost `Repeater` takes
+  `pluginNode.blurRegions` as its model, and a card's `blurRegion` is a fresh object on every
+  frame of a resize, so the `WallpaperBlurSurface` delegates are destroyed and rebuilt per frame;
+  that is a reading of the source, not something anyone has proved, and the way to settle it is a
+  `Component.onCompleted`/`onDestruction` count on the delegate during a resize.
+  feat(calendar): morph the calendar in one tree instead of rebuilding it.
 - **An element that changes its TEXT across spans is two elements, not one.** The currency base
   code read "to USD" at 1x1 and "USD" at 2x1 from a single `StyledText`, so the content swapped in
   one frame in the middle of an otherwise continuous morph. "to" is its own element that fades,
