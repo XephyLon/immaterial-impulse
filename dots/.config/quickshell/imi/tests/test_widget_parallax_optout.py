@@ -38,6 +38,12 @@ MATHS = ROOT / "modules/common/functions/parallax.js"
 SOCKET = "wayland-imi-widget-parallax"
 
 
+# The harness prints how many checks it ran. This number is a literal rather
+# than anything read back from that output: a harness whose step list shrinks
+# must redden here instead of reporting `failures: 0` for a shorter run.
+EXPECTED_CHECKS = 31
+
+
 def squashed(path: Path) -> str:
     return re.sub(r"\s+", " ", path.read_text(encoding="utf-8"))
 
@@ -259,7 +265,7 @@ class WidgetParallaxOptOutRuntimeTest(unittest.TestCase):
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
-        self.assertIn("[WidgetParallax] failures: 0", output,
+        self.assertIn(f"[WidgetParallax] checks: {EXPECTED_CHECKS} failures: 0", output,
                       f"harness did not finish cleanly:\n{output}")
 
         # A cancellation folded back into the placement it is derived from

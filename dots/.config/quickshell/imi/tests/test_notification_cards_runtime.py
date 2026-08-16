@@ -34,6 +34,12 @@ CONFIG = ('{"notifications":{"timeout":1500},'
           '"appearance":{"transparency":{"enable":true}}}')
 
 
+# The harness prints how many checks it ran. This number is a literal rather
+# than anything read back from that output: a harness whose step list shrinks
+# must redden here instead of reporting `failures: 0` for a shorter run.
+EXPECTED_CHECKS = 5
+
+
 def _stop(proc):
     proc.terminate()
     try:
@@ -109,7 +115,7 @@ class NotificationCardsRuntimeTest(unittest.TestCase):
         output = (self.home / "harness.log").read_text(errors="ignore")
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
-        self.assertIn("[NotifCards] failures: 0", output,
+        self.assertIn(f"[NotifCards] checks: {EXPECTED_CHECKS} failures: 0", output,
                       f"harness never reached a verdict:\n{output}")
 
 

@@ -62,6 +62,15 @@ EXPECT_MIGRATED = {
 }
 
 
+# How many checks the harness runs, per shape it is launched in. Literals
+# rather than anything read back from the harness's own output: a harness
+# whose step list shrinks must redden here instead of reporting
+# `failures: 0` for a shorter run.
+EXPECTED_CHECKS_MIGRATED = 6
+EXPECTED_CHECKS_REFUSED = 3
+EXPECTED_CHECKS_NOTHING_TO_DO = 2
+
+
 def _stop(proc):
     proc.terminate()
     try:
@@ -117,7 +126,7 @@ class ConfigDirMigrationRuntimeTest(unittest.TestCase):
         (self.old / "actions").mkdir()
         (self.old / "actions" / "mine.json").write_text('{"a": 1}')
 
-    def launch(self, expect=None, delay=None, mode="gated"):
+    def launch(self, checks, expect=None, delay=None, mode="gated"):
         env = dict(self.env)
         env["XDG_CONFIG_HOME"] = str(self.config_home)
         env["XDG_STATE_HOME"] = str(self.home / "state")
@@ -134,7 +143,7 @@ class ConfigDirMigrationRuntimeTest(unittest.TestCase):
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
-        self.assertIn("[ConfigDirMigration] failures: 0", output,
+        self.assertIn(f"[ConfigDirMigration] checks: {checks} failures: 0", output,
                       f"harness did not finish cleanly:\n{output}")
         return output
 
@@ -146,7 +155,7 @@ class ConfigDirMigrationRuntimeTest(unittest.TestCase):
         which the old code's Config load would have written its defaults into
         the destination and killed the migration outright."""
         self.seed_old()
-        self.launch(expect=EXPECT_MIGRATED, delay=MIGRATE_DELAY)
+        self.launch(EXPECTED_CHECKS_MIGRATED, expect=EXPECT_MIGRATED, delay=MIGRATE_DELAY)
 
         stored = self.stored_config()
         self.assertEqual(stored["osd"]["timeout"], 1700)
@@ -165,7 +174,7 @@ class ConfigDirMigrationRuntimeTest(unittest.TestCase):
         (self.new / "installed_true").write_text("")
         shutil.copyfile(SHIPPED_DEFAULT, self.new / "config.json")
 
-        self.launch(expect=EXPECT_MIGRATED)
+        self.launch(EXPECTED_CHECKS_MIGRATED, expect=EXPECT_MIGRATED)
 
         stored = self.stored_config()
         self.assertEqual(stored["osd"]["timeout"], 1700)
@@ -187,7 +196,7 @@ class ConfigDirMigrationRuntimeTest(unittest.TestCase):
         (self.new / "config.json").write_text(
             json.dumps({"osd": {"timeout": 777}}, indent=2))
 
-        output = self.launch(expect={"osd.timeout": 777})
+        output = self.launch(EXPECTED_CHECKS_REFUSED, expect={"osd.timeout": 777})
 
         self.assertIn("NOT migrating", output)
         self.assertIn(str(self.old), output)
@@ -210,7 +219,8 @@ class ConfigDirMigrationRuntimeTest(unittest.TestCase):
             json.dumps({"osd": {"timeout": 777}}, indent=2))
         before = (self.new / "config.json").read_bytes()
 
-        output = self.launch(expect={"osd.timeout": 777}, delay="14", mode="watchdog")
+        output = self.launch(EXPECTED_CHECKS_REFUSED, expect={"osd.timeout": 777},
+                             delay="14", mode="watchdog")
 
         self.assertIn("read-only", output)
         self.assertEqual((self.new / "config.json").read_bytes(), before,
@@ -219,7 +229,7 @@ class ConfigDirMigrationRuntimeTest(unittest.TestCase):
     def test_a_launch_with_nothing_to_migrate_is_not_held_up(self):
         """The gate is on the startup path of every launch, so the common case
         - no old directory at all - has to stay cheap."""
-        output = self.launch()
+        output = self.launch(EXPECTED_CHECKS_NOTHING_TO_DO)
         migration_ms = int(output.split("migration finished after ")[1].split("ms")[0])
         self.assertLess(migration_ms, 2000,
                         f"the migration gate cost {migration_ms}ms with nothing to do")
