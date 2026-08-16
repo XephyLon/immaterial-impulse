@@ -307,7 +307,14 @@ def status(root, wallpaper):
         return {"state": "unreadable", "error": str(exc), "wallpaper": str(wallpaper)}
 
     result = {"key": key, "wallpaper": str(Path(wallpaper).expanduser().resolve()),
-              "cacheDir": str(root)}
+              "cacheDir": str(root),
+              # The models and what each one is asked with, so the picker draws
+              # one column per model without carrying its own copy of the list -
+              # a second list of model names is the pair that drifts, and the
+              # one that would drift silently is the picker's, since a model
+              # nobody named simply has no column.
+              "models": [{"name": name, "kind": spec["kind"]}
+                         for name, spec in MODELS.items()]}
     accepted = root / f"{key}.png"
     optout = root / f"{key}.off"
     candidates = {}
