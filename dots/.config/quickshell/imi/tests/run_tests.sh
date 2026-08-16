@@ -351,6 +351,15 @@ if ! python3 "$SCRIPT_DIR/test_bar_hover_region.py"; then
     exit 1
 fi
 
+# The two bars draw the same layout out of the same directory, and each used to
+# resolve a widget to a file on its own. Only the horizontal one ever learned
+# `plugin:`, so every plugin bar widget was an empty stub on a vertical bar.
+echo "Running bar widget parity tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_widget_parity.py"; then
+    echo "Bar widget parity tests failed."
+    exit 1
+fi
+
 echo "Running cheatsheet width budget tests..."
 if ! python3 "$SCRIPT_DIR/test_cheatsheet_width_budget.py"; then
     echo "Cheatsheet width budget tests failed."
