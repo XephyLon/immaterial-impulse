@@ -250,10 +250,16 @@ bug in anything that qualifies:
   for `ERROR:` - not just `WARN` - before calling the change verified. See AGENT.md's "Where to look
   when something goes wrong" for the cascade format and the `pgrep -af 'qs -c imi'` caveat.
   `DesignSystemCompile.qml` (run by `run_tests.sh`, skipped without `WAYLAND_DISPLAY`) narrows this
-  for the design system, the bundled packages, every settings page and the desktop-widget host
-  (`PluginWidget.qml`, which only compiles once a plugin is enabled on some monitor) - it compiles
-  them, so a bad property on a page nobody opened is caught. Everything else still needs the live
-  load. 494580b65 ("feat(plugins): resolve a placed widget's span from its stored choice").
+  for the design system, the bundled packages, every settings page, the desktop-widget host
+  (`PluginWidget.qml`, which only compiles once a plugin is enabled on some monitor) and both bars
+  - it compiles them, so a bad property on a page nobody opened is caught. Everything else still
+  needs the live load. 494580b65 ("feat(plugins): resolve a placed widget's span from its stored
+  choice"). The vertical bar joined that list for the same reason the dock is on it: it is opt-in,
+  so anything wrong with it stays green until someone switches it on - which is how the two bars
+  came to resolve widget files differently in the first place. Note the limit the sweep has, which
+  is easy to over-read: it proves a file *compiles*, and a missing `.js` import resolves at binding
+  time rather than compile time, so it passes one. ("fix(verticalBar): render plugin bar widgets
+  instead of an empty stub").
   **It sweeps a bundled package through its `Widget.qml` only**, on the reasoning that a sibling
   file is a type resolved through the package's `qmldir` and so is reached from the entry point
   anyway. A file the entry point loads *by URL* is not that - it is a standalone component that

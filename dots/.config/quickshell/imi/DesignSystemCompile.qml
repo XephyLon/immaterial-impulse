@@ -77,6 +77,18 @@ ShellRoot {
                 Quickshell.shellPath("modules/imi/bar/SysTray.qml"),
                 Quickshell.shellPath("modules/imi/bar/DockerPlugin.qml"),
                 Quickshell.shellPath("modules/imi/bar/DiscordVoicePlugin.qml"),
+                // The generic package bar host, which compiles only once some
+                // installed plugin's widget is in the user's bar layout.
+                Quickshell.shellPath("modules/imi/bar/PluginBarWidget.qml"),
+                // Both bars. The vertical one is the dock's case exactly -
+                // bar.vertical defaults false, so a bad property or a missing
+                // import in it passes every test and is found by whoever turns
+                // it on. The two bars drifting apart unobserved is the whole
+                // defect a47462fcc ("fix(verticalBar): render plugin bar
+                // widgets instead of an empty stub") came out of.
+                Quickshell.shellPath("modules/imi/bar/BarContent.qml"),
+                Quickshell.shellPath("modules/imi/verticalBar/VerticalBar.qml"),
+                Quickshell.shellPath("modules/imi/verticalBar/VerticalBarContent.qml"),
                 Quickshell.shellPath("modules/common/plugins/bundled/docker/DockerPopup.qml"),
                 Quickshell.shellPath("modules/common/plugins/bundled/docker/DockerWidget.qml"),
                 Quickshell.shellPath("modules/common/plugins/bundled/discordVoice/DiscordVoicePopup.qml"),
