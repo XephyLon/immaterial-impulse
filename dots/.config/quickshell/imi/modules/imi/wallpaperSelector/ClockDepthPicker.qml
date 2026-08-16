@@ -5,6 +5,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.imi.background
+import "../../common/functions/clockDepth.js" as ClockDepthLogic
 
 /**
  * Where the quality gate lives, and it is a human - so this is the instrument
@@ -478,17 +479,20 @@ Item {
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
                             cursorShape: Qt.CrossCursor
                             onClicked: mouse => {
-                                const frame = previewCutout.maskRect
-                                if (frame.width <= 0 || frame.height <= 0)
+                                // The cutout's own mask rectangle is where the
+                                // whole wallpaper sits inside this preview, so
+                                // the click's fraction along it IS the point in
+                                // the picture. Worked out in clockDepth.js
+                                // because it is the one part of this gesture a
+                                // test can reach, and because a click sent to
+                                // the wrong part of the picture comes back as a
+                                // perfectly good mask of the wrong thing.
+                                const point = ClockDepthLogic.normalisedPoint(
+                                    previewCutout.maskRect, mouse.x, mouse.y)
+                                if (!point)
                                     return
-                                // Clamped rather than passed through: the
-                                // producer refuses a point outside the picture,
-                                // and a rounding error at the very edge of the
-                                // frame would come back as an error message
-                                // about a click that looked perfectly ordinary.
-                                const nx = Math.max(0, Math.min(1, (mouse.x - frame.x) / frame.width))
-                                const ny = Math.max(0, Math.min(1, (mouse.y - frame.y) / frame.height))
-                                ClockDepth.addPoint(nx, ny, mouse.button === Qt.LeftButton)
+                                ClockDepth.addPoint(point.x, point.y,
+                                    mouse.button === Qt.LeftButton)
                             }
                         }
 
