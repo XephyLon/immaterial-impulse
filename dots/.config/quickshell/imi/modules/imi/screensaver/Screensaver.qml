@@ -2,6 +2,7 @@ import qs
 import qs.modules.common
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 import "screensaver_screens.js" as ScreensaverScreens
@@ -138,6 +139,15 @@ Scope {
                 }
             }
         }
+    }
+
+    // Deliberate, so it is not gated on screensaver.enable: that switch arms
+    // the idle trigger in hypridle.conf, and swallowing a key the user just
+    // pressed would be a silent no-op with nothing to explain it.
+    GlobalShortcut {
+        name: "screensaverToggleMonitor"
+        description: "Blanks the focused monitor (OLED screensaver)"
+        onPressed: root.toggleOn(Hyprland.focusedMonitor?.name ?? "")
     }
 
     IpcHandler {
