@@ -1519,13 +1519,33 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   file from `lint_disabled_opacity.py` on purpose, since that one keys on a dim expression and was
   blind to this for the whole life of the widget. It resolves which types apply the model rather than
   naming them, reads a declaration whole (block-bodied values included), and self-checks against an
-  in-memory fixture so the machinery is proven independently of what the tree contains. Note what the
-  sweep that came with it found and did **not** fix: `modules/imi/sessionScreen/SessionActionButton.qml`
-  keys `buttonRadius` on `button.down`, which is the same doubling in the *radius* channel
-  (`RippleButton` already tightens by `pressRadiusScale` through `pressProgress`), tangled with a
-  `focus` shape the model has no state for.
+  in-memory fixture so the machinery is proven independently of what the tree contains.
   f62673b7f ("fix(discordVoice): let the button own the hover and press motion"),
   1d5d196fd ("test(lint): fail on a hover/press scale inside a control that already scales").
+- **A radius composites too — through the control rather than through the scene graph — and the
+  lint above knew only the transform, so it wrote the next case up as a note instead of failing on
+  it.** That first version named `modules/imi/sessionScreen/SessionActionButton.qml` in its own
+  sweep, right here in this file and in `docs/widget-standards-audit-2026-08-16.md`, as a neighbour
+  it was not fixing: the button keyed `buttonRadius` on `button.down` while `RippleButton` was
+  already tightening. It reasoned that a `pressProgress`-driven radius "composites with nothing",
+  which is true of the scene graph and false of the control —
+  `RippleButton.buttonEffectiveRadius` is *computed from* `buttonRadius`, so a caller keying that
+  on `down` has its own value multiplied by `pressRadiusScale` on the way to the corner. The two
+  sources pulled opposite ways, so this did not read as too much squish: measured on the real
+  component, a press took the corner **30 → 51** — the button's own jump to `size / 2`, then the
+  model's 0.85 landing on the circle — where every other control tightens. It is 30 → 25.5 now.
+  Three things generalise. The `focus` half stayed, because that is the session grid's keyboard
+  cursor and the model has no state for it; a control may still own a shape the model does not
+  name. `tests/lint_interaction_motion_double.py` is per **channel** now — a file is a control in
+  the channels it actually applies the model in, so `MediaTransportButton` (which scales and does
+  not tighten) is not held to the radius rule — and the radius detector reads a *whole*
+  declaration, because both `RippleButton`s spell `buttonEffectiveRadius` across two lines with
+  `pressProgress` on the continuation, and a line-scoped version finds no radius control at all and
+  reports a clean tree. And the rule reaches only controls that apply the model:
+  `common/widgets/GroupButton.qml` drives its own `down`-keyed radius and bounce and has never
+  adopted it, so it is a non-adoption rather than a doubling and the lint leaves it alone.
+  fix(sessionScreen): let RippleButton own the session button's press,
+  test(lint): fail on a hover/press radius inside a control that already tightens.
 - **A one-tree widget's geometry reads the SETTLED span's box, never the animating one.** Three
   trees were written with `spanW: root.implicitWidth`, and `implicitWidth` carries a Behavior: every
   rect became a per-frame target, so the Behaviors that carry the travel never converged, and any
