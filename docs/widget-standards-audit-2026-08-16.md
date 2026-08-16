@@ -240,6 +240,15 @@ other control in the shell, and overshoot on release.
 
 **Size of fix:** small — delete two lines in each of two blocks.
 
+**Fixed**, and mechanised: `tests/lint_interaction_motion_double.py` fails the suite on a
+scale-family property written from a raw hover/press flag anywhere inside a control that applies
+`interactionMotion.scale`. Its sweep of both populations and the rest of the shell found no second
+copy of the *transform* form — but two neighbours in the same family, neither fixed here:
+`modules/imi/sessionScreen/SessionActionButton.qml:14` keys `buttonRadius` on `button.down`, which
+doubles the model's press tightening in the radius channel and is tangled with a `focus` shape the
+model has no state for; and the design system's own `RippleButton.qml:208` hand-rolls a state layer
+beside the model it drives (already recorded in §6).
+
 ### G5 — custom-image's resize animates a target that moves every frame (standard 4, *unverified at runtime*)
 
 `bundled/custom-image/Widget.qml:92-101`:

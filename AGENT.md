@@ -1455,6 +1455,28 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   vacated the nested-dim rule for every component rooted on one - a detector that knows only one
   idiom stops detecting the moment the idiom changes.
   af09ed3b9 ("feat(widgets): one driver wires a control to the model").
+- **The model's motion is applied by the CONTROL, and a caller that adds its own composites with it
+  rather than replacing it.** `Item.scale` and a `Scale` transform multiply down the scene graph
+  exactly the way `opacity` does, so the mirror image of the doubled-dim rule above holds for the
+  transform: a `scale: down ? 0.88 : (hovered ? 1.08 : 1)` written on the contentItem of a
+  `RippleButton` does not override `interactionMotion.scale`, it stacks on it. discordVoice's overlay
+  shipped that on its mute and deafen glyphs — 1.02 × 1.08 on hover, 0.97 × 0.88 on press, roughly
+  five times the intended excursion, on `OutBack` instead of the model's curve, and with one duration
+  standing in for the five tiers. The same two buttons in that package's *popup* were written without
+  it, so two copies of one control disagreed about how hard it squishes. Take the control's motion;
+  where feedback is not a multiple of anything, read `hoverProgress`/`pressProgress` rather than the
+  raw flags. `tests/lint_interaction_motion_double.py` fails the suite on a scale-family property
+  written from a raw hover/press flag anywhere inside a control that applies the model — a *separate*
+  file from `lint_disabled_opacity.py` on purpose, since that one keys on a dim expression and was
+  blind to this for the whole life of the widget. It resolves which types apply the model rather than
+  naming them, reads a declaration whole (block-bodied values included), and self-checks against an
+  in-memory fixture so the machinery is proven independently of what the tree contains. Note what the
+  sweep that came with it found and did **not** fix: `modules/imi/sessionScreen/SessionActionButton.qml`
+  keys `buttonRadius` on `button.down`, which is the same doubling in the *radius* channel
+  (`RippleButton` already tightens by `pressRadiusScale` through `pressProgress`), tangled with a
+  `focus` shape the model has no state for.
+  f62673b7f ("fix(discordVoice): let the button own the hover and press motion"),
+  1d5d196fd ("test(lint): fail on a hover/press scale inside a control that already scales").
 - **A one-tree widget's geometry reads the SETTLED span's box, never the animating one.** Three
   trees were written with `spanW: root.implicitWidth`, and `implicitWidth` carries a Behavior: every
   rect became a per-frame target, so the Behaviors that carry the travel never converged, and any
