@@ -471,17 +471,24 @@ Item {
             // Pinned to the popup's own inward side, which is the side facing
             // the dock.
             readonly property string dockSide: DockGeometry.outwardSide(root.dockEdge)
-            anchors.bottom: dockSide === "bottom" ? parent.bottom : undefined
-            anchors.top: dockSide === "top" ? parent.top : undefined
-            anchors.left: dockSide === "left" ? parent.left : undefined
-            anchors.right: dockSide === "right" ? parent.right : undefined
             implicitWidth:  popupBackground.implicitWidth + Appearance.sizes.elevationMargin * 2
             implicitHeight: root.maxWindowPreviewHeight
                             + root.windowControlsHeight
                             + Appearance.sizes.elevationMargin * 2
             hoverEnabled: true
-            x: root.vertical ? 0 : previewPopup.cachedCenter - width / 2
-            y: root.vertical ? previewPopup.cachedCenter - height / 2 : 0
+            // Hugs the side of the surface facing the dock, and centres on the
+            // hovered button along the strip. Both coordinates are written
+            // out, because the side an anchor lands on moves with the edge and
+            // an anchor WRITES the coordinate it pins - so after a turn from a
+            // side edge to a horizontal one, `x` stayed latched at what
+            // anchors.left had written and this binding never ran again. The
+            // card sat at the start of the strip rather than under the pointer
+            // - measured at x = 0 with cachedCenter reading 2413. Same fault
+            // as Dock.qml's own strip, one surface up.
+            readonly property real acrossX: dockSide === "right" ? parent.width - width : 0
+            readonly property real acrossY: dockSide === "bottom" ? parent.height - height : 0
+            x: root.vertical ? acrossX : previewPopup.cachedCenter - width / 2
+            y: root.vertical ? previewPopup.cachedCenter - height / 2 : acrossY
 
             StyledRectangularShadow {
                 target: popupBackground
