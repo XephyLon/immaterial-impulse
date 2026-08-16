@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
@@ -194,9 +195,39 @@ Item {
         })
     }
 
+    // Three ways to the search field, because three different habits reach for
+    // it: the platform's Find, the palette-style Ctrl+K, and the bare slash.
+    function focusSearch() {
+        settingsSearchField.forceActiveFocus();
+        // Select what is there rather than appending to it: the shortcut is
+        // pressed to start a NEW search far more often than to extend the last
+        // one, and a first keystroke that replaces is undone by one arrow key.
+        settingsSearchField.selectAll();
+    }
+
+    // A bare `/` has to yield to anything that takes typing, or a slash can
+    // never be entered into a field on any settings page - a path, a command,
+    // a URL. Text inputs are the things that expose `selectedText`; nothing
+    // else focusable in this window does.
+    readonly property bool typingSomewhere: {
+        const focused = root.Window.activeFocusItem;
+        return !!focused && focused.selectedText !== undefined;
+    }
+
     Shortcut {
         sequence: StandardKey.Find
-        onActivated: settingsSearchField.forceActiveFocus()
+        onActivated: root.focusSearch()
+    }
+
+    Shortcut {
+        sequences: ["Ctrl+K"]
+        onActivated: root.focusSearch()
+    }
+
+    Shortcut {
+        sequence: "/"
+        enabled: !root.typingSomewhere
+        onActivated: root.focusSearch()
     }
 
     Rectangle {
@@ -266,7 +297,11 @@ Item {
                     StyledText {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: settingsSearchField.text.length === 0
-                        text: Translation.tr("Search settings and sections")
+                        // Names the shortcut, because a shortcut nobody is told
+                        // about is a shortcut nobody uses. `/` is the one worth
+                        // showing: it is the shorter reach and the one people
+                        // do not expect a settings window to have.
+                        text: Translation.tr("Search settings and sections  —  / or Ctrl+K")
                         color: Appearance.colors.colSubtext
                         font.pixelSize: Appearance.font.pixelSize.normal
                     }
