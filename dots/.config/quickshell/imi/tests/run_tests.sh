@@ -315,6 +315,15 @@ if ! python3 "$SCRIPT_DIR/test_dock_edge_runtime.py"; then
     exit 1
 fi
 
+# Counts the qalc processes a typed query really starts, with a counting stub
+# named `qalc` first on PATH. A unit test can check the gate's predicate; only
+# a real shell can see how often the call site fires. Brings its own weston.
+echo "Running launcher qalc spawn runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_launcher_qalc_runtime.py"; then
+    echo "Launcher qalc spawn runtime tests failed."
+    exit 1
+fi
+
 # Renders real cards and reads the pixels under them: the shadow is not
 # reachable from a source-text check. Brings its own headless weston.
 echo "Running widget card shadow tests..."
