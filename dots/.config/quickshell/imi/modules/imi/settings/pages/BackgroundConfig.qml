@@ -271,6 +271,27 @@ ContentPage {
             }
 
             ContentSubsection {
+                title: Translation.tr("Depth")
+                Layout.fillWidth: true
+
+                GroupedList {
+                    ConfigSwitch {
+                        id: clockDepthSwitch
+                        Layout.fillWidth: true
+                        buttonIcon: "layers"
+                        text: Translation.tr("Widgets behind the wallpaper's subject")
+                        // The switch alone changes nothing on screen: depth is a
+                        // per-wallpaper artifact accepted in the wallpaper
+                        // selector, and this only decides whether an accepted one
+                        // is drawn. Off by default, because a feature that puts
+                        // pixels over the clock ships off.
+                        checked: Config.options.background.clockDepth.enable
+                        onToggleRequested: Config.options.background.clockDepth.enable = !Config.options.background.clockDepth.enable
+                    }
+                }
+            }
+
+            ContentSubsection {
                 title: Translation.tr("Centered wallpaper")
                 Layout.fillWidth: true
 

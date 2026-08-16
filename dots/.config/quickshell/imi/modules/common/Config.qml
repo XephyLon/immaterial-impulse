@@ -971,6 +971,19 @@ Singleton {
                     // Set once by migrateDeadParallaxSwitches; see there.
                     property bool migratedFromDeadCode: false
                 }
+                // iOS-style depth: the wallpaper's subject drawn back over the
+                // desktop widgets, so the clock sits behind the person in the
+                // photo. Off by default and deliberately so - a feature that
+                // puts pixels over the clock ships off, and the per-wallpaper
+                // mask the user accepts is what turns it on for that wallpaper.
+                //
+                // There is no per-wallpaper key here: masks and their opt-out
+                // markers are files beside each other in the cache, keyed by
+                // the wallpaper's path/mtime/size, so they invalidate together
+                // and none of it can go stale inside a saved preset.
+                property JsonObject clockDepth: JsonObject {
+                    property bool enable: false
+                }
             }
 
             property JsonObject bar: JsonObject {
