@@ -112,7 +112,8 @@ class TheHostHandsDownTheResolvedLock(unittest.TestCase):
         squashed = re.sub(r"\s+", " ", uncommented(BASE))
         self.assertIn(
             "readonly property bool interactionLocked: clickThrough "
-            "|| positionLocked || Config.options.background.widgetsLocked",
+            "|| positionLocked || (Config.options.background.widgetsLocked "
+            "&& !GlobalStates.editMode)",
             squashed)
 
 
@@ -209,13 +210,25 @@ class TheHostsOwnResizeGrip(unittest.TestCase):
         """
         self.assertIn("preventStealing: true", self._grip())
 
-    def test_the_drag_is_measured_in_scene_coordinates(self):
-        """The grip is anchored to a widget that resizes underneath it while
-        the drag is live, so a delta read from the grip's own frame folds the
-        resize back into the gesture (AGENT.md: a drag cannot be tracked
-        through the item it moves).
+    def test_the_drag_is_measured_in_a_frame_that_neither_moves_nor_scales(self):
+        """Two requirements, and only one frame satisfies both.
+
+        The grip is anchored to a widget that resizes underneath it while the
+        drag is live, so a delta read from the grip's own frame - or the
+        widget's - folds the resize back into the gesture (AGENT.md: a drag
+        cannot be tracked through the item it moves). That is why this was
+        measured in scene coordinates.
+
+        The scene stopped being enough when Edit Mode began drawing the canvas
+        under a scale transform: a scene delta is in screen pixels while the
+        span it sizes is in canvas pixels, so the resize would lag the pointer
+        by the scale. The widget's PARENT is static in both senses and is the
+        frame AbstractWidget's drag already computes in.
         """
-        self.assertIn("resizeArea.mapToItem(null,", self._grip())
+        grip = self._grip()
+        self.assertIn("resizeArea.mapToItem(rootWidget.parent,", grip)
+        self.assertNotIn("mapToItem(null,", grip)
+        self.assertNotIn("mapToItem(resizeArea,", grip)
 
     def test_escape_cancels_the_resize(self):
         grip = self._grip()
