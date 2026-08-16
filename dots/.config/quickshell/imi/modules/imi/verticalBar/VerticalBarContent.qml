@@ -10,6 +10,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
 import qs.modules.imi.bar as Bar
+import "../bar/bar_widget_source.js" as BarWidgetSource
 
 Item {
     id: root
@@ -21,8 +22,11 @@ Item {
     readonly property bool trayHasItems: SystemTray.items.values.length > 0
 
     function filterLayout(layout) {
-        if (trayHasItems) return layout
-        return layout.filter(name => name !== "sysTray")
+        return layout.filter(name => {
+            if (name === "sysTray" && !trayHasItems) return false
+            if (BarWidgetSource.isDisabledPlugin(name, Config.options.plugins.enabled)) return false
+            return true
+        })
     }
 
     readonly property var effectiveLeftLayout:   filterLayout(Config.options.bar.layouts.leftLayout)
@@ -60,9 +64,8 @@ Item {
     }
 
     function getWidgetUrl(name) {
-        if (!name) return "";
-        let formattedName = name.charAt(0).toUpperCase() + name.slice(1);
-        return Qt.resolvedUrl("../bar/" + formattedName + ".qml");
+        const fileName = BarWidgetSource.fileNameFor(name);
+        return fileName ? Qt.resolvedUrl("../bar/" + fileName) : "";
     }
 
     function getMirroredForIndex(layout, idx) {
@@ -192,6 +195,7 @@ Item {
                                 Layout.fillWidth: true
                                 source: root.getWidgetUrl(modelData)
                                 onLoaded: {
+                                    if (item && item.hasOwnProperty("pluginId")) item.pluginId = BarWidgetSource.pluginIdOf(modelData)
                                     if (item && "vertical" in item) item.vertical = true
                                     if (item && item.hasOwnProperty("mirrored"))
                                         item.mirrored = root.getMirroredForIndex(root.effectiveLeftLayout, index)
@@ -219,6 +223,7 @@ Item {
                             Layout.fillWidth: true
                             source: root.getWidgetUrl(modelData)
                             onLoaded: {
+                                if (item && item.hasOwnProperty("pluginId")) item.pluginId = BarWidgetSource.pluginIdOf(modelData)
                                 if (item && "vertical" in item) item.vertical = true
                                 if (item && item.hasOwnProperty("mirrored"))
                                     item.mirrored = root.getMirroredForIndex(root.effectiveLeftLayout, index)
@@ -268,6 +273,7 @@ Item {
                                 Layout.fillWidth: true
                                 source: root.getWidgetUrl(modelData)
                                 onLoaded: {
+                                    if (item && item.hasOwnProperty("pluginId")) item.pluginId = BarWidgetSource.pluginIdOf(modelData)
                                     if (item && "vertical" in item) item.vertical = true
                                     if (item && item.hasOwnProperty("mirrored"))
                                         item.mirrored = root.getMirroredForIndex(root.effectiveMiddleLayout, index)
@@ -295,6 +301,7 @@ Item {
                             Layout.fillWidth: true
                             source: root.getWidgetUrl(modelData)
                             onLoaded: {
+                                if (item && item.hasOwnProperty("pluginId")) item.pluginId = BarWidgetSource.pluginIdOf(modelData)
                                 if (item && "vertical" in item) item.vertical = true
                                 if (item && item.hasOwnProperty("mirrored"))
                                     item.mirrored = root.getMirroredForIndex(root.effectiveMiddleLayout, index)
@@ -345,6 +352,7 @@ Item {
                                 Layout.fillWidth: true
                                 source: root.getWidgetUrl(modelData)
                                 onLoaded: {
+                                    if (item && item.hasOwnProperty("pluginId")) item.pluginId = BarWidgetSource.pluginIdOf(modelData)
                                     if (item && "vertical" in item) item.vertical = true
                                     if (item && item.hasOwnProperty("mirrored"))
                                         item.mirrored = root.getMirroredForIndex(root.effectiveRightLayout, index)
@@ -372,6 +380,7 @@ Item {
                             Layout.fillWidth: true
                             source: root.getWidgetUrl(modelData)
                             onLoaded: {
+                                if (item && item.hasOwnProperty("pluginId")) item.pluginId = BarWidgetSource.pluginIdOf(modelData)
                                 if (item && "vertical" in item) item.vertical = true
                                 if (item && item.hasOwnProperty("mirrored"))
                                     item.mirrored = root.getMirroredForIndex(root.effectiveRightLayout, index)
