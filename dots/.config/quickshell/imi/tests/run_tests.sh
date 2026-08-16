@@ -322,6 +322,16 @@ if ! python3 "$SCRIPT_DIR/test_edit_mode_runtime.py"; then
     exit 1
 fi
 
+# What the mode LOOKS like: the card's corner, the lattice sitting under the
+# widgets, and the chrome being gone once the mode is left. Every one of those
+# reads as correct in the source and is only answerable in pixels. Brings its
+# own weston.
+echo "Running edit mode chrome tests..."
+if ! python3 "$SCRIPT_DIR/test_edit_mode_chrome.py"; then
+    echo "Edit mode chrome tests failed."
+    exit 1
+fi
+
 echo "Running dock position contract tests..."
 if ! python3 "$SCRIPT_DIR/test_dock_position_contract.py"; then
     echo "Dock position contract tests failed."
