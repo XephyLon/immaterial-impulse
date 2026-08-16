@@ -77,6 +77,42 @@ def cache_key(wallpaper):
     return hashlib.sha256(material).hexdigest()[:32]
 
 
+def accepted_model(root, key, candidates):
+    """Which candidate the accepted mask is a copy of, or None.
+
+    Derived from the bytes rather than recorded in a fifth file. `accept` is a
+    byte-for-byte copy, so the answer is already on disk, and a recorded one
+    would be a second thing that has to agree with the first with nothing
+    reporting it when it stops - the `activeStill` shape, and this cache is full
+    of pairs that are deliberately derived for exactly that reason.
+
+    None is a real answer and not only an error: re-running a model overwrites
+    its candidate, so an accepted mask can stop matching either of them, and
+    "the cutout you accepted is not either of these" is what the picker should
+    then say rather than crediting whichever it happens to resemble.
+    """
+    accepted = root / f"{key}.png"
+    blob = None
+    try:
+        size = accepted.stat().st_size
+        for model, path in candidates.items():
+            if path is None:
+                continue
+            candidate = Path(path)
+            # Size first: two 1024x1024 masks from different models are
+            # routinely both ~300 KB but never the same 300 KB, so this skips
+            # the read on the mismatching one without deciding anything by it.
+            if candidate.stat().st_size != size:
+                continue
+            if blob is None:
+                blob = accepted.read_bytes()
+            if candidate.read_bytes() == blob:
+                return model
+    except OSError:
+        return None
+    return None
+
+
 def status(root, wallpaper):
     """What the shell asks. Reads directory entries; loads nothing."""
     try:
@@ -101,6 +137,7 @@ def status(root, wallpaper):
     elif accepted.exists():
         result["state"] = "accepted"
         result["mask"] = str(accepted)
+        result["acceptedModel"] = accepted_model(root, key, candidates)
     elif candidates and all(v is None for v in candidates.values()):
         result["state"] = "none"
     elif candidates:

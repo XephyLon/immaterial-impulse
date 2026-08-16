@@ -54,6 +54,11 @@ Singleton {
     // model name -> candidate mask path, or null where that model looked and
     // found nothing. The picker reads this; the depth layer does not.
     property var candidates: ({})
+    // Which model's candidate the accepted mask is a copy of; "" when nothing
+    // is accepted, and also when it matches neither, because re-running a model
+    // overwrites its candidate. Derived by the producer from the bytes rather
+    // than recorded anywhere, so it cannot drift from the file the shell draws.
+    property string acceptedModel: ""
 
     readonly property bool optedOut: root.state === "declined"
 
@@ -117,6 +122,7 @@ Singleton {
         root.key = ""
         root.maskPath = ""
         root.candidates = ({})
+        root.acceptedModel = ""
         root.queriedPath = ""
     }
 
@@ -177,12 +183,14 @@ Singleton {
                     root.state = "error"
                     root.maskPath = ""
                     root.candidates = ({})
+                    root.acceptedModel = ""
                     return
                 }
                 root.state = parsed.state ?? "error"
                 root.key = parsed.key ?? ""
                 root.maskPath = parsed.state === "accepted" ? (parsed.mask ?? "") : ""
                 root.candidates = parsed.candidates ?? ({})
+                root.acceptedModel = parsed.acceptedModel ?? ""
             }
         }
     }

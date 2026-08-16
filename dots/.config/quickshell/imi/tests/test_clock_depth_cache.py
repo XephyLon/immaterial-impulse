@@ -106,6 +106,46 @@ class StatusTest(unittest.TestCase):
         self.assertEqual(result["state"], "accepted")
         self.assertEqual(result["mask"], str(accepted))
 
+    def test_the_accepted_mask_names_the_model_it_came_from(self):
+        """Which of the two models the desktop is actually drawing.
+
+        Derived from the bytes rather than recorded, so it cannot drift from the
+        file the shell draws - and the picker needs it, because two candidates
+        shown side by side with no mark on either leaves "what is on my screen"
+        unanswerable from the one surface built to answer it.
+        """
+        (self.cache / f"{self.key}.isnet-general-use.png").write_bytes(b"photographic")
+        (self.cache / f"{self.key}.isnet-anime.png").write_bytes(b"illustration")
+        (self.cache / f"{self.key}.png").write_bytes(b"illustration")
+        self.assertEqual(self.status()["acceptedModel"], "isnet-anime")
+
+    def test_a_mask_matching_neither_candidate_names_no_model(self):
+        """Re-running a model overwrites its candidate, so this is reachable.
+
+        None is the honest answer there: crediting whichever candidate it most
+        resembles would put a check mark on a cutout the desktop is not drawing.
+        """
+        (self.cache / f"{self.key}.isnet-anime.png").write_bytes(b"illustration")
+        (self.cache / f"{self.key}.png").write_bytes(b"something else entirely")
+        self.assertIsNone(self.status()["acceptedModel"])
+
+    def test_two_candidates_of_the_same_size_are_told_apart_by_content(self):
+        """Size is a shortcut past a read, never the decision.
+
+        Two 1024x1024 masks are routinely both about 300 KB, so deciding on the
+        size alone would credit whichever model happened to be listed first.
+        """
+        (self.cache / f"{self.key}.isnet-anime.png").write_bytes(b"aaaaaaaa")
+        (self.cache / f"{self.key}.isnet-general-use.png").write_bytes(b"bbbbbbbb")
+        (self.cache / f"{self.key}.png").write_bytes(b"bbbbbbbb")
+        self.assertEqual(self.status()["acceptedModel"], "isnet-general-use")
+
+    def test_nothing_accepted_reports_no_model(self):
+        (self.cache / f"{self.key}.isnet-anime.png").write_bytes(b"illustration")
+        result = self.status()
+        self.assertEqual(result["state"], "candidate")
+        self.assertNotIn("acceptedModel", result)
+
     def test_a_declined_wallpaper_beats_an_accepted_mask(self):
         (self.cache / f"{self.key}.png").write_bytes(b"mask")
         (self.cache / f"{self.key}.off").write_text("")
