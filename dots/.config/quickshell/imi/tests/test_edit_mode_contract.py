@@ -70,7 +70,9 @@ def test_nothing_computes_the_mode_from_anything_but_the_one_flag():
                         text.find("\n", match.start())]
             allowed = (
                 "GlobalStates.editMode" in line
-                or re.search(r"property bool editMode", line)
+                # A declaration, and only with a neutral default: a property
+                # DERIVED from something else is the second source.
+                or re.search(r"property bool editMode: false\s*$", line)
                 or "root.editMode" in line
                 or "rootWidget.editMode" in line
                 or line.lstrip().startswith("//")
