@@ -928,6 +928,18 @@ if ! python3 "$SCRIPT_DIR/test_clock_depth_cache.py"; then
     exit 1
 fi
 
+echo "Running clock depth geometry lint..."
+if ! python3 "$SCRIPT_DIR/lint_clock_depth_geometry.py"; then
+    echo "Clock depth geometry lint failed."
+    exit 1
+fi
+
+echo "Running clock depth compositing tests..."
+if ! python3 "$SCRIPT_DIR/test_clock_depth_compositing.py"; then
+    echo "Clock depth compositing tests failed."
+    exit 1
+fi
+
 echo "Running greeter sync tests..."
 if ! python3 "$SCRIPT_DIR/test_greeter_sync.py"; then
     echo "Greeter sync tests failed."
