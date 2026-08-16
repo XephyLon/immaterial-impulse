@@ -57,9 +57,13 @@ APPLIES_MOTION_SCALE = re.compile(
 
 TYPE_BEFORE_BRACE = re.compile(r"([A-Z]\w*)\s*$")
 
-# An expression continues onto the next line whenever it cannot stand alone yet.
+# An expression continues onto the next line whenever it cannot stand alone yet:
+# it ends on an operator, or the next line opens with one. Brackets are handled
+# by depth instead - treating a leading `}` as a continuation swallows the line
+# that CLOSES the enclosing object, which puts a sibling's text into this
+# declaration's value.
 CONTINUES = re.compile(r"(\?|:|\|\||&&|[-+*/,(\[]|\breturn\b)\s*$")
-STARTS_CONTINUATION = re.compile(r"^\s*([?:.]|\|\||&&|[-+*/)\]}])")
+STARTS_CONTINUATION = re.compile(r"^\s*([?:.]|\|\||&&|[-+*/])")
 
 
 def strip_noise(line):
