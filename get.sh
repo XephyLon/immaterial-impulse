@@ -80,7 +80,13 @@ preserve_local_work() {
     # updater against the same local work reuses the ref instead of littering
     # the checkout with one more every time.
     rescue_branch="imi-rescue/$short"
-    dgit branch -f "$rescue_branch" "$head" >/dev/null
+    # Recovering means checking that branch out, and `git branch -f` refuses to
+    # move a branch that is checked out - which would abort the next update
+    # from under the user who had just recovered. The name carries the sha, so
+    # an existing one already points where this would put it.
+    if [[ "$(dgit rev-parse --verify -q "refs/heads/$rescue_branch" || true)" != "$head" ]]; then
+      dgit branch -f "$rescue_branch" "$head" >/dev/null
+    fi
   fi
 
   while IFS= read -r -d '' path; do

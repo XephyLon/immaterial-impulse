@@ -230,6 +230,30 @@ class GetShLocalWorkTests(unittest.TestCase):
         self.assertEqual((self.dest / "scratch.txt").read_text(encoding="utf-8"),
                          "my notes\n")
 
+    def test_updating_again_from_the_rescue_branch_still_works(self):
+        """Recovering means checking the rescue branch out. Then updating again.
+
+        `git branch -f` refuses to move a branch that is checked out, so a
+        rescue that re-creates its own branch unconditionally kills the update
+        of the user who has just recovered - the one person guaranteed to be
+        standing on it.
+        """
+        self.run_get_sh()
+        (self.dest / "README.md").write_text("my own work\n", encoding="utf-8")
+        local = self.commit(self.dest, "my local commit")
+        self.advance_origin()
+        self.run_get_sh()
+        branch = self.rescue_branches()[0]
+
+        git(self.dest, "checkout", "-q", branch)
+        target = self.advance_origin(content="upstream v3\n")
+
+        self.run_get_sh()
+
+        self.assertEqual(git_out(self.dest, "rev-parse", "HEAD"), target)
+        self.assertEqual(git_out(self.dest, "rev-parse", branch), local,
+                         "the recovered branch was moved or lost")
+
     def test_a_clean_checkout_updates_in_silence(self):
         self.run_get_sh()
         target = self.advance_origin()
