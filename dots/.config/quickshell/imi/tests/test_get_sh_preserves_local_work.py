@@ -159,6 +159,10 @@ class GetShLocalWorkTests(unittest.TestCase):
 
     def test_uncommitted_changes_survive_and_pop_back(self):
         self.run_get_sh()
+        # The one test that runs with an identity available, so the branch that
+        # does NOT borrow one is exercised too.
+        git(self.dest, "config", "user.name", "Local User")
+        git(self.dest, "config", "user.email", "local@example.com")
         (self.dest / "README.md").write_text("edited, never committed\n",
                                              encoding="utf-8")
         # Upstream moves a different file, so the pop is a clean one. (An
