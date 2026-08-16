@@ -1465,6 +1465,14 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   the morph's clothes. Both are checked:
   `test_geometry_rects_come_from_the_settled_span_not_the_animating_box`.
   189caa6ff ("fix(weather): geometry reads the settled span, not the animating box").
+  That check sweeps for the declaration rather than naming the trees, and reads the **whole**
+  declaration rather than the line carrying it - because two of the three spans are written as a
+  block (`readonly property real spanW: { if (sizeMode === "1x1") ... }`), and a line-scoped check
+  sees only the opening brace. It read `readonly property real spanW: {` for weather, the largest
+  of the three files it named, and would have passed on `return root.implicitWidth;` one line
+  below. Any source-text check over a QML property has the same question to answer: is the value a
+  line or a block?
+  test(widgets): sweep for the settled-span rule instead of naming three files.
 - **An element that changes its TEXT across spans is two elements, not one.** The currency base
   code read "to USD" at 1x1 and "USD" at 2x1 from a single `StyledText`, so the content swapped in
   one frame in the middle of an otherwise continuous morph. "to" is its own element that fades,
