@@ -509,6 +509,17 @@ Variants {
             return enabled && sensitiveWallpaper && sensitiveNetwork;
         }
 
+        // Whichever layer is painting the wallpaper right now, as an item. Both
+        // things that blur the wallpaper - the lock backdrop and Edit Mode's -
+        // read this rather than each resolving the same four-way choice, since
+        // two copies of it would disagree the first time a fifth layer arrived.
+        readonly property Item liveWallpaperLayer: (bgRoot.weShown
+                && (bgRoot.lockWallShown || lockPeelTimer.running))
+            ? lockPeel
+            : (bgRoot.weShown
+                ? weLoader.item
+                : (bgRoot.wallpaperAnimation === "" ? wallpaper : transitionEffect))
+
         property bool shouldBlur: (GlobalStates.screenLocked && Config.options.lock.blur.enable)
         property color dominantColor: Appearance.colors.colPrimary
         property bool dominantColorIsDark: dominantColor.hslLightness < 0.5
@@ -926,22 +937,14 @@ Variants {
                         easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
                     }
                 }
-                sourceComponent: GaussianBlur {
-                    // Blur the lock peel (WE<->lock-image) when a lock wallpaper is
+                sourceComponent: WallpaperBlurBackdrop {
+                    // The lock peel (WE<->lock-image) when a lock wallpaper is
                     // in play; the live WE surface when it is the wallpaper;
                     // otherwise the static image / transition.
-                    source: (bgRoot.weShown && (bgRoot.lockWallShown || lockPeelTimer.running))
-                        ? lockPeel
-                        : (bgRoot.weShown
-                            ? weLoader.item
-                            : (bgRoot.wallpaperAnimation === "" ? wallpaper : transitionEffect))
+                    source: bgRoot.liveWallpaperLayer
                     radius: GlobalStates.screenLocked ? Config.options.lock.blur.radius : 0
-                    samples: Config.options.lock.blur.size 
-                    Rectangle {
-                        opacity: GlobalStates.screenLocked ? 1 : 0
-                        anchors.fill: parent
-                        color: CF.ColorUtils.transparentize(Appearance.colors.colLayer0, 0.7)
-                    }
+                    samples: Config.options.lock.blur.size
+                    tintOpacity: GlobalStates.screenLocked ? 1 : 0
                 }
             }
 
