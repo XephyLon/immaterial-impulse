@@ -62,6 +62,11 @@ Singleton {
 	// would strand that scratchpad in a file nothing reads.
 	property string notesPath: FileUtils.trimFileProtocol(`${Directories.state}/user/notes.txt`)
 	property string clipboardPinsPath: FileUtils.trimFileProtocol(`${Directories.state}/user/clipboard-pins.json`)
+	// Launch history for the launcher's frecency ranking, owned by
+	// services/AppUsage.qml. State rather than config: it is derived from what
+	// the user does, holds nothing they typed, and losing it costs a few days
+	// of relearning rather than any of their settings.
+	property string appUsagePath: FileUtils.trimFileProtocol(`${Directories.state}/user/app-usage.json`)
 	// Where the deleted built-in notes widget kept its note array. Imported into
 	// notesPath once (Config.options.notes.importedLegacyStore) and never
 	// written to again - it stays on disk as the user's copy of record.

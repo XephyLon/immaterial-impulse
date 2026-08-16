@@ -2,7 +2,9 @@ pragma Singleton
 
 import qs.modules.common
 import qs.modules.common.functions
+import qs.services
 import Quickshell
+import "frecency.js" as Frecency
 
 /**
  * - Eases fuzzy searching for applications by name
@@ -64,23 +66,34 @@ Singleton {
         entry: a
     }))
 
+    // How well the name matches decides WHETHER an app is offered; how much
+    // the app is used decides the order among the ones that are. The two are
+    // kept apart deliberately - putting the boost inside the threshold test
+    // would let a frequently launched app through on a match it did not make,
+    // which is a worse failure than the one this fixes.
     function fuzzyQuery(search: string): var { // Idk why list<DesktopEntry> doesn't work
+        const now = Date.now();
         if (root.sloppySearch) {
-            const results = list.map(obj => ({
-                entry: obj,
-                score: Levendist.computeScore(obj.name.toLowerCase(), search.toLowerCase())
-            })).filter(item => item.score > root.scoreThreshold)
-                .sort((a, b) => b.score - a.score)
-            return results
-                .map(item => item.entry)
+            return list.map(obj => {
+                const match = Levendist.computeScore(obj.name.toLowerCase(), search.toLowerCase());
+                return {
+                    entry: obj,
+                    match: match,
+                    rank: Frecency.boost(match, AppUsage.scoreFor(obj.id, now))
+                };
+            }).filter(item => item.match > root.scoreThreshold)
+                .sort((a, b) => b.rank - a.rank)
+                .map(item => item.entry);
         }
 
         return Fuzzy.go(search, preppedNames, {
             all: true,
             key: "name"
-        }).map(r => {
-            return r.obj.entry
-        });
+        }).map(r => ({
+            entry: r.obj.entry,
+            rank: Frecency.boost(r.score, AppUsage.scoreFor(r.obj.entry.id, now))
+        })).sort((a, b) => b.rank - a.rank)
+            .map(item => item.entry);
     }
 
     function iconExists(iconName) {
