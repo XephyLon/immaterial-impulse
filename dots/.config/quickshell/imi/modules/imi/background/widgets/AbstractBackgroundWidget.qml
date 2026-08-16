@@ -49,10 +49,17 @@ AbstractWidget {
     // Dragging is pointer input, so a click-through widget is necessarily
     // locked as well; the reverse does not hold, and a locked-but-clickable
     // widget (pinned media controls, say) stays a useful state.
+    //
+    // Edit Mode subtracts the GLOBAL term and only that one. The per-widget pin
+    // survives, which is the same invariant read the other way round: an editor
+    // that unpinned everything would be unlocking exactly what the user pinned
+    // on purpose. And it subtracts rather than writing `widgetsLocked = false`,
+    // which would destroy a stored preference and leave the desktop unlocked
+    // after the mode ended.
     property bool positionLocked: false
     property bool clickThrough: false
     readonly property bool interactionLocked: clickThrough || positionLocked
-        || Config.options.background.widgetsLocked
+        || (Config.options.background.widgetsLocked && !GlobalStates.editMode)
 
     // Two gates, because one property name means two different things here and
     // neither covers the other.
