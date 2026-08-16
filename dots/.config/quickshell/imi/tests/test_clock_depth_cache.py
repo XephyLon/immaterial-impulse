@@ -681,9 +681,9 @@ class PromptedCacheTest(unittest.TestCase):
 
     def test_a_click_mask_is_a_candidate_even_when_both_detectors_refused(self):
         """The state this whole feature exists for. Measured over this library:
-        45 of 91 wallpapers return nothing from BOTH salient models, and every
-        one of them read as `none` - a verdict on the picture, with nowhere to
-        go."""
+        45 of the 94 wallpapers here return nothing from BOTH salient models,
+        and every one of them read as `none` - a verdict on the picture, with
+        nowhere to go."""
         for model in subject_mask.salient_models():
             (self.cache / f"{self.key}.{model}.none").write_text("")
         self.assertEqual(subject_mask.status(self.cache, self.wallpaper)["state"],

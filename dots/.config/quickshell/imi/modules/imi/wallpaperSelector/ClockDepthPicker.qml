@@ -27,8 +27,8 @@ import "../../common/functions/clockDepth.js" as ClockDepthLogic
  * shown side by side, at the same size, for exactly that reason.
  *
  * A THIRD column, because on this library "the wrong model" is usually still
- * the answer after trying both: swept over the 91 wallpapers here, 45 return
- * nothing from either detector. Those are not empty pictures - they are
+ * the answer after trying both: swept over the 94 wallpapers here, 45 return
+ * nothing from either detector and 3 have never been run. Those are not empty pictures - they are
  * landscapes and full-bleed illustrations with plenty to stand in front of a
  * clock and no single salient object to find. That column is MobileSAM and it
  * answers a different question: not "what is the subject of this picture" but
