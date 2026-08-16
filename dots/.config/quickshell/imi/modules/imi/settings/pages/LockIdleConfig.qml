@@ -175,6 +175,7 @@ ContentPage {
                 ConfigSwitch {
                     buttonIcon: "bedtime"
                     text: Translation.tr("Enable OLED screensaver")
+                    description: Translation.tr("Blanks every screen once the session goes idle. Blanking the focused monitor by keybind works either way, and keeps the system awake while that screen is dark")
                     checked: Config.options.screensaver.enable
                     onToggleRequested: Config.options.screensaver.enable = !Config.options.screensaver.enable
                 }
