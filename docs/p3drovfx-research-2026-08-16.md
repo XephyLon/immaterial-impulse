@@ -596,14 +596,14 @@ Ordered by value to the user per unit of work. Sizes are new-code estimates for
 | 6 | **App-search frecency (`AppUsage`)** | The launcher stops offering the wrong app; pure logic, trivially testable | Small, ~200 lines + 4 call sites |
 | 7 | **Launcher: qalc gate + `Qt.callLater` result rebuild** | Stops spawning a `qalc` process per keystroke from inside a live binding — the biggest correctness win available in our launcher | Small, ~60 lines |
 | 8 | **OLED saver** | Best effort/value ratio of any *module* surveyed: one property, one window, one keybind | Small, ~280 lines |
-| 9 | **Quick-toggle draft/commit boundary, staged** (§3.3 #3) | Replaces in-place mutation of a `JsonObject` array with a validated single write path and a cancel | Small-medium, ~400–600 lines |
-| 10 | **Launcher: system controls with two-step confirm** | Real, useful, no external dependency. Needs a `key` on `LauncherSearchResult`, a guard on our unconditional overview close (`SearchItem.qml:108-110`), and a `restart` that is `qs -c imi`-aware rather than a bare `Quickshell.reload()` | Small-medium, ~120 lines |
-| 11 | **EasyEffects state verification** | Fixes a toggle of ours that lies when the launch fails | Tiny, ~70-line diff |
-| 12 | **Local plugin registration + reload IPC verb** | The friction that keeps third-party widgets from existing; does not weaken our installer's security model | Small-medium, ~200 lines |
-| 13 | **Idle: timed keep-awake sessions** | Composes with our `autoOnExternalMonitor`; the absolute-epoch-deadline detail is worth copying verbatim | Small, ~180 net-new + chips UI |
-| 14 | **`CommandsService` + a cheatsheet page** | A genuinely new feature with no equivalent anywhere in ours | Medium, ~550 lines |
-| 15 | **In-UI update log via `systemd-run`** | Solves the shell-kills-its-own-updater problem properly and removes hardcoded `kitty`/`fish`. Pair with an update-available indicator, which is *easier* for us since we keep a real checkout | Medium, ~330 lines |
-| 16 | **Scratchpad-empty overlay** | Cheapest self-contained module in their tree | Small, ~170 lines |
+| 9 | **Launcher: system controls with two-step confirm** | Real, useful, no external dependency. Needs a `key` on `LauncherSearchResult`, a guard on our unconditional overview close (`SearchItem.qml:108-110`), and a `restart` that is `qs -c imi`-aware rather than a bare `Quickshell.reload()` | Small-medium, ~120 lines |
+| 10 | **EasyEffects state verification** | Fixes a toggle of ours that lies when the launch fails | Tiny, ~70-line diff |
+| 11 | **Local plugin registration + reload IPC verb** | The friction that keeps third-party widgets from existing; does not weaken our installer's security model | Small-medium, ~200 lines |
+| 12 | **Idle: timed keep-awake sessions** | Composes with our `autoOnExternalMonitor`; the absolute-epoch-deadline detail is worth copying verbatim | Small, ~180 net-new + chips UI |
+| 13 | **`CommandsService` + a cheatsheet page** | A genuinely new feature with no equivalent anywhere in ours | Medium, ~550 lines |
+| 14 | **In-UI update log via `systemd-run`** | Solves the shell-kills-its-own-updater problem properly and removes hardcoded `kitty`/`fish`. Pair with an update-available indicator, which is *easier* for us since we keep a real checkout | Medium, ~330 lines |
+| 15 | **Scratchpad-empty overlay** | Cheapest self-contained module in their tree | Small, ~170 lines |
+| 16 | **Quick-toggle draft/commit boundary, staged** (§3.3 #3) | Adds validation and a cancel to layout editing that has neither. Ranked here, not at 9 as an earlier draft had it: it repairs nothing — the in-place mutation it was said to fix is correct (26b625905) — so it buys a cancel and a guard rail for ~500 lines | Small-medium, ~400–600 lines |
 | 17 | **Dynamic island** (minimal: surface + registry + 5–6 widgets, on our card) | Their signature feature and the most visible thing they have that we do not; we already own the morph engine. Decide single-screen vs per-screen up front, and do **not** absorb search or the OSD | Medium-large, ~600–900 lines |
 | 18 | **Screen-shader browser** | Turns our one-shader feature into a catalogue, and is the right place to land #1 | Medium, ~470 lines + dialog |
 | 19 | **Media downloader** (their service, our panel) | High user value, clean argv, `yt-dlp` + `ffmpeg` only | Medium, ~600 lines + our own panel |
