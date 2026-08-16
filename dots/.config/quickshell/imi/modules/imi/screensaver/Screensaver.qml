@@ -4,12 +4,56 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import "screensaver_screens.js" as ScreensaverScreens
 
 Scope {
     id: root
 
-    property bool active: GlobalStates.screensaverActive
+    // Two ways in, and they are not the same thing.
+    //
+    // `screensaverActive` is the idle path: hypridle's 240s listener calls
+    // show(), every screen goes black, and the lock/DPMS/suspend ladder behind
+    // it (300/600/900s) must keep running - nobody is here.
+    //
+    // `screensaverScreens` is the deliberate path: the user named a monitor,
+    // so that monitor blacks out, the others are untouched, and an idle
+    // inhibitor is held (services/Idle.qml) so blanking a panel on purpose
+    // cannot walk the session into a lock or a suspend.
+    property bool idleActive: GlobalStates.screensaverActive
+    readonly property var deliberateScreens: GlobalStates.screensaverScreens
     readonly property string mode: Config.options.screensaver?.mode ?? "black"
+
+    function showOn(name: string): void {
+        GlobalStates.screensaverScreens = ScreensaverScreens.withScreen(root.deliberateScreens, name);
+    }
+
+    function hideOn(name: string): void {
+        GlobalStates.screensaverScreens = ScreensaverScreens.withoutScreen(root.deliberateScreens, name);
+    }
+
+    function toggleOn(name: string): void {
+        GlobalStates.screensaverScreens = ScreensaverScreens.toggledScreen(root.deliberateScreens, name);
+    }
+
+    function toggleAll(): void {
+        const next = ScreensaverScreens.toggledAll(root.deliberateScreens, Quickshell.screens.map(screen => screen.name), root.idleActive);
+        GlobalStates.screensaverActive = false;
+        GlobalStates.screensaverScreens = next;
+    }
+
+    Connections {
+        target: Quickshell
+
+        // An unplugged monitor's overlay goes away with its delegate, but its
+        // name would stay in the list - and the inhibitor derived from the list
+        // would be held for the rest of the session with nothing on screen to
+        // explain it.
+        function onScreensChanged(): void {
+            const live = ScreensaverScreens.pruned(root.deliberateScreens, Quickshell.screens.map(screen => screen.name));
+            if (live.length !== root.deliberateScreens.length)
+                GlobalStates.screensaverScreens = live;
+        }
+    }
 
     Variants { // One overlay surface per screen
         model: Quickshell.screens
@@ -17,17 +61,25 @@ Scope {
         delegate: Loader {
             id: screenLoader
             required property ShellScreen modelData
-            active: root.active
+            readonly property bool deliberate: ScreensaverScreens.isBlanked(root.deliberateScreens, modelData.name)
+            active: root.idleActive || screenLoader.deliberate
 
             sourceComponent: PanelWindow {
                 id: saverWindow
                 screen: screenLoader.modelData
                 visible: true
 
+                readonly property bool deliberate: screenLoader.deliberate
+
                 exclusionMode: ExclusionMode.Ignore
                 WlrLayershell.namespace: "quickshell:screensaver"
                 WlrLayershell.layer: WlrLayer.Overlay
-                WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+                // The idle saver takes the keyboard so any key wakes it and no
+                // keystroke leaks into whatever was focused. A deliberately
+                // blanked monitor must not: the whole point is that the user
+                // keeps typing on another screen, and an exclusive grab here
+                // would swallow that and dismiss itself on the first letter.
+                WlrLayershell.keyboardFocus: saverWindow.deliberate ? WlrKeyboardFocus.None : WlrKeyboardFocus.Exclusive
                 color: "transparent"
 
                 anchors {
@@ -49,9 +101,17 @@ Scope {
                     onTriggered: saverWindow.armed = true
                 }
 
-                function dismiss() {
+                function dismiss(pointerMotion: bool): void {
                     if (!saverWindow.armed)
                         return;
+                    // Motion alone does not take down a deliberate blank. The
+                    // user chose it and then has to move the pointer off that
+                    // monitor to get back to work, which is motion across this
+                    // very surface; a click or the keybind is the way out.
+                    if (pointerMotion && saverWindow.deliberate)
+                        return;
+                    if (saverWindow.deliberate)
+                        root.hideOn(screenLoader.modelData.name);
                     GlobalStates.screensaverActive = false;
                 }
 
@@ -61,19 +121,19 @@ Scope {
                     focus: true
 
                     // Any input (once armed) dismisses; unloading resets the drift.
-                    Keys.onPressed: saverWindow.dismiss()
+                    Keys.onPressed: saverWindow.dismiss(false)
 
                     ScreensaverContent {
                         anchors.fill: parent
                         mode: root.mode
-                        active: root.active
+                        active: root.idleActive || saverWindow.deliberate
                     }
 
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
-                        onPositionChanged: saverWindow.dismiss()
-                        onPressed: saverWindow.dismiss()
+                        onPositionChanged: saverWindow.dismiss(true)
+                        onPressed: saverWindow.dismiss(false)
                     }
                 }
             }
@@ -83,6 +143,8 @@ Scope {
     IpcHandler {
         target: "screensaver"
 
+        // The idle path. hypridle drives exactly these two and neither touches
+        // the deliberate list, so neither takes an inhibitor.
         function show(): void {
             if (!(Config.options.screensaver?.enable ?? false))
                 return;
@@ -91,13 +153,24 @@ Scope {
 
         function hide(): void {
             GlobalStates.screensaverActive = false;
+            GlobalStates.screensaverScreens = [];
         }
 
+        // The deliberate path.
         function toggle(): void {
-            if (GlobalStates.screensaverActive)
-                GlobalStates.screensaverActive = false;
-            else if (Config.options.screensaver?.enable ?? false)
-                GlobalStates.screensaverActive = true;
+            root.toggleAll();
+        }
+
+        function showMonitor(name: string): void {
+            root.showOn(name);
+        }
+
+        function hideMonitor(name: string): void {
+            root.hideOn(name);
+        }
+
+        function toggleMonitor(name: string): void {
+            root.toggleOn(name);
         }
     }
 }
