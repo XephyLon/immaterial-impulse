@@ -127,10 +127,10 @@ Region-masked content` idiom, single-screen:
 
 | Their module | Lines | Ours |
 |---|---|---|
-| `bluetoothConnectionPopup/` | 572 | none — our `services/BluetoothStatus.qml` (58) has no connect/disconnect signals at all |
+| `bluetoothConnectionPopup/` | 572 | **not none** — `modules/imi/sidebarRight/bluetoothDevices/` (`BluetoothDialog.qml` 76 + `BluetoothDeviceItem.qml` 125) is a full pair/connect/disconnect dialog with discovery and Connecting/Disconnecting states. It calls `device.connect()`/`device.disconnect()` on `Quickshell.Bluetooth`'s own `BluetoothDevice` (`BluetoothDeviceItem.qml:102-118`), which is why `services/BluetoothStatus.qml` (58) carries no such signals — that observation was true and the conclusion drawn from it was not. What we lack is the *popup on a connection event*, not the ability to connect |
 | `keyboardLayoutTransitionPopup/` | 422 | yes, as an OSD indicator — `modules/imi/onScreenDisplay/indicators/KeyboardLayoutIndicator.qml` |
 | `localSendPopup/` | 479 | none |
-| `colorPickerPopup/` | 1,026 | none — we just `execDetached(["hyprpicker","-a"])` from `modules/imi/bar/UtilButtons.qml:63` |
+| `colorPickerPopup/` | 1,026 | none — we just `execDetached(["hyprpicker","-a"])`, from three places: `modules/imi/bar/UtilButtons.qml:63` and `:69`, and the `ColorPickerToggle` quick toggle (`modules/common/models/quickToggles/ColorPickerToggle.qml:24`) |
 | `screenshotOverlay/` | 463 | yes — `modules/imi/screenshotResult/ScreenshotResultPanel.qml` (242) |
 | `scratchpadOverlay/` | 167 | none |
 | `alarmRingingPopup/` | 137 | none |
@@ -181,7 +181,7 @@ that it has no shell-injection surface; do not regress that.
 | **Touch gestures** — edge swipes on a physical touchscreen with a follow-the-finger overlay | `services/TouchGestureService.qml`, `modules/common/TouchGestureActionRegistry.qml` (250), Rust helper (601) | 867 / ~3,160 | P3DROVFX, 2026-08-14 | none |
 | **Workspace profiles** — snapshot/restore named window layouts | `services/WorkspaceProfileService.qml`, Rust `workspace_profile_manager` (951) | 533 / ~4,600 | Scrimas, 2026-06-19 | none |
 | **Per-app usage & energy** — screen time, watt-hours, CPU/GPU time per app, from a Rust daemon over `/proc`, DRM fdinfo and RAPL | `services/AppStats.qml`, `modules/ii/usage/` (4,032), Rust (2,263) | 806 / ~8,600 | Scrimas, 2026-08-01 | none |
-| **Dock live preview** — a pinned live miniature of a chosen window in the dock | `services/DockLivePreviewService.qml` | 219 / ~920 | — | none in the dock. We use `ScreencopyView` in four other places |
+| **Dock live preview** — a pinned live miniature of a chosen window in the dock | `services/DockLivePreviewService.qml` | 219 / ~920 | — | none in the dock. We use `ScreencopyView` in five other places (`Magnifier.qml`, `RegionSelection.qml`, `ScreenTranslatorPanel.qml`, `OverviewWindow.qml`, `DragApps.qml`) |
 | **Screen-shader browser** — one owner of `decoration:screen_shader`, merging built-ins, extra dirs and `hyprshade`'s catalogue | `services/ScreenShader.qml` | 298 / ~790 | — | `services/HyprlandAntiFlashbangShader.qml` (56) is the whole feature for us |
 | **OSK auto-show** — raise the on-screen keyboard only when a text field is focused by finger or pen, via a `zwp_input_method_v2` observer | `services/OskAutoShow.qml` (172) + Rust (257) | 172 / 430 | — | we have the OSK, no auto-show |
 | **Idle: timed keep-awake** — `inhibitFor(minutes)` on an absolute epoch deadline (deliberately not a decrementing timer, so suspend cannot skew it), pre-expiry warning, MRU duration chips | `services/Idle.qml` (282) | ~180 net-new | — | our `services/Idle.qml` (101) instead has `autoOnExternalMonitor`. The two halves compose |
