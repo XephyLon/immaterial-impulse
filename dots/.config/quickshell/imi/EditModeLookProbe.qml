@@ -3,6 +3,7 @@ import Quickshell
 import qs.modules.common
 import qs.modules.common.widgets.widgetCanvas
 import qs.modules.imi.background
+import qs.modules.imi.editMode
 import "modules/common/functions/edit_mode.js" as EditMode
 
 /*
@@ -182,8 +183,29 @@ ShellRoot {
                     cardRadius: harness.cardRadius
                 }
             }
+
+            // The mode's chrome. On the real shell this is a layer surface of
+            // its own on Overlay, because the bar and the dock sit above the
+            // background - none of which weston can show, so what is rebuilt
+            // here is the arrangement (a full-screen item over the card, at the
+            // card's own geometry) and the content is the shipped component.
+            Loader {
+                id: chromeLoader
+                active: harness.editProgress > 0
+                anchors.fill: parent
+                z: 5
+                opacity: harness.editProgress
+                sourceComponent: EditModeChromeContent {
+                    card: harness.card
+                }
+            }
         }
     }
+
+    // The chrome's two pieces, when there are any. Reached through the loader
+    // rather than held as ids, since they do not exist at rest.
+    readonly property Item toolbar: chromeLoader.item?.toolbarItem ?? null
+    readonly property Item tabBar: chromeLoader.item?.tabBarItem ?? null
 
     readonly property matrix4x4 matrix: Qt.matrix4x4(
         harness.applied.scale, 0, 0, harness.applied.x,
@@ -199,7 +221,12 @@ ShellRoot {
             + ` radius=${harness.cardRadius} scale=${harness.applied.scale}`
             + ` marker=${cornerMarker.x},${cornerMarker.y},${cornerMarker.width},${cornerMarker.height}`
             + ` panel=${opaquePanel.x},${opaquePanel.y},${opaquePanel.width},${opaquePanel.height}`
-            + ` markerColor=${harness.cornerMarkerColor} panelColor=${harness.opaquePanelColor}`);
+            + ` markerColor=${harness.cornerMarkerColor} panelColor=${harness.opaquePanelColor}`
+            + ` toolbar=${harness.toolbar?.x ?? -1},${harness.toolbar?.y ?? -1}`
+            + `,${harness.toolbar?.width ?? 0},${harness.toolbar?.height ?? 0}`
+            + ` tabbar=${harness.tabBar?.x ?? -1},${harness.tabBar?.y ?? -1}`
+            + `,${harness.tabBar?.width ?? 0},${harness.tabBar?.height ?? 0}`
+            + ` chromeColor=${Appearance.m3colors.m3surfaceContainer}`);
     }
 
     function shoot(name, next) {
@@ -234,7 +261,7 @@ ShellRoot {
                     && harness.card.height === harness.screenHeight
                     && harness.cardRadius === 0);
             harness.check("at rest there is no chrome to stand down",
-                !editChrome.active);
+                !editChrome.active && !chromeLoader.active);
             harness.shoot("rest", () => {
                 harness.editProgress = 1;
                 harness.after(harness.editing);
@@ -259,6 +286,35 @@ ShellRoot {
                 && harness.card.y >= harness.margin - 0.5,
             `card=${harness.card.x.toFixed(1)},${harness.card.y.toFixed(1)}`
                 + ` ${harness.card.width.toFixed(1)}x${harness.card.height.toFixed(1)}`);
+        // The chrome frames the desktop, so it has to be OUTSIDE it: a toolbar
+        // overlapping the card covers the widgets it exists to help arrange,
+        // and one that has left the screen is not there at all. Both bands are
+        // opened by the shrink itself, which is why this is asserted against
+        // the card rather than against a chosen inset.
+        harness.check("the toolbar and the tab bar sit in the bands the shrink opened",
+            harness.toolbar !== null && harness.tabBar !== null
+                && harness.toolbar.y >= 0
+                && harness.toolbar.y + harness.toolbar.height <= harness.card.y + 0.5
+                && harness.tabBar.y >= harness.card.y + harness.card.height - 0.5
+                && harness.tabBar.y + harness.tabBar.height <= harness.screenHeight,
+            `toolbar=${harness.toolbar?.y.toFixed(1)}+${harness.toolbar?.height.toFixed(1)}`
+                + ` band=${harness.card.y.toFixed(1)}`);
+        // ...and on the desktop's own axis rather than the screen's, which is
+        // the same point today and stops being one when the drawer translates
+        // the card. The two gaps are compared to each other because the card is
+        // centred: chrome that drifted toward one edge would still be "inside
+        // the band".
+        const gapAbove = harness.toolbar !== null ? harness.toolbar.y : -1;
+        const gapBelow = harness.tabBar !== null
+            ? harness.screenHeight - (harness.tabBar.y + harness.tabBar.height) : -2;
+        harness.check("...centred on the desktop, in two bands of equal height",
+            harness.toolbar !== null && harness.tabBar !== null
+                && Math.abs((harness.toolbar.x + harness.toolbar.width / 2)
+                    - (harness.card.x + harness.card.width / 2)) < 0.5
+                && Math.abs((harness.tabBar.x + harness.tabBar.width / 2)
+                    - (harness.card.x + harness.card.width / 2)) < 0.5
+                && Math.abs(gapAbove - gapBelow) < 0.5,
+            `gaps=${gapAbove.toFixed(1)},${gapBelow.toFixed(1)}`);
         harness.reportGeometry("geometry");
         harness.shoot("editing", () => {
             harness.editProgress = 0.5;
@@ -294,6 +350,11 @@ ShellRoot {
                 && harness.card.width === harness.screenWidth
                 && harness.cardRadius === 0
                 && !editChrome.active);
+        // Its own check rather than a term in the one above: the chrome is a
+        // whole surface on the real shell, and "the desktop came back" and "the
+        // toolbar went away" are two different regressions.
+        harness.check("...and takes the chrome with it", !chromeLoader.active
+            && harness.toolbar === null && harness.tabBar === null);
         harness.shoot("after", () => harness.finish());
     }
 

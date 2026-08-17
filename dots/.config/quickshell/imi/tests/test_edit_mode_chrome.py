@@ -32,6 +32,12 @@ question about pixels that reads as correct in every source file:
   top-left and slid, and it settled somewhere plausible - which is what let it
   ship. The desktop's position is measured off the drawn marker at half
   progress, not read back out of the function that placed it.
+- **the chrome is drawn where its geometry says it is, and outside the desktop
+  it frames.** The harness asserts the toolbar's and the tab bar's numbers; this
+  finds their bodies in the picture, which is the half that catches a chrome
+  item that reports a position and paints somewhere else - or that reports one
+  and paints nothing, which is what a toolbar whose content failed to resolve
+  looks like from every property.
 
 The fixture is a flat colour so that "is this pixel a grid line" is answerable
 at all; the check that the lattice is drawn in the first place is what stops the
@@ -60,12 +66,14 @@ WALLPAPER_RGB = (58, 96, 140)
 # The harness states how many checks it ran; this is the literal it must state.
 # Read back out of its own output it would agree with itself by construction,
 # and `failures: 0` is also what a harness that ran nothing prints.
-EXPECTED_CHECKS = 7
+EXPECTED_CHECKS = 10
 
 GEOMETRY = re.compile(
     r"(geometry|midGeometry): screen=([\d.]+),([\d.]+) card=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
     r"radius=([\d.]+) scale=([\d.]+) marker=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
-    r"panel=([\d.]+),([\d.]+),([\d.]+),([\d.]+) markerColor=(\S+) panelColor=(\S+)")
+    r"panel=([\d.]+),([\d.]+),([\d.]+),([\d.]+) markerColor=(\S+) panelColor=(\S+) "
+    r"toolbar=(-?[\d.]+),(-?[\d.]+),([\d.]+),([\d.]+) "
+    r"tabbar=(-?[\d.]+),(-?[\d.]+),([\d.]+),([\d.]+) chromeColor=(\S+)")
 
 
 def _available():
@@ -118,6 +126,9 @@ class EditModeChromeTest(unittest.TestCase):
                 "panel": tuple(float(v) for v in values[13:17]),
                 "markerColor": _hex_to_rgb(values[17]),
                 "panelColor": _hex_to_rgb(values[18]),
+                "toolbar": tuple(float(v) for v in values[19:23]),
+                "tabbar": tuple(float(v) for v in values[23:27]),
+                "chromeColor": _hex_to_rgb(values[27]),
             }
         for tag in ("geometry", "midGeometry"):
             self.assertIn(tag, self.reported,
@@ -131,6 +142,9 @@ class EditModeChromeTest(unittest.TestCase):
         self.panel = settled["panel"]
         self.marker_rgb = settled["markerColor"]
         self.panel_rgb = settled["panelColor"]
+        self.toolbar = settled["toolbar"]
+        self.tabbar = settled["tabbar"]
+        self.chrome_rgb = settled["chromeColor"]
 
         self.frames = {}
         for name in ("rest", "editing", "midway", "after"):
@@ -232,6 +246,48 @@ class EditModeChromeTest(unittest.TestCase):
                                msg="the desktop is not centred horizontally mid-animation")
         self.assertAlmostEqual(top, screen_h - bottom, delta=3,
                                msg="the desktop is not centred vertically mid-animation")
+
+    # ---- the chrome ------------------------------------------------------
+
+    def _body_span(self, frame, rect):
+        """The horizontal extent of a chrome body, found in the picture.
+
+        Read across the item's own vertical centre, where a stadium's ends are
+        at their widest and the corner arc cannot decide where the body starts.
+        Matched on the toolbar's surface colour with a small tolerance rather
+        than on "not the background": a `Toolbar` draws a soft shadow outside
+        its own bounds, and a strict inequality against the backdrop measures
+        the shadow's reach instead of the body's.
+        """
+        x, y, w, h = rect
+        row = round(y + h / 2)
+        xs = [px for px in range(frame.width)
+              if max(abs(a - b) for a, b in
+                     zip(frame.getpixel((px, row)), self.chrome_rgb)) <= 12]
+        return xs
+
+    def test_the_chrome_is_drawn_where_its_geometry_says_it_is(self):
+        # The harness asserts the numbers; this asserts the paint. A toolbar
+        # whose content fails to resolve - a missing import, a Translation that
+        # is not in scope - still reports a position, a size and a full set of
+        # passing geometry checks, and draws a stub. Found exactly that way.
+        frame = self.frames["editing"]
+        for name, rect in (("toolbar", self.toolbar), ("tab bar", self.tabbar)):
+            xs = self._body_span(frame, rect)
+            self.assertTrue(xs, f"the {name}'s body is not in the picture at all")
+            drawn_x, drawn_width = xs[0], xs[-1] - xs[0] + 1
+            self.assertAlmostEqual(
+                drawn_x, rect[0], delta=2,
+                msg=f"the {name} is drawn {drawn_x - rect[0]:.0f}px from where it reports")
+            self.assertAlmostEqual(
+                drawn_width, rect[2], delta=3,
+                msg=f"the {name} is drawn {drawn_width:.0f}px wide and reports {rect[2]:.0f}")
+
+    # Deliberately NOT repeated here: whether the chrome sits outside the card
+    # and inside the screen. The harness asserts that against the same live
+    # rects, and a copy of it in this file would read those rects back out of
+    # the harness's own report - two checks that agree by construction, which
+    # is one check and a false sense of two.
 
     # ---- the corner ------------------------------------------------------
 
