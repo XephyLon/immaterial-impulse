@@ -223,19 +223,51 @@ ShellRoot {
                               < Math.abs(harness.travelUnscaled.y) - 1);
         },
 
-        // ---- the affordances the mode forces on ---------------------------
+        // ---- the affordances the mode forces on, and the one it does not --
+        //
+        // The lattice belongs to the GESTURE in the mode as well as out of it.
+        // What the mode overrides is the config switch, so the switch is turned
+        // OFF here: what these steps score is then the mode's own behaviour
+        // rather than the user's preference leaking into it.
         () => {
             Config.options.background.showGrid = false;
-            harness.check("the grid is up for the whole mode, not for the drag",
-                          canvas.gridVisible && !canvas.showGrid);
+            harness.check("in the mode at rest there is no lattice",
+                          !canvas.gridVisible && !canvas.showGrid);
             harness.check("the frost stands down for the mode",
                           resizableWidget.frostSuspended);
         },
         () => {
+            // A press is not a drag, and this is the distinction the whole
+            // change turns on: every one of a widget's own controls - the
+            // resize grip, the right-click, a click that selects - presses
+            // without travelling, and a lattice that flashed up under each of
+            // them would be worse than one that never went away. 4 canvas
+            // pixels is comfortably inside AbstractWidget's drag.threshold at
+            // this scale; the drag in the next step is ten times past it.
+            const x = movableWidget.x + movableWidget.width / 2;
+            const y = movableWidget.y + movableWidget.height / 2;
+            driver.mousePress(canvas, x, y, Qt.LeftButton);
+            driver.mouseMove(canvas, x + 4, y + 4, 20, Qt.LeftButton);
+            harness.check("a press that has not travelled draws none of it",
+                          !movableWidget.dragging && !canvas.gridVisible);
+            driver.mouseRelease(canvas, x + 4, y + 4, Qt.LeftButton);
+        },
+        () => {
+            const x = movableWidget.x + movableWidget.width / 2;
+            const y = movableWidget.y + movableWidget.height / 2;
+            driver.mousePress(canvas, x, y, Qt.LeftButton);
+            driver.mouseMove(canvas, x + 120, y, 20, Qt.LeftButton);
+            harness.check("...and a drag past the threshold brings it up",
+                          movableWidget.dragging && canvas.gridVisible);
+            driver.mouseRelease(canvas, x + 120, y, Qt.LeftButton);
+        },
+        () => {
+            harness.check("...and the release takes it away again",
+                          !canvas.showGrid && !canvas.gridVisible);
             Config.options.background.showGrid = true;
             GlobalStates.editMode = false;
-            harness.check("and the grid goes back to being the drag's",
-                          !canvas.gridVisible);
+        },
+        () => {
             harness.check("and the frost comes back", !resizableWidget.frostSuspended);
             GlobalStates.editMode = true;
         },
@@ -292,6 +324,32 @@ ShellRoot {
                           && Math.round(harness.storedPosition("edit-resize-probe").y) === 36);
         },
 
+        // ---- a group drag ends the lattice the same way -------------------
+        //
+        // Scored separately because only the LEADER reports a drag: a follower
+        // is moved imperatively by the canvas and its `dragging` is never true,
+        // so "the lattice goes down when the gesture ends" runs off one widget's
+        // flag while more than one widget was moving. A follower that somehow
+        // did raise it would leave the grid up for the rest of the mode.
+        () => { canvas.clearSelection(); harness.placeWidgets(); },
+        () => {
+            // A marquee from empty canvas across both widgets. Overlap, not
+            // containment, is what selectWidgetsInRect takes.
+            driver.mousePress(canvas, 8, 8, Qt.LeftButton);
+            driver.mouseMove(canvas, 600, 600, 20, Qt.LeftButton);
+            driver.mouseRelease(canvas, 600, 600, Qt.LeftButton);
+        },
+        () => harness.check("a marquee over both widgets selects both",
+                            canvas.selectedWidgets.length === 2),
+        () => harness.dragBy(movableWidget, 60, 0),
+        () => {
+            harness.check("a group drag carries the follower",
+                          Math.round(harness.storedPosition("edit-resize-probe").x) === 96);
+            harness.check("...and the lattice goes down when the group's drag ends",
+                          !canvas.showGrid && !canvas.gridVisible);
+            canvas.clearSelection();
+        },
+
         // ---- leaving mid-drag cancels, it does not commit ------------------
         () => { harness.placeWidgets(); },
         () => {
@@ -314,6 +372,13 @@ ShellRoot {
                           !movableWidget.dragging && Math.round(movableWidget.x) === 36);
             harness.check("...and stores the position the press found",
                           Math.round(harness.storedPosition("edit-move-probe").x) === 36);
+            // The gesture flag rather than gridVisible, because the mode has
+            // ended and gridVisible has a second reason to be false by now. The
+            // question here is whether the cancel reached setDragging at all -
+            // a cancel that did not would leave the lattice armed for the next
+            // time the mode opens.
+            harness.check("...and the cancel takes the lattice with the gesture",
+                          !canvas.showGrid);
         }
     ]
 
