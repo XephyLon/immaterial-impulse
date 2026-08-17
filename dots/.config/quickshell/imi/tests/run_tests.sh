@@ -377,6 +377,16 @@ if ! python3 "$SCRIPT_DIR/test_settings_page_ids.py"; then
     exit 1
 fi
 
+# Stage 8 of Edit Mode: the bar and the dock edited in place. What it pins is
+# silent on screen - a suspension that touches `visible` destroys a layer
+# surface, and an affordance wired into one bar orientation and not the other
+# is invisible on a default screen.
+echo "Running bar/dock edit-mode contract tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_dock_edit_contract.py"; then
+    echo "Bar/dock edit-mode contract tests failed."
+    exit 1
+fi
+
 # A column of dock icons can lay out perfectly and still refuse to reorder,
 # because every slot centre shares an x - only real mouse events see that.
 # Brings its own headless weston.

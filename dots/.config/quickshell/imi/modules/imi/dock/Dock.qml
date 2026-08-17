@@ -40,6 +40,13 @@ Scope {
             property bool fullscreenOnThisMonitor: WM.fullscreenOnMonitor(monitor?.name)
 
             property bool reveal: {
+                // The dock is edited in place (spec §4.2), so the mode holds it
+                // revealed - through this expression, which is a centre offset
+                // on the content, never through the surface's `visible`. First
+                // in the chain so a fullscreen window cannot hide the dock out
+                // from under the user arranging it.
+                if (GlobalStates.editMode)
+                    return true
                 if (dockContextMenu.isOpen)
                     return true
                 if (fullscreenOnThisMonitor)

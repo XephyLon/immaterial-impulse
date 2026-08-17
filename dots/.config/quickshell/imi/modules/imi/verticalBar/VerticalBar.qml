@@ -49,7 +49,11 @@ Scope {
                 }
                 property bool superShow: false
                 // See Bar.qml / issues #30, #31: stay shown while a bar popup is open.
+                // The editMode term is Bar.qml's too - the bar is edited in
+                // place, so auto-hide is suspended by this expression and never
+                // by a write to `visible`, which destroys a layer surface.
                 property bool mustShow: hoverRegion.containsMouse || superShow
+                    || GlobalStates.editMode
                     || ((GlobalStates.mediaControlsOpen || GlobalStates.sysTrayOverflowOpen) && Config?.options.bar.autoHide.dismissPopups)
                 exclusionMode: ExclusionMode.Ignore
                 exclusiveZone: (Config?.options.bar.autoHide.enable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :

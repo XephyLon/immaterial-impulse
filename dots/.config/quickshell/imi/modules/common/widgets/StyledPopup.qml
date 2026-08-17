@@ -101,6 +101,12 @@ QtObject {
     // shared resource: refusing to honour a claim would leave
     // GlobalStates.activeBarPopup pointing at a popup the card is not showing.
     function claimSlot() {
+        // Edit Mode makes the bar's widgets inert, and a popup opening over an
+        // inert bar is the widget answering the pointer after all - through a
+        // claim path the mode's input eater cannot reach. Refused here because
+        // this is the one gate all three claim paths (hover, popupVisible,
+        // completion) already share.
+        if (GlobalStates.editMode) return;
         const occupant = GlobalStates.activeBarPopup;
         if (occupant && occupant !== root && occupant.pinnedOpen && !root.pinnedOpen) return;
         GlobalStates.activeBarPopup = root;
