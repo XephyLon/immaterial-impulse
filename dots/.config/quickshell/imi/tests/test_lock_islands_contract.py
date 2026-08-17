@@ -130,5 +130,72 @@ def test_the_password_field_is_reachable_and_pinned_by_the_module():
         "the module no longer pins the password field as unmovable"
 
 
+CONTROLLER = ROOT / "modules/imi/lock/LockIslandReorder.qml"
+EDIT_ITEM = ROOT / "modules/imi/lock/LockIslandEditItem.qml"
+CANVAS = ROOT / "modules/common/widgets/widgetCanvas/WidgetCanvas.qml"
+GLOBAL_STATES = ROOT / "GlobalStates.qml"
+
+
+def test_the_reorder_commits_through_the_shared_arithmetic_at_literal_paths():
+    # No fifth copy of the reorder (spec §10.2): the gesture is ReorderDragArea,
+    # the list arithmetic is layout_ops, the write-back merge is the module's
+    # storedOrder, and the three stored lists are literal paths - an allowlist
+    # reachable through a computed key is not an allowlist, which is the scope
+    # lint's own rule about these files.
+    text = code(CONTROLLER)
+    # `dropTarget` itself lives inside ReorderDragArea - the controller's half
+    # of that seam is the buckets provider the gesture calls.
+    for required in ("LayoutOps.move(", "LayoutOps.moveTargetForInsertion(",
+                     "LockIslands.storedOrder(", "function dropBuckets"):
+        assert required in text, f"the controller no longer uses {required}"
+    item = code(EDIT_ITEM)
+    assert "ReorderDragArea" in item and "bucketsProvider" in item, \
+        ("the edit item's gesture must be the shared ReorderDragArea over the "
+         "controller's buckets - anything else is the fifth copy")
+    for island in ("main", "left", "right"):
+        assert re.search(rf"Config\.options\.lock\.islands\.{island}\s*=", text), \
+            f"the controller does not write lock.islands.{island} at its literal path"
+    commit = re.search(r"function commitReorder\([^)]*\)\s*\{(.*?)\n    \}", text, re.S)
+    assert commit, "the controller no longer declares commitReorder"
+    assert re.search(r"if \(!GlobalStates\.editMode", commit.group(1)), \
+        ("the commit must be guarded on the mode - a drag can outlive it, and "
+         "an end the user meant as stop must not store an order")
+    assert "DragHandler" not in text, \
+        ("the controller grew a DragHandler - the gesture is ReorderDragArea, "
+         "and a second handler is the fifth copy §10.2 forbids")
+
+
+def test_the_overlay_arms_only_for_the_preview_and_movable_items():
+    text = code(LOCK_SURFACE)
+    overlay = re.search(r"sourceComponent:\s*LockIslandEditItem", text)
+    assert overlay, "LockSurface no longer loads the island edit overlay"
+    loader = re.search(
+        r"active:\s*!root\.interactive\s*&&\s*GlobalStates\.editMode\s*\n?\s*"
+        r"&&\s*LockIslands\.reorderable\(", text)
+    assert loader, \
+        ("the overlay must arm only in the preview, in the mode, and never on "
+         "the password field - the module's reorderable() is what says so")
+
+
+def test_the_ladder_sees_a_lock_island_drag():
+    # Escape mid-drag must cancel the gesture, not exit the mode - the same
+    # composition the bar drag earned in stage 8, through a flag of its own
+    # because the two gestures live on different surfaces and are cleared by
+    # different teardowns.
+    states = code(GLOBAL_STATES)
+    assert re.search(r"property bool editLockDragActive:\s*false", states), \
+        "GlobalStates no longer declares the lock drag flag"
+    handler = re.search(r"onEditModeChanged:\s*\{(.*?)\n    \}", states, re.S)
+    assert handler and "editLockDragActive = false" in handler.group(1), \
+        "leaving the mode must clear the lock drag flag"
+    canvas = code(CANVAS)
+    ladder = re.search(r"gestureInFlight:(.*?),\s*\n\s*selectionCount", canvas, re.S)
+    assert ladder and "editLockDragActive" in ladder.group(0), \
+        "the canvas ladder does not see a lock island drag"
+    item = code(EDIT_ITEM)
+    assert "onEditReorderCancel" in item, \
+        "the edit item does not answer the ladder's cancel"
+
+
 if __name__ == "__main__":
     raise SystemExit(run(globals()))

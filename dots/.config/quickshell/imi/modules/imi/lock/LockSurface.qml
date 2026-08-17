@@ -115,11 +115,16 @@ MouseArea {
     // One slot shape for all three islands: the Loader is the layout's direct
     // child, so it carries the Layout facts, the active/visible gates and the
     // component resolution; the loaded item keeps drawing exactly what the
-    // hand-placed child drew.
+    // hand-placed child drew. In the preview, in the mode, a movable slot
+    // additionally hosts the reorder overlay - never the password field,
+    // which is the module's rule rather than this file's.
     component IslandSlot: Loader {
         id: slot
         required property int index
         required property string modelData
+        objectName: "islandSlot_" + slot.modelData
+        property string island: ""
+        property var reorder: null
         readonly property var meta: root.islandItemMeta[slot.modelData] ?? ({})
         Layout.alignment: Qt.AlignVCenter
         Layout.leftMargin: slot.meta.leftMargin ?? 0
@@ -128,6 +133,22 @@ MouseArea {
         active: root.islandItemActive(slot.modelData)
         visible: slot.active && root.islandItemVisible(slot.modelData)
         sourceComponent: root.islandComponents[slot.modelData] ?? null
+        // The gesture's dim: "this one is moving", on the slot rather than on
+        // a ghost - island items carry no catalogued display name to put on a
+        // chip, and the dim plus the indicator says everything a chip would.
+        opacity: (editOverlay.item?.dragging ?? false) ? 0.4 : 1
+
+        Loader {
+            id: editOverlay
+            anchors.fill: parent
+            z: 2
+            active: !root.interactive && GlobalStates.editMode
+                && LockIslands.reorderable(slot.island, slot.modelData)
+            sourceComponent: LockIslandEditItem {
+                controller: slot.reorder
+                renderedIndex: slot.index
+            }
+        }
     }
 
     // The field lives inside a delegate component now, so the surface reaches
@@ -221,8 +242,12 @@ MouseArea {
         opacity: root.toolbarOpacity
 
         Repeater {
+            id: mainRepeater
             model: root.mainOrder
-            delegate: IslandSlot {}
+            delegate: IslandSlot {
+                island: "main"
+                reorder: mainReorder
+            }
         }
     }
 
@@ -240,8 +265,12 @@ MouseArea {
         opacity: root.toolbarOpacity
 
         Repeater {
+            id: leftRepeater
             model: root.leftOrder
-            delegate: IslandSlot {}
+            delegate: IslandSlot {
+                island: "left"
+                reorder: leftReorder
+            }
         }
     }
 
@@ -260,9 +289,46 @@ MouseArea {
         opacity: root.toolbarOpacity
 
         Repeater {
+            id: rightRepeater
             model: root.rightOrder
-            delegate: IslandSlot {}
+            delegate: IslandSlot {
+                island: "right"
+                reorder: rightReorder
+            }
         }
+    }
+
+    // ---- the reorder coordinators, one per island ------------------------
+    //
+    // Full-surface siblings of the islands so their drop indicators can be
+    // drawn in surface coordinates over any slot. One per island rather than
+    // one with three buckets, deliberately: each island's vocabulary is its
+    // own defaults, and a cross-island move would write an id the receiving
+    // island's resolver (correctly) skips as unknown - the item would vanish
+    // from both. See LockIslandReorder for the rest of the reasoning.
+    LockIslandReorder {
+        id: mainReorder
+        anchors.fill: parent
+        island: "main"
+        orderedIds: root.mainOrder
+        repeater: mainRepeater
+        islandItem: mainIsland
+    }
+    LockIslandReorder {
+        id: leftReorder
+        anchors.fill: parent
+        island: "left"
+        orderedIds: root.leftOrder
+        repeater: leftRepeater
+        islandItem: leftIsland
+    }
+    LockIslandReorder {
+        id: rightReorder
+        anchors.fill: parent
+        island: "right"
+        orderedIds: root.rightOrder
+        repeater: rightRepeater
+        islandItem: rightIsland
     }
 
     // ---- the items, one component per id --------------------------------

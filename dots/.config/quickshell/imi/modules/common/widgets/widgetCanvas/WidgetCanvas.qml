@@ -109,7 +109,8 @@ MouseArea {
             // precedence does not care WHICH gesture is in flight, only that
             // one is.
             gestureInFlight: root.draggingWidget() !== null
-                || GlobalStates.editBarDragActive,
+                || GlobalStates.editBarDragActive
+                || GlobalStates.editLockDragActive,
             selectionCount: root.selectedWidgets.length,
             // The tab that is actually showing. A hardcoded DESKTOP_TAB was
             // correct while only one tab existed, and would silently disarm
