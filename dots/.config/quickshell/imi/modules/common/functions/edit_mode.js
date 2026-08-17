@@ -55,11 +55,51 @@ var MIN_SCALE = 0.2;
 // screen where it is the tighter constraint it still decides.
 var MAX_SCALE = 0.86;
 
+// The part of the screen Edit Mode may use: the screen minus what the bar and
+// the dock occupy. Those two stay where they are and at full size (spec §12
+// stage 8 is editing them in place, and this is not it), so a mode that ignores
+// them draws its chrome on top of them - which is what shipped, and what this
+// exists to stop.
+//
+// Insets rather than a rectangle as the input because that is the shape the two
+// panels answer in: each occupies one EDGE, across its own axis, and nothing
+// about either is a rectangle in the middle of the screen. `EditModeInsets` is
+// the one place that turns the bar's and the dock's configuration into these
+// four numbers.
+function usableArea(input) {
+    const screenWidth = (input && input.screenWidth) || 0;
+    const screenHeight = (input && input.screenHeight) || 0;
+    const top = (input && input.insetTop) || 0;
+    const bottom = (input && input.insetBottom) || 0;
+    const left = (input && input.insetLeft) || 0;
+    const right = (input && input.insetRight) || 0;
+    return {
+        x: left,
+        y: top,
+        width: Math.max(0, screenWidth - left - right),
+        height: Math.max(0, screenHeight - top - bottom)
+    };
+}
+
 // The SIZE is derived, not chosen: the desktop shrinks by at least what the
 // drawer will need, so the drawer opens into space that already exists rather
-// than covering the desktop or resizing it (spec §1.2, §1.3).
+// than covering the desktop or resizing it (spec §1.2, §1.3) - and by at least
+// what the CHROME will need above and below it, so the toolbar and the tab bar
+// have somewhere to be rather than wherever the ceiling happens to leave them.
 //
-// The POSITION is dead centre, and the two are deliberately separate. Entering
+// That second term is the one that was missing. The band the shrink opened was
+// whatever fell out of `MAX_SCALE` - 100.8px at 5120x1440 - and the toolbar is
+// 56px centred in it, which starts 22.4px down a screen whose bar occupies the
+// first 68. Reserving the chrome's own thickness plus a margin either side of
+// it, inside the usable area, is what makes the clearance a property of the
+// arithmetic instead of a literal tuned against `Appearance.sizes.barHeight`.
+//
+// The POSITION is dead centre OF THE USABLE AREA, and the two are deliberately
+// separate. Centre of the usable area rather than of the panel, because the
+// desktop has to sit in the space the chrome frames and the chrome has to clear
+// the bar and the dock; on the machine this was measured against the two
+// centres are 3.5px apart on a 1440-tall screen, so "dead centre" survives the
+// re-reading rather than being traded away by it. Entering
 // the mode is a concentric shrink - the desktop gets smaller where it is, and
 // nothing slides - because reserving the drawer's width inside the resting
 // geometry makes the entry asymmetric from its first frame: the desktop drifts
@@ -89,19 +129,35 @@ var MAX_SCALE = 0.86;
 //
 // `margin` is one token: the gap between the desktop and the screen's edge, and
 // the gap between the desktop and the drawer's slot once there is a drawer.
+//
+// `chromeThickness` is the toolbar's own height, and it is passed rather than
+// measured for the same reason `drawerWidth` is: the desktop's transform is
+// built out of this function on the BACKGROUND surface, where neither the
+// toolbar nor the tab bar exists. `Appearance.sizes.toolbarHeight` is the one
+// number both this and the toolbars themselves read.
 function viewportGeometry(input) {
     const screenWidth = (input && input.screenWidth) || 0;
     const screenHeight = (input && input.screenHeight) || 0;
     const drawerWidth = (input && input.drawerWidth) || 0;
     const margin = (input && input.margin) || 0;
+    const chromeThickness = (input && input.chromeThickness) || 0;
     if (screenWidth <= 0 || screenHeight <= 0)
-        return { scale: 1, x: 0, y: 0, width: screenWidth, height: screenHeight };
+        return {
+            scale: 1, x: 0, y: 0, width: screenWidth, height: screenHeight,
+            area: { x: 0, y: 0, width: screenWidth, height: screenHeight }
+        };
 
+    const area = usableArea(input);
     // Two margins horizontally (outside the desktop, and between the desktop
-    // and the drawer) and two vertically, so the desktop is inset by the same
-    // amount on every side it does not share with the drawer.
-    const roomX = screenWidth - drawerWidth - margin * 2;
-    const roomY = screenHeight - margin * 2;
+    // and the drawer). Vertically the desktop gives up a whole band on each
+    // side: a margin, the chrome, and another margin - so the toolbar centred
+    // in that band has `margin` above and below it by construction, whatever
+    // the screen is and wherever the bar happens to be. With no chrome the band
+    // collapses back to one margin, which is what the geometry was before the
+    // chrome existed.
+    const band = chromeThickness > 0 ? margin * 2 + chromeThickness : margin;
+    const roomX = area.width - drawerWidth - margin * 2;
+    const roomY = area.height - band * 2;
     const scale = Math.max(MIN_SCALE,
         Math.min(MAX_SCALE, roomX / screenWidth, roomY / screenHeight));
     const width = screenWidth * scale;
@@ -109,14 +165,20 @@ function viewportGeometry(input) {
 
     return {
         scale: scale,
-        // Centred on both axes, which is what makes `atProgress` a concentric
-        // shrink rather than a slide: the offset is linear in the scale, so
-        // `x * t` is exactly the centring offset of the intermediate scale and
-        // the four margins stay equal in pairs on every frame of the entry.
-        x: (screenWidth - width) / 2,
-        y: (screenHeight - height) / 2,
+        // Centred in the usable area on both axes. With no insets that is the
+        // screen's centre and `atProgress` is a concentric shrink: the offset
+        // is linear in the scale, so `x * t` is exactly the centring offset of
+        // the intermediate scale and the four margins stay equal in pairs on
+        // every frame. With insets the destination is off the screen's centre
+        // by half their difference, so what `atProgress` interpolates is a
+        // straight line from the whole screen to the card - every corner still
+        // travels straight, and the four margins are equal in pairs against the
+        // USABLE AREA at rest.
+        x: area.x + (area.width - width) / 2,
+        y: area.y + (area.height - height) / 2,
         width: width,
-        height: height
+        height: height,
+        area: area
     };
 }
 
@@ -127,12 +189,16 @@ function viewportGeometry(input) {
 // all - there is no frame in which the scale has arrived and the offset has
 // not.
 //
-// The offset is scaled by the SAME t as the scale, and that is what makes the
-// shrink concentric rather than merely centred at the end: a centred geometry's
-// `x` is `screenWidth * (1 - scale) / 2`, which is linear in `(1 - scale)`, so
-// `x * t` is the exact centring offset for the intermediate scale
-// `1 + (scale - 1) * t`. The desktop's four margins are therefore equal in
-// pairs at every point of the animation and not only at rest.
+// The offset is scaled by the SAME t as the scale. With no insets that makes
+// the shrink concentric rather than merely centred at the end: a centred
+// geometry's `x` is `screenWidth * (1 - scale) / 2`, which is linear in
+// `(1 - scale)`, so `x * t` is the exact centring offset for the intermediate
+// scale `1 + (scale - 1) * t`, and the desktop's four margins are equal in
+// pairs at every point of the animation. With insets the destination is not the
+// screen's centre, so that particular symmetry cannot hold mid-flight and is
+// not claimed; what does hold either way, and is what the eye follows, is that
+// every corner of the desktop travels in a straight line, because both terms of
+// each corner's position are linear in `t`.
 function atProgress(geometry, progress) {
     const t = Math.max(0, Math.min(1, progress || 0));
     return {
@@ -161,5 +227,27 @@ function cardRect(geometry, progress, screenWidth, screenHeight) {
         y: applied.y,
         width: screenWidth * applied.scale,
         height: screenHeight * applied.scale
+    };
+}
+
+// Where the chrome's two bands live at a given progress: the usable area,
+// closing in from the whole screen at the same rate the desktop shrinks out of
+// it. The toolbar is centred between this rectangle's top edge and the card's,
+// the tab bar between the card's bottom edge and this one's.
+//
+// Interpolated rather than fixed at the usable area for the same reason the
+// card is: at progress 0 the two rectangles coincide, so both bands have zero
+// height and both pieces of chrome are parked half off screen and arrive WITH
+// the desktop rather than sliding in from wherever the bar happens to end. A
+// fixed usable area would park the toolbar just below the bar, visible from the
+// first frame of the entry if either stand-down gate were ever lost.
+function areaRect(geometry, progress, screenWidth, screenHeight) {
+    const t = Math.max(0, Math.min(1, progress || 0));
+    const area = geometry.area || { x: 0, y: 0, width: screenWidth, height: screenHeight };
+    return {
+        x: area.x * t,
+        y: area.y * t,
+        width: screenWidth + (area.width - screenWidth) * t,
+        height: screenHeight + (area.height - screenHeight) * t
     };
 }

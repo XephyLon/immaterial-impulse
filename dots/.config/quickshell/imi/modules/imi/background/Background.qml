@@ -9,6 +9,7 @@ import qs.modules.common.functions as CF
 import "../../common/functions/parallax.js" as ParallaxMath
 import "../../common/functions/clockDepth.js" as ClockDepthLogic
 import "../../common/functions/edit_mode.js" as EditMode
+import qs.modules.imi.editMode
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
@@ -545,11 +546,21 @@ Variants {
         // all take one transform, so what the user is arranging keeps its
         // proportions and its coordinates. Derived, never chosen - see
         // edit_mode.js for why the drawer's width is the input.
+        // The bar and the dock keep their edges at full size, so the desktop
+        // shrinks inside what is LEFT of the screen rather than inside the raw
+        // screen - see EditModeInsets for why the two surfaces share one object
+        // for those four numbers and re-derive everything else.
+        readonly property var editInsets: EditModeInsets.insetsFor(bgRoot.screen?.name ?? "")
         readonly property var editViewport: EditMode.viewportGeometry({
             screenWidth: bgRoot.width,
             screenHeight: bgRoot.height,
             drawerWidth: Appearance.sizes.editModeDrawerWidth,
-            margin: Appearance.sizes.editModeMargin
+            margin: Appearance.sizes.editModeMargin,
+            chromeThickness: Appearance.sizes.toolbarHeight,
+            insetTop: bgRoot.editInsets.top,
+            insetBottom: bgRoot.editInsets.bottom,
+            insetLeft: bgRoot.editInsets.left,
+            insetRight: bgRoot.editInsets.right
         })
         // One animated scalar for the whole entry, so the scale and the offset
         // cannot arrive on different frames - and it is GlobalStates' scalar
