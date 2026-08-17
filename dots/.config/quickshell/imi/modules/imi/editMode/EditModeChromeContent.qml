@@ -70,6 +70,7 @@ Item {
     signal widgetToggleRequested(var manifest)
     signal barWidgetAddRequested(string widgetId, string bucket)
     signal dockAppToggleRequested(string appId)
+    signal lockIslandToggleRequested(string key)
 
     // Published for the surface's input mask: these three rects are the only
     // pixels of a screen-sized layer surface that may take a click, because
@@ -201,5 +202,6 @@ Item {
         onToggleRequested: (manifest) => root.widgetToggleRequested(manifest)
         onBarAddRequested: (widgetId, bucket) => root.barWidgetAddRequested(widgetId, bucket)
         onDockToggleRequested: (appId) => root.dockAppToggleRequested(appId)
+        onLockToggleRequested: (key) => root.lockIslandToggleRequested(key)
     }
 }

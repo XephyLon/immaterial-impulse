@@ -180,6 +180,20 @@ PanelWindow {
                 Config.options.bar.layouts.rightLayout.length);
     }
 
+    // The lock screen's presence toggles: three literal paths, one per
+    // boolean, because an allowlist reachable through a computed key is not
+    // an allowlist (lint_edit_mode_scope's own rule about this file). The
+    // keys are presence-on-a-surface (spec §9 names lock.show* as exactly
+    // that), and the same booleans LockIdleConfig's rows write.
+    function toggleLockIsland(key) {
+        if (key === "showToolbars")
+            Config.options.lock.showToolbars = !Config.options.lock.showToolbars;
+        else if (key === "showMedia")
+            Config.options.lock.showMedia = !Config.options.lock.showMedia;
+        else if (key === "showWidgets")
+            Config.options.lock.showWidgets = !Config.options.lock.showWidgets;
+    }
+
     function addWidgetAt(manifest, dropX, dropY) {
         // A release back over the drawer is the gesture being abandoned, not
         // an instruction to add the widget at the drawer.
@@ -237,5 +251,6 @@ PanelWindow {
         // the same togglePin the dock's own context menu calls - rather than
         // a second spelling of the pinnedApps edit here.
         onDockAppToggleRequested: (appId) => TaskbarApps.togglePin(appId)
+        onLockIslandToggleRequested: (key) => root.toggleLockIsland(key)
     }
 }

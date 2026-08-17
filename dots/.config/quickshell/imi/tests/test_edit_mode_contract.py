@@ -1146,6 +1146,32 @@ def test_the_islands_ride_the_edit_transform_above_the_widgets():
          "other sibling that left the viewport")
 
 
+def test_island_visibility_is_presence_through_literal_paths():
+    # Spec §12 stage 9: island VISIBILITY is editable in the mode, and the
+    # three lock.show* booleans are presence-on-a-surface - already inside
+    # §7.1's allowlist (`lock.show*` in lint_edit_mode_scope.py) since the
+    # allowlist was written. The drawer offers them as a Lock section and
+    # still writes nothing (its writes-nothing rule is held by the bar/dock
+    # contract); the chrome surface makes the three writes, each at a literal
+    # path, because an allowlist reachable through a computed key is not an
+    # allowlist.
+    drawer = code(DRAWER)
+    assert re.search(r'section === "lock"', drawer), \
+        "the drawer no longer offers the Lock section"
+    assert "lockToggleRequested" in drawer, \
+        "the drawer's lock rows must raise a signal, not write"
+    for key in ("showToolbars", "showMedia", "showWidgets"):
+        assert key in drawer, f"the Lock section no longer offers {key}"
+    surface = code(CHROME_SURFACE)
+    for key in ("showToolbars", "showMedia", "showWidgets"):
+        assert re.search(
+            rf"Config\.options\.lock\.{key}\s*=\s*!Config\.options\.lock\.{key}",
+            surface), \
+            f"the surface must flip lock.{key} at its literal path"
+    assert not re.search(r"Config\.options\.lock\[", surface + drawer), \
+        "a computed lock key routes around the allowlist"
+
+
 def test_the_clock_previews_its_locked_look_through_one_derivation():
     # The clock is THE lock-screen widget - its locked style, its centring,
     # its "show only when locked" presence and its Locked caption are all

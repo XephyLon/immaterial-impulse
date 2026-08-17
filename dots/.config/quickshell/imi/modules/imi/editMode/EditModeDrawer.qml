@@ -59,6 +59,10 @@ Item {
     // The click-adds: a bar widget into a bucket, a dock app's pin toggled.
     signal barAddRequested(string widgetId, string bucket)
     signal dockToggleRequested(string appId)
+    // The lock screen's presence toggles - which of the lock's pieces appear
+    // while locked. A signal like everything else here; the surface makes the
+    // write at the boolean's own literal path.
+    signal lockToggleRequested(string key)
 
     // Which section is showing, and which bucket a bar-widget click appends
     // to. Session state of the drawer itself; neither survives the mode.
@@ -88,6 +92,24 @@ Item {
     // The drag that is currently out, or null. One ghost for the whole drawer
     // rather than one per row - only one pointer exists.
     property var dragManifest: null
+
+    // The lock screen's three presence toggles (spec §12 stage 9: island
+    // VISIBILITY is what the mode edits; where things sit inside an island is
+    // its own stage). The keys are the lock.show* booleans LockIdleConfig
+    // already offers - presence-on-a-surface, which §9's rule admits and the
+    // scope lint's allowlist has carried since it was written. Translation.tr
+    // in a binding, so a language change re-evaluates the rows.
+    readonly property var lockIslandRows: [
+        { key: "showToolbars", name: Translation.tr("Toolbars"),
+            icon: "call_to_action",
+            description: Translation.tr("The islands beside the password field") },
+        { key: "showMedia", name: Translation.tr("Media player"),
+            icon: "music_note",
+            description: Translation.tr("Playback info while music is playing") },
+        { key: "showWidgets", name: Translation.tr("Desktop widgets"),
+            icon: "widgets",
+            description: Translation.tr("Show every desktop widget while locked") }
+    ]
 
     Rectangle {
         id: panel
@@ -143,10 +165,15 @@ Item {
                     onClicked: root.section = "bar"
                 }
                 SelectionGroupButton {
-                    rightmost: true
                     buttonText: Translation.tr("Dock")
                     toggled: root.section === "dock"
                     onClicked: root.section = "dock"
+                }
+                SelectionGroupButton {
+                    rightmost: true
+                    buttonText: Translation.tr("Lock")
+                    toggled: root.section === "lock"
+                    onClicked: root.section = "lock"
                 }
             }
 
@@ -158,7 +185,9 @@ Item {
                     ? Translation.tr("Drag a widget onto the desktop to place it, or click to add or remove it.")
                     : root.section === "bar"
                         ? Translation.tr("Click a widget to add it to the picked bar section, then drag it into place on the bar.")
-                        : Translation.tr("Click an app to pin or unpin it, then drag it into place on the dock.")
+                        : root.section === "dock"
+                            ? Translation.tr("Click an app to pin or unpin it, then drag it into place on the dock.")
+                            : Translation.tr("Choose what the lock screen shows. The Lockscreen tab previews it.")
                 font.pixelSize: Appearance.font.pixelSize.smaller
                 color: Appearance.colors.colOnSurfaceVariant
                 wrapMode: Text.Wrap
@@ -435,6 +464,78 @@ Item {
                             text: appRow.pinned ? "check_circle" : "add"
                             iconSize: 20
                             color: appRow.pinned
+                                ? Appearance.colors.colPrimary
+                                : Appearance.colors.colOnSurfaceVariant
+                        }
+                    }
+                }
+            }
+
+            // ---- lock screen presence -------------------------------------
+            ListView {
+                id: lockList
+                visible: root.section === "lock"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                spacing: Appearance.spacing.space25
+                model: root.section === "lock" ? root.lockIslandRows : []
+
+                delegate: RippleButton {
+                    id: lockRow
+                    required property var modelData
+                    // Read per key rather than bracket-indexed: the scope
+                    // lint forbids a computed lock path even for a read's
+                    // shape, and three keys do not need a lookup.
+                    readonly property bool islandOn: lockRow.modelData.key === "showToolbars"
+                        ? Config.options.lock.showToolbars
+                        : lockRow.modelData.key === "showMedia"
+                            ? Config.options.lock.showMedia
+                            : Config.options.lock.showWidgets
+
+                    width: lockList.width
+                    implicitHeight: 60
+                    buttonRadius: Appearance.rounding.large
+                    colBackground: "transparent"
+                    colBackgroundHover: Appearance.colors.colLayer2Hover
+                    colRipple: Appearance.colors.colLayer2Active
+                    onClicked: root.lockToggleRequested(lockRow.modelData.key)
+
+                    contentItem: RowLayout {
+                        anchors {
+                            fill: parent
+                            leftMargin: Appearance.spacing.space100
+                            rightMargin: Appearance.spacing.space100
+                        }
+                        spacing: Appearance.spacing.space100
+
+                        MaterialSymbol {
+                            text: lockRow.modelData.icon
+                            iconSize: 22
+                            color: Appearance.colors.colOnSurfaceVariant
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: lockRow.modelData.name
+                                font.pixelSize: Appearance.font.pixelSize.normal
+                                color: Appearance.colors.colOnSurface
+                                elide: Text.ElideRight
+                            }
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: lockRow.modelData.description
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                color: Appearance.colors.colOnSurfaceVariant
+                                elide: Text.ElideRight
+                            }
+                        }
+                        MaterialSymbol {
+                            text: lockRow.islandOn ? "check_circle" : "add"
+                            iconSize: 20
+                            color: lockRow.islandOn
                                 ? Appearance.colors.colPrimary
                                 : Appearance.colors.colOnSurfaceVariant
                         }
