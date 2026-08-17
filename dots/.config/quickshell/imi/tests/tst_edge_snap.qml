@@ -135,6 +135,17 @@ TestCase {
                     `acquired at ${pos}, ${distance}px out - before the near threshold`);
             }
         }
+
+        // The detent again, in raw numbers this time: 24px past the guide
+        // sits between the spec's ~18 acquire and ~32 release. The walk above
+        // reads the thresholds from the module, so a RELEASE_PX collapsed
+        // onto ACQUIRE_PX moves the expectations along with the behaviour and
+        // the walk follows it down - this line is the one a single-threshold
+        // implementation actually fails.
+        held = EdgeSnap.resolveSnap(283, candidates, null);
+        held = EdgeSnap.resolveSnap(324, candidates, held);
+        verify(held !== null && held.target === 300,
+            "released 24px past the guide - inside the detent");
     }
 
     function test_a_held_candidate_survives_regenerated_lists() {
