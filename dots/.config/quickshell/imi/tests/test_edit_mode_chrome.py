@@ -49,6 +49,14 @@ question about pixels that reads as correct in every source file:
   item that reports a position and paints somewhere else - or that reports one
   and paints nothing, which is what a toolbar whose content failed to resolve
   looks like from every property.
+- **the card's edge is a catch and not a rim.** Whether a boundary reads as
+  glass or as a border is a question about the whole perimeter - how wide the
+  drawn band is, and whether it is there all the way round - and no measurement
+  of any one tone asks it. Three tones that each measured well summed to five
+  drawn pixels of piping at one strength round a 3872px card, which is what
+  "edit mode's layout having this thick border" named. Note the failure this
+  one exists to catch that its neighbour cannot: the notch check passes on a
+  card with no edge at all, because a bare ramp has no notch in it.
 
 The fixture is a flat colour so that "is this pixel a grid line" is answerable
 at all; the check that the lattice is drawn in the first place is what stops the
@@ -379,6 +387,101 @@ class EditModeChromeTest(unittest.TestCase):
                 out.append(self._luma(frame.getpixel((x + w - 1 - d, along))))
         return out
 
+    # How far outside the range spanned by the blurred backdrop and the desktop
+    # a level in the boundary band lies. #241's metric, and the reason it is an
+    # EXCURSION rather than a contrast across the edge: a desktop at 240 over a
+    # backdrop at 148 already has a 92-level boundary whatever is drawn on it,
+    # so "contrast across the edge" scores an edge that is not there, and a pure
+    # ramp from one side to the other scores zero, which is the honest answer
+    # for it.
+    #
+    # The tolerance absorbs the drop shadow, which is the one thing outside the
+    # card that legitimately leaves the range: it darkens smoothly toward the
+    # edge and reaches 9.3 below the far-outside reference on the probe's frame.
+    # The shade band this replaced departed by 23 to 38 at the same pixels, so
+    # 15 separates them with room either way.
+    EDGE_TOLERANCE = 15
+    # The catch has to be along the whole top, not at one sample, so the top is
+    # scored on the MEDIAN; nowhere may be loud, so the rest are scored on the
+    # WORST. Measured on the probe's frame: 56.5 along the top, 0.0 everywhere
+    # else. The old three-tone edge scored 50.9 / 31.0 / 37.8.
+    EDGE_CATCH_FLOOR = 25.0
+
+    def _edge_samples(self):
+        """Where to read the edge, clear of the corner arcs and of the marker."""
+        x, y, w, h = self.card
+        arc = round(self.radius) + 8
+        marker_reach = round(self.marker[2] * self.scale) + 8
+        return (
+            ("top", range(round(x) + marker_reach, round(x + w) - arc, 40)),
+            ("bottom", range(round(x) + arc, round(x + w) - arc, 40)),
+            ("left", range(round(y) + marker_reach, round(y + h) - arc, 40)),
+            ("right", range(round(y) + arc, round(y + h) - arc, 40)),
+        )
+
+    def _edge_excursions(self, frame, side, along, depth=10):
+        """Per-pixel excursion beyond the backdrop/desktop range, outside in."""
+        profile = self._edge_profile(frame, side, along, depth)
+        outside, inside = profile[0], profile[depth + 4]
+        low, high = min(outside, inside), max(outside, inside)
+        return [max(0.0, value - high, low - value) for value in profile[:depth + 2]]
+
+    def test_the_edge_is_a_catch_along_the_top_and_almost_nothing_round_the_rest(self):
+        """Glass is not a ring of even thickness.
+
+        The card's edge shipped as three tones - a 4px shade band outside, a 2px
+        specular on the edge, a 1px highlight inside - and every one of them was
+        defensible on its own. The sum was five drawn pixels of dark-then-bright
+        piping at one strength round the whole perimeter of a 3872px card, which
+        is a border, which is what "edit mode's layout having this thick border
+        is what looked ugly for me" named. No per-tone measurement asks that
+        question; this one does, and it asks it in the two terms the complaint is
+        actually about - how WIDE the drawn band is, and whether it is there all
+        the way round.
+
+        Three assertions, and each fails a different way of getting it wrong:
+
+        - the top carries a real catch, which fails when the edge is deleted
+          outright (a bare ramp from the backdrop to the desktop scores 0.0, and
+          this file's notch check passes happily on one);
+        - the flanks and the bottom stay inside the range the shadow and the
+          picture already span, which fails when a rim comes back at any width -
+          the old flank departed by 31 where the shadow alone departs by 9;
+        - and the band is at most two pixels anywhere, which fails when a tone
+          is widened rather than brightened.
+
+        The probe's wallpaper is one flat colour, so every level in the band is
+        the edge and nothing else - the only place this profile can be read
+        without the picture in the way.
+        """
+        frame = self.frames["editing"]
+        by_side = {}
+        widest = (0, None)
+        for side, rng in self._edge_samples():
+            self.assertTrue(list(rng), f"no {side} samples to take")
+            worst_per_sample = []
+            for along in rng:
+                excursions = self._edge_excursions(frame, side, along)
+                worst_per_sample.append(max(excursions))
+                drawn = sum(1 for e in excursions if e > self.EDGE_TOLERANCE)
+                if drawn > widest[0]:
+                    widest = (drawn, (side, along, [round(e) for e in excursions]))
+            by_side[side] = sorted(worst_per_sample)
+
+        top = by_side["top"][len(by_side["top"]) // 2]
+        self.assertGreater(
+            top, self.EDGE_CATCH_FLOOR,
+            f"the card's top edge carries no catch at all: median excursion {top:.1f}/255")
+        for side in ("left", "right", "bottom"):
+            loudest = by_side[side][-1]
+            self.assertLessEqual(
+                loudest, self.EDGE_TOLERANCE,
+                f"the card's {side} edge is a rim, not a catch: {loudest:.1f}/255 "
+                f"outside the range the backdrop and the desktop already span")
+        self.assertLessEqual(
+            widest[0], 2,
+            f"the card's edge is {widest[0]} drawn pixels wide: {widest[1]}")
+
     def test_the_cards_edge_falls_off_its_crest_into_the_desktop(self):
         """A bevel is monotonic on the inward side of its crest; a stack of
         bands is not.
@@ -391,24 +494,21 @@ class EditModeChromeTest(unittest.TestCase):
         feels off" was: the eye reads the dark line as the card's edge and the
         bright band as a piping outside it.
 
+        Both of the bands that produced that notch are gone now, so this cannot
+        fail on the arrangement it was written for - it stays because the way to
+        bring the notch back is to give the edge a second tone, which is exactly
+        what someone reaching for "the specular needs a near side" would do. On
+        its own it passes on a card with no edge at all, which is what the check
+        above is for.
+
         This is the only place the profile can be read cleanly - the probe's
-        wallpaper is one flat colour, so every level in the band is the bevel
+        wallpaper is one flat colour, so every level in the band is the edge
         and nothing else. Tolerance is 4 levels, which is antialiasing on a
         software renderer; the defect it exists for is an order of magnitude
         past that.
         """
         frame = self.frames["editing"]
-        x, y, w, h = self.card
-        # Clear of the corner arcs, and clear of the corner marker, which is
-        # opaque magenta over the top-left of the card's interior.
-        arc = round(self.radius) + 8
-        marker_reach = round(self.marker[2] * self.scale) + 8
-        samples = (
-            ("top", range(round(x) + marker_reach, round(x + w) - arc, 40)),
-            ("bottom", range(round(x) + arc, round(x + w) - arc, 40)),
-            ("left", range(round(y) + marker_reach, round(y + h) - arc, 40)),
-            ("right", range(round(y) + arc, round(y + h) - arc, 40)),
-        )
+        samples = self._edge_samples()
         worst = (0.0, None)
         for side, rng in samples:
             self.assertTrue(list(rng), f"no {side} samples to take")
