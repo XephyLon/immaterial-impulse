@@ -87,6 +87,18 @@ ShellRoot {
             harness.checkValue("scaled stagger step",
                                motion.scale(motion.staggerStep),
                                harness.expected("MOTION_EXPECT_STAGGER"));
+
+            // The two stagger helpers are only ever called from a QML binding
+            // in a widget the unit suite cannot build, so nothing else here
+            // ever resolves them against a real engine - and a typed QML
+            // function that does not resolve is a binding error at the call
+            // site, not a compile failure, so DesignSystemCompile.qml would
+            // pass on it too. Their answers are constants, independent of the
+            // multiplier, so they need no expectation from the driver.
+            harness.check("staggerRanks skips a hidden member",
+                          motion.staggerRanks([true, false, true]).join(",") === "0,-1,1");
+            harness.check("staggerDelay clamps a long ladder",
+                          motion.staggerDelay(99, 10, 5) === motion.staggerDelay(5, 10, 5));
             harness.finish();
         }
     }

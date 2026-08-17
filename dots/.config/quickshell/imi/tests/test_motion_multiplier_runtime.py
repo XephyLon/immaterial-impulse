@@ -37,10 +37,10 @@ ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "MotionMultiplierRuntimeTest.qml"
 SHIPPED_DEFAULT = ROOT / "defaults/config.json"
 
-# One per value the harness reads. A literal rather than anything read back out
-# of the harness's own output: `failures: 0` is also what a harness that ran
-# nothing prints.
-EXPECTED_CHECKS = 5
+# One per value the harness reads, plus the two stagger helpers. A literal
+# rather than anything read back out of the harness's own output: `failures: 0`
+# is also what a harness that ran nothing prints.
+EXPECTED_CHECKS = 7
 
 # (multiplier, reduceMotion, elementMove, elementMoveFaster, press, velocity, stagger)
 #
