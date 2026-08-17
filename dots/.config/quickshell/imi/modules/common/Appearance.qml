@@ -3,6 +3,7 @@ import Quickshell
 import qs
 import qs.modules.common.functions
 import "interaction_motion.js" as InteractionMotion
+import "motion_policy.js" as MotionPolicy
 pragma Singleton
 pragma ComponentBehavior: Bound
 
@@ -409,13 +410,20 @@ Singleton {
         // anything else; the release is longer AND lands on the spatial curve
         // whose control points leave the unit box, so it springs back rather
         // than deflating.
+        //
+        // These go through the same scale as the catalogued tiers, so the
+        // speed slider and reduce motion reach hover and press feedback too. A
+        // multiplier that slowed every panel but left every button's press
+        // acknowledging at a fixed 150ms would be half a multiplier, and
+        // reduce motion would leave the one class of motion that fires on
+        // every single interaction untouched.
         readonly property var tiers: ({
-            hoverIn: { duration: root.animationCurves.expressiveEffectsDuration,
+            hoverIn: { duration: motion.scale(root.animationCurves.expressiveEffectsDuration),
                        curve: root.animationCurves.expressiveEffects },
-            hoverOut: { duration: Math.round(root.animationCurves.expressiveEffectsDuration * 1.25),
+            hoverOut: { duration: motion.scale(Math.round(root.animationCurves.expressiveEffectsDuration * 1.25)),
                         curve: root.animationCurves.expressiveEffects },
-            press: { duration: 150, curve: root.animationCurves.expressiveEffects },
-            release: { duration: root.animationCurves.expressiveFastSpatialDuration,
+            press: { duration: motion.scale(150), curve: root.animationCurves.expressiveEffects },
+            release: { duration: motion.scale(root.animationCurves.expressiveFastSpatialDuration),
                        curve: root.animationCurves.expressiveFastSpatial },
             instant: { duration: 0, curve: root.animationCurves.standard },
             hold: { duration: 0, curve: root.animationCurves.standard }
@@ -447,11 +455,55 @@ Singleton {
     }
 
     animation: QtObject {
+        id: motion
+
+        // How fast this shell moves, and where the bottom of that scale is.
+        //
+        // The multiplier is worth having HERE and not in the fork this was
+        // taken from, and the difference is not taste: roughly half of their
+        // motion is a hardcoded millisecond literal, so their slider silently
+        // does nothing for half the shell. Ours routes ~700 call sites through
+        // the tiers below, so scaling the tiers is the whole job.
+        //
+        // `reduceMotion` is a SEPARATE declared state, never a value of the
+        // multiplier. `multiplier` cannot reach `reduceMotionFloor` from
+        // anywhere - the clamp holds for a hand-edited config.json too - which
+        // is what keeps an accessibility choice from being something a user
+        // can arrive at by dragging a speed slider one notch too far, or lose
+        // by dragging it back.
+        readonly property real multiplier: MotionPolicy.clampMultiplier(
+            Config.options?.appearance?.motion?.multiplier ?? MotionPolicy.MULTIPLIER_DEFAULT)
+        readonly property bool reduceMotion: Config.options?.appearance?.motion?.reduceMotion ?? false
+        readonly property int reduceMotionFloor: MotionPolicy.REDUCE_MOTION_DURATION
+
+        function scale(base: int): int {
+            return MotionPolicy.scaleDuration(base, motion.multiplier, motion.reduceMotion);
+        }
+        function scaleVelocity(base: int): int {
+            return MotionPolicy.scaleVelocity(base, motion.multiplier, motion.reduceMotion);
+        }
+        // One spelling of "these N things arrive in sequence". A cascade asks
+        // for a step as a fraction of a catalogued duration, ranks its members
+        // by VISIBLE position, and gets a clamped delay back - see
+        // motion_policy.js for why each of the three is not the obvious
+        // `index * literal`.
+        // The shell's stagger step, in BASE milliseconds - a fraction of the
+        // effects tier rather than a literal, so it moves with any retiming of
+        // the catalogue. Unscaled on purpose: whatever consumes it scales it
+        // once, and scaling here too would apply the multiplier twice.
+        readonly property int staggerStep: MotionPolicy.staggerStep(animationCurves.expressiveEffectsDuration)
+        function staggerRanks(included: var): var {
+            return MotionPolicy.staggerRanks(included);
+        }
+        function staggerDelay(rank: int, step: int, leadIn: int): int {
+            return MotionPolicy.staggerDelay(rank, step, leadIn);
+        }
+
         property QtObject elementMove: QtObject {
-            property int duration: animationCurves.expressiveDefaultSpatialDuration
+            property int duration: motion.scale(animationCurves.expressiveDefaultSpatialDuration)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.expressiveDefaultSpatial
-            property int velocity: 650
+            property int velocity: motion.scaleVelocity(650)
             property Component numberAnimation: Component {
                 NumberAnimation {
                     duration: root.animation.elementMove.duration
@@ -462,10 +514,10 @@ Singleton {
         }
 
         property QtObject elementMoveSmall: QtObject {
-            property int duration: animationCurves.expressiveFastSpatialDuration
+            property int duration: motion.scale(animationCurves.expressiveFastSpatialDuration)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.expressiveFastSpatial
-            property int velocity: 650
+            property int velocity: motion.scaleVelocity(650)
             property Component numberAnimation: Component {
                 NumberAnimation {
                     duration: root.animation.elementMoveSmall.duration
@@ -476,10 +528,10 @@ Singleton {
         }
 
         property QtObject elementMoveEnter: QtObject {
-            property int duration: 400
+            property int duration: motion.scale(400)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.emphasizedDecel
-            property int velocity: 650
+            property int velocity: motion.scaleVelocity(650)
             property Component numberAnimation: Component {
                 NumberAnimation {
                     alwaysRunToEnd: true
@@ -491,10 +543,10 @@ Singleton {
         }
 
         property QtObject elementMoveExit: QtObject {
-            property int duration: 200
+            property int duration: motion.scale(200)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.emphasizedAccel
-            property int velocity: 650
+            property int velocity: motion.scaleVelocity(650)
             property Component numberAnimation: Component {
                 NumberAnimation {
                     alwaysRunToEnd: true
@@ -506,10 +558,10 @@ Singleton {
         }
 
         property QtObject elementMoveFast: QtObject {
-            property int duration: animationCurves.expressiveEffectsDuration
+            property int duration: motion.scale(animationCurves.expressiveEffectsDuration)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.expressiveEffects
-            property int velocity: 850
+            property int velocity: motion.scaleVelocity(850)
             property Component colorAnimation: Component { ColorAnimation {
                 duration: root.animation.elementMoveFast.duration
                 easing.type: root.animation.elementMoveFast.type
@@ -524,10 +576,10 @@ Singleton {
         }
 
         property QtObject elementMoveFaster: QtObject {
-            property int duration: 150
+            property int duration: motion.scale(150)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.expressiveEffects
-            property int velocity: 850
+            property int velocity: motion.scaleVelocity(850)
             property Component colorAnimation: Component { ColorAnimation {
                 duration: root.animation.elementMoveFaster.duration
                 easing.type: root.animation.elementMoveFaster.type
@@ -542,10 +594,10 @@ Singleton {
         }
 
         property QtObject elementResize: QtObject {
-            property int duration: 300
+            property int duration: motion.scale(300)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.emphasized
-            property int velocity: 650
+            property int velocity: motion.scaleVelocity(650)
             property Component numberAnimation: Component {
                 NumberAnimation {
                     alwaysRunToEnd: true
@@ -557,10 +609,10 @@ Singleton {
         }
 
         property QtObject clickBounce: QtObject {
-            property int duration: 400
+            property int duration: motion.scale(400)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.expressiveDefaultSpatial
-            property int velocity: 850
+            property int velocity: motion.scaleVelocity(850)
             property Component numberAnimation: Component { NumberAnimation {
                 alwaysRunToEnd: true
                 duration: root.animation.clickBounce.duration
@@ -570,21 +622,21 @@ Singleton {
         }
         
         property QtObject scroll: QtObject {
-            property int duration: 200
+            property int duration: motion.scale(200)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: root.animationCurves.standardDecel
         }
 
         property QtObject menuDecel: QtObject {
-            property int duration: 350
+            property int duration: motion.scale(350)
             property int type: Easing.OutExpo
         }
 
         property QtObject sidebarSlideEnter: QtObject {
-            property int duration: 300
+            property int duration: motion.scale(300)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.standardDecel
-            property int velocity: 650
+            property int velocity: motion.scaleVelocity(650)
             property Component numberAnimation: Component {
                 NumberAnimation {
                     alwaysRunToEnd: true
@@ -596,10 +648,10 @@ Singleton {
         }
 
         property QtObject sidebarSlideExit: QtObject {
-            property int duration: 250
+            property int duration: motion.scale(250)
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.standardAccel
-            property int velocity: 650
+            property int velocity: motion.scaleVelocity(650)
             property Component numberAnimation: Component {
                 NumberAnimation {
                     alwaysRunToEnd: true
