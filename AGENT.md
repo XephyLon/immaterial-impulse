@@ -2831,6 +2831,44 @@ mode is built out of are worth not re-deriving:
   feat(background): the viewport draws its locked inputs on the Lockscreen tab;
   feat(bar): the bar and the dock leave the Lockscreen tab;
   feat(editMode): the drawer grows a Lock section for island presence.)
+- **The islands' CONTENTS are three ordered lists, resolved by one module —
+  stage 9b, spec §14 answered "reorder".** `Config.options.lock.islands.
+  {main,left,right}` are declared `list<string>` properties (a `JsonAdapter`
+  cannot hold a dynamic map) whose defaults are the hand-placed order the
+  surface always drew, and `modules/common/functions/lock_islands.js` is the
+  only reading of them: `orderedItems` renders a known id MISSING from a
+  stored list at its default position rather than disappearing it, skips an
+  UNKNOWN stored id without destroying it, and `storedOrder` merges a commit
+  back with every unknown id's presence kept — both directions of the
+  version-skew rule, because a list written by one shell version and read by
+  another is where silent removal happens. `LockSurface` draws each island
+  as a Repeater over the resolver's answer through one `IslandSlot` Loader
+  (Layout facts in `islandItemMeta`, components in `islandComponents`, both
+  pinned to the module's whole vocabulary — a missing entry is an empty slot
+  or a zero margin, not an error); the password field is rendered from the
+  list and pinned unmovable by the module's `reorderable()`, reachable
+  through the published `passwordField` property. The reorder is stage 8's
+  machinery with no fifth copy: `LockIslandEditItem` (eater + shared
+  `ReorderDragArea`), `LockIslandReorder` per island (ONE bucket each — a
+  cross-island move would write an id the receiving island's resolver
+  correctly skips, vanishing it from both), commits through `layout_ops` +
+  `storedOrder` at three literal paths, guarded on the mode, with
+  `GlobalStates.editLockDragActive` composed into the Escape ladder beside
+  the bar's flag. The scope lint sweeps `modules/imi/lock` and admits
+  exactly the three list paths.
+  **Verifying any of this must never touch the live display.** A lock-screen
+  probe run against the user's Wayland session locks the real session, and
+  on this machine a real lock suspends the laptop — so every harness and
+  probe for the lock surface runs under headless weston with its OWN
+  `XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY` (the shape
+  `test_lock_island_reorder_runtime.py` uses), never a `qs -p` against the
+  session, and anything that genuinely needs a real `WlSessionLock` is
+  recorded as unverified rather than attempted.
+  (feat(lock): lock_islands.js, the islands' order as arithmetic;
+  feat(config): three ordered island lists under lock.islands;
+  refactor(lock): the three islands become data-driven;
+  test(lint): the scope lint reaches the lock surface and admits its lists;
+  feat(lock): island contents reorder in the mode.)
 (feat(editMode): shrink the desktop into a viewport on the background surface,
 feat(editMode): stand the per-widget frost down for the mode,
 feat(editMode): draw the shrunk desktop as a card, not as a cropped screenshot,
