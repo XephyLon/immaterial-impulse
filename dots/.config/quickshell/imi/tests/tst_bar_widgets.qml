@@ -102,4 +102,33 @@ TestCase {
         verify(!BarWidgets.available.some(w => w.id === "plugin:docker_plugin"),
                "an uninstalled plugin's bar widget must leave the catalogue");
     }
+
+    // The offer policy - which catalogue entries may be ADDED given what the
+    // layouts already hold - lives on the catalogue, so the settings page's
+    // dropdown and Edit Mode's drawer answer identically rather than each
+    // carrying a copy of "which ids may repeat" that can drift.
+    function test_theOfferExcludesAWidgetTheLayoutsAlreadyHold() {
+        PluginManager.availablePlugins = [];
+        const offered = BarWidgets.offerFor(["media", "clockWidget"], "none");
+        verify(!offered.some(w => w.id === "media"),
+               "a widget already on the bar must not be offered twice");
+        verify(offered.some(w => w.id === "workspaces"),
+               "a widget not on the bar stays offered");
+    }
+
+    function test_theMultipleAllowedIdsStayOffered() {
+        PluginManager.availablePlugins = [];
+        const offered = BarWidgets.offerFor(["visualizer", "divisor"], "transparent");
+        verify(offered.some(w => w.id === "visualizer"),
+               "the visualizer may appear more than once and must stay offered");
+        verify(offered.some(w => w.id === "divisor"),
+               "the divisor may appear more than once and must stay offered");
+    }
+
+    function test_theDivisorIsOnlyOfferedUnderTransparentBorderless() {
+        PluginManager.availablePlugins = [];
+        verify(!BarWidgets.offerFor([], "none").some(w => w.id === "divisor"),
+               "the divisor draws nothing outside the transparent style");
+        verify(BarWidgets.offerFor([], "transparent").some(w => w.id === "divisor"));
+    }
 }
