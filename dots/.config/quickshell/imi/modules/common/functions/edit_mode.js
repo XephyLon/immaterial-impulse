@@ -347,7 +347,12 @@ function canvasPointFromScreen(geometry, progress, drawerShift, screenX, screenY
 //
 // A widget with no resolvable size yet - the content-sized path, where the
 // pixel size exists only once the widget instantiates - is a point at the
-// pointer: zero defaults keep the centring and the clamp exact for it.
+// pointer, but its CLAMP treats it as at least one cell: zero keeps the
+// centring exact, while a stored point at exactly the screen's edge is
+// guaranteed to disagree with the clamped position the widget is then drawn
+// at (705e9006d's store/drawn disagreement, transiently, on every mount until
+// the user next drags it). One cell is the least anything on the lattice
+// occupies.
 function dropPosition(input) {
     const grid = (input && input.gridSize) || 12;
     const width = (input && input.widgetWidth) || 0;
@@ -358,7 +363,7 @@ function dropPosition(input) {
     const x = snap(((input && input.canvasX) || 0) - width / 2);
     const y = snap(((input && input.canvasY) || 0) - height / 2);
     return {
-        x: Math.max(0, Math.min(screenWidth - width, x)),
-        y: Math.max(0, Math.min(screenHeight - height, y))
+        x: Math.max(0, Math.min(screenWidth - Math.max(width, grid), x)),
+        y: Math.max(0, Math.min(screenHeight - Math.max(height, grid), y))
     };
 }

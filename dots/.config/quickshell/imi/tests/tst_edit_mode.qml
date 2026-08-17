@@ -459,11 +459,16 @@ TestCase {
         compare(edge.x, 1600 - 276);
         compare(edge.y, 1000 - 108);
         // A widget with no size yet - the content-sized path - is a point at
-        // the pointer, still on the lattice, still inside the screen.
+        // the pointer, still on the lattice, and clamped a CELL inside the
+        // screen rather than onto its edge: the widget's real size is unknown
+        // until it mounts, so a stored point at exactly the screen's edge is
+        // guaranteed to disagree with the clamped position it is then drawn
+        // at - 705e9006d's store/drawn disagreement, transiently. One cell is
+        // the least anything on the lattice can occupy.
         const point = EditMode.dropPosition({
             canvasX: 1620, canvasY: -30, screenWidth: 1600, screenHeight: 1000
         });
-        compare(point.x, 1600);
+        compare(point.x, 1600 - 12);
         compare(point.y, 0);
     }
 
