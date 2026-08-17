@@ -216,4 +216,140 @@ TestCase {
         fuzzyCompare(settled.width, wide.width, 1e-9);
         fuzzyCompare(settled.height, wide.height, 1e-9);
     }
+
+    // ---- the bar and the dock keep their edges ---------------------------
+    //
+    // The two panels stay where they are at full size (spec §12 stage 8 is
+    // editing them in place, and this is not it), so the mode's whole geometry
+    // happens inside what is left of the screen. Stage 4 shipped without this
+    // and put the toolbar over the bar's widgets and the tab bar over the
+    // dock's; every case below is a way that comes back.
+
+    // The numbers this machine's compositor reports for its own two panels
+    // (`hyprctl layers`: quickshell:bar at y=5 h=63, quickshell:dock 75 tall),
+    // and deliberately UNEQUAL - a top and a bottom inset that match are
+    // indistinguishable from a symmetric margin, and every "which edge did you
+    // subtract" bug passes on them.
+    readonly property real barInset: 68
+    readonly property real dockInset: 75
+    readonly property real chrome: 56
+
+    readonly property var framed: EditMode.viewportGeometry({
+        screenWidth: 5120, screenHeight: 1440, drawerWidth: 400, margin: 24,
+        chromeThickness: chrome, insetTop: barInset, insetBottom: dockInset
+    })
+
+    function test_the_usable_area_is_the_screen_minus_what_the_panels_occupy() {
+        const area = EditMode.usableArea({
+            screenWidth: 5120, screenHeight: 1440,
+            insetTop: barInset, insetBottom: dockInset, insetLeft: 12, insetRight: 30
+        });
+        compare(area.x, 12);
+        compare(area.y, barInset);
+        compare(area.width, 5120 - 12 - 30);
+        compare(area.height, 1440 - barInset - dockInset);
+        // Absent insets are zero, which is the geometry the mode had before it
+        // knew about either panel - not an error and not a default guess.
+        const bare = EditMode.usableArea({ screenWidth: 800, screenHeight: 600 });
+        compare(bare.x, 0);
+        compare(bare.y, 0);
+        compare(bare.width, 800);
+        compare(bare.height, 600);
+    }
+
+    function test_the_desktop_leaves_the_chrome_a_band_of_its_own() {
+        // The band above and below the card is a margin, the toolbar, and
+        // another margin - so the toolbar centred in it has a whole margin at
+        // each end BY CONSTRUCTION rather than by whatever the ceiling left
+        // over. That is the correction: the old band was 100.8px at this screen
+        // size and the toolbar is 56 centred in it, which starts 22.4px into a
+        // screen whose bar occupies the first 68.
+        const bandTop = framed.y - barInset;
+        const bandBottom = (1440 - dockInset) - (framed.y + framed.height);
+        fuzzyCompare(bandTop, 24 + chrome + 24, 0.5);
+        fuzzyCompare(bandBottom, 24 + chrome + 24, 0.5);
+        // ...and the vertical constraint is what decides the scale here, which
+        // is what makes the two numbers above a promise rather than a
+        // coincidence of the ceiling.
+        verify(framed.scale < EditMode.MAX_SCALE);
+    }
+
+    function test_the_desktop_rests_dead_centre_of_the_usable_area() {
+        // Centre of what is LEFT, not of the panel: the margins are equal in
+        // pairs against the area's edges, and the card is strictly inside the
+        // two panels' bands. A geometry that centred on the screen would put
+        // the card 3.5px lower here and its chrome on the bar, which is the
+        // failure this replaces - so the check is the containment as well as
+        // the symmetry.
+        const area = framed.area;
+        fuzzyCompare(framed.x - area.x,
+            (area.x + area.width) - (framed.x + framed.width), 1e-6);
+        fuzzyCompare(framed.y - area.y,
+            (area.y + area.height) - (framed.y + framed.height), 1e-6);
+        verify(framed.y >= barInset);
+        verify(framed.y + framed.height <= 1440 - dockInset);
+    }
+
+    function test_a_panel_on_a_side_edge_takes_from_the_horizontal_room_too() {
+        // The bar is vertical on this setting and the dock has four edges, so
+        // the left and right insets are not decoration. Measured where the
+        // horizontal constraint binds, or the ceiling answers for both.
+        const sided = EditMode.viewportGeometry({
+            screenWidth: 1600, screenHeight: 1000, drawerWidth: 400, margin: 24,
+            insetLeft: 60, insetRight: 40
+        });
+        fuzzyCompare(sided.width, 1600 - 60 - 40 - 400 - 48, 0.5);
+        verify(sided.x >= 60);
+        verify(sided.x + sided.width <= 1600 - 40);
+    }
+
+    function test_no_insets_and_no_chrome_is_the_geometry_the_mode_had_before() {
+        // The regression pin for every case above this section: adding the two
+        // terms must not have moved the answer for a caller that passes
+        // neither. If this ever needs updating, the mode's geometry changed for
+        // a screen with no bar and no dock, which nothing here intends.
+        const plain = EditMode.viewportGeometry({
+            screenWidth: 5120, screenHeight: 1440, drawerWidth: 400, margin: 24
+        });
+        compare(plain.scale, wide.scale);
+        compare(plain.x, wide.x);
+        compare(plain.y, wide.y);
+        compare(plain.area.x, 0);
+        compare(plain.area.y, 0);
+        compare(plain.area.width, 5120);
+        compare(plain.area.height, 1440);
+    }
+
+    function test_the_chromes_band_closes_in_as_the_desktop_shrinks() {
+        // The chrome is placed between `areaRect` and `cardRect`, and at
+        // progress 0 the two coincide - so both bands have zero height and both
+        // pieces are parked half off screen, arriving WITH the desktop rather
+        // than sliding in from wherever the bar happens to end. A band fixed at
+        // the usable area would put the toolbar just under the bar from the
+        // first frame of the entry.
+        const start = EditMode.areaRect(framed, 0, 5120, 1440);
+        compare(start.x, 0);
+        compare(start.y, 0);
+        compare(start.width, 5120);
+        compare(start.height, 1440);
+
+        const end = EditMode.areaRect(framed, 1, 5120, 1440);
+        fuzzyCompare(end.y, barInset, 1e-9);
+        fuzzyCompare(end.height, 1440 - barInset - dockInset, 1e-9);
+
+        const half = EditMode.areaRect(framed, 0.5, 5120, 1440);
+        fuzzyCompare(half.y, barInset / 2, 1e-9);
+        fuzzyCompare(half.height, (1440 + (1440 - barInset - dockInset)) / 2, 1e-9);
+
+        // And the band it opens is never negative once the mode has arrived,
+        // at any progress: the card is inside the area for every t, because
+        // both rectangles are linear in t and the containment holds at both
+        // ends.
+        for (const t of [0.2, 0.5, 0.9, 1]) {
+            const card = EditMode.cardRect(framed, t, 5120, 1440);
+            const area = EditMode.areaRect(framed, t, 5120, 1440);
+            verify(card.y >= area.y - 1e-6);
+            verify(card.y + card.height <= area.y + area.height + 1e-6);
+        }
+    }
 }
