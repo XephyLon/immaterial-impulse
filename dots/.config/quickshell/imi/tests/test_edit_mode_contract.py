@@ -32,6 +32,21 @@ can see, because weston implements no wlr-layer-shell:
   compositor to blur the whole screen;
 - and a chrome surface taking keyboard focus sits in front of the background
   and swallows the Escape the exit ladder is answered on.
+
+Four more came out of the first live load, and three of the four are silent in
+the same way - they are geometry that is only wrong on a machine that has the
+panel in question:
+
+- two surfaces working out where the bar and the dock are separately, which
+  frames a rectangle the desktop is not at, and only where the two derivations
+  differ;
+- a reservation that follows something which MOVES while the mode is on
+  (auto-hide, a hover reveal, a fullscreen window), which resizes the viewport
+  mid-edit - b710ef731's defect reached from a new direction;
+- the chrome placed against the screen's own edges rather than against the
+  usable area, which is what put the toolbar on the bar's widgets;
+- and a tone drawn between the specular and the inner highlight, which turns
+  the card's bevel into a bevel around a line.
 """
 
 import re
@@ -54,6 +69,7 @@ LOOK_PROBE = ROOT / "EditModeLookProbe.qml"
 CHROME_SCOPE = ROOT / "modules/imi/editMode/EditModeChrome.qml"
 CHROME_SURFACE = ROOT / "modules/imi/editMode/EditModeChromeSurface.qml"
 CHROME_CONTENT = ROOT / "modules/imi/editMode/EditModeChromeContent.qml"
+INSETS = ROOT / "modules/imi/editMode/EditModeInsets.qml"
 DESKTOP_MENU = ROOT / "modules/imi/desktopMenu/DesktopMenu.qml"
 RULES = ROOT.parents[1] / "hypr/hyprland/rules.lua"
 
@@ -67,6 +83,42 @@ PARTICIPANTS = [BACKGROUND, CANVAS, WIDGET, BACKGROUND_WIDGET, PLUGIN_WIDGET,
 def read(path: Path) -> str:
     assert path.exists(), f"{path} is missing - this check has nothing to say"
     return path.read_text()
+
+
+def code(path: Path) -> str:
+    """The file with its comments removed.
+
+    Every check below that forbids a NAME has to read this rather than the raw
+    text, because the comment explaining why the name is forbidden contains it.
+    Three of these checks failed on their own rationale the first time they ran,
+    which is a way for a rule to be unwritable rather than a way for it to be
+    wrong.
+    """
+    text = re.sub(r"/\*.*?\*/", "", read(path), flags=re.S)
+    return "\n".join(re.sub(r"//.*$", "", line) for line in text.splitlines())
+
+
+def declaration(text: str, name: str) -> str:
+    """One property's whole value, continuation lines included.
+
+    A line-scoped read of a QML property is the mistake this repo keeps making:
+    `edgeRollOff` carries its guard on the first line and its arithmetic on the
+    second, so a check that reads the line finds a comparison and passes on
+    anything below it. Same lesson as the settled-span sweep.
+    """
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        match = re.match(rf"^(\s*)(?:readonly\s+)?property\s+\w+\s+{name}:(.*)$", line)
+        if not match:
+            continue
+        indent = len(match.group(1))
+        body = [match.group(2)]
+        for following in lines[index + 1:]:
+            if following.strip() and len(following) - len(following.lstrip()) <= indent:
+                break
+            body.append(following)
+        return "\n".join(body)
+    return ""
 
 
 def declared_z(text: str) -> dict:
@@ -546,14 +598,138 @@ def test_the_mode_has_one_way_in_and_the_toolbar_owns_the_way_out():
     writes = re.findall(r"GlobalStates\.editMode = ([^\n]+)", menu)
     assert writes == ["true"], \
         f"the desktop menu is no longer only the way in: {writes}"
-    assert re.search(r"visible:\s*!GlobalStates\.editMode", menu), \
+    # `rowVisible`, not `visible`. A GroupedList row hidden the second way keeps
+    # its plate - a row-height band of the group's own background with nothing
+    # in it, which is what this menu grew between Widgets and DropShelf for the
+    # whole life of the mode. GroupedList.qml says why the widget cannot simply
+    # mirror `visible`; this pins the call site that reported it.
+    assert re.search(r"property bool rowVisible:\s*!GlobalStates\.editMode", menu), \
         "the Edit layout row must not sit in the menu doing nothing while the mode is on"
+    assert not re.search(r"^\s*visible:\s*!GlobalStates\.editMode", menu, re.M), \
+        "a GroupedList row hidden with `visible` leaves an empty plate behind"
     assert re.search(r"GlobalStates\.editMode = false", read(CHROME_SURFACE)), \
         "the toolbar's Done is the mode's exit"
     # Leaving takes the gesture and the selection with it: Done means stop, and
     # a selection halo left on the desktop has no visible way to be cleared.
     assert re.search(r"onEditModeChanged:[^\n]*clearSelection", read(CANVAS)), \
         "leaving the mode leaves a selection behind"
+
+
+def test_the_bar_and_the_dock_have_exactly_one_answer_for_where_they_are():
+    """The insets are derived once, and both surfaces read that one object.
+
+    Everything else about the mode's geometry is re-derived on the background
+    surface and on the chrome surface, because every input is an `Appearance`
+    token and the same screen. These four numbers are not: they come from
+    `Config.options.bar.*`, `Config.options.dock.*` and `dock_geometry.js`, so a
+    second file working them out is a second answer to where the dock is - the
+    thing `test_dock_position_contract.py` exists to prevent for the dock's own
+    tree. The failure is silent in the worst way: two surfaces that disagree
+    frame a rectangle the desktop is not at, and only on the machine whose bar
+    is the height that makes them differ.
+    """
+    insets = code(INSETS)
+    assert re.search(r"^pragma Singleton", insets, re.M), \
+        "the insets are one object, not a component each surface instantiates"
+    assert "DockGeometry.thickness(" in insets and "DockGeometry.outwardSide(" in insets, \
+        "the dock's edge and thickness come from the dock's own module"
+
+    for path in (BACKGROUND, CHROME_SURFACE):
+        text = code(path)
+        assert "EditModeInsets.insetsFor(" in text, \
+            f"{path.name} must take the insets from the one derivation"
+        for term in ("insetTop:", "insetBottom:", "insetLeft:", "insetRight:"):
+            assert term in text, f"{path.name} drops {term} on the way in"
+        assert "chromeThickness: Appearance.sizes.toolbarHeight" in text, \
+            f"{path.name} must reserve the toolbar's own height, not a literal"
+
+    # Nothing else in the mode may reach for either panel's configuration. A
+    # file that reads `dock.edge` to decide where the chrome goes is the second
+    # derivation this exists to stop, whatever it then does with it.
+    for path in PARTICIPANTS + [CARD, LOOK_PROBE]:
+        if path is BACKGROUND:
+            continue
+        text = code(path)
+        for key in ("Config.options.dock", "Config.options?.dock",
+                    "Config.options.bar.bottom", "Config.options?.bar.bottom"):
+            assert key not in text, \
+                f"{path.name} works out where a panel is instead of asking EditModeInsets"
+
+
+def test_the_reservation_does_not_move_while_the_mode_is_on():
+    """A viewport that changes size mid-edit rescales every widget under the
+    cursor and hands every Behavior carrying the box a moving target
+    (b710ef731). So the insets are a function of CONFIGURATION - never of
+    auto-hide, hover reveal, `barOpen`, or a fullscreen window dropping the
+    dock's exclusive zone, all of which move while the user is editing.
+
+    It is the same decision `edit_mode.js` makes about the drawer's width, and
+    the same reason: reserve the space whether or not the thing is in it.
+    """
+    insets = code(INSETS)
+    for moving in ("GlobalStates.barOpen", "hoverToReveal", "pinnedOnStartup",
+                   "containsMouse", "fullscreen", "ToplevelManager",
+                   "autoHide.enable"):
+        assert moving not in insets, \
+            f"the reservation follows {moving}, which moves while the mode is on"
+    # `viewportGeometry` has no input for the drawer's open state either, and
+    # this is the check that keeps the two consistent as stage 5 lands.
+    assert "drawerOpen" not in code(MODULE), \
+        "the geometry must not learn whether the drawer is open"
+
+
+def test_the_chrome_is_placed_between_the_card_and_the_usable_area():
+    """The band the toolbar sits in is the gap between the two rectangles, not
+    between the card and the screen.
+
+    Placed against the surface's own height, the chrome clears the card and
+    lands on whatever is on that edge - which is what stage 4 shipped: the
+    toolbar over the bar's widgets and the tab bar over the dock's. Both
+    rectangles come from the module and both are functions of the same
+    progress, so the placement carries no motion of its own either.
+    """
+    content = code(CHROME_CONTENT)
+    assert re.search(r"property rect area:", content), \
+        "the chrome content takes the usable area as well as the card"
+    for term in ("root.area.y", "root.area.height"):
+        assert term in content, f"the chrome does not place itself off {term}"
+    # The screen's own edges are exactly what it may no longer measure from.
+    assert not re.search(r"\(root\.height\s*-\s*root\.card", content), \
+        "the tab bar is placed against the screen's bottom edge, not the usable area's"
+    assert "EditMode.areaRect(" in code(CHROME_SURFACE), \
+        "the usable area must come from the module, not be rebuilt on the surface"
+
+
+def test_the_cards_edge_is_a_bevel_rather_than_a_bevel_around_a_line():
+    """No tone on the edge may be drawn between the specular and the inner
+    highlight.
+
+    A 1px `colLayer0Border` outline sat there, and measured on the real desktop
+    it was a notch - up to 70/255 below the lower of the two bright bands either
+    side of it. A bevel falls off its crest into the surface; a stack of bands
+    does not, and the eye reads the dark line as the card's edge with the bright
+    band as a piping outside it. `test_edit_mode_chrome.py` scores the profile
+    in pixels; this is the source half, because the outline is the kind of thing
+    that comes back as "every floating surface carries one".
+
+    docs/M3_GUIDELINES.md §1 is what licenses its absence rather than what it is
+    traded against: "visible borders are not required for every surface", and
+    the job it gives the outline - defining edges against complex backgrounds -
+    is the job the bevel exists to do, because the outline could not do it over
+    a wallpaper.
+    """
+    card = code(CARD)
+    assert "colLayer0Border" not in card, \
+        "the card's edge is a bevel; an outline through it is a seam"
+    # ...and the roll-off is the corner's, not a number someone picked. A stop
+    # at a literal fraction is a rim that is bright right round the bend, which
+    # is a stroke however bright it is - the thing the file's own comment
+    # forbids.
+    roll_off = declaration(card, "edgeRollOff")
+    assert "cardRadius" in roll_off, \
+        f"the specular's roll-off must be expressed against the corner radius: {roll_off!r}"
+    assert card.count("root.edgeRollOff") >= 2, \
+        "the roll-off must bound the crest at both ends of the flank"
 
 
 if __name__ == "__main__":
