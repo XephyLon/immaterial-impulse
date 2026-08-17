@@ -124,6 +124,32 @@ function resolveSize(grid, stored) {
     return fallback;
 }
 
+// The span one step along the offered order from wherever the widget is
+// drawn, or null when there is nowhere to step. The menu's Size stepper is
+// built on this - "the neighbouring offered span" gets one spelling, beside
+// the resolution it starts from, where qmltestrunner can reach it (the walk
+// used to live in the menu's QML, where only the weston harness could).
+//
+// It starts from resolveSize's answer rather than from the stored string, so
+// a stale stored span - one the manifest no longer offers - steps from the
+// fallback the widget is actually drawn at. Off either end it answers null
+// rather than clamping, because the caller's chevron reads "is there a next
+// span" straight off this, and a clamp would leave a live-looking button that
+// writes the span the widget already has.
+function steppedSize(grid, stored, direction) {
+    const offered = offeredSizes(grid);
+    if (offered.length < 2) return null;
+    const current = resolveSize(grid, stored);
+    if (!current) return null;
+    for (let index = 0; index < offered.length; index++) {
+        if (!sameSize(offered[index], current)) continue;
+        const next = index + direction;
+        if (next < 0 || next >= offered.length) return null;
+        return offered[next];
+    }
+    return null;
+}
+
 // Folding a legacy `sizeMode` option into the host's `__gridSize`.
 //
 // `sizeMode` was a plugin-*declared* choice option on two bundled widgets, in

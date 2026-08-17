@@ -138,8 +138,11 @@ ShellRoot {
 
             // The menu's card, driven directly: the window that hosts it on
             // the desktop is a layer surface no harness can build, and the
-            // card is where the writes live. Beside the canvas, clear of every
-            // gesture the steps above drive.
+            // card is where the writes live. Parked at the canvas's far right,
+            // clear of every gesture the steps above drive (their canvas
+            // coordinates all stay left of x=700); QtTest maps clicks through
+            // whatever transform the mode has applied, the same way it maps
+            // the widget gestures.
             EditWidgetMenuContent {
                 id: menuContent
                 x: 920
@@ -549,6 +552,9 @@ ShellRoot {
         () => {
             Config.options.plugins.enabled = ["edit-resize-probe"];
             PluginState.setOption("edit-resize-probe", "positionLocked", false);
+            // Seeded, not inherited from the grip section's end state: the
+            // stepper checks walk the offered order from its middle.
+            PluginState.setOption("edit-resize-probe", "__gridSize", "2x2");
         },
         () => {
             const pin = driver.findChild(menuContent, "editMenuPin");
@@ -565,8 +571,6 @@ ShellRoot {
                           && menuContent.pinned === false);
         },
         () => {
-            // The grip section above left the span at 2x2, the middle of the
-            // offered order.
             const down = driver.findChild(menuContent, "editMenuSizeDown");
             driver.mouseClick(down, down.width / 2, down.height / 2, Qt.LeftButton);
             harness.check("the stepper steps back through the offered order",
