@@ -226,8 +226,11 @@ def test_the_escape_ladder_is_the_module_and_not_open_coded():
     body = handler.group(1)
     assert "EditMode.resolveEscape" in body, \
         "the ladder's precedence belongs to the module, where a test can reach it"
-    # The four answers the module gives, and no branch invented beside them.
-    for answer in ("cancelGesture", "clearSelection"):
+    # The answers the module gives, and no branch invented beside them.
+    # `closeMenu` is the first rung: the per-widget menu is the topmost
+    # transient the mode draws, so Escape dismisses it before touching what is
+    # under it - and never exits the mode while it is up.
+    for answer in ("closeMenu", "cancelGesture", "clearSelection"):
         assert answer in body, f"the handler ignores the module's {answer}"
 
 
