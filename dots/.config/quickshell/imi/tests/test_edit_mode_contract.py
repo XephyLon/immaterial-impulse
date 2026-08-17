@@ -48,6 +48,8 @@ CANVAS = ROOT / "modules/common/widgets/widgetCanvas/WidgetCanvas.qml"
 WIDGET = ROOT / "modules/common/widgets/widgetCanvas/AbstractWidget.qml"
 BACKGROUND_WIDGET = ROOT / "modules/imi/background/widgets/AbstractBackgroundWidget.qml"
 PLUGIN_WIDGET = ROOT / "modules/common/plugins/PluginWidget.qml"
+CLOCK_DEPTH = ROOT / "modules/common/functions/clockDepth.js"
+LOOK_PROBE = ROOT / "EditModeLookProbe.qml"
 CHROME_SCOPE = ROOT / "modules/imi/editMode/EditModeChrome.qml"
 CHROME_SURFACE = ROOT / "modules/imi/editMode/EditModeChromeSurface.qml"
 CHROME_CONTENT = ROOT / "modules/imi/editMode/EditModeChromeContent.qml"
@@ -64,6 +66,25 @@ PARTICIPANTS = [BACKGROUND, CANVAS, WIDGET, BACKGROUND_WIDGET, PLUGIN_WIDGET,
 def read(path: Path) -> str:
     assert path.exists(), f"{path} is missing - this check has nothing to say"
     return path.read_text()
+
+
+def declared_z(text: str) -> dict:
+    """The z each declared object states, keyed by its id.
+
+    A scan rather than a block match because the objects in question are hundreds
+    of lines apart and a brace matcher over this file is a second thing to be
+    wrong. It records the FIRST z after each id, which is that object's own.
+    """
+    found, current = {}, None
+    for line in text.splitlines():
+        named = re.match(r"\s*id: (\w+)\s*$", line)
+        if named:
+            current = named.group(1)
+            continue
+        depth = re.match(r"\s*z: (-?\d+)\s*$", line)
+        if depth and current is not None and current not in found:
+            found[current] = int(depth.group(1))
+    return found
 
 
 def test_the_mode_is_ephemeral_state_and_not_a_setting():
@@ -242,6 +263,91 @@ def test_the_lattice_declares_where_it_sits_rather_than_inheriting_it():
             continue
         assert lattice.start() < match.start() < lattice.end(), \
             "a line of the lattice is drawn outside the item that owns its order"
+
+
+def test_the_lattice_belongs_to_the_drag_and_not_to_the_mode():
+    # "In Edit mode, the grid lines should not appear until I try to move a
+    # widget." The reversal of §4.1's discoverability argument, which was
+    # written before the mode had a toolbar of its own to say it is on.
+    #
+    # Read as a WHOLE declaration rather than as a line: this one is written
+    # across two, with the `&&` on the continuation, and a line-scoped check
+    # sees `root.showGrid` on its own and passes on anything.
+    text = read(CANVAS)
+    gate = re.search(
+        r"readonly property bool gridVisible:((?:[^\n]*\n)(?:\s*(?:&&|\|\|)[^\n]*\n)*)", text)
+    assert gate, "the canvas no longer resolves whether the lattice is drawn"
+    body = " ".join(gate.group(1).split())
+    # A gesture in flight is REQUIRED, so it is the leading conjunct and
+    # everything after it is joined with `&&`. Written as a shape rather than as
+    # "editMode must not appear" because the mode legitimately appears further
+    # in - it is what overrides the config switch, inside the second operand.
+    # Anything a top-level `||` reaches is a second way to draw the lattice with
+    # nobody dragging, which is the thing being removed.
+    assert body.startswith("root.showGrid"), \
+        f"the lattice is not gated first on a gesture being in flight: {body}"
+    rest = body[len("root.showGrid"):].strip()
+    assert rest == "" or rest.startswith("&&"), \
+        (f"the lattice has a way to be drawn that is not a gesture: {body} - "
+         f"what the mode overrides is the config switch, not the gesture")
+
+    # ...and the flag it is gated on follows the THRESHOLD rather than the
+    # press. A widget's own controls - the grip, the right-click, a click that
+    # selects - all press without travelling, and a lattice answering each of
+    # them would be worse than one that never went away.
+    widget = read(WIDGET)
+    assert "drag.threshold" in widget, \
+        "the drag no longer distinguishes a press from a move"
+    pressed = re.search(r"onPressed: \(mouse\) => \{(.*?)\n    \}", widget, re.S)
+    assert pressed, "AbstractWidget no longer answers a press"
+    assert "dragActive" not in pressed.group(1), \
+        "a press raises the drag flag, so the lattice would answer every click"
+    changed = re.search(r"onDraggingChanged: \{(.*?)\n    \}", widget, re.S)
+    assert changed and "setDragging(dragging)" in changed.group(1), \
+        "the canvas is no longer told when a drag starts and stops"
+
+
+def test_the_cover_that_rounds_the_corner_sits_below_the_widgets():
+    # "There shouldn't be any clipping." The cover makes the card's corner by
+    # covering it, and a cover over EVERYTHING covers the widgets too: the
+    # desktop scales about its own centre, so the canvas's edge lands on the
+    # card's edge and a widget parked against a screen edge is flush with the
+    # rounding. At a corner it lost a bite - measured at 5120x1440, 20px along
+    # each edge of a widget pinned there, which is where this machine's own
+    # store keeps `visualizer`.
+    order = declared_z(read(BACKGROUND))
+    for name in ("editChrome", "widgetCanvas", "clockDepthLayer"):
+        assert name in order, \
+            f"{name} declares no z, so its order is whatever happened to build first"
+    assert order["editChrome"] < order["widgetCanvas"], \
+        (f"the mode's cover is at z {order['editChrome']} and the widget canvas at "
+         f"{order['widgetCanvas']}: the rounding is cutting the widgets")
+
+    # The look probe RE-DECLARES this arrangement, because weston implements no
+    # layer shell and the real one cannot be stood up. That makes it a second
+    # copy of the thing it scores, and a second copy drifts: it scored one
+    # render of this fix against its own z: 4 and reported a widget whose corner
+    # was visibly still being eaten.
+    probe = declared_z(read(LOOK_PROBE))
+    for name in ("editChrome", "widgetCanvas"):
+        assert probe.get(name) == order[name], \
+            (f"the look probe draws {name} at z {probe.get(name)} and Background.qml "
+             f"at {order[name]}: the probe is scoring an arrangement the shell "
+             f"does not have")
+
+
+def test_the_depth_layer_stands_down_for_the_mode():
+    # The one thing left drawing above that cover, and it is above the widgets
+    # by design - so it cannot be put under the cover without putting the
+    # widgets under it too. It stands down instead, which it wants to anyway:
+    # it paints the wallpaper's subject over the widgets the mode exists to let
+    # the user arrange, and it reconstructs the parallax viewport, which is
+    # larger than the screen and would be free to paint outside the card.
+    assert re.search(r"if \(s\.editing\) return false;", read(CLOCK_DEPTH)), \
+        "the eligibility predicate has no refusal for the mode"
+    background = read(BACKGROUND)
+    assert re.search(r"editing:\s*GlobalStates\.editMode", background), \
+        "the depth layer never tells the predicate the mode is on"
 
 
 def test_the_inset_is_derived_from_one_declared_drawer_width():
