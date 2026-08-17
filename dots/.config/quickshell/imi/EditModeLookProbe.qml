@@ -45,6 +45,14 @@ import "modules/common/functions/edit_mode.js" as EditMode
  * - the lattice is a SUBSTRATE. The desktop widgets arrive as external children
  *   of the canvas, so nothing in WidgetCanvas.qml decides whether they are drawn
  *   over the grid; an opaque widget must hide the lines under it completely.
+ * - the chrome KEEPS OFF the bar and the dock. Two opaque bands stand in for
+ *   them on the two edges the mode may not draw on, under the chrome rather
+ *   than over it, so an overlap paints the toolbar's own colour inside a band
+ *   instead of being hidden by it.
+ * - the card's edge FALLS OFF its crest. The wallpaper here is flat, so every
+ *   level in the band across that edge is the bevel and nothing else - which is
+ *   the one place a profile through it can be read without the picture in the
+ *   way.
  *
  * The wallpaper is whatever EDIT_MODE_WALLPAPER names, so the same probe serves
  * the synthetic fixture the suite runs and a real photograph a human looks at.
@@ -70,6 +78,17 @@ ShellRoot {
 
     readonly property real drawerWidth: Appearance.sizes.editModeDrawerWidth
     readonly property real margin: Appearance.sizes.editModeMargin
+    readonly property real chromeThickness: Appearance.sizes.toolbarHeight
+
+    // What the bar and the dock occupy. `EditModeInsets` answers this on the
+    // real shell from the two panels' configuration; here they are literals,
+    // and they are the numbers this machine's compositor actually reports
+    // (`hyprctl layers`: quickshell:bar at y=5 h=63, quickshell:dock 75 tall).
+    // Deliberately UNEQUAL, because a top and a bottom inset that match are
+    // indistinguishable from a symmetric margin and every "which edge did you
+    // subtract" bug passes on them.
+    readonly property real insetTop: parseFloat(Quickshell.env("EDIT_MODE_INSET_TOP") || "68")
+    readonly property real insetBottom: parseFloat(Quickshell.env("EDIT_MODE_INSET_BOTTOM") || "75")
 
     // The one thing that moves. Driven directly rather than through a Behavior:
     // every frame here is a settled one, and a curve sampled mid-flight is a
@@ -80,10 +99,15 @@ ShellRoot {
         screenWidth: harness.screenWidth,
         screenHeight: harness.screenHeight,
         drawerWidth: harness.drawerWidth,
-        margin: harness.margin
+        margin: harness.margin,
+        chromeThickness: harness.chromeThickness,
+        insetTop: harness.insetTop,
+        insetBottom: harness.insetBottom
     })
     readonly property var applied: EditMode.atProgress(harness.viewport, harness.editProgress)
     readonly property rect card: EditMode.cardRect(harness.viewport, harness.editProgress,
+        harness.screenWidth, harness.screenHeight)
+    readonly property rect area: EditMode.areaRect(harness.viewport, harness.editProgress,
         harness.screenWidth, harness.screenHeight)
     readonly property real cardRadius: Appearance.rounding.verylarge * harness.editProgress
 
@@ -92,6 +116,7 @@ ShellRoot {
     readonly property color cornerMarkerColor: "#ff00ff"
     readonly property color opaquePanelColor: "#00ff88"
     readonly property color cornerWidgetColor: "#ffcc00"
+    readonly property color reservedColor: "#ff4400"
 
     FloatingWindow {
         id: window
@@ -225,6 +250,28 @@ ShellRoot {
             // background - none of which weston can show, so what is rebuilt
             // here is the arrangement (a full-screen item over the card, at the
             // card's own geometry) and the content is the shipped component.
+            // Stand-ins for the bar and the dock: opaque bands on the two edges
+            // the mode must not draw on. UNDER the chrome (z 3 against 5), so
+            // an overlap paints the toolbar's own colour inside a band and the
+            // pixel half can see it. Drawn at all, rather than left as two
+            // numbers, because a saved frame with them in it is a frame a human
+            // can judge the clearance in.
+            Rectangle {
+                z: 3
+                x: 0; y: 0
+                width: field.width
+                height: harness.insetTop
+                color: harness.reservedColor
+            }
+            Rectangle {
+                z: 3
+                x: 0
+                y: field.height - harness.insetBottom
+                width: field.width
+                height: harness.insetBottom
+                color: harness.reservedColor
+            }
+
             Loader {
                 id: chromeLoader
                 active: harness.editProgress > 0
@@ -233,6 +280,7 @@ ShellRoot {
                 opacity: harness.editProgress
                 sourceComponent: EditModeChromeContent {
                     card: harness.card
+                    area: harness.area
                 }
             }
         }
@@ -264,6 +312,8 @@ ShellRoot {
             + `,${harness.toolbar?.width ?? 0},${harness.toolbar?.height ?? 0}`
             + ` tabbar=${harness.tabBar?.x ?? -1},${harness.tabBar?.y ?? -1}`
             + `,${harness.tabBar?.width ?? 0},${harness.tabBar?.height ?? 0}`
+            + ` area=${harness.area.x},${harness.area.y},${harness.area.width},${harness.area.height}`
+            + ` reserved=${harness.insetTop},${harness.insetBottom}`
             + ` chromeColor=${Appearance.m3colors.m3surfaceContainer}`);
     }
 
@@ -312,18 +362,23 @@ ShellRoot {
             harness.applied.scale <= EditMode.MAX_SCALE + 1e-9
                 && harness.applied.scale > EditMode.MIN_SCALE,
             `scale=${harness.applied.scale.toFixed(3)}`);
-        // Dead centre, with room on each side for the drawer to translate the
-        // desktop into later. A shrink that opened one edge is a crop, and one
-        // that opened three is the desktop being shoved aside.
-        const freeX = harness.screenWidth - (harness.card.x + harness.card.width);
-        const freeY = harness.screenHeight - (harness.card.y + harness.card.height);
-        harness.check("...about dead centre, with room for the drawer on each side",
-            Math.abs(harness.card.x - freeX) < 0.5
-                && Math.abs(harness.card.y - freeY) < 0.5
-                && harness.card.x >= harness.drawerWidth / 2 + harness.margin - 0.5
-                && harness.card.y >= harness.margin - 0.5,
+        // Dead centre OF THE USABLE AREA, with room on each side for the drawer
+        // to translate the desktop into later. A shrink that opened one edge is
+        // a crop, and one that opened three is the desktop being shoved aside.
+        // Measured against the area rather than the screen because the two stop
+        // being the same rectangle the moment the bar and the dock are
+        // subtracted, and the whole point is that the desktop sits in what is
+        // left rather than in the middle of a panel it overlaps.
+        const freeX = harness.area.x + harness.area.width - (harness.card.x + harness.card.width);
+        const freeY = harness.area.y + harness.area.height - (harness.card.y + harness.card.height);
+        harness.check("...about dead centre of the usable area, with room for the drawer",
+            Math.abs((harness.card.x - harness.area.x) - freeX) < 0.5
+                && Math.abs((harness.card.y - harness.area.y) - freeY) < 0.5
+                && harness.card.x - harness.area.x >= harness.drawerWidth / 2 + harness.margin - 0.5
+                && harness.card.y - harness.area.y >= harness.margin - 0.5,
             `card=${harness.card.x.toFixed(1)},${harness.card.y.toFixed(1)}`
-                + ` ${harness.card.width.toFixed(1)}x${harness.card.height.toFixed(1)}`);
+                + ` ${harness.card.width.toFixed(1)}x${harness.card.height.toFixed(1)}`
+                + ` area=${harness.area.y.toFixed(1)}+${harness.area.height.toFixed(1)}`);
         // The chrome frames the desktop, so it has to be OUTSIDE it: a toolbar
         // overlapping the card covers the widgets it exists to help arrange,
         // and one that has left the screen is not there at all. Both bands are
@@ -337,14 +392,30 @@ ShellRoot {
                 && harness.tabBar.y + harness.tabBar.height <= harness.screenHeight,
             `toolbar=${harness.toolbar?.y.toFixed(1)}+${harness.toolbar?.height.toFixed(1)}`
                 + ` band=${harness.card.y.toFixed(1)}`);
+        // ...and clear of the two edges the bar and the dock own, by a whole
+        // margin at each end. This is the check stage 4 did not have: its bands
+        // were whatever the ceiling left over, so the toolbar started 22px into
+        // a screen whose bar occupies the first 68 and the tab bar landed on the
+        // dock. Asserted against the reserved insets rather than against the
+        // area, so it cannot be satisfied by an area that forgot to subtract
+        // them.
+        harness.check("...clear of the bar's and the dock's own edges",
+            harness.toolbar !== null && harness.tabBar !== null
+                && harness.toolbar.y >= harness.insetTop + harness.margin - 0.5
+                && harness.tabBar.y + harness.tabBar.height
+                    <= harness.screenHeight - harness.insetBottom - harness.margin + 0.5
+                && harness.card.y >= harness.insetTop
+                && harness.card.y + harness.card.height
+                    <= harness.screenHeight - harness.insetBottom,
+            `toolbar=${harness.toolbar?.y.toFixed(1)} reserved=${harness.insetTop},${harness.insetBottom}`);
         // ...and on the desktop's own axis rather than the screen's, which is
         // the same point today and stops being one when the drawer translates
         // the card. The two gaps are compared to each other because the card is
-        // centred: chrome that drifted toward one edge would still be "inside
-        // the band".
-        const gapAbove = harness.toolbar !== null ? harness.toolbar.y : -1;
+        // centred in the area: chrome that drifted toward one edge would still
+        // be "inside the band".
+        const gapAbove = harness.toolbar !== null ? harness.toolbar.y - harness.area.y : -1;
         const gapBelow = harness.tabBar !== null
-            ? harness.screenHeight - (harness.tabBar.y + harness.tabBar.height) : -2;
+            ? harness.area.y + harness.area.height - (harness.tabBar.y + harness.tabBar.height) : -2;
         harness.check("...centred on the desktop, in two bands of equal height",
             harness.toolbar !== null && harness.tabBar !== null
                 && Math.abs((harness.toolbar.x + harness.toolbar.width / 2)
@@ -395,13 +466,22 @@ ShellRoot {
         // at are the ones in between. Held at half progress and photographed,
         // so the pixel half can measure where the desktop is actually drawn
         // rather than read the number back out of the same function.
+        // Horizontally the destination is still the screen's centre, so the old
+        // symmetry holds on that axis and is still asserted. Vertically it is
+        // not - the card lands between a 68px band and a 75px one - so what is
+        // checked there is the property that survives the re-centring and is
+        // what the eye actually follows: every corner travels in a straight
+        // line from the whole screen to the card, i.e. the drawn offset is the
+        // settled offset times the same t the scale is at.
         const freeX = harness.screenWidth - (harness.card.x + harness.card.width);
-        const freeY = harness.screenHeight - (harness.card.y + harness.card.height);
-        harness.check("half way in, the desktop is still dead centre",
-            Math.abs(harness.card.x - freeX) < 0.5 && Math.abs(harness.card.y - freeY) < 0.5
+        const t = (1 - harness.applied.scale) / (1 - harness.viewport.scale);
+        harness.check("half way in, the desktop is on the straight line to its slot",
+            Math.abs(harness.card.x - freeX) < 0.5
+                && Math.abs(harness.card.y - harness.viewport.y * t) < 0.5
                 && harness.applied.scale > harness.viewport.scale
                 && harness.applied.scale < 1,
             `card=${harness.card.x.toFixed(1)},${harness.card.y.toFixed(1)}`
+                + ` expectedY=${(harness.viewport.y * t).toFixed(1)}`
                 + ` scale=${harness.applied.scale.toFixed(3)}`);
         harness.reportGeometry("midGeometry");
         harness.shoot("midway", () => {

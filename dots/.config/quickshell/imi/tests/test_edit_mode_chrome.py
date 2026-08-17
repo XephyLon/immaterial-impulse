@@ -77,7 +77,7 @@ WALLPAPER_RGB = (58, 96, 140)
 # The harness states how many checks it ran; this is the literal it must state.
 # Read back out of its own output it would agree with itself by construction,
 # and `failures: 0` is also what a harness that ran nothing prints.
-EXPECTED_CHECKS = 13
+EXPECTED_CHECKS = 14
 
 GEOMETRY = re.compile(
     r"(geometry|midGeometry): screen=([\d.]+),([\d.]+) card=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
@@ -86,7 +86,9 @@ GEOMETRY = re.compile(
     r"corner=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
     r"markerColor=(\S+) panelColor=(\S+) cornerColor=(\S+) "
     r"toolbar=(-?[\d.]+),(-?[\d.]+),([\d.]+),([\d.]+) "
-    r"tabbar=(-?[\d.]+),(-?[\d.]+),([\d.]+),([\d.]+) chromeColor=(\S+)")
+    r"tabbar=(-?[\d.]+),(-?[\d.]+),([\d.]+),([\d.]+) "
+    r"area=(-?[\d.]+),(-?[\d.]+),([\d.]+),([\d.]+) "
+    r"reserved=([\d.]+),([\d.]+) chromeColor=(\S+)")
 
 
 def _available():
@@ -143,7 +145,9 @@ class EditModeChromeTest(unittest.TestCase):
                 "cornerColor": _hex_to_rgb(values[23]),
                 "toolbar": tuple(float(v) for v in values[24:28]),
                 "tabbar": tuple(float(v) for v in values[28:32]),
-                "chromeColor": _hex_to_rgb(values[32]),
+                "area": tuple(float(v) for v in values[32:36]),
+                "reserved": tuple(float(v) for v in values[36:38]),
+                "chromeColor": _hex_to_rgb(values[38]),
             }
         for tag in ("geometry", "midGeometry"):
             self.assertIn(tag, self.reported,
@@ -161,6 +165,8 @@ class EditModeChromeTest(unittest.TestCase):
         self.corner_rgb = settled["cornerColor"]
         self.toolbar = settled["toolbar"]
         self.tabbar = settled["tabbar"]
+        self.area = settled["area"]
+        self.reserved = settled["reserved"]
         self.chrome_rgb = settled["chromeColor"]
 
         self.frames = {}
@@ -255,7 +261,6 @@ class EditModeChromeTest(unittest.TestCase):
         left = row[-1] + 1 - mid["marker"][2] * mid["scale"]
         top = column[-1] + 1 - mid["marker"][3] * mid["scale"]
         right = left + screen_w * mid["scale"]
-        bottom = top + screen_h * mid["scale"]
         self.assertAlmostEqual(left, mid["card"][0], delta=2)
         self.assertAlmostEqual(top, mid["card"][1], delta=2)
         # Three pixels: an edge measured off a scaled, antialiased marker is
@@ -264,8 +269,18 @@ class EditModeChromeTest(unittest.TestCase):
         # width of a whole margin - 60px here - not at three.
         self.assertAlmostEqual(left, screen_w - right, delta=3,
                                msg="the desktop is not centred horizontally mid-animation")
-        self.assertAlmostEqual(top, screen_h - bottom, delta=3,
-                               msg="the desktop is not centred vertically mid-animation")
+
+        # Vertically the destination is no longer the screen's centre - the card
+        # sits between the bar's band and the dock's - so the symmetry that used
+        # to be asserted here is gone and this is what replaced it: the desktop
+        # travels in a STRAIGHT LINE from the whole screen to its slot, which is
+        # the property the eye follows and the one a scale about the top-left
+        # still fails (it would put `top` at 0 for every t). `t` is recovered
+        # from the drawn scale, so nothing here reads the interpolation back out
+        # of the function that produced it.
+        t = (1 - drawn_scale) / (1 - self.scale)
+        self.assertAlmostEqual(top, self.card[1] * t, delta=3,
+                               msg="the desktop does not travel in a straight line to its slot")
 
     # ---- the chrome ------------------------------------------------------
 
@@ -308,6 +323,109 @@ class EditModeChromeTest(unittest.TestCase):
     # rects, and a copy of it in this file would read those rects back out of
     # the harness's own report - two checks that agree by construction, which
     # is one check and a false sense of two.
+
+    def test_the_chrome_keeps_off_the_bar_and_the_dock(self):
+        """Stage 4 shipped the toolbar over the bar's widgets and the tab bar
+        over the dock's, on the reasoning that no placement clears a bar of
+        unknown height without a literal. The viewport reserves both edges now,
+        so this asks the question in paint rather than in numbers: does the
+        toolbar's own surface colour appear anywhere in the two bands?
+
+        The bands are drawn UNDER the chrome in the probe, so an overlap is
+        visible rather than covered up - and the failure this catches is not
+        only "the chrome is at the wrong y". A chrome whose geometry is right
+        and whose shadow, ripple or content overhangs into a band fails here and
+        passes every rect assertion the harness makes.
+        """
+        frame = self.frames["editing"]
+        inset_top, inset_bottom = self.reserved
+        self.assertGreater(inset_top, 0)
+        self.assertGreater(inset_bottom, 0)
+
+        bands = (("bar", range(0, round(inset_top))),
+                 ("dock", range(round(self.screen[1] - inset_bottom), round(self.screen[1]))))
+        for name, rows in bands:
+            hits = [(x, y) for y in rows for x in range(0, round(self.screen[0]), 4)
+                    if max(abs(a - b) for a, b in
+                           zip(frame.getpixel((x, y)), self.chrome_rgb)) <= 12]
+            self.assertEqual(hits[:6], [],
+                             f"the chrome is painted on the {name}'s own band")
+
+        # ...and it is there to be found. Without this the check above passes on
+        # a probe that drew no chrome at all, which is the vacuity the lattice
+        # count already had to be repaired for.
+        self.assertTrue(self._body_span(frame, self.toolbar),
+                        "no toolbar was drawn, so keeping off the bar proves nothing")
+
+    # ---- the glass edge --------------------------------------------------
+
+    @staticmethod
+    def _luma(pixel):
+        return 0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]
+
+    def _edge_profile(self, frame, side, along, depth=8):
+        """Luma walking inward across the card's edge, starting `depth` px
+        outside it. Index `depth` is the card's own outermost pixel."""
+        x, y, w, h = (round(v) for v in self.card)
+        out = []
+        for d in range(-depth, depth + 1):
+            if side == "top":
+                out.append(self._luma(frame.getpixel((along, y + d))))
+            elif side == "bottom":
+                out.append(self._luma(frame.getpixel((along, y + h - 1 - d))))
+            elif side == "left":
+                out.append(self._luma(frame.getpixel((x + d, along))))
+            else:
+                out.append(self._luma(frame.getpixel((x + w - 1 - d, along))))
+        return out
+
+    def test_the_cards_edge_falls_off_its_crest_into_the_desktop(self):
+        """A bevel is monotonic on the inward side of its crest; a stack of
+        bands is not.
+
+        The card carried a 1px `colLayer0Border` outline BETWEEN the specular
+        outside it and the inner highlight inside it, so walking inward the
+        profile went shade, crest, dark line, highlight, desktop - measured on
+        the real desktop, a notch of up to 70/255 below the lower of the two
+        bright bands either side of it. That is what "the glassy border effect
+        feels off" was: the eye reads the dark line as the card's edge and the
+        bright band as a piping outside it.
+
+        This is the only place the profile can be read cleanly - the probe's
+        wallpaper is one flat colour, so every level in the band is the bevel
+        and nothing else. Tolerance is 4 levels, which is antialiasing on a
+        software renderer; the defect it exists for is an order of magnitude
+        past that.
+        """
+        frame = self.frames["editing"]
+        x, y, w, h = self.card
+        # Clear of the corner arcs, and clear of the corner marker, which is
+        # opaque magenta over the top-left of the card's interior.
+        arc = round(self.radius) + 8
+        marker_reach = round(self.marker[2] * self.scale) + 8
+        samples = (
+            ("top", range(round(x) + marker_reach, round(x + w) - arc, 40)),
+            ("bottom", range(round(x) + arc, round(x + w) - arc, 40)),
+            ("left", range(round(y) + marker_reach, round(y + h) - arc, 40)),
+            ("right", range(round(y) + arc, round(y + h) - arc, 40)),
+        )
+        worst = (0.0, None)
+        for side, rng in samples:
+            self.assertTrue(list(rng), f"no {side} samples to take")
+            for along in rng:
+                profile = self._edge_profile(frame, side, along)
+                crest = max(range(len(profile)), key=lambda i: profile[i])
+                # Only the band. Further in is the desktop's own picture, and a
+                # bright thing a few pixels inside it is not a seam in the edge.
+                inward = profile[crest:crest + 5]
+                for i in range(1, len(inward) - 1):
+                    later = max(inward[i + 1:])
+                    if inward[i] <= inward[i - 1] and inward[i] <= later:
+                        depth = min(inward[i - 1], later) - inward[i]
+                        if depth > worst[0]:
+                            worst = (depth, (side, along, [round(v) for v in profile]))
+        self.assertLess(worst[0], 4.0,
+                        f"the card's edge has a notch in it: {worst[1]}")
 
     # ---- the corner ------------------------------------------------------
 
@@ -403,8 +521,16 @@ class EditModeChromeTest(unittest.TestCase):
         # The other half of the check above, and what stops it passing on a
         # desktop that simply is not where the geometry says it is: at rest the
         # card is the whole screen and its corner is the marker's own pixel.
-        self.assertEqual(self.frames["rest"].getpixel((3, 3)), self.marker_rgb)
-        self.assertEqual(self.frames["after"].getpixel((3, 3)), self.marker_rgb)
+        #
+        # Three pixels below the bar's band rather than three below the screen's
+        # top edge - the probe now stands a band there for the chrome to keep
+        # off, and it is opaque. The marker is 220 canvas pixels tall and the
+        # band is 68, so this is still well inside a corner that must not be cut
+        # while the mode is off; what it is NOT is a sample of the band itself,
+        # which is what the first version of this read after the bands landed.
+        corner = (3, round(self.reserved[0]) + 3)
+        self.assertEqual(self.frames["rest"].getpixel(corner), self.marker_rgb)
+        self.assertEqual(self.frames["after"].getpixel(corner), self.marker_rgb)
 
     # ---- the substrate ---------------------------------------------------
 
