@@ -99,10 +99,11 @@ function usableArea(input) {
 // desktop has to sit in the space the chrome frames and the chrome has to clear
 // the bar and the dock; on the machine this was measured against the two
 // centres are 3.5px apart on a 1440-tall screen, so "dead centre" survives the
-// re-reading rather than being traded away by it. Entering
-// the mode is a concentric shrink - the desktop gets smaller where it is, and
-// nothing slides - because reserving the drawer's width inside the resting
-// geometry makes the entry asymmetric from its first frame: the desktop drifts
+// re-reading rather than being traded away by it.
+//
+// Entering the mode is a concentric shrink - the desktop gets smaller where it
+// is, and nothing slides - because reserving the drawer's width inside the
+// resting geometry makes the entry asymmetric from its first frame: it drifts
 // toward one edge on the way in, which reads as being shoved aside rather than
 // lifted off the wallpaper, and it does it whether or not a drawer exists yet.
 // The drawer's width is still what decides how far the desktop moves when the
