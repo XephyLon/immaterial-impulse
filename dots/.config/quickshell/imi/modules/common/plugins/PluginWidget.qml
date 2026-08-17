@@ -386,6 +386,36 @@ AbstractBackgroundWidget {
         rootWidget.resizePullY = 0;
     }
 
+    // The mode's right-click (AbstractWidget raises it only while the canvas
+    // is editing). The point is mapped to the SCENE - which on the full-screen
+    // background surface is the screen - through Qt's own transform chain, so
+    // the mode's scale, the drawer's shift and the press scale are all
+    // composed by the same arithmetic that draws the widget. Multiplying a
+    // viewport scale in by hand here is the compensation the contract forbids,
+    // and it would be wrong at every scale but 1.
+    onContextMenuRequested: (atX, atY) => {
+        if (!manifest) return;
+        const point = rootWidget.mapToItem(null, atX, atY);
+        GlobalStates.editWidgetMenuPluginId = manifest.id;
+        GlobalStates.editWidgetMenuScreenName = rootWidget.screenName;
+        GlobalStates.editWidgetMenuX = point.x;
+        GlobalStates.editWidgetMenuY = point.y;
+        GlobalStates.editWidgetMenuOpen = true;
+    }
+
+    // A widget destroyed while its menu is open must not strand the menu - the
+    // BarContent.filterLayout shape: disabling a plugin (the menu's own Remove
+    // included) tears this instance down while the menu still points at it, so
+    // the declaring object vacates on its way out. Keyed on the screen as well
+    // as the id, because every monitor holds an instance of this plugin and
+    // only the one the menu was opened on may close it.
+    Component.onDestruction: {
+        if (manifest && GlobalStates.editWidgetMenuOpen
+                && GlobalStates.editWidgetMenuPluginId === manifest.id
+                && GlobalStates.editWidgetMenuScreenName === rootWidget.screenName)
+            GlobalStates.editWidgetMenuOpen = false;
+    }
+
     configEntryName: manifest ? "plugin_" + manifest.id : "plugin_unknown"
 
     // The background layer surface only accepts keyboard input while it is

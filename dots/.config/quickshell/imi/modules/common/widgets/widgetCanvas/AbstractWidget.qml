@@ -82,10 +82,33 @@ MouseArea {
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     cursorShape: (draggable && containsPress) ? Qt.ClosedHandCursor : draggable ? Qt.OpenHandCursor : Qt.ArrowCursor
 
+    // Edit Mode's right-click, announced rather than handled: this base class
+    // knows nothing about what a widget IS, and only a subclass that carries an
+    // identity (PluginWidget's manifest) can open a menu about itself. The
+    // coordinates are this widget's own; whoever answers maps them onward.
+    signal contextMenuRequested(real atX, real atY)
+
     onClicked: (mouse) => {
-        if (mouse.button === Qt.RightButton) {
-            Config.options.background.widgetsLocked = !Config.options.background.widgetsLocked
+        if (mouse.button !== Qt.RightButton) return
+        // The mode is read off the owning canvas - the same property the
+        // marquee and the Escape ladder already run on - rather than from a
+        // second global source, which keeps the overlay's canvas (which never
+        // follows the mode) on today's behaviour without a special case.
+        //
+        // In the mode the click is the widget's menu (spec §4.1). Outside it
+        // the click keeps being the one quick gesture for the global lock -
+        // the spec's table changes only the in-mode column, and this is the
+        // lock's sole sanctioned writer outside Settings
+        // (test_edit_mode_contract.py pins that). It also stops being a
+        // SILENT write: since the mode began suppressing the global lock,
+        // an in-mode right-click flipped a stored preference whose effect
+        // was invisible until the mode ended.
+        const canvas = findCanvas(root.parent)
+        if (canvas && canvas.editMode === true) {
+            root.contextMenuRequested(mouse.x, mouse.y)
+            return
         }
+        Config.options.background.widgetsLocked = !Config.options.background.widgetsLocked
     }
 
     // The canvas cannot see this widget's press/drag on its own, so report it.
