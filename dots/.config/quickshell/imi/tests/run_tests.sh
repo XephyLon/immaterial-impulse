@@ -344,6 +344,15 @@ if ! python3 "$SCRIPT_DIR/test_lock_preview_contract.py"; then
     exit 1
 fi
 
+# Stage 9b: the lock islands' order - the schema's defaults pinned to the
+# resolver's, the islands rendered through the one resolver, and the reorder
+# committing through the shared arithmetic at literal paths.
+echo "Running lock islands contract tests..."
+if ! python3 "$SCRIPT_DIR/test_lock_islands_contract.py"; then
+    echo "Lock islands contract tests failed."
+    exit 1
+fi
+
 # Whether a drag still lands where the pointer put it once the desktop is drawn
 # at a scale. Nothing static can see that: the drag is hand-computed and the
 # transform is only SUPPOSED to cancel itself out. Brings its own weston.
