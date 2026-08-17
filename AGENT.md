@@ -478,7 +478,10 @@ modules/imi/                 The "imi" (Immaterial Impulse) panel family - one d
                               output (quickshell:editMode) whose mask is those two rects and
                               nothing else, so every other pixel falls through to the desktop
                               being edited. The desktop itself is not here: it stays on the
-                              background surface, which is what the mode transforms
+                              background surface, which is what the mode transforms.
+                              EditModeInsets.qml is the one derivation of what the bar and
+                              the dock occupy - both surfaces read it, and nothing else in
+                              the mode may work out where either panel is
   overview/                   Workspace/window overview (like GNOME Activities)
   notificationPopup/          Desktop notification popups
   settings/                   The in-shell settings UI (pages/ = one file per settings category)
@@ -2177,6 +2180,28 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   to do nothing. This only surfaces where focus is obtained by clicking - `LockSurface.qml`'s
   password box uses the identical overlay structure but never hit this, since it
   `forceActiveFocus()`s itself programmatically instead of depending on a click.
+- **`Item.visible` reads back EFFECTIVE visibility, so a container that hides
+  itself from its child's `visible` latches.** The sibling of the `enabled`
+  trap below, and it bites the other way round: `visible` is the item's own flag
+  AND its parents', so an item whose parent is hidden reports `false` no matter
+  what its own binding says. A wrapper bound to `child.visible` therefore hides
+  the child, then reads `false`, then can never let it back. Probed with `qml6`
+  against a control row: the control followed a gate true/false/true/false while
+  the mirrored one read `false` on every sample after the first hide, with no
+  warning and no binding-loop message. `GroupedList` is where this landed —
+  it builds one plate per declared row and sizes it from the row's
+  `implicitHeight`, which never asked whether the row was drawn, so a row hidden
+  with `visible: false` kept a full-height plate painting the group's background
+  with nothing in it (the desktop menu grew one between Widgets and DropShelf
+  for the whole life of Edit Mode; Settings > Services > Weather has the same
+  hole on wttr.in). A row that comes and goes therefore declares **`rowVisible`**,
+  a property of its own; a row that never disappears declares nothing and reads
+  `undefined`, which takes the `?? true`. The group's outer corners follow the
+  rows that are DRAWN, not the declared first and last, or a hidden plate holds
+  the rounding while the row above it is square. `tst_grouped_list.qml` covers
+  all of it, and the case that earns its place is "a hidden row that comes back
+  is drawn again" — the one the plausible alternative fix fails.
+  b949bf24a ("fix(widgets): a GroupedList row that is not drawn takes no room").
 - **`enabled: false` on a `MouseArea` disables that area and nothing under it.**
   `QQuickMouseArea` declares its own `enabled` property, which shadows `Item.enabled` — so the
   usual "`enabled` cascades to the whole subtree" intuition, which is true of a plain `Item`, is
@@ -2342,6 +2367,48 @@ mode is built out of are worth not re-deriving:
   92%, which is the mode's whole signal spent on a border. A ceiling cannot
   break the derivation, because shrinking further only makes the drawer's slot
   larger.
+- **...and "dead centre" means dead centre of what the bar and the dock leave,
+  because they stay where they are.** Editing them in place is spec §12 stage 8;
+  until then they keep their edges at full size, and a mode that ignores them
+  draws its chrome on top of them — which is what shipped. `viewportGeometry`
+  takes four INSETS and a CHROME THICKNESS on top of the drawer's width, and the
+  two answer different questions: the insets say which part of the screen the
+  mode may use, and the chrome thickness makes the band above and below the card
+  `margin + toolbarHeight + margin`, so the toolbar centred in that band has a
+  whole margin at each end by construction rather than by whatever the ceiling
+  left over. (It left 100.8px at 5120x1440 for a 56px toolbar, which starts
+  22.4px into a screen whose bar occupies the first 68.) Passing neither term
+  reproduces the old geometry property for property, which
+  `tst_edit_mode.qml` pins.
+
+  Three things about it are worth not re-deriving. **The insets have exactly one
+  derivation** (`modules/imi/editMode/EditModeInsets.qml`): everything else in
+  the mode is re-derived on both surfaces because every input is an `Appearance`
+  token and the same screen, and these are not — they come from
+  `Config.options.bar.*`, `Config.options.dock.*` and `dock_geometry.js`, so a
+  second file working them out is a second answer to where the dock is, which is
+  what `test_dock_position_contract.py` already exists to prevent for the dock's
+  own tree. **What is reserved is each panel's LAYER SURFACE, not its painted
+  body** — the bar's carries the screen-corner decorators below its body and the
+  dock's carries its elevation margin, both take clicks there, and the surface
+  extent is the number `hyprctl layers` reports, so the compositor is a check on
+  it rather than an unrelated measurement (`quickshell:bar` at y=5 h=63 and
+  `quickshell:dock` 75 tall, which is `Appearance.sizes.barSurfaceThickness` and
+  `DockGeometry.thickness`). And **the reservation is a function of
+  CONFIGURATION only** — never of auto-hide, a hover reveal, `GlobalStates.barOpen`,
+  or a fullscreen window dropping the dock's exclusive zone. All four move while
+  the mode is on, and a viewport that changes size mid-edit is b710ef731's moving
+  target: it is the same decision the module already makes about the drawer.
+
+  What this costs is the one symmetry an off-centre destination cannot keep: the
+  four margins are no longer equal in pairs *mid-flight*. What replaced it in
+  the checks is stronger and is what the eye follows — every corner still
+  travels in a straight line, because both terms of each corner's position are
+  linear in `t`. At rest the margins are equal in pairs against the USABLE AREA,
+  and on the machine this was measured on that centre is 3.5px from the screen's
+  own on a 1440-tall panel. b23c3f0f3 ("feat(editMode): shrink the desktop
+  inside what the bar and the dock leave"), 07940391a ("feat(appearance): name
+  what a bar's layer surface occupies").
 - **The blurred backdrop cannot be the lock's `blurLoader` with a second gate**,
   which is what the spec asked for: that loader is a *child* of
   `parallaxViewport`, so it takes the edit transform and shrinks along with the
@@ -2389,7 +2456,42 @@ mode is built out of are worth not re-deriving:
   edge that is brightest along the top and fades to a weak bounce at the bottom
   (which carries a dark one), and a faint highlight just inside so the specular
   is the outer face of something. Re-measured: worst-on-perimeter 24.0/255 over
-  the darkest wallpaper and 38.2/255 over the brightest. Two things generalise.
+  the darkest wallpaper and 38.2/255 over the brightest.
+
+  **It shipped as a bevel around a LINE, though, and that is what "the glassy
+  border effect feels off" turned out to be.** The 1px outline stayed, drawn
+  between the specular outside the card and the highlight inside it, so walking
+  inward the profile went shade, crest, *dark line*, highlight, desktop — a
+  NOTCH of up to 70/255 below the lower of the two bright bands either side of
+  it, measured on the real desktop at 5120x1440. A bevel falls off its crest
+  into the surface; this one fell, rose and fell, so the eye reads the dark line
+  as the card's edge and the bright band as a piping outside it, which at the
+  top-left corner looks exactly like chrome trim with a seam in it. The outline
+  is gone, and `docs/M3_GUIDELINES.md` §1 is what licenses that rather than what
+  it is traded against: "visible borders are not required for every surface",
+  and the job the guideline gives an outline — defining edges against complex
+  backgrounds — is the job this bevel exists to do, *because* the outline could
+  not do it over a wallpaper. One edge treatment, not two stacked.
+
+  **And "brightest along the top" was a stroke, because the gradient ran over
+  the bounding box.** The run from the top's value to the flank's was half the
+  card, so the whole 4403px top edge sat at one strength and both top corners
+  with it — 113/255 median along the top against 42 down the left flank. The
+  roll-off belongs to the CORNER ARC, which is precisely the run over which the
+  outline's normal turns from facing up to facing sideways, and it is expressed
+  as `cardRadius / card.height` rather than as a stop someone picked, so a
+  change to the corner moves the light with it. Re-measured after both: the
+  notch is 0.0 median / 5.3 worst (from 6.8 / 50.1) and the crest's spread
+  narrows from 0-125 to 0-109 with the top down at 89 and the flanks and bottom
+  up. The weakest point on the perimeter is 1.8/255 against 6.4 before — both
+  are "no edge here", over the brightest part of the blurred backdrop, and the
+  cause is structural: the shade band is drawn UNDER the specular, so the crest
+  composites on a darkened base and cannot clear a bright backdrop by much at
+  the bottom. Separating them costs a second mask, which is the cost this
+  component is arranged to avoid. 1df616e62 ("fix(editMode): the card's edge
+  stops having a seam drawn through it").
+
+  Two things generalise.
   The two outer tones are plain `Rectangle`s declared INSIDE `surround`, whose
   layer is already masked to the complement of the card — so the mask cuts each
   of them back to the band outside the card by itself and the shading is the
@@ -2483,17 +2585,30 @@ mode is built out of are worth not re-deriving:
   **keyboard** (`WlrKeyboardFocus.None`, or a surface on `Overlay` sits in front
   of the background and swallows the Escape the exit ladder is answered on).
 - **The chrome's placement IS the shrink's arithmetic, which is why it carries no
-  motion of its own.** Both pieces are positioned off `edit_mode.js`'s `cardRect`
-  — the same function the transform is built out of, for the reason
-  `ClockDepthCutout` is one component — and the bands they sit in are opened by
-  the shrink itself, so at progress 0 they are parked half off screen and they
-  arrive *with* the desktop rather than after it. A `Behavior` on either would be
-  a target that moves every frame, which restarts every frame and never ticks
+  motion of its own.** Both pieces sit between two rectangles from
+  `edit_mode.js` — `cardRect`, the desktop's own, and `areaRect`, the screen
+  minus what the bar and the dock occupy — for the reason `ClockDepthCutout` is
+  one component. Placed against the SURFACE's own edges instead, which is how
+  stage 4 shipped, the chrome clears the card and lands on whatever is on that
+  edge; `areaRect` is what makes clearing the two panels a property of the
+  arithmetic rather than a literal tuned against `Appearance.sizes.barHeight`.
+  Both are functions of the same progress, and `areaRect` closes in from the
+  whole screen rather than being fixed at the usable area — so at progress 0 the
+  two rectangles coincide, both bands have zero height, and both pieces are
+  parked half off screen and arrive *with* the desktop rather than sliding in
+  from wherever the bar happens to end. A `Behavior` on either would be a target
+  that moves every frame, which restarts every frame and never ticks
   (b710ef731). Note also what the pixel probe adds over the geometry checks and
   what it does not: a chrome item left `visible: false` reports its box, passes
   every geometry assertion, and paints nothing, so the probe measures the drawn
   extent — while re-asserting "the chrome is outside the card" in the pixel half
-  would read the harness's own numbers back and agree with itself.
+  would read the harness's own numbers back and agree with itself. The probe
+  stands two opaque bands on the reserved edges now, UNDER the chrome, because
+  the class no rect assertion can reach is chrome whose geometry is right and
+  whose shadow or content overhangs into one: planted as a decoration 40px above
+  the toolbar, that is the only check in either half that reddens.
+  620a480de ("test(editMode): score the chrome against the panels, and the edge
+  as a bevel").
 (feat(editMode): shrink the desktop into a viewport on the background surface,
 feat(editMode): stand the per-widget frost down for the mode,
 feat(editMode): draw the shrunk desktop as a card, not as a cropped screenshot,
@@ -3012,7 +3127,10 @@ pages - don't reintroduce a second single-line text-entry widget.
 controls form one continuous semantic unit (for example, the fields and actions for a single custom
 AI provider). Cohesive mode removes internal spacing and corner rounding while retaining the outer
 group corners. Controls rendered inside a group should rely on the group's inset; avoid adding a
-second horizontal inset that misaligns their icons or labels with neighboring rows.
+second horizontal inset that misaligns their icons or labels with neighboring rows. **A row that
+comes and goes declares `rowVisible`, never `visible`** — see the effective-visibility note under
+[Dynamic/data-driven QML gotchas](#dynamicdata-driven-qml-gotchas) for the empty plate the second
+spelling leaves behind and why the widget cannot repair it by mirroring `visible`.
 
 **`colLayer0` vs `colLayer1`/`colLayer2`/...** - these are not interchangeable "just pick one that
 looks transparent enough" tokens:
