@@ -324,6 +324,29 @@ ShellRoot {
                           && Math.round(harness.storedPosition("edit-resize-probe").y) === 36);
         },
 
+        // ---- and a widget that stops existing mid-drag ---------------------
+        //
+        // Through `widgetRemoved`, which is the call AbstractWidget's
+        // Component.onDestruction makes - a statically declared widget cannot
+        // be destroy()ed, and what matters is that the canvas answers that
+        // entry point rather than how the widget came to be gone. Nothing else
+        // can take the lattice down here: a destroyed widget never reaches
+        // onDraggingChanged, so a FadeLoader dropping a plugin from under the
+        // pointer (disabling it from Settings mid-drag) used to be invisible
+        // while the grid was up for the whole mode and would now leave it up
+        // for the rest of the mode.
+        () => { harness.placeWidgets(); },
+        () => {
+            const x = movableWidget.x + movableWidget.width / 2;
+            const y = movableWidget.y + movableWidget.height / 2;
+            driver.mousePress(canvas, x, y, Qt.LeftButton);
+            driver.mouseMove(canvas, x + 120, y, 20, Qt.LeftButton);
+            canvas.widgetRemoved(movableWidget);
+            harness.check("a widget that stops existing mid-drag takes the lattice with it",
+                          !canvas.showGrid);
+            driver.mouseRelease(canvas, x + 120, y, Qt.LeftButton);
+        },
+
         // ---- a group drag ends the lattice the same way -------------------
         //
         // Scored separately because only the LEADER reports a drag: a follower
