@@ -60,8 +60,15 @@ ShellRoot {
         drawerWidth: Appearance.sizes.editModeDrawerWidth,
         margin: Appearance.sizes.editModeMargin
     })
+    // The drawer's shift, from the REAL scalar: GlobalStates derives
+    // editDrawerProgress from the mode and the open flag exactly as the shell
+    // runs it, so these steps drive the derivation that ships rather than a
+    // number of the harness's own.
+    readonly property real drawerShift: EditMode.drawerTravel(harness.viewport)
+        * GlobalStates.editDrawerProgress
     readonly property var applied: EditMode.atProgress(harness.viewport,
-                                                       GlobalStates.editMode ? 1 : 0)
+                                                       GlobalStates.editMode ? 1 : 0,
+                                                       harness.drawerShift)
 
     function manifestFor(id, grid) {
         return {
@@ -171,6 +178,7 @@ ShellRoot {
     property var travelUnscaled: null
     property var travelScaled: null
     property var before: null
+    property real scaleBeforeDrawer: 1
 
     readonly property var steps: [
         // ---- the same gesture, unscaled and scaled ------------------------
@@ -221,6 +229,43 @@ ShellRoot {
                               < Math.abs(harness.travelUnscaled.x) - 1
                           && Math.abs(harness.travelScaled.y)
                               < Math.abs(harness.travelUnscaled.y) - 1);
+        },
+
+        // ---- the drawer: a translation, driven through the real scalars ----
+        //
+        // Opening the drawer must move the canvas's origin left by exactly
+        // drawerTravel and change nothing else about the transform - and a
+        // drag taken through the shifted matrix must still land where the
+        // pointer put it, which is the half no arithmetic test can answer:
+        // the drag cancels the transform by mapping through the moving item,
+        // and a translation is one more term it has to cancel.
+        () => {
+            harness.scaleBeforeDrawer = harness.applied.scale;
+            GlobalStates.editDrawerOpen = true;
+            harness.placeWidgets();
+        },
+        () => {
+            harness.check("the open drawer translates the canvas and does not resize it",
+                          harness.drawerShift > 0
+                          && canvas.width === harness.screenWidth
+                          && canvas.height === harness.screenHeight
+                          && Math.abs(harness.applied.scale - harness.scaleBeforeDrawer) < 1e-9);
+            const origin = canvas.mapToItem(null, 0, 0);
+            harness.check("...and by exactly the drawer's travel",
+                          Math.abs(origin.x - (harness.viewport.x - harness.drawerShift)) < 0.5);
+        },
+        () => harness.dragBy(movableWidget, 120, 60),
+        () => {
+            const stored = harness.storedPosition("edit-move-probe");
+            harness.check("shifted: the same gesture stores the same position",
+                          Math.round(stored.x) === 156 && Math.round(stored.y) === 456);
+            GlobalStates.editDrawerOpen = false;
+        },
+        () => {
+            const origin = canvas.mapToItem(null, 0, 0);
+            harness.check("closing the drawer puts the desktop back",
+                          harness.drawerShift === 0
+                          && Math.abs(origin.x - harness.viewport.x) < 0.5);
         },
 
         // ---- the affordances the mode forces on, and the one it does not --
