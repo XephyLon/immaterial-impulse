@@ -37,7 +37,13 @@ Item {
     // `lock.showWidgets`, which is about the *other* desktop widgets, and why
     // it still centres itself there exactly as it always has.
     readonly property bool visibleWhenLocked: true
-    readonly property bool forceCenter: GlobalStates.screenLocked && Config.options.lock.centerClock
+    // The desktop showing its locked face: the real lock, or Edit Mode's
+    // Lockscreen tab previewing it. One derivation for the four lock-look
+    // bindings below (centring, style, presence, the Locked caption), so a
+    // later edit cannot leave one of them keyed on half the condition.
+    readonly property bool lockLook: GlobalStates.screenLocked
+        || GlobalStates.editLockPreview
+    readonly property bool forceCenter: root.lockLook && Config.options.lock.centerClock
     // Only the digital style paints bare text straight onto the wallpaper, so
     // only it needs the host's wallpaper-adaptive colour - and the least-busy
     // region pass that produces it.
@@ -73,8 +79,8 @@ Item {
     readonly property string quoteText: PluginState.option("clock", "quoteText", "")
     readonly property bool quoteFollowClock: PluginState.option("clock", "quoteFollowClock", false)
 
-    readonly property string clockStyle: GlobalStates.screenLocked ? root.styleLocked : root.style
-    readonly property bool shouldShow: !root.showOnlyWhenLocked || GlobalStates.screenLocked
+    readonly property string clockStyle: root.lockLook ? root.styleLocked : root.style
+    readonly property bool shouldShow: !root.showOnlyWhenLocked || root.lockLook
 
     readonly property string customClockColorKey: PluginState.option("clock", "color", "")
     readonly property color resolvedClockColor: {
@@ -208,7 +214,7 @@ Item {
                 }
                 ClockStatusText {
                     id: lockStatusText
-                    shown: GlobalStates.screenLocked && Config.options.lock.showLockedText
+                    shown: root.lockLook && Config.options.lock.showLockedText
                     statusIcon: "lock"
                     statusText: Translation.tr("Locked")
                 }
