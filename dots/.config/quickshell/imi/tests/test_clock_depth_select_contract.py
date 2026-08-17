@@ -389,13 +389,17 @@ class TheDesktopHandsOverItsGeometry(unittest.TestCase):
         # The statement, not the handler's layout: onEditModeChanged became a
         # block when Edit Mode's drawer joined it (leaving the mode also
         # closes the drawer), and the exclusion this check exists for is the
-        # `if` itself, wherever the handler puts its braces.
+        # `if` itself, wherever the handler puts its braces. The entry branch
+        # then became a block of its own when stage 8 added the bar-popup
+        # dismissal beside the exclusion, so BOTH brace positions are
+        # optional - the pinned fact is that entering the mode closes the
+        # picker, first thing in its branch.
         self.assertRegex(
             self.states,
-            r"onEditModeChanged:\s*\{?\s*if\s*\(root\.editMode\)\s*root\.clockDepthSelectOpen = false")
+            r"onEditModeChanged:\s*\{?\s*if\s*\(root\.editMode\)\s*\{?\s*root\.clockDepthSelectOpen = false")
         self.assertRegex(
             self.states,
-            r"onClockDepthSelectOpenChanged:\s*\{?\s*if\s*\(root\.clockDepthSelectOpen\)\s*root\.editMode = false")
+            r"onClockDepthSelectOpenChanged:\s*\{?\s*if\s*\(root\.clockDepthSelectOpen\)\s*\{?\s*root\.editMode = false")
 
     def test_the_depth_layer_stands_down_while_a_selection_is_live(self):
         # The surface draws the candidate over the same widgets at the same
