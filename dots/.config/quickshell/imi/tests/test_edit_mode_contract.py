@@ -1146,6 +1146,26 @@ def test_the_islands_ride_the_edit_transform_above_the_widgets():
          "other sibling that left the viewport")
 
 
+def test_the_clock_previews_its_locked_look_through_one_derivation():
+    # The clock is THE lock-screen widget - its locked style, its centring,
+    # its "show only when locked" presence and its Locked caption are all
+    # keyed on the real lock. A Lockscreen tab that previews none of them is
+    # a preview of a different lock screen, so all four ride one local
+    # `lockLook` derivation; four separate `screenLocked || editLockPreview`
+    # spellings would be four chances for one of them to lose a term.
+    clock = code(ROOT / "modules/common/plugins/bundled/clock/Widget.qml")
+    assert re.search(r"readonly property bool lockLook:\s*GlobalStates\.screenLocked"
+                     r"\s*\n?\s*\|\|\s*GlobalStates\.editLockPreview", clock), \
+        "the clock no longer derives its locked look once"
+    for name, pattern in (
+            ("forceCenter", r"forceCenter:\s*root\.lockLook"),
+            ("clockStyle", r"clockStyle:\s*root\.lockLook"),
+            ("shouldShow", r"shouldShow:\s*!root\.showOnlyWhenLocked\s*\|\|\s*root\.lockLook"),
+            ("the Locked caption", r"shown:\s*root\.lockLook\s*&&\s*Config\.options\.lock\.showLockedText")):
+        assert re.search(pattern, clock), \
+            f"the clock's {name} does not follow the locked look"
+
+
 def test_the_tab_bar_offers_both_tabs_and_follows_the_state():
     # The tab bar is the pointer's way onto the Lockscreen tab and the state
     # is `GlobalStates.editTab`, so the two must not hold hands loosely: the
