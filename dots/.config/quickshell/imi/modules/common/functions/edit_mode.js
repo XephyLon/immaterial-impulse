@@ -20,6 +20,24 @@ var DESKTOP_TAB = "desktop";
 // this file.
 var LOCKSCREEN_TAB = "lockscreen";
 
+// The chrome's tab bar speaks indices and everything else speaks tab names.
+// The mapping lives here, in the tab list's own order, so the bar's index and
+// the ladder's answers cannot come from two spellings of the same list - the
+// contract forbids an `editTab ===` comparison outside GlobalStates for
+// exactly that reason. Unknown input lands on the Desktop tab both ways: a
+// bad index or a stale stored string must not strand the bar pointing at
+// nothing.
+var TABS = [DESKTOP_TAB, LOCKSCREEN_TAB];
+
+function tabIndex(tab) {
+    const index = TABS.indexOf(tab);
+    return index < 0 ? 0 : index;
+}
+
+function tabAt(index) {
+    return TABS[index] || DESKTOP_TAB;
+}
+
 // Escape is overloaded on the desktop before Edit Mode exists: WidgetCanvas
 // clears a marquee selection with it and PluginWidget cancels a grip resize
 // with it. So the mode may not simply take the key - it resolves in order and

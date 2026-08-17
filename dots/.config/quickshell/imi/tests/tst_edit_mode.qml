@@ -61,6 +61,23 @@ TestCase {
         }), "desktopTab");
     }
 
+    function test_the_tab_and_its_index_map_both_ways() {
+        // The chrome's tab bar speaks indices and everything else speaks tab
+        // names, so the mapping lives here rather than as a comparison at the
+        // call site - the one-derivation contract forbids `editTab ===`
+        // outside GlobalStates precisely so a second answer to "which tab"
+        // cannot grow. Unknown input lands on the Desktop tab in both
+        // directions: a bad index or a stale string must not strand the bar
+        // pointing at nothing.
+        compare(EditMode.tabIndex(EditMode.DESKTOP_TAB), 0);
+        compare(EditMode.tabIndex(EditMode.LOCKSCREEN_TAB), 1);
+        compare(EditMode.tabIndex("no-such-tab"), 0);
+        compare(EditMode.tabIndex(undefined), 0);
+        compare(EditMode.tabAt(0), EditMode.DESKTOP_TAB);
+        compare(EditMode.tabAt(1), EditMode.LOCKSCREEN_TAB);
+        compare(EditMode.tabAt(7), EditMode.DESKTOP_TAB);
+    }
+
     function test_escape_leaves_the_mode_only_when_nothing_else_answers() {
         compare(EditMode.resolveEscape({
             gestureInFlight: false, selectionCount: 0, tab: EditMode.DESKTOP_TAB

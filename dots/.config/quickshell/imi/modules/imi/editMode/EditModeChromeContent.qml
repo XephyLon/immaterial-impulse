@@ -4,6 +4,7 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import "../../common/functions/edit_mode.js" as EditMode
 
 /**
  * Edit Mode's chrome: the toolbar above the shrunk desktop and the tab bar
@@ -151,16 +152,30 @@ Item {
         y: root.card.y + root.card.height
             + (root.area.y + root.area.height - root.card.y - root.card.height - height) / 2
 
-        // A tab bar with one tab in it, and not a label that will grow into
-        // one. The Lockscreen tab (spec §1.4) is stage 9's, and it arrives as
-        // a second entry in this list rather than as a rewrite of whatever a
-        // label had become. There is deliberately no `GlobalStates` tab
-        // property yet: a stored choice with one legal value is plumbing for a
-        // feature that does not exist, and the Escape ladder already answers
-        // `desktopTab` from the module.
+        // The mode's two tabs (spec §1.4): the tab is a FILTER on what the
+        // viewport draws, so the bar's index and `GlobalStates.editTab` must
+        // agree from both directions. An index change writes the state -
+        // including the wheel shortcut, which writes the inner index without
+        // passing through any button - and an external state write (Escape's
+        // return to Desktop, the exit's reset) moves the index back. Both
+        // directions are imperative on purpose: the wheel handler assigns the
+        // inner index directly, so a binding placed on `currentIndex` would be
+        // destroyed by the first scroll and the indicator would frame a
+        // viewport showing the other tab. The re-entrant hop each write takes
+        // through the other terminates because both sides no-op on equality.
         ToolbarTabBar {
             id: tabs
-            tabButtonList: [{ name: Translation.tr("Desktop"), icon: "wallpaper" }]
+            tabButtonList: [
+                { name: Translation.tr("Desktop"), icon: "wallpaper" },
+                { name: Translation.tr("Lockscreen"), icon: "lock" }
+            ]
+            onCurrentIndexChanged: GlobalStates.editTab = EditMode.tabAt(tabs.currentIndex)
+            Connections {
+                target: GlobalStates
+                function onEditTabChanged() {
+                    tabs.setCurrentIndex(EditMode.tabIndex(GlobalStates.editTab));
+                }
+            }
         }
     }
 
