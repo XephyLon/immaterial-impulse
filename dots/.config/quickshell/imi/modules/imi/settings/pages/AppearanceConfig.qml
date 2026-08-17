@@ -109,6 +109,41 @@ ContentPage {
         }
 
         ContentSection {
+            icon: "animation"
+            title: Translation.tr("Motion")
+
+            GroupedList {
+                // Two controls, deliberately not one. The slider is a speed
+                // preference over the shell's catalogued durations; the switch
+                // is an accessibility state that collapses them to the floor.
+                // Expressing the second as "drag the first far enough left"
+                // would mean a user could land on it by accident and lose it
+                // the same way - which is why the slider's own range stops
+                // well short of the floor and the switch disables it outright.
+                ConfigSlider {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Animation speed")
+                    buttonIcon: "speed"
+                    enabled: !Config.options.appearance.motion.reduceMotion
+                    value: Config.options.appearance.motion.multiplier
+                    usePercentTooltip: false
+                    from: 0.5
+                    to: 2.5
+                    stopIndicatorValues: [1]
+                    onValueModified: newValue => {
+                        Config.options.appearance.motion.multiplier = newValue;
+                    }
+                }
+                ConfigSwitch {
+                    buttonIcon: "accessibility_new"
+                    text: Translation.tr("Reduce motion")
+                    checked: Config.options.appearance.motion.reduceMotion
+                    onToggleRequested: Config.options.appearance.motion.reduceMotion = !Config.options.appearance.motion.reduceMotion
+                }
+            }
+        }
+
+        ContentSection {
             icon: "text_format"
             shape: MaterialShape.Shape.Arrow
             title: Translation.tr("Fonts")
