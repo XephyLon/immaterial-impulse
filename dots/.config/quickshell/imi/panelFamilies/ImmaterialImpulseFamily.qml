@@ -7,6 +7,7 @@ import qs.modules.imi.cheatsheet
 import qs.modules.imi.bar
 import qs.modules.imi.clockDepthSelect
 import qs.modules.imi.dock
+import qs.modules.imi.editMode
 import qs.modules.imi.lock
 import qs.modules.imi.mediaControls
 import qs.modules.imi.notificationPopup
@@ -38,6 +39,7 @@ Scope {
     PanelLoader { component: Background {} }
     PanelLoader { component: Cheatsheet {} }
     PanelLoader { component: ClockDepthSelect {} }
+    PanelLoader { component: EditModeChrome {} }
     PanelLoader { extraCondition: Config.options.dock.enable; component: Dock {} }
     PanelLoader { component: Lock {} }
     PanelLoader { component: MediaControls {} }
