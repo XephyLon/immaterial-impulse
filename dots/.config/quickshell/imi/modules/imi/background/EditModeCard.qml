@@ -148,11 +148,10 @@ Item {
             height: root.card.height + 2 * root.edgeShadeWidth
             radius: root.cardRadius > 0 ? root.cardRadius + root.edgeShadeWidth : 0
             antialiasing: true
-            // Weakest where the light is and strongest opposite it. Note the
-            // far stops are the shade's own colour at zero alpha rather than
-            // "transparent": a stop interpolating toward #00000000 walks the
-            // colour through black, which is the smudge WidgetCanvas's lattice
-            // fade already records - here it would be a second, wider shade.
+            // Weakest where the light is and strongest opposite it, and never
+            // at zero on either stop: this is the tone that has to carry the
+            // edge over a bright wallpaper, where the specular cannot, and a
+            // lip that faded out along its own top would have no edge there.
             gradient: Gradient {
                 GradientStop { position: 0; color: Qt.alpha(Appearance.colors.colGlassShade, 0.18) }
                 GradientStop { position: 1; color: Qt.alpha(Appearance.colors.colGlassShade, 0.5) }
