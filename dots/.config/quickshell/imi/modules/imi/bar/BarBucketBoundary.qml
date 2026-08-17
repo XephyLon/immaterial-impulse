@@ -23,9 +23,10 @@ import qs.modules.common
 Rectangle {
     id: root
 
-    property bool vertical: false
     // At least a slot's worth along the bar, so an empty bucket is visible
-    // and droppable.
+    // and droppable. The instantiation site owns which axis this runs on,
+    // because it owns the anchoring too - a boundary knows its minimum, not
+    // its orientation.
     readonly property real minRun: 48
 
     color: "transparent"

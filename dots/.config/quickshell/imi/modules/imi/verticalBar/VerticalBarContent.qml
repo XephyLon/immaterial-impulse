@@ -187,7 +187,6 @@ Item {
             Bar.BarBucketBoundary {
                 id: leftBoundary
                 z: 50
-                vertical: true
                 anchors.top: parent.top
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: parent.width - Appearance.spacing.space50
@@ -283,7 +282,6 @@ Item {
             Bar.BarBucketBoundary {
                 id: middleBoundary
                 z: 50
-                vertical: true
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: parent.width - Appearance.spacing.space50
@@ -381,7 +379,6 @@ Item {
             Bar.BarBucketBoundary {
                 id: rightBoundary
                 z: 50
-                vertical: true
                 anchors.bottom: parent.bottom
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: parent.width - Appearance.spacing.space50

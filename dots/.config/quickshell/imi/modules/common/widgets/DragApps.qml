@@ -348,7 +348,11 @@ Item {
                         // is the same store commitOrder writes, through the
                         // shared arithmetic.
                         onClicked: {
-                            if (!GlobalStates.editMode) return;
+                            // The slot index counts _workOrder, which only
+                            // matches pinnedApps outside a drag - a second
+                            // pointer (touch) could otherwise remove by a
+                            // mid-drag index into the wrong list.
+                            if (!GlobalStates.editMode || root._dragging) return;
                             Config.options.dock.pinnedApps =
                                 LayoutOps.remove(root.pinnedApps, slotItem.index);
                         }
