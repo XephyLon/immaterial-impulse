@@ -2757,6 +2757,39 @@ mode is built out of are worth not re-deriving:
   hover submenu and the chevron that promised it; the sanctioned writers of
   `background.widgetsLocked` shrink to `AbstractWidget`'s right-click.
   (refactor(desktopMenu): remove WidgetsSubmenu.)
+- **The bar and the dock are edited in place, at full size — stage 8.** The
+  mode holds them on screen as a TERM of the expressions they already answer
+  auto-hide with (`mustShow` in both bars, the dock's `reveal`), never
+  anywhere near a surface's `visible`, and the reservation stays
+  configuration-only — a bar coming out of hiding changes nothing about the
+  shrunk desktop. Their widgets go inert through an input EATER, not through
+  `enabled`: disabling a MouseArea disables only that area, and disabling the
+  whole subtree runs every control's disabled dim at once. The eater, the
+  reorder gesture (`ReorderDragArea`, whose only arithmetic is
+  `layout_ops.dropTarget`) and the shared `EditRemoveBadge` load per widget
+  from `BarGroup` — one Loader covering both orientations — and
+  `BarEditController` (one component both content trees instantiate, turned
+  by a flag) owns the indicator, the ghost and every commit. Commits map
+  visible indices back to STORED ones (`nthVisible` and friends): the drawn
+  slots are the filtered layouts, and an unmapped edit eats whichever hidden
+  entry sat between. Each bucket's visible boundary doubles as its drop
+  anchor, which is what makes an empty middleLayout a valid drop target. The
+  drawer offers bar widgets (`BarWidgets.offerFor` — the policy promoted so
+  the settings dropdown and the drawer cannot drift) and dock apps
+  (`DesktopEntries` through `AppSearch`), by CLICK only: their drop targets
+  live in other windows whose slot geometry this surface cannot map, so
+  placement is the in-place drag the panels themselves carry. Escape reaches
+  a bar drag through composition into the ladder's `gestureInFlight` (no new
+  rung — the precedence does not care which gesture is in flight) and
+  `GlobalStates.editReorderCancel` is the return path to a grab held on
+  another surface; every commit is also guarded on the mode, because a drag
+  can outlive it. `test_bar_dock_edit_contract.py` pins all of it on BOTH
+  bars, and `BarEditRuntimeTest.qml` drives the along/across pair at both
+  orientations — the axis-inert comparison only real events can see.
+  (feat(bar): the mode holds the bar and the dock on screen, as a term;
+  feat(bar): bar widgets become inert, badged and reorderable in the mode;
+  feat(dock): pinned icons grow remove badges and go inert in the mode;
+  feat(editMode): the drawer grows Bar and Dock sections.)
 (feat(editMode): shrink the desktop into a viewport on the background surface,
 feat(editMode): stand the per-widget frost down for the mode,
 feat(editMode): draw the shrunk desktop as a card, not as a cropped screenshot,
