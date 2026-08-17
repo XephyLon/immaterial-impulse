@@ -29,10 +29,19 @@ import "modules/common/functions/edit_mode.js" as EditMode
  *   matrix left applied to the live desktop. A property assertion cannot: an
  *   inactive Loader and a zeroed radius are what a still-transformed viewport
  *   reports too.
- * - the desktop's corner is CUT. There is no rounded clip in QML, so the corner
+ * - the PICTURE's corner is CUT. There is no rounded clip in QML, so the corner
  *   is made by covering it with the backdrop, and "did the cover land on the
  *   corner" is a question about one pixel. `cornerMarker` is pinned to the
- *   canvas's own top-left corner so the answer does not depend on the picture.
+ *   wallpaper viewport's own top-left corner so the answer does not depend on
+ *   the picture's content.
+ * - ...and a WIDGET's corner is not. The cover sits below the widget canvas, so
+ *   a widget the user parked against the desktop's corner overhangs the
+ *   rounding instead of losing a bite to it. `cornerWidget` is that widget,
+ *   pinned to the canvas's bottom-left corner because that is where this
+ *   machine's own store keeps `visualizer` (0,1200 on a 1440-tall screen).
+ * - the lattice arrives with the DRAG, not with the mode. Three frames say it:
+ *   in the mode at rest there are no lines, mid-drag there are, and the frame
+ *   after the drag ends is the same picture as the one before it started.
  * - the lattice is a SUBSTRATE. The desktop widgets arrive as external children
  *   of the canvas, so nothing in WidgetCanvas.qml decides whether they are drawn
  *   over the grid; an opaque widget must hide the lines under it completely.
@@ -82,6 +91,7 @@ ShellRoot {
     // rather than "is this a colour the wallpaper might also be".
     readonly property color cornerMarkerColor: "#ff00ff"
     readonly property color opaquePanelColor: "#00ff88"
+    readonly property color cornerWidgetColor: "#ffcc00"
 
     FloatingWindow {
         id: window
@@ -111,6 +121,23 @@ ShellRoot {
                     asynchronous: false
                     source: harness.wallpaperFile === "" ? "" : `file://${harness.wallpaperFile}`
                 }
+
+                // Part of the PICTURE, pinned to the viewport's own top-left
+                // corner, which is the card's top-left corner at every scale.
+                // In the wallpaper layer rather than on the canvas because the
+                // rounding is the picture's now: without a cut this reaches the
+                // card's corner pixel, with one the backdrop does. It is not
+                // what the backdrop samples (that is the Image alone), so the
+                // pixel the cut reveals is blurred wallpaper rather than a
+                // blurred marker.
+                Rectangle {
+                    id: cornerMarker
+                    x: 0
+                    y: 0
+                    width: 220
+                    height: 220
+                    color: harness.cornerMarkerColor
+                }
             }
 
             WidgetCanvas {
@@ -121,16 +148,19 @@ ShellRoot {
                 selectionEnabled: true
                 transform: Matrix4x4 { matrix: harness.matrix }
 
-                // Pinned to the canvas's own top-left corner, which is the
-                // card's top-left corner at every scale. Without a cut it
-                // reaches the card's corner pixel; with one, the backdrop does.
+                // A widget the user parked in the desktop's bottom-left corner,
+                // which is where this machine's own plugin-state.json keeps
+                // `visualizer` - the case the mode was cutting. Opaque for the
+                // same reason opaquePanel is: a translucent one cannot say
+                // whether its corner survived or the backdrop is showing
+                // through it.
                 Rectangle {
-                    id: cornerMarker
+                    id: cornerWidget
                     x: 0
-                    y: 0
-                    width: 220
-                    height: 220
-                    color: harness.cornerMarkerColor
+                    y: widgetCanvas.height - height
+                    width: 240
+                    height: 200
+                    color: harness.cornerWidgetColor
                 }
 
                 // Opaque on purpose: a translucent panel cannot say whether the
@@ -227,7 +257,9 @@ ShellRoot {
             + ` radius=${harness.cardRadius} scale=${harness.applied.scale}`
             + ` marker=${cornerMarker.x},${cornerMarker.y},${cornerMarker.width},${cornerMarker.height}`
             + ` panel=${opaquePanel.x},${opaquePanel.y},${opaquePanel.width},${opaquePanel.height}`
+            + ` corner=${cornerWidget.x},${cornerWidget.y},${cornerWidget.width},${cornerWidget.height}`
             + ` markerColor=${harness.cornerMarkerColor} panelColor=${harness.opaquePanelColor}`
+            + ` cornerColor=${harness.cornerWidgetColor}`
             + ` toolbar=${harness.toolbar?.x ?? -1},${harness.toolbar?.y ?? -1}`
             + `,${harness.toolbar?.width ?? 0},${harness.toolbar?.height ?? 0}`
             + ` tabbar=${harness.tabBar?.x ?? -1},${harness.tabBar?.y ?? -1}`
@@ -321,8 +353,36 @@ ShellRoot {
                     - (harness.card.x + harness.card.width / 2)) < 0.5
                 && Math.abs(gapAbove - gapBelow) < 0.5,
             `gaps=${gapAbove.toFixed(1)},${gapBelow.toFixed(1)}`);
+        harness.check("in the mode at rest the lattice is down",
+            !widgetCanvas.gridVisible && widgetCanvas.gridStrength === 0);
         harness.reportGeometry("geometry");
         harness.shoot("editing", () => {
+            // Through the canvas's own drag reporter, which is what
+            // AbstractWidget calls from onDraggingChanged - there is no QtTest
+            // here to press a real button with, so the harness enters the state
+            // by the same door the gesture does rather than by writing the flag
+            // this check reads. The TRIGGER (press versus press-and-moved) is
+            // scored with real mouse events in EditModeRuntimeTest.qml; what
+            // only this probe can see is what the lattice looks like once it is
+            // up, and that it leaves nothing behind when it goes.
+            widgetCanvas.setDragging(true);
+            harness.after(harness.dragging);
+        });
+    }
+
+    function dragging(): void {
+        harness.check("...and a drag brings it up",
+            widgetCanvas.gridVisible && widgetCanvas.gridStrength === 1);
+        harness.shoot("dragging", () => {
+            widgetCanvas.setDragging(false);
+            harness.after(harness.released);
+        });
+    }
+
+    function released(): void {
+        harness.check("...and letting go takes it away again",
+            !widgetCanvas.gridVisible && widgetCanvas.gridStrength === 0);
+        harness.shoot("released", () => {
             harness.editProgress = 0.5;
             harness.after(harness.midway);
         });
