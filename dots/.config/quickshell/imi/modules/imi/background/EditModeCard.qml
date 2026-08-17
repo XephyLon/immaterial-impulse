@@ -54,6 +54,37 @@ Item {
     property rect card: Qt.rect(0, 0, root.width, root.height)
     property real cardRadius: 0
 
+    // ---- the glass edge ---------------------------------------------------
+    //
+    // The card used to end at a 1px colLayer0Border line, which is the shell's
+    // outline for a floating surface and is right for a panel sitting on a
+    // surface this file's own tokens were derived from. Over a WALLPAPER it is
+    // a drawn line rather than an edge: measured on this library's darkest
+    // picture the outline came back at 27/255 with the desktop at 0 inside it
+    // and the blurred backdrop at 12 outside, so the whole boundary was ten
+    // levels of contrast wide and read as a seam in a screenshot.
+    //
+    // What replaces it is a bevel with THICKNESS, in three tones, and the
+    // reason it is three is that no single one survives every wallpaper:
+    //
+    //   - a shade band just OUTSIDE the card, so the card has a lip. It is what
+    //     carries the edge over a bright picture, where a specular cannot.
+    //   - a specular ON the edge, brightest along the top and fading down the
+    //     sides to a weak bounce at the bottom - the same lamp the drop shadow
+    //     below is drawn for. A uniform bright rim reads as a stroke; a rim that
+    //     is brighter where light would catch reads as a surface.
+    //   - a highlight just INSIDE, which is what gives the specular something to
+    //     be the outer face of rather than a line floating on the seam.
+    //
+    // The first two cost nothing extra: they are plain Rectangles declared
+    // inside `surround`, whose layer is already masked to the complement of the
+    // card - so the mask cuts each of them down to the band outside the card by
+    // itself, and the gradient that shades them is the Rectangle's own. No
+    // second layer, no second mask, and nothing re-rendering the backdrop, which
+    // is the cost this whole component is arranged to avoid.
+    readonly property real edgeShadeWidth: Appearance.borderWidth.heavy
+    readonly property real edgeSpecularWidth: Appearance.borderWidth.emphasis
+
     // Everything that lives OUTSIDE the card, composited once and then cut to
     // shape. The mask is inverted, so what survives is the complement of the
     // card: the backdrop, and the outer half of the shadow drawn over it.
@@ -99,6 +130,55 @@ Item {
         StyledRectangularShadow {
             target: cardShape
         }
+
+        // Drawn AFTER the shadow, because the shadow is at its darkest exactly
+        // where these two are: a bright line standing on the near edge of a
+        // pool of shade is the whole of what reads as glass, and a shadow drawn
+        // over it would be a shadow of the card cast onto the card's own rim.
+        //
+        // Both are grown from the card and cut back to it by `surround`'s mask,
+        // so their inner boundary IS the card's edge - to the same antialiased
+        // pixel as the corner, because it is the same mask that makes the
+        // corner.
+        Rectangle {
+            id: edgeShade
+            x: root.card.x - root.edgeShadeWidth
+            y: root.card.y - root.edgeShadeWidth
+            width: root.card.width + 2 * root.edgeShadeWidth
+            height: root.card.height + 2 * root.edgeShadeWidth
+            radius: root.cardRadius > 0 ? root.cardRadius + root.edgeShadeWidth : 0
+            antialiasing: true
+            // Weakest where the light is and strongest opposite it. Note the
+            // far stops are the shade's own colour at zero alpha rather than
+            // "transparent": a stop interpolating toward #00000000 walks the
+            // colour through black, which is the smudge WidgetCanvas's lattice
+            // fade already records - here it would be a second, wider shade.
+            gradient: Gradient {
+                GradientStop { position: 0; color: Qt.alpha(Appearance.colors.colGlassShade, 0.18) }
+                GradientStop { position: 1; color: Qt.alpha(Appearance.colors.colGlassShade, 0.5) }
+            }
+        }
+
+        Rectangle {
+            id: edgeSpecular
+            x: root.card.x - root.edgeSpecularWidth
+            y: root.card.y - root.edgeSpecularWidth
+            width: root.card.width + 2 * root.edgeSpecularWidth
+            height: root.card.height + 2 * root.edgeSpecularWidth
+            radius: root.cardRadius > 0 ? root.cardRadius + root.edgeSpecularWidth : 0
+            antialiasing: true
+            // The non-uniformity is the point. A rim at one strength all the way
+            // round is a stroke however bright it is; light catching the top of
+            // an edge, fading off down the sides and coming back weakly at the
+            // bottom is what a piece of glass looks like. The bottom stop is a
+            // bounce off whatever the card is lying on, so it is much weaker
+            // than the top rather than symmetric with it.
+            gradient: Gradient {
+                GradientStop { position: 0; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.55) }
+                GradientStop { position: 0.5; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.18) }
+                GradientStop { position: 1; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.3) }
+            }
+        }
     }
 
     // The cut. Its colour is an alpha channel rather than a colour - OpacityMask
@@ -137,5 +217,26 @@ Item {
         antialiasing: true
         border.width: Appearance.borderWidth.standard
         border.color: Appearance.colors.colLayer0Border
+    }
+
+    // The inner face of the bevel. This one cannot ride `surround`'s mask - it
+    // is INSIDE the card, which is exactly what that mask removes - so it is a
+    // border rather than a gradient-filled rect, and it is uniform. That is a
+    // deliberate asymmetry rather than an omission: the specular is the tone
+    // that has to look lit, and this is the tone that has to make the specular
+    // look like the outside of something. Faint enough that it does not become
+    // a second line on a dark wallpaper, present enough that the edge has a
+    // near side.
+    Rectangle {
+        id: cardInnerHighlight
+        x: root.card.x + Appearance.borderWidth.standard
+        y: root.card.y + Appearance.borderWidth.standard
+        width: root.card.width - 2 * Appearance.borderWidth.standard
+        height: root.card.height - 2 * Appearance.borderWidth.standard
+        radius: Math.max(0, root.cardRadius - Appearance.borderWidth.standard)
+        color: "transparent"
+        antialiasing: true
+        border.width: Appearance.borderWidth.standard
+        border.color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.14)
     }
 }
