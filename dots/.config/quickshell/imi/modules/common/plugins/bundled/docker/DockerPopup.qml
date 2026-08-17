@@ -199,7 +199,7 @@ StyledPopup {
         // cards nest inside the popup's own colLayer2 stage rather than
         // directly on a page, and the action chips stagger in.
         surfaceLayer: StyledRectangle.ContentLayer.Subgroup
-        staggerStep: 40
+        staggerStep: Appearance.animation.staggerStep
         // The whole header toggles, with a ripple across it - the same feel as
         // the settings page, where a full-width ConfigSwitch fills the header.
         // The chevron stays as the visual affordance.
