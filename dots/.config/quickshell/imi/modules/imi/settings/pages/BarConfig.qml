@@ -38,38 +38,9 @@ ContentPage {
         }
     }
 
-    readonly property var pluginWidgets: PluginManager.availablePlugins
-        .filter(plugin => plugin.barWidget !== undefined)
-        .map(plugin => ({
-            id: "plugin:" + plugin.id,
-            name: plugin.name,
-            icon: plugin.icon || "extension"
-        }))
-
-    property var allWidgets: [
-        { id: "leftSidebarButton", name: Translation.tr("Left Sidebar Button"),  icon: "left_panel_open" },
-        { id: "workspaces",        name: Translation.tr("Workspaces"),           icon: "steppers" },
-        { id: "weatherBar",        name: Translation.tr("Weather"),              icon: "flare" },
-        { id: "media",             name: Translation.tr("Media"),                icon: "music_note" },
-        { id: "resources",         name: Translation.tr("Resources"),            icon: "empty_dashboard" },
-        { id: "systemIcons",       name: Translation.tr("System Icons"),         icon: "info" },
-        { id: "networkSpeed",      name: Translation.tr("Network Speed"),        icon: "network_check" },
-        { id: "timerPill",         name: Translation.tr("Timer"),                icon: "timer" },
-        { id: "privacyIndicator",  name: Translation.tr("Privacy"),              icon: "privacy_tip" },
-        { id: "submapIndicator",   name: Translation.tr("Submap"),               icon: "keyboard" },
-        { id: "clockWidget",       name: Translation.tr("Clock"),                icon: "schedule" },
-        { id: "utilButtons",       name: Translation.tr("Util Buttons"),         icon: "toggle_on" },
-        { id: "sysTray",           name: Translation.tr("Tray"),                 icon: "inbox" },
-        { id: "batteryIndicator",  name: Translation.tr("Battery"),              icon: "battery_android_frame_full" },
-        { id: "activeWindow",      name: Translation.tr("Active Window"),        icon: "subtitles" },
-        { id: "powerButton",       name: Translation.tr("Power Button"),         icon: "power_settings_new" },
-        { id: "updatesCount",      name: Translation.tr("Updates"),              icon: "deployed_code_update" },
-        { id: "docktoPanel",       name: Translation.tr("Dock to Panel"),        icon: "apps" },
-        { id: "visualizer",        name: Translation.tr("Visualizer"),           icon: "graphic_eq" },
-        { id: "hyprlandXkbIndicator",   name: Translation.tr("Keyboard Layout"), icon: "keyboard" },
-        { id: "divisor",            name: Translation.tr("Divider"),             icon: "horizontal_distribute" },
-    ].concat(pluginWidgets)
-
+    // The catalogue itself is BarWidgets (a singleton beside PluginManager,
+    // Edit Mode spec §4.2). This page only decides which of it is still
+    // offerable, which is a question about this page's own layout state.
     function availableFor() {
         let used = [
             ...Config.options.bar.layouts.leftLayout,
@@ -77,15 +48,14 @@ ContentPage {
             ...Config.options.bar.layouts.rightLayout
         ]
         const multipleAllowed = ["visualizer", "divisor"]
-        return allWidgets.filter(w => {
+        return BarWidgets.available.filter(w => {
             if (w.id === "divisor" && Config.options.bar.borderless !== "transparent") return false
             return !used.includes(w.id) || multipleAllowed.includes(w.id)
         })
     }
 
     function getWidgetName(id) {
-        const w = allWidgets.find(w => w.id === id)
-        return w ? w.name : id
+        return BarWidgets.nameFor(id)
     }
 
     ColumnLayout {

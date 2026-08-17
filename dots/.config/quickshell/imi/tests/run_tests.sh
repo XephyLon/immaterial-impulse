@@ -455,6 +455,14 @@ if ! python3 "$SCRIPT_DIR/test_bar_widget_parity.py"; then
     exit 1
 fi
 
+# The bar widget catalogue has one home (BarWidgets.qml) and the settings page
+# reads it; a second copy in BarConfig is the drift the promotion removed.
+echo "Running bar widget catalogue tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_widgets_catalogue.py"; then
+    echo "Bar widget catalogue tests failed."
+    exit 1
+fi
+
 echo "Running cheatsheet width budget tests..."
 if ! python3 "$SCRIPT_DIR/test_cheatsheet_width_budget.py"; then
     echo "Cheatsheet width budget tests failed."
