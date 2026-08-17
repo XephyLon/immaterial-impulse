@@ -159,7 +159,13 @@ Singleton {
     // gated on the other's key would read `undefined` on the base that does not
     // declare it yet and take its fallback forever.
     onEditModeChanged: {
-        if (root.editMode) root.clockDepthSelectOpen = false;
+        if (root.editMode) {
+            root.clockDepthSelectOpen = false;
+            // StyledPopup refuses NEW claims for the length of the mode; this
+            // is the popup already holding the card when the mode opens, whose
+            // card would otherwise sit over the bar being edited.
+            root.activeBarPopup = null;
+        }
         // The open flag does not outlive the mode: a drawer left latched open
         // would greet the NEXT entry mid-slide, with the desktop already
         // shifted on the first frame of a shrink that is supposed to be

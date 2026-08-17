@@ -54,7 +54,16 @@ Scope {
                 // Stay shown while a bar popup is open so it isn't orphaned above
                 // a hidden bar; the popup closes itself on pointer-leave, then the
                 // bar hides. See issues #30, #31.
+                //
+                // Edit Mode is a term here and NEVER a write to `visible`: the
+                // bar is edited in place at full size (spec §4.2), so an
+                // auto-hidden bar has to stay on screen for the mode - and
+                // `visible: false` on a layer surface destroys the surface
+                // rather than hiding it. The mode's viewport reservation does
+                // not read this (EditModeInsets is configuration-only), so
+                // holding the bar out changes nothing about the shrunk desktop.
                 property bool mustShow: hoverRegion.containsMouse || superShow
+                    || GlobalStates.editMode
                     || ((GlobalStates.mediaControlsOpen || GlobalStates.sysTrayOverflowOpen) && Config?.options.bar.autoHide.dismissPopups)
                 property var thisMonitorData: HyprlandData.monitors.find(m => m.name === barRoot.screen?.name)
                 property bool monitorHasFullscreen: HyprlandData.workspaceById[thisMonitorData?.activeWorkspace?.id]?.hasfullscreen ?? false
