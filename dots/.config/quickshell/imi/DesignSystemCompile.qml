@@ -73,6 +73,8 @@ ShellRoot {
                 // merely running has never compiled either of them.
                 Quickshell.shellPath("modules/imi/editMode/EditModeChromeSurface.qml"),
                 Quickshell.shellPath("modules/imi/editMode/EditModeChromeContent.qml"),
+                Quickshell.shellPath("modules/imi/editMode/EditWidgetMenu.qml"),
+                Quickshell.shellPath("modules/imi/editMode/EditWidgetMenuContent.qml"),
                 // The cheatsheet only compiles when the user presses Super+/,
                 // and the keybind editor only when a row's pencil is clicked.
                 Quickshell.shellPath("modules/imi/cheatsheet/CheatsheetKeybinds.qml"),

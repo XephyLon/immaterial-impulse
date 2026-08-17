@@ -35,4 +35,9 @@ Scope {
             }
         }
     }
+
+    // The per-widget context menu's window - one, not one per screen: it
+    // exists only while a menu is open, on the screen the widget was
+    // right-clicked on, and its own loader is that gate.
+    EditWidgetMenu {}
 }
