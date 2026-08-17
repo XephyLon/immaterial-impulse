@@ -75,6 +75,13 @@ ShellRoot {
                 Quickshell.shellPath("modules/imi/editMode/EditModeChromeContent.qml"),
                 Quickshell.shellPath("modules/imi/editMode/EditWidgetMenu.qml"),
                 Quickshell.shellPath("modules/imi/editMode/EditWidgetMenuContent.qml"),
+                // Stage 9's Lockscreen tab: the preview context compiles for
+                // the first time when somebody opens that tab, and the lock
+                // surface itself only when the screen actually locks - so a
+                // bad property in either passes every test on a shell that is
+                // merely running.
+                Quickshell.shellPath("modules/imi/lock/LockSurface.qml"),
+                Quickshell.shellPath("modules/common/panels/lock/LockPreviewContext.qml"),
                 // The cheatsheet only compiles when the user presses Super+/,
                 // and the keybind editor only when a row's pencil is clicked.
                 Quickshell.shellPath("modules/imi/cheatsheet/CheatsheetKeybinds.qml"),

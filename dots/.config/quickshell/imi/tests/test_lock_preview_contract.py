@@ -218,6 +218,27 @@ def test_the_preview_context_cannot_authenticate_or_spawn_anything():
             f"{name} must have an empty body in the preview context"
 
 
+def test_the_preview_host_passes_interactive_false_and_the_preview_context():
+    # The other half of spec §11.2's last bullet: the one place that renders
+    # LockSurface outside the real session lock is Edit Mode's viewport, and it
+    # must pass `interactive: false` and hand in the preview context - never
+    # the real one. The block is matched whole so a host that keeps the
+    # property but points it at LockContext fails on the second assertion
+    # rather than passing on the first.
+    background = code(ROOT / "modules/imi/background/Background.qml")
+    host = re.search(r"sourceComponent:\s*LockSurface\s*\{(.*?)\n            \}",
+                     background, re.S)
+    assert host, "Background.qml no longer hosts the lock islands preview"
+    body = host.group(1)
+    assert re.search(r"interactive:\s*false", body), \
+        "the preview host must pass interactive: false"
+    assert "LockPreviewContext" in body, \
+        "the preview host must hand the surface the preview context"
+    assert "LockContext {" not in background, \
+        ("Background.qml constructs a real LockContext - the preview must not "
+         "be able to authenticate")
+
+
 def test_the_surface_takes_the_context_as_a_plain_object():
     # The typed `required property LockContext context` would refuse the
     # preview component at assignment; QtObject admits both. The real caller

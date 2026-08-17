@@ -10,6 +10,8 @@ import "../../common/functions/parallax.js" as ParallaxMath
 import "../../common/functions/clockDepth.js" as ClockDepthLogic
 import "../../common/functions/edit_mode.js" as EditMode
 import qs.modules.imi.editMode
+import qs.modules.imi.lock
+import qs.modules.common.panels.lock
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
@@ -268,8 +270,14 @@ Variants {
             GlobalStates.clockDepthViewports = published
         }
 
+        // The lock terms below say `screenLocked || editLockPreview` because
+        // Edit Mode's Lockscreen tab is a FILTER on this viewport (spec §1.4):
+        // it switches these same layers to their locked inputs rather than
+        // drawing a second copy of any of them, so the preview inside the
+        // shrunk card is the picture the lock screen will actually show.
         property string effectiveWallpaperPath: {
-            if (GlobalStates.screenLocked && Config.options.background.lockWall !== "")
+            if ((GlobalStates.screenLocked || GlobalStates.editLockPreview)
+                    && Config.options.background.lockWall !== "")
                 return Config.options.background.lockWall
             return Wallpapers.previewPath || Wallpapers.confirmedPath || Config.options.background.wallpaperPath
         }
@@ -282,7 +290,8 @@ Variants {
         // on unlock): the WE surface reloads the lock project and the existing
         // WE<->WE peel plays, so one renderer covers both - no second surface.
         property string weProjectPath: {
-            if (GlobalStates.screenLocked && Config.options.background.lockWallEngine !== "")
+            if ((GlobalStates.screenLocked || GlobalStates.editLockPreview)
+                    && Config.options.background.lockWallEngine !== "")
                 return Config.options.background.lockWallEngine
             return Config.options.wallpaperSelector.wallpaperEngine.activePath ?? ""
         }
@@ -317,7 +326,7 @@ Variants {
         // Image lock wallpaper only. A WE lock wallpaper (lockWallEngine set) is
         // served by switching weProjectPath instead, so exclude it here even though
         // its preview lives in lockWall for palette generation.
-        property bool lockWallShown: GlobalStates.screenLocked
+        property bool lockWallShown: (GlobalStates.screenLocked || GlobalStates.editLockPreview)
             && Config.options.background.lockWall !== ""
             && Config.options.background.lockWallEngine === "" && bgRoot.weActive
         property bool lockRevealWe: false // true = peeling back to WE (unlock)
@@ -1024,9 +1033,15 @@ Variants {
 
             Loader {
                 id: blurLoader
-                active: Config.options.lock.blur.enable && (GlobalStates.screenLocked || scaleAnim.running)
+                // `lockLook` rather than screenLocked alone: Edit Mode's
+                // Lockscreen tab shows the lock's own blur inside the shrunk
+                // card, through this same loader - a child of the viewport, so
+                // it takes the edit transform with everything else in here.
+                readonly property bool lockLook: GlobalStates.screenLocked
+                    || GlobalStates.editLockPreview
+                active: Config.options.lock.blur.enable && (blurLoader.lockLook || scaleAnim.running)
                 anchors.fill: parent
-                scale: GlobalStates.screenLocked ? Config.options.lock.blur.extraZoom : 1
+                scale: blurLoader.lockLook ? Config.options.lock.blur.extraZoom : 1
                 Behavior on scale {
                     NumberAnimation {
                         id: scaleAnim
@@ -1040,9 +1055,9 @@ Variants {
                     // in play; the live WE surface when it is the wallpaper;
                     // otherwise the static image / transition.
                     source: bgRoot.liveWallpaperLayer
-                    radius: GlobalStates.screenLocked ? Config.options.lock.blur.radius : 0
+                    radius: blurLoader.lockLook ? Config.options.lock.blur.radius : 0
                     samples: Config.options.lock.blur.size
-                    tintOpacity: GlobalStates.screenLocked ? 1 : 0
+                    tintOpacity: blurLoader.lockLook ? 1 : 0
                 }
             }
 
@@ -1456,6 +1471,38 @@ Variants {
                 wallpaperSource: wallpaper.source
                 maskPath: ClockDepth.maskPath
                 maskRevision: ClockDepth.maskRevision
+            }
+        }
+
+        // Edit Mode's Lockscreen tab: the real lock islands, rendered by the
+        // preview context that cannot authenticate (spec §4.3, and the whole
+        // of tests/test_lock_preview_contract.py). A FIFTH sibling carrying
+        // the one edit transform, at z 4 - above the widget canvas (z 2)
+        // because the real session lock surface draws over the desktop
+        // widgets, and above the clock depth layer (z 3), which stands down
+        // for the mode anyway.
+        //
+        // The surface is the real LockSurface, `interactive: false`: its root
+        // area stands down through its own enabled, every handler in it
+        // returns first thing, and the context handed in here is the plain
+        // object whose unlock paths are empty by contract - never the real
+        // LockContext, which runs a fingerprint enumeration and declares two
+        // pam contexts the moment it is built. Declared inside the Loader so
+        // the preview context exists only while the tab is showing.
+        //
+        // Its own copy of the fullscreen gate, like every sibling that left
+        // the viewport: without it the islands would float over fullscreen
+        // video with the wallpaper gone.
+        Loader {
+            id: lockPreviewIslands
+            active: GlobalStates.editLockPreview && !bgRoot.suppressContents
+            width: bgRoot.width
+            height: bgRoot.height
+            z: 4
+            transform: Matrix4x4 { matrix: bgRoot.editMatrix }
+            sourceComponent: LockSurface {
+                interactive: false
+                context: LockPreviewContext {}
             }
         }
 

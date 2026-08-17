@@ -193,9 +193,10 @@ def test_the_viewport_is_a_transform_and_not_a_resize():
     # The three siblings that draw the desktop all take the SAME matrix, so
     # there is one arithmetic and they cannot drift a pixel apart.
     applied = re.findall(r"transform:\s*Matrix4x4\s*\{\s*matrix:\s*bgRoot\.editMatrix\s*\}", text)
-    assert len(applied) == 3, \
-        (f"expected the wallpaper viewport, the widget canvas and the clock depth "
-         f"layer to carry the edit transform, found {len(applied)}")
+    assert len(applied) == 4, \
+        (f"expected the wallpaper viewport, the widget canvas, the clock depth "
+         f"layer and the lock islands host to carry the edit transform, "
+         f"found {len(applied)}")
     # Nothing may write the geometry the mode is supposed to leave alone.
     for prop in ("width", "height", "x", "y"):
         assert not re.search(rf"^\s*{prop}:[^\n]*editViewport", text, re.M), \
@@ -1087,6 +1088,62 @@ def test_the_tab_is_a_string_beside_the_mode_and_dies_with_it():
     assert handler and "editTab = EditMode.DESKTOP_TAB" in handler.group(1), \
         ("leaving the mode must return the tab to Desktop - a tab left latched "
          "would greet the next entry already filtered to the lock screen")
+
+
+def test_the_viewport_draws_its_locked_inputs_on_the_lockscreen_tab():
+    # Spec §4.3: the tab switches the viewport's wallpaper and blur to their
+    # locked inputs - a gate change on things Background.qml already draws,
+    # with `GlobalStates.editLockPreview` joining `GlobalStates.screenLocked`
+    # in each gate rather than a second copy of any layer. Each binding is
+    # named individually because a missing term here is silent: the tab
+    # simply previews the wrong wallpaper, on machines that configured a lock
+    # wallpaper, which is not every machine.
+    background = code(BACKGROUND)
+    for name in ("effectiveWallpaperPath", "weProjectPath"):
+        value = declaration(background, name)
+        assert value, f"Background no longer declares {name}"
+        assert re.search(r"GlobalStates\.screenLocked\s*\|\|\s*"
+                         r"GlobalStates\.editLockPreview", value), \
+            f"{name} does not take the lock preview's term"
+    lock_wall = declaration(background, "lockWallShown")
+    assert lock_wall and re.search(
+        r"\(GlobalStates\.screenLocked\s*\|\|\s*GlobalStates\.editLockPreview\)",
+        lock_wall), "lockWallShown does not take the lock preview's term"
+    blur = re.search(r"id:\s*blurLoader\n(.*?)sourceComponent:", background, re.S)
+    assert blur, "the lock blur loader is gone"
+    assert re.search(r"lockLook:\s*GlobalStates\.screenLocked\s*\n?\s*\|\|\s*"
+                     r"GlobalStates\.editLockPreview", blur.group(1)), \
+        "the lock blur's lockLook must cover the preview"
+    assert re.search(r"active:.*lockLook", blur.group(1)), \
+        "the lock blur must be active for the locked look"
+    # And the widget filter: the tab shows the widgets the lock screen will.
+    widget = code(BACKGROUND_WIDGET)
+    assert re.search(r"opacity:\s*\(\(GlobalStates\.screenLocked\s*\|\|\s*"
+                     r"GlobalStates\.editLockPreview\)\s*&&\s*!visibleWhenLocked\)",
+                     widget), \
+        "AbstractBackgroundWidget's lock filter does not cover the preview"
+
+
+def test_the_islands_ride_the_edit_transform_above_the_widgets():
+    # The islands host is a FOURTH carrier of the one edit matrix (wallpaper
+    # viewport, widget canvas, clock depth layer, islands) - the count is
+    # pinned so a fifth copy is a deliberate change here, not a drift. It sits
+    # at z 4: above the widget canvas (z 2), because the real session lock
+    # surface draws over the desktop widgets, and above the depth layer (z 3),
+    # which stands down for the mode anyway.
+    background = code(BACKGROUND)
+    host = re.search(r"id:\s*lockPreviewIslands\n(.*?)sourceComponent:",
+                     background, re.S)
+    assert host, "Background.qml no longer declares the islands host"
+    body = host.group(1)
+    assert "GlobalStates.editLockPreview" in body, \
+        "the islands host must be gated on the one preview derivation"
+    assert re.search(r"z:\s*4", body), "the islands must draw above the widgets"
+    assert re.search(r"transform:\s*Matrix4x4\s*\{\s*matrix:\s*bgRoot\.editMatrix\s*\}",
+                     body), "the islands must take the same edit transform"
+    assert "suppressContents" in body, \
+        ("the islands need their own copy of the fullscreen gate, like every "
+         "other sibling that left the viewport")
 
 
 def test_the_tab_bar_offers_both_tabs_and_follows_the_state():
