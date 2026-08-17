@@ -73,4 +73,28 @@ Singleton {
         // rather than going blank.
         return found ? found.name : id
     }
+
+    // Which entries may be ADDED, given what the layouts already hold. On the
+    // catalogue rather than in BarConfig because it has two consumers now -
+    // the settings page's dropdown and Edit Mode's drawer - and two copies of
+    // "which ids may repeat" is the drift the catalogue was promoted to stop.
+    //
+    // `usedIds` is walked by index because a Config layout crosses the QML
+    // boundary without its Array brand (the gridSizes.js lesson); `borderless`
+    // is passed in rather than read here so the answer is a pure function of
+    // its arguments and the tests need no Config.
+    function offerFor(usedIds, borderless) {
+        const multipleAllowed = ["visualizer", "divisor"]
+        const used = []
+        const count = usedIds && typeof usedIds.length === "number" ? usedIds.length : 0
+        for (let i = 0; i < count; i++)
+            used.push(usedIds[i])
+        return root.available.filter(entry => {
+            // The divisor is a gap between transparent groups; under any
+            // other style it draws nothing at all.
+            if (entry.id === "divisor" && borderless !== "transparent")
+                return false
+            return used.indexOf(entry.id) === -1 || multipleAllowed.indexOf(entry.id) !== -1
+        })
+    }
 }

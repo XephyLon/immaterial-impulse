@@ -42,16 +42,13 @@ ContentPage {
     // Edit Mode spec §4.2). This page only decides which of it is still
     // offerable, which is a question about this page's own layout state.
     function availableFor() {
-        let used = [
+        // The policy lives on the catalogue now, so Edit Mode's drawer and
+        // this dropdown cannot disagree about which ids may repeat.
+        return BarWidgets.offerFor([
             ...Config.options.bar.layouts.leftLayout,
             ...Config.options.bar.layouts.middleLayout,
             ...Config.options.bar.layouts.rightLayout
-        ]
-        const multipleAllowed = ["visualizer", "divisor"]
-        return BarWidgets.available.filter(w => {
-            if (w.id === "divisor" && Config.options.bar.borderless !== "transparent") return false
-            return !used.includes(w.id) || multipleAllowed.includes(w.id)
-        })
+        ], Config.options.bar.borderless)
     }
 
     function getWidgetName(id) {

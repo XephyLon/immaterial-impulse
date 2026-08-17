@@ -62,9 +62,12 @@ class BarWidgetsCatalogueTests(unittest.TestCase):
                          "unbalanced braces in BarWidgets.qml")
 
     def test_bar_config_reads_the_singleton(self):
-        self.assertIn("BarWidgets.available", self.bar_config,
-                      "BarConfig must take its widget list from the "
-                      "BarWidgets singleton, not a copy of its own.")
+        # `offerFor` since the policy promotion: the page asks the catalogue
+        # which entries may be added, rather than filtering `available` with a
+        # policy copy of its own - the same one-list rule, one level up.
+        self.assertIn("BarWidgets.offerFor", self.bar_config,
+                      "BarConfig must take its addable-widget list from the "
+                      "BarWidgets singleton's offer, not a filter of its own.")
         self.assertIn("BarWidgets.nameFor", self.bar_config,
                       "BarConfig must resolve a widget id to its display "
                       "name through BarWidgets.nameFor.")
