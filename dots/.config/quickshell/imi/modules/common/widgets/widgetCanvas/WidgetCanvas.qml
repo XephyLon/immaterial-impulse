@@ -357,11 +357,30 @@ MouseArea {
     property bool centerXActive: false
     property bool centerYActive: false
 
+    // The edge-snap guides (spec §6): one vertical and one horizontal line,
+    // published by whichever widget is dragging (AbstractWidget resolves the
+    // hold; the canvas only draws it). The position keeps its last value while
+    // inactive so the fade-out fades the line where it was, rather than a
+    // line sliding to 0 as it leaves.
+    property bool edgeGuideXActive: false
+    property real edgeGuideXPos: 0
+    property bool edgeGuideYActive: false
+    property real edgeGuideYPos: 0
+
+    function setEdgeGuides(xActive, xPos, yActive, yPos) {
+        if (xActive) root.edgeGuideXPos = xPos
+        if (yActive) root.edgeGuideYPos = yPos
+        root.edgeGuideXActive = xActive
+        root.edgeGuideYActive = yActive
+    }
+
     function setDragging(active) {
         root.showGrid = active
         if (!active) {
             root.centerXActive = false
             root.centerYActive = false
+            root.edgeGuideXActive = false
+            root.edgeGuideYActive = false
         }
     }
 
@@ -493,6 +512,68 @@ MouseArea {
                 animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
             }
             Behavior on height {
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
+            Behavior on opacity {
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
+        }
+    }
+
+    // The edge-snap guides join the centre-line family - the same tier's
+    // Behaviors, taken whole through the tier's own factory - rather than
+    // starting a second idiom. Unlike the centre lines they live ABOVE the
+    // widgets, not in the lattice substrate: the line belongs to the OTHER
+    // widget's edge, and an alignment cue drawn under a translucent panel is
+    // an alignment cue the panel dims. They are also not gated on the grid's
+    // visibility, because the hold they announce rides
+    // `background.showSnapLines` (gated where it is resolved, in
+    // AbstractWidget) while the lattice rides `background.showGrid` - two
+    // switches, and a guide the user asked for must not disappear with a grid
+    // they turned off.
+    Item {
+        id: edgeGuides
+        anchors.fill: parent
+        z: 9
+        // Cannot take input, ever - same rule as the lattice.
+        enabled: false
+
+        Rectangle {
+            id: edgeGuideV
+            visible: opacity > 0
+            x: root.edgeGuideXPos - width / 2
+            width: 2
+            height: root.height
+            color: Appearance.colors.colPrimary
+            opacity: root.edgeGuideXActive ? 1 : 0
+
+            Behavior on x {
+                // Instant while invisible, so the first hold of a drag places
+                // the line at its guide instead of sweeping it in from
+                // wherever the previous one faded out. While visible, a hold
+                // moving between neighbours travels: the reference
+                // implementation's guides are two plain Rectangles that pop
+                // and teleport between guides (spec §6.2), which is exactly
+                // what joining the animated family is for.
+                enabled: edgeGuideV.opacity > 0
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
+            Behavior on opacity {
+                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            }
+        }
+
+        Rectangle {
+            id: edgeGuideH
+            visible: opacity > 0
+            y: root.edgeGuideYPos - height / 2
+            width: root.width
+            height: 2
+            color: Appearance.colors.colPrimary
+            opacity: root.edgeGuideYActive ? 1 : 0
+
+            Behavior on y {
+                enabled: edgeGuideH.opacity > 0
                 animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
             }
             Behavior on opacity {
