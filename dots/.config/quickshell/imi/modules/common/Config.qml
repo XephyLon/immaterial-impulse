@@ -590,6 +590,15 @@ Singleton {
                     property string reading: "Readex Pro"
                     property string expressive: "Space Grotesk"
                 }
+                // How fast the shell moves. `multiplier` is a speed preference
+                // and is clamped to motion_policy.js's sanctioned range;
+                // `reduceMotion` is an accessibility state and is deliberately
+                // a separate key, because a floor a slider can land on is a
+                // floor a user can leave by accident.
+                property JsonObject motion: JsonObject {
+                    property real multiplier: 1.0
+                    property bool reduceMotion: false
+                }
                 property JsonObject transparency: JsonObject {
                     property bool enable: false
                     property bool automatic: true
