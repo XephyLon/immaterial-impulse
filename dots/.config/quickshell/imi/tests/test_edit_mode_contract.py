@@ -631,8 +631,13 @@ def test_the_bar_and_the_dock_have_exactly_one_answer_for_where_they_are():
     insets = code(INSETS)
     assert re.search(r"^pragma Singleton", insets, re.M), \
         "the insets are one object, not a component each surface instantiates"
-    assert "DockGeometry.thickness(" in insets and "DockGeometry.outwardSide(" in insets, \
-        "the dock's edge and thickness come from the dock's own module"
+    assert "DockGeometry.thickness(" in insets, \
+        "the dock's thickness comes from the dock's own module"
+    # The bar's overloaded pair and the dock's stored edge both become an edge
+    # NAME in dock_geometry.js and nowhere else - `test_dock_position_contract.py`
+    # owns that rule and caught this file re-deriving both on its first run.
+    assert "DockGeometry.barEdge(" in insets and "DockGeometry.normalizedEdge(" in insets, \
+        "an edge name is derived in the dock's module, not spelled out again"
 
     for path in (BACKGROUND, CHROME_SURFACE):
         text = code(path)
