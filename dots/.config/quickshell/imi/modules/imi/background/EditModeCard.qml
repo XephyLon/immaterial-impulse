@@ -9,7 +9,7 @@ import qs.modules.common.widgets
  * The mode shrinks the desktop with a transform and nothing else, which leaves
  * a hard rectangular edge with no corner, no border and no shadow - a cropped
  * screenshot rather than a surface being edited. This is the chrome around it:
- * the blurred backdrop, the corner, the drop shadow and the outline, as one
+ * the blurred backdrop, the corner, the drop shadow and the edge, as one
  * component so the four cannot end up a pixel apart from each other or from the
  * desktop. Everything geometric comes from `card`, which is
  * `edit_mode.js`'s `cardRect` - the same arithmetic the transform is built out
@@ -56,38 +56,59 @@ Item {
 
     // ---- the glass edge ---------------------------------------------------
     //
+    // ONE tone, one pixel wide, and mostly not there. That is a correction of
+    // this file's own previous answer rather than a tuning of it.
+    //
     // The card used to end at a 1px colLayer0Border line, which is the shell's
     // outline for a floating surface and is right for a panel sitting on a
     // surface this file's own tokens were derived from. Over a WALLPAPER it is
-    // a drawn line rather than an edge: measured on this library's darkest
-    // picture the outline came back at 27/255 with the desktop at 0 inside it
-    // and the blurred backdrop at 12 outside, so the whole boundary was ten
-    // levels of contrast wide and read as a seam in a screenshot.
+    // a drawn line rather than an edge, so it was replaced by a bevel in three
+    // tones: a 4px shade band outside the card, a 2px specular on the edge, and
+    // a 1px highlight inside it. Each tone was defensible and the sum was a
+    // BORDER - measured on the real desktop at 5120x1440, walking inward across
+    // the left flank: backdrop 28, shade 17, 17, specular 77, 77, highlight
+    // 128, desktop 105. Five drawn pixels of dark-then-bright piping, at one
+    // strength the whole way round a 3872px card. Which is what "edit mode's
+    // layout having this thick border is what looked ugly" names.
     //
-    // What replaces it is a bevel with THICKNESS, in three tones, and the
-    // reason it is three is that no single one survives every wallpaper:
+    // What the three tones were each solving, and why none of them survives:
     //
-    //   - a shade band just OUTSIDE the card, so the card has a lip. It is what
-    //     carries the edge over a bright picture, where a specular cannot.
-    //   - a specular ON the edge, brightest along the top, rolling off round the
-    //     corners to a grazing flank and coming back as a weak bounce at the
-    //     bottom - the same lamp the drop shadow below is drawn for. A uniform
-    //     bright rim reads as a stroke; a rim that is brighter where light would
-    //     catch reads as a surface.
-    //   - a highlight just INSIDE, which is what gives the specular something to
-    //     be the outer face of rather than a line floating on the seam. It is
-    //     the innermost tone on the edge, and there is deliberately nothing
-    //     between it and the specular - see its own comment for the 1px outline
-    //     that used to be there and why a notch is not part of a bevel.
+    //   - the shade band gave the card a lip so the edge carried over a bright
+    //     picture. `StyledRectangularShadow` below is already a darkening
+    //     outside the card, from the same lamp, and it is the one the
+    //     maintainer says is right. Two darkenings outside one edge is the
+    //     shade band drawing a hard 2px copy of the soft one under it.
+    //   - the inner highlight gave the specular a near side. It is a uniform
+    //     line at the card's edge that composites over the DESKTOP, so it is
+    //     the brightest thing on the boundary on three edges out of four (+24
+    //     to +41 levels wherever it lands) - structurally the same object as
+    //     the colLayer0Border outline removed in 1df616e62, in white.
+    //   - the specular is the one that is really an edge: a catch where the
+    //     light hits. It stays, at `standard` rather than `emphasis` width,
+    //     and its flank drops to a value that is nearly nothing rather than to
+    //     a value that is merely less.
     //
-    // The first two cost nothing extra: they are plain Rectangles declared
-    // inside `surround`, whose layer is already masked to the complement of the
-    // card - so the mask cuts each of them down to the band outside the card by
-    // itself, and the gradient that shades them is the Rectangle's own. No
-    // second layer, no second mask, and nothing re-rendering the backdrop, which
-    // is the cost this whole component is arranged to avoid.
-    readonly property real edgeShadeWidth: Appearance.borderWidth.heavy
-    readonly property real edgeSpecularWidth: Appearance.borderWidth.emphasis
+    // Glass is not a ring of even thickness. It is a bright catch along the top
+    // and the corner arcs and almost nothing along the rest; what carries its
+    // presence is the shadow around it, not a drawn perimeter. The shadow is
+    // already there, so the edge does not have to prove the card exists.
+    //
+    // The two divide the perimeter between them rather than doubling up on it,
+    // and that is a property of the shadow rather than a hope: it carries
+    // `offset: (0, 1)`, so it is at its weakest directly above the card and at
+    // its strongest below. Measured over this library's brightest wallpaper, the
+    // backdrop falls 172 -> 158 above the card and 237 -> 146 below it, which is
+    // the opposite ordering to the catch (0.44 at the top, 0.13 at the bottom).
+    // The boundary is a bright line where the shade is thin and a pool of shade
+    // where the line is not there.
+    //
+    // It costs nothing extra: a plain Rectangle declared inside `surround`,
+    // whose layer is already masked to the complement of the card - so the mask
+    // cuts it down to the band outside the card by itself, and the shading is
+    // the Rectangle's own gradient. No second layer, no second mask, and
+    // nothing re-rendering the backdrop, which is the cost this whole component
+    // is arranged to avoid.
+    readonly property real edgeSpecularWidth: Appearance.borderWidth.standard
 
     // Where the light rolls off the edge, as a fraction of the card's height:
     // the corner arc is the piece of the outline whose normal turns from facing
@@ -145,32 +166,13 @@ Item {
         }
 
         // Drawn AFTER the shadow, because the shadow is at its darkest exactly
-        // where these two are: a bright line standing on the near edge of a
-        // pool of shade is the whole of what reads as glass, and a shadow drawn
-        // over it would be a shadow of the card cast onto the card's own rim.
+        // where this is: a bright catch standing on the near edge of a pool of
+        // shade is the whole of what reads as glass, and a shadow drawn over it
+        // would be a shadow of the card cast onto the card's own rim.
         //
-        // Both are grown from the card and cut back to it by `surround`'s mask,
-        // so their inner boundary IS the card's edge - to the same antialiased
-        // pixel as the corner, because it is the same mask that makes the
-        // corner.
-        Rectangle {
-            id: edgeShade
-            x: root.card.x - root.edgeShadeWidth
-            y: root.card.y - root.edgeShadeWidth
-            width: root.card.width + 2 * root.edgeShadeWidth
-            height: root.card.height + 2 * root.edgeShadeWidth
-            radius: root.cardRadius > 0 ? root.cardRadius + root.edgeShadeWidth : 0
-            antialiasing: true
-            // Weakest where the light is and strongest opposite it, and never
-            // at zero on either stop: this is the tone that has to carry the
-            // edge over a bright wallpaper, where the specular cannot, and a
-            // lip that faded out along its own top would have no edge there.
-            gradient: Gradient {
-                GradientStop { position: 0; color: Qt.alpha(Appearance.colors.colGlassShade, 0.3) }
-                GradientStop { position: 1; color: Qt.alpha(Appearance.colors.colGlassShade, 0.5) }
-            }
-        }
-
+        // It is grown from the card and cut back to it by `surround`'s mask, so
+        // its inner boundary IS the card's edge - to the same antialiased pixel
+        // as the corner, because it is the same mask that makes the corner.
         Rectangle {
             id: edgeSpecular
             x: root.card.x - root.edgeSpecularWidth
@@ -179,28 +181,30 @@ Item {
             height: root.card.height + 2 * root.edgeSpecularWidth
             radius: root.cardRadius > 0 ? root.cardRadius + root.edgeSpecularWidth : 0
             antialiasing: true
-            // The non-uniformity is the point. A rim at one strength all the way
-            // round is a stroke however bright it is; light catching the top of
-            // an edge, rolling off round the corners and coming back weakly at
-            // the bottom is what a piece of glass looks like. The bottom is a
-            // bounce off whatever the card is lying on, so it is weaker than the
-            // top rather than symmetric with it.
+            // The non-uniformity is not a flourish on top of a rim, it IS the
+            // edge: everywhere the light does not catch, there is deliberately
+            // almost nothing here, and the shadow outside is what says the card
+            // is a separate object. A rim at one strength all the way round is a
+            // stroke however bright it is, and a rim at two thirds of one
+            // strength all the way round is the same stroke a shade fainter -
+            // which is what shipped, and what still read as a border.
             //
             // The roll-off happens over the CORNER, not over the flank. Shipped
             // as a plain 0 / 0.5 / 1 ramp, the run from the top's value to the
             // side's value was half the card - so both top corners were as
             // bright as the top edge and the whole 3872px top read as one
-            // uniform stroke, which is the thing the paragraph above says a rim
-            // must not be (measured on the real desktop: crest 111/255 median
-            // along the top against 37 along the left, and 0 at its weakest
-            // point). Holding the top's value only to the end of the arc and the
-            // side's value along the whole flank is the same idea the comment
-            // always claimed, applied on the geometry that actually turns.
+            // uniform stroke (measured on the real desktop: crest 111/255 median
+            // along the top against 37 along the left). Holding the top's value
+            // only to the end of the arc and the flank's along the whole flank
+            // is the same idea, applied on the geometry that actually turns.
+            //
+            // The bottom is a bounce off whatever the card is lying on, so it is
+            // a hint above the flank rather than symmetric with the top.
             gradient: Gradient {
-                GradientStop { position: 0; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.46) }
-                GradientStop { position: root.edgeRollOff; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.26) }
-                GradientStop { position: 1 - root.edgeRollOff; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.26) }
-                GradientStop { position: 1; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.32) }
+                GradientStop { position: 0; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.44) }
+                GradientStop { position: root.edgeRollOff; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.07) }
+                GradientStop { position: 1 - root.edgeRollOff; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.07) }
+                GradientStop { position: 1; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.13) }
             }
         }
     }
@@ -226,44 +230,30 @@ Item {
         }
     }
 
-    // The inner face of the bevel, and the innermost thing on the edge - which
-    // is a correction rather than a rearrangement.
+    // Nothing is drawn INSIDE the card, and that is the point rather than an
+    // omission.
     //
-    // A 1px `colLayer0Border` outline sat here, between this and the specular,
-    // on the reasoning that it is what every floating surface in this shell
-    // carries beside its shadow. Measured on the real desktop it was a NOTCH:
-    // walking inward from the backdrop the profile went shade, crest, *dark
-    // line*, highlight, desktop - down as much as 70/255 below the lower of the
-    // two bright bands either side of it, on all four edges. A bevel falls off
-    // its crest into the surface; this one fell, rose and fell, so the eye read
-    // the dark line as the card's edge and the bright band as a piping outside
-    // it. That is a stroke with a bevel drawn around it, not a bevel.
+    // Two things have sat here in turn. A 1px `colLayer0Border` outline, on the
+    // reasoning that every floating surface in this shell carries one beside its
+    // shadow - which measured as a notch, a dark line between the two bright
+    // bands either side of it, and went in 1df616e62. Then a 1px
+    // `colGlassSpecular` highlight at 0.16, on the reasoning that the specular
+    // needs a near side or it is a line balanced on the seam.
     //
-    // The outline is gone rather than moved, and docs/M3_GUIDELINES.md §1 is
-    // what licenses that rather than what it is traded against: "visible borders
-    // are not required for every surface", and the job the guideline gives the
-    // outline - to "clearly define edges against complex backgrounds" - is the
-    // job this bevel exists to do, because the outline could not do it over a
-    // wallpaper. One edge treatment, not two stacked.
+    // The second is the first wearing the other colour. It cannot ride
+    // `surround`'s mask - it is inside the card, which is exactly what that mask
+    // removes - so it is a uniform border rather than a shaded band, drawn at
+    // one strength round all 9922px of a 3872x1089 perimeter, compositing over
+    // the DESKTOP rather than over the backdrop. Measured on the real desktop it
+    // was the brightest thing on the boundary on three edges out of four: +41
+    // levels over a wallpaper at 105 on the left flank, +35 over one at 36 along
+    // the top. A line that is brighter than the specular it is supposedly
+    // supporting is the edge, and a line of even thickness all the way round is
+    // a border.
     //
-    // This one cannot ride `surround`'s mask - it is INSIDE the card, which is
-    // exactly what that mask removes - so it is a border rather than a
-    // gradient-filled rect, and it is uniform where the specular is not. A real
-    // bevel's inner face would be the specular's inverse (the inside of the top
-    // edge faces away from the light), and expressing that needs a second mask
-    // and a second layer, which is the cost this whole component is arranged
-    // around. Faint enough not to become a second line on a dark wallpaper,
-    // present enough that the crest has a near side.
-    Rectangle {
-        id: cardInnerHighlight
-        x: root.card.x
-        y: root.card.y
-        width: root.card.width
-        height: root.card.height
-        radius: root.cardRadius
-        color: "transparent"
-        antialiasing: true
-        border.width: Appearance.borderWidth.standard
-        border.color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.16)
-    }
+    // docs/M3_GUIDELINES.md §1 is what licenses the absence: "visible borders
+    // are not required for every surface". The job the guideline gives an
+    // outline - defining edges against complex backgrounds - belongs here to the
+    // shadow and to the specular's catch, and both of those already vary round
+    // the perimeter the way a real edge does.
 }
