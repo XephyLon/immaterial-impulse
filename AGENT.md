@@ -2349,26 +2349,68 @@ mode is built out of are worth not re-deriving:
   `WallpaperBlurBackdrop` component with the lock's, and it works because a
   `ShaderEffectSource` renders its source item in that item's OWN coordinates —
   a transformed wallpaper still yields an untransformed texture.
-- **That backdrop is drawn ABOVE the desktop, cut out to a rounded rect, and
-  that is the only cheap way to round the desktop's corner**
-  (`modules/imi/background/EditModeCard.qml`). QML has no rounded clip and the
-  desktop is three separately transformed siblings, so no property on any of
-  them rounds a corner, and wrapping all three in one masked layer pushes the
-  wallpaper through an effect for every frame of the shrink — the cost the
-  transform was chosen to avoid. Covering the corner with what is behind it is
-  identical to drawing the backdrop behind everywhere except the four corners,
-  and it gives the drop shadow somewhere honest to live: inside the same cut,
-  over the backdrop, so only the half outside the card survives and its interior
-  never darkens the desktop it is lifting. Two things measured rather than
-  argued while building it. The shadow stays `StyledRectangularShadow` at the
-  magnitude the component defines — raising `blur` from 9 to 40 on a 4403px card
-  spreads the same darkness over four times the distance and the two renders are
-  indistinguishable, because the edge contrast comes from `colShadow`'s alpha
-  and most of a `RectangularShadow` sits under its target, which the cut
-  removes. And the chrome stands down through **two** gates, the Loader's
-  `active` and its `opacity`: either alone hides it, so a frame comparison
-  passes on a tree with one of them deleted, which is why
-  `test_edit_mode_contract.py` names both.
+- **That backdrop is drawn ABOVE the wallpaper and BELOW the widget canvas, cut
+  out to a rounded rect, and that is the only cheap way to round the desktop's
+  corner** (`modules/imi/background/EditModeCard.qml`, the `editChrome` Loader
+  at `z: 1`). QML has no rounded clip and the desktop is three separately
+  transformed siblings, so no property on any of them rounds a corner, and
+  wrapping all three in one masked layer pushes the wallpaper through an effect
+  for every frame of the shrink — the cost the transform was chosen to avoid.
+  Covering the corner with what is behind it is identical to drawing the backdrop
+  behind everywhere except the four corners, and it gives the drop shadow
+  somewhere honest to live: inside the same cut, over the backdrop, so only the
+  half outside the card survives and its interior never darkens the desktop it is
+  lifting.
+
+  **A cover over EVERYTHING covers everything, which is what the `z: 1` is for.**
+  It shipped at `z: 4` and cut the widgets too: the desktop scales about its own
+  centre, so the canvas's edge lands exactly on the card's edge and a widget
+  parked against a screen edge is flush with the rounding — at a corner the arc
+  comes in on both axes and takes a bite. Measured at 5120x1440, 20px along each
+  edge and 10px on the diagonal of a block pinned there, and this machine's own
+  `plugin-state.json` keeps `visualizer` at 0,1200 on a 1440-tall screen. The
+  trade is deliberate and is the whole of the fix: a widget in the corner now
+  OVERHANGS the rounding, drawn whole over the blurred backdrop. It says "this
+  widget is at the edge of your desktop", where the alternative was moving
+  widgets the user placed. `test_edit_mode_chrome.py` asks the question from both
+  sides — a marker in the wallpaper viewport that has to be cut, a block on the
+  canvas that has to survive — because a single check either way passes on both
+  arrangements. Note the second copy of the arrangement: `EditModeLookProbe.qml`
+  re-declares the four siblings, because weston implements no layer shell, and it
+  scored one render of that fix against its own stale `z: 4`. The contract pins
+  the two z values against each other now.
+
+  **The card's edge is a bevel, not a line.** A 1px `colLayer0Border` outline is
+  right for a panel on a surface these tokens were derived from and is a drawn
+  line over a WALLPAPER: walked round the perimeter on this library's darkest
+  picture, the worst point departed from the backdrop beside it by 2.8/255. Three
+  tones fix it, and it is three because no single one survives every wallpaper —
+  a shade band just outside (which carries a bright picture), a specular on the
+  edge that is brightest along the top and fades to a weak bounce at the bottom
+  (which carries a dark one), and a faint highlight just inside so the specular
+  is the outer face of something. Re-measured: worst-on-perimeter 24.0/255 over
+  the darkest wallpaper and 38.2/255 over the brightest. Two things generalise.
+  The two outer tones are plain `Rectangle`s declared INSIDE `surround`, whose
+  layer is already masked to the complement of the card — so the mask cuts each
+  of them back to the band outside the card by itself and the shading is the
+  Rectangle's own gradient, which is why the whole treatment adds no layer, no
+  mask and no effect (measured under headless weston's software renderer, 14.91s
+  ± 0.22 of user CPU against 14.68s ± 0.32, indistinguishable on a 3-4% spread).
+  And its two colours are `Appearance.colors.colGlassSpecular`/`colGlassShade`,
+  the one pair in that file deliberately NOT derived from the wallpaper: every
+  other colour there is generated from the picture on screen, so an edge drawn in
+  one of them is guaranteed to be a colour the picture already contains. Same
+  reasoning as the depth picker's hardcoded contour.
+
+  Two things measured rather than argued while building the original. The shadow
+  stays `StyledRectangularShadow` at the magnitude the component defines —
+  raising `blur` from 9 to 40 on a 4403px card spreads the same darkness over
+  four times the distance and the two renders are indistinguishable, because the
+  edge contrast comes from `colShadow`'s alpha and most of a `RectangularShadow`
+  sits under its target, which the cut removes. And the chrome stands down
+  through **two** gates, the Loader's `active` and its `opacity`: either alone
+  hides it, so a frame comparison passes on a tree with one of them deleted,
+  which is why `test_edit_mode_contract.py` names both.
 - **The per-widget frost is stood down for the mode, not aligned to it**
   (`PluginWidget.frostSuspended`, the generalisation of what used to be
   `lockCoversFrost`). Measured on a live desktop with a Wallpaper Engine scene:
@@ -2388,6 +2430,28 @@ mode is built out of are worth not re-deriving:
   is translucent, which every desktop widget is and which this mode makes more
   so by standing the frost down, then has a crisp full-strength line running
   across it, and a line is a foreground cue whatever is really in front.
+- **...and it belongs to the GESTURE, in the mode as well as out of it.** The
+  mode forced it on for the whole mode on the spec's §4.1 discoverability
+  argument, and that argument predates the mode having any chrome: the toolbar
+  and the tab bar say it is on now, and a mode that opens on a screen of graph
+  paper hides the desktop you came to look at. What the mode overrides is the
+  config SWITCH (`background.showGrid`, "draw the grid while I drag"), so
+  `gridVisible` is `showGrid && (editMode || the switch)` — the gesture is a
+  required conjunct and a top-level `||` is what the contract forbids. The
+  trigger is the distinction `AbstractWidget` already draws and never a second
+  one: `showGrid` is written from `onDraggingChanged`, which follows
+  `dragActive`, which `onPositionChanged` raises only past `drag.threshold`.
+  That matters because every one of a widget's own controls presses without
+  travelling — the resize grip, the right-click, a click that selects — and a
+  lattice flashing up under each of them is worse than one that never goes away.
+  Two consequences: the fade is `elementMoveFaster` rather than `elementMoveFast`
+  because its reference is now the pointer rather than the 500ms shrink, and
+  `widgetRemoved` takes the lattice down, because a widget destroyed mid-drag is
+  the one end of a gesture that never reaches `onDraggingChanged`. The pixel half
+  is three frames (at rest, mid-drag, and a whole-frame comparison of after
+  against before), because `gridVisible` goes false the instant a drag ends while
+  the fade still has 150ms to run — a lattice that never finished leaving reports
+  the same false.
 - **The whole mode animates on ONE scalar, and it is `GlobalStates.editProgress`
   rather than a property of the surface that uses it.** The desktop's transform
   and the chrome that frames it are on two different layer surfaces, in two
@@ -2437,7 +2501,10 @@ feat(editMode): shrink the desktop about dead centre, and move it only for the d
 feat(widgetCanvas): the lattice is a substrate, and it dissolves at the edges,
 feat(editMode): animate the mode on one scalar, shared by every surface,
 feat(editMode): draw the mode's toolbar and tab bar on a surface of their own,
-test(editMode): score the chrome against the desktop it frames.)
+test(editMode): score the chrome against the desktop it frames,
+fix(widgetCanvas): the lattice comes up with the drag, not with the mode,
+feat(editMode): give the card's edge thickness instead of a drawn line,
+fix(editMode): stop the card's rounded corner biting a widget the user placed.)
 
 **The clock depth layer is the counter-case to that rule, and it is why it is a
 FOURTH sibling.** `widgetCanvas` sits at `z: 2` as a sibling of
@@ -2455,7 +2522,25 @@ only while everything above it lets clicks through.
 `tests/test_clock_depth_compositing.py` renders it under headless weston and
 samples the pan mid-animation, because a layer bound to the destination settles
 in exactly the right place and passes every settled check.
-(feat(background): draw the wallpaper's subject over the desktop widgets.)
+
+**Being above the widgets is also why it stands down for Edit Mode**
+(`ClockDepthLogic.eligible`'s `editing` refusal). Once the mode's cover moved
+below the widget canvas, this layer was the one thing left drawing above it, and
+it cannot follow the widgets down without putting the widgets under the cover
+again — which is the bite that move removed. Two reasons to refuse rather than
+reorder, and they are both its own: it paints the wallpaper's subject OVER the
+widgets the mode exists to let the user arrange, which is a partly hidden widget
+in the one mode where that matters most (the sibling of the `selecting`
+refusal); and it reconstructs the parallax viewport, which is deliberately
+larger than the screen (`workspaceZoom`, 1.1 by default) with only the layer
+surface's own edge keeping that overscan off screen. The mode's transform pulls
+the desktop's edge away from the surface's and puts the blurred backdrop in
+between, so a subject reaching the picture's edge would be free to paint up to
+154px past the card at 5120x1440. The refusal touches nothing else:
+`ClockDepth.watching` is `enabled || picking`, so entering the mode drops no
+cached answer and leaving it re-runs no segmentation.
+(feat(background): draw the wallpaper's subject over the desktop widgets,
+fix(clockDepth): stand the depth layer down for the mode that arranges widgets.)
 
 **`OpacityMask` masks by the mask's ALPHA channel and nothing else, so a
 grayscale mask is opaque everywhere.** The obvious artifact for a segmentation

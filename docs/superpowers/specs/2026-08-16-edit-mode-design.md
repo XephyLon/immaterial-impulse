@@ -333,7 +333,7 @@ Almost nothing new is drawn. What the mode does is stop hiding what is already t
 
 | today | in Edit Mode |
 | --- | --- |
-| the grid appears only mid-drag (`WidgetCanvas.qml:211-217`) | on for the whole mode |
+| the grid appears only mid-drag (`WidgetCanvas.qml:211-217`) | ~~on for the whole mode~~ — reversed after looking at it, see below |
 | the resize grip fades in on hover (`PluginWidget.qml:709-726`) | every resizable widget shows its grip |
 | the global lock is a submenu switch (`WidgetsSubmenu.qml:32-38`) | the mode suppresses it (below) |
 | right-click on a widget toggles the global lock (`AbstractWidget.qml:85-89`) | right-click is a per-widget menu (Remove, Size, Pin) |
@@ -347,12 +347,30 @@ belt — *"'Lock widget positions' must never unlock something the user delibera
 either direction"* (`:37-40`). Writing `widgetsLocked = false` on entry would destroy a stored
 preference and leave the desktop unlocked after the mode ended.
 
+**The grid stays the DRAG's, and the row above is withdrawn.** Written after the mode shipped and
+was looked at: *"in Edit mode, the grid lines should not appear until I try to move a widget."*
+The argument for forcing it on was discoverability — §2 calls the grid "the one thing that
+reliably says this is editable" and complains that it only appears once you have already started
+dragging — and that argument was made before stage 6 gave the mode a toolbar and a tab bar of its
+own. Those say the mode is on now. A mode that opens on a screen of graph paper hides the desktop
+the user came in to look at, which is the opposite of §4.1's own framing.
+
+What the mode overrides is the config SWITCH (`background.showGrid`, whose meaning has always been
+"draw the grid while I drag") rather than the gesture: editing, a drag always draws the lattice it
+is landing on. The trigger is the distinction `AbstractWidget` already draws — `dragActive`, raised
+past `drag.threshold` and never on the press — because every one of a widget's own controls presses
+without travelling.
+(fix(widgetCanvas): the lattice comes up with the drag, not with the mode.)
+
 **The drawn grid becomes 12px.** `WidgetCanvas.qml:7` draws every 24px; `AbstractWidget.qml:23`
 snaps every 12, and `docs/widget-grid.md`'s "Position snapping" section explains why the fine
-lattice is deliberate. While the grid was only up during a drag this read as decoration; with it
-up for the whole mode, a widget landing between two lines reads as broken snapping. Draw 12px
-lines at a lower opacity with every second one emphasised, so the lattice is honest and the rhythm
-stays readable. This changes an existing default, so it lands as its own commit.
+lattice is deliberate. Drawing 24 while snapping 12 puts a widget between two lines at every second
+stop, which reads as broken snapping — and it reads that way exactly when the grid is up, i.e.
+during the drag doing the snapping. (This paragraph originally hung that on the grid being up for
+the whole mode; the mode made it impossible to miss rather than made it true, so it survives the
+row above being withdrawn.) Draw 12px lines at a lower opacity with every second one emphasised, so
+the lattice is honest and the rhythm stays readable. This changes an existing default, so it lands
+as its own commit.
 
 **`WidgetsSubmenu` goes.** Its `widgetList` is empty by decision (`:14-19`) and its only live
 control is the global lock, which the mode suppresses — a switch that turns off something the
