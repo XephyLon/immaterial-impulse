@@ -67,10 +67,10 @@ Singleton {
     readonly property var available: staticWidgets.concat(pluginWidgets)
 
     function nameFor(id) {
-        const w = root.available.find(w => w.id === id)
+        const found = root.available.find(entry => entry.id === id)
         // A layout can hold an id the catalogue no longer offers - an
         // uninstalled plugin's bar widget. Its chip keeps a readable label
         // rather than going blank.
-        return w ? w.name : id
+        return found ? found.name : id
     }
 }
