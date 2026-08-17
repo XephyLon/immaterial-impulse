@@ -171,6 +171,10 @@ Item {
                 { name: Translation.tr("Lockscreen"), icon: "lock" }
             ]
             onCurrentIndexChanged: GlobalStates.editTab = EditMode.tabAt(tabs.currentIndex)
+            // The sync is change-driven both ways, so a chrome built while a
+            // non-default tab is showing - a monitor hotplugged mid-mode -
+            // needs the one initial alignment no change ever delivers.
+            Component.onCompleted: tabs.setCurrentIndex(EditMode.tabIndex(GlobalStates.editTab))
             Connections {
                 target: GlobalStates
                 function onEditTabChanged() {

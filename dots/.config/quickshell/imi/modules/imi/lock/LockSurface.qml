@@ -178,7 +178,15 @@ MouseArea {
 
             // Synchronizing (across monitors) and unlocking
             onTextChanged: root.context.currentText = this.text
+            // Guarded like every other dispatch even though `enabled: false`
+            // already keeps key events out of a preview field: `accepted()`
+            // is raised from Return handling, which `readOnly` does NOT close
+            // (readOnly stops text mutation, not the signal), so this is the
+            // one belt the disabled field wears alone - and the contract's
+            // action-anchored sweep holds it to the guard by the dispatch
+            // rather than by the handler's name.
             onAccepted: {
+                if (!root.interactive) return;
                 root.context.tryUnlock(ctrlHeld);
             }
             Connections {
@@ -489,10 +497,13 @@ MouseArea {
             }
         }
 
-        // Keyboard layout (Fcitx)
+        // Keyboard layout (Fcitx). `enabled` cascades from this plain root, so
+        // the preview's copy cannot activate the real SNI item - the one
+        // interactive element in the islands that reaches outside the shell.
         Bar.SysTray {
             Layout.rightMargin: Appearance.spacing.space150
             Layout.alignment: Qt.AlignVCenter
+            enabled: root.interactive
             showSeparator: false
             showOverflowMenu: false
             pinnedItems: SystemTray.items.values.filter(i => i.id == "Fcitx")

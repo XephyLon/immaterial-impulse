@@ -1232,25 +1232,36 @@ def test_the_lockscreen_preview_is_one_derivation():
         r"readonly property bool editLockPreview:\s*root\.editMode\s*&&\s*"
         r"root\.editTab === EditMode\.LOCKSCREEN_TAB", states), \
         "GlobalStates no longer derives the preview from the mode and the tab"
+    # Tree-wide, not a participant list: the consumers of the preview flag
+    # (both bars, the dock, the clock plugin) live outside the mode's own
+    # files, and the fifth file to grow an `editTab ===` comparison will be
+    # too. `tests/` is excluded - the tst pins the literal against the
+    # constant on purpose - and so are the rule's two named homes:
+    # edit_mode.js for the literal, GlobalStates.qml for the comparison.
     swept = 0
-    for path in PARTICIPANTS + [GLOBAL_STATES, LOCK_SURFACE, LOCK_PREVIEW_CONTEXT]:
+    for path in sorted(list(ROOT.rglob("*.qml")) + list(ROOT.rglob("*.js"))):
+        if (ROOT / "tests") in path.parents:
+            continue
+        # The runtime harnesses live at the root but are tests: their tab
+        # comparisons are assertions about the state, not derivations from it.
+        if path.name.endswith("RuntimeTest.qml") or path.name.endswith("Probe.qml"):
+            continue
         text = code(path)
         swept += 1
-        # The literal lives in edit_mode.js and nowhere else, so the constant
-        # cannot drift from the string anyone compares against.
-        assert '"lockscreen"' not in text and "'lockscreen'" not in text, \
-            f"{path.name} spells the Lockscreen tab as a literal"
+        if path != MODULE:
+            assert '"lockscreen"' not in text and "'lockscreen'" not in text, \
+                f"{path} spells the Lockscreen tab as a literal"
         if path == GLOBAL_STATES:
             continue
         assert not re.search(r"editTab\s*===", text), \
-            (f"{path.name} compares the tab itself - read "
+            (f"{path} compares the tab itself - read "
              f"GlobalStates.editLockPreview instead")
         for match in re.finditer(r"(?<![.\w])editLockPreview\b", text):
             line = text[text.rfind("\n", 0, match.start()) + 1:
                         text.find("\n", match.start())]
             assert "GlobalStates.editLockPreview" in line, \
-                f"{path.name}: a second source for the preview: {line.strip()}"
-    assert swept == len(PARTICIPANTS) + 3, "the sweep lost a file"
+                f"{path}: a second source for the preview: {line.strip()}"
+    assert swept > 400, f"the tree sweep found only {swept} files"
 
 
 if __name__ == "__main__":
