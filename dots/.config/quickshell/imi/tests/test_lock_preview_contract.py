@@ -144,5 +144,91 @@ def test_the_root_area_and_the_key_handlers_stand_down_too():
                  f"being interactive; its first statement is: {first!r}")
 
 
+def declarations_at_root(text: str):
+    """(properties, signals, functions) declared at the component's root level.
+
+    Depth-tracked rather than regexed flat, because `LockContext.qml` declares
+    children (Timer, Process, PamContext) whose own members are not part of
+    the surface a consumer sees.
+    """
+    properties, signals, functions = set(), set(), set()
+    depth = 0
+    for line in text.splitlines():
+        stripped = line.strip()
+        if depth == 1:
+            prop = re.match(
+                r"(?:readonly\s+|default\s+)?property\s+[\w<>.]+\s+(\w+)", stripped)
+            if prop:
+                properties.add(prop.group(1))
+            sig = re.match(r"signal\s+(\w+)", stripped)
+            if sig:
+                signals.add(sig.group(1))
+            func = re.match(r"function\s+(\w+)\s*\(", stripped)
+            if func:
+                functions.add(func.group(1))
+        depth += stripped.count("{") - stripped.count("}")
+    return properties, signals, functions
+
+
+def test_the_preview_context_declares_the_real_contexts_whole_surface():
+    # The preview is a SEPARATE component, so the one way it stays honest is
+    # enumeration: every property, signal and function the real context
+    # declares at its root must exist on the preview, or the surface reads an
+    # `undefined` from it - which is a value, not an error, and shows up as a
+    # binding that silently stops meaning anything (AGENT.md's undeclared-key
+    # family). The counts guard the parser: a sweep that extracted nothing
+    # from LockContext.qml must fail here, not certify an empty set.
+    properties, signals, functions = declarations_at_root(code(LOCK_CONTEXT))
+    assert len(properties) >= 6, \
+        f"extracted only {sorted(properties)} properties from LockContext.qml"
+    assert len(signals) >= 3, \
+        f"extracted only {sorted(signals)} signals from LockContext.qml"
+    assert len(functions) >= 7, \
+        f"extracted only {sorted(functions)} functions from LockContext.qml"
+    preview_properties, preview_signals, preview_functions = \
+        declarations_at_root(code(PREVIEW_CONTEXT))
+    for name in properties:
+        assert name in preview_properties, \
+            f"LockPreviewContext is missing the property `{name}`"
+    for name in signals:
+        assert name in preview_signals, \
+            f"LockPreviewContext is missing the signal `{name}`"
+    for name in functions:
+        assert name in preview_functions, \
+            f"LockPreviewContext is missing the function `{name}`"
+
+
+def test_the_preview_context_cannot_authenticate_or_spawn_anything():
+    text = read(PREVIEW_CONTEXT)
+    # `read`, not `code`: a PamContext in a comment is not a defect, but this
+    # file has no business even discussing one - and more importantly, the
+    # check must not be routable around by wrapping the construct oddly.
+    for forbidden in ("PamContext", "fprintd", "Process", "Quickshell.Io",
+                      "Quickshell.Services.Pam", "exec", "running"):
+        assert forbidden not in text, \
+            (f"LockPreviewContext contains `{forbidden}` - the preview context "
+             f"must construct nothing that can authenticate or spawn")
+    # And its unlock paths are empty by construction, not merely unused: a
+    # body that forwards to anything is a body a later edit can point at pam.
+    for name in ("tryUnlock", "tryFingerUnlock"):
+        match = re.search(rf"function {name}\([^)]*\)\s*\{{(.*?)\}}",
+                          code(PREVIEW_CONTEXT), re.S)
+        assert match, f"LockPreviewContext no longer declares {name}"
+        assert match.group(1).strip() == "", \
+            f"{name} must have an empty body in the preview context"
+
+
+def test_the_surface_takes_the_context_as_a_plain_object():
+    # The typed `required property LockContext context` would refuse the
+    # preview component at assignment; QtObject admits both. The real caller
+    # (Lock.qml) still passes the real context.
+    text = code(LOCK_SURFACE)
+    assert re.search(r"required property QtObject context", text), \
+        "LockSurface must type its context as QtObject"
+    lock = read(ROOT / "modules/imi/lock/Lock.qml")
+    assert re.search(r"context:\s*root\.context", lock), \
+        "Lock.qml no longer hands the real LockContext to the surface"
+
+
 if __name__ == "__main__":
     raise SystemExit(run(globals()))
