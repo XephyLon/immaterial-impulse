@@ -7,9 +7,11 @@ MouseArea {
     id: root
     // The drawn lattice is the one the drag snaps to (AbstractWidget's 12px),
     // with every second line emphasised so the 24px rhythm this used to draw is
-    // still readable. Drawing 24 while snapping 12 was honest enough while the
-    // grid was only up during a drag; with it up for the whole of Edit Mode, a
-    // widget landing between two lines reads as broken snapping.
+    // still readable. Drawing 24 while snapping 12 puts a widget between two
+    // lines at every second stop, which reads as broken snapping - and it reads
+    // that way exactly when the grid is up, i.e. during the drag that is doing
+    // the snapping. Edit Mode made it impossible to miss rather than made it
+    // true.
     property int gridSize: 12
     property bool showGrid: false
     readonly property bool isWidgetCanvas: true
@@ -17,20 +19,44 @@ MouseArea {
     // the desktop's. The overlay reuses this component and has its own store
     // and its own dismissal, so it must not follow the mode.
     property bool editMode: false
-    // Edit Mode's whole purpose is that the affordances stop hiding, so the
-    // grid is up for the mode rather than for the gesture. It overrides the
-    // config switch, whose meaning is "draw the grid while I drag".
-    readonly property bool gridVisible: root.editMode
-        || (showGrid && Config.options.background.showGrid)
+    // The lattice belongs to the GESTURE, in the mode as well as out of it.
+    // Edit Mode used to force it on for the whole mode, on the spec's
+    // discoverability argument (§4.1: the grid was "the one thing that reliably
+    // says this is editable" and only appeared once you were already dragging).
+    // That argument was written before the mode had any chrome of its own; the
+    // toolbar and the tab bar say it now, and a mode that greets you with a
+    // screen of graph paper hides the desktop you came to look at. So what the
+    // mode overrides is the config SWITCH - whose meaning is "draw the grid
+    // while I drag" - and not the gesture: while editing, a drag always draws
+    // the lattice it is landing on.
+    //
+    // `showGrid` is set from AbstractWidget's onDraggingChanged, so it follows
+    // `dragActive` - which is raised only once the pointer has moved past
+    // `drag.threshold`, never on the press. That is the distinction that
+    // matters: a widget's own controls (the resize grip, a right-click, a click
+    // that selects) all press without dragging, and a lattice flashing up under
+    // every one of them would be worse than one that is always on.
+    readonly property bool gridVisible: root.showGrid
+        && (root.editMode || Config.options.background.showGrid)
     // ...and it arrives and leaves rather than appearing. The lattice used to be
     // a Repeater model going straight from 0 to a screen's worth of lines, so it
     // popped on while the desktop eased into the mode beside it - the reading of
-    // "not M3E-compliant" that costs nothing to fix. An effects tier because
-    // this is an opacity, which is what elementMoveFast is for and what the
-    // centre lines in this same file already animate on.
+    // "not M3E-compliant" that costs nothing to fix.
+    //
+    // The FASTER of the two effects tiers, which is a change from when this
+    // fade arrived with the mode: there it eased in beside a 500ms shrink and
+    // 200ms was the slow half of a pair. Its reference now is the pointer. The
+    // widget is already `drag.threshold` (10px) from where it was pressed when
+    // the lattice is asked for, and it keeps travelling while the lattice
+    // arrives - at an unhurried 1000px/s that is 200px, sixteen 12px cells,
+    // under elementMoveFast against twelve under elementMoveFaster. Neither is
+    // instant and no effects tier below 150ms exists, so the choice is the
+    // faster tier or a literal, and docs/M3_GUIDELINES.md §2 forbids the
+    // literal. Taken whole through the tier's own factory rather than as a
+    // duration, or the curve silently falls back to Easing.Linear.
     property real gridStrength: root.gridVisible ? 1 : 0
     Behavior on gridStrength {
-        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)
     }
 
     // Desktop widgets sit on the background layer surface, which only accepts
@@ -161,6 +187,11 @@ MouseArea {
     }
 
     function widgetRemoved(widget) {
+        // A widget destroyed mid-drag never reaches onDraggingChanged, so
+        // nothing else takes the lattice down again: a FadeLoader dropping the
+        // widget under the pointer (disabling a plugin from Settings while it
+        // is being dragged) would leave the grid up for the rest of the mode.
+        if (widget.dragging) root.setDragging(false)
         const idx = root.selectedWidgets.indexOf(widget)
         if (idx !== -1) {
             const next = root.selectedWidgets.slice()
