@@ -68,16 +68,24 @@ def violations_in(name: str, raw: str) -> list:
     text = strip_comments(raw)
     found = []
 
-    # A direct assignment to a Config.options leaf. `=` but not `==`/`===`/`>=`
-    # etc; comparisons carry a second `=` or a preceding operator character.
+    # A direct assignment to a Config.options leaf - plain or compound
+    # (`+=`, `||=`, `??=`, ...). `=` but not `==`/`===`/`>=` etc; comparisons
+    # carry a second `=` or a preceding comparison character.
     for match in re.finditer(
-            r"Config\.options\.([A-Za-z0-9_.?]+?)\s*=(?![=])", text):
+            r"Config\.options\.([A-Za-z0-9_.?]+?)\s*"
+            r"(?:[-+*/%]|\|\||&&|\?\?)?=(?![=])", text):
         before = text[:match.start()].rstrip()[-1:]
         if before in ("!", "<", ">", "="):
             continue
         path = match.group(1)
         if not path_allowed(path):
             found.append(f"{name}: writes Config.options.{path}")
+
+    # Bracket access cannot be resolved to a path, so it cannot be checked
+    # against an allowlist - which makes it a violation outright rather than a
+    # hole: an allowlist reachable through a computed key is not an allowlist.
+    if re.search(r"Config\.options\s*\[", text):
+        found.append(f"{name}: reaches Config.options through a computed key")
 
     # An in-place mutation reaches the same store without an `=`.
     for match in re.finditer(
@@ -113,9 +121,13 @@ def violations_in(name: str, raw: str) -> list:
 
 
 def edit_mode_files() -> list:
+    # .js as well as .qml: a helper library under the mode's directory writes
+    # through exactly the same singletons, and a sweep that reads only QML is
+    # an invitation to move the write one file sideways.
     files = []
     for directory in EDIT_MODE_DIRS:
         files.extend(sorted(directory.rglob("*.qml")))
+        files.extend(sorted(directory.rglob("*.js")))
     return files
 
 
@@ -155,6 +167,15 @@ class EditModeScopeLint(unittest.TestCase):
 
     def test_the_detector_flags_a_host_option_outside_the_modes_three(self):
         fixture = 'PluginState.setOption(manifest.id, "blurEnabled", true)\n'
+        self.assertEqual(len(violations_in("fixture", fixture)), 1)
+
+    def test_the_detector_flags_a_compound_assignment(self):
+        fixture = ('Config.options.appearance.fakeDarkMode.wallpaperDetect += 1\n'
+                   'Config.options.bar.autoHide.enable ||= true\n')
+        self.assertEqual(len(violations_in("fixture", fixture)), 2)
+
+    def test_the_detector_flags_a_bracket_access(self):
+        fixture = 'Config.options["appearance"].transparency.enable = false\n'
         self.assertEqual(len(violations_in("fixture", fixture)), 1)
 
     def test_the_detector_accepts_the_sanctioned_writes(self):
