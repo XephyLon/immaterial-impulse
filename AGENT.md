@@ -2498,18 +2498,71 @@ mode is built out of are worth not re-deriving:
   component is arranged to avoid. 1df616e62 ("fix(editMode): the card's edge
   stops having a seam drawn through it").
 
+  **And then all three tones went, because the sum of three defensible tones is
+  a border.** Every measurement above scores one tone at a time, and the
+  complaint that followed was about the whole card: *"edit mode's layout having
+  this thick border is what looked ugly for me. I want it to look glassy without
+  it having this thick border."* Walked inward across the left flank on the real
+  desktop — backdrop 28, shade 17, 17, specular 77, 77, highlight 128, desktop
+  105. Five drawn pixels of dark-then-bright piping at one strength the whole way
+  round a 3872px card, which is what a border *is*, and no per-tone number says
+  so. It is now ONE tone, `borderWidth.standard` wide: 0.44 along the top, 0.07
+  along the flank, 0.13 at the bottom.
+
+  Three things about why each tone could go, and they are the reusable part:
+
+  - **The shade band was a hard copy of the shadow.** It existed to carry the
+    edge over a bright picture, and `StyledRectangularShadow` is already a
+    darkening outside the card, from the same lamp, soft where the band was a
+    hard 4px lip. Two darkenings on one edge.
+  - **The inner highlight was 1df616e62's outline in the other colour.**
+    Anything drawn INSIDE the card cannot ride `surround`'s mask — that mask
+    removes exactly the card — so it is a uniform border by construction, at one
+    strength round the whole perimeter, and it composites over the DESKTOP rather
+    than over the backdrop. Measured, it was the brightest thing on the boundary
+    on three edges out of four: +41 levels over a wallpaper at 105 on the flank,
+    +35 over one at 36 along the top. A line brighter than the specular it is
+    supposedly supporting is the edge.
+  - **The catch and the shadow divide the perimeter rather than doubling up**,
+    and that falls out of the shadow's own `offset: (0, 1)` — weakest directly
+    above the card, strongest below, which is the opposite ordering to the catch.
+    Measured over the brightest wallpaper, the backdrop falls 172 → 158 above the
+    card and 237 → 146 below it. The boundary is a bright line where the shade is
+    thin and a pool of shade where the line is not.
+
+  What generalises past the card: **"is this glass or a border" is a question
+  about the whole perimeter, and non-uniformity is a RATIO rather than a
+  direction.** The edge that read as a border was already non-uniform — 0.46
+  along the top against 0.26 down the flank — and 0.26 of white on a 2px band all
+  the way round is a stroke a shade fainter, not a catch. `test_edit_mode_chrome.py`
+  scores three things now: a catch along the top (median 56.5/255), flanks and a
+  bottom that stay inside the range the backdrop and the desktop already span
+  (worst 0.0, against 31.0 and 37.8 before), and a drawn band at most two pixels
+  wide (1, against 5). The first of those is the one that had been missing:
+  **every edge check in that file passed with the edge removed entirely**, because
+  the notch check reads the profile from its crest inward and a bare ramp has no
+  notch in it. `test_edit_mode_contract.py` holds the source half — no
+  `border.width` anywhere in the file (the only way to draw a line the mask does
+  not cut, and what both retired lines were written as), no `colGlassShade`, the
+  width at `borderWidth.standard`, and the flank at most a quarter of the top.
+  ("fix(editMode): the card's edge becomes a catch, not a rim").
+
   Two things generalise.
-  The two outer tones are plain `Rectangle`s declared INSIDE `surround`, whose
-  layer is already masked to the complement of the card — so the mask cuts each
-  of them back to the band outside the card by itself and the shading is the
-  Rectangle's own gradient, which is why the whole treatment adds no layer, no
-  mask and no effect (measured under headless weston's software renderer, 14.91s
-  ± 0.22 of user CPU against 14.68s ± 0.32, indistinguishable on a 3-4% spread).
-  And its two colours are `Appearance.colors.colGlassSpecular`/`colGlassShade`,
-  the one pair in that file deliberately NOT derived from the wallpaper: every
-  other colour there is generated from the picture on screen, so an edge drawn in
-  one of them is guaranteed to be a colour the picture already contains. Same
-  reasoning as the depth picker's hardcoded contour.
+  The one outer tone is a plain `Rectangle` declared INSIDE `surround`, whose
+  layer is already masked to the complement of the card — so the mask cuts it
+  back to the band outside the card by itself and the shading is the Rectangle's
+  own gradient, which is why the whole treatment adds no layer, no mask and no
+  effect (measured under headless weston's software renderer, 14.91s ± 0.22 of
+  user CPU against 14.68s ± 0.32, indistinguishable on a 3-4% spread).
+  And its colour is `Appearance.colors.colGlassSpecular`, the one colour in that
+  file deliberately NOT derived from the wallpaper: every other colour there is
+  generated from the picture on screen, so an edge drawn in one of them is
+  guaranteed to be a colour the picture already contains. Same reasoning as the
+  depth picker's hardcoded contour. Its `colGlassShade` sibling went with the
+  shade band — nothing else had ever read it, and `lint_appearance_tokens.py`
+  fails on a token that is read and not declared, never on one declared and read
+  by nobody, so a dead token there rots silently. ("refactor(appearance): a glass
+  edge is one tone, so colGlassShade goes").
 
   Two things measured rather than argued while building the original. The shadow
   stays `StyledRectangularShadow` at the magnitude the component defines —
@@ -2626,7 +2679,8 @@ feat(editMode): draw the mode's toolbar and tab bar on a surface of their own,
 test(editMode): score the chrome against the desktop it frames,
 fix(widgetCanvas): the lattice comes up with the drag, not with the mode,
 feat(editMode): give the card's edge thickness instead of a drawn line,
-fix(editMode): stop the card's rounded corner biting a widget the user placed.)
+fix(editMode): stop the card's rounded corner biting a widget the user placed,
+fix(editMode): the card's edge becomes a catch, not a rim.)
 
 **The clock depth layer is the counter-case to that rule, and it is why it is a
 FOURTH sibling.** `widgetCanvas` sits at `z: 2` as a sibling of
