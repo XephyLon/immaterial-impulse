@@ -48,6 +48,14 @@ Item {
     // somewhere arbitrary.
     property rect card: Qt.rect(0, 0, root.width, root.height)
 
+    // The screen minus what the bar and the dock occupy - `edit_mode.js`'s
+    // `areaRect`, interpolated on the same progress as `card`. The two bands the
+    // chrome sits in are the gaps between the two rectangles, so a bar of any
+    // height and a dock on any edge push the chrome rather than being drawn over
+    // by it. Defaults to the whole item, which is the geometry the mode had
+    // before it knew about either panel.
+    property rect area: Qt.rect(0, 0, root.width, root.height)
+
     signal doneRequested()
 
     // Published for the surface's input mask: these two rects are the only
@@ -62,8 +70,11 @@ Item {
         // point today and stop being one the moment stage 5's drawer
         // translates the desktop, and the chrome belongs to the desktop.
         x: root.card.x + (root.card.width - width) / 2
-        // Centred in the band between the screen's top edge and the card's.
-        y: (root.card.y - height) / 2
+        // Centred in the band between the usable area's top edge and the card's
+        // - the screen's top edge only while nothing is on that edge. The
+        // viewport reserves `margin + toolbarHeight + margin` there, so this
+        // lands with a margin above and below it and cannot reach the bar.
+        y: root.area.y + (root.card.y - root.area.y - height) / 2
         spacing: Appearance.spacing.space150
 
         MaterialSymbol {
@@ -105,11 +116,13 @@ Item {
     Toolbar {
         id: tabBar
         x: root.card.x + (root.card.width - width) / 2
-        // ...and the mirror band, between the card's bottom edge and the
-        // screen's. The card is centred, so the two bands are the same height
-        // and the two pieces travel by the same amount.
+        // ...and the mirror band, between the card's bottom edge and the usable
+        // area's. The card is centred in that area, so the two bands are the
+        // same height and the two pieces travel by the same amount - which is
+        // true with a bar on one edge and a dock on the other, and was true
+        // before only because neither was accounted for.
         y: root.card.y + root.card.height
-            + (root.height - root.card.y - root.card.height - height) / 2
+            + (root.area.y + root.area.height - root.card.y - root.card.height - height) / 2
 
         // A tab bar with one tab in it, and not a label that will grow into
         // one. The Lockscreen tab (spec §1.4) is stage 9's, and it arrives as

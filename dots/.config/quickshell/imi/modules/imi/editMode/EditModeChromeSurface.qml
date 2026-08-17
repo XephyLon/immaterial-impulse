@@ -76,13 +76,24 @@ PanelWindow {
     // the window boundary (which is what the clock depth layer's viewport has to
     // do) because every input is available on both sides: this surface is the
     // same screen, `GlobalStates.editProgress` is the one animated scalar, and
-    // the drawer width and margin are `Appearance` tokens. There is no live
-    // state here that only the other window can see.
+    // the drawer width, the margin and the toolbar's height are `Appearance`
+    // tokens. There is no live state here that only the other window can see.
+    //
+    // The one input that is NOT re-derived is what the bar and the dock occupy:
+    // that comes from `Config.options.bar.*` and `Config.options.dock.*` through
+    // `dock_geometry.js`, and a second file working it out is a second answer to
+    // where the dock is. `EditModeInsets` is that one answer.
+    readonly property var insets: EditModeInsets.insetsFor(root.screen?.name ?? "")
     readonly property var viewport: EditMode.viewportGeometry({
         screenWidth: root.width,
         screenHeight: root.height,
         drawerWidth: Appearance.sizes.editModeDrawerWidth,
-        margin: Appearance.sizes.editModeMargin
+        margin: Appearance.sizes.editModeMargin,
+        chromeThickness: Appearance.sizes.toolbarHeight,
+        insetTop: root.insets.top,
+        insetBottom: root.insets.bottom,
+        insetLeft: root.insets.left,
+        insetRight: root.insets.right
     })
 
     mask: Region {
@@ -96,6 +107,12 @@ PanelWindow {
         id: chrome
         anchors.fill: parent
         card: EditMode.cardRect(root.viewport, GlobalStates.editProgress,
+            root.width, root.height)
+        // The part of the screen the bar and the dock have not taken, closing in
+        // at the same rate the card shrinks out of it. The chrome is placed
+        // between the two rectangles, so it clears both panels by construction
+        // rather than by a literal measured against one of them.
+        area: EditMode.areaRect(root.viewport, GlobalStates.editProgress,
             root.width, root.height)
         // The second of the mode's two stand-down gates, the other being the
         // loader that creates this window at all. Either alone hides the
