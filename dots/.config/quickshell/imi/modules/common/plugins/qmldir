@@ -1,5 +1,6 @@
 module qs.modules.common.plugins
 
+singleton BarWidgets 1.0 BarWidgets.qml
 singleton PluginManager 1.0 PluginManager.qml
 singleton PluginState 1.0 PluginState.qml
 PluginNode 1.0 PluginNode.qml
