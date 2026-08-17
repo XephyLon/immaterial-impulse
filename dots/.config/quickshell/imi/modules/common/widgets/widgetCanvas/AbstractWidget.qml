@@ -396,7 +396,14 @@ MouseArea {
 
         dragProxy.x = root.x
         dragProxy.y = root.y
-        if (!dragging) root.clearEdgeSnap()
+        // Deferred, because this handler runs while the drag Binding may not
+        // have deactivated yet - the `when` and this handler both observe
+        // `dragging`, and nothing orders them. Nulling the hold under a
+        // still-live Binding re-evaluates it to the lattice branch and rounds
+        // an edge-snapped landing off the edge it was released on: measured,
+        // a widget released holding 465 committed 468. One turn later the
+        // Binding is inert and the clear touches nothing but the guides.
+        if (!dragging) Qt.callLater(root.clearEdgeSnap)
     }
 
     Behavior on x {
