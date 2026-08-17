@@ -2669,6 +2669,55 @@ mode is built out of are worth not re-deriving:
   the toolbar, that is the only check in either half that reddens.
   620a480de ("test(editMode): score the chrome against the panels, and the edge
   as a bevel").
+- **The drawer spends the reservation, and the ONLY term of the transform its
+  open state reaches is the desktop's `x`.** `edit_mode.js`'s `drawerTravel` is
+  what the centred desktop's free side cannot absorb of the drawer-plus-margin
+  slot (zero on screens where the scale ceiling left more room than the slot
+  needs), and `atProgress` takes it as a shift applied to `x` alone — the size
+  takes the drawer's WIDTH whether or not it is open, so opening it translates
+  the desktop and can never resize it (spec §1.3; a resize mid-edit is
+  b710ef731's moving target under every widget at once). The shift rides the
+  same `t` as the scale, so the exit lands on the identity even while both
+  scalars are mid-flight. Those scalars are `GlobalStates.editDrawerOpen` /
+  `editDrawerProgress`, beside the mode's own pair for the same two-scene-graphs
+  reason, and the one-scalar sweep in `test_edit_mode_contract.py` refuses a
+  second `Behavior` on either. The drawer itself (`EditModeDrawer.qml`) is
+  chrome: `drawerRect` pins its right edge to the usable area's and animates its
+  WIDTH, because the surface's input mask tracks exactly x/y/width/height — a
+  closed drawer is a zero-width rect whose mask region is empty, which is what
+  lets it sit in `quickshell:editMode`'s mask as a third region without a
+  permanently-reachable full-height rect eating clicks on whatever panel lives
+  on that edge. Its rows are deliberately `MouseArea`s, not buttons: a drag out
+  of the clipped panel needs the implicit grab of the press to keep delivering
+  events after the pointer leaves the reveal, and the contract's no-MouseArea
+  sweep names the drawer as the one exception. The drawer writes no store —
+  both gestures are signals, and `EditModeChromeSurface` makes every write: a
+  drop maps screen→canvas through `canvasPointFromScreen` (the inverse composed
+  out of the same `atProgress` the desktop is drawn with, so the two directions
+  cannot drift), is centred on the span the widget will come up at, snapped and
+  clamped by `dropPosition`, and the position is written BEFORE the enable — a
+  newly enabled plugin mounts at whatever the store holds, and spec §8.3 places
+  an added widget the moment it is added rather than inventing an unplaced
+  state. (feat(editMode): the drawer's travel, rectangle and drop point as
+  arithmetic; feat(editMode): the drawer, fed by the plugin catalogue, and
+  add-at-pointer.)
+- **What the mode may write is a failing check now**
+  (`tests/lint_edit_mode_scope.py`): a write from any file under the edit-mode
+  directories to a `Config.options.*` path outside spec §7.1's placement and
+  presence keys, a `PluginState.setOption` key outside `{__gridSize,
+  positionLocked, clickThrough}`, or a computed path or key — which no allowlist
+  can verify — reddens the suite. Three spellings are caught (assignment,
+  in-place `push`/`splice`, `setNestedValue`), the detector is proven against
+  in-memory fixtures inside the module, and the sweep asserts it still found the
+  edit-mode files so a directory move cannot leave it green over nothing.
+  (test(lint): fail on an edit-mode write outside placement's scope.)
+- **`WidgetsSubmenu` is gone.** Its widget list had been empty since the desktop
+  widgets became plugins, and its one live control was the global lock the mode
+  suppresses — a switch that turns off something the editor turns back on. The
+  desktop menu's Widgets row keeps its click through to Settings and loses the
+  hover submenu and the chevron that promised it; the sanctioned writers of
+  `background.widgetsLocked` shrink to `AbstractWidget`'s right-click.
+  (refactor(desktopMenu): remove WidgetsSubmenu.)
 (feat(editMode): shrink the desktop into a viewport on the background surface,
 feat(editMode): stand the per-widget frost down for the mode,
 feat(editMode): draw the shrunk desktop as a card, not as a cropped screenshot,
@@ -2680,7 +2729,10 @@ test(editMode): score the chrome against the desktop it frames,
 fix(widgetCanvas): the lattice comes up with the drag, not with the mode,
 feat(editMode): give the card's edge thickness instead of a drawn line,
 fix(editMode): stop the card's rounded corner biting a widget the user placed,
-fix(editMode): the card's edge becomes a catch, not a rim.)
+fix(editMode): the card's edge becomes a catch, not a rim,
+feat(editMode): the drawer's open state, one scalar beside the mode's,
+feat(editMode): opening the drawer translates the desktop,
+test(editMode): drive the drawer's translation with real gestures.)
 
 **The clock depth layer is the counter-case to that rule, and it is why it is a
 FOURTH sibling.** `widgetCanvas` sits at `z: 2` as a sibling of
