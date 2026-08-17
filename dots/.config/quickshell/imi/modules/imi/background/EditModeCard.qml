@@ -69,12 +69,16 @@ Item {
     //
     //   - a shade band just OUTSIDE the card, so the card has a lip. It is what
     //     carries the edge over a bright picture, where a specular cannot.
-    //   - a specular ON the edge, brightest along the top and fading down the
-    //     sides to a weak bounce at the bottom - the same lamp the drop shadow
-    //     below is drawn for. A uniform bright rim reads as a stroke; a rim that
-    //     is brighter where light would catch reads as a surface.
+    //   - a specular ON the edge, brightest along the top, rolling off round the
+    //     corners to a grazing flank and coming back as a weak bounce at the
+    //     bottom - the same lamp the drop shadow below is drawn for. A uniform
+    //     bright rim reads as a stroke; a rim that is brighter where light would
+    //     catch reads as a surface.
     //   - a highlight just INSIDE, which is what gives the specular something to
-    //     be the outer face of rather than a line floating on the seam.
+    //     be the outer face of rather than a line floating on the seam. It is
+    //     the innermost tone on the edge, and there is deliberately nothing
+    //     between it and the specular - see its own comment for the 1px outline
+    //     that used to be there and why a notch is not part of a bevel.
     //
     // The first two cost nothing extra: they are plain Rectangles declared
     // inside `surround`, whose layer is already masked to the complement of the
@@ -84,6 +88,15 @@ Item {
     // is the cost this whole component is arranged to avoid.
     readonly property real edgeShadeWidth: Appearance.borderWidth.heavy
     readonly property real edgeSpecularWidth: Appearance.borderWidth.emphasis
+
+    // Where the light rolls off the edge, as a fraction of the card's height:
+    // the corner arc is the piece of the outline whose normal turns from facing
+    // UP to facing SIDEWAYS, so it is exactly the run over which a lamp
+    // overhead stops reaching the edge. Expressed against `cardRadius` rather
+    // than as a number, so a change to the corner moves the roll-off with it
+    // instead of leaving a rim that is bright right round the bend.
+    readonly property real edgeRollOff: root.card.height > 0
+        ? Math.min(0.5, root.cardRadius / root.card.height) : 0
 
     // Everything that lives OUTSIDE the card, composited once and then cut to
     // shape. The mask is inverted, so what survives is the complement of the
@@ -153,7 +166,7 @@ Item {
             // edge over a bright wallpaper, where the specular cannot, and a
             // lip that faded out along its own top would have no edge there.
             gradient: Gradient {
-                GradientStop { position: 0; color: Qt.alpha(Appearance.colors.colGlassShade, 0.18) }
+                GradientStop { position: 0; color: Qt.alpha(Appearance.colors.colGlassShade, 0.3) }
                 GradientStop { position: 1; color: Qt.alpha(Appearance.colors.colGlassShade, 0.5) }
             }
         }
@@ -168,14 +181,26 @@ Item {
             antialiasing: true
             // The non-uniformity is the point. A rim at one strength all the way
             // round is a stroke however bright it is; light catching the top of
-            // an edge, fading off down the sides and coming back weakly at the
-            // bottom is what a piece of glass looks like. The bottom stop is a
-            // bounce off whatever the card is lying on, so it is much weaker
-            // than the top rather than symmetric with it.
+            // an edge, rolling off round the corners and coming back weakly at
+            // the bottom is what a piece of glass looks like. The bottom is a
+            // bounce off whatever the card is lying on, so it is weaker than the
+            // top rather than symmetric with it.
+            //
+            // The roll-off happens over the CORNER, not over the flank. Shipped
+            // as a plain 0 / 0.5 / 1 ramp, the run from the top's value to the
+            // side's value was half the card - so both top corners were as
+            // bright as the top edge and the whole 3872px top read as one
+            // uniform stroke, which is the thing the paragraph above says a rim
+            // must not be (measured on the real desktop: crest 111/255 median
+            // along the top against 37 along the left, and 0 at its weakest
+            // point). Holding the top's value only to the end of the arc and the
+            // side's value along the whole flank is the same idea the comment
+            // always claimed, applied on the geometry that actually turns.
             gradient: Gradient {
-                GradientStop { position: 0; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.55) }
-                GradientStop { position: 0.5; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.18) }
-                GradientStop { position: 1; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.3) }
+                GradientStop { position: 0; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.46) }
+                GradientStop { position: root.edgeRollOff; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.26) }
+                GradientStop { position: 1 - root.edgeRollOff; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.26) }
+                GradientStop { position: 1; color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.32) }
             }
         }
     }
@@ -201,12 +226,36 @@ Item {
         }
     }
 
-    // The 1px outline every floating surface in this shell carries beside its
-    // shadow (docs/M3_GUIDELINES.md §1). Drawn over the seam between the
-    // desktop and the cut rather than inside the mask, where the half of it
-    // outside the card would be removed along with everything else there.
+    // The inner face of the bevel, and the innermost thing on the edge - which
+    // is a correction rather than a rearrangement.
+    //
+    // A 1px `colLayer0Border` outline sat here, between this and the specular,
+    // on the reasoning that it is what every floating surface in this shell
+    // carries beside its shadow. Measured on the real desktop it was a NOTCH:
+    // walking inward from the backdrop the profile went shade, crest, *dark
+    // line*, highlight, desktop - down as much as 70/255 below the lower of the
+    // two bright bands either side of it, on all four edges. A bevel falls off
+    // its crest into the surface; this one fell, rose and fell, so the eye read
+    // the dark line as the card's edge and the bright band as a piping outside
+    // it. That is a stroke with a bevel drawn around it, not a bevel.
+    //
+    // The outline is gone rather than moved, and docs/M3_GUIDELINES.md §1 is
+    // what licenses that rather than what it is traded against: "visible borders
+    // are not required for every surface", and the job the guideline gives the
+    // outline - to "clearly define edges against complex backgrounds" - is the
+    // job this bevel exists to do, because the outline could not do it over a
+    // wallpaper. One edge treatment, not two stacked.
+    //
+    // This one cannot ride `surround`'s mask - it is INSIDE the card, which is
+    // exactly what that mask removes - so it is a border rather than a
+    // gradient-filled rect, and it is uniform where the specular is not. A real
+    // bevel's inner face would be the specular's inverse (the inside of the top
+    // edge faces away from the light), and expressing that needs a second mask
+    // and a second layer, which is the cost this whole component is arranged
+    // around. Faint enough not to become a second line on a dark wallpaper,
+    // present enough that the crest has a near side.
     Rectangle {
-        id: cardEdge
+        id: cardInnerHighlight
         x: root.card.x
         y: root.card.y
         width: root.card.width
@@ -215,27 +264,6 @@ Item {
         color: "transparent"
         antialiasing: true
         border.width: Appearance.borderWidth.standard
-        border.color: Appearance.colors.colLayer0Border
-    }
-
-    // The inner face of the bevel. This one cannot ride `surround`'s mask - it
-    // is INSIDE the card, which is exactly what that mask removes - so it is a
-    // border rather than a gradient-filled rect, and it is uniform. That is a
-    // deliberate asymmetry rather than an omission: the specular is the tone
-    // that has to look lit, and this is the tone that has to make the specular
-    // look like the outside of something. Faint enough that it does not become
-    // a second line on a dark wallpaper, present enough that the edge has a
-    // near side.
-    Rectangle {
-        id: cardInnerHighlight
-        x: root.card.x + Appearance.borderWidth.standard
-        y: root.card.y + Appearance.borderWidth.standard
-        width: root.card.width - 2 * Appearance.borderWidth.standard
-        height: root.card.height - 2 * Appearance.borderWidth.standard
-        radius: Math.max(0, root.cardRadius - Appearance.borderWidth.standard)
-        color: "transparent"
-        antialiasing: true
-        border.width: Appearance.borderWidth.standard
-        border.color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.14)
+        border.color: Qt.alpha(Appearance.colors.colGlassSpecular, 0.16)
     }
 }
