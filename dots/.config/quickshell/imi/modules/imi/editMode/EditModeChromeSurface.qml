@@ -124,12 +124,7 @@ PanelWindow {
     // Widgets makes) and `PluginState`'s placement keys. That boundary is
     // spec §9's, and `lint_edit_mode_scope.py` polices it.
     function enabledWithout(id) {
-        const next = [];
-        for (let i = 0; i < Config.options.plugins.enabled.length; i++) {
-            if (Config.options.plugins.enabled[i] !== id)
-                next.push(Config.options.plugins.enabled[i]);
-        }
-        return next;
+        return EditMode.enabledWithout(Config.options.plugins.enabled, id);
     }
 
     function enablePlugin(id) {

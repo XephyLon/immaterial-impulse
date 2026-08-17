@@ -101,11 +101,13 @@ MouseArea {
     focus: root.selectionEnabled
     Keys.onEscapePressed: {
         const action = EditMode.resolveEscape({
+            menuOpen: GlobalStates.editWidgetMenuOpen,
             gestureInFlight: root.draggingWidget() !== null,
             selectionCount: root.selectedWidgets.length,
             tab: EditMode.DESKTOP_TAB
         })
-        if (action === "cancelGesture") root.cancelActiveDrag()
+        if (action === "closeMenu") GlobalStates.editWidgetMenuOpen = false
+        else if (action === "cancelGesture") root.cancelActiveDrag()
         else if (action === "clearSelection") root.clearSelection()
         else if (root.editMode) GlobalStates.editMode = false
     }
