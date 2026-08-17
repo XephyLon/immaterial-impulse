@@ -1453,17 +1453,35 @@ Variants {
         // unaffected - a ShaderEffectSource renders its source item in that
         // item's own coordinates, not the scene's.
         //
-        // ABOVE the desktop rather than behind it, which is what rounds the
+        // ABOVE the wallpaper rather than behind it, which is what rounds the
         // corner: see EditModeCard for why covering the corner with the picture
-        // behind it is the only cheap way to round three separately transformed
-        // siblings. Above the clock depth layer at z 3, and non-interactive,
-        // because desktopRightClickArea at z -2 works only while everything
-        // over it lets clicks through.
+        // behind it is the only cheap way to round a transformed sibling. And
+        // BELOW the widget canvas at z 2, which is the whole of what stops it
+        // rounding the widgets too.
+        //
+        // It sat at z 4, over everything, and a cover over everything cuts
+        // everything: the desktop scales about its own centre, so the canvas's
+        // edge lands exactly on the card's edge and a widget parked against a
+        // screen edge has its own edge flush with it. At a CORNER the rounding
+        // comes in on both axes at once and takes a bite out of whatever is
+        // there - measured at 5120x1440, a widget at the desktop's corner lost
+        // 20px along each edge and 10px on the diagonal. `visualizer` sits at
+        // 0,1200 in this machine's own store, so the desktop editor was cutting
+        // a corner off a widget while the user was arranging it.
+        //
+        // What that costs, and it is the deliberate trade: a widget in the
+        // corner now OVERHANGS the rounding, drawn whole over the blurred
+        // backdrop. It says "this widget is at the edge of your desktop", which
+        // is true and is information; the alternative was hiding part of a
+        // widget in the mode that exists to place it.
+        //
+        // Non-interactive either way, because desktopRightClickArea at z -2
+        // works only while everything over it lets clicks through.
         Loader {
             id: editChrome
             active: bgRoot.editProgress > 0 && !bgRoot.suppressContents
             anchors.fill: parent
-            z: 4
+            z: 1
             enabled: false
             opacity: bgRoot.editProgress
             sourceComponent: EditModeCard {
