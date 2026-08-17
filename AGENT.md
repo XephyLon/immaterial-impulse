@@ -425,6 +425,13 @@ modules/common/             Shared, feature-agnostic building blocks
   Appearance.qml              Singleton: design tokens - colors (M3 color roles), font sizes,
                               rounding, spacing, border widths, animation curves/durations, sizes.
                               Every widget reads from here rather than hardcoding values.
+  motion_policy.js           The motion policy as arithmetic, beside interaction_motion.js and for
+                              the same reason - the DECISIONS are testable and the rendering is not.
+                              How a catalogued duration is scaled by the speed multiplier, where the
+                              reduce-motion floor is and who may reach it, and how a group of things
+                              arrives in sequence (visible rank, clamped ladder, step as a fraction
+                              of a tier). Pure: every input arrives as an argument, and Appearance
+                              is its only importer - see the design-language section
   Directories.qml            Singleton: XDG paths + shell-specific cache/state paths
   Icons.qml, Images.qml       Icon/image lookup helpers
   Persistent.qml              Helper for persisting fixed-schema values outside Config's JSON
@@ -2958,6 +2965,129 @@ it about a screen rather than about a line. Note `elementMoveEnter`/`elementMove
 `alwaysRunToEnd`, so they are wrong for anything the user can reverse mid-flight — a mode toggled
 twice inside its own duration finishes arriving before it starts leaving.
 (fix(editMode): take the motion tiers whole instead of half of one each.)
+
+**...and that rule is a failing check now, with a register, because writing it down twice was not
+enough.** `tests/lint_motion_tier_partial.py` fails on an animation that names a tier's `duration`
+and sets no easing at all. The two fixes above are why it exists rather than a third paragraph:
+2044e1b3b ("fix(bar): give the util button's expand the curve it names") repaired the two size
+Behaviors in `modules/imi/bar/UtilButton.qml` and left **three more partial takes a dozen lines
+below in the same file**, and 8d81d7471 ("fix(editMode): take the motion tiers whole instead of half
+of one each") found the resize grip doing it after every grip in the shell had faded linearly since
+the file was written. Both fixes repaired the sites someone had noticed.
+
+The tree carries **40** of these across 17 files, and they are deliberately **not** fixed — the
+register in that file holds a count per file, for the reason `docs/M3_GUIDELINES.md` §3 already
+gives for this whole class: a curve shape is visually perceptible and cannot be verified from a
+test, so forty unverified visual changes in one branch is worse than forty known ones written down.
+It is a **ratchet**, not an allowlist: a file outside it may have none, a registered file may not
+grow, and a registered file that *shrinks* also fails, so fixing one forces the number down and the
+register cannot rot into something nobody rechecks. Two things it deliberately ignores, with the
+reasoning in the file: an easing that is present but generic (§3's separate register — a curve
+somebody chose, where this is a curve nobody chose), and a duration paired with a curve read
+straight out of `animationCurves` (a drift risk, not a live defect, and it would triple the register
+for no bug). 1c728dd6a ("test(lint): fail on an animation that takes a tier's duration and leaves
+its curve").
+
+**How fast the shell moves is one scalar, and where the bottom of that scale is, is a *different*
+declared thing.** `modules/common/motion_policy.js` is the arithmetic (pure, `.pragma library`, so
+the decisions are testable and nothing about the rendering has to be); `Appearance.animation`
+exposes `multiplier`, `reduceMotion`, `reduceMotionFloor`, `scale()`, `scaleVelocity()` and the
+stagger helpers, and every tier duration and velocity in that block — plus `Appearance.interaction`'s
+five tiers — goes through them. That reaches ~700 `Appearance.animation` call sites and all 140
+`SpanTravel`/`SpanFade` uses without one of them changing.
+
+This is worth having *here* and is largely decorative in the fork it came from, and the difference is
+structural: 1728 of their `duration:` values are hardcoded literals across 272 files, so their slider
+does nothing for about half of that shell. Ours has 164 literals in 62 files.
+
+Five things about it that are not obvious:
+
+- **The reduce-motion floor is not reachable by the multiplier, and that is the whole point.** The
+  fork spells the same idea as `animationMultiplier <= 0.25`, re-derived by hand as a private
+  `_animationsDisabled` at seven call sites — so there, "the user turned motion off" and "the user
+  likes it snappy" are one number, and dragging a speed slider one notch too far *is* the
+  accessibility state. `MULTIPLIER_MIN` is 0.5, `clampMultiplier()` holds for a hand-edited
+  `config.json` too, and `appearance.motion.reduceMotion` is a separate declared key with its own
+  switch. A floor a slider can land on is a floor a user can leave by accident.
+- **The floor is a duration of 0 rather than "switch the Behaviors off", and both halves were
+  measured with a `qml6` probe rather than reasoned about.** An animation driven by a `Behavior`
+  never emits `finished` at *any* duration — it runs as a job rather than through `start()` — while
+  an animation the code *starts* emits it even at duration 0. Every cleanup here that hangs off a
+  completion (`BarPopupOverlay.contentExit` releasing the outgoing content tree,
+  `ExpandablePanel`'s spent stagger animations) hangs off a started one, so a floor of 0 strands
+  none of them; disabling the Behaviors would have reached only half the motion and left the
+  started animations at full length. Collapsing the *durations* also reaches the two things a
+  `Behavior` does not — a `Timer` whose interval is a tier duration, and a `PauseAnimation` written
+  as the difference of two tiers — so a hand-built sequence keeps its order at the floor.
+- **A velocity is the reciprocal axis.** `SmoothedAnimation.velocity` is px/s, so a slower shell
+  wants a *smaller* number; applying the duration multiplier to it makes "slower" mean "faster".
+  `scaleVelocity()` divides, and the floor's velocity is large-but-finite rather than `Infinity`.
+- **Two spellings of a tier's base exist in that block and a scaling has to catch both.** Four tiers
+  read `animationCurves.*Duration` and eight state a literal; a scaling applied to one spelling
+  leaves a third of the catalogue frozen, reads perfectly in review and logs nothing.
+  `tests/test_motion_policy_contract.py` reads the whole block rather than a sample, and
+  `tests/test_motion_multiplier_runtime.py` reads the catalogue back off a real shell against a
+  seeded config — the QML default and the value the `JsonAdapter` merges over it are different
+  numbers and only the second one runs.
+- **The interaction model is a separate object and is easy to miss.** It carries the motion that
+  fires on every hover and press in the shell, so a multiplier that slows every panel while leaving
+  every button acknowledging at a fixed 150ms is half a multiplier — and reduce motion would skip
+  the class of motion the user touches most.
+  954a7885a ("feat(motion): one policy for the speed, the floor and the stagger"),
+  da2a87c07 ("feat(appearance): thread the motion policy through every catalogued tier"),
+  416dd1420 ("feat(settings): a motion speed slider and a reduce-motion switch").
+
+**One spelling of "these N things arrive in sequence".** `Appearance.animation.staggerRanks()` /
+`.staggerStep` / `.staggerDelay()` are it. There were two cascades and they disagreed in exactly the
+way that makes duplication a defect rather than redundancy: `Carousel.qml` clamped at ten members
+and `ExpandablePanel.qml` not at all, `Carousel` stepped 50ms and `ExpandablePanel` 40ms, and both
+numbers were literals. Three rules live in the policy now:
+
+- **Rank by VISIBLE position, never by position in `children`.** A hidden participant that spends a
+  slot leaves a hole one step wide in the middle of the cascade, and nothing downstream compensates
+  because every later member is still counted from its own index.
+- **Clamp the ladder.** `leadIn + index * step` is unbounded and the failure is silent — a twenty
+  member group's last member arrives most of a second after the container has finished opening, by
+  which point the wave has stopped reading as one gesture.
+- **The step is a fraction of a catalogued duration, and it is published UNSCALED.** Whatever
+  consumes it scales it once; scaling it in `Appearance` as well would apply the multiplier twice
+  and a wave would run at the square of the setting.
+
+A delegate cannot see its siblings, so `Carousel`'s rank stays the model index — the clamp and the
+scaled step still come from the policy, which was the half that was wrong. And a wave is a
+**cancellable** list rather than loose animations: `expanded` flipping twice inside the first wave's
+own length used to leave it running, because the collapse created a fade to 0 per child without
+stopping the entrances, so a child still sitting in its `PauseAnimation` faded back *in* onto a
+panel that had already closed — and its spent object was never destroyed, because `stop()` does not
+raise `finished`. The survey this came from proposes a third fix, "store the stagger in the model
+row so a recycled delegate keeps its place"; that one **does not apply here** and was not written —
+our staggered surfaces are `FlowButtonGroup`s whose contents are fixed for the life of the card that
+owns them, and a Docker refresh destroys the whole `ExpandablePanel` rather than recycling anything
+under it. fb92b4f5d ("fix(widgets): rank a stagger by visible position, clamp it, and let a wave be
+cancelled").
+
+**`Behavior on <non-animatable>` with a trailing bare `PropertyAction {}` defers a write instead of
+animating it.** A `Loader.source` is a `url`, which QML cannot interpolate, so the `Behavior` cannot
+animate it — and the *bare* `PropertyAction` (no `target`, no `property`, no `value`) means "apply
+the pending write here". That is how `modules/imi/onScreenDisplay/OnScreenDisplay.qml` lets the
+outgoing indicator leave before its replacement is built, with no pending-value field, no state
+machine, and no pair of `Timer`s whose intervals have to keep agreeing with two animations'
+durations. The construct is **not new to this tree** — `modules/common/widgets/StyledText.qml` has
+carried a `Behavior on text` ending in one since it came from end-4, switched on at ~20 call sites
+by `animateChange: true`.
+
+Three things to know before reaching for it. Measured with a `qml6` probe: the **initial** write is
+still applied immediately, because a `Behavior` does not fire before its component is finalized — so
+a surface that is opening does not wait for a fade of nothing. Naming the action's `target` and
+`property` instead of leaving it bare *looks* equivalent and is a hand-written re-derivation of what
+the bare form takes from the `Behavior` it sits in, so a rename makes it match nothing with no
+warning (`modules/imi/bar/Media.qml` and `modules/imi/sidebarLeft/SidebarPlayerControl.qml` both
+spell it that way). And it is pinned from both sides, because the failure direction is bad — a bare
+form that stopped being honoured would leave the pending write *never* applied, i.e. the OSD showing
+the indicator the user navigated away from, with nothing in any log:
+`tests/tst_deferred_property_swap.qml` pins the construct against Qt itself and
+`tests/test_osd_indicator_swap.py` pins that the call site still uses it.
+f968a55c4 ("feat(osd): let the outgoing indicator leave before its replacement arrives").
 
 **The sidebar's bottom widget group has a fixed height, and that is load-bearing.**
 `BottomWidgetGroup.qml`'s `expandedHeight` is a constant (352) rather than a binding on its
