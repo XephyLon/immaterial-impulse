@@ -67,6 +67,12 @@ ShellRoot {
                 // arms the mode from that picker, so an ordinary run never
                 // compiles it.
                 Quickshell.shellPath("modules/imi/clockDepthSelect/ClockDepthSelectSurface.qml"),
+                // And again for Edit Mode's chrome: the surface, and the
+                // toolbar and tab bar drawn on it, sit behind a Loader that is
+                // inactive until somebody enters the mode, so a shell that is
+                // merely running has never compiled either of them.
+                Quickshell.shellPath("modules/imi/editMode/EditModeChromeSurface.qml"),
+                Quickshell.shellPath("modules/imi/editMode/EditModeChromeContent.qml"),
                 // The cheatsheet only compiles when the user presses Super+/,
                 // and the keybind editor only when a row's pencil is clicked.
                 Quickshell.shellPath("modules/imi/cheatsheet/CheatsheetKeybinds.qml"),

@@ -159,6 +159,19 @@ hl.layer_rule({ match = { namespace = "quickshell:clockDepthSelect" }, blur = fa
 -- configured edge. Naming the edge here pinned it to the bottom, and a top
 -- dock then slid downward, into the screen, to leave.
 hl.layer_rule({ match = { namespace = "quickshell:dock" }, animation = "slide"})
+-- Edit Mode's chrome: another full-screen surface that is transparent
+-- everywhere except two opaque toolbars, because the desktop it frames is the
+-- real one underneath it. Same hazard as the subject selector above - under the
+-- catch-all 0.05 its transparent pixels clear the threshold and the compositor
+-- is asked to blur the whole screen - answered the other way round, because the
+-- toolbar bodies are m3surfaceContainer and therefore fully opaque: at
+-- ignore_alpha = 1 the bodies are the only thing blurred, and their shadows and
+-- everything else on the surface are left alone. That is the treatment
+-- quickshell:overlay and quickshell:recordingRegion already carry for this
+-- shape. The surface is created and destroyed by a toggle, so a map animation
+-- on something screen-sized reads as the desktop lurching.
+hl.layer_rule({ match = { namespace = "quickshell:editMode" }, ignore_alpha = 1})
+hl.layer_rule({ match = { namespace = "quickshell:editMode" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:screenCorners" }, animation = "popin 120%"})
 hl.layer_rule({ match = { namespace = "quickshell:lockWindowPusher" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:notificationPopup" }, animation = "fade"})
