@@ -473,6 +473,12 @@ modules/imi/                 The "imi" (Immaterial Impulse) panel family - one d
                               into a MobileSAM prompt. It redraws neither the wallpaper nor the
                               widgets - both are already on screen, which is what makes the pixels
                               clicked the pixels the depth layer will mask
+  editMode/                   Edit Mode's CHROME only - the toolbar above the shrunk desktop
+                              and the tab bar below it, on one full-screen Overlay surface per
+                              output (quickshell:editMode) whose mask is those two rects and
+                              nothing else, so every other pixel falls through to the desktop
+                              being edited. The desktop itself is not here: it stays on the
+                              background surface, which is what the mode transforms
   overview/                   Workspace/window overview (like GNOME Activities)
   notificationPopup/          Desktop notification popups
   settings/                   The in-shell settings UI (pages/ = one file per settings category)
@@ -2382,11 +2388,56 @@ mode is built out of are worth not re-deriving:
   is translucent, which every desktop widget is and which this mode makes more
   so by standing the frost down, then has a crisp full-strength line running
   across it, and a line is a foreground cue whatever is really in front.
+- **The whole mode animates on ONE scalar, and it is `GlobalStates.editProgress`
+  rather than a property of the surface that uses it.** The desktop's transform
+  and the chrome that frames it are on two different layer surfaces, in two
+  different scene graphs, and both build their geometry out of the progress —
+  so a second `Behavior on (editMode ? 1 : 0)` on the other surface is two
+  numbers that have to agree, agreeing at rest (the only place anyone looks)
+  and disagreeing exactly on the frames where the chrome frames a rectangle the
+  desktop is not at. `test_edit_mode_contract.py` sweeps the tree for a second
+  `Behavior on editProgress` rather than naming files, because the second one is
+  written by whoever adds the next surface.
+- **The chrome is a SECOND surface, and the viewport deliberately does not move
+  onto it** (`modules/imi/editMode/`). The desktop stays on `quickshell:background`
+  because that is where the wallpaper and the `WidgetCanvas` already are and
+  where a `ShaderEffectSource` can still reach the live Wallpaper Engine layer —
+  but that surface is on `WlrLayer.Bottom`, and measured live the layers come out
+  background / dock+bar / screenCorners+barPopup, so chrome drawn there renders
+  under a bar the mode leaves at full size. Three things a screen-sized surface
+  has to get right, all three of which this repo has already paid for once:
+  **input** (the mask is the toolbar's and the tab bar's rects and nothing else,
+  or the desktop underneath — the thing being edited — stops taking clicks; the
+  surface also does not exist while the mode is off, which is the state nobody
+  looks at); **blur** (a minted namespace absent from `rules.lua` falls through
+  the catch-all `ignore_alpha = 0.05`, under which a screen-sized surface of
+  transparent pixels asks the compositor to blur the entire screen —
+  `quickshell:editMode` is listed at `ignore_alpha = 1` because its two toolbar
+  bodies are opaque `m3surfaceContainer`, the same treatment
+  `quickshell:recordingRegion` and `quickshell:overlay` carry, and reusing
+  `quickshell:popup` is the trap `BarPopupOverlay.qml:53-69` records); and
+  **keyboard** (`WlrKeyboardFocus.None`, or a surface on `Overlay` sits in front
+  of the background and swallows the Escape the exit ladder is answered on).
+- **The chrome's placement IS the shrink's arithmetic, which is why it carries no
+  motion of its own.** Both pieces are positioned off `edit_mode.js`'s `cardRect`
+  — the same function the transform is built out of, for the reason
+  `ClockDepthCutout` is one component — and the bands they sit in are opened by
+  the shrink itself, so at progress 0 they are parked half off screen and they
+  arrive *with* the desktop rather than after it. A `Behavior` on either would be
+  a target that moves every frame, which restarts every frame and never ticks
+  (b710ef731). Note also what the pixel probe adds over the geometry checks and
+  what it does not: a chrome item left `visible: false` reports its box, passes
+  every geometry assertion, and paints nothing, so the probe measures the drawn
+  extent — while re-asserting "the chrome is outside the card" in the pixel half
+  would read the harness's own numbers back and agree with itself.
 (feat(editMode): shrink the desktop into a viewport on the background surface,
 feat(editMode): stand the per-widget frost down for the mode,
 feat(editMode): draw the shrunk desktop as a card, not as a cropped screenshot,
 feat(editMode): shrink the desktop about dead centre, and move it only for the drawer,
-feat(widgetCanvas): the lattice is a substrate, and it dissolves at the edges.)
+feat(widgetCanvas): the lattice is a substrate, and it dissolves at the edges,
+feat(editMode): animate the mode on one scalar, shared by every surface,
+feat(editMode): draw the mode's toolbar and tab bar on a surface of their own,
+test(editMode): score the chrome against the desktop it frames.)
 
 **The clock depth layer is the counter-case to that rule, and it is why it is a
 FOURTH sibling.** `widgetCanvas` sits at `z: 2` as a sibling of
