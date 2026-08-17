@@ -334,6 +334,16 @@ if ! python3 "$SCRIPT_DIR/lint_edit_mode_scope.py"; then
     exit 1
 fi
 
+# Stage 9 of Edit Mode: the lock screen's preview must not be able to
+# authenticate. The one contract in the mode whose failure is a security bug
+# rather than a layout bug - every sweep in it asserts it still FOUND the
+# thing it swept, because a grep that matches nothing must fail, not pass.
+echo "Running lock preview contract tests..."
+if ! python3 "$SCRIPT_DIR/test_lock_preview_contract.py"; then
+    echo "Lock preview contract tests failed."
+    exit 1
+fi
+
 # Whether a drag still lands where the pointer put it once the desktop is drawn
 # at a scale. Nothing static can see that: the drag is hand-computed and the
 # transform is only SUPPOSED to cancel itself out. Brings its own weston.
