@@ -1241,6 +1241,20 @@ Singleton {
                     property bool requirePasswordToPower: false
                 }
                 property bool materialShapeChars: true
+                // The lock islands' item order (spec §14, answered "reorder"):
+                // declared lists, never a dynamic map - a JsonAdapter cannot
+                // hold one. The defaults are the hand-placed order the surface
+                // has always drawn, so a config that never stored these keys
+                // renders exactly what it rendered before they existed - which
+                // is also why no migration is needed: a missing key takes the
+                // QML default. The same lists are spelled in lock_islands.js
+                // (the resolver cannot read this file); the two are pinned
+                // equal by tests/test_lock_islands_contract.py.
+                property JsonObject islands: JsonObject {
+                    property list<string> main: ["fingerprint", "password", "confirm"]
+                    property list<string> left: ["username", "media", "keyboardLayout", "fcitx"]
+                    property list<string> right: ["battery", "sleep", "power", "reboot"]
+                }
             }
 
             property JsonObject media: JsonObject {
