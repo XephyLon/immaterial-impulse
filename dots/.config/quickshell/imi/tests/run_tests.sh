@@ -562,6 +562,13 @@ if ! python3 "$SCRIPT_DIR/test_widget_group_drag_runtime.py"; then
     exit 1
 fi
 
+# Brings its own headless weston, like the interaction runtime tests above.
+echo "Running widget edge snap runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_widget_edge_snap_runtime.py"; then
+    echo "Widget edge snap runtime tests failed."
+    exit 1
+fi
+
 echo "Running widget plugin migration tests..."
 if ! python3 "$SCRIPT_DIR/test_widget_plugin_migration.py"; then
     echo "Widget plugin migration tests failed."
