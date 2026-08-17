@@ -446,6 +446,16 @@ modules/common/             Shared, feature-agnostic building blocks
                               per-plugin, per-monitor layout in raw plugin-state.json.
                               bundled/ is where every desktop widget the shell ships lives -
                               there are no built-in desktop widgets (see docs/PLUGINS.md).
+                              BarWidgets.qml is the bar's widget catalogue - the built-ins
+                              plus every installed plugin's bar widget - promoted out of
+                              BarConfig.qml so Settings > Bar and Edit Mode's bar stage read
+                              one list. Layouts store ids and nameFor(id) is the only
+                              resolution to a display name; the built-in names stay spelled
+                              as Translation.tr("...") literals because the translation
+                              extractor only sees that form and its clean pass strips what
+                              it cannot see. test_bar_widgets_catalogue.py reddens on a
+                              second copy growing back in BarConfig
+                              71daefe9 ("feat(bar): promote the bar widget catalogue to a BarWidgets singleton")
   widgets/                   Shared UI components: StyledText, StyledComboBox, StyledSlider,
                               StyledToolTip(+Content), RippleButton, MaterialSymbol, ResourceCard,
                               PopupToolTip, StyledPopup, GroupedList, ConfigSwitch/ConfigSpinBox/
