@@ -102,13 +102,43 @@ def test_the_mode_is_a_term_of_the_docks_reveal():
 def test_suspension_never_reaches_a_surfaces_visible():
     # `visible: false` on a layer surface destroys it (AGENT.md, layer-shell
     # section). The dock's existing `visible: !GlobalStates.screenLocked` is a
-    # deliberate, pre-existing teardown for the lock; the mode may not add one.
+    # deliberate, pre-existing teardown for the lock; the mode may not add one
+    # for AUTO-HIDE SUSPENSION - holding a panel on screen goes through
+    # mustShow/reveal, never through visible.
+    #
+    # `editLockPreview` is the sanctioned exception, and it is the OPPOSITE
+    # gesture: on Edit Mode's Lockscreen tab the panels disappear exactly as
+    # they do on the real lock (spec §1.5 - "the Lockscreen tab adds a term to
+    # each"), so it rides the same teardown screenLocked already takes, cost
+    # and all. The rule this check holds is therefore spelled by name: no
+    # `visible` may be gated on editMode itself.
     for path in (BAR, VERTICAL_BAR, DOCK):
         for line in code(path).splitlines():
             if re.search(r"\bvisible\s*:", line) and "editMode" in line:
                 raise AssertionError(
                     f"{path.name} gates a visible on editMode: {line.strip()} "
                     f"- on a layer surface that destroys the surface")
+
+
+def test_the_panels_leave_the_lockscreen_tab_the_way_they_leave_the_lock():
+    # Spec §1.5: on the Lockscreen tab the bar and the dock simply disappear,
+    # and both halves of "disappear" already exist as the real lock's own
+    # gates - the bars' loader `active` and the dock surface's `visible`. The
+    # tab adds `!GlobalStates.editLockPreview` beside `!screenLocked` in each,
+    # inheriting the same teardown/rebuild per tab flip the lock already pays
+    # (the dock embeds no renderer, so a rebuilt GL context is acceptable
+    # there - and noted, not assumed, per the spec's own caveat).
+    for path in (BAR, VERTICAL_BAR):
+        text = code(path)
+        loader = re.search(r"active:\s*GlobalStates\.barOpen\s*&&\s*"
+                           r"!GlobalStates\.screenLocked\s*\n?\s*&&\s*"
+                           r"!GlobalStates\.editLockPreview", text)
+        assert loader, \
+            f"{path.name}'s loader does not stand down for the Lockscreen tab"
+    dock = code(DOCK)
+    assert re.search(r"visible:\s*!GlobalStates\.screenLocked\s*\n?\s*&&\s*"
+                     r"!GlobalStates\.editLockPreview", dock), \
+        "the dock does not stand down for the Lockscreen tab"
 
 
 def test_a_bar_popup_cannot_claim_the_card_while_the_mode_is_on():

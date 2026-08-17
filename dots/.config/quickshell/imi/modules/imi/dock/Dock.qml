@@ -34,7 +34,13 @@ Scope {
             id: dockRoot
             required property var modelData
             screen: modelData
+            // The Lockscreen tab rides the lock's own teardown (spec §1.5).
+            // Destroying the surface is this line's existing, deliberate cost
+            // - the dock embeds no renderer - and the tab inherits it per
+            // flip; holding the dock ON screen for the mode's Desktop tab
+            // still goes through `reveal` below, never through this property.
             visible: !GlobalStates.screenLocked
+                && !GlobalStates.editLockPreview
 
             property var monitor: WM.monitorFor(modelData)
             property bool fullscreenOnThisMonitor: WM.fullscreenOnMonitor(monitor?.name)
