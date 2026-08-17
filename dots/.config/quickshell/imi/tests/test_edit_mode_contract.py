@@ -306,6 +306,17 @@ def test_the_lattice_belongs_to_the_drag_and_not_to_the_mode():
     changed = re.search(r"onDraggingChanged: \{(.*?)\n    \}", widget, re.S)
     assert changed and "setDragging(dragging)" in changed.group(1), \
         "the canvas is no longer told when a drag starts and stops"
+    # The one end a drag has that onDraggingChanged never sees. The runtime
+    # harness drives `widgetRemoved` directly, because a statically declared
+    # widget cannot be destroy()ed - so what it cannot say is that a real
+    # destruction reaches that function, and this is that half.
+    destruction = re.search(r"Component\.onDestruction: \{(.*?)\n    \}", widget, re.S)
+    assert destruction and "widgetRemoved" in destruction.group(1), \
+        "a destroyed widget no longer tells the canvas it has gone"
+    removed = re.search(r"function widgetRemoved\(widget\) \{(.*?)\n    \}", read(CANVAS), re.S)
+    assert removed and "setDragging(false)" in removed.group(1), \
+        ("a widget destroyed mid-drag leaves the lattice up: nothing else can "
+         "take it down, because it never reaches onDraggingChanged")
 
 
 def test_the_cover_that_rounds_the_corner_sits_below_the_widgets():
