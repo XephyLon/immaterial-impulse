@@ -236,9 +236,12 @@ def test_the_global_lock_is_suppressed_and_never_written():
     # once the mode ended. Only the two places that mean "the user asked for the
     # lock to change" may write it.
     writers = {
-        # The desktop menu's submenu switch, and a right-click on a widget:
-        # the two gestures that mean "change the lock".
-        "modules/common/widgets/WidgetsSubmenu.qml",
+        # A right-click on a widget: the one gesture left that means "change
+        # the lock". WidgetsSubmenu was the other sanctioned writer and is
+        # gone - its widget list had been empty since the desktop widgets
+        # became plugins, and its only live control was this switch, which the
+        # mode suppresses (spec §4.1: a switch that turns off something the
+        # editor turns back on).
         "modules/common/widgets/widgetCanvas/AbstractWidget.qml",
     }
     seen = set()
