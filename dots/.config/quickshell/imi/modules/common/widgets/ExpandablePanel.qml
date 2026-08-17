@@ -96,12 +96,6 @@ StyledRectangle {
             root.runStagger();
     }
 
-    // Children opt in by declaring `property real appear: 1` and folding it
-    // into their own opacity. The stagger animates THAT, never `opacity`
-    // itself: an imperative write to `opacity` destroys whatever binding the
-    // child had, and RippleButton expresses its disabled state through
-    // exactly that binding - so staggering used to leave every disabled
-    // button looking enabled, permanently.
     function stopStagger() {
         for (let i = 0; i < root.activeStagger.length; i++) {
             const spent = root.activeStagger[i];
@@ -113,6 +107,12 @@ StyledRectangle {
         root.activeStagger = [];
     }
 
+    // Children opt in by declaring `property real appear: 1` and folding it
+    // into their own opacity. The stagger animates THAT, never `opacity`
+    // itself: an imperative write to `opacity` destroys whatever binding the
+    // child had, and RippleButton expresses its disabled state through
+    // exactly that binding - so staggering used to leave every disabled
+    // button looking enabled, permanently.
     function runStagger() {
         root.stopStagger();
         const kids = (root.staggerTarget ?? contentColumn).children;
