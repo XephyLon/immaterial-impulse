@@ -34,6 +34,16 @@ import "../../common/functions/lock_islands.js" as LockIslands
  * The write-back is `LockIslands.storedOrder`: the moved rendered order plus
  * every unknown stored id appended, so a list written by a newer shell
  * version loses nothing when this one reorders it.
+ *
+ * Two smaller facts, stated so nobody "fixes" either toward the bar's shape:
+ * a drop at an island's END lands before any hidden tail entry (the centres
+ * cap the insertion at the last VISIBLE slot, where the bar's
+ * insertionForVisible maps an append to the stored end) - visible items stay
+ * contiguous ahead of hidden ones, which is the behaviour a pointer gesture
+ * over visible slots can actually mean. And like the bar's flag, a drag
+ * whose overlay is destroyed without its end handlers (an external rebuild
+ * of the model mid-drag) leaves `editLockDragActive` up until the mode's
+ * exit reset - the central endDrag below is the recovery both flags share.
  */
 Item {
     id: root

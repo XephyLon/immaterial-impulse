@@ -120,7 +120,8 @@ MouseArea {
         if (action === "closeMenu") GlobalStates.editWidgetMenuOpen = false
         else if (action === "cancelGesture") {
             root.cancelActiveDrag()
-            if (GlobalStates.editBarDragActive) GlobalStates.editReorderCancel()
+            if (GlobalStates.editBarDragActive || GlobalStates.editLockDragActive)
+                GlobalStates.editReorderCancel()
         }
         else if (action === "clearSelection") root.clearSelection()
         else if (action === "desktopTab") GlobalStates.editTab = EditMode.DESKTOP_TAB
