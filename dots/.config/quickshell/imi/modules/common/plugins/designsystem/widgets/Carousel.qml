@@ -140,7 +140,20 @@ Item {
 
                 Behavior on opacity {
                     SequentialAnimation {
-                        PauseAnimation { duration: root.isOpen ? Math.min(itemRoot.index, 10) * 50 : 0 }
+                        // The one stagger policy, not a second hand-written one. This
+                        // file already had the clamp that ExpandablePanel lacked and
+                        // a step that ExpandablePanel spelled differently, which is
+                        // the shape the extraction exists to stop: two cascades in one
+                        // shell that disagree about how long a wave is allowed to run.
+                        // A delegate cannot see its siblings, so the rank here is the
+                        // model index rather than a visible rank - the clamp and the
+                        // scaled step still come from the policy.
+                        PauseAnimation {
+                            duration: root.isOpen
+                                ? Appearance.animation.staggerDelay(itemRoot.index,
+                                    Appearance.animation.scale(Appearance.animation.staggerStep), 0)
+                                : 0
+                        }
                         NumberAnimation {
                             duration: root.isOpen ? Appearance.animation.elementMoveEnter.duration : Appearance.animation.elementMoveExit.duration
                             easing.bezierCurve: root.isOpen ? Appearance.animationCurves.expressiveDefaultSpatial : Appearance.animationCurves.emphasizedAccel
@@ -150,7 +163,20 @@ Item {
 
                 Behavior on scale {
                     SequentialAnimation {
-                        PauseAnimation { duration: root.isOpen ? Math.min(itemRoot.index, 10) * 50 : 0 }
+                        // The one stagger policy, not a second hand-written one. This
+                        // file already had the clamp that ExpandablePanel lacked and
+                        // a step that ExpandablePanel spelled differently, which is
+                        // the shape the extraction exists to stop: two cascades in one
+                        // shell that disagree about how long a wave is allowed to run.
+                        // A delegate cannot see its siblings, so the rank here is the
+                        // model index rather than a visible rank - the clamp and the
+                        // scaled step still come from the policy.
+                        PauseAnimation {
+                            duration: root.isOpen
+                                ? Appearance.animation.staggerDelay(itemRoot.index,
+                                    Appearance.animation.scale(Appearance.animation.staggerStep), 0)
+                                : 0
+                        }
                         NumberAnimation {
                             duration: root.isOpen ? Appearance.animation.elementMoveEnter.duration : Appearance.animation.elementMoveExit.duration
                             easing.bezierCurve: root.isOpen ? Appearance.animationCurves.emphasizedDecel : Appearance.animationCurves.emphasizedAccel

@@ -49,7 +49,18 @@ StyledRectangle {
 
     // Fixed: the container needs a visible head start, otherwise staggered
     // children race the reveal instead of landing in space that exists.
+    // Scaled at use, not here, so the head start keeps its proportion to the
+    // reveal it is a head start on when the speed multiplier moves.
     readonly property int staggerLeadIn: 120
+
+    // The wave, as one cancellable thing rather than as a handful of loose
+    // animations. `expanded` flipping twice inside the first wave's own length
+    // used to leave the first wave running: the collapse created a fade to 0
+    // per child without stopping the entrances, so a child still sitting in
+    // its PauseAnimation faded back IN afterwards, onto a panel that had
+    // already closed, and its spent animation object was never destroyed
+    // because `stop()` does not raise `finished`.
+    property var activeStagger: []
 
     // Lifting is one step toward the viewer; Background (0) has nowhere to go.
     contentLayer: (root.tonalLift && root.expanded) ? Math.max(0, root.surfaceLayer - 1) : root.surfaceLayer
@@ -72,6 +83,7 @@ StyledRectangle {
     onStaggerStepChanged: {
         if (root.staggerStep > 0)
             return;
+        root.stopStagger();
         const kids = (root.staggerTarget ?? contentColumn).children;
         for (let i = 0; i < kids.length; i++)
             if (kids[i].appear !== undefined)
@@ -90,31 +102,68 @@ StyledRectangle {
     // child had, and RippleButton expresses its disabled state through
     // exactly that binding - so staggering used to leave every disabled
     // button looking enabled, permanently.
-    function runStagger() {
-        const kids = (root.staggerTarget ?? contentColumn).children;
-        let index = 0;
-        for (let i = 0; i < kids.length; i++) {
-            if (kids[i].appear === undefined)
+    function stopStagger() {
+        for (let i = 0; i < root.activeStagger.length; i++) {
+            const spent = root.activeStagger[i];
+            if (!spent)
                 continue;
-            if (!root.expanded) {
+            spent.stop();
+            spent.destroy();
+        }
+        root.activeStagger = [];
+    }
+
+    function runStagger() {
+        root.stopStagger();
+        const kids = (root.staggerTarget ?? contentColumn).children;
+        const wave = [];
+
+        if (!root.expanded) {
+            for (let i = 0; i < kids.length; i++) {
+                if (kids[i].appear === undefined)
+                    continue;
                 // Animate out together rather than snapping: assigning the
                 // value directly meant the entrance was animated and the exit
                 // was not, which reads as the content vanishing rather than
-                // leaving.
-                staggerFade.createObject(root, {
+                // leaving. No ranking here - an exit is one gesture, and a
+                // child that has since been hidden still needs its `appear`
+                // put back for the next entrance to start from.
+                wave.push(staggerFade.createObject(root, {
                     item: kids[i], delay: 0, to: 0,
                     span: Appearance.animation.elementMoveExit.duration
-                }).start();
-                continue;
+                }));
             }
-            kids[i].appear = 0;
-            staggerFade.createObject(root, {
-                item: kids[i], to: 1,
-                span: Appearance.animation.elementMoveFast.duration,
-                delay: root.staggerLeadIn + index * root.staggerStep
-            }).start();
-            index++;
+        } else {
+            // Rank by VISIBLE position through the one policy, never by
+            // position in `children`. A child that is not on screen must not
+            // spend a slot: it leaves a hole one step wide in the middle of
+            // the cascade, and nothing downstream compensates, because every
+            // later child is still counted from its own index. The policy also
+            // clamps the rank - `leadIn + index * step` is unbounded, so a
+            // twenty-chip group's last chip arrives most of a second after the
+            // panel has finished opening, by which point the wave has stopped
+            // reading as one gesture.
+            const included = [];
+            for (let i = 0; i < kids.length; i++)
+                included.push(kids[i].appear !== undefined && kids[i].visible);
+            const ranks = Appearance.animation.staggerRanks(included);
+            const step = Appearance.animation.scale(root.staggerStep);
+            const leadIn = Appearance.animation.scale(root.staggerLeadIn);
+            for (let i = 0; i < kids.length; i++) {
+                if (ranks[i] < 0)
+                    continue;
+                kids[i].appear = 0;
+                wave.push(staggerFade.createObject(root, {
+                    item: kids[i], to: 1,
+                    span: Appearance.animation.elementMoveFast.duration,
+                    delay: Appearance.animation.staggerDelay(ranks[i], step, leadIn)
+                }));
+            }
         }
+
+        root.activeStagger = wave;
+        for (let i = 0; i < wave.length; i++)
+            wave[i].start();
     }
 
     Component {
@@ -134,7 +183,12 @@ StyledRectangle {
                 easing.type: Easing.BezierSpline
                 easing.bezierCurve: Appearance.animationCurves.expressiveEffects
             }
-            onFinished: seq.destroy()
+            // Drops itself from the wave before destroying, or `stopStagger()`
+            // would later reach a destroyed object.
+            onFinished: {
+                root.activeStagger = root.activeStagger.filter(member => member !== seq);
+                seq.destroy();
+            }
         }
     }
 
