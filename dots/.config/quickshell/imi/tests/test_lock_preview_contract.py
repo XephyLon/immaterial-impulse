@@ -100,11 +100,26 @@ def test_force_field_focus_returns_before_reaching_the_field():
 
 
 def test_the_password_field_is_disabled_and_read_only_without_interactive():
+    # Anchored to the field's own block rather than matched anywhere in the
+    # file: a term on any OTHER control would otherwise satisfy the sweep
+    # while the field's own gate silently went.
     text = code(LOCK_SURFACE)
-    enabled = re.search(r"^\s*enabled:\s*(.+root\.interactive.*)$", text, re.M)
-    assert enabled, \
+    start = text.find("ToolbarTextField {")
+    assert start != -1, "the password field is no longer a ToolbarTextField"
+    depth = 0
+    end = start
+    for index in range(text.index("{", start), len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                end = index + 1
+                break
+    field = text[start:end]
+    assert re.search(r"^\s*enabled:\s*.+root\.interactive.*$", field, re.M), \
         "the password field's `enabled` must carry the interactive term"
-    assert re.search(r"^\s*readOnly:\s*!root\.interactive\s*$", text, re.M), \
+    assert re.search(r"^\s*readOnly:\s*!root\.interactive\s*$", field, re.M), \
         ("the password field must be readOnly when the surface is not "
          "interactive - `enabled` alone still leaves programmatic paths open")
 
@@ -125,6 +140,67 @@ def test_every_click_handler_in_the_surface_is_gated():
         assert GUARD.search(first), \
             (f"an onClicked at offset {offset} is not gated on the surface "
              f"being interactive; its first statement is: {first!r}")
+
+
+def handler_spans(text: str):
+    """Every `on*:` handler in the file as (name_start, body_start, body_end)
+    character spans, arrow parameters skipped - the span form of
+    `handler_bodies`, for sweeps that need to ask which handler CONTAINS an
+    offset rather than what a named handler says."""
+    spans = []
+    for match in re.finditer(r"\b(?:Keys\.)?on[A-Z]\w*\s*:", text):
+        rest = text[match.end():]
+        without_arrow = re.sub(r"^\s*(?:\([^)]*\)|\w+)\s*=>\s*", "", rest)
+        base = match.end() + (len(rest) - len(without_arrow))
+        base += len(without_arrow) - len(without_arrow.lstrip())
+        if not text[base:].startswith("{"):
+            end = text.find("\n", base)
+            spans.append((match.start(), base, end if end != -1 else len(text)))
+            continue
+        depth = 0
+        for index in range(base, len(text)):
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    spans.append((match.start(), base, index + 1))
+                    break
+    return spans
+
+
+def test_every_session_action_sits_in_a_guarded_body():
+    # The handler-name sweeps beside this one anchor on `onClicked`/`Keys.*`,
+    # which leaves a structural blind spot: a dispatch inside a handler with
+    # another name - `onAccepted` was exactly that, and shipped unguarded
+    # behind two other layers - passes them unexamined. So this sweep anchors
+    # on the ACTIONS themselves: every occurrence of an unlock, session or
+    # media dispatch must sit inside a handler whose body starts with the
+    # guard, whatever the handler is called. The site count is asserted first,
+    # as always: a sweep that stops finding the actions must fail, not pass.
+    text = code(LOCK_SURFACE)
+    actions = re.compile(
+        r"tryUnlock\(|\.unlocked\(|Session\.\w+\(|"
+        r"MprisController\.(?:previous|togglePlaying|next)\(")
+    spans = handler_spans(text)
+    sites = list(actions.finditer(text))
+    assert len(sites) >= 7, \
+        (f"expected at least 7 session/media action sites in LockSurface.qml, "
+         f"found {len(sites)} - the sweep may be looking at the wrong thing")
+    for site in sites:
+        containing = [span for span in spans
+                      if span[1] <= site.start() < span[2]]
+        assert containing, \
+            (f"the action {site.group(0)!r} at offset {site.start()} is not "
+             f"inside any handler body - a dispatch outside a handler cannot "
+             f"carry the guard at all")
+        # The innermost containing handler is the one whose guard matters.
+        _, base, end = max(containing, key=lambda span: span[1])
+        body = text[base:end].strip().lstrip("{").strip()
+        first = next((line.strip() for line in body.splitlines() if line.strip()), "")
+        assert GUARD.search(first), \
+            (f"the handler dispatching {site.group(0)!r} is not gated on the "
+             f"surface being interactive; its first statement is: {first!r}")
 
 
 def test_the_root_area_and_the_key_handlers_stand_down_too():
@@ -234,7 +310,9 @@ def test_the_preview_host_passes_interactive_false_and_the_preview_context():
         "the preview host must pass interactive: false"
     assert "LockPreviewContext" in body, \
         "the preview host must hand the surface the preview context"
-    assert "LockContext {" not in background, \
+    # \b + optional whitespace, so neither a respelled `LockContext{` nor
+    # `LockPreviewContext {` confuses it in either direction.
+    assert not re.search(r"(?<![\w])LockContext\s*\{", background), \
         ("Background.qml constructs a real LockContext - the preview must not "
          "be able to authenticate")
 
