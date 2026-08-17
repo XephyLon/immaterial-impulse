@@ -66,20 +66,23 @@ Item {
     signal dismissRequested()
 
     readonly property var offeredSizes: GridSizes.offeredSizes(root.manifest?.grid ?? null)
+    // The stored choice, read once so every derivation below shares one
+    // reactive dependency on the plugin-state store.
+    readonly property var storedSpan: root.manifest
+        ? PluginState.option(root.manifest.id, "__gridSize") : undefined
     // Stored choice -> manifest default, resolved the way the host resolves
     // it, so the value the stepper starts from is the span the widget is
     // actually drawn at - including when the stored span is one the manifest
     // no longer offers and resolveSize has fallen back.
     readonly property var currentSize: GridSizes.resolveSize(root.manifest?.grid ?? null,
-        root.manifest ? PluginState.option(root.manifest.id, "__gridSize") : undefined)
-    readonly property int sizeIndex: {
-        const current = GridSizes.formatSize(root.currentSize);
-        for (let index = 0; index < root.offeredSizes.length; index++) {
-            if (GridSizes.formatSize(root.offeredSizes[index]) === current)
-                return index;
-        }
-        return -1;
-    }
+        root.storedSpan)
+    // The two neighbours, from the module (tst_grid_sizes.qml owns the walk):
+    // null means "nowhere to step", which is exactly what the chevron's
+    // enabled reads.
+    readonly property var stepBack: GridSizes.steppedSize(root.manifest?.grid ?? null,
+        root.storedSpan, -1)
+    readonly property var stepForward: GridSizes.steppedSize(root.manifest?.grid ?? null,
+        root.storedSpan, 1)
 
     // The same seed PluginWidget's own binding reads, or the row would
     // disagree with the widget for a manifest that ships `locked: true`.
@@ -88,18 +91,19 @@ Item {
             root.manifest.desktopWidget?.locked === true)
         : false
 
-    // A step moves the index, never a pixel: the write is the offered entry at
-    // the neighbouring index, formatted the way the grip and the settings row
-    // format it. Out-of-range asks are refused here as well as by the
-    // chevrons' `enabled`, so a click racing the store cannot walk off the
-    // list. The menu stays open - stepping several spans and watching the
+    // A step moves along the offered order, never a pixel: the write is
+    // whatever GridSizes.steppedSize answers, formatted the way the grip and
+    // the settings row format it. A null answer - off either end, or nothing
+    // to step - writes nothing, so a click racing the store cannot walk off
+    // the list. The menu stays open: stepping several spans and watching the
     // widget morph between them is what a stepper is for.
     function stepSize(direction) {
         if (!root.manifest) return;
-        const next = root.sizeIndex + direction;
-        if (root.sizeIndex < 0 || next < 0 || next >= root.offeredSizes.length) return;
+        const next = GridSizes.steppedSize(root.manifest.grid ?? null,
+            root.storedSpan, direction);
+        if (!next) return;
         PluginState.setOption(root.manifest.id, "__gridSize",
-            GridSizes.formatSize(root.offeredSizes[next]));
+            GridSizes.formatSize(next));
     }
 
     implicitWidth: 260
@@ -207,7 +211,7 @@ Item {
                     objectName: "editMenuSizeDown"
                     implicitWidth: 32
                     implicitHeight: 32
-                    enabled: root.sizeIndex > 0
+                    enabled: root.stepBack !== null
                     onClicked: root.stepSize(-1)
                     colBackground: "transparent"
                     colBackgroundHover: Appearance.colors.colLayer2
@@ -229,7 +233,7 @@ Item {
                     objectName: "editMenuSizeUp"
                     implicitWidth: 32
                     implicitHeight: 32
-                    enabled: root.sizeIndex >= 0 && root.sizeIndex < root.offeredSizes.length - 1
+                    enabled: root.stepForward !== null
                     onClicked: root.stepSize(1)
                     colBackground: "transparent"
                     colBackgroundHover: Appearance.colors.colLayer2

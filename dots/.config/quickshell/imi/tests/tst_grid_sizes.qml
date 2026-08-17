@@ -238,6 +238,43 @@ TestCase {
         compare(migrated.sizeMode, undefined);
     }
 
+    // --- stepping through the offered order (the menu's Size stepper) -----
+
+    function test_a_step_moves_to_the_neighbouring_offered_span() {
+        // The offered order IS the step order - the manifest's own, which
+        // offeredSizes documents as the resize order.
+        const grid = mediaGrid();
+        compare(GridSizes.formatSize(GridSizes.steppedSize(grid, "2x2", -1)), "3x2");
+        compare(GridSizes.formatSize(GridSizes.steppedSize(grid, "2x2", 1)), "2x1");
+    }
+
+    function test_a_step_off_either_end_answers_null() {
+        // Null rather than clamping to the end: the caller's chevron reads
+        // "is there a next span" straight off this, so a clamp would leave a
+        // live-looking button that writes the span the widget already has.
+        const grid = mediaGrid();
+        compare(GridSizes.steppedSize(grid, "3x2", -1), null);
+        compare(GridSizes.steppedSize(grid, "2x1", 1), null);
+    }
+
+    function test_a_widget_that_cannot_step_answers_null() {
+        // No grid (content-sized: calendar, world-clock, custom-image) and a
+        // single-span grid both have nowhere to step - the same predicate that
+        // gives them no grip and no Size row.
+        compare(GridSizes.steppedSize(undefined, "", 1), null);
+        compare(GridSizes.steppedSize({ cols: 2, rows: 1 }, "2x1", 1), null);
+        compare(GridSizes.steppedSize({ cols: 2, rows: 1 }, "2x1", -1), null);
+    }
+
+    function test_a_stale_stored_span_steps_from_the_resolved_fallback() {
+        // resolveSize already refuses a span the manifest no longer offers and
+        // falls back to the default; the step starts where the widget is
+        // actually drawn, which is that fallback.
+        const grid = mediaGrid();
+        compare(GridSizes.formatSize(GridSizes.steppedSize(grid, "9x9", 1)), "2x2");
+        compare(GridSizes.steppedSize(grid, "9x9", -1), null);
+    }
+
     function test_a_plugin_with_no_sizeMode_is_left_alone() {
         // Answering null rather than a copy is what keeps the store from being
         // rewritten for every plugin on every launch.
