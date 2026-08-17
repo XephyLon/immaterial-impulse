@@ -47,6 +47,14 @@ panel in question:
   usable area, which is what put the toolbar on the bar's widgets;
 - and a tone drawn between the specular and the inner highlight, which turns
   the card's bevel into a bevel around a line.
+
+The card's edge then came back a third time, as a whole-card judgement no
+per-tone measurement had asked: three defensible tones summed to five drawn
+pixels of piping at one strength round the whole perimeter, which is a border.
+Two rules hold the replacement in place - nothing may be drawn INSIDE the card
+(anything there misses `surround`'s mask and is a uniform line by construction),
+and the one band outside it is one pixel wide with a flank a fraction of its
+top, not merely less than it.
 """
 
 import re
@@ -705,36 +713,92 @@ def test_the_chrome_is_placed_between_the_card_and_the_usable_area():
         "the usable area must come from the module, not be rebuilt on the surface"
 
 
-def test_the_cards_edge_is_a_bevel_rather_than_a_bevel_around_a_line():
-    """No tone on the edge may be drawn between the specular and the inner
-    highlight.
+def test_the_cards_edge_is_one_tone_and_nothing_is_drawn_inside_the_card():
+    """The edge is a catch on one band outside the card, and there is nothing
+    else on the boundary.
 
-    A 1px `colLayer0Border` outline sat there, and measured on the real desktop
-    it was a notch - up to 70/255 below the lower of the two bright bands either
-    side of it. A bevel falls off its crest into the surface; a stack of bands
-    does not, and the eye reads the dark line as the card's edge with the bright
-    band as a piping outside it. `test_edit_mode_chrome.py` scores the profile
-    in pixels; this is the source half, because the outline is the kind of thing
-    that comes back as "every floating surface carries one".
+    Two lines have sat inside the card in turn and both were the same object. A
+    1px `colLayer0Border` outline, which measured as a notch - up to 70/255
+    below the lower of the two bright bands either side of it - and went in
+    1df616e62. Then a 1px `colGlassSpecular` highlight at 0.16, which measured
+    as the BRIGHTEST thing on the boundary on three edges out of four, +41
+    levels over a wallpaper at 105. Anything inside the card cannot ride
+    `surround`'s mask, so it is a uniform border by construction, at one
+    strength round the whole perimeter, and a border of even thickness is what
+    "edit mode's layout having this thick border" names.
 
-    docs/M3_GUIDELINES.md §1 is what licenses its absence rather than what it is
-    traded against: "visible borders are not required for every surface", and
-    the job it gives the outline - defining edges against complex backgrounds -
-    is the job the bevel exists to do, because the outline could not do it over
-    a wallpaper.
+    The shade band outside is held to the same rule from the other side: what
+    darkens outside the card is `colShadow`, already drawn there by
+    `StyledRectangularShadow`, softly and from the same lamp. A second darkening
+    is a hard copy of the soft one under it, which is the other two of the five
+    drawn pixels the edge used to occupy.
+
+    `test_edit_mode_chrome.py` scores the profile in pixels; this is the source
+    half, because both of these come back as "every floating surface in this
+    shell carries one". docs/M3_GUIDELINES.md §1 is what licenses their absence
+    rather than what they are traded against: "visible borders are not required
+    for every surface", and the job it gives an outline - defining edges against
+    complex backgrounds - belongs here to the shadow and to the catch.
     """
     card = code(CARD)
     assert "colLayer0Border" not in card, \
-        "the card's edge is a bevel; an outline through it is a seam"
+        "the card's edge is a catch; an outline through it is a seam"
+    assert "colGlassShade" not in card, \
+        ("the darkening outside the card is StyledRectangularShadow's; a shade "
+         "band beside it is a hard copy of the soft one underneath")
+    # Every tone the edge is drawn in has to be a child of `surround`, whose
+    # mask cuts it back to the band outside the card. A `border.width` is the
+    # only way to paint a line at the card's edge from outside that item, which
+    # is exactly why both of the lines that have sat there were written as one.
+    assert "border.width" not in card, \
+        "nothing may be drawn inside the card: a border there is the outline again"
     # ...and the roll-off is the corner's, not a number someone picked. A stop
     # at a literal fraction is a rim that is bright right round the bend, which
     # is a stroke however bright it is - the thing the file's own comment
     # forbids.
     roll_off = declaration(card, "edgeRollOff")
     assert "cardRadius" in roll_off, \
-        f"the specular's roll-off must be expressed against the corner radius: {roll_off!r}"
+        f"the catch's roll-off must be expressed against the corner radius: {roll_off!r}"
     assert card.count("root.edgeRollOff") >= 2, \
         "the roll-off must bound the crest at both ends of the flank"
+
+
+def test_the_cards_edge_is_a_catch_rather_than_a_rim():
+    """One pixel wide, and the flank is a fraction of the top rather than a bit
+    less than it.
+
+    This is the rule the previous edge passed on and still read as a border. Its
+    specular was already non-uniform - 0.46 along the top against 0.26 down the
+    flank - and 0.26 of white on a 2px band all the way round a 3872px card is a
+    rim at 57% of full strength, which is a stroke a shade fainter rather than a
+    catch. Glass shows a bright catch where the light hits it and almost nothing
+    along the rest, and what carries its presence is the shadow around it.
+
+    So the two numbers that decide whether this is an edge or a border are the
+    band's WIDTH and the RATIO between its top and its flank, and both are
+    asserted here rather than left to whoever tunes a stop next. The pixel half
+    scores what these produce on screen; a source check is what stops a stop
+    being nudged back up one at a time.
+    """
+    card = code(CARD)
+    width = declaration(card, "edgeSpecularWidth")
+    assert "borderWidth.standard" in width, \
+        (f"the catch is one pixel: a wider band is a rim whatever its alpha is "
+         f"({width!r})")
+
+    stops = [float(v) for v in
+             re.findall(r"colGlassSpecular,\s*([0-9.]+)\s*\)", card)]
+    assert len(stops) == 4, \
+        f"expected four gradient stops on the catch, found {stops}"
+    top, arc_top, arc_bottom, bottom = stops
+    assert arc_top == arc_bottom, \
+        f"the flank is one value between the two corner arcs, not a ramp: {stops}"
+    assert arc_top <= top / 4, \
+        (f"the flank is {arc_top} against a top of {top}: a rim at a fraction "
+         f"under the top is still a rim")
+    assert arc_top < bottom < top, \
+        (f"the bottom is a bounce - above the flank and below the top - not a "
+         f"second catch: {stops}")
 
 
 if __name__ == "__main__":
