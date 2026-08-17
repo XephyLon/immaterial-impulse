@@ -45,16 +45,21 @@ Singleton {
 
     // Exactly one bar exists - `ImmaterialImpulseFamily.qml` loads Bar or
     // VerticalBar on `Config.options.bar.vertical` - so this is which edge it
-    // is on, not which of two.
+    // is on, not which of two. Through `DockGeometry.barEdge` rather than
+    // spelled out, because that overloaded pair (`bar.bottom` means "right"
+    // when the bar is vertical) already has one place it becomes an edge name,
+    // and `test_dock_position_contract.py` caught this file re-deriving it.
     readonly property bool barVertical: Config.options?.bar.vertical ?? false
-    readonly property string barSide: root.barVertical
-        ? ((Config.options?.bar.bottom ?? false) ? "right" : "left")
-        : ((Config.options?.bar.bottom ?? false) ? "bottom" : "top")
+    readonly property string barSide: DockGeometry.barEdge(
+        root.barVertical, Config.options?.bar.bottom ?? false)
     readonly property real barThickness: root.barVertical
         ? Appearance.sizes.verticalBarSurfaceWidth
         : Appearance.sizes.barSurfaceThickness
 
-    readonly property string dockSide: DockGeometry.outwardSide(
+    // The dock's outward side IS its edge, so this is `normalizedEdge` and not
+    // `outwardSide` reading it: a file may take the stored key only straight
+    // into that call, which is the same one-derivation rule.
+    readonly property string dockSide: DockGeometry.normalizedEdge(
         Config.options?.dock.edge ?? "bottom")
     readonly property real dockThickness: (Config.options?.dock.enable ?? false)
         ? DockGeometry.thickness(Config.options?.dock.height ?? 60,
