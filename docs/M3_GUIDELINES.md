@@ -110,6 +110,42 @@ This codebase uses the **M3 Expressive** motion scheme. You must use the compone
 
 Never use raw integer durations (e.g., `duration: 150`), generic QML easing curves (e.g., `Easing.OutCubic`, `Easing.Linear`), or ad hoc bezier curves.
 
+**Take a tier whole.** Naming a tier's `duration` and setting no easing is not half-compliant — it
+leaves `easing.type` at Qt's default, which is `Easing.Linear`, the generic curve this section
+forbids. Prefer the tier's own `numberAnimation`/`colorAnimation` factory, which carries the
+duration, the type and the curve together; write out `<tier>.type` and `<tier>.bezierCurve` beside
+the duration only where the factory's `alwaysRunToEnd` would change the behaviour (a transition the
+user can reverse mid-flight). `tests/lint_motion_tier_partial.py` fails the suite on a new partial
+take and holds the existing ones in a per-file register that may only shrink; the durations quoted
+below are the *base* values, before the user's speed multiplier.
+
+### Speed, and the reduce-motion floor
+
+Every duration in `Appearance.animation` — and every tier of `Appearance.interaction` — is scaled by
+`Appearance.animation.multiplier`, the user's speed preference, clamped to a range that stops well
+short of the floor. `Appearance.animation.reduceMotion` is a **separate** state that collapses every
+one of them to `reduceMotionFloor`. Do not re-derive "motion is off" from the multiplier's value:
+accessibility is a declared switch, not the far end of a slider. New motion needs nothing for either
+of these as long as it takes its duration from a tier.
+
+### Stagger
+
+A group that arrives in sequence uses `Appearance.animation.staggerRanks()`,
+`Appearance.animation.staggerStep` and `Appearance.animation.staggerDelay()` — never `index * <ms>`.
+Rank by *visible* position (a hidden member that spends a slot leaves a hole in the middle of the
+wave), take the clamp (`index * step` is unbounded and a long list cascades for seconds), and let
+the step be a fraction of a catalogued duration rather than a literal. Scale the step and the lead-in
+once, at the call site, so a wave collapses to nothing under reduce motion with no second gate.
+
+### Swapping content that cannot be interpolated
+
+To make a `url`/`string`/`Component` swap wait for the outgoing content's exit, put a `Behavior` on
+that property whose animation ends in a **bare** `PropertyAction {}` — no target, no property, no
+value. Inside a `Behavior` that means "apply the pending write here", so the exit runs first and the
+entrance runs after. Do not build a state machine with a pending-value field and chained `Timer`s
+for this; the wait *is* the animation, so no interval has to be kept in agreement with a duration
+declared elsewhere.
+
 ### Spatial Moves (Position and Size)
 For elements changing position, dimensions, or layout:
 - **Default Spatial Move**: `Appearance.animation.elementMove` (500ms, `expressiveDefaultSpatial`). Use for most spatial transitions.
