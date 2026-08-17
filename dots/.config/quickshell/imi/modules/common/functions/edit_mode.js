@@ -9,9 +9,16 @@
 // and §1.2 (the inset).
 
 // The tab the mode opens on. A string rather than a boolean because the
-// Lockscreen tab joins it later (spec §1.4) and the ladder already has to say
-// which tab it returns to.
+// Lockscreen tab sits beside it (spec §1.4) and the ladder has to say which
+// tab it returns to.
 var DESKTOP_TAB = "desktop";
+
+// The Lockscreen tab - a FILTER on the viewport, not a mode (spec §1.4): the
+// same entry, the same exit ladder, the same chrome, one GlobalStates.editMode.
+// Declared here so the rung above, GlobalStates' preview derivation and the
+// chrome's tab bar all read one spelling; the contract holds the literal to
+// this file.
+var LOCKSCREEN_TAB = "lockscreen";
 
 // Escape is overloaded on the desktop before Edit Mode exists: WidgetCanvas
 // clears a marquee selection with it and PluginWidget cancels a grip resize

@@ -49,6 +49,18 @@ TestCase {
         }), "desktopTab");
     }
 
+    function test_the_lockscreen_tab_has_one_declared_name() {
+        // The tab the caller passes is `GlobalStates.editTab`, and the string
+        // it holds is this constant - declared in the module so the ladder,
+        // the preview derivation in GlobalStates and the chrome's tab bar
+        // cannot each spell it. A constant that drifted from the string the
+        // rung fires on would make the Lockscreen tab unreachable by name.
+        compare(EditMode.LOCKSCREEN_TAB, "lockscreen");
+        compare(EditMode.resolveEscape({
+            gestureInFlight: false, selectionCount: 0, tab: EditMode.LOCKSCREEN_TAB
+        }), "desktopTab");
+    }
+
     function test_escape_leaves_the_mode_only_when_nothing_else_answers() {
         compare(EditMode.resolveEscape({
             gestureInFlight: false, selectionCount: 0, tab: EditMode.DESKTOP_TAB
