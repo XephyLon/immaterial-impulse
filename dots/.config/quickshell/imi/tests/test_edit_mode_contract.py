@@ -903,5 +903,57 @@ def test_the_cards_edge_is_a_catch_rather_than_a_rim():
          f"second catch: {stops}")
 
 
+def test_the_right_click_is_the_menu_in_the_mode_and_the_lock_outside_it():
+    # One click, two meanings, decided by the mode (spec 4.1's table changes
+    # only the in-mode column). Both halves are pinned because each can rot
+    # alone: losing the in-mode branch brings back a SILENT lock write - the
+    # mode suppresses the global lock, so flipping it from inside has no
+    # visible effect until the mode ends - and losing the outside branch takes
+    # away the lock's one sanctioned quick gesture.
+    widget = code(WIDGET)
+    handler = re.search(r"onClicked:\s*\(mouse\)\s*=>\s*\{(.*?)\n    \}", widget, re.S)
+    assert handler, "AbstractWidget no longer answers the click"
+    body = handler.group(1)
+    menu = re.search(r"canvas\.editMode\s*===\s*true", body)
+    lock = re.search(r"Config\.options\.background\.widgetsLocked\s*=(?!=)", body)
+    assert menu and "contextMenuRequested" in body, \
+        "in the mode the right-click must raise the widget's menu"
+    assert lock, "outside the mode the right-click must still toggle the lock"
+    assert menu.start() < lock.start(), \
+        ("the menu branch must be resolved first, or the in-mode click writes "
+         "the lock as well as opening the menu")
+    # The subclass that answers the request maps the point through Qt's own
+    # transform chain - the scene mapping - never by multiplying a viewport
+    # scale in by hand (the compensation the sweep above already forbids by
+    # name; this is the positive half).
+    plugin = code(PLUGIN_WIDGET)
+    request = re.search(r"onContextMenuRequested:\s*\(atX, atY\)\s*=>\s*\{(.*?)\n    \}",
+                        plugin, re.S)
+    assert request, "PluginWidget no longer answers the menu request"
+    assert "mapToItem(null" in request.group(1), \
+        "the menu's anchor must go through the widget's own transform chain"
+    for field in ("editWidgetMenuPluginId", "editWidgetMenuScreenName",
+                  "editWidgetMenuX", "editWidgetMenuY", "editWidgetMenuOpen"):
+        assert f"GlobalStates.{field}" in request.group(1), \
+            f"the menu request no longer writes {field}"
+
+
+def test_a_destroyed_widget_vacates_the_menu_it_opened():
+    # The BarContent.filterLayout shape: disabling a plugin (the menu's own
+    # Remove included) destroys the widget while the menu still points at it,
+    # and a stranded menu offers Remove/Pin/Size about nothing. The declaring
+    # object vacates from Component.onDestruction, keyed on the id AND the
+    # screen - every monitor holds an instance of the plugin, and only the one
+    # the menu was opened on may close it.
+    plugin = code(PLUGIN_WIDGET)
+    vacate = re.search(
+        r"Component\.onDestruction:\s*\{(.*?)\n    \}", plugin, re.S)
+    assert vacate, "PluginWidget no longer vacates on destruction"
+    body = vacate.group(1)
+    assert "editWidgetMenuOpen = false" in body, "the vacate no longer closes the menu"
+    assert "editWidgetMenuPluginId" in body and "editWidgetMenuScreenName" in body, \
+        "the vacate must match both the id and the screen before closing"
+
+
 if __name__ == "__main__":
     raise SystemExit(run(globals()))
