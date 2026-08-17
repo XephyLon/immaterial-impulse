@@ -320,6 +320,153 @@ TestCase {
         compare(plain.area.height, 1440);
     }
 
+    // ---- the drawer spends the reservation -------------------------------
+    //
+    // The geometry above reserves `drawerWidth + margin` of room in the SIZE
+    // and rests the desktop dead centre; stage 5 spends it. Opening the drawer
+    // TRANSLATES the desktop - x only, never width, height or scale - by
+    // exactly what the centred desktop's free side cannot absorb.
+
+    function test_the_drawer_travel_is_what_the_free_side_cannot_absorb() {
+        // narrow: width 1152, so each side has (1600 - 1152) / 2 = 224 free.
+        // The drawer's slot is 400 + 24 = 424 against the area's right edge,
+        // so the desktop travels the 200 the free side is short.
+        fuzzyCompare(EditMode.drawerTravel(narrow), 424 - 224, 1e-9);
+        // A drawer small enough to fit in the ceiling's own leftover needs no
+        // travel at all: at 5120 the ceiling leaves 358.4 a side, and a 120px
+        // drawer plus its margin is 144.
+        const small = EditMode.viewportGeometry({
+            screenWidth: 5120, screenHeight: 1440, drawerWidth: 120, margin: 24
+        });
+        compare(EditMode.drawerTravel(small), 0);
+        // A geometry from a screen that reported no size travels nowhere.
+        compare(EditMode.drawerTravel(EditMode.viewportGeometry({
+            screenWidth: 0, screenHeight: 0, drawerWidth: 400, margin: 24
+        })), 0);
+    }
+
+    function test_the_drawer_moves_the_desktop_and_does_not_resize_it() {
+        const shift = EditMode.drawerTravel(narrow);
+        const closed = EditMode.atProgress(narrow, 1);
+        const open = EditMode.atProgress(narrow, 1, shift);
+        // The whole of spec §1.3: x moves by the shift, and nothing else about
+        // the transform changes - a scale that read the drawer's state would
+        // rescale every widget under the cursor.
+        fuzzyCompare(open.x, closed.x - shift, 1e-9);
+        compare(open.scale, closed.scale);
+        compare(open.y, closed.y);
+        // ...and a caller that passes no shift keeps yesterday's answer.
+        compare(EditMode.atProgress(narrow, 1).x, closed.x);
+    }
+
+    function test_the_shift_dies_with_the_mode() {
+        // At progress 0 the desktop is the untransformed screen whatever the
+        // drawer's state is - the exit animation must land on identity even if
+        // the drawer's own scalar is still on its way down.
+        const at = EditMode.atProgress(narrow, 0, EditMode.drawerTravel(narrow));
+        compare(at.scale, 1);
+        compare(at.x, 0);
+        compare(at.y, 0);
+        const card = EditMode.cardRect(narrow, 0, 1600, 1000, EditMode.drawerTravel(narrow));
+        compare(card.x, 0);
+        compare(card.width, 1600);
+    }
+
+    function test_the_open_drawer_leaves_a_margin_on_both_sides_of_the_desktop() {
+        // The arithmetic the module's own comment promises: the slot the size
+        // reserved is spent as `margin` between the desktop and the drawer,
+        // and at least `margin` survives on the desktop's other side.
+        const shift = EditMode.drawerTravel(narrow);
+        const card = EditMode.cardRect(narrow, 1, 1600, 1000, shift);
+        const drawer = EditMode.drawerRect(narrow, 1, 1, 1600, 1000);
+        fuzzyCompare(drawer.x - (card.x + card.width), 24, 1e-6);
+        verify(card.x - narrow.area.x >= 24 - 1e-6);
+    }
+
+    function test_the_drawer_rect_slides_in_from_the_areas_right_edge() {
+        // Closed is a rect with no width - which is what the chrome surface's
+        // input mask reads, so a closed drawer takes no clicks from whatever
+        // is on that edge.
+        const closed = EditMode.drawerRect(narrow, 1, 0, 1600, 1000);
+        compare(closed.width, 0);
+        compare(closed.x, narrow.area.x + narrow.area.width);
+
+        // Open, it is the drawer's declared width flush against the usable
+        // area's right edge, spanning exactly the card's own band.
+        const card = EditMode.cardRect(narrow, 1, 1600, 1000,
+            EditMode.drawerTravel(narrow));
+        const open = EditMode.drawerRect(narrow, 1, 1, 1600, 1000);
+        compare(open.width, 400);
+        fuzzyCompare(open.x + open.width, narrow.area.x + narrow.area.width, 1e-9);
+        fuzzyCompare(open.y, card.y, 1e-9);
+        fuzzyCompare(open.height, card.height, 1e-9);
+
+        // Mid-slide the right edge stays put and the reveal grows, so the
+        // panel arrives from the edge rather than fading in place.
+        const half = EditMode.drawerRect(narrow, 1, 0.5, 1600, 1000);
+        fuzzyCompare(half.width, 200, 1e-9);
+        fuzzyCompare(half.x + half.width, open.x + open.width, 1e-9);
+
+        // And the mode's own progress gates it: at progress 0 there is no
+        // drawer whatever its own scalar says, which is what makes "the chrome
+        // stands down completely on exit" hold for the drawer too.
+        compare(EditMode.drawerRect(narrow, 0, 1, 1600, 1000).width, 0);
+    }
+
+    function test_a_screen_point_maps_back_into_the_canvas() {
+        // The inverse of the one transform, for the drop: a drop lands in
+        // SCREEN coordinates and the store speaks canvas ones. Round-tripped
+        // through atProgress rather than asserted against literals, so the two
+        // directions cannot drift apart.
+        const shift = EditMode.drawerTravel(narrow);
+        const applied = EditMode.atProgress(narrow, 1, shift);
+        for (const point of [[0, 0], [800, 500], [1599, 999]]) {
+            const screenX = point[0] * applied.scale + applied.x;
+            const screenY = point[1] * applied.scale + applied.y;
+            const back = EditMode.canvasPointFromScreen(narrow, 1, shift, screenX, screenY);
+            fuzzyCompare(back.x, point[0], 1e-6);
+            fuzzyCompare(back.y, point[1], 1e-6);
+        }
+        // At rest the mapping is the identity, not a division by zero.
+        const rest = EditMode.canvasPointFromScreen(narrow, 0, 0, 321, 123);
+        compare(rest.x, 321);
+        compare(rest.y, 123);
+    }
+
+    function test_a_drop_centres_snaps_and_clamps() {
+        // The widget's box is centred on the pointer, snapped to the drag's
+        // own 12px lattice, and clamped inside the screen - snap first, clamp
+        // second, the ordering AbstractWidget spells out so an edge drop is
+        // not rounded back off its bound.
+        const placed = EditMode.dropPosition({
+            canvasX: 500, canvasY: 300, widgetWidth: 276, widgetHeight: 108,
+            screenWidth: 1600, screenHeight: 1000
+        });
+        compare(placed.x, 360);
+        compare(placed.y, 252);
+        // An off-lattice pointer lands on the lattice.
+        const snapped = EditMode.dropPosition({
+            canvasX: 505, canvasY: 305, widgetWidth: 276, widgetHeight: 108,
+            screenWidth: 1600, screenHeight: 1000
+        });
+        compare(snapped.x % 12, 0);
+        compare(snapped.y % 12, 0);
+        // A drop at the screen's edge keeps the widget inside it.
+        const edge = EditMode.dropPosition({
+            canvasX: 1599, canvasY: 999, widgetWidth: 276, widgetHeight: 108,
+            screenWidth: 1600, screenHeight: 1000
+        });
+        compare(edge.x, 1600 - 276);
+        compare(edge.y, 1000 - 108);
+        // A widget with no size yet - the content-sized path - is a point at
+        // the pointer, still on the lattice, still inside the screen.
+        const point = EditMode.dropPosition({
+            canvasX: 1620, canvasY: -30, screenWidth: 1600, screenHeight: 1000
+        });
+        compare(point.x, 1600);
+        compare(point.y, 0);
+    }
+
     function test_the_chromes_band_closes_in_as_the_desktop_shrinks() {
         // The chrome is placed between `areaRect` and `cardRect`, and at
         // progress 0 the two coincide - so both bands have zero height and both

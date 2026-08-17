@@ -179,8 +179,39 @@ function viewportGeometry(input) {
         y: area.y + (area.height - height) / 2,
         width: width,
         height: height,
-        area: area
+        area: area,
+        // Carried on the geometry so `drawerTravel` and `drawerRect` spend the
+        // same reservation this size was derived from. Taking them as fresh
+        // arguments instead would be two fields that must agree: a caller
+        // passing a different width there than here reserves one slot and
+        // opens another into it, and only the machine where the two differ
+        // ever sees it.
+        drawer: drawerWidth,
+        margin: margin
     };
+}
+
+// How far LEFT the desktop travels when the drawer is fully open: whatever the
+// centred desktop's free side cannot absorb of the drawer's slot.
+//
+// The slot is `drawer + margin` against the usable area's right edge - the
+// drawer sits flush on the edge and the margin is the gap between it and the
+// desktop, which is exactly the room `viewportGeometry` reserved in the SIZE
+// (`roomX = area.width - drawerWidth - margin * 2`: one margin outside the
+// desktop, one between it and the drawer). A centred desktop already has
+// `(area.width - width) / 2` free on that side, so the travel is the
+// difference, floored at zero for the screens where the ceiling left more
+// room than the slot needs.
+//
+// This is the ONLY thing about the transform the drawer's state may reach
+// (spec §1.3): the scale and the size take the drawer's WIDTH whether or not
+// it is open, so opening it is a two-number translation and nothing under the
+// cursor is rescaled mid-gesture.
+function drawerTravel(geometry) {
+    if (!geometry || !(geometry.width > 0) || !geometry.area)
+        return 0;
+    const free = (geometry.area.width - geometry.width) / 2;
+    return Math.max(0, (geometry.drawer || 0) + (geometry.margin || 0) - free);
 }
 
 // The entry and exit animation, expressed as one scalar the shell can put a
@@ -200,11 +231,17 @@ function viewportGeometry(input) {
 // not claimed; what does hold either way, and is what the eye follows, is that
 // every corner of the desktop travels in a straight line, because both terms of
 // each corner's position are linear in `t`.
-function atProgress(geometry, progress) {
+// `drawerShift` is the CURRENT applied travel - `drawerTravel` times the
+// drawer's own animated scalar, multiplied in by the caller - and it reaches
+// only `x`. It rides the same `t` as everything else, so at progress 0 the
+// transform is the identity whatever the drawer's scalar still holds: the exit
+// lands on the untransformed desktop even if the two animations are mid-flight
+// together.
+function atProgress(geometry, progress, drawerShift) {
     const t = Math.max(0, Math.min(1, progress || 0));
     return {
         scale: 1 + (geometry.scale - 1) * t,
-        x: geometry.x * t,
+        x: (geometry.x - (drawerShift || 0)) * t,
         y: geometry.y * t
     };
 }
@@ -221,8 +258,8 @@ function atProgress(geometry, progress) {
 // At progress 0 this is the whole screen at 0,0, which is what makes "the
 // chrome stands down completely on exit" a property of the arithmetic rather
 // than of a `visible` binding someone has to remember.
-function cardRect(geometry, progress, screenWidth, screenHeight) {
-    const applied = atProgress(geometry, progress);
+function cardRect(geometry, progress, screenWidth, screenHeight, drawerShift) {
+    const applied = atProgress(geometry, progress, drawerShift);
     return {
         x: applied.x,
         y: applied.y,
@@ -250,5 +287,78 @@ function areaRect(geometry, progress, screenWidth, screenHeight) {
         y: area.y * t,
         width: screenWidth + (area.width - screenWidth) * t,
         height: screenHeight + (area.height - screenHeight) * t
+    };
+}
+
+// Where the drawer is at a given pair of progresses: the reveal, expressed as
+// geometry only.
+//
+// The right edge is pinned to the usable area's and the WIDTH is what animates,
+// so the panel slides in from the edge - and because the chrome surface's input
+// mask tracks exactly x/y/width/height, a closed drawer is a zero-width rect
+// and takes no clicks from whatever panel lives on that edge. That is the same
+// collapse rule BarPopupOverlay's card follows, reached through the reveal
+// rather than through a second gate someone has to remember.
+//
+// The drawer's own scalar is multiplied by the MODE's, so at progress 0 there
+// is no drawer whatever `drawerProgress` still holds - "the chrome stands down
+// completely on exit" stays a property of the arithmetic for this piece too.
+//
+// It spans exactly the card's band (same y, same height), which needs no shift
+// term: the drawer's travel moves the desktop sideways and sideways does not
+// change y or height.
+function drawerRect(geometry, progress, drawerProgress, screenWidth, screenHeight) {
+    const t = Math.max(0, Math.min(1, progress || 0));
+    const p = Math.max(0, Math.min(1, drawerProgress || 0)) * t;
+    const area = areaRect(geometry, progress, screenWidth, screenHeight);
+    const card = cardRect(geometry, progress, screenWidth, screenHeight);
+    const width = (geometry.drawer || 0) * p;
+    return {
+        x: area.x + area.width - width,
+        y: card.y,
+        width: width,
+        height: card.height
+    };
+}
+
+// The inverse of the one transform, for the drop: a release from the drawer
+// arrives in SCREEN coordinates and the store speaks canvas ones. Composed out
+// of `atProgress` rather than written as its own arithmetic so the two
+// directions cannot drift apart - a forward map and a hand-inverted copy of it
+// are two fields that must agree.
+function canvasPointFromScreen(geometry, progress, drawerShift, screenX, screenY) {
+    const applied = atProgress(geometry, progress, drawerShift);
+    if (!(applied.scale > 0))
+        return { x: screenX, y: screenY };
+    return {
+        x: (screenX - applied.x) / applied.scale,
+        y: (screenY - applied.y) / applied.scale
+    };
+}
+
+// Where a widget dropped from the drawer is stored: its box centred on the
+// pointer, snapped to the drag's own 12px lattice, clamped inside the screen.
+//
+// Snap first, clamp second - the ordering AbstractWidget spells out, because
+// clamp-then-snap rounds an edge drop back off its bound by up to half a cell.
+// Clamped at the WRITE because this is a write with no release to clamp it:
+// spec §8.3 places an added widget the moment it is added, and an unclamped
+// store is 705e9006d's defect (a real store held a widget at x: -852).
+//
+// A widget with no resolvable size yet - the content-sized path, where the
+// pixel size exists only once the widget instantiates - is a point at the
+// pointer: zero defaults keep the centring and the clamp exact for it.
+function dropPosition(input) {
+    const grid = (input && input.gridSize) || 12;
+    const width = (input && input.widgetWidth) || 0;
+    const height = (input && input.widgetHeight) || 0;
+    const screenWidth = (input && input.screenWidth) || 0;
+    const screenHeight = (input && input.screenHeight) || 0;
+    const snap = value => Math.round(value / grid) * grid;
+    const x = snap(((input && input.canvasX) || 0) - width / 2);
+    const y = snap(((input && input.canvasY) || 0) - height / 2);
+    return {
+        x: Math.max(0, Math.min(screenWidth - width, x)),
+        y: Math.max(0, Math.min(screenHeight - height, y))
     };
 }
