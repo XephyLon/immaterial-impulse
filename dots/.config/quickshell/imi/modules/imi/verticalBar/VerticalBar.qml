@@ -25,7 +25,11 @@ Scope {
         }
         LazyLoader {
             id: barLoader
+            // The Lockscreen tab takes the bar down exactly as the real lock
+            // does, through the same gate (spec §1.5) - a teardown/rebuild per
+            // tab flip, same as per lock/unlock.
             active: GlobalStates.barOpen && !GlobalStates.screenLocked
+                && !GlobalStates.editLockPreview
             required property ShellScreen modelData
             component: PanelWindow {
                 id: barRoot
