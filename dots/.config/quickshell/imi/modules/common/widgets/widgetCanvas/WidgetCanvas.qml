@@ -44,8 +44,8 @@ MouseArea {
     // "not M3E-compliant" that costs nothing to fix.
     //
     // The FASTER of the two effects tiers, which is a change from when this
-    // fade arrived with the mode: there it eased in beside a 500ms shrink and
-    // 200ms was the slow half of a pair. Its reference now is the pointer. The
+    // fade arrived with the mode: there it eased in beside a 500ms shrink, and
+    // 200ms against 500 is already brisk. Its reference now is the pointer. The
     // widget is already `drag.threshold` (10px) from where it was pressed when
     // the lattice is asked for, and it keeps travelling while the lattice
     // arrives - at an unhurried 1000px/s that is 200px, sixteen 12px cells,
