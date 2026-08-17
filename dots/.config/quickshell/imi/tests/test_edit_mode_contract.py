@@ -968,10 +968,12 @@ def test_the_size_affordance_indexes_offered_spans_and_never_a_pixel():
     content = code(MENU_CONTENT)
     assert "GridSizes.offeredSizes(" in content, \
         "the menu no longer takes its spans from the offered list"
+    assert "GridSizes.steppedSize(" in content, \
+        "the step must come from the module, where tst_grid_sizes owns the walk"
     assert re.search(
-        r'setOption\([^)]*"__gridSize",\s*\n?\s*GridSizes\.formatSize\(root\.offeredSizes\[',
+        r'setOption\([^)]*"__gridSize",\s*\n?\s*GridSizes\.formatSize\(next\)',
         content), \
-        "the size write must be an entry of offeredGridSizes and nothing else"
+        "the size write must be the stepped offered span and nothing else"
     # No pointer anywhere near the size: the card's rows are buttons, and a
     # MouseArea is how a pixel delta would arrive.
     assert "MouseArea" not in content, \
