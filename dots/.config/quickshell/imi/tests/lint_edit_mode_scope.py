@@ -36,7 +36,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-EDIT_MODE_DIRS = [ROOT / "modules/imi/editMode"]
+# The lock module joined for stage 9b: the island reorder commits its lists
+# from LockSurface's own edit machinery, which lives beside the surface rather
+# than under editMode/ - and a scope rule that stops at a directory boundary is
+# an invitation to move the write one directory sideways.
+EDIT_MODE_DIRS = [ROOT / "modules/imi/editMode", ROOT / "modules/imi/lock"]
 
 ALLOWED_CONFIG_PATHS = {
     "plugins.enabled",
@@ -44,6 +48,12 @@ ALLOWED_CONFIG_PATHS = {
     "bar.layouts.middleLayout",
     "bar.layouts.rightLayout",
     "dock.pinnedApps",
+    # Stage 9b: the islands' ORDER is placement (spec §9's rule admits order
+    # by name), and the three lists are spelled out rather than a prefix so a
+    # future lock.islands.* key does not inherit the licence unreviewed.
+    "lock.islands.main",
+    "lock.islands.left",
+    "lock.islands.right",
 }
 # `lock.showWidgets` / `showToolbars` / `showMedia` are presence-on-a-surface,
 # which the rule admits (spec §9's second edge case).
@@ -184,6 +194,7 @@ class EditModeScopeLint(unittest.TestCase):
             'Config.options.plugins.enabled = next\n'
             'Config.setNestedValue("dock.pinnedApps", apps)\n'
             'Config.setNestedValue("lock.showWidgets", true)\n'
+            'Config.options.lock.islands.left = next\n'
             'PluginState.setOption(id, "positionLocked", true)\n'
             'PluginState.setOption(id, "__gridSize", "2x1")\n'
             'PluginState.setPosition(id, screen, { x: 0, y: 0 })\n'
