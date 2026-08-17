@@ -168,11 +168,17 @@ ShellRoot {
                 }
             }
 
+            // BELOW widgetCanvas (z 2), which is the arrangement Background.qml
+            // has: the cover rounds the picture and the widgets draw over it
+            // uncut. test_edit_mode_contract.py pins this z against
+            // Background.qml's, because a probe re-declaring the arrangement can
+            // score one the shell does not have - and it did, for exactly one
+            // render of this fix.
             Loader {
                 id: editChrome
                 active: harness.editProgress > 0
                 anchors.fill: parent
-                z: 4
+                z: 1
                 enabled: false
                 opacity: harness.editProgress
                 sourceComponent: EditModeCard {
