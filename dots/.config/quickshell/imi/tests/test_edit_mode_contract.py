@@ -469,6 +469,42 @@ def test_the_inset_is_derived_from_one_declared_drawer_width():
          "translates the desktop, it never resizes it")
 
 
+def test_the_drawer_reaches_the_desktops_x_and_nothing_else():
+    """Opening the drawer translates the desktop; it never resizes it.
+
+    Spec §1.3, mechanized: the drawer's open state may reach exactly one term
+    of the transform - the shift `atProgress` applies to x - and may not reach
+    the geometry at all. A width, height or scale that read it would rescale
+    every widget under the cursor mid-edit and hand every Behavior carrying
+    the box a moving target (b710ef731). The failure is silent at rest, which
+    is the only place anyone looks: open and closed settle correctly, and the
+    frames in between rescale a drag in flight.
+    """
+    text = code(BACKGROUND)
+    shift = declaration(text, "editShift")
+    assert "EditMode.drawerTravel(" in shift, \
+        "the desktop's travel must come from the module, not be worked out again"
+    assert "GlobalStates.editDrawerProgress" in shift, \
+        "the shift is the travel times the drawer's own animated scalar"
+    # The drawer's scalar reaches the one declaration and nothing else in the
+    # file - the size, the insets and the viewport may not learn it exists.
+    occurrences = text.count("editDrawerProgress")
+    assert occurrences == 1, \
+        (f"GlobalStates.editDrawerProgress appears {occurrences} times in "
+         f"Background.qml: the drawer's state may reach only the shift")
+    viewport = declaration(text, "editViewport")
+    assert "editShift" not in viewport and "drawerTravel" not in viewport, \
+        "the geometry is a function of the drawer's WIDTH alone, never its state"
+    # ...and the shift rides into the transform through the module's own
+    # argument, so the exit's identity-at-zero holds for it too.
+    transform = declaration(text, "editTransform")
+    assert re.search(r"EditMode\.atProgress\([^)]*editShift", transform), \
+        "the shift must go through atProgress, not be added to the matrix by hand"
+    card = declaration(text, "editCard")
+    assert "editShift" in card, \
+        "the card the chrome frames must shift with the desktop it frames"
+
+
 def test_the_mode_animates_on_exactly_one_scalar():
     # The desktop and the chrome that frames it are on two different layer
     # surfaces, and both build their geometry out of the progress. A second
@@ -479,7 +515,8 @@ def test_the_mode_animates_on_exactly_one_scalar():
     for path in ROOT.rglob("*.qml"):
         if "/tests/" in str(path):
             continue
-        if re.search(r"Behavior on editProgress", path.read_text()):
+        if re.search(r"Behavior on editProgress|Behavior on editDrawerProgress",
+                     path.read_text()):
             behaviours.append(str(path.relative_to(ROOT)))
     assert behaviours == ["GlobalStates.qml"], \
         f"the mode's progress is animated in more than one place: {behaviours}"

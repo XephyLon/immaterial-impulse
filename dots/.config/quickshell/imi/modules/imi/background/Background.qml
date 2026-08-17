@@ -569,7 +569,16 @@ Variants {
         // same number. The animation, and why it is `elementMove` rather than
         // an entrance tier, are stated where the property lives.
         readonly property real editProgress: GlobalStates.editProgress
-        readonly property var editTransform: EditMode.atProgress(bgRoot.editViewport, bgRoot.editProgress)
+        // The ONLY term of the transform the drawer's open state reaches: the
+        // desktop's sideways travel, spent out of the room the geometry above
+        // reserved. The size takes the drawer's WIDTH whether or not it is
+        // open, so opening it translates the desktop and can never resize it -
+        // a viewport that changed size mid-edit would rescale every widget
+        // under the cursor (spec §1.3, b710ef731's moving target).
+        readonly property real editShift: EditMode.drawerTravel(bgRoot.editViewport)
+            * GlobalStates.editDrawerProgress
+        readonly property var editTransform: EditMode.atProgress(bgRoot.editViewport,
+            bgRoot.editProgress, bgRoot.editShift)
         // A scale about the top-left followed by a translation, written as one
         // matrix rather than as a [Scale, Translate] pair: the order a transform
         // list composes in is exactly the kind of thing that is wrong by a
@@ -591,7 +600,7 @@ Variants {
         // exactly, and a second derivation of a registration is the drift
         // ClockDepthCutout exists as one component to prevent.
         readonly property rect editCard: EditMode.cardRect(bgRoot.editViewport,
-            bgRoot.editProgress, bgRoot.width, bgRoot.height)
+            bgRoot.editProgress, bgRoot.width, bgRoot.height, bgRoot.editShift)
         // The corner grows with the shrink, so a desktop at rest has no radius
         // applied to it at all rather than one that happens to be hidden. The
         // ladder's own name for the tier, per docs/M3_GUIDELINES.md - a whole
