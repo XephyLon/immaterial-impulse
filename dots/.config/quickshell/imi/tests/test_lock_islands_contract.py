@@ -67,5 +67,68 @@ def test_the_schema_and_the_resolver_agree_on_the_default_order():
              f"default is {expected} - two spellings of one order have split")
 
 
+def all_default_ids():
+    ids = []
+    for name in ("MAIN", "LEFT", "RIGHT"):
+        ids.extend(module_default(name))
+    assert len(ids) >= 10, f"the module's defaults shrank to {ids}"
+    return ids
+
+
+def test_the_islands_render_through_the_one_resolver():
+    # Each island's Repeater models the resolver's answer, never the stored
+    # list directly: the resolver is where the version-skew rules live (a
+    # missing known id renders at its default position; an unknown one is
+    # skipped without being destroyed), and a Repeater over the raw list
+    # would silently drop both rules.
+    raw = read(LOCK_SURFACE)
+    assert "lock_islands.js" in raw, \
+        "LockSurface no longer imports the islands module"
+    text = code(LOCK_SURFACE)
+    for name, default in (("mainOrder", "MAIN_DEFAULT"),
+                          ("leftOrder", "LEFT_DEFAULT"),
+                          ("rightOrder", "RIGHT_DEFAULT")):
+        assert re.search(
+            rf"property var {name}:\s*LockIslands\.orderedItems\(\s*\n?\s*"
+            rf"Config\.options\.lock\.islands\.\w+,\s*LockIslands\.{default}\)",
+            text), \
+            f"{name} is not the resolver over the stored list and its defaults"
+    models = re.findall(r"model:\s*root\.(main|left|right)Order", text)
+    assert sorted(models) == ["left", "main", "right"], \
+        f"expected the three islands to model the three orders, found {models}"
+
+
+def test_every_default_id_has_a_component_and_its_layout_metadata():
+    # A default id with no component entry renders as an empty slot - the
+    # Loader resolves null and draws nothing, silently, which is the exact
+    # disappearance the resolver exists to prevent arriving from the other
+    # side. Same for the layout metadata: a missing entry is not an error,
+    # it is a margin of 0 that reads as a design choice.
+    text = code(LOCK_SURFACE)
+    components = re.search(r"islandComponents:\s*\(\{(.*?)\}\)", text, re.S)
+    assert components, "LockSurface declares no islandComponents map"
+    meta = re.search(r"islandItemMeta:\s*\(\{(.*?)\n    \}\)", text, re.S)
+    assert meta, "LockSurface declares no islandItemMeta map"
+    for item in all_default_ids():
+        assert re.search(rf"\b{item}:", components.group(1)), \
+            f"islandComponents has no entry for {item}"
+        assert re.search(rf"\b{item}:", meta.group(1)), \
+            f"islandItemMeta has no entry for {item}"
+
+
+def test_the_password_field_is_reachable_and_pinned_by_the_module():
+    # The field lives inside a delegate component now, so forceFieldFocus
+    # reaches it through the property the component publishes - and the
+    # module, not the surface, is what says it cannot be reordered.
+    text = code(LOCK_SURFACE)
+    assert re.search(r"property Item passwordField", text), \
+        "the surface no longer publishes the password field"
+    assert re.search(r"root\.passwordField\?\.forceActiveFocus\(\)", text), \
+        "forceFieldFocus no longer reaches the field through the property"
+    module = code(MODULE)
+    assert re.search(r'island === "main" && id === "password"', module), \
+        "the module no longer pins the password field as unmovable"
+
+
 if __name__ == "__main__":
     raise SystemExit(run(globals()))
