@@ -20,6 +20,7 @@ TestCase {
             maskPath: "/cache/clock-depth/abc.png",
             optedOut: false,
             selecting: false,
+            editing: false,
             weActive: false,
             wallpaperIsVideo: false,
             centeredWallpaper: false,
@@ -69,6 +70,27 @@ TestCase {
         compare(ClockDepth.eligible({
             enable: true, maskPath: "/cache/clock-depth/abc.png",
             optedOut: false, selecting: true
+        }), false);
+    }
+
+    function test_edit_mode_refuses() {
+        // This layer paints the subject back OVER the desktop widgets, which is
+        // the effect at rest and is a widget the user cannot fully see in the
+        // mode that exists to let them place it. It is also the only thing left
+        // drawing above the mode's blurred backdrop, and it reconstructs the
+        // parallax viewport - which is larger than the screen, so with the
+        // desktop shrunk away from the surface's own edge it would be free to
+        // paint outside the card.
+        compare(showing({ editing: true }), false);
+    }
+
+    function test_edit_mode_refuses_even_with_everything_else_perfect() {
+        // Its own case for the reason the selection's is: `editing` is resolved
+        // BEFORE the mask, so a fixture that drifted into having no mask would
+        // refuse anyway and the check above would pass with the clause deleted.
+        compare(ClockDepth.eligible({
+            enable: true, maskPath: "/cache/clock-depth/abc.png",
+            optedOut: false, editing: true
         }), false);
     }
 
