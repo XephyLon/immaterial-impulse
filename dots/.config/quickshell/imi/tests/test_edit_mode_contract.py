@@ -78,6 +78,8 @@ CHROME_SCOPE = ROOT / "modules/imi/editMode/EditModeChrome.qml"
 CHROME_SURFACE = ROOT / "modules/imi/editMode/EditModeChromeSurface.qml"
 CHROME_CONTENT = ROOT / "modules/imi/editMode/EditModeChromeContent.qml"
 DRAWER = ROOT / "modules/imi/editMode/EditModeDrawer.qml"
+MENU = ROOT / "modules/imi/editMode/EditWidgetMenu.qml"
+MENU_CONTENT = ROOT / "modules/imi/editMode/EditWidgetMenuContent.qml"
 INSETS = ROOT / "modules/imi/editMode/EditModeInsets.qml"
 DESKTOP_MENU = ROOT / "modules/imi/desktopMenu/DesktopMenu.qml"
 RULES = ROOT.parents[1] / "hypr/hyprland/rules.lua"
@@ -86,7 +88,8 @@ RULES = ROOT.parents[1] / "hypr/hyprland/rules.lua"
 # participant is a deliberate addition to this list, which is where someone
 # reads what the rules are.
 PARTICIPANTS = [BACKGROUND, CANVAS, WIDGET, BACKGROUND_WIDGET, PLUGIN_WIDGET,
-                CHROME_SCOPE, CHROME_SURFACE, CHROME_CONTENT, DRAWER]
+                CHROME_SCOPE, CHROME_SURFACE, CHROME_CONTENT, DRAWER,
+                MENU, MENU_CONTENT]
 
 
 def read(path: Path) -> str:
@@ -953,6 +956,94 @@ def test_a_destroyed_widget_vacates_the_menu_it_opened():
     assert "editWidgetMenuOpen = false" in body, "the vacate no longer closes the menu"
     assert "editWidgetMenuPluginId" in body and "editWidgetMenuScreenName" in body, \
         "the vacate must match both the id and the screen before closing"
+
+
+def test_the_size_affordance_indexes_offered_spans_and_never_a_pixel():
+    # Spec 5's rule, mechanized (11.2): the host can only ever assign an
+    # offered span, so the menu's Size is a stepper over offeredGridSizes and
+    # the tempting way to build it - a handle over pixels - must be
+    # unreachable. A widget offering one span gets no row at all (omitted, not
+    # disabled), and one that declined `grid` (calendar, world-clock,
+    # custom-image) offers zero, so its own handles keep the size they chose.
+    content = code(MENU_CONTENT)
+    assert "GridSizes.offeredSizes(" in content, \
+        "the menu no longer takes its spans from the offered list"
+    assert re.search(
+        r'setOption\([^)]*"__gridSize",\s*\n?\s*GridSizes\.formatSize\(root\.offeredSizes\[',
+        content), \
+        "the size write must be an entry of offeredGridSizes and nothing else"
+    # No pointer anywhere near the size: the card's rows are buttons, and a
+    # MouseArea is how a pixel delta would arrive.
+    assert "MouseArea" not in content, \
+        "the menu card grew a pointer area - a size handle starts this way"
+    assert "onPositionChanged" not in content
+    # No second copy of the grip's tension walk either.
+    assert "previewGridResize" not in content and "BREAK_PX" not in content, \
+        "the menu re-implements the grip instead of stepping the offered list"
+    # The row comes and goes with the offered count, through GroupedList's own
+    # mechanism - `visible` would leave an empty plate (b949bf24a).
+    assert re.search(r"rowVisible:\s*root\.offeredSizes\.length > 1", content), \
+        "a single-span widget must get no Size row, via rowVisible"
+
+
+def test_the_pin_is_one_writer_with_two_call_sites_and_a_bound_state():
+    # Spec 9's first deliberate edge case: a "Widget behaviour" toggle that is
+    # about placement. The write goes through the one existing writer
+    # (PluginState.setOption), and the drawn state is a BINDING on the stored
+    # value with the host's own manifest seed - never local state, which is the
+    # ConfigSwitch lesson: a row holding its own flag detaches from the store
+    # on the first external write and then lies about it.
+    content = code(MENU_CONTENT)
+    pinned = declaration(content, "pinned")
+    assert pinned, "the pin row no longer binds its state"
+    assert "PluginState.option(" in pinned and "positionLocked" in pinned, \
+        "the pin state must be read from the store"
+    assert "desktopWidget?.locked === true" in pinned, \
+        "the pin state must be seeded the way PluginWidget seeds it"
+    assert re.search(
+        r'PluginState\.setOption\([^)]*"positionLocked",\s*!root\.pinned\)', content), \
+        "the pin click must flip the stored value at its source"
+
+
+def test_remove_is_presence_through_the_one_spelling():
+    # Presence on the surface is one list and one write: the menu's Remove,
+    # the drawer's toggle and Settings > Widgets all mutate plugins.enabled,
+    # and the two edit-mode call sites share EditMode.enabledWithout so they
+    # cannot disagree about order or duplicates.
+    content = code(MENU_CONTENT)
+    assert 'Config.setNestedValue("plugins.enabled"' in content, \
+        "the menu's Remove no longer writes presence"
+    assert "EditMode.enabledWithout(" in content, \
+        "the menu spells its own removal loop instead of the shared one"
+    assert "EditMode.enabledWithout(" in code(CHROME_SURFACE), \
+        "the drawer's toggle left the shared spelling"
+
+
+def test_the_menu_window_is_the_desktop_menus_shape():
+    # A transient full-screen Overlay window that exists only while open, on
+    # the reused quickshell:desktopMenu namespace - the same kind of surface as
+    # the desktop's own menu, under the same compositor rules. A menu on the
+    # background surface would sit under the bar; a fourth mask region on the
+    # chrome surface could never dismiss on an outside click, because every
+    # pixel outside the chrome's rects falls through to the desktop.
+    menu = code(MENU)
+    assert 'WlrLayershell.namespace: "quickshell:desktopMenu"' in menu, \
+        "the menu window left the desktop menu's namespace"
+    assert re.search(r'color:\s*"transparent"', menu), \
+        "the window's clear colour must stay a literal (deba3e3f6)"
+    assert re.search(r"active:\s*GlobalStates\.editWidgetMenuOpen", menu), \
+        "the window must exist only while the menu is open"
+    assert re.search(r"onClicked:\s*GlobalStates\.editWidgetMenuOpen = false", menu), \
+        "a click outside the card must dismiss the menu"
+
+
+def test_the_menu_does_not_outlive_the_mode():
+    states = code(GLOBAL_STATES)
+    handler = re.search(r"onEditModeChanged:\s*\{(.*?)\n    \}", states, re.S)
+    assert handler, "GlobalStates no longer answers the mode ending"
+    assert "editWidgetMenuOpen = false" in handler.group(1), \
+        ("leaving the mode must close the menu - one left open would greet the "
+         "next entry pointing at wherever a widget used to be")
 
 
 if __name__ == "__main__":

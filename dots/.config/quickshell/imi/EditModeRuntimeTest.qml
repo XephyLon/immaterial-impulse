@@ -5,6 +5,7 @@ import qs
 import qs.modules.common
 import qs.modules.common.plugins
 import qs.modules.common.widgets.widgetCanvas
+import qs.modules.imi.editMode
 import "modules/common/functions/edit_mode.js" as EditMode
 
 /**
@@ -133,6 +134,19 @@ ShellRoot {
                 scaledScreenWidth: harness.screenWidth
                 scaledScreenHeight: harness.screenHeight
                 wallpaperScale: 1
+            }
+
+            // The menu's card, driven directly: the window that hosts it on
+            // the desktop is a layer surface no harness can build, and the
+            // card is where the writes live. Beside the canvas, clear of every
+            // gesture the steps above drive.
+            EditWidgetMenuContent {
+                id: menuContent
+                x: 920
+                y: 8
+                width: 260
+                height: implicitHeight
+                manifest: harness.resizableManifest
             }
 
             // A widget that can stop existing while its menu is open - the
@@ -523,6 +537,59 @@ ShellRoot {
         () => {
             harness.check("a widget destroyed while its menu is open vacates it",
                           !GlobalStates.editWidgetMenuOpen);
+        },
+
+        // ---- the menu's rows: Pin, the Size stepper, Remove ----------------
+        //
+        // Real clicks on the real card, read back from the real stores. The
+        // stepper's whole contract is that it INDEXES offeredGridSizes - the
+        // manifest's own order, [3x2, 2x2, 2x1] here - and never sees a pixel
+        // or a pointer delta, so the checks walk the list to both of its ends
+        // and read the stored span after every step.
+        () => {
+            Config.options.plugins.enabled = ["edit-resize-probe"];
+            PluginState.setOption("edit-resize-probe", "positionLocked", false);
+        },
+        () => {
+            const pin = driver.findChild(menuContent, "editMenuPin");
+            driver.mouseClick(pin, pin.width / 2, pin.height / 2, Qt.LeftButton);
+            harness.check("the menu's Pin writes the stored positionLocked and the row follows",
+                          PluginState.option("edit-resize-probe", "positionLocked", false) === true
+                          && menuContent.pinned === true);
+        },
+        () => {
+            const pin = driver.findChild(menuContent, "editMenuPin");
+            driver.mouseClick(pin, pin.width / 2, pin.height / 2, Qt.LeftButton);
+            harness.check("...and a second click unpins",
+                          PluginState.option("edit-resize-probe", "positionLocked", true) === false
+                          && menuContent.pinned === false);
+        },
+        () => {
+            // The grip section above left the span at 2x2, the middle of the
+            // offered order.
+            const down = driver.findChild(menuContent, "editMenuSizeDown");
+            driver.mouseClick(down, down.width / 2, down.height / 2, Qt.LeftButton);
+            harness.check("the stepper steps back through the offered order",
+                          harness.storedSize("edit-resize-probe") === "3x2");
+        },
+        () => {
+            const up = driver.findChild(menuContent, "editMenuSizeUp");
+            driver.mouseClick(up, up.width / 2, up.height / 2, Qt.LeftButton);
+            driver.mouseClick(up, up.width / 2, up.height / 2, Qt.LeftButton);
+            harness.check("...and forward to the other end",
+                          harness.storedSize("edit-resize-probe") === "2x1");
+        },
+        () => {
+            const up = driver.findChild(menuContent, "editMenuSizeUp");
+            driver.mouseClick(up, up.width / 2, up.height / 2, Qt.LeftButton);
+            harness.check("...and holds at the end of the offered list",
+                          harness.storedSize("edit-resize-probe") === "2x1");
+        },
+        () => {
+            const remove = driver.findChild(menuContent, "editMenuRemove");
+            driver.mouseClick(remove, remove.width / 2, remove.height / 2, Qt.LeftButton);
+            harness.check("Remove takes the widget out of plugins.enabled",
+                          Config.options.plugins.enabled.length === 0);
         }
     ]
 
