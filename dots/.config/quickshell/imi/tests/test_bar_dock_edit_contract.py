@@ -325,5 +325,52 @@ def test_the_docks_preview_popup_stands_down_for_the_mode():
         "StyledPopup's claim gate closes on the bar")
 
 
+# ---- the drawer's Bar and Dock sections ------------------------------------
+
+DRAWER = ROOT / "modules/imi/editMode/EditModeDrawer.qml"
+CHROME_SURFACE = ROOT / "modules/imi/editMode/EditModeChromeSurface.qml"
+
+
+def test_the_drawer_offers_the_bar_catalogue_through_the_one_policy():
+    drawer = code(DRAWER)
+    assert "BarWidgets.offerFor(" in drawer, (
+        "the drawer's bar section does not ask BarWidgets.offerFor - a local "
+        "filter is the policy copy the promotion removed from BarConfig")
+    assert "AppSearch" in drawer, (
+        "the drawer's dock section no longer reads the desktop entries "
+        "through AppSearch")
+
+
+def test_the_drawer_still_writes_nothing():
+    # Stage 5's discipline, held through the new sections: every gesture is a
+    # signal and the chrome surface makes every store write - which is what
+    # keeps the scope question answerable in one file per store.
+    drawer = code(DRAWER)
+    for spelling in ("Config.setNestedValue", "TaskbarApps.togglePin",
+                     "PluginState.set"):
+        assert spelling not in drawer, (
+            f"the drawer calls {spelling} itself - it reports gestures, the "
+            f"surface writes")
+    assert not re.search(r"Config\.options\.[\w.]+\s*=(?!=)", drawer), (
+        "the drawer assigns to Config.options - it reports gestures, the "
+        "surface writes")
+
+
+def test_the_surface_appends_bar_widgets_by_literal_path_and_pins_through_the_one_writer():
+    surface = code(CHROME_SURFACE)
+    body = function_body(surface, "appendBarWidget")
+    assert "LayoutOps.insert(" in body, (
+        "appendBarWidget no longer goes through layout_ops.insert")
+    writes = re.findall(r"Config\.options\.bar\.layouts\.(\w+)\s*=", body)
+    assert sorted(set(writes)) == ["leftLayout", "middleLayout", "rightLayout"], (
+        f"appendBarWidget writes {sorted(set(writes))} - three literal paths, "
+        f"never a computed key (an allowlist reachable through a variable is "
+        f"not an allowlist)")
+    assert "TaskbarApps.togglePin(" in surface, (
+        "the dock's presence write no longer goes through its one existing "
+        "writer - a second spelling of the pinnedApps edit is the drift "
+        "layout_ops and togglePin each exist to prevent in their own stores")
+
+
 if __name__ == "__main__":
     raise SystemExit(run(globals()))

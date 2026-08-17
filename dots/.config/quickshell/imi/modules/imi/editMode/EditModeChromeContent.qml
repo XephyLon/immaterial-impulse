@@ -67,6 +67,8 @@ Item {
     signal drawerToggleRequested()
     signal widgetDropRequested(var manifest, real dropX, real dropY)
     signal widgetToggleRequested(var manifest)
+    signal barWidgetAddRequested(string widgetId, string bucket)
+    signal dockAppToggleRequested(string appId)
 
     // Published for the surface's input mask: these three rects are the only
     // pixels of a screen-sized layer surface that may take a click, because
@@ -182,5 +184,7 @@ Item {
         ghostParent: root
         onAddRequested: (manifest, dropX, dropY) => root.widgetDropRequested(manifest, dropX, dropY)
         onToggleRequested: (manifest) => root.widgetToggleRequested(manifest)
+        onBarAddRequested: (widgetId, bucket) => root.barWidgetAddRequested(widgetId, bucket)
+        onDockToggleRequested: (appId) => root.dockAppToggleRequested(appId)
     }
 }
