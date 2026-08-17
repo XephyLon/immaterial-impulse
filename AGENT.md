@@ -2790,6 +2790,47 @@ mode is built out of are worth not re-deriving:
   feat(bar): bar widgets become inert, badged and reorderable in the mode;
   feat(dock): pinned icons grow remove badges and go inert in the mode;
   feat(editMode): the drawer grows Bar and Dock sections.)
+- **The Lockscreen tab is a filter on the viewport, and its preview cannot
+  authenticate — stage 9.** The tab is `GlobalStates.editTab`, a string beside
+  the mode holding `edit_mode.js`'s tab constants (the literal lives in that
+  file alone), reset on exit like the drawer and the menu; the ONE derivation
+  of "the viewport is showing the lock screen" is
+  `GlobalStates.editLockPreview`, and the contract forbids an `editTab ===`
+  comparison anywhere else — the chrome's tab bar maps index↔tab through the
+  module's `tabAt`/`tabIndex` for exactly that reason, and its two directions
+  are imperative on purpose, because `ToolbarTabBar`'s wheel handler assigns
+  the inner index directly and would destroy a binding placed on it. What the
+  tab changes is gates on things `Background.qml` already draws: the lock
+  wallpaper, the lock WE project, the peel state, the lock blur (through one
+  local `lockLook`), `AbstractBackgroundWidget`'s lock filter, and the clock's
+  four lock-look bindings (one `lockLook` in the plugin — centring, style,
+  show-only-when-locked, the Locked caption). The islands are the REAL
+  `LockSurface`, neutered by construction: `interactive: false` gates the
+  root area, the field (`enabled` AND `readOnly`), `forceFieldFocus` and
+  every click/key handler uniformly — so `tests/test_lock_preview_contract.py`
+  holds ALL handlers to the one guard and asserts how many it found, since a
+  sweep here that matches nothing is a security hole reading as green — and
+  the context is `LockPreviewContext`, a separate component enumerated
+  against `LockContext`'s whole surface that constructs no pam machinery and
+  spawns nothing (never "the real one with a flag"). The host is a fifth
+  sibling carrying the one edit matrix at z 4, above the widgets the way the
+  real session lock surface is. The bar and the dock leave the tab through
+  the lock's own gates (the bars' loader `active`, the dock's `visible` — a
+  surface teardown per tab flip, sanctioned where auto-hide suspension never
+  is), while `EditModeInsets` deliberately does NOT drop with them: the
+  reservation is configuration-only, and a card resized per tab flip is
+  b710ef731's moving target under every widget at once. Island visibility is
+  the drawer's Lock section — rows signal, the chrome surface flips the three
+  `lock.show*` booleans at literal paths. Known fidelity gaps, accepted and
+  stated: no fingerprint glyph in the preview (knowing means asking the
+  daemon), parallax stays desktop-framed (its zoom feeds the viewport's
+  size), and `centeredWallpaperOnlyWhenLocked` does not preview.
+  (feat(lock): LockSurface takes an interactive switch, default on;
+  feat(lock): LockPreviewContext, a context that cannot authenticate;
+  feat(editMode): the mode's tab, a GlobalStates string beside it;
+  feat(background): the viewport draws its locked inputs on the Lockscreen tab;
+  feat(bar): the bar and the dock leave the Lockscreen tab;
+  feat(editMode): the drawer grows a Lock section for island presence.)
 (feat(editMode): shrink the desktop into a viewport on the background surface,
 feat(editMode): stand the per-widget frost down for the mode,
 feat(editMode): draw the shrunk desktop as a card, not as a cropped screenshot,
