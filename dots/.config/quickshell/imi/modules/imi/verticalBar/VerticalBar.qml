@@ -56,8 +56,9 @@ Scope {
                     Appearance.sizes.baseVerticalBarWidth + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
                     + (Config.options.bar.cornerStyle === 3 ? (Config.options.hyprland.general.gapsOut || 5) : 0)
                 WlrLayershell.namespace: "quickshell:verticalBar"
-                implicitWidth: Appearance.sizes.verticalBarWidth + Appearance.rounding.screenRounding
-                    + (Config.options.bar.cornerStyle === 3 ? (Config.options.hyprland.general.gapsOut || 5) : 0)
+                // In Appearance for the reason Bar.qml's height is: Edit Mode
+                // keeps its chrome clear of this surface and cannot measure it.
+                implicitWidth: Appearance.sizes.verticalBarSurfaceWidth
                 mask: Region { item: hoverMaskRegion }
                 color: "transparent"
 

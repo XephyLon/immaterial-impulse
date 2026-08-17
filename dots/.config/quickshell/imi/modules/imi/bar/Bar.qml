@@ -78,7 +78,11 @@ Scope {
                 // content carries the gap instead, which looks identical and
                 // costs no surface reconfiguration.
                 readonly property real detachInset: Appearance.sizes.barDetachInset
-                implicitHeight: Appearance.sizes.barHeight + Appearance.rounding.screenRounding + detachInset
+                // The sum lives in Appearance because Edit Mode has to know how
+                // much of the screen this surface occupies and cannot measure
+                // it - the two are on different layer surfaces, in different
+                // scene graphs.
+                implicitHeight: Appearance.sizes.barSurfaceHeight
                 // When Overlay-layer, bar shares a layer with the screen-corner click zones (ScreenCorners.qml)
                 // and same-layer overlap is resolved by stacking, not layer priority - bar was winning and
                 // swallowing the tiny corner-open hit rects. Carve them out of the bar's own mask so clicks
