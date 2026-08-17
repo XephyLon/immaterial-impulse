@@ -347,17 +347,35 @@ class EditModeChromeTest(unittest.TestCase):
 
     # ---- the lattice arrives with the drag -------------------------------
 
-    def test_the_mode_at_rest_draws_no_lattice(self):
-        # Sampled on the same run of bare wallpaper the vacuity check below
-        # uses, so the two are answering one question from opposite sides: on
-        # the flat fixture anything that is not the wallpaper's own colour is a
-        # line, and at rest in the mode there must be none of them.
-        frame = self.frames["editing"]
+    SAMPLES = 120
+    # WidgetCanvas.gridSize: the pitch the drag snaps to and the lattice draws.
+    LATTICE = 12
+
+    def lattice_samples(self, frame):
+        """How many of a run of bare wallpaper below the panel are not wallpaper.
+
+        On the flat fixture anything that is not the wallpaper's own colour is a
+        grid line, so this counts the vertical lines crossed by one horizontal
+        run - and the count is what tells the two directions of the question
+        apart. 0 is no lattice; SAMPLES is the whole run, which means the row
+        itself landed on a horizontal line and says nothing about whether there
+        were any vertical ones.
+
+        The row is deliberately offset half a cell off the lattice, because the
+        obvious choice was not: `panel.y + panel.height + 60` is 540 canvas
+        pixels down, which is 45 cells exactly, so every sample in the run
+        differed and this measured a horizontal line rather than the lattice.
+        Planting `model: 0` on the vertical Repeater left it green.
+        """
         px, py, pw, ph = self.panel
-        lines = [i for i in range(1, 120)
-                 if frame.getpixel(self.on_card(px + pw * i / 120, py + ph + 60))
-                 != WALLPAPER_RGB]
-        self.assertEqual(lines, [], "the mode drew a lattice before anything was dragged")
+        row = py + ph + 60 + self.LATTICE / 2
+        return sum(1 for i in range(1, self.SAMPLES)
+                   if frame.getpixel(self.on_card(px + pw * i / self.SAMPLES, row))
+                   != WALLPAPER_RGB)
+
+    def test_the_mode_at_rest_draws_no_lattice(self):
+        self.assertEqual(self.lattice_samples(self.frames["editing"]), 0,
+                         "the mode drew a lattice before anything was dragged")
 
     def test_and_the_lattice_leaves_when_the_drag_does(self):
         # The same shape as the rest/after comparison, one level in: both frames
@@ -404,16 +422,17 @@ class EditModeChromeTest(unittest.TestCase):
 
     def test_and_the_lattice_is_there_to_be_hidden(self):
         # Without this the check above passes on a frame with no grid in it.
-        # Sampled on a run of bare wallpaper below the panel: on the flat
-        # fixture, anything that is not the wallpaper's own colour is a line.
-        frame = self.frames["dragging"]
-        px, py, pw, ph = self.panel
-        lines = 0
-        for i in range(1, 120):
-            point = self.on_card(px + pw * i / 120, py + ph + 60)
-            if frame.getpixel(point) != WALLPAPER_RGB:
-                lines += 1
+        #
+        # Bounded at BOTH ends, and the upper bound is not decoration: the run
+        # is horizontal, so what it crosses is the VERTICAL lines - and if the
+        # row it is read along happens to land on a horizontal line, every
+        # sample differs and the check passes while there is not a vertical
+        # line on the screen. Found by planting exactly that: `model: 0` on the
+        # vertical Repeater alone left this green.
+        lines = self.lattice_samples(self.frames["dragging"])
         self.assertGreater(lines, 0, "no lattice was drawn, so hiding it proves nothing")
+        self.assertLess(lines, self.SAMPLES - 1,
+                        "the sampled row is itself a line, so it says nothing about the lattice")
 
 
 if __name__ == "__main__":
