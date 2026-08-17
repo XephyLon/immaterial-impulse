@@ -123,6 +123,19 @@ Singleton {
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
     }
 
+    // The per-widget context menu - Edit Mode's right-click on a widget
+    // (spec §4.1: Remove / Pin / Size). Session state like the mode itself,
+    // and shaped like the desktop menu's quad: which screen, where on it, and
+    // - the one field the desktop menu does not need - which widget it is
+    // about. The point is in SCREEN coordinates, mapped by the widget through
+    // its own transform chain on the way here, so the menu window needs no
+    // knowledge of the mode's viewport arithmetic.
+    property bool editWidgetMenuOpen: false
+    property string editWidgetMenuScreenName: ""
+    property real editWidgetMenuX: 0
+    property real editWidgetMenuY: 0
+    property string editWidgetMenuPluginId: ""
+
     property bool dropShelfOpen: false
     property real dropShelfX: 0
     property real dropShelfY: 0
@@ -150,8 +163,13 @@ Singleton {
         // The open flag does not outlive the mode: a drawer left latched open
         // would greet the NEXT entry mid-slide, with the desktop already
         // shifted on the first frame of a shrink that is supposed to be
-        // concentric.
-        else root.editDrawerOpen = false;
+        // concentric. The widget menu goes with it for the same reason - it is
+        // the mode's affordance, and one left open would greet the next entry
+        // pointing at wherever a widget used to be.
+        else {
+            root.editDrawerOpen = false;
+            root.editWidgetMenuOpen = false;
+        }
     }
     onClockDepthSelectOpenChanged: if (root.clockDepthSelectOpen) root.editMode = false
 

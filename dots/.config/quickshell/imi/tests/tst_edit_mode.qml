@@ -19,6 +19,24 @@ TestCase {
         }), "cancelGesture");
     }
 
+    function test_escape_dismisses_an_open_menu_before_anything_else() {
+        // The per-widget context menu is the topmost transient the mode draws
+        // - it opens over the widget it belongs to and everything else waits
+        // behind it - so it is the ladder's first rung. Asserted with every
+        // other rung armed, because a rung that only wins against an empty
+        // state would pass a `||` chain.
+        compare(EditMode.resolveEscape({
+            menuOpen: true, gestureInFlight: true, selectionCount: 3, tab: "lockscreen"
+        }), "closeMenu");
+    }
+
+    function test_a_closed_menu_leaves_the_ladder_exactly_as_it_was() {
+        compare(EditMode.resolveEscape({
+            menuOpen: false, gestureInFlight: true, selectionCount: 0
+        }), "cancelGesture");
+        compare(EditMode.resolveEscape({ menuOpen: false }), "exit");
+    }
+
     function test_escape_clears_a_selection_before_changing_tab() {
         compare(EditMode.resolveEscape({
             gestureInFlight: false, selectionCount: 2, tab: "lockscreen"
@@ -470,6 +488,29 @@ TestCase {
         });
         compare(point.x, 1600 - 12);
         compare(point.y, 0);
+    }
+
+    function test_removing_an_id_from_the_enabled_list_keeps_the_rest_in_order() {
+        // Presence on the desktop is one list, and taking an id out of it has
+        // one spelling - the drawer's toggle and the menu's Remove are two call
+        // sites of this, not two loops that can disagree.
+        compare(EditMode.enabledWithout(["clock", "notes", "visualizer"], "notes"),
+                ["clock", "visualizer"]);
+    }
+
+    function test_removing_an_absent_id_returns_an_equal_list() {
+        compare(EditMode.enabledWithout(["clock", "notes"], "docker"),
+                ["clock", "notes"]);
+        compare(EditMode.enabledWithout([], "docker"), []);
+    }
+
+    function test_the_enabled_list_survives_arriving_as_a_qml_list() {
+        // `plugins.enabled` is a QML list property, and a JS array that has
+        // crossed the QML boundary keeps its indices and its length while
+        // losing its Array brand - the trap gridSizes.js already documents. An
+        // array-LIKE input has to come out as a plain array with the id gone.
+        const like = { length: 3, 0: "clock", 1: "notes", 2: "visualizer" };
+        compare(EditMode.enabledWithout(like, "clock"), ["notes", "visualizer"]);
     }
 
     function test_the_chromes_band_closes_in_as_the_desktop_shrinks() {

@@ -23,6 +23,12 @@ var DESKTOP_TAB = "desktop";
 // canvas, a widget or a compositor. The caller does the work each answer names.
 function resolveEscape(state) {
     const s = state || {};
+    // The per-widget context menu is the topmost transient the mode draws - it
+    // opens over the widget it belongs to and everything else waits behind it
+    // until a click lands somewhere else - so it is dismissed before anything
+    // under it is touched.
+    if (s.menuOpen)
+        return "closeMenu";
     if (s.gestureInFlight)
         return "cancelGesture";
     if ((s.selectionCount || 0) > 0)
@@ -30,6 +36,25 @@ function resolveEscape(state) {
     if ((s.tab || DESKTOP_TAB) !== DESKTOP_TAB)
         return "desktopTab";
     return "exit";
+}
+
+// Presence on the desktop is one list (`Config.options.plugins.enabled`), and
+// taking an id out of it has one spelling: the drawer's toggle and the context
+// menu's Remove are two call sites of this function, not two loops that can
+// disagree about order or duplicates.
+//
+// Index-walked rather than filtered because the list arrives as a QML list
+// property: indices and `length` survive the QVariant crossing, the Array
+// brand does not (the boundary gridSizes.js documents), and the result must be
+// a plain array `Config.setNestedValue` can store.
+function enabledWithout(ids, id) {
+    const next = [];
+    const count = ids && typeof ids.length === "number" ? ids.length : 0;
+    for (let index = 0; index < count; index++) {
+        if (ids[index] !== id)
+            next.push(ids[index]);
+    }
+    return next;
 }
 
 // A desktop scaled below this is not an editor any more, it is a thumbnail.
