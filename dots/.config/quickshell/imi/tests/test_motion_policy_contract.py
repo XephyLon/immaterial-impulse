@@ -44,11 +44,13 @@ STAGGER_EXEMPT = {
 # `Appearance.animation`'s body, between its opening brace and `sizes:`.
 TIER_DURATION = re.compile(r"^\s*property int duration:\s*(.+)$", re.MULTILINE)
 TIER_VELOCITY = re.compile(r"^\s*property int velocity:\s*(.+)$", re.MULTILINE)
-# A per-member RANK, as it appears in an expression: an index or a distance
-# from some centre, multiplied by something.
-RANKED = re.compile(
-    r"(?:\b\w*[Ii]ndex\b\s*\*|\*\s*\b\w*[Ii]ndex\b"
-    r"|\b\w*[Dd]istance\w*\b\s*\*|\*\s*\b\w*[Dd]istance\w*\b)")
+# A per-member RANK, as it appears in an expression: an index, or a distance
+# from some centre. Deliberately NOT "...multiplied by something": the first
+# version of this required the rank to sit directly beside a `*`, and
+# `Math.min(itemRoot.index, 10) * 50` - the exact cascade this file exists to
+# have joined - slipped straight through it. A mention is enough, because a
+# wait that depends on which member it belongs to IS a stagger.
+RANKED = re.compile(r"\b(?:\w*[Ii]ndex|\w*[Dd]istance\w*)\b")
 # Only a WAIT counts - a PauseAnimation's duration, or anything spelled as a
 # delay. A NumberAnimation whose own LENGTH varies per member is a different
 # technique (the weather widget desyncs its clouds by giving each a different
@@ -156,9 +158,18 @@ def test_the_speed_slider_cannot_reach_the_floor():
     assert slider_to <= maximum, (
         f"the speed slider goes up to {slider_to}, above the policy's clamp "
         f"of {maximum}.")
-    assert "Config.options.appearance.motion.reduceMotion" in page, (
-        "the settings page offers no reduce-motion control, so the state is "
-        "reachable only by hand-editing config.json")
+    section = page[page.index('title: Translation.tr("Motion")'):]
+    section = section[:section.index("ContentSection", 10)]
+    switch = section[section.index("ConfigSwitch"):]
+    assert "checked: Config.options.appearance.motion.reduceMotion" in switch, (
+        "the Motion section offers no switch bound to the reduce-motion state, "
+        "so an accessibility choice is reachable only by hand-editing "
+        "config.json - or, worse, only by dragging the speed slider, which is "
+        "the arrangement the separate key exists to prevent.")
+    assert "onToggleRequested: Config.options.appearance.motion.reduceMotion" in switch, (
+        "the reduce-motion switch does not write back through an intent. A "
+        "ConfigSwitch that assigns to its own `checked` destroys the binding "
+        "and then lies about the setting for the rest of the session (#158).")
 
 
 def test_the_two_group_cascades_share_one_spelling():
