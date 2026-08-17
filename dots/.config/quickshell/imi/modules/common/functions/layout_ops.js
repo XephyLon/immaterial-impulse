@@ -118,3 +118,86 @@ function remove(list, at) {
     copy.splice(at, 1);
     return copy;
 }
+
+// Which bucket a drop lands in, and where in it - for the bar's three layouts,
+// which are separate lists laid out along one axis.
+//
+// `buckets` is an array of `{ centres, anchor }`: `centres` are the drawn
+// slots' scene centres with the same holes `indexAt` takes (the dragged slot,
+// a Repeater item not built yet), and `anchor` is a stand-in point for a
+// bucket with nothing visible in it - an empty middleLayout has no slot
+// centres at all, and without a stand-in it could never win a drop, which is
+// exactly the "empty bucket must be a valid drop target" half of the bar's
+// bucket boundaries. A bucket whose every slot is a hole is empty in the same
+// sense: dragging the only widget of a bucket must leave that bucket
+// droppable-back-into.
+//
+// The answer's `index` is an INSERTION index (0..length), not a nearest slot:
+// the caller splices with it, and "past the last slot" has to be representable
+// or nothing can be dropped at a bucket's end. Nearest is decided along the
+// one axis the buckets run - the same reasoning as `indexAt`'s column note -
+// and the near/far side of the winning centre decides before/after.
+function dropTarget(buckets, point, axis) {
+    if (!buckets || !point) return null;
+    var best = null;
+    var bestDistance = Infinity;
+    for (var b = 0; b < buckets.length; b++) {
+        var bucket = buckets[b];
+        if (!bucket) continue;
+        var centres = bucket.centres || [];
+        var sawSlot = false;
+        for (var i = 0; i < centres.length; i++) {
+            var centre = centres[i];
+            if (!centre) continue;
+            sawSlot = true;
+            var distance = Math.abs(point[axis] - centre[axis]);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = { bucket: b, index: i + (point[axis] > centre[axis] ? 1 : 0) };
+            }
+        }
+        if (!sawSlot && bucket.anchor) {
+            var anchorDistance = Math.abs(point[axis] - bucket.anchor[axis]);
+            if (anchorDistance < bestDistance) {
+                bestDistance = anchorDistance;
+                best = { bucket: b, index: 0 };
+            }
+        }
+    }
+    return best;
+}
+
+// The bar draws its layouts FILTERED - an empty tray drops sysTray, a disabled
+// plugin drops its widget - so a drag's indices count VISIBLE slots while the
+// store holds the whole list. `flags[i]` says whether stored entry i is drawn;
+// these three walk between the two framings so a reorder shifts the hidden
+// entries along with their visible neighbours instead of eating them.
+
+// The stored index of the nth drawn entry, or -1 past the visible count.
+function nthVisible(flags, n) {
+    if (!flags) return -1;
+    var seen = 0;
+    for (var i = 0; i < flags.length; i++) {
+        if (!flags[i]) continue;
+        if (seen === n) return i;
+        seen++;
+    }
+    return -1;
+}
+
+// A visible insertion index as a stored one: before the nth drawn entry, or at
+// the stored end for an insertion at or past the visible count - an append
+// stays an append whatever is hidden at the tail.
+function insertionForVisible(flags, insertion) {
+    var stored = nthVisible(flags, insertion);
+    return stored === -1 ? (flags ? flags.length : 0) : stored;
+}
+
+// An insertion index counts a GAP and a move destination counts a SLOT: taking
+// the dragged item out first shifts every gap past it one place down, so the
+// two agree below the drag origin and differ by one above it. Named rather
+// than spelled at the call site, because an off-by-one here reads as a reorder
+// that "lands one short" only when the drag crosses more than one neighbour.
+function moveTargetForInsertion(from, insertion) {
+    return insertion > from ? insertion - 1 : insertion;
+}
