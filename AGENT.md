@@ -2711,6 +2711,35 @@ mode is built out of are worth not re-deriving:
   in-memory fixtures inside the module, and the sweep asserts it still found the
   edit-mode files so a directory move cannot leave it green over nothing.
   (test(lint): fail on an edit-mode write outside placement's scope.)
+- **A right-click on a widget is the per-widget menu in the mode and the global
+  lock toggle outside it, and the boundary between the two is the canvas.**
+  `AbstractWidget` resolves the mode off its owning canvas — the same property
+  the marquee and the Escape ladder already run on, so the overlay's canvas
+  (which never follows the mode) keeps today's behaviour with no special case —
+  and only ANNOUNCES the click (`contextMenuRequested`): the base class knows
+  nothing about what a widget is, and `PluginWidget` is what carries an
+  identity. It maps the click with `mapToItem(null, …)` — Qt's own transform
+  chain, which composes the mode's scale, the drawer's shift and the press
+  scale — never a hand-multiplied viewport scale, which is the compensation the
+  contract forbids and is wrong at every scale but 1. The menu's rows are
+  exactly spec §9's three licences: Pin writes the one existing
+  `positionLocked` writer (`PluginState.setOption` — one writer, two call
+  sites) with its drawn check a BINDING on the stored value, seeded the way the
+  host seeds it; Size is a stepper over `offeredGridSizes` in the manifest's
+  own order writing `__gridSize`, with no row at all for a single-span widget
+  (`rowVisible`, not `visible`) and nothing for a widget that declined `grid`,
+  whose own handles keep the size they chose; Remove is presence —
+  `plugins.enabled` is one global list rendered on every monitor, so it removes
+  everywhere, through the same `EditMode.enabledWithout` the drawer's toggle
+  uses. The window is the desktop menu's shape on its reused
+  `quickshell:desktopMenu` namespace (a minted name would repeat the rules.lua
+  threshold exercise to reach the same treatment), the widget vacates the menu
+  from `Component.onDestruction` (the `BarContent.filterLayout` shape — its own
+  Remove destroys the widget under the open menu), and `closeMenu` is the
+  Escape ladder's FIRST rung, so Escape dismisses the menu rather than exiting
+  the mode. (feat(editMode): the menu's open state, and an Escape rung that
+  dismisses it; feat(editMode): right-click in the mode asks for the widget's
+  menu; feat(editMode): the per-widget menu - Remove, Pin, and a Size stepper.)
 - **`WidgetsSubmenu` is gone.** Its widget list had been empty since the desktop
   widgets became plugins, and its one live control was the global lock the mode
   suppresses — a switch that turns off something the editor turns back on. The
