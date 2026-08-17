@@ -415,6 +415,16 @@ if ! python3 "$SCRIPT_DIR/test_bar_edit_runtime.py"; then
     exit 1
 fi
 
+# Stage 9b: the lock islands' reorder, driven with real mouse events on the
+# real LockSurface with the preview context - the overlay's eater, the shared
+# gesture, move semantics, the storedOrder merge, and both cancel paths.
+# Brings its own headless weston.
+echo "Running lock island reorder runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_lock_island_reorder_runtime.py"; then
+    echo "Lock island reorder runtime tests failed."
+    exit 1
+fi
+
 # A column of dock icons can lay out perfectly and still refuse to reorder,
 # because every slot centre shares an x - only real mouse events see that.
 # Brings its own headless weston.

@@ -163,6 +163,14 @@ Singleton {
     // whichever slot holds the grab abandons, and the release still coming
     // lands on nothing.
     property bool editBarDragActive: false
+    // A lock-island reorder in flight (stage 9b's drag inside the Lockscreen
+    // tab's preview). A flag of its own beside the bar's rather than a shared
+    // one: the two gestures live on different surfaces and are cleared by
+    // different teardowns, and one flag cleared by whichever ends first would
+    // strand the other in the ladder. `editReorderCancel` is shared - the
+    // ladder's cancel does not care which reorder is in flight, and each
+    // overlay only answers it while its own drag is.
+    property bool editLockDragActive: false
     signal editReorderCancel()
 
     property bool dropShelfOpen: false
@@ -213,6 +221,7 @@ Singleton {
             // here or a drag cut short by Done leaves the ladder believing a
             // gesture is still in flight.
             root.editBarDragActive = false;
+            root.editLockDragActive = false;
         }
     }
     onClockDepthSelectOpenChanged: if (root.clockDepthSelectOpen) root.editMode = false
