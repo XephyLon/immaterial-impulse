@@ -134,6 +134,23 @@ ShellRoot {
                 scaledScreenHeight: harness.screenHeight
                 wallpaperScale: 1
             }
+
+            // A widget that can stop existing while its menu is open - the
+            // static two above cannot be destroy()ed. The FadeLoader shape a
+            // disabled plugin actually goes through.
+            Loader {
+                id: transientLoader
+                active: false
+                sourceComponent: PluginWidget {
+                    manifest: harness.manifestFor("edit-vanish-probe", { cols: 2, rows: 1 })
+                    screenName: harness.testScreen
+                    screenWidth: harness.screenWidth
+                    screenHeight: harness.screenHeight
+                    scaledScreenWidth: harness.screenWidth
+                    scaledScreenHeight: harness.screenHeight
+                    wallpaperScale: 1
+                }
+            }
         }
     }
 
@@ -447,6 +464,65 @@ ShellRoot {
             // time the mode opens.
             harness.check("...and the cancel takes the lattice with the gesture",
                           !canvas.showGrid);
+        },
+
+        // ---- the right-click: the menu in the mode, the lock outside it ----
+        //
+        // The same click means two things on the two sides of the mode
+        // boundary, and both halves are scored so the branch cannot rot in
+        // either direction: outside, the one quick gesture for the global lock
+        // (spec §4.1's table changes only the in-mode column); inside, the
+        // per-widget menu, anchored at the click's SCREEN position - which is
+        // the widget mapping through the mode's own transform, the half a
+        // hand-multiplied scale gets wrong at every scale but 1.
+        () => {
+            harness.placeWidgets();
+            Config.options.background.widgetsLocked = false;
+        },
+        () => {
+            const x = movableWidget.x + movableWidget.width / 2;
+            const y = movableWidget.y + movableWidget.height / 2;
+            driver.mouseClick(canvas, x, y, Qt.RightButton);
+            harness.check("outside the mode a right-click still toggles the global lock",
+                          Config.options.background.widgetsLocked === true
+                          && !GlobalStates.editWidgetMenuOpen);
+            Config.options.background.widgetsLocked = false;
+        },
+        () => { GlobalStates.editMode = true; },
+        () => {
+            const x = movableWidget.x + movableWidget.width / 2;
+            const y = movableWidget.y + movableWidget.height / 2;
+            driver.mouseClick(canvas, x, y, Qt.RightButton);
+            harness.check("in the mode the same click asks for the widget's menu instead",
+                          GlobalStates.editWidgetMenuOpen
+                          && GlobalStates.editWidgetMenuPluginId === "edit-move-probe"
+                          && GlobalStates.editWidgetMenuScreenName === harness.testScreen
+                          && Config.options.background.widgetsLocked === false);
+            const mapped = canvas.mapToItem(null, x, y);
+            harness.check("...anchored through the mode's own transform",
+                          Math.abs(GlobalStates.editWidgetMenuX - mapped.x) < 1.5
+                          && Math.abs(GlobalStates.editWidgetMenuY - mapped.y) < 1.5);
+            GlobalStates.editWidgetMenuOpen = false;
+        },
+
+        // ---- a widget destroyed while its menu is open vacates it ----------
+        () => {
+            PluginState.setPosition("edit-vanish-probe", harness.testScreen,
+                                    { x: 396, y: 396, placementStrategy: "free" });
+            transientLoader.active = true;
+        },
+        () => {
+            const transient = transientLoader.item;
+            driver.mouseClick(canvas, transient.x + transient.width / 2,
+                              transient.y + transient.height / 2, Qt.RightButton);
+            harness.check("the menu opens for the transient widget",
+                          GlobalStates.editWidgetMenuOpen
+                          && GlobalStates.editWidgetMenuPluginId === "edit-vanish-probe");
+            transientLoader.active = false;
+        },
+        () => {
+            harness.check("a widget destroyed while its menu is open vacates it",
+                          !GlobalStates.editWidgetMenuOpen);
         }
     ]
 
