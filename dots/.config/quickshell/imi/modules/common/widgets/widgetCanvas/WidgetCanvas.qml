@@ -291,7 +291,13 @@ MouseArea {
     // Leaving the mode mid-drag cancels the gesture. It cannot commit: a widget
     // is only clamped on release, and the mode ending is not the user letting
     // go of anything.
-    onEditModeChanged: if (!root.editMode) root.cancelActiveDrag()
+    //
+    // The selection goes with it, because Done means "stop" (spec §8.2) and a
+    // selection halo surviving the mode is a marquee the user has no visible
+    // way to clear. Escape never reaches this branch holding one - the ladder
+    // clears the selection before it will exit - so this is the exit that Done
+    // and the screen being taken away both take.
+    onEditModeChanged: if (!root.editMode) { root.cancelActiveDrag(); root.clearSelection() }
 
     Connections {
         target: root.groupDrag ? root.groupDrag.leader : null
