@@ -213,7 +213,7 @@ Singleton {
         property color colOnTooltip: m3colors.m3inverseOnSurface
         property color colScrim: ColorUtils.transparentize(m3colors.m3scrim, 0.5)
         property color colShadow: ColorUtils.transparentize(m3colors.m3shadow, 0.7)
-        // The two tones a glass edge is drawn in, and the one pair in this file
+        // The tone a glass edge is drawn in, and the one colour in this file
         // deliberately NOT derived from the wallpaper. Everything above is
         // generated from the picture on screen, so an edge drawn in one of those
         // roles is guaranteed to be a colour that picture already contains -
@@ -224,14 +224,20 @@ Singleton {
         // hardcoded contour (refactor(background): one cutout for the layer and
         // the picker to draw).
         //
-        // A PAIR rather than one colour, because that is what carries an edge
-        // over any wallpaper: the specular reads against a dark picture, the
-        // shade against a bright one, and a bevel wearing both is never entirely
-        // invisible. Opaque here - a call site picks its own weight with
-        // Qt.alpha, so one tone can appear at several strengths along the same
-        // edge without a token per strength.
+        // Opaque here - a call site picks its own weight with Qt.alpha, so one
+        // tone appears at several strengths along the same edge without a token
+        // per strength, which is what lets an edge be a catch along the top and
+        // almost nothing along the flanks.
+        //
+        // It shipped as a PAIR, with a `colGlassShade` black beside it, on the
+        // reasoning that a specular reads against a dark picture and a shade
+        // band against a bright one. The shade band went with the thick border
+        // it was half of: what darkens outside Edit Mode's card is `colShadow`
+        // two lines up, already drawn there, from the same lamp, and softly
+        // rather than as a hard 4px lip - so the shade band was a hard copy of
+        // the soft darkening underneath it. Nothing else had ever read the
+        // token. (fix(editMode): the card's edge becomes a catch, not a rim.)
         property color colGlassSpecular: "#ffffff"
-        property color colGlassShade: "#000000"
         property color colOutline: m3colors.m3outline
         property color colOutlineVariant: m3colors.m3outlineVariant
         property color colError: m3colors.m3error
