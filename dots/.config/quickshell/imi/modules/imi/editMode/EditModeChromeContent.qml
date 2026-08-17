@@ -56,13 +56,26 @@ Item {
     // before it knew about either panel.
     property rect area: Qt.rect(0, 0, root.width, root.height)
 
-    signal doneRequested()
+    // The drawer's reveal - `edit_mode.js`'s `drawerRect`, interpolated on the
+    // same pair of scalars as everything else here. Defaults to a zero-width
+    // rect parked at the right edge, so an unconnected instance (the look
+    // probe's) has no drawer and paints exactly what it painted before the
+    // drawer existed.
+    property rect drawer: Qt.rect(root.width, 0, 0, root.height)
 
-    // Published for the surface's input mask: these two rects are the only
+    signal doneRequested()
+    signal drawerToggleRequested()
+    signal widgetDropRequested(var manifest, real dropX, real dropY)
+    signal widgetToggleRequested(var manifest)
+
+    // Published for the surface's input mask: these three rects are the only
     // pixels of a screen-sized layer surface that may take a click, because
-    // everything else on it is the desktop being edited.
+    // everything else on it is the desktop being edited. The drawer's item is
+    // its REVEAL, so closed it is a zero-width rect and the mask built from it
+    // is empty - the edge it lives on keeps its clicks.
     readonly property alias toolbarItem: toolbar
     readonly property alias tabBarItem: tabBar
+    readonly property alias drawerItem: drawerPanel
 
     Toolbar {
         id: toolbar
@@ -90,6 +103,18 @@ Item {
             text: Translation.tr("Edit layout")
             font.pixelSize: Appearance.font.pixelSize.normal
             color: Appearance.colors.colOnSurface
+        }
+
+        // The drawer's toggle, drawn as state rather than as a verb: the
+        // toggled container is what says the panel on the right belongs to
+        // this button once it is open.
+        IconAndTextToolbarButton {
+            id: drawerButton
+            Layout.alignment: Qt.AlignVCenter
+            iconText: "widgets"
+            text: Translation.tr("Add widgets")
+            toggled: GlobalStates.editDrawerOpen
+            onClicked: root.drawerToggleRequested()
         }
 
         // The mode's real way out. Two things about it are deliberate. It
@@ -135,5 +160,27 @@ Item {
             id: tabs
             tabButtonList: [{ name: Translation.tr("Desktop"), icon: "wallpaper" }]
         }
+    }
+
+    // The drawer's shadow lives OUT here because the drawer clips to its
+    // reveal - a shadow drawn inside would fall entirely outside the clip and
+    // vanish. Around the reveal it grows with the slide, and the gate keeps a
+    // zero-width rect from being given a blur of its own while the drawer is
+    // closed.
+    StyledRectangularShadow {
+        target: drawerPanel
+        visible: drawerPanel.width > 0
+        radius: Appearance.rounding.verylarge
+    }
+
+    EditModeDrawer {
+        id: drawerPanel
+        x: root.drawer.x
+        y: root.drawer.y
+        width: root.drawer.width
+        height: root.drawer.height
+        ghostParent: root
+        onAddRequested: (manifest, dropX, dropY) => root.widgetDropRequested(manifest, dropX, dropY)
+        onToggleRequested: (manifest) => root.widgetToggleRequested(manifest)
     }
 }

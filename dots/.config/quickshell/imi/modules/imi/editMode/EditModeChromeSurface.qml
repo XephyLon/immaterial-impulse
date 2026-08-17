@@ -3,7 +3,9 @@ import Quickshell
 import Quickshell.Wayland
 import qs
 import qs.modules.common
+import qs.modules.common.plugins
 import "../../common/functions/edit_mode.js" as EditMode
+import "../../common/plugins/gridSizes.js" as GridSizes
 
 /**
  * One screen's worth of Edit Mode's chrome: a full-screen layer surface that is
@@ -96,18 +98,106 @@ PanelWindow {
         insetRight: root.insets.right
     })
 
+    // The desktop's sideways travel while the drawer is open - the same term
+    // Background.qml applies, from the same module, times the same scalar, so
+    // the chrome keeps framing the desktop the drawer pushed aside.
+    readonly property real editShift: EditMode.drawerTravel(root.viewport)
+        * GlobalStates.editDrawerProgress
+
     mask: Region {
         item: chrome.toolbarItem
         Region {
             item: chrome.tabBarItem
         }
+        // The drawer's REVEAL: a closed drawer is a zero-width item, so this
+        // region is empty and the edge it lives on keeps its clicks - the
+        // collapse rule every permanently-mapped surface here follows.
+        Region {
+            item: chrome.drawerItem
+        }
+    }
+
+    // What the drop writes, and the only file in the mode that writes it. The
+    // drawer reports gestures; the surface owns the geometry that turns a
+    // release into a canvas point, and the two stores the catalogue may touch
+    // - `plugins.enabled` (presence on the desktop, the same write Settings >
+    // Widgets makes) and `PluginState`'s placement keys. That boundary is
+    // spec §9's, and `lint_edit_mode_scope.py` polices it.
+    function enabledWithout(id) {
+        const next = [];
+        for (let i = 0; i < Config.options.plugins.enabled.length; i++) {
+            if (Config.options.plugins.enabled[i] !== id)
+                next.push(Config.options.plugins.enabled[i]);
+        }
+        return next;
+    }
+
+    function enablePlugin(id) {
+        if (Config.options.plugins.enabled.includes(id))
+            return;
+        const next = root.enabledWithout(id);
+        next.push(id);
+        Config.setNestedValue("plugins.enabled", next);
+    }
+
+    function togglePlugin(manifest) {
+        if (Config.options.plugins.enabled.includes(manifest.id))
+            Config.setNestedValue("plugins.enabled", root.enabledWithout(manifest.id));
+        else
+            root.enablePlugin(manifest.id);
+    }
+
+    // The span the widget will come up at, for centring the drop on the
+    // pointer. Resolved the way the host resolves it - stored choice, then
+    // manifest default - and null (the content-sized path) is a zero-size box,
+    // which keeps the centring and the clamp exact for a widget whose pixel
+    // size exists only once it instantiates.
+    function spanSizeFor(manifest) {
+        const span = GridSizes.resolveSize(manifest.grid,
+            PluginState.option(manifest.id, "__gridSize", ""));
+        if (!span)
+            return { width: 0, height: 0 };
+        return {
+            width: Appearance.sizes.widgetGridSpanX(span.cols),
+            height: Appearance.sizes.widgetGridSpanY(span.rows)
+        };
+    }
+
+    function addWidgetAt(manifest, dropX, dropY) {
+        // A release back over the drawer is the gesture being abandoned, not
+        // an instruction to add the widget at the drawer.
+        const reveal = chrome.drawer;
+        if (dropX >= reveal.x && dropX <= reveal.x + reveal.width
+                && dropY >= reveal.y && dropY <= reveal.y + reveal.height)
+            return;
+        const point = EditMode.canvasPointFromScreen(root.viewport,
+            GlobalStates.editProgress, root.editShift, dropX, dropY);
+        const span = root.spanSizeFor(manifest);
+        const placed = EditMode.dropPosition({
+            canvasX: point.x,
+            canvasY: point.y,
+            widgetWidth: span.width,
+            widgetHeight: span.height,
+            screenWidth: root.width,
+            screenHeight: root.height
+        });
+        // The position is written BEFORE the enable: a newly enabled plugin
+        // mounts at whatever the store holds, so writing it after would flash
+        // the widget up at the default position and then move it (spec §8.3 -
+        // an added widget is placed the moment it is added, and there is no
+        // "unplaced" state to park it in).
+        PluginState.setPosition(manifest.id, root.screen?.name ?? "",
+            { x: placed.x, y: placed.y, placementStrategy: "free" });
+        root.enablePlugin(manifest.id);
     }
 
     EditModeChromeContent {
         id: chrome
         anchors.fill: parent
         card: EditMode.cardRect(root.viewport, GlobalStates.editProgress,
-            root.width, root.height)
+            root.width, root.height, root.editShift)
+        drawer: EditMode.drawerRect(root.viewport, GlobalStates.editProgress,
+            GlobalStates.editDrawerProgress, root.width, root.height)
         // The part of the screen the bar and the dock have not taken, closing in
         // at the same rate the card shrinks out of it. The chrome is placed
         // between the two rectangles, so it clears both panels by construction
@@ -122,5 +212,8 @@ PanelWindow {
         // deleted as redundant.
         opacity: GlobalStates.editProgress
         onDoneRequested: GlobalStates.editMode = false
+        onDrawerToggleRequested: GlobalStates.editDrawerOpen = !GlobalStates.editDrawerOpen
+        onWidgetDropRequested: (manifest, dropX, dropY) => root.addWidgetAt(manifest, dropX, dropY)
+        onWidgetToggleRequested: (manifest) => root.togglePlugin(manifest)
     }
 }
