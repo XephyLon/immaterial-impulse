@@ -15,8 +15,22 @@ import Quickshell.Services.SystemTray
 
 MouseArea {
     id: root
-    required property LockContext context
+    required property QtObject context
     property bool active: false
+    // The one switch between the real lock screen and Edit Mode's preview of
+    // it (spec §4.3). While false, nothing on this surface may take a
+    // keystroke or dispatch a session action: forceFieldFocus returns before
+    // reaching the field, the field itself is disabled and readOnly, the root
+    // area stops taking presses, and every click handler returns first thing.
+    // The guards are uniform on purpose - every handler starts with the same
+    // line - so tests/test_lock_preview_contract.py can hold ALL of them to it
+    // rather than an allowlist of the ones somebody remembered.
+    //
+    // `context` is typed QtObject rather than LockContext for the same reason:
+    // the preview hands in LockPreviewContext, a separate component with the
+    // same property surface that cannot authenticate, instead of the real
+    // context with a flag on it.
+    property bool interactive: true
     property bool showInputField: active || context.currentText.length > 0
     readonly property bool requirePasswordToPower: Config.options.lock.security.requirePasswordToPower
     readonly property MprisPlayer activePlayer: MprisController.activePlayer
@@ -25,6 +39,7 @@ MouseArea {
 
     // Force focus on entry
     function forceFieldFocus() {
+        if (!root.interactive) return;
         passwordBox.forceActiveFocus();
     }
     Connections {
@@ -35,6 +50,13 @@ MouseArea {
     }
     hoverEnabled: true
     acceptedButtons: Qt.LeftButton
+    // MouseArea's own `enabled`, which stops this area alone: the preview must
+    // not focus-chase the pointer or swallow clicks over the whole screen -
+    // the desktop being edited is underneath. The islands' own controls keep
+    // their input and are gated handler by handler instead, because disabling
+    // the whole subtree would run every control's disabled dim at once and the
+    // preview would stop looking like the lock screen it previews.
+    enabled: root.interactive
     onPressed: mouse => {
         forceFieldFocus();
     }
@@ -66,16 +88,18 @@ MouseArea {
     // Key presses
     property bool ctrlHeld: false
     Keys.onPressed: event => {
+        if (!root.interactive) return;
         root.context.resetClearTimer();
         if (event.key === Qt.Key_Control) {
             root.ctrlHeld = true;
         }
         if (event.key === Qt.Key_Escape) { // Esc to clear
             root.context.currentText = "";
-        } 
+        }
         forceFieldFocus();
     }
     Keys.onReleased: event => {
+        if (!root.interactive) return;
         if (event.key === Qt.Key_Control) {
             root.ctrlHeld = false;
         }
@@ -144,8 +168,11 @@ MouseArea {
             selectedTextColor: materialShapeChars ? "transparent" : Appearance.colors.colOnSecondaryContainer
             selectionColor: materialShapeChars ? "transparent" : Appearance.colors.colSecondaryContainer
 
-            // Password
-            enabled: !root.context.unlockInProgress
+            // Password. Both halves of the preview gate on purpose: `enabled`
+            // stops pointer and key input, `readOnly` closes the programmatic
+            // paths a disabled field still leaves open.
+            enabled: !root.context.unlockInProgress && root.interactive
+            readOnly: !root.interactive
             echoMode: TextInput.Password
             inputMethodHints: Qt.ImhSensitiveData
 
@@ -162,6 +189,7 @@ MouseArea {
             }
 
             Keys.onPressed: event => {
+                if (!root.interactive) return;
                 root.context.resetClearTimer();
             }
             
@@ -212,7 +240,10 @@ MouseArea {
             enabled: !root.context.unlockInProgress
             colBackgroundToggled: Appearance.colors.colPrimary
 
-            onClicked: root.context.tryUnlock()
+            onClicked: {
+                if (!root.interactive) return;
+                root.context.tryUnlock();
+            }
 
             contentItem: MaterialSymbol {
                 anchors.centerIn: parent
@@ -381,16 +412,25 @@ MouseArea {
                         LockMediaButton {
                             icon: "skip_previous"
                             ctlEnabled: MprisController.canGoPrevious
-                            onClicked: MprisController.previous()
+                            onClicked: {
+                                if (!root.interactive) return;
+                                MprisController.previous();
+                            }
                         }
                         LockMediaButton {
                             icon: activePlayer?.isPlaying ? "pause" : "play_arrow"
-                            onClicked: MprisController.togglePlaying()
+                            onClicked: {
+                                if (!root.interactive) return;
+                                MprisController.togglePlaying();
+                            }
                         }
                         LockMediaButton {
                             icon: "skip_next"
                             ctlEnabled: MprisController.canGoNext
-                            onClicked: MprisController.next()
+                            onClicked: {
+                                if (!root.interactive) return;
+                                MprisController.next();
+                            }
                         }
                     }
 
@@ -483,7 +523,10 @@ MouseArea {
 
         IconToolbarButton {
             id: sleepButton
-            onClicked: Session.suspend()
+            onClicked: {
+                if (!root.interactive) return;
+                Session.suspend();
+            }
             text: "dark_mode"
         }
 
@@ -507,6 +550,7 @@ MouseArea {
         toggled: root.context.targetAction === guardedBtn.targetAction
 
         onClicked: {
+            if (!root.interactive) return;
             if (!root.requirePasswordToPower) {
                 root.context.unlocked(guardedBtn.targetAction);
                 return;
