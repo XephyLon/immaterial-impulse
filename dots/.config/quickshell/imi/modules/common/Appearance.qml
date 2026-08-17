@@ -801,10 +801,10 @@ Singleton {
         property real sidebarWidthExtended: 750
         // Edit Mode's viewport is inset by exactly what the drawer will need,
         // so the drawer opens into space that already exists rather than
-        // covering the desktop or resizing it (spec §1.2). The drawer itself
-        // does not exist until stage 5; this is the one number both it and the
-        // inset read, so it plugs in here rather than restating a width the
-        // desktop has already been shrunk by.
+        // covering the desktop or resizing it (spec §1.2). This is the one
+        // number the inset, the drawer's own panel and its reveal all read -
+        // a width restated in any of them would be two fields that must
+        // agree.
         property real editModeDrawerWidth: 380
         // The gap outside the shrunk desktop on its three free sides, and
         // between it and the drawer's slot on the fourth.
