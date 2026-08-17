@@ -35,6 +35,14 @@ VERTICAL_BAR = ROOT / "modules/imi/verticalBar/VerticalBar.qml"
 DOCK = ROOT / "modules/imi/dock/Dock.qml"
 STYLED_POPUP = ROOT / "modules/common/widgets/StyledPopup.qml"
 GLOBAL_STATES = ROOT / "GlobalStates.qml"
+BAR_CONTENT = ROOT / "modules/imi/bar/BarContent.qml"
+VERTICAL_CONTENT = ROOT / "modules/imi/verticalBar/VerticalBarContent.qml"
+CONTROLLER = ROOT / "modules/imi/bar/BarEditController.qml"
+EDIT_ITEM = ROOT / "modules/imi/bar/BarWidgetEditItem.qml"
+BAR_GROUP = ROOT / "modules/imi/bar/BarGroup.qml"
+BADGE = ROOT / "modules/common/widgets/EditRemoveBadge.qml"
+REORDER_AREA = ROOT / "modules/common/widgets/ReorderDragArea.qml"
+CANVAS = ROOT / "modules/common/widgets/widgetCanvas/WidgetCanvas.qml"
 
 
 def read(path: Path) -> str:
@@ -129,6 +137,159 @@ def test_entering_the_mode_dismisses_whatever_popup_holds_the_card():
     assert "activeBarPopup" in handler.group(1), (
         "entering the mode leaves whatever bar popup was open holding the "
         "shared card, over the bar being edited")
+
+
+# ---- the two content trees carry the same edit machinery -------------------
+
+def function_body(text: str, name: str) -> str:
+    """A QML function's body by brace matching - the same block read the
+    parity test uses, minimal because these two functions are short."""
+    start = text.find(f"function {name}(")
+    assert start != -1, f"no `function {name}` found"
+    open_brace = text.index("{", start)
+    depth = 0
+    for index in range(open_brace, len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[open_brace:index + 1]
+    raise AssertionError(f"unbalanced braces in `function {name}`")
+
+
+def test_both_trees_run_one_edit_predicate_and_one_slot_walk():
+    # `widgetVisible` maps a drag's visible indices back to stored ones, and a
+    # predicate that drifted from the other bar's would shift a drag by one
+    # hidden entry - on the orientation nobody runs by default. Identical text
+    # is the strongest cheap pin; the repeater ids are deliberately named the
+    # same in both trees so `editSlotItems` can be identical too.
+    for name in ("widgetVisible", "editSlotItems"):
+        horizontal = " ".join(function_body(code(BAR_CONTENT), name).split())
+        vertical = " ".join(function_body(code(VERTICAL_CONTENT), name).split())
+        assert horizontal == vertical, (
+            f"the two bars' {name} have diverged:\n"
+            f"  horizontal: {horizontal}\n  vertical:   {vertical}")
+
+
+def test_every_bucket_delegate_in_both_trees_wires_the_edit_overlay():
+    # Six BarGroup delegates per tree (three buckets, two styles), and every
+    # one passes the controller, its bucket and its widget id. A delegate that
+    # misses the wiring is a widget that silently stays live and unbadged in
+    # the mode - and only in the style and orientation that missed it.
+    for path in (BAR_CONTENT, VERTICAL_CONTENT):
+        text = code(path)
+        controllers = text.count("editController: barEditController")
+        assert controllers == 6, (
+            f"{path.name} wires editController into {controllers} delegates, "
+            f"not 6 - a bucket or a style is missing its edit overlay")
+        for bucket in ("left", "middle", "right"):
+            count = text.count(f'editBucket: "{bucket}"')
+            assert count == 2, (
+                f'{path.name} declares editBucket: "{bucket}" {count} times, '
+                f"not 2 (one per style)")
+        assert text.count("editWidgetId: modelData") == 6, (
+            f"{path.name} does not hand every delegate its widget id")
+
+
+def test_each_tree_instantiates_the_controller_at_its_own_orientation():
+    horizontal = code(BAR_CONTENT)
+    vertical = code(VERTICAL_CONTENT)
+    assert re.search(r"BarEditController\s*{[^}]*vertical:\s*false", horizontal), (
+        "BarContent's controller is not declared horizontal")
+    assert re.search(r"Bar\.BarEditController\s*{[^}]*vertical:\s*true", vertical), (
+        "VerticalBarContent's controller is not declared vertical - the "
+        "reorder would compare the axis a column does not run along, which is "
+        "the inert comparison the dock already shipped once")
+
+
+def test_the_widgets_are_inert_through_an_eater_and_not_through_enabled():
+    # `enabled: false` on a MouseArea disables that area and nothing under it,
+    # and disabling the whole subtree runs every control's own disabled dim at
+    # once. The eater intercepts the click, the hover and the wheel without
+    # touching a binding in the widget below.
+    item = code(EDIT_ITEM)
+    assert "acceptedButtons: Qt.AllButtons" in item, (
+        "the edit overlay's eater no longer takes every button - a right-click "
+        "would fall through to the widget being edited")
+    assert "hoverEnabled: true" in item, (
+        "the eater no longer takes hover - hover-revealed widget affordances "
+        "would answer the pointer through an inert bar")
+    assert re.search(r"onWheel:.*\n?.*accepted = true", item), (
+        "the eater no longer accepts wheel - an unhandled wheel propagates to "
+        "whatever scrollable the widget carries")
+    for path in (BAR_GROUP, EDIT_ITEM):
+        assert not re.search(r"^\s*enabled\s*:\s*(false|!)", code(path), re.M), (
+            f"{path.name} reaches for enabled to make the widget inert - "
+            f"that is the cascade AGENT.md warns about, in either direction")
+
+
+def test_the_remove_badge_is_the_shared_control():
+    assert "EditRemoveBadge" in code(EDIT_ITEM), (
+        "the bar's edit overlay no longer uses the shared remove badge")
+    badge = read(BADGE)
+    assert re.search(r"^RippleButton\s*{", badge, re.M), (
+        "EditRemoveBadge is not rooted on RippleButton - the cursor, the "
+        "hover/press states and the single application of the interaction "
+        "motion all come from the control")
+
+
+def test_the_controller_commits_through_layout_ops_and_only_in_the_mode():
+    controller = code(CONTROLLER)
+    assert ".splice(" not in controller, (
+        "BarEditController spells a splice itself - the reorder arithmetic "
+        "lives in layout_ops.js, and this file has no DragHandler for "
+        "lint_reorder_arithmetic to sweep it with")
+    for call in ("LayoutOps.move", "LayoutOps.remove", "LayoutOps.insert",
+                 "LayoutOps.nthVisible", "LayoutOps.insertionForVisible",
+                 "LayoutOps.moveTargetForInsertion"):
+        assert call in controller, (
+            f"BarEditController no longer reaches {call} - a local respelling "
+            f"is the fifth copy the module exists to prevent")
+    for name in ("commitReorder", "removeAt"):
+        body = function_body(controller, name)
+        assert "GlobalStates.editMode" in body, (
+            f"{name} commits without checking the mode - a drag that outlives "
+            f"the mode (Done mid-gesture) would store an order the user "
+            f"never chose")
+    writes = re.findall(r"Config\.options\.bar\.layouts\.(\w+)\s*=", controller)
+    assert sorted(set(writes)) == ["leftLayout", "middleLayout", "rightLayout"], (
+        f"the controller's layout writes are {sorted(set(writes))} - three "
+        f"literal paths, never a computed key")
+
+
+def test_the_gesture_is_the_shared_component_with_no_local_arithmetic():
+    item = code(EDIT_ITEM)
+    assert "ReorderDragArea" in item, (
+        "the bar's edit overlay no longer drives the shared reorder gesture")
+    area = code(REORDER_AREA)
+    assert "LayoutOps.dropTarget" in area, (
+        "ReorderDragArea no longer asks layout_ops where the drop lands")
+
+
+def test_the_overlay_stands_down_with_the_mode_itself():
+    group = code(BAR_GROUP)
+    loader = re.search(r"Loader\s*{[^{]*?active:([^\n]*)", group, re.S)
+    assert loader and "GlobalStates.editMode" in loader.group(1), (
+        "BarGroup's edit loader is not gated on the mode - an overlay left "
+        "active outside it eats every click on the bar")
+
+
+def test_escape_sees_a_bar_drag_and_can_cancel_it():
+    canvas = code(CANVAS)
+    assert "GlobalStates.editBarDragActive" in canvas, (
+        "the exit ladder cannot see a bar drag in flight - Escape mid-drag "
+        "would exit the mode instead of cancelling the gesture")
+    assert "GlobalStates.editReorderCancel()" in canvas, (
+        "the ladder's cancelGesture no longer reaches the bar's drag - the "
+        "pointer grab is on another surface and the signal is the return path")
+    states = code(GLOBAL_STATES)
+    assert "signal editReorderCancel()" in states
+    handler = re.search(r"onEditModeChanged:\s*{(.*?)\n    }", states, re.S)
+    assert handler and "editBarDragActive = false" in handler.group(1), (
+        "leaving the mode does not clear editBarDragActive - the overlays "
+        "holding a drag are torn down with the mode, so no end-of-drag "
+        "handler is guaranteed to run")
 
 
 if __name__ == "__main__":

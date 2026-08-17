@@ -33,6 +33,26 @@ Item {
     readonly property var effectiveMiddleLayout: filterLayout(Config.options.bar.layouts.middleLayout)
     readonly property var effectiveRightLayout:  filterLayout(Config.options.bar.layouts.rightLayout)
 
+    // Edit Mode's per-entry read of the same rule filterLayout applies - THE
+    // same rule by construction, not a copy: the reorder maps its visible
+    // indices back to stored ones with these answers, and a predicate that
+    // drifted from the filter would shift a drag by one hidden entry.
+    function widgetVisible(name) {
+        return root.filterLayout([name]).length > 0;
+    }
+
+    // The drawn slot items per bucket, for the edit controller: whichever
+    // style is on screen owns the geometry, so the pick follows isMaterial.
+    function editSlotItems(bucket) {
+        const repeaters = root.isMaterial
+            ? { left: leftMaterialRepeater, middle: centerMaterialRepeater, right: rightMaterialRepeater }
+            : { left: leftRepeater, middle: middleRepeater, right: rightRepeater };
+        const repeater = repeaters[bucket];
+        const items = [];
+        for (let i = 0; i < repeater.count; i++) items.push(repeater.itemAt(i));
+        return items;
+    }
+
     readonly property bool centerOnly: !root.isMaterial
         && root.effectiveLeftLayout.length === 0
         && root.effectiveRightLayout.length === 0
@@ -157,11 +177,22 @@ Item {
 
         // Top
         Item {
+            id: topSection
             anchors.top: parent.top
             anchors.topMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
             anchors.left: parent.left
             anchors.right: parent.right
             height: root.isMaterial ? topMaterialPill.implicitHeight : topCol.implicitHeight
+
+            Bar.BarBucketBoundary {
+                id: leftBoundary
+                z: 50
+                vertical: true
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width - Appearance.spacing.space50
+                height: Math.max(parent.height, minRun)
+            }
 
             Rectangle {
                 id: topMaterialPill
@@ -178,6 +209,7 @@ Item {
                     spacing: Appearance.spacing.space50
 
                     Repeater {
+                        id: leftMaterialRepeater
                         model: root.effectiveLeftLayout
                         delegate: topMaterialGroupDelegate
                     }
@@ -189,6 +221,9 @@ Item {
                             vertical: true
                             currentIndex: index
                             totalCount: root.effectiveLeftLayout.length
+                            editController: barEditController
+                            editBucket: "left"
+                            editWidgetId: modelData
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -213,12 +248,16 @@ Item {
                 spacing: Config.options.bar.borderless === "transparent" ? -Appearance.spacing.space50 : Appearance.spacing.space25
 
                 Repeater {
+                    id: leftRepeater
                     model: root.effectiveLeftLayout
                     delegate: Bar.BarGroup {
                         Layout.fillWidth: true
                         vertical: true
                         currentIndex: index
                         totalCount: root.effectiveLeftLayout.length
+                        editController: barEditController
+                        editBucket: "left"
+                        editWidgetId: modelData
                         Loader {
                             Layout.fillWidth: true
                             source: root.getWidgetUrl(modelData)
@@ -241,6 +280,16 @@ Item {
             width: parent.width
             height: root.isMaterial ? centerMaterialPill.implicitHeight : middleCol.implicitHeight
 
+            Bar.BarBucketBoundary {
+                id: middleBoundary
+                z: 50
+                vertical: true
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width - Appearance.spacing.space50
+                height: Math.max(parent.height, minRun)
+            }
+
             Rectangle {
                 id: centerMaterialPill
                 visible: root.isMaterial
@@ -256,6 +305,7 @@ Item {
                     spacing: Appearance.spacing.space50
 
                     Repeater {
+                        id: centerMaterialRepeater
                         model: root.effectiveMiddleLayout
                         delegate: centerMaterialGroupDelegate
                     }
@@ -267,6 +317,9 @@ Item {
                             vertical: true
                             currentIndex: index
                             totalCount: root.effectiveMiddleLayout.length
+                            editController: barEditController
+                            editBucket: "middle"
+                            editWidgetId: modelData
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -291,12 +344,16 @@ Item {
                 spacing: Config.options.bar.borderless === "transparent" ? -Appearance.spacing.space50 : Appearance.spacing.space25
 
                 Repeater {
+                    id: middleRepeater
                     model: root.effectiveMiddleLayout
                     delegate: Bar.BarGroup {
                         Layout.fillWidth: true
                         vertical: true
                         currentIndex: index
                         totalCount: root.effectiveMiddleLayout.length
+                        editController: barEditController
+                        editBucket: "middle"
+                        editWidgetId: modelData
                         Loader {
                             Layout.fillWidth: true
                             source: root.getWidgetUrl(modelData)
@@ -314,11 +371,22 @@ Item {
 
         // Bottom
         Item {
+            id: bottomSection
             anchors.bottom: parent.bottom
             anchors.bottomMargin: root.isMaterial ? (Config.options.hyprland.general.gapsOut || 5) : (Config.options.bar.cornerStyle === 1 ? Appearance.spacing.space50 : Appearance.spacing.space125)
             anchors.left: parent.left
             anchors.right: parent.right
             height: root.isMaterial ? bottomMaterialPill.implicitHeight : bottomCol.implicitHeight
+
+            Bar.BarBucketBoundary {
+                id: rightBoundary
+                z: 50
+                vertical: true
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width - Appearance.spacing.space50
+                height: Math.max(parent.height, minRun)
+            }
 
             Rectangle {
                 id: bottomMaterialPill
@@ -335,6 +403,7 @@ Item {
                     spacing: Appearance.spacing.space50
 
                     Repeater {
+                        id: rightMaterialRepeater
                         model: root.effectiveRightLayout
                         delegate: bottomMaterialGroupDelegate
                     }
@@ -346,6 +415,9 @@ Item {
                             vertical: true
                             currentIndex: index
                             totalCount: root.effectiveRightLayout.length
+                            editController: barEditController
+                            editBucket: "right"
+                            editWidgetId: modelData
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -370,12 +442,16 @@ Item {
                 spacing: Config.options.bar.borderless === "transparent" ? -Appearance.spacing.space50 : Appearance.spacing.space25
 
                 Repeater {
+                    id: rightRepeater
                     model: root.effectiveRightLayout
                     delegate: Bar.BarGroup {
                         Layout.fillWidth: true
                         vertical: true
                         currentIndex: index
                         totalCount: root.effectiveRightLayout.length
+                        editController: barEditController
+                        editBucket: "right"
+                        editWidgetId: modelData
                         Loader {
                             Layout.fillWidth: true
                             source: root.getWidgetUrl(modelData)
@@ -390,5 +466,20 @@ Item {
                 }
             }
         }
+    }
+
+    // Edit Mode's reorder coordinator - the same shared component the
+    // horizontal bar instantiates, turned by one flag, so the two orientations
+    // cannot run different edit logic.
+    Bar.BarEditController {
+        id: barEditController
+        anchors.fill: parent
+        z: 200
+        vertical: true
+        widgetVisible: name => root.widgetVisible(name)
+        slotItemsFor: bucket => root.editSlotItems(bucket)
+        leftZone: leftBoundary
+        middleZone: middleBoundary
+        rightZone: rightBoundary
     }
 }
