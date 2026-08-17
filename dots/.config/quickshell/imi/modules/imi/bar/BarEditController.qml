@@ -131,8 +131,23 @@ Item {
         root.dragVisibleIndex = -1;
         root.dragWidgetId = "";
         GlobalStates.editBarDragActive = false;
-        dropIndicator.visible = false;
-        ghost.visible = false;
+        dropIndicator.shown = false;
+        ghost.shown = false;
+    }
+
+    // The overlay's end-of-drag handlers live on the BarWidgetEditItem the
+    // mode's exit destroys, so - exactly like GlobalStates' own central
+    // editBarDragActive reset, and for the reason its comment gives - none of
+    // them is guaranteed to run for an exit mid-drag. Without this, the drag
+    // bookkeeping and a stale ghost chip would survive onto the LIVE bar:
+    // this controller is instantiated unconditionally in both content trees.
+    // The rectangles' `visible` is additionally bound through `dragActive`,
+    // so even a reset path nobody predicted cannot strand a drawn chip.
+    property Connections modeWatcher: Connections {
+        target: GlobalStates
+        function onEditModeChanged() {
+            if (!GlobalStates.editMode) root.endDrag();
+        }
     }
 
     function dragMoved(target, scenePoint) {
@@ -140,7 +155,7 @@ Item {
         const local = root.mapFromItem(null, scenePoint.x, scenePoint.y);
         ghost.x = local.x - ghost.width / 2;
         ghost.y = local.y - ghost.height - Appearance.spacing.space100;
-        ghost.visible = true;
+        ghost.shown = true;
         root.placeIndicator(target);
     }
 
@@ -149,7 +164,7 @@ Item {
     // for an empty bucket.
     function placeIndicator(target) {
         if (!target) {
-            dropIndicator.visible = false;
+            dropIndicator.shown = false;
             return;
         }
         const items = root.slotItemsFor(root.bucketNames[target.bucket]) || [];
@@ -162,7 +177,7 @@ Item {
         if (!reference) {
             const zone = root.zoneFor(target.bucket);
             if (!zone) {
-                dropIndicator.visible = false;
+                dropIndicator.shown = false;
                 return;
             }
             const centre = zone.mapToItem(root, zone.width / 2, zone.height / 2);
@@ -190,7 +205,7 @@ Item {
             dropIndicator.x = along - dropIndicator.width / 2;
             dropIndicator.y = crossCentre - crossSize / 2;
         }
-        dropIndicator.visible = true;
+        dropIndicator.shown = true;
     }
 
     // The commits. Guarded on the mode because a drag can outlive it - Done
@@ -228,7 +243,9 @@ Item {
 
     Rectangle {
         id: dropIndicator
-        visible: false
+        objectName: "barEditDropIndicator"
+        property bool shown: false
+        visible: root.dragActive && shown
         radius: Appearance.rounding.unsharpen
         color: Appearance.colors.colPrimary
     }
@@ -237,7 +254,9 @@ Item {
     // its name with it - the drawer's ghost, at the bar's scale.
     Rectangle {
         id: ghost
-        visible: false
+        objectName: "barEditGhost"
+        property bool shown: false
+        visible: root.dragActive && shown
         width: ghostLabel.implicitWidth + Appearance.spacing.space200
         height: 28
         radius: height / 2

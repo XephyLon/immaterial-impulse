@@ -133,7 +133,6 @@ ShellRoot {
 
                 BarBucketBoundary {
                     id: zone
-                    vertical: harness.vertical
                     anchors.centerIn: parent
                     width: harness.vertical ? parent.width - 4 : Math.max(minRun, 4)
                     height: harness.vertical ? Math.max(minRun, 4) : parent.height - 4
@@ -304,6 +303,15 @@ ShellRoot {
                           harness.stored() === "a,ghostly,b||c");
             harness.check("...and the gesture flag is cleared",
                           !GlobalStates.editBarDragActive);
+            // The overlay whose handlers would have ended the drag was torn
+            // down WITH the mode, so this is the controller's own central
+            // reset being scored: a stale ghost chip here would be drawn over
+            // the live bar for the rest of the session.
+            const ghost = driver.findChild(controller, "barEditGhost");
+            const indicator = driver.findChild(controller, "barEditDropIndicator");
+            harness.check("...and the ghost and the indicator stand down",
+                          !ghost.visible && !indicator.visible
+                          && !controller.dragActive);
             GlobalStates.editMode = true;
         },
         // The ladder's cancel: the canvas raises editReorderCancel, the slot

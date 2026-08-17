@@ -35,7 +35,7 @@ SOCKET = "wayland-imi-bar-edit"
 # A literal, never read back out of the harness's own output: a step list that
 # shrinks must redden here instead of reporting `failures: 0` for a shorter
 # run.
-EXPECTED_CHECKS = 16
+EXPECTED_CHECKS = 17
 
 
 def _stop(proc):
