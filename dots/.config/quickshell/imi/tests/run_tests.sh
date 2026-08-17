@@ -324,6 +324,16 @@ if ! python3 "$SCRIPT_DIR/test_edit_mode_contract.py"; then
     exit 1
 fi
 
+# Edit Mode may change placement, order, span and presence - nothing else.
+# Settings is one click away FROM the mode, so a settings row duplicated into
+# the editor is a second call site for a config write (spec 9); the allowlist
+# in this lint is the spec and the lint is the receipt.
+echo "Running edit mode scope lint..."
+if ! python3 "$SCRIPT_DIR/lint_edit_mode_scope.py"; then
+    echo "Edit mode scope lint failed."
+    exit 1
+fi
+
 # Whether a drag still lands where the pointer put it once the desktop is drawn
 # at a scale. Nothing static can see that: the drag is hand-computed and the
 # transform is only SUPPOSED to cancel itself out. Brings its own weston.
