@@ -552,21 +552,12 @@ Variants {
             margin: Appearance.sizes.editModeMargin
         })
         // One animated scalar for the whole entry, so the scale and the offset
-        // cannot arrive on different frames. It moves once per mode change, not
-        // per frame, which is what makes a Behavior legitimate here at all.
-        property real editProgress: GlobalStates.editMode ? 1 : 0
-        // The shell's default spatial move, taken whole rather than spelled out
-        // - the duration used to be a literal 400 beside the spatial curve,
-        // which is neither of the two tiers docs/M3_GUIDELINES.md offers (500ms
-        // expressiveDefaultSpatial for a spatial move, 400ms emphasizedDecel for
-        // an entrance) and so is a third timing nothing else in the shell moves
-        // at. `elementMove` and not `elementMoveEnter`/`Exit`, because those two
-        // carry `alwaysRunToEnd` and this toggle has to be able to reverse
-        // mid-flight: a mode entered and left again inside 400ms would otherwise
-        // finish arriving before it started leaving.
-        Behavior on editProgress {
-            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
-        }
+        // cannot arrive on different frames - and it is GlobalStates' scalar
+        // rather than this window's, because the chrome that frames this
+        // desktop is a different layer surface deriving its geometry from the
+        // same number. The animation, and why it is `elementMove` rather than
+        // an entrance tier, are stated where the property lives.
+        readonly property real editProgress: GlobalStates.editProgress
         readonly property var editTransform: EditMode.atProgress(bgRoot.editViewport, bgRoot.editProgress)
         // A scale about the top-left followed by a translation, written as one
         // matrix rather than as a [Scale, Translate] pair: the order a transform

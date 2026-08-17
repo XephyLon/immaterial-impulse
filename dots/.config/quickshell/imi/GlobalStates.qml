@@ -83,6 +83,27 @@ Singleton {
     // themselves global, and a per-monitor mode would have to explain why
     // moving a bar chip on one screen changed another.
     property bool editMode: false
+    // The entry and exit, as one animated scalar that every surface the mode
+    // draws on reads. It lives here rather than beside the transform it feeds
+    // because the desktop and the chrome that frames it are on two different
+    // layer surfaces, in two different scene graphs, and both derive their
+    // geometry from this number: a second Behavior on the other surface would
+    // be two values that have to agree, and the frames where they do not are
+    // the ones where the chrome frames a rectangle the desktop is not at.
+    //
+    // Interpolating one scalar rather than animating a scale and an offset
+    // separately is also what keeps the desktop's corner travelling in a
+    // straight line - there is no frame in which the scale has arrived and the
+    // inset has not.
+    //
+    // `elementMove`, taken whole, and deliberately not `elementMoveEnter` /
+    // `elementMoveExit`: those two carry `alwaysRunToEnd`, so a mode toggled
+    // twice inside its own duration would finish arriving before it started
+    // leaving.
+    property real editProgress: root.editMode ? 1 : 0
+    Behavior on editProgress {
+        animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+    }
 
     property bool dropShelfOpen: false
     property real dropShelfX: 0
