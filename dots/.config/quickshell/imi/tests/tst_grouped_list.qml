@@ -23,29 +23,34 @@ TestCase {
     height: 400
     visible: true
 
-    Component {
-        id: groupComponent
-        GroupedList {
-            id: group
-            width: 300
-            property alias firstRow: first
-            property alias middleRow: middle
-            property alias lastRow: last
-            Item {
-                id: first
-                implicitHeight: 40
-                property bool rowVisible: true
-            }
-            Item {
-                id: middle
-                implicitHeight: 40
-                property bool rowVisible: true
-            }
-            // Declares nothing, which is what almost every row in the shell
-            // does - it must still be drawn, and it must still be able to hold
-            // the group's bottom corner.
-            Item { id: last; implicitHeight: 40 }
+    // Built from a URL rather than declared inline. `GroupedList` uses
+    // per-corner `Rectangle` radii, which arrived in Qt 6.7 - and an inline
+    // component is compiled with this file, so on an older Qt the whole
+    // TestCase goes unavailable and all five cases are lost with it. CI runs
+    // Ubuntu's Qt and that is exactly what happened the first time this landed:
+    // one FAIL reading `Type GroupedList unavailable`, with the real cause
+    // ("Cannot assign to non-existent property bottomRightRadius") one line
+    // further down.
+    //
+    // Through `createComponent` the version dependency is a STATUS, so the
+    // skip is specific: an error naming a per-corner radius is a Qt too old for
+    // the widget the shell ships, and any other error is still a failure.
+    property Component groupComponent: null
+
+    function initTestCase() {
+        groupComponent = Qt.createComponent("fixtures/GroupedListRows.qml");
+        if (groupComponent.status === Component.Error) {
+            const reason = groupComponent.errorString();
+            verify(/(top|bottom)(Left|Right)Radius/.test(reason),
+                "GroupedList failed to build for a reason that is not Qt's version: " + reason);
         }
+    }
+
+    function ensureComponent() {
+        if (groupComponent.status === Component.Error)
+            skip("Qt is older than 6.7, so the per-corner radii GroupedList "
+                + "draws its group with do not exist here");
+        compare(groupComponent.status, Component.Ready, groupComponent.errorString());
     }
 
     function plates(group) {
@@ -62,6 +67,7 @@ TestCase {
     }
 
     function test_a_hidden_row_takes_no_height_and_no_spacing() {
+        ensureComponent();
         const group = createTemporaryObject(groupComponent, this);
         verify(group);
         waitForRendering(group);
@@ -81,6 +87,7 @@ TestCase {
     }
 
     function test_the_rows_either_side_of_it_close_up() {
+        ensureComponent();
         const group = createTemporaryObject(groupComponent, this);
         verify(group);
         waitForRendering(group);
@@ -93,6 +100,7 @@ TestCase {
     }
 
     function test_the_groups_corners_follow_the_rows_that_are_drawn() {
+        ensureComponent();
         const group = createTemporaryObject(groupComponent, this);
         verify(group);
         waitForRendering(group);
@@ -117,6 +125,7 @@ TestCase {
         // `undefined`, and the group must take the `?? true` rather than
         // reading it as hidden - which is what a plain truthiness test on the
         // wrong side of the `??` would do, silently, to every group.
+        ensureComponent();
         const group = createTemporaryObject(groupComponent, this);
         verify(group);
         waitForRendering(group);
@@ -132,6 +141,7 @@ TestCase {
         // four more toggles while the control followed every one. The Edit
         // layout row toggles on every entry to and exit from the mode, so the
         // latch would cost the menu that row permanently after the first edit.
+        ensureComponent();
         const group = createTemporaryObject(groupComponent, this);
         verify(group);
         waitForRendering(group);
