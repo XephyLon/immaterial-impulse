@@ -118,6 +118,17 @@ if ! python3 "$SCRIPT_DIR/lint_interaction_motion_double.py"; then
     exit 1
 fi
 
+# Static lint: an animation that names a motion tier's duration must take that
+# tier's easing with it. Leaving the curve behind hands the animation Qt's
+# default, Easing.Linear - the generic curve M3_GUIDELINES §2 forbids - and
+# nothing about the source or the log shows it. Two fixes in two days each
+# repaired the sites someone had noticed and left more in the same file.
+echo "Running motion tier lint..."
+if ! python3 "$SCRIPT_DIR/lint_motion_tier_partial.py"; then
+    echo "Motion tier lint failed."
+    exit 1
+fi
+
 # Static lint: a drag that reorders a list reorders it through layout_ops.js.
 # Four surfaces had written that out for themselves and two of the four
 # exchanged the two entries instead of moving one - the same list for a step of
@@ -560,6 +571,29 @@ fi
 echo "Running parallax migration runtime tests..."
 if ! python3 "$SCRIPT_DIR/test_parallax_migration_runtime.py"; then
     echo "Parallax migration runtime tests failed."
+    exit 1
+fi
+
+# One motion policy: that every tier still routes through it, and that the
+# reduce-motion floor stays a named state rather than the far end of a slider.
+echo "Running motion policy contract tests..."
+if ! python3 "$SCRIPT_DIR/test_motion_policy_contract.py"; then
+    echo "Motion policy contract tests failed."
+    exit 1
+fi
+
+# ...and the same thing read back off a real shell against a seeded config,
+# because the QML default and the adapter's merged answer are different
+# numbers and only the second one runs.
+echo "Running motion multiplier runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_motion_multiplier_runtime.py"; then
+    echo "Motion multiplier runtime tests failed."
+    exit 1
+fi
+
+echo "Running OSD indicator swap tests..."
+if ! python3 "$SCRIPT_DIR/test_osd_indicator_swap.py"; then
+    echo "OSD indicator swap tests failed."
     exit 1
 fi
 
