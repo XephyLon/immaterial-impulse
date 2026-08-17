@@ -49,6 +49,7 @@ WIDGET = ROOT / "modules/common/widgets/widgetCanvas/AbstractWidget.qml"
 BACKGROUND_WIDGET = ROOT / "modules/imi/background/widgets/AbstractBackgroundWidget.qml"
 PLUGIN_WIDGET = ROOT / "modules/common/plugins/PluginWidget.qml"
 CLOCK_DEPTH = ROOT / "modules/common/functions/clockDepth.js"
+CARD = ROOT / "modules/imi/background/EditModeCard.qml"
 LOOK_PROBE = ROOT / "EditModeLookProbe.qml"
 CHROME_SCOPE = ROOT / "modules/imi/editMode/EditModeChrome.qml"
 CHROME_SURFACE = ROOT / "modules/imi/editMode/EditModeChromeSurface.qml"
@@ -334,6 +335,39 @@ def test_the_cover_that_rounds_the_corner_sits_below_the_widgets():
             (f"the look probe draws {name} at z {probe.get(name)} and Background.qml "
              f"at {order[name]}: the probe is scoring an arrangement the shell "
              f"does not have")
+
+
+def test_the_cards_chrome_composites_once_and_only_once():
+    # The card's edge is full-screen and is redrawn on every frame of a 400ms
+    # shrink, so what it may cost is a standing constraint rather than a
+    # one-off measurement: an effect that re-renders the backdrop per frame
+    # would be felt. The bevel's two outer tones are Rectangles declared inside
+    # `surround`, whose layer is already masked to the complement of the card -
+    # they ride a mask that existed rather than bringing one.
+    #
+    # Measured over four runs each of an identical scripted sequence under
+    # headless weston's SOFTWARE renderer, where a full-screen pass costs CPU
+    # instead of being free: 14.91s +/- 0.22 of user CPU with the bevel against
+    # 14.68s +/- 0.32 without, on a run-to-run spread of 3-4%. Indistinguishable.
+    # That number is only true while the shape stays this one, which is what
+    # this check is for - the way to break the finding is to add a second layer
+    # later and never re-measure.
+    text = read(CARD)
+    layers = re.findall(r"^\s*layer\.enabled:\s*true\s*$", text, re.M)
+    assert len(layers) == 1, \
+        (f"the card composites through {len(layers)} layers: every one of them is a "
+         f"full-screen render target reallocated for each frame of the shrink")
+    effects = re.findall(r"^\s*layer\.effect:\s*(\w+)", text, re.M)
+    assert effects == ["OpacityMask"], \
+        f"the card's chrome runs {effects} over the backdrop, not one mask"
+    # Declared objects rather than any mention of the name: the file's own
+    # comments explain why a ShaderEffectSource renders its source in that
+    # item's coordinates, and a check that reads prose is a check about prose.
+    for expensive in ("GaussianBlur", "FastBlur", "MultiEffect", "ShaderEffect",
+                      "ShaderEffectSource"):
+        assert not re.search(rf"^\s*{expensive}\s*\{{", text, re.M), \
+            (f"{expensive} in the card's chrome re-renders the backdrop the "
+             f"component is arranged to render once")
 
 
 def test_the_depth_layer_stands_down_for_the_mode():
