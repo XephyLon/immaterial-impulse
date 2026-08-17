@@ -1089,6 +1089,35 @@ def test_the_tab_is_a_string_beside_the_mode_and_dies_with_it():
          "would greet the next entry already filtered to the lock screen")
 
 
+def test_the_tab_bar_offers_both_tabs_and_follows_the_state():
+    # The tab bar is the pointer's way onto the Lockscreen tab and the state
+    # is `GlobalStates.editTab`, so the two must not hold hands loosely: the
+    # widget's index follows any external tab write (the Escape ladder's
+    # return to Desktop, the mode's exit reset), and every index change -
+    # including the tab bar's own wheel shortcut, which writes the index
+    # without going through a button - writes the state back. Both directions
+    # are imperative-to-imperative on purpose: ToolbarTabBar's wheel handler
+    # writes its inner index directly, which would destroy a binding placed
+    # on it and leave the indicator and the viewport disagreeing.
+    text = code(CHROME_CONTENT)
+    tabs = re.search(r"tabButtonList:\s*\[(.*?)\]", text, re.S)
+    assert tabs, "the chrome no longer declares its tab list"
+    names = re.findall(r"name:\s*Translation\.tr\(\"(\w+)\"\)", tabs.group(1))
+    assert names == ["Desktop", "Lockscreen"], \
+        f"expected the Desktop and Lockscreen tabs in that order, found {names}"
+    assert re.search(
+        r"onCurrentIndexChanged:\s*GlobalStates\.editTab\s*=\s*EditMode\.tabAt",
+        text), \
+        ("an index change must write the tab state through the module's "
+         "mapping, or the wheel desyncs them")
+    assert "EditMode.tabIndex(GlobalStates.editTab)" in text, \
+        "the state-to-index direction must go through the module's mapping too"
+    assert re.search(r"function onEditTabChanged\(\)", text), \
+        ("the tab bar must follow an external tab write - Escape's return to "
+         "Desktop moves the state, and an indicator left behind frames a "
+         "viewport showing the other tab")
+
+
 def test_the_lockscreen_preview_is_one_derivation():
     # "The viewport is showing the lock screen's inputs" is asked by the
     # wallpaper, the blur, the widget filter, the islands host, both bars and
