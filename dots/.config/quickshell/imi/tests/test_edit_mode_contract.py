@@ -77,6 +77,7 @@ LOOK_PROBE = ROOT / "EditModeLookProbe.qml"
 CHROME_SCOPE = ROOT / "modules/imi/editMode/EditModeChrome.qml"
 CHROME_SURFACE = ROOT / "modules/imi/editMode/EditModeChromeSurface.qml"
 CHROME_CONTENT = ROOT / "modules/imi/editMode/EditModeChromeContent.qml"
+DRAWER = ROOT / "modules/imi/editMode/EditModeDrawer.qml"
 INSETS = ROOT / "modules/imi/editMode/EditModeInsets.qml"
 DESKTOP_MENU = ROOT / "modules/imi/desktopMenu/DesktopMenu.qml"
 RULES = ROOT.parents[1] / "hypr/hyprland/rules.lua"
@@ -85,7 +86,7 @@ RULES = ROOT.parents[1] / "hypr/hyprland/rules.lua"
 # participant is a deliberate addition to this list, which is where someone
 # reads what the rules are.
 PARTICIPANTS = [BACKGROUND, CANVAS, WIDGET, BACKGROUND_WIDGET, PLUGIN_WIDGET,
-                CHROME_SCOPE, CHROME_SURFACE, CHROME_CONTENT]
+                CHROME_SCOPE, CHROME_SURFACE, CHROME_CONTENT, DRAWER]
 
 
 def read(path: Path) -> str:
@@ -555,15 +556,19 @@ def test_every_pixel_that_is_not_chrome_falls_through_to_the_desktop():
     mask = re.search(r"mask: Region \{(.*?)\n    \}", text, re.S)
     assert mask, "the chrome surface publishes no input mask at all"
     items = re.findall(r"item: (chrome\.\w+)", mask.group(1))
-    assert items == ["chrome.toolbarItem", "chrome.tabBarItem"], \
-        f"the mask is not exactly the two chrome rects: {items}"
+    assert items == ["chrome.toolbarItem", "chrome.tabBarItem", "chrome.drawerItem"], \
+        f"the mask is not exactly the three chrome rects: {items}"
     # ...and nothing else on the surface may take a press. A screen-sized
     # MouseArea would be inside the mask's own hole and eat nothing, which is
     # exactly why it would survive review: it does nothing until the mask grows.
+    # The DRAWER is the deliberate exception and is not in this sweep: its rows
+    # are pointer areas by construction (a drag out of a clipped panel cannot
+    # be a Button), and they sit inside the third mask rect - the reveal, which
+    # is zero-width whenever the drawer is closed.
     for path in (CHROME_SURFACE, CHROME_CONTENT):
         body = read(path)
         assert "MouseArea" not in body, \
-            f"{path.name} adds a pointer area to a surface whose mask is two rects"
+            f"{path.name} adds a pointer area to a surface whose mask is three rects"
 
 
 def test_the_chrome_surface_leaves_the_keyboard_to_the_desktop():
@@ -633,6 +638,60 @@ def test_the_chrome_is_placed_off_the_desktops_own_rectangle():
                 and not line.lstrip().startswith("//")]
     assert declared == [], \
         f"the chrome's motion is the shrink's, and a Behavior on it would freeze: {declared}"
+
+
+def test_the_drawer_is_the_modules_rect_and_the_drop_is_the_modules_arithmetic():
+    """The drawer's geometry and the drop's mapping both come from edit_mode.js.
+
+    The reveal is `drawerRect` - right edge pinned, width animating - because
+    the surface's input mask tracks exactly x/y/width/height, so a closed
+    drawer collapsing to zero width is what keeps a permanently-reachable
+    full-height rect from eating clicks on whatever panel lives on that edge.
+    And the drop goes screen -> canvas through `canvasPointFromScreen`, the
+    inverse composed out of the same `atProgress` the desktop is drawn with: a
+    hand-inverted copy here would be right at scale 1 and wrong everywhere
+    else, which is the compensating-for-the-viewport failure this file already
+    forbids by name.
+    """
+    surface = code(CHROME_SURFACE)
+    assert "EditMode.drawerRect(" in surface, \
+        "the drawer's reveal must come from the module, not be laid out by hand"
+    assert "EditMode.canvasPointFromScreen(" in surface, \
+        "the drop must invert the one transform through the module"
+    assert "EditMode.dropPosition(" in surface, \
+        "the drop's snap and clamp are the module's, not a second spelling"
+    # The chrome frames the SHIFTED desktop: both the card it hands the content
+    # and the travel itself ride the same scalar pair as the background's.
+    assert "EditMode.drawerTravel(" in surface \
+        and "GlobalStates.editDrawerProgress" in surface, \
+        "the chrome must travel with the desktop the drawer pushes aside"
+    # setPosition runs before the enable, or a newly enabled plugin mounts at
+    # the store's default and then jumps to the drop - spec §8.3 places an
+    # added widget the moment it is added.
+    add = re.search(r"function addWidgetAt\([^)]*\)\s*\{(.*?)\n    \}", surface, re.S)
+    assert add, "the surface no longer owns the drop"
+    body = add.group(1)
+    assert body.find("PluginState.setPosition(") != -1 \
+        and body.find("enablePlugin(") != -1 \
+        and body.find("PluginState.setPosition(") < body.find("enablePlugin("), \
+        "the drop must write the position BEFORE enabling the plugin"
+
+    # The drawer reports gestures and writes nothing: every store the mode
+    # touches from this surface is written in the surface's own file, which is
+    # what keeps lint_edit_mode_scope.py's question about writes answerable.
+    drawer = code(DRAWER)
+    assert "setNestedValue" not in drawer and "setPosition" not in drawer \
+        and "setOption" not in drawer, \
+        "the drawer writes a store; gestures are requests and the surface writes"
+    for signal in ("addRequested", "toggleRequested"):
+        assert re.search(rf"signal {signal}\(", drawer), \
+            f"the drawer no longer raises {signal}"
+    # The catalogue is PluginManager's, filtered by the surface vocabulary -
+    # a hardcoded list here is the drift the BarWidgets stage exists to stop.
+    assert "PluginManager.availablePlugins" in drawer, \
+        "the drawer must be fed by PluginManager.availablePlugins"
+    assert "pluginSurfaces" in drawer and "desktop-widget" in drawer, \
+        "the drawer must filter by the declared surface capability"
 
 
 def test_the_mode_has_one_way_in_and_the_toolbar_owns_the_way_out():
