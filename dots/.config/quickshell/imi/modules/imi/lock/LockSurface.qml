@@ -12,6 +12,7 @@ import qs.modules.common.panels.lock
 import qs.modules.imi.bar as Bar
 import Quickshell
 import Quickshell.Services.SystemTray
+import "../../common/functions/lock_islands.js" as LockIslands
 
 MouseArea {
     id: root
@@ -37,10 +38,108 @@ MouseArea {
 
     property var    artUrl:      activePlayer?.trackArtUrl ?? ""
 
+    // ---- the islands' contents, as data --------------------------------
+    //
+    // Spec §14, answered "reorder": each island renders its stored order
+    // through the one resolver, so a list written by an older shell still
+    // shows a later version's items at their default positions, and a list
+    // written by a newer shell loses nothing on the way through this one.
+    // The Repeaters below model these, never the stored lists directly.
+    readonly property var mainOrder: LockIslands.orderedItems(
+        Config.options.lock.islands.main, LockIslands.MAIN_DEFAULT)
+    readonly property var leftOrder: LockIslands.orderedItems(
+        Config.options.lock.islands.left, LockIslands.LEFT_DEFAULT)
+    readonly property var rightOrder: LockIslands.orderedItems(
+        Config.options.lock.islands.right, LockIslands.RIGHT_DEFAULT)
+
+    // One filter, shared by the fcitx slot's visibility and the component
+    // that draws it, so the two cannot disagree about what counts as present.
+    readonly property var fcitxItems: SystemTray.items.values.filter(i => i.id == "Fcitx")
+
+    // Which component draws each id. An id missing here would render as an
+    // empty slot - the Loader resolves null and draws nothing - which is why
+    // tests/test_lock_islands_contract.py holds this map to the module's
+    // whole default vocabulary.
+    readonly property var islandComponents: ({
+        fingerprint: fingerprintComponent,
+        password: passwordComponent,
+        confirm: confirmComponent,
+        username: usernameComponent,
+        media: mediaComponent,
+        keyboardLayout: keyboardLayoutComponent,
+        fcitx: fcitxComponent,
+        battery: batteryComponent,
+        sleep: sleepComponent,
+        power: powerComponent,
+        reboot: rebootComponent
+    })
+
+    // Each item's Layout facts, which used to live as attached properties on
+    // the hand-placed children. They move to the slot Loader because a Layout
+    // only honours attached properties on its DIRECT children, and the slot
+    // is the direct child now. Held to the same vocabulary as the components
+    // by the contract, since a missing entry is not an error - it is a margin
+    // of 0 that reads as a design choice.
+    readonly property var islandItemMeta: ({
+        fingerprint: { leftMargin: Appearance.spacing.space150, rightMargin: Appearance.spacing.space100 },
+        password: { fillHeight: true },
+        confirm: { fillHeight: true },
+        username: { leftMargin: Appearance.spacing.space100, rightMargin: Appearance.spacing.space150, fillHeight: true },
+        media: { leftMargin: Appearance.spacing.space25, rightMargin: Appearance.spacing.space25 },
+        keyboardLayout: { rightMargin: Appearance.spacing.space100, fillHeight: true },
+        fcitx: { rightMargin: Appearance.spacing.space150 },
+        battery: { leftMargin: Appearance.spacing.space150, rightMargin: Appearance.spacing.space150, fillHeight: true },
+        sleep: { fillHeight: true },
+        power: { fillHeight: true },
+        reboot: { fillHeight: true }
+    })
+
+    // The per-item visibility the hand-placed children carried, unchanged in
+    // meaning: visibility stays per item, order is the list - the lists and
+    // the lock.show* booleans divide the work rather than fighting over it.
+    function islandItemActive(id) {
+        if (id === "fingerprint") return root.context.fingerprintsConfigured === true;
+        if (id === "media") return MprisController.activePlayer !== null;
+        return true;
+    }
+
+    function islandItemVisible(id) {
+        if (id === "username" || id === "keyboardLayout")
+            return !Config.options.lock.showMedia || MprisController.activePlayer === null;
+        if (id === "media") return Config.options.lock.showMedia;
+        if (id === "fcitx") return root.fcitxItems.length > 0;
+        if (id === "battery") return Battery.available;
+        return true;
+    }
+
+    // One slot shape for all three islands: the Loader is the layout's direct
+    // child, so it carries the Layout facts, the active/visible gates and the
+    // component resolution; the loaded item keeps drawing exactly what the
+    // hand-placed child drew.
+    component IslandSlot: Loader {
+        id: slot
+        required property int index
+        required property string modelData
+        readonly property var meta: root.islandItemMeta[slot.modelData] ?? ({})
+        Layout.alignment: Qt.AlignVCenter
+        Layout.leftMargin: slot.meta.leftMargin ?? 0
+        Layout.rightMargin: slot.meta.rightMargin ?? 0
+        Layout.fillHeight: slot.meta.fillHeight === true
+        active: root.islandItemActive(slot.modelData)
+        visible: slot.active && root.islandItemVisible(slot.modelData)
+        sourceComponent: root.islandComponents[slot.modelData] ?? null
+    }
+
+    // The field lives inside a delegate component now, so the surface reaches
+    // it through this property rather than an id that no longer resolves at
+    // file scope. Null while the main island has not built (or is rebuilt by
+    // a reorder), which forceFieldFocus already tolerates.
+    property Item passwordField: null
+
     // Force focus on entry
     function forceFieldFocus() {
         if (!root.interactive) return;
-        passwordBox.forceActiveFocus();
+        root.passwordField?.forceActiveFocus();
     }
     Connections {
         target: context
@@ -106,25 +205,6 @@ MouseArea {
         forceFieldFocus();
     }
 
-    // RippleButton {
-    //     anchors {
-    //         top: parent.top
-    //         left: parent.left
-    //         leftMargin: 10
-    //         topMargin: 10
-    //     }
-    //     implicitHeight: 40
-    //     colBackground: Appearance.colors.colLayer2
-    //     onClicked: {
-    //         context.unlocked(LockContext.ActionEnum.Unlock);
-    //         GlobalStates.screenLocked = false;
-    //     }
-    //     contentItem: StyledText {
-    //         text: "[[ DEBUG BYPASS ]]"
-    //     }
-    // }
-
-
     // Main toolbar: password box
     Toolbar {
         id: mainIsland
@@ -140,27 +220,71 @@ MouseArea {
         scale: root.toolbarScale
         opacity: root.toolbarOpacity
 
-        // Fingerprint
-        Loader {
-            Layout.leftMargin: Appearance.spacing.space150
-            Layout.rightMargin: Appearance.spacing.space100
-            Layout.alignment: Qt.AlignVCenter
-            active: root.context.fingerprintsConfigured
-            visible: active
+        Repeater {
+            model: root.mainOrder
+            delegate: IslandSlot {}
+        }
+    }
 
-            sourceComponent: MaterialSymbol {
-                id: fingerprintIcon
-                fill: 1
-                text: "fingerprint"
-                iconSize: Appearance.font.pixelSize.hugeass
-                color: Appearance.colors.colOnSurfaceVariant
-            }
+    // Left toolbar
+    Toolbar {
+        id: leftIsland
+        visible: Config.options.lock.showToolbars
+        anchors {
+            right: mainIsland.left
+            top: mainIsland.top
+            bottom: mainIsland.bottom
+            rightMargin: Appearance.spacing.space150
+        }
+        scale: root.toolbarScale
+        opacity: root.toolbarOpacity
+
+        Repeater {
+            model: root.leftOrder
+            delegate: IslandSlot {}
+        }
+    }
+
+    // Right toolbar
+    Toolbar {
+        id: rightIsland
+        visible: Config.options.lock.showToolbars
+        anchors {
+            left: mainIsland.right
+            top: mainIsland.top
+            bottom: mainIsland.bottom
+            leftMargin: Appearance.spacing.space150
         }
 
+        scale: root.toolbarScale
+        opacity: root.toolbarOpacity
+
+        Repeater {
+            model: root.rightOrder
+            delegate: IslandSlot {}
+        }
+    }
+
+    // ---- the items, one component per id --------------------------------
+
+    Component {
+        id: fingerprintComponent
+        MaterialSymbol {
+            fill: 1
+            text: "fingerprint"
+            iconSize: Appearance.font.pixelSize.hugeass
+            color: Appearance.colors.colOnSurfaceVariant
+        }
+    }
+
+    Component {
+        id: passwordComponent
         ToolbarTextField {
             id: passwordBox
-            Layout.rightMargin: -Layout.leftMargin
             placeholderText: GlobalStates.screenUnlockFailed ? Translation.tr("Incorrect password") : Translation.tr("Enter password")
+
+            Component.onCompleted: root.passwordField = passwordBox
+            Component.onDestruction: if (root.passwordField === passwordBox) root.passwordField = null
 
             // Style
             clip: true
@@ -200,7 +324,7 @@ MouseArea {
                 if (!root.interactive) return;
                 root.context.resetClearTimer();
             }
-            
+
             layer.enabled: true
             layer.effect: OpacityMask {
                 maskSource: Rectangle {
@@ -240,7 +364,10 @@ MouseArea {
                 }
             }
         }
+    }
 
+    Component {
+        id: confirmComponent
         ToolbarButton {
             id: confirmButton
             implicitWidth: height
@@ -272,283 +399,252 @@ MouseArea {
         }
     }
 
-    // Left toolbar
-    Toolbar {
-        id: leftIsland
-        visible: Config.options.lock.showToolbars
-        anchors {
-            right: mainIsland.left
-            top: mainIsland.top
-            bottom: mainIsland.bottom
-            rightMargin: Appearance.spacing.space150
-        }
-        scale: root.toolbarScale
-        opacity: root.toolbarOpacity
-
-        // Username
+    Component {
+        id: usernameComponent
         IconAndTextPair {
-            Layout.leftMargin: Appearance.spacing.space100
             icon: "account_circle"
-            visible: !Config.options.lock.showMedia || MprisController.activePlayer === null
             text: SystemInfo.username
         }
+    }
 
-        // Media player info 
-        Loader {
-            Layout.leftMargin: Appearance.spacing.space25
-            Layout.rightMargin: Appearance.spacing.space25
-            Layout.alignment: Qt.AlignVCenter
-            active: MprisController.activePlayer !== null
-            visible: active && Config.options.lock.showMedia
-            
-            sourceComponent: Item {
-                implicitWidth: mediaRow.implicitWidth
-                implicitHeight: mediaRow.implicitHeight
-                
-                readonly property MprisPlayer activePlayer: MprisController.activePlayer
-                readonly property string cleanedTitle: StringUtils.cleanMusicTitle(activePlayer?.trackTitle) || ""
-                
-                Timer {
-                    running: activePlayer?.playbackState == MprisPlaybackState.Playing
-                    interval: Config.options.resources.updateInterval
-                    repeat: true
-                    onTriggered: activePlayer.positionChanged()
+    Component {
+        id: mediaComponent
+        Item {
+            implicitWidth: mediaRow.implicitWidth
+            implicitHeight: mediaRow.implicitHeight
+
+            readonly property MprisPlayer activePlayer: MprisController.activePlayer
+            readonly property string cleanedTitle: StringUtils.cleanMusicTitle(activePlayer?.trackTitle) || ""
+
+            Timer {
+                running: activePlayer?.playbackState == MprisPlaybackState.Playing
+                interval: Config.options.resources.updateInterval
+                repeat: true
+                onTriggered: activePlayer.positionChanged()
+            }
+
+            // Compact playback controls for the lock-screen media widget.
+            component LockMediaButton: MouseArea {
+                property string icon
+                property bool ctlEnabled: true
+                implicitWidth: 28
+                implicitHeight: 28
+                enabled: ctlEnabled
+                opacity: ctlEnabled ? 1 : 0.4
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                Layout.alignment: Qt.AlignVCenter
+                MaterialSymbol {
+                    anchors.centerIn: parent
+                    fill: 1
+                    text: parent.icon
+                    iconSize: Appearance.font.pixelSize.huge
+                    color: Appearance.colors.colOnSurfaceVariant
                 }
-                
-                // Compact playback controls for the lock-screen media widget.
-                component LockMediaButton: MouseArea {
-                    property string icon
-                    property bool ctlEnabled: true
-                    implicitWidth: 28
-                    implicitHeight: 28
-                    enabled: ctlEnabled
-                    opacity: ctlEnabled ? 1 : 0.4
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
+            }
+
+            RowLayout {
+                id: mediaRow
+                spacing: Appearance.spacing.space100
+                anchors.centerIn: parent
+
+                Rectangle {
+                    id: artRect
+                    implicitWidth: 40
+                    implicitHeight: 40
+                    radius: Appearance.rounding.full
+                    color: Appearance.colors.colPrimaryContainer
                     Layout.alignment: Qt.AlignVCenter
+                    clip: true
+
+                    layer.enabled: true
+                    layer.effect: OpacityMask {
+                        maskSource: Rectangle {
+                            width: artRect.width
+                            height: artRect.height
+                            radius: artRect.radius
+                        }
+                    }
+
+                    StyledImage {
+                        anchors.centerIn: parent
+                        width: artRect.width
+                        height: artRect.height
+                        source: root.artUrl
+                        fillMode: Image.PreserveAspectCrop
+                        cache: false
+                        antialiasing: true
+                        sourceSize.width: artRect.width * 2
+                        sourceSize.height: artRect.height * 2
+                        visible: root.artUrl !== ""
+                    }
+
                     MaterialSymbol {
                         anchors.centerIn: parent
                         fill: 1
-                        text: parent.icon
-                        iconSize: Appearance.font.pixelSize.huge
+                        text: "music_note"
+                        iconSize: Appearance.font.pixelSize.normal
+                        color: Appearance.colors.colOnSecondaryContainer
+                        visible: root.artUrl === ""
+                    }
+                }
+
+                Column {
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: -Appearance.spacing.space25
+
+                    StyledText {
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideRight
+                        maximumLineCount: 1
+                        width: Math.min(implicitWidth, 180)
                         color: Appearance.colors.colOnSurfaceVariant
+                        text: {
+                            var artist = activePlayer?.trackArtist || " ";
+                            return artist.length > 25 ? artist.substring(0, 25) + "..." : artist;
+                        }
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                    }
+
+                    StyledText {
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideRight
+                        maximumLineCount: 1
+                        width: Math.min(implicitWidth, 180)
+                        color: Appearance.colors.colOnSurfaceVariant
+                        text: {
+                            var title = cleanedTitle;
+                            return title.length > 30 ? title.substring(0, 30) + "..." : title;
+                        }
+                        font.weight: Font.Medium
+                        font.pixelSize: Appearance.font.pixelSize.small
                     }
                 }
 
                 RowLayout {
-                    id: mediaRow
-                    spacing: Appearance.spacing.space100
-                    anchors.centerIn: parent
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: Appearance.spacing.space25
 
-                    Rectangle {
-                        id: artRect
-                        implicitWidth: 40
-                        implicitHeight: 40
-                        radius: Appearance.rounding.full
-                        color: Appearance.colors.colPrimaryContainer
-                        Layout.alignment: Qt.AlignVCenter
-                        clip: true 
-
-                        layer.enabled: true
-                        layer.effect: OpacityMask {
-                            maskSource: Rectangle {
-                                width: artRect.width
-                                height: artRect.height
-                                radius: artRect.radius
-                            }
+                    LockMediaButton {
+                        icon: "skip_previous"
+                        ctlEnabled: MprisController.canGoPrevious
+                        onClicked: {
+                            if (!root.interactive) return;
+                            MprisController.previous();
                         }
-
-                        StyledImage {
-                            anchors.centerIn: parent
-                            width: artRect.width
-                            height: artRect.height
-                            source: root.artUrl
-                            fillMode: Image.PreserveAspectCrop
-                            cache: false
-                            antialiasing: true
-                            sourceSize.width: artRect.width * 2
-                            sourceSize.height: artRect.height * 2
-                            visible: root.artUrl !== ""
+                    }
+                    LockMediaButton {
+                        icon: activePlayer?.isPlaying ? "pause" : "play_arrow"
+                        onClicked: {
+                            if (!root.interactive) return;
+                            MprisController.togglePlaying();
                         }
+                    }
+                    LockMediaButton {
+                        icon: "skip_next"
+                        ctlEnabled: MprisController.canGoNext
+                        onClicked: {
+                            if (!root.interactive) return;
+                            MprisController.next();
+                        }
+                    }
+                }
+
+                ClippedFilledCircularProgress {
+                    id: mediaCircProg
+                    Layout.alignment: Qt.AlignVCenter
+                    lineWidth: Appearance.rounding.unsharpen
+                    value: activePlayer?.position / activePlayer?.length
+                    implicitSize: 24
+                    colPrimary: Appearance.colors.colOnSurfaceVariant
+                    enableAnimation: false
+
+                    Item {
+                        anchors.centerIn: parent
+                        width: mediaCircProg.implicitSize
+                        height: mediaCircProg.implicitSize
 
                         MaterialSymbol {
                             anchors.centerIn: parent
                             fill: 1
                             text: "music_note"
                             iconSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnSecondaryContainer
-                            visible: root.artUrl === ""
-                        }
-                    }
-                    
-                    Column {
-                        Layout.alignment: Qt.AlignVCenter
-                        spacing: -Appearance.spacing.space25
-                        
-                        StyledText {
-                            horizontalAlignment: Text.AlignLeft
-                            elide: Text.ElideRight
-                            maximumLineCount: 1
-                            width: Math.min(implicitWidth, 180) 
                             color: Appearance.colors.colOnSurfaceVariant
-                            text: {
-                                var artist = activePlayer?.trackArtist || " ";
-                                return artist.length > 25 ? artist.substring(0, 25) + "..." : artist;
-                            }
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                        }
-                        
-                        StyledText {
-                            horizontalAlignment: Text.AlignLeft
-                            elide: Text.ElideRight
-                            maximumLineCount: 1
-                            width: Math.min(implicitWidth, 180) 
-                            color: Appearance.colors.colOnSurfaceVariant
-                            text: {
-                                var title = cleanedTitle;
-                                return title.length > 30 ? title.substring(0, 30) + "..." : title;
-                            }
-                            font.weight: Font.Medium
-                            font.pixelSize: Appearance.font.pixelSize.small
-                        }
-                    }
-                    
-                    RowLayout {
-                        Layout.alignment: Qt.AlignVCenter
-                        spacing: Appearance.spacing.space25
-
-                        LockMediaButton {
-                            icon: "skip_previous"
-                            ctlEnabled: MprisController.canGoPrevious
-                            onClicked: {
-                                if (!root.interactive) return;
-                                MprisController.previous();
-                            }
-                        }
-                        LockMediaButton {
-                            icon: activePlayer?.isPlaying ? "pause" : "play_arrow"
-                            onClicked: {
-                                if (!root.interactive) return;
-                                MprisController.togglePlaying();
-                            }
-                        }
-                        LockMediaButton {
-                            icon: "skip_next"
-                            ctlEnabled: MprisController.canGoNext
-                            onClicked: {
-                                if (!root.interactive) return;
-                                MprisController.next();
-                            }
-                        }
-                    }
-
-                    ClippedFilledCircularProgress {
-                        id: mediaCircProg
-                        Layout.alignment: Qt.AlignVCenter
-                        lineWidth: Appearance.rounding.unsharpen
-                        value: activePlayer?.position / activePlayer?.length
-                        implicitSize: 24
-                        colPrimary: Appearance.colors.colOnSurfaceVariant
-                        enableAnimation: false
-                        
-                        Item {
-                            anchors.centerIn: parent
-                            width: mediaCircProg.implicitSize
-                            height: mediaCircProg.implicitSize
-                            
-                            MaterialSymbol {
-                                anchors.centerIn: parent
-                                fill: 1
-                                text: "music_note"
-                                iconSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colOnSurfaceVariant
-                            }
                         }
                     }
                 }
             }
-        }
-
-        // Keyboard layout (Xkb)
-        Loader {
-            Layout.rightMargin: Appearance.spacing.space100
-            Layout.fillHeight: true
-            visible: !Config.options.lock.showMedia || MprisController.activePlayer === null
-
-            sourceComponent: Row {
-                spacing: Appearance.spacing.space100
-
-                MaterialSymbol {
-                    id: keyboardIcon
-                    anchors.verticalCenter: parent.verticalCenter
-                    fill: 1
-                    text: "keyboard_alt"
-                    iconSize: Appearance.font.pixelSize.huge
-                    color: Appearance.colors.colOnSurfaceVariant
-                }
-                Loader {
-                    anchors.verticalCenter: parent.verticalCenter
-                    sourceComponent: StyledText {
-                        text: HyprlandXkb.currentLayoutCode
-                        color: Appearance.colors.colOnSurfaceVariant
-                        animateChange: true
-                    }
-                }
-            }
-        }
-
-        // Keyboard layout (Fcitx). `enabled` cascades from this plain root, so
-        // the preview's copy cannot activate the real SNI item - the one
-        // interactive element in the islands that reaches outside the shell.
-        Bar.SysTray {
-            Layout.rightMargin: Appearance.spacing.space150
-            Layout.alignment: Qt.AlignVCenter
-            enabled: root.interactive
-            showSeparator: false
-            showOverflowMenu: false
-            pinnedItems: SystemTray.items.values.filter(i => i.id == "Fcitx")
-            visible: pinnedItems.length > 0
         }
     }
 
-    // Right toolbar
-    Toolbar {
-        id: rightIsland
-        visible: Config.options.lock.showToolbars
-        anchors {
-            left: mainIsland.right
-            top: mainIsland.top
-            bottom: mainIsland.bottom
-            leftMargin: Appearance.spacing.space150
+    Component {
+        id: keyboardLayoutComponent
+        Row {
+            spacing: Appearance.spacing.space100
+
+            MaterialSymbol {
+                id: keyboardIcon
+                anchors.verticalCenter: parent.verticalCenter
+                fill: 1
+                text: "keyboard_alt"
+                iconSize: Appearance.font.pixelSize.huge
+                color: Appearance.colors.colOnSurfaceVariant
+            }
+            Loader {
+                anchors.verticalCenter: parent.verticalCenter
+                sourceComponent: StyledText {
+                    text: HyprlandXkb.currentLayoutCode
+                    color: Appearance.colors.colOnSurfaceVariant
+                    animateChange: true
+                }
+            }
         }
+    }
 
-        scale: root.toolbarScale
-        opacity: root.toolbarOpacity
+    Component {
+        id: fcitxComponent
+        // `enabled` cascades from SysTray's plain Item root, so the preview's
+        // copy cannot activate the real SNI item - the one interactive element
+        // in the islands that reaches outside the shell.
+        Bar.SysTray {
+            enabled: root.interactive
+            showSeparator: false
+            showOverflowMenu: false
+            pinnedItems: root.fcitxItems
+        }
+    }
 
+    Component {
+        id: batteryComponent
         IconAndTextPair {
-            visible: Battery.available
             icon: Battery.isCharging ? "bolt" : "battery_android_full"
             text: Math.round(Battery.percentage * 100)
             color: (Battery.isLow && !Battery.isCharging) ? Appearance.colors.colError : Appearance.colors.colOnSurfaceVariant
         }
+    }
 
+    Component {
+        id: sleepComponent
         IconToolbarButton {
-            id: sleepButton
             onClicked: {
                 if (!root.interactive) return;
                 Session.suspend();
             }
             text: "dark_mode"
         }
+    }
 
+    Component {
+        id: powerComponent
         PasswordGuardedIconToolbarButton {
-            id: powerButton
             text: "power_settings_new"
             targetAction: LockContext.ActionEnum.Poweroff
         }
+    }
 
+    Component {
+        id: rebootComponent
         PasswordGuardedIconToolbarButton {
-            id: rebootButton
             text: "restart_alt"
             targetAction: LockContext.ActionEnum.Reboot
         }
@@ -582,10 +678,6 @@ MouseArea {
         property color color: Appearance.colors.colOnSurfaceVariant
 
         spacing: Appearance.spacing.space50
-        Layout.fillHeight: true
-        Layout.leftMargin: Appearance.spacing.space150
-        Layout.rightMargin: Appearance.spacing.space150
-        
 
         MaterialSymbol {
             anchors.verticalCenter: parent.verticalCenter
