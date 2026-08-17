@@ -135,4 +135,133 @@ TestCase {
         compare(LayoutOps.remove(five, -1).join(","), "a,b,c,d,e");
         compare(five.join(","), "a,b,c,d,e", "remove must not touch its argument");
     }
+
+    // ---- dropTarget: which bucket, and where in it -------------------------
+    //
+    // The bar's three layouts are three lists laid out along one axis, so a
+    // drop has to answer two questions at once - which list, and where in it -
+    // and the second answer is an INSERTION index (0..length), not a nearest
+    // slot: the caller splices with it, and "past the last slot" has to be a
+    // representable answer or nothing can ever be dropped at the end.
+
+    // A row of two buckets: left holds slots at x 100 and 200, right one at
+    // x 500. The middle is empty and anchored at x 350.
+    readonly property var rowBuckets: [
+        { centres: [Qt.point(100, 40), Qt.point(200, 40)], anchor: null },
+        { centres: [], anchor: Qt.point(350, 40) },
+        { centres: [Qt.point(500, 40)], anchor: null }
+    ]
+
+    function test_a_drop_before_a_slots_centre_inserts_before_it() {
+        const target = LayoutOps.dropTarget(rowBuckets, Qt.point(90, 40), "x");
+        compare(target.bucket, 0);
+        compare(target.index, 0);
+    }
+
+    function test_a_drop_past_a_slots_centre_inserts_after_it() {
+        const target = LayoutOps.dropTarget(rowBuckets, Qt.point(110, 40), "x");
+        compare(target.bucket, 0);
+        compare(target.index, 1);
+    }
+
+    function test_a_drop_past_the_last_slot_is_an_append() {
+        const target = LayoutOps.dropTarget(rowBuckets, Qt.point(560, 40), "x");
+        compare(target.bucket, 2);
+        compare(target.index, 1, "one past the last slot, so the caller can append");
+    }
+
+    function test_an_empty_bucket_answers_through_its_anchor() {
+        // The whole reason the anchor exists: an empty middleLayout has no slot
+        // centres at all, and without a stand-in it could never win a drop.
+        const target = LayoutOps.dropTarget(rowBuckets, Qt.point(355, 40), "x");
+        compare(target.bucket, 1);
+        compare(target.index, 0);
+    }
+
+    function test_a_bucket_whose_every_slot_is_a_hole_counts_as_empty() {
+        // Dragging the only widget of a bucket: its own slot is the hole, so
+        // the bucket falls back to its anchor rather than disappearing as a
+        // drop target.
+        const buckets = [
+            { centres: [null], anchor: Qt.point(100, 40) },
+            { centres: [Qt.point(500, 40)], anchor: null }
+        ];
+        const target = LayoutOps.dropTarget(buckets, Qt.point(105, 40), "x");
+        compare(target.bucket, 0);
+        compare(target.index, 0);
+    }
+
+    function test_the_drop_compares_along_the_axis_the_buckets_run() {
+        // The same arrangement turned into a column, so neither axis is
+        // hardcoded - the inert-comparison lesson from the vertical dock.
+        const columnBuckets = [
+            { centres: [Qt.point(40, 100), Qt.point(40, 200)], anchor: null },
+            { centres: [Qt.point(40, 500)], anchor: null }
+        ];
+        const target = LayoutOps.dropTarget(columnBuckets, Qt.point(40, 210), "y");
+        compare(target.bucket, 0);
+        compare(target.index, 2);
+    }
+
+    function test_no_candidate_at_all_is_no_target() {
+        compare(LayoutOps.dropTarget([], Qt.point(0, 0), "x"), null);
+        compare(LayoutOps.dropTarget([{ centres: [null], anchor: null }],
+                                     Qt.point(0, 0), "x"), null);
+    }
+
+    // ---- the visible-to-stored mapping -------------------------------------
+    //
+    // The bar draws its layouts FILTERED - an empty tray drops sysTray, a
+    // disabled plugin drops its widget - so the index a drag reads off the
+    // screen is an index into the visible list, while the store holds the whole
+    // one. The mapping is arithmetic over a flags array (flags[i] says whether
+    // stored entry i is drawn), kept here so a reorder cannot silently eat the
+    // hidden entries.
+
+    function test_nth_visible_walks_the_flags() {
+        const flags = [true, false, true, true];
+        compare(LayoutOps.nthVisible(flags, 0), 0);
+        compare(LayoutOps.nthVisible(flags, 1), 2);
+        compare(LayoutOps.nthVisible(flags, 2), 3);
+        compare(LayoutOps.nthVisible(flags, 3), -1, "past the visible count is no index");
+        compare(LayoutOps.nthVisible([], 0), -1);
+    }
+
+    function test_a_visible_insertion_lands_between_the_right_stored_entries() {
+        const flags = [true, false, true, true];
+        compare(LayoutOps.insertionForVisible(flags, 0), 0);
+        compare(LayoutOps.insertionForVisible(flags, 1), 2);
+        compare(LayoutOps.insertionForVisible(flags, 2), 3);
+        // At or past the visible count the insertion is the stored end, so an
+        // append stays an append whatever is hidden at the tail.
+        compare(LayoutOps.insertionForVisible(flags, 3), 4);
+        compare(LayoutOps.insertionForVisible(flags, 9), 4);
+    }
+
+    function test_an_insertion_index_becomes_a_move_destination() {
+        // An insertion index counts the gap; a move destination counts the
+        // slot. Taking the dragged item out first is what shifts everything
+        // past it one place down.
+        compare(LayoutOps.moveTargetForInsertion(0, 2), 1);
+        compare(LayoutOps.moveTargetForInsertion(0, 3), 2);
+        compare(LayoutOps.moveTargetForInsertion(2, 0), 0);
+        compare(LayoutOps.moveTargetForInsertion(1, 1), 1);
+        compare(LayoutOps.moveTargetForInsertion(1, 2), 1,
+                "the gap just past the dragged slot is where it already is");
+    }
+
+    function test_the_mapping_reorders_around_a_hidden_entry() {
+        // The end-to-end shape a bar reorder runs: stored [a, hidden, b, c],
+        // drag the visible "a" to the gap between "b" and "c". The hidden entry
+        // stays where it was and the visible order comes out b, a, c.
+        const stored = ["a", "hidden", "b", "c"];
+        const flags = [true, false, true, true];
+        const fromVisible = 0;
+        const insertion = 2;
+        const visibleDest = LayoutOps.moveTargetForInsertion(fromVisible, insertion);
+        const result = LayoutOps.move(stored,
+            LayoutOps.nthVisible(flags, fromVisible),
+            LayoutOps.nthVisible(flags, visibleDest));
+        compare(result.join(","), "hidden,b,a,c");
+    }
 }
