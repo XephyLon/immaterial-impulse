@@ -136,6 +136,15 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton
+                    // The ListView above is a Flickable, and a Flickable
+                    // STEALS a mostly-vertical press-move from any child -
+                    // overshoot dragging included, so it fires even while the
+                    // content fits - which would end this row's grab with
+                    // onCanceled and drop the ghost a few pixels into a
+                    // down-then-left drag toward the desktop. The wheel still
+                    // scrolls the list; what this declines is flicking it by
+                    // dragging a row, which was never the row's gesture.
+                    preventStealing: true
 
                     // The same by-hand drag as AbstractWidget's, for the same
                     // reason at a smaller scale: the row does not move, so all
@@ -183,6 +192,14 @@ Item {
                         color: entry.pressed ? Appearance.colors.colLayer2Active
                             : entry.containsMouse ? Appearance.colors.colLayer2Hover
                             : "transparent"
+                        // The rows are not buttons (the drag needs the raw
+                        // MouseArea), so the eased hover is declared rather
+                        // than inherited - taken whole from the tier whose
+                        // reference is the pointer, or the curve silently
+                        // falls back to Easing.Linear.
+                        Behavior on color {
+                            animation: Appearance.animation.elementMoveFaster.colorAnimation.createObject(this)
+                        }
                     }
 
                     RowLayout {
