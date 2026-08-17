@@ -17,12 +17,23 @@ question about pixels that reads as correct in every source file:
   radius are exactly what a still-transformed viewport also reports, and a
   radius or a shadow left applied to the live desktop is the failure that
   matters most - it is on screen for the rest of the session.
-- **the desktop's corner is cut.** QML has no rounded clip, so the corner is
-  made by covering it with the blurred backdrop, and whether the cover landed on
-  the corner is a question about one pixel. The probe pins an opaque marker to
-  the canvas's own top-left corner, so the answer does not depend on the
-  wallpaper: at rest the card's corner pixel IS the marker, in the mode it is
-  not, and a marker's width further down the same edge it is again.
+- **the picture's corner is cut, and a widget's corner is not.** QML has no
+  rounded clip, so the corner is made by covering it with the blurred backdrop,
+  and whether the cover landed on the corner is a question about one pixel. The
+  probe pins an opaque marker to the wallpaper viewport's top-left corner, so
+  the answer does not depend on the wallpaper: at rest the card's corner pixel
+  IS the marker, in the mode it is not, and a marker's width further down the
+  same edge it is again. The cover sits BELOW the widget canvas, so the same
+  question asked of a widget must come back the other way - a second opaque
+  block is pinned to the canvas's bottom-left corner (where this machine's own
+  store keeps `visualizer`) and its corner pixel must survive. That pair is the
+  whole of "there shouldn't be any clipping": one of them has to be cut and the
+  other has to not be, and a cover at the wrong z reverses exactly one of them.
+- **the lattice arrives with the drag rather than with the mode.** Three frames,
+  because the failure is a state and not a value: in the mode at rest there are
+  no lines, mid-drag there are, and the frame after the drag ends is the same
+  picture as the one before it started - which is the only form of "it went away
+  again" that a leftover half-faded lattice cannot pass.
 - **the lattice is a substrate.** The desktop widgets arrive as external
   children of the canvas, so nothing in `WidgetCanvas.qml` decides whether they
   are drawn over the grid - the order is a consequence of when each Repeater's
@@ -66,12 +77,14 @@ WALLPAPER_RGB = (58, 96, 140)
 # The harness states how many checks it ran; this is the literal it must state.
 # Read back out of its own output it would agree with itself by construction,
 # and `failures: 0` is also what a harness that ran nothing prints.
-EXPECTED_CHECKS = 10
+EXPECTED_CHECKS = 13
 
 GEOMETRY = re.compile(
     r"(geometry|midGeometry): screen=([\d.]+),([\d.]+) card=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
     r"radius=([\d.]+) scale=([\d.]+) marker=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
-    r"panel=([\d.]+),([\d.]+),([\d.]+),([\d.]+) markerColor=(\S+) panelColor=(\S+) "
+    r"panel=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
+    r"corner=([\d.]+),([\d.]+),([\d.]+),([\d.]+) "
+    r"markerColor=(\S+) panelColor=(\S+) cornerColor=(\S+) "
     r"toolbar=(-?[\d.]+),(-?[\d.]+),([\d.]+),([\d.]+) "
     r"tabbar=(-?[\d.]+),(-?[\d.]+),([\d.]+),([\d.]+) chromeColor=(\S+)")
 
@@ -124,11 +137,13 @@ class EditModeChromeTest(unittest.TestCase):
                 "scale": float(values[8]),
                 "marker": tuple(float(v) for v in values[9:13]),
                 "panel": tuple(float(v) for v in values[13:17]),
-                "markerColor": _hex_to_rgb(values[17]),
-                "panelColor": _hex_to_rgb(values[18]),
-                "toolbar": tuple(float(v) for v in values[19:23]),
-                "tabbar": tuple(float(v) for v in values[23:27]),
-                "chromeColor": _hex_to_rgb(values[27]),
+                "corner": tuple(float(v) for v in values[17:21]),
+                "markerColor": _hex_to_rgb(values[21]),
+                "panelColor": _hex_to_rgb(values[22]),
+                "cornerColor": _hex_to_rgb(values[23]),
+                "toolbar": tuple(float(v) for v in values[24:28]),
+                "tabbar": tuple(float(v) for v in values[28:32]),
+                "chromeColor": _hex_to_rgb(values[32]),
             }
         for tag in ("geometry", "midGeometry"):
             self.assertIn(tag, self.reported,
@@ -140,14 +155,16 @@ class EditModeChromeTest(unittest.TestCase):
         self.scale = settled["scale"]
         self.marker = settled["marker"]
         self.panel = settled["panel"]
+        self.corner = settled["corner"]
         self.marker_rgb = settled["markerColor"]
         self.panel_rgb = settled["panelColor"]
+        self.corner_rgb = settled["cornerColor"]
         self.toolbar = settled["toolbar"]
         self.tabbar = settled["tabbar"]
         self.chrome_rgb = settled["chromeColor"]
 
         self.frames = {}
-        for name in ("rest", "editing", "midway", "after"):
+        for name in ("rest", "editing", "dragging", "released", "midway", "after"):
             path = self.tmp / f"{name}.png"
             self.assertTrue(path.exists(), f"the harness saved no {name} frame")
             self.frames[name] = Image.open(path).convert("RGB")
@@ -227,13 +244,16 @@ class EditModeChromeTest(unittest.TestCase):
         self.assertGreater(drawn_scale, self.scale + 0.01)
         self.assertLess(drawn_scale, 0.99)
 
-        # The origin comes from the marker's CENTRE rather than from its leading
-        # edge: a scaled edge is antialiased, so the first pixel that is exactly
-        # the marker's colour sits a pixel or two inside it, and that bias lands
-        # entirely on one side of the symmetry being measured. A centre cancels
-        # it.
-        left = (row[0] + row[-1] + 1) / 2 - mid["marker"][2] / 2 * mid["scale"]
-        top = (column[0] + column[-1] + 1) / 2 - mid["marker"][3] / 2 * mid["scale"]
+        # The origin comes from the marker's FAR edges, which are in the middle
+        # of the card with nothing drawn over them. Not its leading ones: those
+        # sit exactly on the card's edge, where the glass bevel's inner
+        # highlight is painted across them, so the first pixel that is exactly
+        # the marker's colour is a couple inside it. A centre used to cancel
+        # that, and does not any more - the bias is on the leading side only
+        # and it put this check 3.05px outside a 3px tolerance, which is the
+        # instrument moving rather than the desktop.
+        left = row[-1] + 1 - mid["marker"][2] * mid["scale"]
+        top = column[-1] + 1 - mid["marker"][3] * mid["scale"]
         right = left + screen_w * mid["scale"]
         bottom = top + screen_h * mid["scale"]
         self.assertAlmostEqual(left, mid["card"][0], delta=2)
@@ -291,7 +311,7 @@ class EditModeChromeTest(unittest.TestCase):
 
     # ---- the corner ------------------------------------------------------
 
-    def test_the_cards_corner_is_cut_out_of_the_desktop(self):
+    def test_the_cards_corner_is_cut_out_of_the_picture(self):
         inset = 3
         corner = (round(self.card[0]) + inset, round(self.card[1]) + inset)
         # Far enough down the same edge to be past the arc, and still well
@@ -299,9 +319,67 @@ class EditModeChromeTest(unittest.TestCase):
         below = (round(self.card[0]) + inset, round(self.card[1] + self.radius * 2))
 
         self.assertEqual(self.frames["editing"].getpixel(below), self.marker_rgb,
-                         "the desktop does not reach the card's edge at all")
+                         "the picture does not reach the card's edge at all")
         self.assertNotEqual(self.frames["editing"].getpixel(corner), self.marker_rgb,
-                            "the card's corner is square: the desktop reaches it")
+                            "the card's corner is square: the picture reaches it")
+
+    def test_but_a_widget_at_that_corner_is_drawn_whole(self):
+        # The maintainer's report, and the other half of the check above. The
+        # cover that rounds the picture used to sit over everything, and the
+        # desktop scales about its own centre - so the canvas's edge lands on
+        # the card's edge and a widget parked against it is flush with the
+        # rounding. At a corner that took a bite out of the widget: measured at
+        # 5120x1440 before the fix, 20px along each edge and 10px on the
+        # diagonal of a block pinned to the desktop's corner.
+        #
+        # The widget is pinned to the canvas's BOTTOM-left, so its own corner is
+        # (x, y + h) and not (x, y) - reading the wrong end of it samples the
+        # middle of the card's left edge, which is straight and was never cut.
+        # The first version of this check did exactly that and passed on a frame
+        # whose widget was visibly still being bitten.
+        x, y, w, h = self.corner
+        for dx, dy, where in ((2, -2, "its corner"), (2, -10, "just above it"),
+                              (10, -2, "just along from it")):
+            point = self.on_card(x + dx, y + h + dy)
+            self.assertEqual(
+                self.frames["editing"].getpixel(point), self.corner_rgb,
+                f"the card's rounding is eating a widget placed in the corner, at {where}")
+
+    # ---- the lattice arrives with the drag -------------------------------
+
+    def test_the_mode_at_rest_draws_no_lattice(self):
+        # Sampled on the same run of bare wallpaper the vacuity check below
+        # uses, so the two are answering one question from opposite sides: on
+        # the flat fixture anything that is not the wallpaper's own colour is a
+        # line, and at rest in the mode there must be none of them.
+        frame = self.frames["editing"]
+        px, py, pw, ph = self.panel
+        lines = [i for i in range(1, 120)
+                 if frame.getpixel(self.on_card(px + pw * i / 120, py + ph + 60))
+                 != WALLPAPER_RGB]
+        self.assertEqual(lines, [], "the mode drew a lattice before anything was dragged")
+
+    def test_and_the_lattice_leaves_when_the_drag_does(self):
+        # The same shape as the rest/after comparison, one level in: both frames
+        # are taken in the mode, so what can differ between them is the drag and
+        # nothing else. A property assertion cannot say this - `gridVisible` is
+        # false the instant the drag ends while the fade still has 150ms to run,
+        # and a lattice that never finished leaving reports exactly the same
+        # false.
+        editing, released = self.frames["editing"], self.frames["released"]
+        worst = 0
+        differing = 0
+        for y in range(0, editing.height, 3):
+            for x in range(0, editing.width, 3):
+                a, b = editing.getpixel((x, y)), released.getpixel((x, y))
+                delta = max(abs(p - q) for p, q in zip(a, b))
+                if delta:
+                    differing += 1
+                    worst = max(worst, delta)
+        self.assertEqual(
+            (differing, worst), (0, 0),
+            "the drag left something on the desktop behind it: "
+            f"{differing} sampled pixels differ, worst by {worst}/255")
 
     def test_the_corner_is_only_cut_while_the_mode_is_on(self):
         # The other half of the check above, and what stops it passing on a
@@ -313,7 +391,7 @@ class EditModeChromeTest(unittest.TestCase):
     # ---- the substrate ---------------------------------------------------
 
     def test_the_lattice_is_drawn_under_the_widgets_and_not_over_them(self):
-        frame = self.frames["editing"]
+        frame = self.frames["dragging"]
         px, py, pw, ph = self.panel
 
         showing = []
@@ -328,7 +406,7 @@ class EditModeChromeTest(unittest.TestCase):
         # Without this the check above passes on a frame with no grid in it.
         # Sampled on a run of bare wallpaper below the panel: on the flat
         # fixture, anything that is not the wallpaper's own colour is a line.
-        frame = self.frames["editing"]
+        frame = self.frames["dragging"]
         px, py, pw, ph = self.panel
         lines = 0
         for i in range(1, 120):
