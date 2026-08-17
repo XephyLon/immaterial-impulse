@@ -192,6 +192,17 @@ def test_the_ladder_sees_a_lock_island_drag():
     ladder = re.search(r"gestureInFlight:(.*?),\s*\n\s*selectionCount", canvas, re.S)
     assert ladder and "editLockDragActive" in ladder.group(0), \
         "the canvas ladder does not see a lock island drag"
+    # Seeing the drag is only half the wiring: the cancel branch must also
+    # EMIT the return path for it. With only the bar's flag in the emit gate,
+    # Escape mid-lock-drag resolves to cancelGesture, is consumed doing
+    # nothing, and the eventual release COMMITS the order the user tried to
+    # abandon - the commit's own guard checks the mode, which is still on.
+    cancel = re.search(r'else if \(action === "cancelGesture"\)\s*\{(.*?)\n\s*\}',
+                       canvas, re.S)
+    assert cancel, "the canvas no longer has a cancelGesture branch"
+    assert "editLockDragActive" in cancel.group(1), \
+        ("the cancel branch never reaches a lock island drag - Escape is "
+         "swallowed and the release commits")
     item = code(EDIT_ITEM)
     assert "onEditReorderCancel" in item, \
         "the edit item does not answer the ladder's cancel"

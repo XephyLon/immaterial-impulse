@@ -154,6 +154,12 @@ ShellRoot {
         },
 
         // ---- Escape's cancel abandons the gesture --------------------------
+        //
+        // This drives the LISTENER by emitting the signal directly - there is
+        // no WidgetCanvas in this harness, so the ladder's emit gate (the
+        // cancelGesture branch reaching editLockDragActive) is pinned by
+        // test_lock_islands_contract.py rather than exercised here. Do not
+        // read this step as evidence the ladder works end to end.
         () => {
             harness.lockLeftBefore = JSON.stringify([...Config.options.lock.islands.left]);
             const from = harness.centreOf(harness.slot("username"));

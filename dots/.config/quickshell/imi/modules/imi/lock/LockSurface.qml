@@ -349,7 +349,15 @@ MouseArea {
             id: passwordBox
             placeholderText: GlobalStates.screenUnlockFailed ? Translation.tr("Incorrect password") : Translation.tr("Enter password")
 
-            Component.onCompleted: root.passwordField = passwordBox
+            // The pull as well as the publication: a slot rebuild (a reorder
+            // committing, an external write to the main list) creates a
+            // fresh field, and one that only followed onCurrentTextChanged
+            // would show empty over a context still holding text - then
+            // overwrite that text with the next keystroke alone.
+            Component.onCompleted: {
+                root.passwordField = passwordBox;
+                passwordBox.text = root.context.currentText;
+            }
             Component.onDestruction: if (root.passwordField === passwordBox) root.passwordField = null
 
             // Style
