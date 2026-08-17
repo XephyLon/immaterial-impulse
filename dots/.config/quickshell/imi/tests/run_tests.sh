@@ -387,6 +387,15 @@ if ! python3 "$SCRIPT_DIR/test_bar_dock_edit_contract.py"; then
     exit 1
 fi
 
+# The bar's in-place edit gesture: a drag along the bar reorders, a drag
+# across it does not, at both orientations - the axis-inert comparison only
+# real mouse events can see. Brings its own headless weston.
+echo "Running bar edit runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_edit_runtime.py"; then
+    echo "Bar edit runtime tests failed."
+    exit 1
+fi
+
 # A column of dock icons can lay out perfectly and still refuse to reorder,
 # because every slot centre shares an x - only real mouse events see that.
 # Brings its own headless weston.
