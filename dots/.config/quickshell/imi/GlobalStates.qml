@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
+import "modules/common/functions/edit_mode.js" as EditMode
 pragma Singleton
 pragma ComponentBehavior: Bound
 
@@ -105,6 +106,23 @@ Singleton {
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
     }
 
+    // The mode's tab (spec §1.4): a FILTER on what the viewport draws, never a
+    // mode of its own - one `editMode`, one entry, one exit ladder, and this
+    // string beside it saying which of the desktop's two faces the viewport is
+    // showing. Session state for the same reason the mode is, and reset on
+    // exit (below) so the next entry opens on the Desktop tab rather than
+    // mid-preview. The strings are edit_mode.js's constants - the ladder's
+    // `desktopTab` rung fires on the same values, so a second spelling here
+    // would be a tab Escape cannot leave.
+    property string editTab: EditMode.DESKTOP_TAB
+    // The ONE derivation of "the viewport is showing the lock screen". The
+    // wallpaper, the blur, the widget filter, the islands host, both bars and
+    // the dock all ask this question, and each comparing the tab itself would
+    // be that many answers to it - the contract holds every other file to
+    // reading this property.
+    readonly property bool editLockPreview: root.editMode
+        && root.editTab === EditMode.LOCKSCREEN_TAB
+
     // The drawer - Edit Mode's catalogue of desktop widgets. Session state for
     // the same reason the mode is, and beside it for the same reason the
     // progress is: the desktop it translates and the panel that slides in are
@@ -186,6 +204,10 @@ Singleton {
         else {
             root.editDrawerOpen = false;
             root.editWidgetMenuOpen = false;
+            // The tab too: it is a filter on a viewport that no longer exists,
+            // and one left latched would greet the next entry already showing
+            // the lock screen's inputs.
+            root.editTab = EditMode.DESKTOP_TAB;
             // The overlays holding a bar drag are torn down with the mode, so
             // no end-of-drag handler is guaranteed to run - clear the flag
             // here or a drag cut short by Done leaves the ladder believing a

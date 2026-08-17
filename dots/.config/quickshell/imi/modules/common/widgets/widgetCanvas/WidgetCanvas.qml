@@ -111,7 +111,10 @@ MouseArea {
             gestureInFlight: root.draggingWidget() !== null
                 || GlobalStates.editBarDragActive,
             selectionCount: root.selectedWidgets.length,
-            tab: EditMode.DESKTOP_TAB
+            // The tab that is actually showing. A hardcoded DESKTOP_TAB was
+            // correct while only one tab existed, and would silently disarm
+            // the ladder's desktopTab rung now that a second one does.
+            tab: GlobalStates.editTab
         })
         if (action === "closeMenu") GlobalStates.editWidgetMenuOpen = false
         else if (action === "cancelGesture") {
@@ -119,6 +122,7 @@ MouseArea {
             if (GlobalStates.editBarDragActive) GlobalStates.editReorderCancel()
         }
         else if (action === "clearSelection") root.clearSelection()
+        else if (action === "desktopTab") GlobalStates.editTab = EditMode.DESKTOP_TAB
         else if (root.editMode) GlobalStates.editMode = false
     }
     readonly property bool keyboardFocusHeld: root.selectedWidgets.length > 0 || root.editMode

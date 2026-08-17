@@ -82,6 +82,8 @@ MENU = ROOT / "modules/imi/editMode/EditWidgetMenu.qml"
 MENU_CONTENT = ROOT / "modules/imi/editMode/EditWidgetMenuContent.qml"
 INSETS = ROOT / "modules/imi/editMode/EditModeInsets.qml"
 DESKTOP_MENU = ROOT / "modules/imi/desktopMenu/DesktopMenu.qml"
+LOCK_SURFACE = ROOT / "modules/imi/lock/LockSurface.qml"
+LOCK_PREVIEW_CONTEXT = ROOT / "modules/common/panels/lock/LockPreviewContext.qml"
 RULES = ROOT.parents[1] / "hypr/hyprland/rules.lua"
 
 # Everything that takes part in the mode. Listed rather than globbed so a new
@@ -232,9 +234,17 @@ def test_the_escape_ladder_is_the_module_and_not_open_coded():
     # The answers the module gives, and no branch invented beside them.
     # `closeMenu` is the first rung: the per-widget menu is the topmost
     # transient the mode draws, so Escape dismisses it before touching what is
-    # under it - and never exits the mode while it is up.
-    for answer in ("closeMenu", "cancelGesture", "clearSelection"):
+    # under it - and never exits the mode while it is up. `desktopTab` is the
+    # rung the Lockscreen tab fires: without its branch the answer would fall
+    # through to the exit and Escape on that tab would leave the mode instead
+    # of returning to the Desktop tab.
+    for answer in ("closeMenu", "cancelGesture", "clearSelection", "desktopTab"):
         assert answer in body, f"the handler ignores the module's {answer}"
+    # And the tab the ladder is asked about is the real one. A hardcoded
+    # DESKTOP_TAB here was correct while only one tab existed and silently
+    # disarms the rung above the moment a second one does.
+    assert "tab: GlobalStates.editTab" in body, \
+        "the ladder must be asked about the tab that is actually showing"
 
 
 def test_the_global_lock_is_suppressed_and_never_written():
@@ -1060,6 +1070,55 @@ def test_the_menu_does_not_outlive_the_mode():
     assert "editWidgetMenuOpen = false" in handler.group(1), \
         ("leaving the mode must close the menu - one left open would greet the "
          "next entry pointing at wherever a widget used to be")
+
+
+def test_the_tab_is_a_string_beside_the_mode_and_dies_with_it():
+    # Spec §1.4: the Lockscreen tab is a FILTER on the viewport, not a mode -
+    # one GlobalStates.editMode, and the tab a string beside it. Session state
+    # for the same reason the mode is, and reset on exit so the next entry
+    # opens on the Desktop tab rather than mid-preview.
+    states = code(GLOBAL_STATES)
+    assert re.search(r"property string editTab:\s*EditMode\.DESKTOP_TAB", states), \
+        ("GlobalStates must declare the tab, defaulted through the module's "
+         "constant rather than a second spelling of the string")
+    assert "editTab" not in read(CONFIG), \
+        "a persisted tab is a shell that restarts into the Lockscreen preview"
+    handler = re.search(r"onEditModeChanged:\s*\{(.*?)\n    \}", states, re.S)
+    assert handler and "editTab = EditMode.DESKTOP_TAB" in handler.group(1), \
+        ("leaving the mode must return the tab to Desktop - a tab left latched "
+         "would greet the next entry already filtered to the lock screen")
+
+
+def test_the_lockscreen_preview_is_one_derivation():
+    # "The viewport is showing the lock screen's inputs" is asked by the
+    # wallpaper, the blur, the widget filter, the islands host, both bars and
+    # the dock. One readonly derivation in GlobalStates answers all of them;
+    # a second `editTab === ...` comparison anywhere else is a second answer
+    # to one question, and the two disagree the first time either moves.
+    states = code(GLOBAL_STATES)
+    assert re.search(
+        r"readonly property bool editLockPreview:\s*root\.editMode\s*&&\s*"
+        r"root\.editTab === EditMode\.LOCKSCREEN_TAB", states), \
+        "GlobalStates no longer derives the preview from the mode and the tab"
+    swept = 0
+    for path in PARTICIPANTS + [GLOBAL_STATES, LOCK_SURFACE, LOCK_PREVIEW_CONTEXT]:
+        text = code(path)
+        swept += 1
+        # The literal lives in edit_mode.js and nowhere else, so the constant
+        # cannot drift from the string anyone compares against.
+        assert '"lockscreen"' not in text and "'lockscreen'" not in text, \
+            f"{path.name} spells the Lockscreen tab as a literal"
+        if path == GLOBAL_STATES:
+            continue
+        assert not re.search(r"editTab\s*===", text), \
+            (f"{path.name} compares the tab itself - read "
+             f"GlobalStates.editLockPreview instead")
+        for match in re.finditer(r"(?<![.\w])editLockPreview\b", text):
+            line = text[text.rfind("\n", 0, match.start()) + 1:
+                        text.find("\n", match.start())]
+            assert "GlobalStates.editLockPreview" in line, \
+                f"{path.name}: a second source for the preview: {line.strip()}"
+    assert swept == len(PARTICIPANTS) + 3, "the sweep lost a file"
 
 
 if __name__ == "__main__":
