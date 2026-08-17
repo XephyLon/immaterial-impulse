@@ -250,6 +250,52 @@ Scope {
                         Loader {
                             id: osdIndicatorLoader
                             source: root.indicators.find(i => i.id === root.currentIndicator)?.sourceUrl
+
+                            // A `url` cannot be interpolated, so this Behavior
+                            // does not animate the property - it DEFERS the
+                            // write. The bare `PropertyAction {}` is the whole
+                            // of it: with no target and no property, inside a
+                            // Behavior it means "apply the pending write
+                            // here", so the outgoing indicator leaves before
+                            // it is destroyed rather than being cut off in the
+                            // frame its replacement arrives. There is no
+                            // pending-value field, no state machine and no
+                            // pair of chained Timers whose intervals have to
+                            // keep agreeing with two animations' durations.
+                            //
+                            // It belongs on THIS loader because the OSD is one
+                            // window that nine sources write into: touching
+                            // volume and then brightness inside
+                            // Config.options.osd.timeout swaps the indicator
+                            // under a surface that is already up, so the swap
+                            // is a transition the user watches rather than a
+                            // build nobody sees. Measured with a qml6 probe
+                            // before it was written: the initial source is
+                            // still applied immediately (a Behavior does not
+                            // fire before its component is finalized), so an
+                            // OSD that is opening does not wait for a fade of
+                            // nothing.
+                            Behavior on source {
+                                SequentialAnimation {
+                                    NumberAnimation {
+                                        target: osdIndicatorLoader
+                                        property: "opacity"
+                                        to: 0
+                                        duration: Appearance.animation.elementMoveExit.duration
+                                        easing.type: Appearance.animation.elementMoveExit.type
+                                        easing.bezierCurve: Appearance.animation.elementMoveExit.bezierCurve
+                                    }
+                                    PropertyAction {}
+                                    NumberAnimation {
+                                        target: osdIndicatorLoader
+                                        property: "opacity"
+                                        to: 1
+                                        duration: Appearance.animation.elementMoveEnter.duration
+                                        easing.type: Appearance.animation.elementMoveEnter.type
+                                        easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
+                                    }
+                                }
+                            }
                         }
 
                         Item {
