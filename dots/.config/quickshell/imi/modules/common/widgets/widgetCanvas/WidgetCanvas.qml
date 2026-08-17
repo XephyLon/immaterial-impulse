@@ -102,12 +102,22 @@ MouseArea {
     Keys.onEscapePressed: {
         const action = EditMode.resolveEscape({
             menuOpen: GlobalStates.editWidgetMenuOpen,
-            gestureInFlight: root.draggingWidget() !== null,
+            // A bar-widget reorder is a gesture in flight too - it just holds
+            // its pointer grab on a different layer surface than the one this
+            // key arrives on, which is why it is composed in here rather than
+            // becoming a new rung of the pure function: the ladder's
+            // precedence does not care WHICH gesture is in flight, only that
+            // one is.
+            gestureInFlight: root.draggingWidget() !== null
+                || GlobalStates.editBarDragActive,
             selectionCount: root.selectedWidgets.length,
             tab: EditMode.DESKTOP_TAB
         })
         if (action === "closeMenu") GlobalStates.editWidgetMenuOpen = false
-        else if (action === "cancelGesture") root.cancelActiveDrag()
+        else if (action === "cancelGesture") {
+            root.cancelActiveDrag()
+            if (GlobalStates.editBarDragActive) GlobalStates.editReorderCancel()
+        }
         else if (action === "clearSelection") root.clearSelection()
         else if (root.editMode) GlobalStates.editMode = false
     }

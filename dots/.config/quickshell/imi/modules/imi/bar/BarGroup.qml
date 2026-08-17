@@ -1,3 +1,4 @@
+import qs
 import qs.modules.common
 import QtQuick
 import QtQuick.Layouts
@@ -7,6 +8,16 @@ Item {
     property bool vertical: false
     property int currentIndex: 0
     property int totalCount: 0
+
+    // Edit Mode's per-widget affordances, declared HERE because every widget
+    // in both bars is wrapped in a BarGroup - one Loader in this file covers
+    // both orientations, where a per-delegate copy would be twelve. The
+    // delegates pass which bucket this slot draws and which widget id it is;
+    // a tree that passes no controller (a test, a future preview) gets no
+    // overlay at all.
+    property var editController: null
+    property string editBucket: ""
+    property string editWidgetId: ""
     property bool isMaterial: Config.options.bar.cornerStyle === 3
     property bool paintMaterialPill: false
     // Islands is the only style where each group *is* the visible shape, with
@@ -88,5 +99,31 @@ Item {
         anchors.centerIn: parent
         columnSpacing: 0
         rowSpacing: 0
+    }
+
+    // The dragged slot dims so the ghost and the indicator read as "this one
+    // is moving". The binding's value changes only at the drag's ends, so the
+    // Behavior is safe (the b710ef731 distinction: a target that moves every
+    // frame, not a binding that re-evaluates every frame, is the trap).
+    opacity: editLoader.item && editLoader.item.dragging ? 0.4 : 1
+    Behavior on opacity {
+        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+    }
+
+    Loader {
+        id: editLoader
+        anchors.fill: parent
+        z: 100
+        // Gated on the mode itself, not the progress tail: the overlay exists
+        // to intercept input, and input during the exit animation belongs to
+        // the widgets again. Tearing it down mid-drag is deliberate - the
+        // handler dies with the grab and no release can commit.
+        active: root.editController !== null && GlobalStates.editMode
+        sourceComponent: BarWidgetEditItem {
+            controller: root.editController
+            bucket: root.editBucket
+            widgetId: root.editWidgetId
+            visibleIndex: root.currentIndex
+        }
     }
 }

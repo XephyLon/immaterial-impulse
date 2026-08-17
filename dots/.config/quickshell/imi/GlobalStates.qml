@@ -136,6 +136,17 @@ Singleton {
     property real editWidgetMenuY: 0
     property string editWidgetMenuPluginId: ""
 
+    // A bar-widget reorder in flight (stage 8's in-place drag). Here rather
+    // than on either bar because the exit ladder is answered on the
+    // BACKGROUND surface's WidgetCanvas: the keyboard and the pointer are on
+    // two different layer surfaces during this gesture, and the ladder's
+    // `gestureInFlight` has to see the drag to cancel it instead of exiting
+    // the mode. `editReorderCancel` is the return path - the canvas raises it,
+    // whichever slot holds the grab abandons, and the release still coming
+    // lands on nothing.
+    property bool editBarDragActive: false
+    signal editReorderCancel()
+
     property bool dropShelfOpen: false
     property real dropShelfX: 0
     property real dropShelfY: 0
@@ -175,6 +186,11 @@ Singleton {
         else {
             root.editDrawerOpen = false;
             root.editWidgetMenuOpen = false;
+            // The overlays holding a bar drag are torn down with the mode, so
+            // no end-of-drag handler is guaranteed to run - clear the flag
+            // here or a drag cut short by Done leaves the ladder believing a
+            // gesture is still in flight.
+            root.editBarDragActive = false;
         }
     }
     onClockDepthSelectOpenChanged: if (root.clockDepthSelectOpen) root.editMode = false
