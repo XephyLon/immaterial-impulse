@@ -33,6 +33,17 @@ function eligible(state) {
     // the difference reads as the candidate having claimed something it did
     // not - which is a verdict given against the wrong picture.
     if (s.selecting) return false;
+    // Edit Mode, for that same reason and one more. This layer paints the
+    // wallpaper's subject back OVER the desktop widgets, which is the effect at
+    // rest and is a partly hidden widget in the mode that exists to let the user
+    // place it. The one more: the layer reconstructs the parallax viewport,
+    // which is deliberately larger than the screen (workspaceZoom), and only the
+    // layer surface's own edge keeps that overscan off screen. The mode's
+    // transform pulls the desktop's edge away from the surface's and puts the
+    // blurred backdrop in between, so at 1.07 zoom on a 5120px screen a subject
+    // reaching the picture's edge would paint up to 154px past the card, on the
+    // one part of the screen that is supposed to be what is OUTSIDE the desktop.
+    if (s.editing) return false;
     if (!s.maskPath) return false;
     // A live Wallpaper Engine project is a moving surface with no file to
     // segment, and a mask of the frozen greeter still would be a stale

@@ -1386,6 +1386,7 @@ Variants {
                 // widgets while it is up; two cutouts arguing is not a thing
                 // anyone can give a verdict on.
                 selecting: GlobalStates.clockDepthSelectOpen,
+                editing: GlobalStates.editMode,
                 weActive: bgRoot.weActive,
                 wallpaperIsVideo: bgRoot.wallpaperIsVideo,
                 centeredWallpaper: bgRoot.centeredWallpaperEnabled,
