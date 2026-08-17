@@ -282,27 +282,15 @@ Scope {
                                 spacing: Appearance.spacing.space150
                                 MaterialSymbol { text: "widgets"; iconSize: Appearance.font.pixelSize.larger; color: Appearance.colors.colOnLayer1 }
                                 StyledText { Layout.fillWidth: true; text: "Widgets"; font.pixelSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1 }
-                                MaterialSymbol { text: "chevron_right"; iconSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1; opacity: 0.4 }
                             }
 
-                            Component {
-                                id: widgetsSubmenu
-                                WidgetsSubmenu {}
-                            }
-
-                            HoverHandler {
-                                onHoveredChanged: {
-                                    if (hovered) {
-                                        submenuCloseTimer.stop()
-                                        menuWindow.submenuAnchorY = menuCard.y + widgetsRow.mapToItem(menuCard, 0, 0).y
-                                        menuWindow.openSubmenuComponent = widgetsSubmenu
-                                    } else {
-                                        submenuCloseTimer.restart()
-                                    }
-                                }
-                            }
-                            // Same pattern as Wallpaper & style: hover for the
-                            // quick submenu, click for the full Settings page.
+                            // No hover submenu any more: WidgetsSubmenu's only
+                            // live control was the global widget lock, which
+                            // Edit Mode suppresses - a switch that turns off
+                            // something the editor turns back on - and its
+                            // widget list has been empty since the desktop
+                            // widgets became plugins. The click is the row's
+                            // whole meaning now, same as Edit layout below.
                             onClicked: {
                                 GlobalStates.desktopMenuOpen = false
                                 GlobalStates.settingsOpen = true
