@@ -105,6 +105,24 @@ Singleton {
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
     }
 
+    // The drawer - Edit Mode's catalogue of desktop widgets. Session state for
+    // the same reason the mode is, and beside it for the same reason the
+    // progress is: the desktop it translates and the panel that slides in are
+    // on two different layer surfaces, and both build their geometry out of
+    // this pair.
+    property bool editDrawerOpen: false
+    // The drawer's own animated scalar, second BESIDE `editProgress` and never
+    // a second animation OF it: this one carries the slide and the desktop's
+    // sideways travel, that one carries the shrink. `&& editMode` rather than
+    // the open flag alone so the exit closes the drawer even if nothing wrote
+    // the flag back - both scalars then run down together on the same tier,
+    // and edit_mode.js multiplies the shift by the mode's own t anyway, so the
+    // frame at progress 0 is the untransformed desktop whatever this holds.
+    property real editDrawerProgress: root.editMode && root.editDrawerOpen ? 1 : 0
+    Behavior on editDrawerProgress {
+        animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+    }
+
     property bool dropShelfOpen: false
     property real dropShelfX: 0
     property real dropShelfY: 0
@@ -127,7 +145,14 @@ Singleton {
     // stated once here rather than as a gate inside either mode - a mode that
     // gated on the other's key would read `undefined` on the base that does not
     // declare it yet and take its fallback forever.
-    onEditModeChanged: if (root.editMode) root.clockDepthSelectOpen = false
+    onEditModeChanged: {
+        if (root.editMode) root.clockDepthSelectOpen = false;
+        // The open flag does not outlive the mode: a drawer left latched open
+        // would greet the NEXT entry mid-slide, with the desktop already
+        // shifted on the first frame of a shrink that is supposed to be
+        // concentric.
+        else root.editDrawerOpen = false;
+    }
     onClockDepthSelectOpenChanged: if (root.clockDepthSelectOpen) root.editMode = false
 
     onSidebarRightOpenChanged: {
