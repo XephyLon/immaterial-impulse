@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import qs
 import qs.services
 import qs.modules.common
@@ -7,38 +8,36 @@ import qs.modules.common.widgets
 import qs.modules.common.plugins
 
 /**
- * Edit Mode's drawer: the catalogue of desktop widgets, fed by
- * `PluginManager.availablePlugins` - the same list Settings > Widgets reads,
- * because a second catalogue is a second list to go stale (spec §4.1's table:
- * "adding a widget means opening Settings › Widgets" becomes this panel).
+ * Edit Mode's drawer: the catalogue of everything the mode can add, one
+ * section per target surface - desktop widgets (`PluginManager.
+ * availablePlugins`), bar widgets (`BarWidgets.offerFor`) and dock apps
+ * (`DesktopEntries`, through AppSearch's prepared list). Sections rather
+ * than three panels because the drawer's width is the viewport's reserved
+ * slot and one reservation cannot be three widths.
  *
- * ---- how it reveals -------------------------------------------------------
+ * ---- how each section adds --------------------------------------------------
  *
- * The item this file declares IS the reveal: the surface sizes it to
- * `edit_mode.js`'s `drawerRect`, whose right edge is pinned and whose WIDTH is
- * what animates. The panel inside is the drawer's full width anchored to the
- * LEFT edge, so the leading edge appears first and the panel slides in from
- * the screen's edge - and `clip: true` is what makes a closed drawer paint
- * nothing at all, which the pixel test's before/after comparison depends on.
- * The clip is also why the panel's shadow is not drawn here: it falls entirely
- * outside the reveal and the chrome content draws it around this item instead.
+ * The desktop section keeps stage 5's two gestures: click toggles presence,
+ * drag carries the widget out to a drop point - the drop lands on the
+ * desktop, which is on the surface this drawer draws over, so the geometry
+ * works out on this side of the screen.
  *
- * ---- the two gestures -----------------------------------------------------
+ * The bar and dock sections add by CLICK only, deliberately. Their drop
+ * targets live on OTHER layer surfaces, in other scene graphs, whose slot
+ * geometry this surface cannot map (`mapToItem` does not cross windows) -
+ * a drag-out whose landing zone is guessed from configuration would disagree
+ * with the boundaries the bar draws, which is worse than no drag. Placement
+ * is the in-place reorder those surfaces already carry in the mode: a click
+ * appends (the bar section to a picked bucket, the dock to the end of the
+ * strip), and the new widget arrives badged and draggable where it will be
+ * arranged. The bar section's bucket picker names the buckets the way the
+ * current orientation draws them.
  *
- * A CLICK toggles the widget's presence on the desktop - the same
- * `plugins.enabled` write the Settings page makes, one writer with two call
- * sites rather than two meanings. A DRAG carries the widget out: past the
- * threshold a ghost chip follows the pointer, and the release hands the drop
- * point up as a request. Both are requests rather than writes, so every store
- * this mode touches is written on the surface that owns the geometry - which
- * is also what keeps `lint_edit_mode_scope.py`'s question answerable in one
- * file.
+ * ---- what this file writes --------------------------------------------------
  *
- * The pointer areas in this file are the reason the drawer is IN the surface's
- * input mask: unlike the toolbar's buttons they must keep receiving events
- * after the pointer leaves the panel, which the implicit grab of the press
- * provides - a Wayland pointer grab follows the surface that took the press,
- * not the input region it took it in.
+ * Nothing, same as stage 5: every gesture is a signal, and the chrome surface
+ * makes every store write - which is what keeps `lint_edit_mode_scope.py`'s
+ * question answerable in one file per store.
  */
 Item {
     id: root
@@ -57,6 +56,14 @@ Item {
     // coordinates. The surface maps it into the canvas and writes the store.
     signal addRequested(var manifest, real dropX, real dropY)
     signal toggleRequested(var manifest)
+    // The click-adds: a bar widget into a bucket, a dock app's pin toggled.
+    signal barAddRequested(string widgetId, string bucket)
+    signal dockToggleRequested(string appId)
+
+    // Which section is showing, and which bucket a bar-widget click appends
+    // to. Session state of the drawer itself; neither survives the mode.
+    property string section: "widgets"
+    property string barBucket: "right"
 
     // Everything that can live on the desktop and can come up now. The
     // `startupSafe` term is the same one Background.qml's Repeater applies: a
@@ -67,6 +74,16 @@ Item {
         && manifest.startupSafe !== false)
 
     readonly property var enabledIds: Config.options.plugins.enabled
+
+    // The bar's offer, from the same function the settings dropdown asks -
+    // one policy, two call sites, per the offerFor promotion.
+    readonly property var barOffer: BarWidgets.offerFor([
+        ...Config.options.bar.layouts.leftLayout,
+        ...Config.options.bar.layouts.middleLayout,
+        ...Config.options.bar.layouts.rightLayout
+    ], Config.options.bar.borderless)
+
+    readonly property bool barVertical: Config.options.bar.vertical
 
     // The drag that is currently out, or null. One ghost for the whole drawer
     // rather than one per row - only one pointer exists.
@@ -96,15 +113,40 @@ Item {
                 spacing: Appearance.spacing.space100
 
                 MaterialSymbol {
-                    text: "widgets"
+                    text: "add_circle"
                     iconSize: 22
                     color: Appearance.colors.colOnSurfaceVariant
                 }
                 StyledText {
                     Layout.fillWidth: true
-                    text: Translation.tr("Widgets")
+                    text: Translation.tr("Add")
                     font.pixelSize: Appearance.font.pixelSize.large
                     color: Appearance.colors.colOnSurface
+                }
+            }
+
+            // One chip per target surface.
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: Appearance.spacing.space75
+                spacing: Appearance.spacing.space25
+
+                SelectionGroupButton {
+                    leftmost: true
+                    buttonText: Translation.tr("Widgets")
+                    toggled: root.section === "widgets"
+                    onClicked: root.section = "widgets"
+                }
+                SelectionGroupButton {
+                    buttonText: Translation.tr("Bar")
+                    toggled: root.section === "bar"
+                    onClicked: root.section = "bar"
+                }
+                SelectionGroupButton {
+                    rightmost: true
+                    buttonText: Translation.tr("Dock")
+                    toggled: root.section === "dock"
+                    onClicked: root.section = "dock"
                 }
             }
 
@@ -112,19 +154,25 @@ Item {
                 Layout.fillWidth: true
                 Layout.leftMargin: Appearance.spacing.space75
                 Layout.rightMargin: Appearance.spacing.space75
-                text: Translation.tr("Drag a widget onto the desktop to place it, or click to add or remove it.")
+                text: root.section === "widgets"
+                    ? Translation.tr("Drag a widget onto the desktop to place it, or click to add or remove it.")
+                    : root.section === "bar"
+                        ? Translation.tr("Click a widget to add it to the picked bar section, then drag it into place on the bar.")
+                        : Translation.tr("Click an app to pin or unpin it, then drag it into place on the dock.")
                 font.pixelSize: Appearance.font.pixelSize.smaller
                 color: Appearance.colors.colOnSurfaceVariant
                 wrapMode: Text.Wrap
             }
 
+            // ---- desktop widgets (stage 5's list, unchanged) ---------------
             ListView {
                 id: list
+                visible: root.section === "widgets"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
                 spacing: Appearance.spacing.space25
-                model: root.desktopManifests
+                model: root.section === "widgets" ? root.desktopManifests : []
 
                 delegate: MouseArea {
                     id: entry
@@ -236,6 +284,157 @@ Item {
                             text: entry.widgetEnabled ? "check_circle" : "add"
                             iconSize: 20
                             color: entry.widgetEnabled
+                                ? Appearance.colors.colPrimary
+                                : Appearance.colors.colOnSurfaceVariant
+                        }
+                    }
+                }
+            }
+
+            // ---- bar widgets ----------------------------------------------
+            RowLayout {
+                visible: root.section === "bar"
+                Layout.fillWidth: true
+                Layout.leftMargin: Appearance.spacing.space75
+                spacing: Appearance.spacing.space25
+
+                SelectionGroupButton {
+                    leftmost: true
+                    buttonText: root.barVertical ? Translation.tr("Top") : Translation.tr("Left")
+                    toggled: root.barBucket === "left"
+                    onClicked: root.barBucket = "left"
+                }
+                SelectionGroupButton {
+                    buttonText: Translation.tr("Middle")
+                    toggled: root.barBucket === "middle"
+                    onClicked: root.barBucket = "middle"
+                }
+                SelectionGroupButton {
+                    rightmost: true
+                    buttonText: root.barVertical ? Translation.tr("Bottom") : Translation.tr("Right")
+                    toggled: root.barBucket === "right"
+                    onClicked: root.barBucket = "right"
+                }
+            }
+
+            ListView {
+                id: barList
+                visible: root.section === "bar"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                spacing: Appearance.spacing.space25
+                model: root.section === "bar" ? root.barOffer : []
+
+                delegate: RippleButton {
+                    required property var modelData
+                    width: barList.width
+                    implicitHeight: 48
+                    buttonRadius: Appearance.rounding.large
+                    colBackground: "transparent"
+                    colBackgroundHover: Appearance.colors.colLayer2Hover
+                    colRipple: Appearance.colors.colLayer2Active
+                    onClicked: root.barAddRequested(modelData.id, root.barBucket)
+
+                    contentItem: RowLayout {
+                        anchors {
+                            fill: parent
+                            leftMargin: Appearance.spacing.space100
+                            rightMargin: Appearance.spacing.space100
+                        }
+                        spacing: Appearance.spacing.space100
+
+                        MaterialSymbol {
+                            text: modelData.icon || "extension"
+                            iconSize: 22
+                            color: Appearance.colors.colOnSurfaceVariant
+                        }
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: modelData.name
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnSurface
+                            elide: Text.ElideRight
+                        }
+                        MaterialSymbol {
+                            text: "add"
+                            iconSize: 20
+                            color: Appearance.colors.colOnSurfaceVariant
+                        }
+                    }
+                }
+            }
+
+            // ---- dock apps ------------------------------------------------
+            MaterialTextField {
+                id: appSearchField
+                visible: root.section === "dock"
+                Layout.fillWidth: true
+                placeholderText: Translation.tr("Search apps")
+            }
+
+            ListView {
+                id: appList
+                visible: root.section === "dock"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                spacing: Appearance.spacing.space25
+                model: root.section !== "dock" ? []
+                    : appSearchField.text.length > 0
+                        ? AppSearch.fuzzyQuery(appSearchField.text)
+                        : AppSearch.list
+
+                delegate: RippleButton {
+                    id: appRow
+                    required property var modelData
+                    // The dock's store speaks lowercase app ids (TaskbarApps
+                    // keys its map that way), so the pin is written and read
+                    // in that spelling.
+                    readonly property string appId: (modelData.id ?? "").toLowerCase()
+                    // A binding on TaskbarApps' derived list - a PROPERTY, so
+                    // the row follows a pin toggled anywhere (the
+                    // LiveDesktopEntry lesson: an invokable like isPinned in
+                    // a binding never re-evaluates). Through the service
+                    // rather than Config.options.dock, because nothing in the
+                    // mode's own files may read the dock's configuration -
+                    // that is the one-derivation rule EditModeInsets exists
+                    // for, and the contract holds every participant to it.
+                    readonly property bool pinned: TaskbarApps.apps.some(
+                        app => app.appId === appRow.appId && app.pinned)
+
+                    width: appList.width
+                    implicitHeight: 48
+                    buttonRadius: Appearance.rounding.large
+                    colBackground: "transparent"
+                    colBackgroundHover: Appearance.colors.colLayer2Hover
+                    colRipple: Appearance.colors.colLayer2Active
+                    onClicked: root.dockToggleRequested(appRow.appId)
+
+                    contentItem: RowLayout {
+                        anchors {
+                            fill: parent
+                            leftMargin: Appearance.spacing.space100
+                            rightMargin: Appearance.spacing.space100
+                        }
+                        spacing: Appearance.spacing.space100
+
+                        Image {
+                            sourceSize.width: 26
+                            sourceSize.height: 26
+                            source: Quickshell.iconPath(appRow.modelData.icon, "image-missing")
+                        }
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: appRow.modelData.name ?? appRow.appId
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnSurface
+                            elide: Text.ElideRight
+                        }
+                        MaterialSymbol {
+                            text: appRow.pinned ? "check_circle" : "add"
+                            iconSize: 20
+                            color: appRow.pinned
                                 ? Appearance.colors.colPrimary
                                 : Appearance.colors.colOnSurfaceVariant
                         }

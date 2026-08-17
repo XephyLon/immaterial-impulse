@@ -2,9 +2,11 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import qs
+import qs.services
 import qs.modules.common
 import qs.modules.common.plugins
 import "../../common/functions/edit_mode.js" as EditMode
+import "../../common/functions/layout_ops.js" as LayoutOps
 import "../../common/plugins/gridSizes.js" as GridSizes
 
 /**
@@ -158,6 +160,26 @@ PanelWindow {
         };
     }
 
+    // The bar section's click-add: appended to the picked bucket's stored
+    // layout, as three literal paths - an allowlist reachable through a
+    // computed key is not an allowlist, which is lint_edit_mode_scope's own
+    // rule about this file. Arranging it further is the bar's in-place drag;
+    // the widget arrives at the bucket's end, badged and draggable.
+    function appendBarWidget(widgetId, bucket) {
+        if (bucket === "left")
+            Config.options.bar.layouts.leftLayout = LayoutOps.insert(
+                Config.options.bar.layouts.leftLayout, widgetId,
+                Config.options.bar.layouts.leftLayout.length);
+        else if (bucket === "middle")
+            Config.options.bar.layouts.middleLayout = LayoutOps.insert(
+                Config.options.bar.layouts.middleLayout, widgetId,
+                Config.options.bar.layouts.middleLayout.length);
+        else
+            Config.options.bar.layouts.rightLayout = LayoutOps.insert(
+                Config.options.bar.layouts.rightLayout, widgetId,
+                Config.options.bar.layouts.rightLayout.length);
+    }
+
     function addWidgetAt(manifest, dropX, dropY) {
         // A release back over the drawer is the gesture being abandoned, not
         // an instruction to add the widget at the drawer.
@@ -210,5 +232,10 @@ PanelWindow {
         onDrawerToggleRequested: GlobalStates.editDrawerOpen = !GlobalStates.editDrawerOpen
         onWidgetDropRequested: (manifest, dropX, dropY) => root.addWidgetAt(manifest, dropX, dropY)
         onWidgetToggleRequested: (manifest) => root.togglePlugin(manifest)
+        onBarWidgetAddRequested: (widgetId, bucket) => root.appendBarWidget(widgetId, bucket)
+        // The dock's presence write goes through its one existing writer -
+        // the same togglePin the dock's own context menu calls - rather than
+        // a second spelling of the pinnedApps edit here.
+        onDockAppToggleRequested: (appId) => TaskbarApps.togglePin(appId)
     }
 }
