@@ -641,7 +641,9 @@ ContentPage {
                 ConfigTextArea {
                     id: weatherApiKeyField
                     Layout.fillWidth: true
-                    visible: Config.options.bar.weather.provider === "owm"
+                    // A GroupedList row declares its visibility this way or it
+                    // leaves an empty plate behind - see GroupedList.qml.
+                    property bool rowVisible: Config.options.bar.weather.provider === "owm"
                     fieldWidth: 250
                     buttonIcon: "vpn_key"
                     text: Translation.tr("OpenWeatherMap API key (leave empty for the built-in key)")
