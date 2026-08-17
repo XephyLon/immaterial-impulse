@@ -1,0 +1,2 @@
+module qs.modules.imi.editMode
+singleton EditModeInsets EditModeInsets.qml
