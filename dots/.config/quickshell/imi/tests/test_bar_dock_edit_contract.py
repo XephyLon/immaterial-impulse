@@ -292,5 +292,38 @@ def test_escape_sees_a_bar_drag_and_can_cancel_it():
         "handler is guaranteed to run")
 
 
+# ---- the dock's half --------------------------------------------------------
+
+DRAG_APPS = ROOT / "modules/common/widgets/DragApps.qml"
+
+
+def test_the_docks_pinned_icons_grow_the_badge_and_go_inert_in_the_mode():
+    drag_apps = code(DRAG_APPS)
+    loader = re.search(
+        r"Loader\s*{[^{]*?active:\s*GlobalStates\.editMode(.*?)\n            }",
+        drag_apps, re.S)
+    assert loader, (
+        "DragApps no longer loads an edit overlay gated on the mode - the "
+        "pinned icons would stay launchable and unbadged while being arranged")
+    overlay = loader.group(1)
+    assert "acceptedButtons: Qt.AllButtons" in overlay, (
+        "the dock's eater no longer takes every button - a middle-click would "
+        "still launch, and a right-click still open the context menu")
+    assert "EditRemoveBadge" in overlay, (
+        "the dock's overlay lost its remove badge - presence on the dock "
+        "would only be editable from Settings again")
+    assert "LayoutOps.remove" in overlay, (
+        "the badge's removal no longer goes through layout_ops - a local "
+        "splice is the copy the module exists to prevent")
+
+
+def test_the_docks_preview_popup_stands_down_for_the_mode():
+    should_show = declaration(code(DRAG_APPS), "shouldShow")
+    assert should_show and "GlobalStates.editMode" in should_show, (
+        "the window-preview popup can open while the dock is being edited - "
+        "a hover card over the icons being arranged, the same hole "
+        "StyledPopup's claim gate closes on the bar")
+
+
 if __name__ == "__main__":
     raise SystemExit(run(globals()))

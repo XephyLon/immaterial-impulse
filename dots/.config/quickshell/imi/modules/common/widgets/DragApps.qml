@@ -317,6 +317,45 @@ Item {
                 }
             }
 
+            // Edit Mode: the pinned icon goes inert and grows its remove
+            // badge (spec §4.2 - the dock's own drag already reorders, so the
+            // mode adds presence editing, not a second gesture). An input
+            // EATER over the button rather than `enabled`: `enabled: false`
+            // on a MouseArea disables that area and nothing under it
+            // (AGENT.md), and the disabled route would also dim the icon
+            // through the button's own disabled state. The slot's DragHandler
+            // sits on the slot itself and steals past the drag threshold, so
+            // the reorder keeps working over the eater exactly as it works
+            // over the button.
+            Loader {
+                anchors.fill: parent
+                z: 500
+                active: GlobalStates.editMode
+                sourceComponent: Item {
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.AllButtons
+                        hoverEnabled: true
+                        onWheel: wheel => {
+                            wheel.accepted = true;
+                        }
+                    }
+                    EditRemoveBadge {
+                        objectName: "dockEditRemove"
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        // Presence on the dock is the pinned list; the removal
+                        // is the same store commitOrder writes, through the
+                        // shared arithmetic.
+                        onClicked: {
+                            if (!GlobalStates.editMode) return;
+                            Config.options.dock.pinnedApps =
+                                LayoutOps.remove(root.pinnedApps, slotItem.index);
+                        }
+                    }
+                }
+            }
+
             DragHandler {
                 id: dragHandler
                 target: null
@@ -392,6 +431,11 @@ Item {
 
         property bool shouldShow: (popupMouseArea.containsMouse || root.buttonHovered)
                                   && !root._dragging
+                                  // An inert dock does not answer hover with a
+                                  // window-preview card over the icons being
+                                  // arranged - same reasoning as StyledPopup's
+                                  // claim gate on the bar.
+                                  && !GlobalStates.editMode
                                   && !(root.contextMenu?.isOpen ?? false)
                                   && appTopLevel
                                   && appTopLevel.toplevels
