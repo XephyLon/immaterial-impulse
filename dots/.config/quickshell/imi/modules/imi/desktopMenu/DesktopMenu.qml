@@ -328,7 +328,12 @@ Scope {
                         // control that does nothing is worse than one that is
                         // not there.
                         RippleButton {
-                            visible: !GlobalStates.editMode
+                            // `rowVisible`, not `visible`: a GroupedList row
+                            // hidden the second way keeps its plate, which is
+                            // the row-height band of empty `colLayer0` this
+                            // menu grew between Widgets and DropShelf while the
+                            // mode was on. See GroupedList.qml.
+                            property bool rowVisible: !GlobalStates.editMode
                             implicitHeight: 40
                             colBackground: "transparent"
                             colBackgroundHover: Appearance.colors.colLayer2

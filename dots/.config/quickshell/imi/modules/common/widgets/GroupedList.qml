@@ -2,6 +2,31 @@ import qs.modules.common
 import QtQuick
 import QtQuick.Layouts
 
+/**
+ * A list of rows drawn as one grouped surface: each row gets its own tinted
+ * plate, the outer corners are rounded and the inner ones are not.
+ *
+ * ---- a row that comes and goes declares `rowVisible`, never `visible` -------
+ *
+ * The plates are built by a `Repeater` over the declared items and each one
+ * sizes itself from its item's `implicitHeight`. That arithmetic never asked
+ * whether the item was drawn, so a row hidden with `visible: false` kept its
+ * plate: a row-height band of `bgcolor` with nothing in it. Two call sites had
+ * it - the desktop menu's Edit layout row, which disappears while Edit Mode is
+ * on, and Settings > Services > Weather's API-key field, which is OWM-only.
+ *
+ * The fix cannot be for the plate to mirror its item's `visible`, and that is
+ * worth stating because it is the obvious shape. `Item.visible` reads back
+ * EFFECTIVE visibility - the item's own flag AND its parents' - and the item is
+ * a descendant of the plate, so a plate that hid itself from it would hide the
+ * item too, and the item would then report false for ever. Probed with `qml6`
+ * against a control row: the item toggled true/false/true while the mirrored
+ * one read `false` on every one of the four samples after the first hide.
+ *
+ * So the declaration is a property of its own. A row that never disappears
+ * declares nothing and reads `undefined`, which takes the `?? true` and costs
+ * one property lookup.
+ */
 Item {
     id: root
     default property list<Item> items
@@ -13,6 +38,21 @@ Item {
     Layout.fillWidth: true
     implicitHeight: col.implicitHeight
 
+    // Which rows are drawn, in declaration order. A binding rather than a
+    // function so that a row flipping its own `rowVisible` re-rounds the group:
+    // the outer corners belong to the first and last row ON SCREEN, and reading
+    // `isFirst` off the declared index leaves a hidden row holding the group's
+    // rounding while the row above it is drawn square.
+    readonly property var drawnIndices: {
+        const drawn = [];
+        for (let i = 0; i < root.items.length; i++) {
+            const item = root.items[i];
+            if (item && (item.rowVisible ?? true))
+                drawn.push(i);
+        }
+        return drawn;
+    }
+
     ColumnLayout {
         id: col
         anchors.fill: parent
@@ -22,8 +62,13 @@ Item {
             model: root.items.length
             delegate: Rectangle {
                 required property int index
-                readonly property bool isFirst: index === 0
-                readonly property bool isLast: index === root.items.length - 1
+                readonly property bool isFirst: index === root.drawnIndices[0]
+                readonly property bool isLast: index === root.drawnIndices[root.drawnIndices.length - 1]
+                // A `ColumnLayout` leaves an invisible child out of the layout
+                // entirely, so this is what takes the plate's height AND the
+                // spacing beside it out of the group rather than collapsing one
+                // and leaving the other.
+                visible: root.drawnIndices.indexOf(index) !== -1
                 Layout.fillWidth: true
                 implicitHeight: (root.items[index]?.implicitHeight ?? 0) + root.itemVerticalPadding
                 color: root.bgcolor
