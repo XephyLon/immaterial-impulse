@@ -32,7 +32,7 @@ Item {
         id: background
         anchors.fill: parent
         color: Appearance.m3colors.m3surfaceContainer
-        implicitHeight: 56
+        implicitHeight: Appearance.sizes.toolbarHeight
         implicitWidth: toolbarLayout.implicitWidth + root.padding * 2
         radius: height / 2
 

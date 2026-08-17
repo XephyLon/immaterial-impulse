@@ -702,6 +702,28 @@ Singleton {
         property real barBottomMargin: (Config?.options.bar.bottom && root.sizes.barDeadPixelOverhang !== 0)
             ? root.sizes.barDeadPixelOverhang
             : root.sizes.barDetachMargin
+        // The bar's layer SURFACE, as opposed to the body it paints: what
+        // Bar.qml asks the compositor for, and how far that lands from the
+        // screen edge. One expression each, because anything that has to keep
+        // clear of the bar without editing it - Edit Mode's chrome is the first
+        // - would otherwise carry its own copy of a four-term sum, and a copy
+        // of that is a copy that drifts. Checked against the live compositor at
+        // cornerStyle 3 with auto-hide off: `hyprctl layers` reports
+        // `quickshell:bar` at y=5 h=63, which is these two.
+        property real barSurfaceHeight: root.sizes.barHeight
+            + root.rounding.screenRounding + root.sizes.barDetachInset
+        property real barSurfaceMargin: Config?.options.bar.bottom
+            ? root.sizes.barBottomMargin : root.sizes.barDetachMargin
+        // A negative margin is the dead-pixel overhang, which pulls the surface
+        // PAST the screen edge - it takes no room from anything inside.
+        property real barSurfaceThickness: root.sizes.barSurfaceHeight
+            + Math.max(0, root.sizes.barSurfaceMargin)
+        // ...and the same for the vertical bar, which anchors flush to its edge
+        // and so has no margin term.
+        property real verticalBarSurfaceWidth: root.sizes.verticalBarWidth
+            + root.rounding.screenRounding
+            + (Config?.options.bar.cornerStyle === 3
+                ? (Config?.options.hyprland.general.gapsOut || 5) : 0)
         property real barCenterSideModuleWidth: Config.options?.bar.verbose ? 360 : 140
         property real barCenterSideModuleWidthShortened: 280
         property real barCenterSideModuleWidthHellaShortened: 190
@@ -729,6 +751,13 @@ Singleton {
         // The gap outside the shrunk desktop on its three free sides, and
         // between it and the drawer's slot on the fourth.
         property real editModeMargin: root.spacing.space300
+        // M3's toolbar height (m3.material.io/components/toolbars). It is a
+        // token rather than a literal inside Toolbar.qml because Edit Mode's
+        // viewport reserves a band for the toolbar on the BACKGROUND surface,
+        // where no toolbar exists to measure - so the reservation and the thing
+        // reserved for have to read the same number or the chrome lands in a
+        // band that is not its size.
+        property real toolbarHeight: 56
         property real baseVerticalBarWidth: 46
         property real verticalBarWidth: Config.options.bar.cornerStyle === 1 ? 
             (baseVerticalBarWidth + root.sizes.hyprlandGapsOut * 2) : baseVerticalBarWidth
