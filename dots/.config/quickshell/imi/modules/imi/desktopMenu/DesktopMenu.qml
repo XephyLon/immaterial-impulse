@@ -314,14 +314,21 @@ Scope {
                         // unlike Wallpaper & style and Widgets, this row has no
                         // quick-settings half and no Settings page behind it.
                         //
-                        // The same row is also the way out, which is not what
-                        // the toolbar's Done will be - it stands in for it until
-                        // stage 4 draws one. Escape is the other exit and it
-                        // depends on the compositor delivering keys to a
-                        // Bottom-layer surface, which is not established here;
-                        // a mode whose only way out is unproven is not one to
-                        // ship.
+                        // The way IN, and now only that. It stood in as the way
+                        // out as well while the mode had no toolbar, because
+                        // Escape depends on the compositor delivering keys to a
+                        // Bottom-layer surface and that was never established -
+                        // a mode whose only exit is unproven is not one to ship.
+                        // The toolbar's Done is that exit now, on screen for the
+                        // whole mode, so a second one here would leave the exit
+                        // ALSO hidden behind a right-click, two rows deep in a
+                        // context menu: precisely the discoverability failure
+                        // the mode exists to fix. The row disappears while the
+                        // mode is on rather than becoming a no-op, because a
+                        // control that does nothing is worse than one that is
+                        // not there.
                         RippleButton {
+                            visible: !GlobalStates.editMode
                             implicitHeight: 40
                             colBackground: "transparent"
                             colBackgroundHover: Appearance.colors.colLayer2
@@ -329,20 +336,20 @@ Scope {
                                 anchors { fill: parent; leftMargin: Appearance.spacing.space150; rightMargin: Appearance.spacing.space150 }
                                 spacing: Appearance.spacing.space150
                                 MaterialSymbol {
-                                    text: GlobalStates.editMode ? "done" : "edit"
+                                    text: "edit"
                                     iconSize: Appearance.font.pixelSize.larger
                                     color: Appearance.colors.colOnLayer1
                                 }
                                 StyledText {
                                     Layout.fillWidth: true
-                                    text: GlobalStates.editMode ? "Done editing" : "Edit layout"
+                                    text: "Edit layout"
                                     font.pixelSize: Appearance.font.pixelSize.normal
                                     color: Appearance.colors.colOnLayer1
                                 }
                             }
                             onClicked: {
                                 GlobalStates.desktopMenuOpen = false
-                                GlobalStates.editMode = !GlobalStates.editMode
+                                GlobalStates.editMode = true
                             }
                         }
 
