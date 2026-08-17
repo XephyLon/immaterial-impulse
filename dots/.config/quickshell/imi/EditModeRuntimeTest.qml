@@ -594,6 +594,43 @@ ShellRoot {
             driver.mouseClick(remove, remove.width / 2, remove.height / 2, Qt.LeftButton);
             harness.check("Remove takes the widget out of plugins.enabled",
                           Config.options.plugins.enabled.length === 0);
+        },
+
+        // ---- the Lockscreen tab: a filter, and Escape climbs off it --------
+        //
+        // The ladder's desktopTab rung is pure and tst-covered; what only a
+        // real key through the real canvas handler can show is the WIRING -
+        // that the caller passes the live tab and answers the rung by moving
+        // it, rather than falling through to the exit. The key needs the
+        // canvas focused, which the shell does on mode entry; the steps above
+        // clicked other controls, so it is re-asserted rather than assumed.
+        () => {
+            GlobalStates.editMode = true;
+            GlobalStates.editTab = EditMode.LOCKSCREEN_TAB;
+            harness.check("the preview flag follows the mode and the tab",
+                          GlobalStates.editLockPreview === true);
+        },
+        () => {
+            canvas.forceActiveFocus();
+            driver.keyClick(Qt.Key_Escape);
+            harness.check("Escape on the Lockscreen tab returns to Desktop with the mode still on",
+                          GlobalStates.editTab === EditMode.DESKTOP_TAB
+                          && GlobalStates.editMode === true
+                          && GlobalStates.editLockPreview === false);
+        },
+        () => {
+            canvas.forceActiveFocus();
+            driver.keyClick(Qt.Key_Escape);
+            harness.check("...and the next Escape leaves the mode",
+                          GlobalStates.editMode === false);
+        },
+        () => {
+            GlobalStates.editMode = true;
+            GlobalStates.editTab = EditMode.LOCKSCREEN_TAB;
+            GlobalStates.editMode = false;
+            harness.check("leaving the mode resets the tab with the drawer and the menu",
+                          GlobalStates.editTab === EditMode.DESKTOP_TAB
+                          && GlobalStates.editLockPreview === false);
         }
     ]
 
