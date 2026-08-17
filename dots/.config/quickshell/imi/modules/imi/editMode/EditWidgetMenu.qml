@@ -51,6 +51,13 @@ Scope {
             exclusiveZone: 0
             WlrLayershell.namespace: "quickshell:desktopMenu"
             WlrLayershell.layer: WlrLayer.Overlay
+            // Explicitly None, not left to the default: this surface maps on
+            // Overlay while the menu's own Escape rung (`closeMenu`) is
+            // answered by WidgetCanvas on the BACKGROUND surface, so a menu
+            // window holding the keyboard would swallow the exact key that
+            // dismisses it - the same hazard the chrome surface pins, one
+            // surface up.
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
             anchors {
                 top: true

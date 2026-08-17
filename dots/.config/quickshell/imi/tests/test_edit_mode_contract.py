@@ -1035,6 +1035,20 @@ def test_the_menu_window_is_the_desktop_menus_shape():
         "the window must exist only while the menu is open"
     assert re.search(r"onClicked:\s*GlobalStates\.editWidgetMenuOpen = false", menu), \
         "a click outside the card must dismiss the menu"
+    assert "WlrLayershell.layer: WlrLayer.Overlay" in menu, \
+        "the menu must map above the mode's chrome, or it opens under the toolbar"
+    # Explicit, not defaulted: this Overlay surface must not hold the keyboard,
+    # because the menu's own Escape rung is answered on the background surface
+    # - the same pin the chrome surface carries, for the same reason.
+    assert "WlrLayershell.keyboardFocus: WlrKeyboardFocus.None" in menu, \
+        "the menu window must decline the keyboard the Escape ladder needs"
+    # The click-eater under the card: without it a click on the card's title
+    # row or plate padding falls through to the closer and dismisses the menu -
+    # and no harness can see it, because no harness can build this window.
+    eater = re.search(
+        r"MouseArea\s*\{\s*x:\s*card\.x\s*y:\s*card\.y\s*width:\s*card\.width\s*"
+        r"height:\s*card\.height\s*acceptedButtons:\s*Qt\.AllButtons", menu)
+    assert eater, "a click ON the card must not read as a click away from it"
 
 
 def test_the_menu_does_not_outlive_the_mode():
