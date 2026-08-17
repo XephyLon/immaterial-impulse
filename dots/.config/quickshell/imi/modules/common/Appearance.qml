@@ -212,6 +212,25 @@ Singleton {
         property color colOnTooltip: m3colors.m3inverseOnSurface
         property color colScrim: ColorUtils.transparentize(m3colors.m3scrim, 0.5)
         property color colShadow: ColorUtils.transparentize(m3colors.m3shadow, 0.7)
+        // The two tones a glass edge is drawn in, and the one pair in this file
+        // deliberately NOT derived from the wallpaper. Everything above is
+        // generated from the picture on screen, so an edge drawn in one of those
+        // roles is guaranteed to be a colour that picture already contains -
+        // which is precisely the edge that disappears against it. Measured on
+        // this library's darkest wallpaper: Edit Mode's card reached 27/255 on
+        // its colLayer0Border outline over a backdrop at 12, ten levels of
+        // contrast for the whole boundary. Same reasoning as the depth picker's
+        // hardcoded contour (refactor(background): one cutout for the layer and
+        // the picker to draw).
+        //
+        // A PAIR rather than one colour, because that is what carries an edge
+        // over any wallpaper: the specular reads against a dark picture, the
+        // shade against a bright one, and a bevel wearing both is never entirely
+        // invisible. Opaque here - a call site picks its own weight with
+        // Qt.alpha, so one tone can appear at several strengths along the same
+        // edge without a token per strength.
+        property color colGlassSpecular: "#ffffff"
+        property color colGlassShade: "#000000"
         property color colOutline: m3colors.m3outline
         property color colOutlineVariant: m3colors.m3outlineVariant
         property color colError: m3colors.m3error
