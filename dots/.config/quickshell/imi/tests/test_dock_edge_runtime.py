@@ -45,7 +45,7 @@ SOCKET = "wayland-imi-dock-edge"
 # The harness prints how many checks it ran. This number is a literal rather
 # than anything read back from that output: a harness whose step list shrinks
 # must redden here instead of reporting `failures: 0` for a shorter run.
-EXPECTED_CHECKS = 8
+EXPECTED_CHECKS = 12
 
 
 def _stop(proc):

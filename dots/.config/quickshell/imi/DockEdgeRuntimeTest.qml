@@ -1,6 +1,7 @@
 import QtQuick
 import QtTest
 import Quickshell
+import qs
 import qs.modules.common
 import qs.modules.common.widgets
 
@@ -204,7 +205,40 @@ ShellRoot {
         () => harness.resetOrder(),
         () => harness.flickSlot(0, 100, 0),
         () => harness.scoreReordered("a pointer that outruns the events shifts the run it passed",
-                                     ["beta", "gamma", "alpha"])
+                                     ["beta", "gamma", "alpha"]),
+
+        // ---- Edit Mode: the badge, and the drag that survives it ----------
+        //
+        // Stage 8 adds presence editing to the dock (a remove badge per
+        // pinned icon) without touching the reorder, so the checks are the
+        // pair: the badge removes, and the drag still works with the edit
+        // overlay loaded over every button.
+        () => { harness.resetOrder(); GlobalStates.editMode = true; },
+        () => {
+            const slot = harness.slotItem(0);
+            const badge = slot ? driver.findChild(slot, "dockEditRemove") : null;
+            harness.check("the mode grows a remove badge on a pinned icon",
+                          badge !== null && badge !== undefined);
+            if (badge) {
+                const centre = badge.mapToItem(slots, badge.width / 2, badge.height / 2);
+                driver.mouseClick(slots, centre.x, centre.y, Qt.LeftButton);
+            }
+        },
+        () => harness.scoreReordered("the badge unpins the icon it rides",
+                                     ["beta", "gamma"]),
+        () => harness.dragSlot(0, 60, 0),
+        () => harness.scoreReordered("the drag still reorders over the edit overlay",
+                                     ["gamma", "beta"]),
+        () => {
+            GlobalStates.editMode = false;
+            harness.resetOrder();
+        },
+        () => {
+            const slot = harness.slotItem(0);
+            const badge = slot ? driver.findChild(slot, "dockEditRemove") : null;
+            harness.check("the badge stands down with the mode",
+                          badge === null || badge === undefined);
+        }
     ]
 
     property int stepIndex: 0
