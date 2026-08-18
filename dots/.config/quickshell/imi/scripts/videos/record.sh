@@ -216,6 +216,31 @@ echo "$GSR_PID" > "$PIDFILE"
 set_recording_state true "$REGION"
 notify-send "Recording started" "$(basename "$OUT")" -a 'Recorder' & disown
 
+# A recording that never starts must not sit behind an indicator that says
+# it did. The portal path can wedge before the first frame - measured: a
+# hard-hung xdg-desktop-portal-hyprland left gsr at CreateSession for minutes,
+# single-threaded, no output file, while the bar showed "recording" - and the
+# user's only signal was that Stop did nothing. So watch for the OUTPUT FILE
+# to appear: gsr opens it the moment capture begins, and a screen capture
+# begins well inside this window. Past it, tear gsr down through the same
+# ladder the stop uses and say why, then fall through to the cleanup below.
+# The picker (a first-ever portal recording, or a token the portal refused)
+# needs the user's click, so the window is generous rather than tight.
+START_WINDOW_S="${IMI_RECORD_START_WINDOW_S:-25}"   # env override is for the test
+for _ in $(seq 1 $((START_WINDOW_S * 10))); do
+    kill -0 "$GSR_PID" 2>/dev/null || break            # exited on its own: fall through
+    [[ -e "$OUT" ]] && break                            # capturing
+    sleep 0.1
+done
+if kill -0 "$GSR_PID" 2>/dev/null && [[ ! -e "$OUT" ]]; then
+    notify-send "Recording did not start" \
+        "No frames after ${START_WINDOW_S}s - the screen-capture portal is not answering. Try again; if it keeps happening, restart xdg-desktop-portal-hyprland." \
+        -a 'Recorder' -u critical & disown
+    kill -INT "$GSR_PID" 2>/dev/null; sleep 1
+    kill -0 "$GSR_PID" 2>/dev/null && { kill -TERM "$GSR_PID" 2>/dev/null; sleep 1; }
+    kill -0 "$GSR_PID" 2>/dev/null && kill -KILL "$GSR_PID" 2>/dev/null
+fi
+
 # Block until gsr exits (stop toggle, crash, or logout) so the pidfile and the
 # shell's recording indicator are always cleaned up. The saved-file
 # notification comes from the -sc hook with the real path.
