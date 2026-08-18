@@ -34,8 +34,95 @@ class RecordScriptTests(unittest.TestCase):
     def test_toggle_is_pidfile_scoped_not_pkill(self):
         # pkill by process name would also kill the replay daemon.
         self.assertIn("imi-screenrecord.pid", self.script)
-        self.assertIn('kill -INT "$(cat "$PIDFILE")"', self.script)
+        self.assertIn('kill -INT "$gsr_pid"', self.script)
         self.assertNotIn("pkill", self.script)
+
+    def test_the_stop_reaches_a_recorder_that_ignores_int_and_sits_on_term(self):
+        """The recording the maintainer could not stop from the privacy card or
+        the overlay: gsr blocked at portal selection, never capturing, INT
+        still ignored (a `&` job in non-interactive bash is born with INT and
+        QUIT ignored, and gsr undoes that only once capturing) and TERM caught
+        but never acted on. Every stop path funnels into this script with a
+        live pidfile, and it sent one INT.
+
+        Driven for real: a stand-in `gpu-screen-recorder` on PATH that ignores
+        INT and traps TERM to a no-op, launched through the script's own
+        launch (which is where the mask comes from), then stopped through the
+        script's own toggle. It must be gone within the ladder's window and the
+        pidfile with it. The stand-in exits 0 on any signal it DOES receive,
+        so a launch that stops ignoring INT ends it at the first rung.
+        """
+        import os, tempfile, time, shutil, stat
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            binstub = home / "bin"; binstub.mkdir()
+            gsr = binstub / "gpu-screen-recorder"
+            # INT and TERM are both trapped to no-ops - handled and ignored,
+            # the way a wedged gsr behaves - so only KILL ends it: the worst
+            # case the ladder must beat. Traps, not `trap '' INT`: that would
+            # set SIG_IGN itself, and the assertion below reads the mask the
+            # LAUNCH handed the process, which must be clean. `exec sleep`
+            # would replace the traps, so it loops instead.
+            gsr.write_text("#!/usr/bin/env bash\n"
+                           "trap ':' INT TERM\n"
+                           "while :; do sleep 0.2; done\n")
+            gsr.chmod(gsr.stat().st_mode | stat.S_IEXEC)
+            for helper in ("notify-send", "slurp", "jq"):
+                stub = binstub / helper
+                if helper == "jq":
+                    # The script reads its config through jq; the real one is
+                    # fine but must be on the stub PATH too.
+                    real = shutil.which("jq")
+                    if real: os.symlink(real, stub); continue
+                stub.write_text("#!/usr/bin/env bash\nexit 0\n")
+                stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+            runtime = home / "rt"; runtime.mkdir(mode=0o700)
+            cfg = home / ".config/immaterial-impulse"; cfg.mkdir(parents=True)
+            (cfg / "config.json").write_text(json.dumps({"screenRecord": {
+                "fps": 30, "quality": "medium", "audioCodec": "opus", "codec": "auto",
+                "framerateMode": "vfr", "showCursor": True, "recordAudio": False,
+                "recordMic": False, "tonemapSdr": False, "savePath": str(home / "Videos")}}))
+            (home / "Videos").mkdir()
+            state = home / ".local/state/quickshell"; state.mkdir(parents=True)
+            (state / "states.json").write_text(json.dumps({"record": {"enable": False, "region": ""}}))
+            env = dict(os.environ, HOME=str(home), XDG_RUNTIME_DIR=str(runtime),
+                       XDG_CONFIG_HOME=str(home / ".config"),
+                       PATH=f"{binstub}:{os.environ['PATH']}")
+            env.pop("HYPRLAND_INSTANCE_SIGNATURE", None)
+
+            # Start: the script blocks on `wait`, so run it detached.
+            starter = subprocess.Popen(["bash", str(RECORD_SH), "--fullscreen"], env=env,
+                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            pidfile = runtime / "imi-screenrecord.pid"
+            deadline = time.monotonic() + 10
+            while not pidfile.exists() and time.monotonic() < deadline:
+                time.sleep(0.1)
+            self.assertTrue(pidfile.exists(), "the script never wrote its pidfile")
+            gsr_pid = int(pidfile.read_text().strip())
+            self.assertTrue(Path(f"/proc/{gsr_pid}").exists(), "the stand-in never came up")
+
+            # The launch must not hand gsr an ignored INT.
+            sigign = re.search(r"SigIgn:\s*([0-9a-f]+)",
+                               Path(f"/proc/{gsr_pid}/status").read_text()).group(1)
+            self.assertEqual(int(sigign, 16) & 0x2, 0,
+                             f"gsr was launched with SIGINT ignored (SigIgn={sigign}); "
+                             f"the launch must run under job control")
+
+            # Stop through the toggle - the same path every UI stop takes.
+            t0 = time.monotonic()
+            subprocess.run(["bash", str(RECORD_SH)], env=env, timeout=30, check=True)
+            deadline = time.monotonic() + 8
+            while Path(f"/proc/{gsr_pid}").exists() and time.monotonic() < deadline:
+                time.sleep(0.1)
+            elapsed = time.monotonic() - t0
+            self.assertFalse(Path(f"/proc/{gsr_pid}").exists(),
+                             f"the recorder survived the stop ({elapsed:.1f}s) - the toggle "
+                             f"must escalate INT -> TERM -> KILL")
+            try:
+                starter.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                starter.kill(); self.fail("record.sh did not exit after its recorder died")
+            self.assertFalse(pidfile.exists(), "the pidfile outlived the recording")
 
     def test_keeps_interface_flags(self):
         for flag in ("--sound", "--fullscreen", "--region", "--path"):
