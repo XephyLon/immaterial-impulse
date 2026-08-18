@@ -457,6 +457,15 @@ fi
 # of the things it filters: stage 9 switched every layer's source and left the
 # theme keyed on the session lock, so the tab drew the lock's wallpaper under
 # the desktop's colours.
+# Two widget layouts in one store: the lock's inherits the desktop's until the
+# first Lockscreen-tab move forks it. The arithmetic is tst_layout_surfaces
+# (qmltestrunner, below); this pins the writers, the store shape and presets.
+echo "Running layout surfaces contract..."
+if ! python3 "$SCRIPT_DIR/test_layout_surfaces_contract.py"; then
+    echo "Layout surfaces contract failed."
+    exit 1
+fi
+
 echo "Running lock look palette tests..."
 if ! python3 "$SCRIPT_DIR/test_lock_look_palette.py"; then
     echo "Lock look palette tests failed."

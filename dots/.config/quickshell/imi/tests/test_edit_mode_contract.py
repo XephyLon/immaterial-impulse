@@ -987,7 +987,7 @@ def test_the_size_affordance_indexes_offered_spans_and_never_a_pixel():
     assert "GridSizes.steppedSize(" in content, \
         "the step must come from the module, where tst_grid_sizes owns the walk"
     assert re.search(
-        r'setOption\([^)]*"__gridSize",\s*\n?\s*GridSizes\.formatSize\(next\)',
+        r'setGridSize\(id, screen, GridSizes\.formatSize\(next\), surface\)',
         content), \
         "the size write must be the stepped offered span and nothing else"
     # No pointer anywhere near the size: the card's rows are buttons, and a
@@ -1360,8 +1360,10 @@ def test_every_committed_mutation_records_exactly_its_entries():
     expected = {
         PLUGIN_WIDGET: 2,      # a drag's release; a span commit (grip + Size row path)
         MENU_CONTENT: 2,       # the Size stepper; Remove
-        CHROME_SURFACE: 9,     # presence toggle, 3 bar-bucket adds, 3 lock keys,
-                               # add-at-pointer, dock pin toggle
+        CHROME_SURFACE: 10,    # presence toggle, 3 bar-bucket adds, 3 lock keys,
+                               # add-at-pointer, dock pin toggle, and the lock
+                               # layout re-link (spec §4.3 as amended: one entry
+                               # that puts a forked screen back whole)
         BAR_CONTROLLER: 1,     # one snapshot helper serving reorder and remove
         LOCK_REORDER: 3,       # one literal path per island
         DRAG_APPS: 2,          # the dock's reorder commit; the badge unpin
