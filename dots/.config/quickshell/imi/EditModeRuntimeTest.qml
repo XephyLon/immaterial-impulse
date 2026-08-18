@@ -631,6 +631,75 @@ ShellRoot {
             harness.check("leaving the mode resets the tab with the drawer and the menu",
                           GlobalStates.editTab === EditMode.DESKTOP_TAB
                           && GlobalStates.editLockPreview === false);
+        },
+
+        // ---- undo (spec §7.3): the last committed mutation, reversed ------
+        //
+        // Ctrl+Z's key delivery is a compositor question no weston harness
+        // can see (probe 4 answered it against a nested Hyprland); what this
+        // drives is everything behind the key: the commit paths recording
+        // entries, the entries reversing the store AND the drawn widget, and
+        // the gate that keeps the mode's history the mode's.
+        () => {
+            GlobalStates.editMode = true;
+            harness.placeWidgets();
+        },
+        () => {
+            // The earlier steps' own commits recorded entries; this section
+            // starts from an empty stack so its counts mean something.
+            GlobalStates.editUndoStack = [];
+            GlobalStates.editUndo();
+            harness.check("an empty stack undoes nothing and breaks nothing",
+                          GlobalStates.editUndoStack.length === 0
+                          && GlobalStates.editMode === true);
+        },
+        () => {
+            harness.dragBy(movableWidget, 96, 0);
+            harness.check("a drag committed in the mode records one entry",
+                          GlobalStates.editUndoStack.length === 1
+                          && Math.round(harness.storedPosition("edit-move-probe").x) === 132);
+        },
+        () => {
+            GlobalStates.editUndo();
+            harness.check("undo returns the store to the position the drag found",
+                          Math.round(harness.storedPosition("edit-move-probe").x) === 36
+                          && GlobalStates.editUndoStack.length === 0);
+        },
+        () => {
+            harness.check("...and the widget is drawn there again",
+                          Math.round(movableWidget.x) === 36);
+        },
+        () => {
+            // The gate. A commit with the mode off records nothing: the same
+            // gesture commits all day outside the editor, and Ctrl+Z inside
+            // it must not reach back past the mode's own affordance.
+            GlobalStates.editMode = false;
+        },
+        () => {
+            harness.dragBy(movableWidget, 96, 0);
+            harness.check("the same drag outside the mode records nothing",
+                          GlobalStates.editUndoStack.length === 0
+                          && Math.round(harness.storedPosition("edit-move-probe").x) === 132);
+        },
+        () => {
+            // A span commit, through the one path the grip and the menu's
+            // stepper both call, undone back to the stored choice it found.
+            GlobalStates.editMode = true;
+            PluginState.setOption("edit-resize-probe", "__gridSize", "3x2");
+            GlobalStates.editUndoStack = [];
+        },
+        () => {
+            resizableWidget.commitGridSize({ cols: 2, rows: 1 });
+            harness.check("a span commit records the old choice",
+                          GlobalStates.editUndoStack.length === 1
+                          && harness.storedSize("edit-resize-probe") === "2x1");
+        },
+        () => {
+            GlobalStates.editUndo();
+            harness.check("undo puts the stored span back",
+                          harness.storedSize("edit-resize-probe") === "3x2"
+                          && GlobalStates.editUndoStack.length === 0);
+            GlobalStates.editMode = false;
         }
     ]
 

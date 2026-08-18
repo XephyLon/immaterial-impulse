@@ -85,6 +85,9 @@ DESKTOP_MENU = ROOT / "modules/imi/desktopMenu/DesktopMenu.qml"
 LOCK_SURFACE = ROOT / "modules/imi/lock/LockSurface.qml"
 LOCK_PREVIEW_CONTEXT = ROOT / "modules/common/panels/lock/LockPreviewContext.qml"
 RULES = ROOT.parents[1] / "hypr/hyprland/rules.lua"
+BAR_CONTROLLER = ROOT / "modules/imi/bar/BarEditController.qml"
+LOCK_REORDER = ROOT / "modules/imi/lock/LockIslandReorder.qml"
+DRAG_APPS = ROOT / "modules/common/widgets/DragApps.qml"
 
 # Everything that takes part in the mode. Listed rather than globbed so a new
 # participant is a deliberate addition to this list, which is where someone
@@ -1262,6 +1265,82 @@ def test_the_lockscreen_preview_is_one_derivation():
             assert "GlobalStates.editLockPreview" in line, \
                 f"{path}: a second source for the preview: {line.strip()}"
     assert swept > 400, f"the tree sweep found only {swept} files"
+
+
+def test_the_undo_stack_is_the_modules_arithmetic_and_records_only_in_the_mode():
+    # Spec §7.3. The stack lives in GlobalStates but its bound and its order
+    # are edit_mode.js's tst-covered functions - a shift or a limit open-coded
+    # in the singleton would be a second copy of arithmetic the tests cannot
+    # see. And the push is gated on the mode: the same gestures commit all day
+    # with the mode off, and Ctrl+Z inside the mode reversing a drag made
+    # hours earlier would be undo reaching past the editor whose affordance
+    # it is.
+    states = code(GLOBAL_STATES)
+    assert re.search(
+        r"function editUndoPush\(entry\)\s*\{\s*"
+        r"if \(!root\.editMode\) return;\s*"
+        r"root\.editUndoStack = EditMode\.undoPush\(root\.editUndoStack, entry\);",
+        states), "editUndoPush no longer gates on the mode and defers to the module"
+    assert "EditMode.undoPop(root.editUndoStack)" in states, \
+        "editUndo no longer pops through the module"
+    module = code(MODULE)
+    for name in ("UNDO_LIMIT", "function undoPush", "function undoPop",
+                 "function listCopy"):
+        assert name in module, f"edit_mode.js lost {name}"
+
+
+def test_ctrl_z_lives_on_the_canvas_and_leaves_the_ladder_alone():
+    # Probe 4's measured answer is what licenses the wiring: the BACKGROUND
+    # surface's canvas receives compositor keys under OnDemand focus, so
+    # Ctrl+Z is answered there - gated on the mode, through GlobalStates'
+    # one undo entry point, and accepted so nothing beneath re-answers it.
+    # The chrome surface stays keyboard-None (its own check above), and the
+    # Escape ladder is a different rung entirely: undo reverses the last
+    # COMMITTED mutation, Escape cancels the gesture still in flight.
+    canvas = code(CANVAS)
+    start = canvas.find("Keys.onPressed")
+    assert start != -1, "the canvas lost its key handler"
+    handler = canvas[start:canvas.find("Keys.onEscapePressed", start)]
+    assert "if (!root.editMode) return" in handler, \
+        "Ctrl+Z is no longer gated on the mode"
+    assert "Qt.Key_Z" in handler and "Qt.ControlModifier" in handler, \
+        "the canvas no longer answers Ctrl+Z"
+    assert "GlobalStates.editUndo()" in handler, \
+        "Ctrl+Z stopped going through the one undo entry point"
+    assert "event.accepted = true" in handler, \
+        "an unaccepted Ctrl+Z falls through to whatever sits beneath"
+    assert re.search(r"Keys\.onEscapePressed", canvas), \
+        "the Escape ladder left the canvas"
+
+
+def test_every_committed_mutation_records_exactly_its_entries():
+    # Spec §7.3's five kinds of committed mutation, as push counts per file.
+    # Exact rather than at-least in both directions: a site that stops
+    # pushing is a mutation undo silently forgot, and a NEW push is a new
+    # licence that belongs in this table on review. The closures' discipline
+    # (only singletons and captured data, literal store paths) is stated at
+    # each site; what a count can hold is that the sites exist at all.
+    expected = {
+        PLUGIN_WIDGET: 2,      # a drag's release; a span commit (grip + Size row path)
+        MENU_CONTENT: 2,       # the Size stepper; Remove
+        CHROME_SURFACE: 9,     # presence toggle, 3 bar-bucket adds, 3 lock keys,
+                               # add-at-pointer, dock pin toggle
+        BAR_CONTROLLER: 1,     # one snapshot helper serving reorder and remove
+        LOCK_REORDER: 3,       # one literal path per island
+        DRAG_APPS: 2,          # the dock's reorder commit; the badge unpin
+    }
+    for path, count in expected.items():
+        found = code(path).count("editUndoPush")
+        assert found == count, \
+            f"{path.name}: {found} undo pushes where the contract expects {count}"
+    # The drag-release push is guarded on the commit having MOVED something:
+    # commitPosition runs for every release of a draggable widget, click
+    # included, and an unguarded push fills the stack with entries that undo
+    # to where the widget already is.
+    widget = code(PLUGIN_WIDGET)
+    assert re.search(
+        r"if \(beforeX !== rootWidget\.targetX \|\| beforeY !== rootWidget\.targetY\)",
+        widget), "the drag-release push lost its moved-something guard"
 
 
 if __name__ == "__main__":

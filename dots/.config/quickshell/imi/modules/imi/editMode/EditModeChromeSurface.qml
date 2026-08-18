@@ -310,13 +310,15 @@ PanelWindow {
         // the same togglePin the dock's own context menu calls - rather than
         // a second spelling of the pinnedApps edit here.
         onDockAppToggleRequested: (appId) => {
-            // A dock pin flip is an add or a remove (§7.3). The write stays
-            // with TaskbarApps.togglePin - the one existing writer - and the
-            // closure restores the pinned list at its literal path.
-            const beforePins = EditMode.listCopy(Config.options.dock.pinnedApps);
-            GlobalStates.editUndoPush(() => {
-                Config.options.dock.pinnedApps = beforePins;
-            });
+            // A dock pin flip is an add or a remove (§7.3), and its inverse
+            // is the same flip - so the closure calls the one existing
+            // writer again rather than restoring the list, which would need
+            // this file to read `Config.options.dock` and be the second
+            // derivation the one-answer contract forbids. The cost is that
+            // undoing an unpin re-pins at the strip's end rather than the
+            // old slot; the order is the dock's in-place drag's to arrange.
+            const toggled = appId;
+            GlobalStates.editUndoPush(() => TaskbarApps.togglePin(toggled));
             TaskbarApps.togglePin(appId);
         }
         onLockIslandToggleRequested: (key) => root.toggleLockIsland(key)
