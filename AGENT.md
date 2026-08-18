@@ -3494,6 +3494,21 @@ that. The frames came back by stopping what kept the window *busy*, not by remov
 perf(bar): the popup overlay surface is mapped only while it has a card;
 test(perf): infinite animations are gated on visibility, and the overlay stands down.)
 
+**And the last blocker was not the shell at all: any Overlay surface, from anyone, at any size,
+holds the fullscreen fast path shut.** With every shell-side cost gone the game still read 84
+against a 94 ceiling, `solitaryBlockedBy: other overlays`, and the only overlay left was the
+Activate Linux plugin's 340×120 watermark — a process the shell spawns but a surface the shell does
+not own. Killing that one process: `solitary` went from 0 to the game's own address, Hyprland's GPU
+share from ~9% to **0.0%**, the game to 92. The plugin now stands its watermark down while any
+monitor's active workspace has a fullscreen window (`XephyLon/activate-linux-plugin#1`), reading
+`HyprlandData.hasfullscreen` like the bar and dock do — a first cut on `Hyprland.workspaces[..].
+toplevels` did not re-evaluate on workspace change. The general rule is in `docs/PLUGINS.md`
+§"Overlay surfaces and fullscreen windows". Two lessons for the next investigation: `hyprctl
+monitors`' `solitaryBlockedBy` is the first thing to read, because it names the class of blocker
+outright; and the shell's *own* GPU share reading 0.0% does not clear the shell, because what the
+shell spawns and what the compositor does on the shell's behalf are both invisible there.
+(docs(plugins): an Overlay surface holds the fullscreen fast path shut.)
+
 **How fast the shell moves is one scalar, and where the bottom of that scale is, is a *different*
 declared thing.** `modules/common/motion_policy.js` is the arithmetic (pure, `.pragma library`, so
 the decisions are testable and nothing about the rendering has to be); `Appearance.animation`
