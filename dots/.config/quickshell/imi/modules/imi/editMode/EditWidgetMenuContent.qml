@@ -63,13 +63,16 @@ Item {
     // window) or hands in its own (the runtime harness, whose manifests are
     // synthetic and exist in no catalogue).
     property var manifest: null
+    // The screen the widget lives on: a span is per surface AND per screen
+    // once the lock layout is forked, so the stepper has to say which.
+    property string screenName: ""
     signal dismissRequested()
 
     readonly property var offeredSizes: GridSizes.offeredSizes(root.manifest?.grid ?? null)
     // The stored choice, read once so every derivation below shares one
     // reactive dependency on the plugin-state store.
     readonly property var storedSpan: root.manifest
-        ? PluginState.option(root.manifest.id, "__gridSize") : undefined
+        ? PluginState.gridSize(root.manifest.id, root.screenName) : undefined
     // Stored choice -> manifest default, resolved the way the host resolves
     // it, so the value the stepper starts from is the span the widget is
     // actually drawn at - including when the stored span is one the manifest
@@ -107,10 +110,11 @@ Item {
         // PluginState singleton - never this card or its widget, both of
         // which the mode can destroy while the stack outlives them.
         const id = root.manifest.id;
-        const before = PluginState.option(id, "__gridSize", null);
-        GlobalStates.editUndoPush(() => PluginState.setOption(id, "__gridSize", before));
-        PluginState.setOption(id, "__gridSize",
-            GridSizes.formatSize(next));
+        const screen = root.screenName;
+        const surface = PluginState.currentSurface;
+        const before = PluginState.gridSize(id, screen, surface) ?? null;
+        GlobalStates.editUndoPush(() => PluginState.setGridSize(id, screen, before, surface));
+        PluginState.setGridSize(id, screen, GridSizes.formatSize(next), surface);
     }
 
     implicitWidth: 260
