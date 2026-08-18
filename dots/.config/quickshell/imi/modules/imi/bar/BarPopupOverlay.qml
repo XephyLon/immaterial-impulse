@@ -398,6 +398,21 @@ Scope {
                 else retargetTimer.restart();
             }
 
+            // The window is unmapped while it has nothing to show (a mapped
+            // screen-sized Overlay surface holds the compositor's fullscreen
+            // fast path shut), and a WlrLayershell window that has just gone
+            // visible does not have its size yet: measured on the live
+            // compositor, it reports 500x500 for the same tick AND through
+            // Qt.callLater, and the real 5120x1330 arrives with the configure
+            // ~50ms later. retarget()'s clamp reads overlayWindow.width and
+            // height, so a retarget on the zero-interval timer ran against
+            // 500x500, `min(base, 500 - cardWidth - margin - 10)` went
+            // negative, and `max(margin, ...)` pinned the card to the
+            // top-left - the calendar card at x=margin under a clock at
+            // screen-centre. Re-run when the geometry actually lands.
+            onWidthChanged: if (overlayWindow.current) overlayWindow.retarget()
+            onHeightChanged: if (overlayWindow.current) overlayWindow.retarget()
+
             // There is no sensible interpolation between "below the top edge"
             // and "right of the left edge", so an orientation change idles the
             // card rather than morphing across it.
