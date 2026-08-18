@@ -752,6 +752,134 @@ ShellRoot {
                           && Math.round(harness.storedPosition("edit-resize-probe").x) === 36);
             canvas.clearSelection();
             GlobalStates.editMode = false;
+        },
+
+        // ---- the lock layout forks on the first Lockscreen-tab move ---------
+        //
+        // spec §4.3 as amended 2026-08-18: the lock screen's arrangement
+        // INHERITS the desktop's until a widget is moved on the Lockscreen
+        // tab, which copies the whole screen into a store of its own. What
+        // only the real drag path can show: the widget's own drag commit
+        // writes the LOCK store when the look is the lock's; every other
+        // widget on the screen comes along in the fork; the desktop store is
+        // untouched; the widget goes BACK to its desktop position when the
+        // tab returns; an undo pushed on the lock tab and popped on the
+        // desktop tab still edits the lock store; and the re-link puts the
+        // inheritance back.
+        () => {
+            // The lock has to SHOW the widgets for there to be a lock layout
+            // to arrange - a widget the lock hides is at opacity 0 and takes
+            // no drag, which is the product's own rule and not this test's.
+            Config.options.lock.showWidgets = true;
+            GlobalStates.editMode = true;
+        },
+        () => {
+            harness.check("before any lock edit the screen is not forked",
+                          !PluginState.lockLayoutForked(harness.testScreen));
+            GlobalStates.editTab = EditMode.LOCKSCREEN_TAB;
+        },
+        () => {
+            harness.check("on the Lockscreen tab the widget still sits at its desktop position",
+                          Math.round(movableWidget.x) === 36 && Math.round(movableWidget.y) === 396);
+            harness.dragBy(movableWidget, 120, 0);
+        },
+        () => {
+            harness.check("the first lock move forks the screen",
+                          PluginState.lockLayoutForked(harness.testScreen));
+            harness.check("...the moved widget follows the lock store",
+                          Math.round(PluginState.position("edit-move-probe", harness.testScreen,
+                                                          PluginState.lockSurface).x) === 156);
+            harness.check("...the OTHER widget came along at its own position",
+                          Math.round(PluginState.position("edit-resize-probe", harness.testScreen,
+                                                          PluginState.lockSurface).x) === 36);
+            harness.check("...and the desktop store did not move",
+                          Math.round(PluginState.position("edit-move-probe", harness.testScreen,
+                                                          PluginState.desktopSurface).x) === 36);
+            GlobalStates.editTab = EditMode.DESKTOP_TAB;
+        },
+        () => {
+            harness.check("back on the Desktop tab the widget is at its desktop position again",
+                          Math.round(movableWidget.x) === 36);
+            // The undo was pushed on the LOCK tab. Popping it here must edit
+            // the lock store, not write the lock's old position into the
+            // desktop's.
+            GlobalStates.editUndo();
+        },
+        () => {
+            harness.check("an undo popped on the other tab restores the LOCK store",
+                          Math.round(PluginState.position("edit-move-probe", harness.testScreen,
+                                                          PluginState.lockSurface).x) === 36);
+            harness.check("...and leaves the desktop store alone",
+                          Math.round(PluginState.position("edit-move-probe", harness.testScreen,
+                                                          PluginState.desktopSurface).x) === 36
+                          && Math.round(movableWidget.x) === 36);
+            // The fork itself survives an undo of the move - the screen is
+            // still separate, just back at the same numbers.
+            harness.check("...the screen stays forked",
+                          PluginState.lockLayoutForked(harness.testScreen));
+            PluginState.resetLockLayout(harness.testScreen);
+        },
+        () => {
+            harness.check("the re-link removes the fork",
+                          !PluginState.lockLayoutForked(harness.testScreen));
+            harness.check("...and the lock reads through to the desktop again",
+                          PluginState.rawPosition("edit-move-probe", harness.testScreen,
+                                                  PluginState.lockSurface) !== undefined
+                          && Math.round(PluginState.position("edit-move-probe", harness.testScreen,
+                                                             PluginState.lockSurface).x) === 36);
+        },
+
+        // ---- the SPAN forks with the position -------------------------------
+        //
+        // The maintainer's second report: a media widget at 3x2 on the desktop
+        // and 1x2 on the lock. Driven through the real grip on the Lockscreen
+        // tab: the resize forks the screen and writes the LOCK span; the
+        // desktop's __gridSize option is untouched; back on the Desktop tab
+        // the widget is drawn at the desktop's span; the undo pushed on the
+        // lock tab restores the lock span from the other tab.
+        () => {
+            // A known desktop span to fork from.
+            PluginState.setOption("edit-resize-probe", "__gridSize", "2x2");
+        },
+        () => {
+            harness.check("the desktop span is 2x2 before the lock resize",
+                          harness.storedSize("edit-resize-probe") === "2x2"
+                          && !PluginState.lockLayoutForked(harness.testScreen));
+            GlobalStates.editTab = EditMode.LOCKSCREEN_TAB;
+        },
+        () => {
+            harness.check("on the Lockscreen tab the widget is drawn at the desktop span",
+                          resizableWidget.storedGridSize.cols === 2
+                          && resizableWidget.storedGridSize.rows === 2);
+            // Pull the grip one row up: 2x2 -> 2x1, the next span the probe
+            // offers (its list is 3x2 / 2x2 / 2x1).
+            harness.dragGripBy(resizableWidget, 0, -160);
+        },
+        () => {
+            harness.check("a lock resize forks the screen",
+                          PluginState.lockLayoutForked(harness.testScreen));
+            harness.check("...and writes the LOCK span",
+                          PluginState.gridSize("edit-resize-probe", harness.testScreen,
+                                               PluginState.lockSurface) === "2x1");
+            harness.check("...leaving the desktop's __gridSize option at 2x2",
+                          PluginState.option("edit-resize-probe", "__gridSize", "") === "2x2");
+            harness.check("...and the widget is drawn at 2x1 here",
+                          resizableWidget.storedGridSize.rows === 1);
+            GlobalStates.editTab = EditMode.DESKTOP_TAB;
+        },
+        () => {
+            harness.check("back on the Desktop tab the widget is drawn at 2x2 again",
+                          resizableWidget.storedGridSize.rows === 2);
+            GlobalStates.editUndo();
+        },
+        () => {
+            harness.check("the resize's undo, popped on the Desktop tab, restores the LOCK span",
+                          PluginState.gridSize("edit-resize-probe", harness.testScreen,
+                                               PluginState.lockSurface) === "2x2");
+            harness.check("...and the desktop option is still 2x2",
+                          PluginState.option("edit-resize-probe", "__gridSize", "") === "2x2");
+            PluginState.resetLockLayout(harness.testScreen);
+            GlobalStates.editMode = false;
         }
     ]
 

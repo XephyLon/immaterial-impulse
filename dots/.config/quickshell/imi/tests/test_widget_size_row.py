@@ -37,10 +37,19 @@ class TheRowAndTheGripShareOneValue(unittest.TestCase):
         self.host = squashed(HOST)
 
     def test_the_row_writes_the_key_the_grip_writes(self):
+        # Settings' size row writes the DESKTOP span option directly, and the
+        # grip writes through PluginState.setGridSize(), whose desktop surface
+        # is that same option (layout_surfaces.js `withGridSize`). The two
+        # meet at `__gridSize` in pluginOptions - pinned at both ends, since
+        # a row writing a key nothing reads is the failure this exists for.
         self.assertIn('key: "__gridSize"', self.options)
-        self.assertIn('PluginState.setOption(manifest.id, "__gridSize"', self.host,
+        self.assertIn("PluginState.setGridSize(id, screen, next, surface)", self.host,
                       "the grip's writer moved; the row now writes a key "
                       "nothing reads")
+        surfaces = squashed(ROOT / "modules/common/plugins/layout_surfaces.js")
+        self.assertIn("plugin.__gridSize = value", surfaces,
+                      "setGridSize's desktop surface no longer lands on the "
+                      "__gridSize option Settings' row writes")
 
     def test_the_choices_are_formatted_by_the_module_that_parses_them(self):
         """A row spelling the span itself is a second format to keep in step,
