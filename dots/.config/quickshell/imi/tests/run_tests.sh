@@ -438,6 +438,21 @@ fi
 # real LockSurface with the preview context - the overlay's eater, the shared
 # gesture, move semantics, the storedOrder merge, and both cancel paths.
 # Brings its own headless weston.
+# A screen-sized Overlay surface with nothing in it still sits over every
+# fullscreen window, and an infinite animation keeps the compositor repainting
+# the whole output: together they cost a fullscreen game half its frames.
+echo "Running surface stand-down contract..."
+if ! python3 "$SCRIPT_DIR/test_surface_standdown_contract.py"; then
+    echo "Surface stand-down contract failed."
+    exit 1
+fi
+
+echo "Running infinite animation visibility lint..."
+if ! python3 "$SCRIPT_DIR/lint_infinite_animation_visibility.py"; then
+    echo "Infinite animation visibility lint failed."
+    exit 1
+fi
+
 # The Lockscreen tab is a filter on the desktop viewport, and the palette is one
 # of the things it filters: stage 9 switched every layer's source and left the
 # theme keyed on the session lock, so the tab drew the lock's wallpaper under
