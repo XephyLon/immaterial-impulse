@@ -2,11 +2,22 @@
 """The bar popup overlay's surface geometry must be a constant of the screen.
 
 `modules/imi/bar/BarPopupOverlay.qml` hosts every bar popup's card on one
-always-mapped layer surface. That only works while the *surface* never moves or
-resizes: on a layer-shell surface position is `margins`, so a bound margin, a
-bound implicit size, or an edge anchor that can go false reconfigures the
-surface - which is the create-map-destroy loop StyledPopup's imperative
-positioning was written to escape, reached from the other side.
+layer surface. That only works while the *surface* never moves or resizes: on a
+layer-shell surface position is `margins`, so a bound margin, a bound implicit
+size, or an edge anchor that can go false reconfigures the surface - which is
+the create-map-destroy loop StyledPopup's imperative positioning was written to
+escape, reached from the other side.
+
+The surface is no longer always MAPPED - it unmaps while it has nothing to
+show, because a mapped screen-sized Overlay surface holds the compositor's
+fullscreen fast path shut - and that added a rule of its own. A WlrLayershell
+window that has just gone visible does not have its size yet: measured on the
+live compositor, 500x500 for the same tick and through Qt.callLater, the real
+size arriving with the configure ~50ms later. `retarget()` clamps the card
+against the window's width/height, so a retarget on the zero-interval timer
+alone pinned the card to the top-left margin - the calendar under the clock at
+screen-centre. The overlay must therefore retarget again when its own geometry
+lands (`onWidthChanged`/`onHeightChanged`), which is the last check below.
 
 Two more properties this file must keep, both from the same design:
 
@@ -52,6 +63,17 @@ else:
     for edge in ("top", "bottom", "left", "right"):
         if not re.search(rf"\b{edge}\s*:\s*true\b", anchors.group(1)):
             failures.append(f"anchors.{edge} is not literally true")
+
+# The window retargets when its OWN geometry arrives. Without this the first
+# retarget after unmap->map runs against the placeholder 500x500 and the clamp
+# pins the card to the margin.
+for signal in ("onWidthChanged", "onHeightChanged"):
+    if not re.search(rf"^\s*{signal}:\s*if \(overlayWindow\.current\) overlayWindow\.retarget\(\)",
+                     code, re.MULTILINE):
+        failures.append(
+            f"does not retarget on the window's {signal}; a just-shown layer surface "
+            f"reports a placeholder size for its first tick and the clamp pins the card "
+            f"to the top-left margin")
 
 for transform in ("scale", "rotation"):
     if re.search(rf"^\s*{transform}\s*:", code, re.MULTILINE) \
