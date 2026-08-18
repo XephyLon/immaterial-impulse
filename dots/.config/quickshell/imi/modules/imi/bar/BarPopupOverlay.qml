@@ -38,6 +38,25 @@ Scope {
 
             screen: modelData
             color: "transparent"
+            // Mapped only while it has something to show. This is a
+            // SCREEN-SIZED surface on the Overlay layer, so leaving it mapped
+            // puts a 5120x1440 transparent sheet over every fullscreen window
+            // for the whole session - the compositor composites it each frame
+            // and the window under it can never be the only thing on the
+            // output. Measured with FFXIV's own counter on a static scene:
+            // 98 fps with this mapped and idle, 105 with it unmapped.
+            //
+            // The predicate outlasts the exit deliberately. Unmapping destroys
+            // the QQuickWindow, and a popup's content tree is REPARENTED into
+            // this window while it shows - so the window may only go once
+            // `finishExit()` has released both trees and collapsed the card,
+            // which is exactly the state this reads.
+            visible: overlayWindow.current !== null
+                || overlayWindow.outgoing !== null
+                || overlayWindow.exiting
+                || card.opacity > 0
+                || card.width > 0
+                || card.height > 0
             exclusionMode: ExclusionMode.Ignore
             exclusiveZone: 0
 
