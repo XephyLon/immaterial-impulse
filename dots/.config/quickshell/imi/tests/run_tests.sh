@@ -199,6 +199,16 @@ if ! python3 "$SCRIPT_DIR/lint_self_matching_process_patterns.py"; then
     exit 1
 fi
 
+# A harness that launches qs on the inherited session bus measures the
+# developer's session as much as this tree: the lock island reorder test read
+# the maintainer's browser as an MPRIS player, which hides the two slots it
+# drags, and failed on their machine while passing everywhere else.
+echo "Running runtime bus isolation lint..."
+if ! python3 "$SCRIPT_DIR/lint_runtime_bus_isolation.py"; then
+    echo "Runtime bus isolation lint failed."
+    exit 1
+fi
+
 echo "Running doc citation lint..."
 if ! python3 "$SCRIPT_DIR/lint_doc_citations.py"; then
     echo "Doc citation lint failed."
