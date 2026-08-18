@@ -553,6 +553,32 @@ def test_the_mode_animates_on_exactly_one_scalar():
         "...and so must the chrome"
 
 
+def test_the_snap_toggle_rides_the_settings_key_and_records_no_undo():
+    # Maintainer, 2026-08-18: a toggle in the mode for edge snapping. It must
+    # be the SAME key Settings offers and stage 10's detent rides -
+    # `background.showSnapLines` - not a second one: the guide and the hold
+    # travel together on that key, and two keys that must agree eventually
+    # disagree. And it is a preference, not a committed mutation: no undo
+    # entry, like the global widget lock. The write lives on the surface,
+    # because that is where every store write the mode makes lives.
+    content = code(CHROME_CONTENT)
+    assert "signal snapToggleRequested()" in content, \
+        "the chrome content no longer offers the snap toggle"
+    button = re.search(r"id:\s*snapButton\n(.*?)\n\s*\}", content, re.S)
+    assert button, "the toolbar has no snapButton"
+    assert "toggled: Config.options.background.showSnapLines" in button.group(1), \
+        "the snap toggle must read background.showSnapLines - the key the detent rides"
+    assert "onClicked: root.snapToggleRequested()" in button.group(1), \
+        "the snap toggle must signal the surface, not write the store from the chrome"
+    surface = code(CHROME_SURFACE)
+    assert re.search(r"onSnapToggleRequested:\s*Config\.options\.background\.showSnapLines\s*=\s*!Config\.options\.background\.showSnapLines",
+                     surface), \
+        "the surface must flip background.showSnapLines on the signal"
+    handler = re.search(r"onSnapToggleRequested:[^\n]*", surface)
+    assert handler and "editUndoPush" not in handler.group(0), \
+        "the snap toggle is a preference and must not spend an undo entry"
+
+
 def test_the_chrome_surface_is_static():
     # On a layer surface, position IS `margins`, so chrome animating into place
     # through them reconfigures the surface every frame - the create-map-destroy
