@@ -1279,8 +1279,18 @@ def test_the_undo_stack_is_the_modules_arithmetic_and_records_only_in_the_mode()
     assert re.search(
         r"function editUndoPush\(entry\)\s*\{\s*"
         r"if \(!root\.editMode\) return;\s*"
-        r"root\.editUndoStack = EditMode\.undoPush\(root\.editUndoStack, entry\);",
-        states), "editUndoPush no longer gates on the mode and defers to the module"
+        r"if \(root\.editUndoBatch !== null\)",
+        states), "editUndoPush no longer gates on the mode before anything else"
+    assert "root.editUndoStack = EditMode.undoPush(root.editUndoStack, entry)" in states, \
+        "editUndoPush no longer defers to the module's arithmetic"
+    # A gesture that commits several mutations folds them into one entry: the
+    # batch is opened by the canvas at a group release and closed a turn
+    # later, or the leader's entry sits on top and the first Ctrl+Z deforms
+    # the cluster.
+    canvas_text = code(CANVAS)
+    assert "GlobalStates.editUndoBeginBatch()" in canvas_text \
+        and "Qt.callLater(GlobalStates.editUndoEndBatch)" in canvas_text, \
+        "a group release no longer batches its members into one entry"
     assert "EditMode.undoPop(root.editUndoStack)" in states, \
         "editUndo no longer pops through the module"
     module = code(MODULE)

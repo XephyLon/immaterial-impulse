@@ -157,11 +157,17 @@ MouseArea {
         root.dragActive = false
         const canvas = findCanvas(root.parent)
         if (canvas && canvas.widgetDragEnded) canvas.widgetDragEnded(root)
+        // A plain click never raises dragActive, so onDraggingChanged never
+        // schedules the clear and the rects captured at the press would sit
+        // held until the next one. Idempotent for a real drag, which has
+        // already scheduled the same call.
+        Qt.callLater(root.clearEdgeSnap)
     }
     onCanceled: {
         root.dragActive = false
         const canvas = findCanvas(root.parent)
         if (canvas && canvas.widgetDragEnded) canvas.widgetDragEnded(root)
+        Qt.callLater(root.clearEdgeSnap)
     }
 
     // Put the widget back where the press found it and commit nothing. Called

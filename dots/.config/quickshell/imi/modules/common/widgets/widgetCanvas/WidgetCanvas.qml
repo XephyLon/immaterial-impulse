@@ -110,7 +110,10 @@ MouseArea {
     // the two never answer the same moment.
     Keys.onPressed: (event) => {
         if (!root.editMode) return
-        if (event.key === Qt.Key_Z && (event.modifiers & Qt.ControlModifier)) {
+        // Exactly Control, not "Control among others": Ctrl+Shift+Z is
+        // convention's redo, and a redo stack is deliberately not built -
+        // answering it with an undo would be worse than ignoring it.
+        if (event.key === Qt.Key_Z && event.modifiers === Qt.ControlModifier) {
             GlobalStates.editUndo()
             event.accepted = true
         }
@@ -310,6 +313,14 @@ MouseArea {
         widget.groupDragMinY = -Infinity
         widget.groupDragMaxY = Infinity
         if (!group || group.leader !== widget) return
+        // One gesture, one undo entry: every follower's commit below and the
+        // leader's own - which runs AFTER this function, later in the same
+        // release chain - collect into one batch, closed a turn later so the
+        // leader's push cannot miss it. Without this the leader's entry sits
+        // on top and the first Ctrl+Z moves the leader alone, deforming the
+        // cluster the user moved as a unit.
+        GlobalStates.editUndoBeginBatch()
+        Qt.callLater(GlobalStates.editUndoEndBatch)
         for (const entry of group.followers) {
             entry.widget.groupDragging = false
             if (entry.widget.commitPosition) entry.widget.commitPosition()
