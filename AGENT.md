@@ -2869,6 +2869,72 @@ mode is built out of are worth not re-deriving:
   refactor(lock): the three islands become data-driven;
   test(lint): the scope lint reaches the lock surface and admits its lists;
   feat(lock): island contents reorder in the mode.)
+- **A dragged widget holds a neighbour's edge through a Schmitt trigger, and
+  both thresholds read the SHADOW — stage 10, spec §6.**
+  `modules/common/functions/edge_snap.js` owns the arithmetic: four relations
+  per neighbour per axis, each carrying the `target` the widget travels to AND
+  the `guide` the line is drawn at (they differ for half the relations,
+  because the line belongs to the OTHER widget's edge); a perpendicular
+  relevance filter measured as the GAP between extents, boundary excluded; and
+  acquire-at-18/release-at-32 compared against `dragProxy`, never the rendered
+  position — with one threshold the decision boundary and the resulting
+  position are the same number and the widget flip-flops per event.
+  `AbstractWidget` captures neighbour rects at the press (after
+  `widgetDragStarted`, so a group drag's followers are already flagged and
+  excluded), regenerates candidates per event in the drag proxy's handlers
+  (the resolve is stateful, so it lives beside `updateCenterHighlight`, not
+  in the drag Binding), and a held target REPLACES the lattice snap rather
+  than stacking on it — rounding an exact alignment misses the edge by up to
+  half a cell. Snap-then-clamp survives; the group leader snaps and followers
+  ride by delta with no new code. The feature rides
+  `background.showSnapLines` (the switch that already gates the alignment
+  visuals, and the one the dead designsystem duplicate rode for the same
+  feature): the guide and the detent travel together, because either alone is
+  a mystery. Guides draw ABOVE the widgets in the centre-line family's
+  animation tier, travelling while visible and placing instantly while not.
+  Two traps paid for: the hold must be cleared one turn AFTER the drag ends
+  (`Qt.callLater`) — `onDraggingChanged` and the drag Binding's `when` both
+  observe `dragging` with nothing ordering them, and nulling the hold under a
+  still-live Binding rounds an off-lattice landing onto the lattice (measured:
+  released holding 465, committed 468) — and the runtime harness's landings
+  sit on edges the lattice cannot produce (an anchor at x 305), or a wiring
+  that silently fell back to `snapX` passes by coincidence.
+  (feat(widgetCanvas): edge_snap.js, widget edge alignment as arithmetic;
+  feat(widgetCanvas): a dragged widget holds a neighbour's edge, under a travelling guide;
+  fix(widgetCanvas): clear the edge-snap hold after the drag Binding stands down;
+  test(widgetCanvas): the walk pins the detent in raw numbers, not the module's own;
+  test(widgets): drive the edge snap's acquire, detent and release with real drags.)
+- **Ctrl+Z reverses the last COMMITTED mutation, and it lives on the canvas
+  because that is where the keyboard measurably works — stage 10, spec §7.3,
+  gated on §11.4 probe 4 and now measured.** The probe ran in a nested
+  Hyprland on the blur probe's shape, hardened: the nested instance gets its
+  OWN `XDG_RUNTIME_DIR` and reaches its wayland parent through an
+  ABSOLUTE-path `WAYLAND_DISPLAY` (libwayland only prefixes the runtime dir
+  onto a relative name), so its sockets cannot land beside the session's; a
+  fully headless nested Hyprland is not possible — Aquamarine's
+  `CBackend::create()` aborts with no wayland parent and no seat. Keys were
+  injected with wtype (a virtual-keyboard CLIENT of the nested display —
+  ydotool writes uinput into the kernel and reaches the user's real seat, so
+  it is never the tool for this). Measured on 0.56.2: a `Bottom`-layer
+  surface with `keyboardFocus: OnDemand` receives real compositor keys while
+  holding that focus, an Overlay/Exclusive control proved the injection path,
+  and a mapped toplevel beside it did not take the keyboard away
+  (`activewindow: Invalid` throughout). The undo stack sits in `GlobalStates`
+  with its arithmetic in `edit_mode.js` (bounded at 50 dropping the OLDEST,
+  LIFO, copy-on-write because a `property var` signals on reassignment only);
+  recording is gated on the mode, one entry per committed mutation (a release
+  that moved nothing pushes nothing — every click on a draggable widget
+  releases through `commitPosition`), and every entry is a closure over the
+  store write that captures plain data and SINGLETONS only — the mode
+  destroys its overlays, menus and widgets while the stack outlives them, so
+  a closure over a controller throws on the exact keystroke that exists to
+  repair a mistake. The dock-pin entry is the same flip again through
+  `TaskbarApps.togglePin`, because restoring the list would need the chrome
+  surface to read `Config.options.dock` — the second derivation the
+  one-answer contract forbids, and it caught exactly that draft.
+  (feat(editMode): the undo stack's arithmetic - bounded, LIFO, copy-on-write;
+  feat(editMode): Ctrl+Z reverses the last committed mutation, on the surface the keyboard reaches;
+  test(editMode): drive undo's record, reverse and gate, and pin its shape.)
 (feat(editMode): shrink the desktop into a viewport on the background surface,
 feat(editMode): stand the per-widget frost down for the mode,
 feat(editMode): draw the shrunk desktop as a card, not as a cropped screenshot,
