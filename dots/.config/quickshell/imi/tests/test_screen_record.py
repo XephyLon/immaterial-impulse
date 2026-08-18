@@ -63,8 +63,11 @@ class RecordScriptTests(unittest.TestCase):
             # set SIG_IGN itself, and the assertion below reads the mask the
             # LAUNCH handed the process, which must be clean. `exec sleep`
             # would replace the traps, so it loops instead.
+            # It also opens its output file, the way gsr does the moment
+            # capture begins - the start watchdog reads that as "capturing".
             gsr.write_text("#!/usr/bin/env bash\n"
                            "trap ':' INT TERM\n"
+                           "while [[ $# -gt 0 ]]; do [[ $1 == -o ]] && : > \"$2\"; shift; done\n"
                            "while :; do sleep 0.2; done\n")
             gsr.chmod(gsr.stat().st_mode | stat.S_IEXEC)
             for helper in ("notify-send", "slurp", "jq"):
@@ -123,6 +126,67 @@ class RecordScriptTests(unittest.TestCase):
             except subprocess.TimeoutExpired:
                 starter.kill(); self.fail("record.sh did not exit after its recorder died")
             self.assertFalse(pidfile.exists(), "the pidfile outlived the recording")
+
+    def test_a_recording_that_never_starts_is_torn_down_and_reported(self):
+        """The bar said "recording" for minutes while gsr sat at CreateSession
+        against a hard-hung portal - single-threaded, no output file - and the
+        user's only signal was that Stop did nothing. The script now waits a
+        bounded window for the OUTPUT FILE (gsr opens it as capture begins)
+        and, past it, tears gsr down and says why. Driven with a stand-in that
+        never opens its file, and the window shortened through the env hook.
+        """
+        import os, tempfile, time, shutil, stat
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            binstub = home / "bin"; binstub.mkdir()
+            gsr = binstub / "gpu-screen-recorder"
+            gsr.write_text("#!/usr/bin/env bash\n"
+                           "trap ':' INT TERM\n"
+                           "while :; do sleep 0.2; done\n")
+            gsr.chmod(gsr.stat().st_mode | stat.S_IEXEC)
+            notes = home / "notify.log"
+            (binstub / "notify-send").write_text(f"#!/usr/bin/env bash\necho \"$*\" >> {notes}\n")
+            (binstub / "notify-send").chmod(0o755)
+            (binstub / "slurp").write_text("#!/usr/bin/env bash\nexit 0\n"); (binstub / "slurp").chmod(0o755)
+            real_jq = shutil.which("jq"); self.assertTrue(real_jq); os.symlink(real_jq, binstub / "jq")
+            runtime = home / "rt"; runtime.mkdir(mode=0o700)
+            cfg = home / ".config/immaterial-impulse"; cfg.mkdir(parents=True)
+            (cfg / "config.json").write_text(json.dumps({"screenRecord": {
+                "fps": 30, "quality": "medium", "audioCodec": "opus", "codec": "auto",
+                "framerateMode": "vfr", "showCursor": True, "recordAudio": False,
+                "recordMic": False, "tonemapSdr": False, "savePath": str(home / "Videos")}}))
+            (home / "Videos").mkdir()
+            state = home / ".local/state/quickshell"; state.mkdir(parents=True)
+            (state / "states.json").write_text(json.dumps({"record": {"enable": False, "region": ""}}))
+            env = dict(os.environ, HOME=str(home), XDG_RUNTIME_DIR=str(runtime),
+                       XDG_CONFIG_HOME=str(home / ".config"),
+                       PATH=f"{binstub}:{os.environ['PATH']}",
+                       IMI_RECORD_START_WINDOW_S="2")
+            env.pop("HYPRLAND_INSTANCE_SIGNATURE", None)
+
+            t0 = time.monotonic()
+            proc = subprocess.Popen(["bash", str(RECORD_SH), "--fullscreen"], env=env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                proc.wait(timeout=12)
+            except subprocess.TimeoutExpired:
+                # The pre-fix shape: record.sh blocks on `wait` behind a
+                # recorder that never began, and the bar says "recording"
+                # until someone kills it by hand.
+                proc.kill(); proc.wait()
+                for stray in subprocess.run(["pgrep", "-f", str(gsr)], capture_output=True,
+                                            text=True).stdout.split():
+                    subprocess.run(["kill", "-KILL", stray])
+                self.fail("record.sh never gave up on a recorder that produced no output "
+                          "file - the start watchdog is missing")
+            elapsed = time.monotonic() - t0
+            self.assertFalse((runtime / "imi-screenrecord.pid").exists(),
+                             "the pidfile outlived the never-started recording")
+            self.assertEqual(json.loads((state / "states.json").read_text())["record"]["enable"], False,
+                             "the indicator was left saying 'recording'")
+            self.assertTrue(notes.exists() and "Recording did not start" in notes.read_text(),
+                            "the user was not told the recording never started")
+            self.assertFalse(list((home / "Videos").glob("*.mp4")), "no file should exist")
 
     def test_keeps_interface_flags(self):
         for flag in ("--sound", "--fullscreen", "--region", "--path"):
