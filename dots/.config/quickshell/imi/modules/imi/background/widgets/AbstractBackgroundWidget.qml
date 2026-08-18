@@ -26,7 +26,7 @@ AbstractWidget {
     // `editLockPreview` beside the real lock: Edit Mode's Lockscreen tab shows
     // the widgets the lock screen will show, through this same filter rather
     // than a second one that could disagree with it.
-    opacity: ((GlobalStates.screenLocked || GlobalStates.editLockPreview) && !visibleWhenLocked) ? 0 : 1
+    opacity: (GlobalStates.lockLookActive && !visibleWhenLocked) ? 0 : 1
     Behavior on opacity {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
