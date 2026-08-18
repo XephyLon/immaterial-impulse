@@ -192,8 +192,37 @@ Singleton {
     // exit would make Done destroy the very history "I did not mean that"
     // asks for.
     property var editUndoStack: []
+    // One GESTURE can commit several mutations - a group drag's release runs
+    // commitPosition once per member, followers first, leader last - and "the
+    // last thing I did" is the whole gesture: with one entry per member the
+    // leader's sits on top and the first Ctrl+Z would move the leader alone,
+    // deforming the cluster the user moved as a unit. While a batch is open,
+    // pushes collect; closing it folds them into ONE composite entry that
+    // replays every collected closure. The canvas opens it at a group
+    // release and closes it with Qt.callLater, because the leader's own
+    // commit runs later in the same signal chain and has to fall inside.
+    property var editUndoBatch: null
+    function editUndoBeginBatch() {
+        if (root.editUndoBatch === null) root.editUndoBatch = [];
+    }
+    function editUndoEndBatch() {
+        const entries = root.editUndoBatch;
+        root.editUndoBatch = null;
+        if (entries === null || entries.length === 0) return;
+        if (entries.length === 1) {
+            root.editUndoStack = EditMode.undoPush(root.editUndoStack, entries[0]);
+            return;
+        }
+        root.editUndoStack = EditMode.undoPush(root.editUndoStack, () => {
+            for (const entry of entries) entry();
+        });
+    }
     function editUndoPush(entry) {
         if (!root.editMode) return;
+        if (root.editUndoBatch !== null) {
+            root.editUndoBatch.push(entry);
+            return;
+        }
         root.editUndoStack = EditMode.undoPush(root.editUndoStack, entry);
     }
     function editUndo() {

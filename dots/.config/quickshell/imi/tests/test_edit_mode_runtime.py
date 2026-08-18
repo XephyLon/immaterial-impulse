@@ -40,7 +40,7 @@ SOCKET = "wayland-imi-edit-mode"
 # The harness prints how many checks it ran. A literal rather than anything read
 # back out of that output: a harness whose step list shrinks must redden here
 # instead of reporting `failures: 0` for a shorter run.
-EXPECTED_CHECKS = 52
+EXPECTED_CHECKS = 56
 
 
 def _stop(proc):

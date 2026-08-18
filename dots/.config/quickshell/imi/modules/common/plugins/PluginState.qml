@@ -189,7 +189,15 @@ Singleton {
         const nextState = Object.assign({}, root.state);
         const nextOptions = Object.assign({}, nextState.pluginOptions || {});
         const nextPlugin = Object.assign({}, nextOptions[pluginId] || {});
-        nextPlugin[key] = value;
+        // null means REMOVE, not store: `option()` falls back only on
+        // undefined, so a persisted null would answer every later read in
+        // place of the caller's fallback - a key that never existed,
+        // materialised on disk. Edit Mode's undo is what reaches this branch:
+        // reversing a first-ever commit restores "no stored choice", which
+        // has to leave the store the way it found it. No live caller stored
+        // null before this meaning was assigned (checked, not assumed).
+        if (value === null || value === undefined) delete nextPlugin[key];
+        else nextPlugin[key] = value;
         nextOptions[pluginId] = nextPlugin;
         nextState.version = root.schemaVersion;
         nextState.pluginOptions = nextOptions;

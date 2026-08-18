@@ -317,6 +317,10 @@ PanelWindow {
             // derivation the one-answer contract forbids. The cost is that
             // undoing an unpin re-pins at the strip's end rather than the
             // old slot; the order is the dock's in-place drag's to arrange.
+            // A self-inverse also goes stale differently from the restores:
+            // applied after the user re-toggled the same app by hand, it
+            // inverts their choice instead of reverting this one - accepted,
+            // because the alternative is a second derivation of the store.
             const toggled = appId;
             GlobalStates.editUndoPush(() => TaskbarApps.togglePin(toggled));
             TaskbarApps.togglePin(appId);

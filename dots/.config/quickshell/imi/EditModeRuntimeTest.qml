@@ -699,6 +699,58 @@ ShellRoot {
             harness.check("undo puts the stored span back",
                           harness.storedSize("edit-resize-probe") === "3x2"
                           && GlobalStates.editUndoStack.length === 0);
+        },
+        () => {
+            // A FIRST-EVER span commit undone leaves the store the way it
+            // found it: no stored key, so the read answers the caller's
+            // fallback again. A persisted null here would answer null past
+            // every later fallback instead.
+            PluginState.setOption("edit-move-probe", "__gridSize", null);
+            GlobalStates.editUndoStack = [];
+        },
+        () => {
+            movableWidget.commitGridSize({ cols: 2, rows: 1 });
+            harness.check("a first-ever span commit stores and records",
+                          harness.storedSize("edit-move-probe") === "2x1"
+                          && GlobalStates.editUndoStack.length === 1);
+        },
+        () => {
+            GlobalStates.editUndo();
+            harness.check("undoing it removes the key instead of storing null",
+                          harness.storedSize("edit-move-probe") === ""
+                          && PluginState.option("edit-move-probe", "__gridSize", "fallback") === "fallback");
+        },
+        () => {
+            // One gesture, one entry: a group release folds every member's
+            // commit into a single composite, and one Ctrl+Z restores the
+            // whole cluster - not the leader alone, which is what one entry
+            // per member would do with the leader's push landing last.
+            harness.placeWidgets();
+        },
+        () => {
+            driver.mousePress(canvas, 8, 8, Qt.LeftButton);
+            driver.mouseMove(canvas, 600, 600, 20, Qt.LeftButton);
+            driver.mouseRelease(canvas, 600, 600, Qt.LeftButton);
+        },
+        () => {
+            GlobalStates.editUndoStack = [];
+            harness.dragBy(movableWidget, 60, 0);
+        },
+        () => {
+            // Its own step: the batch folds on Qt.callLater, a turn after
+            // the release chain, so a depth read in the drag's own step
+            // still sees the batch open and the stack empty.
+            harness.check("a group release records ONE entry for the gesture",
+                          GlobalStates.editUndoStack.length === 1
+                          && Math.round(harness.storedPosition("edit-move-probe").x) === 96
+                          && Math.round(harness.storedPosition("edit-resize-probe").x) === 96);
+        },
+        () => {
+            GlobalStates.editUndo();
+            harness.check("...and one undo restores the whole cluster",
+                          Math.round(harness.storedPosition("edit-move-probe").x) === 36
+                          && Math.round(harness.storedPosition("edit-resize-probe").x) === 36);
+            canvas.clearSelection();
             GlobalStates.editMode = false;
         }
     ]
