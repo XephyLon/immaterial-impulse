@@ -26,27 +26,54 @@ TestCase {
     }
 
     function test_four_relations_per_neighbour_on_x() {
-        const candidates = EdgeSnap.candidatesForAxis([xNeighbour], "x", 60, 120, 40);
+        const candidates = EdgeSnap.candidatesForAxis([xNeighbour], "x", 60, 120, 40, 12);
         compare(candidates.length, 4);
         // near-to-near: our left on their left, line at their left.
         verify(hasCandidate(candidates, 300, 300));
         // far-to-far: our right on their right - the widget travels to
         // 420 - 60, but the line is drawn at THEIR edge, not where we land.
         verify(hasCandidate(candidates, 360, 420));
-        // near-to-far: our left against their right (sitting beside them).
-        verify(hasCandidate(candidates, 420, 420));
-        // far-to-near: our right against their left.
-        verify(hasCandidate(candidates, 240, 300));
+        // near-to-far: beside them, ONE GAP off their right - the line is
+        // still at their edge, the widget lands 12 past it.
+        verify(hasCandidate(candidates, 432, 420));
+        // far-to-near: beside them on the other side, one gap off their left.
+        verify(hasCandidate(candidates, 228, 300));
     }
 
     function test_four_relations_per_neighbour_on_y() {
         const neighbour = { x: 40, y: 500, width: 90, height: 200 };
-        const candidates = EdgeSnap.candidatesForAxis([neighbour], "y", 80, 60, 50);
+        const candidates = EdgeSnap.candidatesForAxis([neighbour], "y", 80, 60, 50, 12);
         compare(candidates.length, 4);
         verify(hasCandidate(candidates, 500, 500));      // top-to-top
         verify(hasCandidate(candidates, 620, 700));      // bottom-to-bottom
-        verify(hasCandidate(candidates, 700, 700));      // top under their bottom
-        verify(hasCandidate(candidates, 420, 500));      // bottom on their top
+        verify(hasCandidate(candidates, 712, 700));      // under them, one gap down
+        verify(hasCandidate(candidates, 408, 500));      // over them, one gap up
+    }
+
+    // The invariant the gap exists for: a widget snapped BESIDE a neighbour
+    // never touches it. Every adjacency target leaves exactly `gap` of clear
+    // space between the two rects, and the two ALIGNMENT targets are unmoved
+    // by the gap - aligning an edge to an edge is a line, not a distance.
+    function test_adjacency_leaves_one_gap_and_alignment_takes_none() {
+        const size = 60;
+        for (const gap of [0, 8, 12, 24]) {
+            const c = EdgeSnap.candidatesForAxis([xNeighbour], "x", size, 120, 40, gap);
+            // Beside on the right: clear space = target - neighbourFar.
+            verify(hasCandidate(c, 420 + gap, 420), "right-of at gap " + gap);
+            // Beside on the left: clear space = neighbourNear - (target + size).
+            verify(hasCandidate(c, 300 - size - gap, 300), "left-of at gap " + gap);
+            // Alignments do not move.
+            verify(hasCandidate(c, 300, 300), "near-to-near at gap " + gap);
+            verify(hasCandidate(c, 360, 420), "far-to-far at gap " + gap);
+        }
+    }
+
+    // A caller that hands in no gap gets the flush behaviour, so nothing
+    // that only ever aligned edges changes under it.
+    function test_a_missing_gap_is_flush() {
+        const c = EdgeSnap.candidatesForAxis([xNeighbour], "x", 60, 120, 40);
+        verify(hasCandidate(c, 420, 420));
+        verify(hasCandidate(c, 240, 300));
     }
 
     function test_a_neighbour_across_the_axis_contributes_nothing() {
