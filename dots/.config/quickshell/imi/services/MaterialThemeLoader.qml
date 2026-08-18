@@ -41,7 +41,7 @@ Singleton {
         m3onTertiaryContainer: true
     })
     readonly property int colorTransitionDuration: Appearance.animation.elementMoveFast.duration
-    readonly property bool lockThemeActive: GlobalStates.screenLocked
+    readonly property bool lockThemeActive: GlobalStates.lockLookActive
         && Config.options.background.lockWall !== ""
 
     function reapplyTheme() {
@@ -178,7 +178,7 @@ Singleton {
 
     function handleLockStateChange() {
         const wallpaper = Config.options.background.lockWall;
-        if (!GlobalStates.screenLocked || wallpaper === "") {
+        if (!GlobalStates.lockLookActive || wallpaper === "") {
             const normalColors = themeFileView.text();
             if (normalColors && normalColors.trim() !== "")
                 root.scheduleTheme(normalColors, false, false);
@@ -248,7 +248,7 @@ Singleton {
         interval: Appearance.animation.elementMoveFast.duration
         onTriggered: {
             if (root.pendingThemeColors === ""
-                    || root.pendingThemeForLockedState !== GlobalStates.screenLocked) return;
+                    || root.pendingThemeForLockedState !== GlobalStates.lockLookActive) return;
             if (root.pendingThemeIsGenerated)
                 root.applyGeneratedColors(root.pendingThemeColors);
             else
@@ -275,9 +275,12 @@ Singleton {
         }
     }
 
+    // One handler for both ways the lock's look arrives: the session lock and
+    // Edit Mode's Lockscreen tab. The tab is a filter on the same layers
+    // (spec 1.4), so the palette it shows has to be the locked one too.
     Connections {
         target: GlobalStates
-        function onScreenLockedChanged() { root.handleLockStateChange(); }
+        function onLockLookActiveChanged() { root.handleLockStateChange(); }
     }
 
     Connections {
