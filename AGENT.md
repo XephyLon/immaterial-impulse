@@ -2931,10 +2931,20 @@ mode is built out of are worth not re-deriving:
   repair a mistake. The dock-pin entry is the same flip again through
   `TaskbarApps.togglePin`, because restoring the list would need the chrome
   surface to read `Config.options.dock` — the second derivation the
-  one-answer contract forbids, and it caught exactly that draft.
+  one-answer contract forbids, and it caught exactly that draft. Two edges
+  the first cut got wrong, both review-caught: a GESTURE that commits several
+  mutations is one entry, so a group release opens a batch the canvas closes
+  with `Qt.callLater` (the leader's commit runs later in the same signal
+  chain and has to fall inside — without it the leader's entry lands last
+  and the first Ctrl+Z moves the leader alone, deforming the cluster); and
+  `PluginState.setOption` treats null as REMOVE, because undoing a
+  first-ever span commit otherwise persisted a literal null that `option()`
+  — which falls back only on `undefined` — would answer past every later
+  caller's fallback.
   (feat(editMode): the undo stack's arithmetic - bounded, LIFO, copy-on-write;
   feat(editMode): Ctrl+Z reverses the last committed mutation, on the surface the keyboard reaches;
-  test(editMode): drive undo's record, reverse and gate, and pin its shape.)
+  test(editMode): drive undo's record, reverse and gate, and pin its shape;
+  fix(editMode): a group release is one undo entry, and undoing a first commit leaves no null behind.)
 (feat(editMode): shrink the desktop into a viewport on the background surface,
 feat(editMode): stand the per-widget frost down for the mode,
 feat(editMode): draw the shrunk desktop as a card, not as a cropped screenshot,
