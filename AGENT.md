@@ -3464,6 +3464,36 @@ straight out of `animationCurves` (a drift risk, not a live defect, and it would
 for no bug). 1c728dd6a ("test(lint): fail on an animation that takes a tier's duration and leaves
 its curve").
 
+**An animation that loops forever must stop when what it animates is off screen, because a
+running animation is a repaint of the whole output — including the parts nobody can see.** The
+chain is not visible from the animation: a running animation writes a property every frame; that
+dirties the scene; a dirty scene makes the shell commit a frame; and a commit makes the
+*compositor* repaint the entire output. So one `RotationAnimation` with `loops: Animation.Infinite`
+in `CookieClock.qml` — 30 seconds per turn, behind an opaque fullscreen game — kept a 5120×1440
+240Hz screen redrawing continuously, and the user reported "my game's FPS is halved when qs is
+running even in fullscreen". It was, and it was that. Measured against FFXIV's own frame counter
+(OCR'd off its System Configuration window, so every state used one instrument): shell stopped
+108, shell stock **52**, the spin gated on `visible` **94**. Found by `QSG_RENDER_TIMING=1` — one
+window syncing at 243Hz for 0ms of render work — and `QT_LOGGING_RULES=qt.quick.dirty=true`
+naming the node. `visible` is *effective* visibility, false while any ancestor is hidden, so the
+animation never has to know why it is off screen. `tests/lint_infinite_animation_visibility.py`
+fails a new ungated one and carries seven registered files whose animations live on surfaces that
+are unmapped when idle, as a ratchet.
+
+Two things about the *surfaces* were learned in the same investigation and are worth stating
+because both look like the fix and one is forbidden. `quickshell:barPopup` — a screen-sized
+surface on the **Overlay** layer hosting the bar's hover cards — was mapped for the whole session
+with nothing in it, and a mapped Overlay surface sits over every fullscreen window; unmapping it
+while idle was worth 98 → 105 and is safe because no renderer lives in it. The **background**
+surface is the same shape one layer down and unmapping it measures better still, and it is
+**pinned mapped** by `test_background_fullscreen_suppression.py`: `visible: false` on a
+WlrLayershell window destroys it, and destroying that one is what left the embedded Wallpaper
+Engine renderer strobing at 30Hz — a photosensitive-seizure hazard. Frame rate does not outrank
+that. The frames came back by stopping what kept the window *busy*, not by removing the window.
+(perf(clock): the cookie's spin stops when the cookie is off screen;
+perf(bar): the popup overlay surface is mapped only while it has a card;
+test(perf): infinite animations are gated on visibility, and the overlay stands down.)
+
 **How fast the shell moves is one scalar, and where the bottom of that scale is, is a *different*
 declared thing.** `modules/common/motion_policy.js` is the arithmetic (pure, `.pragma library`, so
 the decisions are testable and nothing about the rendering has to be); `Appearance.animation`
