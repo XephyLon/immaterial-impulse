@@ -417,3 +417,47 @@ function dropPosition(input) {
         y: Math.max(0, Math.min(screenHeight - Math.max(height, grid), y))
     };
 }
+
+// ---- the undo stack (spec §7.3) -------------------------------------------
+//
+// The stack itself lives in GlobalStates (in memory, session-scoped, gone
+// with a restart - §7.4's argument that a restart mid-edit already does the
+// right thing); these are its arithmetic, kept pure so the bound, the LIFO
+// order and the copy-on-write shape are reachable from tst_edit_mode.qml.
+// Entries are opaque here - at the call sites each one is a closure over the
+// store write that reverses a committed mutation, never a diff, because a
+// diff needs a serialiser per store and there are three stores.
+
+var UNDO_LIMIT = 50;
+
+// A fresh stack on every operation, never a mutation: the stack sits in a
+// `property var`, whose change signal fires on reassignment only, so an
+// in-place push would leave every observer reading a depth that never moves.
+// Bounded by dropping the OLDEST entry - a stack that refuses new work when
+// full has stopped recording exactly the mutations the user is still making.
+function undoPush(stack, entry) {
+    var next = listCopy(stack);
+    next.push(entry);
+    if (next.length > UNDO_LIMIT)
+        next.shift();
+    return next;
+}
+
+function undoPop(stack) {
+    var next = listCopy(stack);
+    if (next.length === 0)
+        return { stack: next, entry: null };
+    var entry = next.pop();
+    return { stack: next, entry: entry };
+}
+
+// The snapshot an undo closure captures, taken by index and length because a
+// store list that has crossed the QML boundary keeps both and loses its
+// Array brand (enabledWithout's rule, one shelf up).
+function listCopy(list) {
+    var out = [];
+    var count = list && typeof list.length === "number" ? list.length : 0;
+    for (var i = 0; i < count; i++)
+        out.push(list[i]);
+    return out;
+}

@@ -574,4 +574,71 @@ TestCase {
             verify(card.y + card.height <= area.y + area.height + 1e-6);
         }
     }
+
+    // ---- the undo stack (spec §7.3) -----------------------------------
+
+    function test_undo_push_appends_and_pop_returns_last_in() {
+        // LIFO, because "the last thing I did" is what Ctrl+Z means. Entries
+        // are opaque to the stack - closures at the call sites - so the test
+        // uses plain markers.
+        let stack = [];
+        stack = EditMode.undoPush(stack, "first");
+        stack = EditMode.undoPush(stack, "second");
+        compare(stack.length, 2);
+        const popped = EditMode.undoPop(stack);
+        compare(popped.entry, "second");
+        compare(popped.stack.length, 1);
+        const again = EditMode.undoPop(popped.stack);
+        compare(again.entry, "first");
+        compare(again.stack.length, 0);
+    }
+
+    function test_undo_pop_on_empty_returns_no_entry() {
+        const popped = EditMode.undoPop([]);
+        compare(popped.entry, null);
+        compare(popped.stack.length, 0);
+    }
+
+    function test_undo_stack_is_bounded_and_drops_the_oldest() {
+        // Bounded at UNDO_LIMIT (spec §7.3's ~50), and it is the OLDEST entry
+        // that goes: an undo stack that refuses new work when full has
+        // stopped recording exactly the mutations the user is still making.
+        verify(EditMode.UNDO_LIMIT >= 50);
+        let stack = [];
+        for (let i = 0; i < EditMode.UNDO_LIMIT + 5; i++)
+            stack = EditMode.undoPush(stack, i);
+        compare(stack.length, EditMode.UNDO_LIMIT);
+        compare(EditMode.undoPop(stack).entry, EditMode.UNDO_LIMIT + 4);
+        compare(stack[0], 5);
+    }
+
+    function test_undo_ops_return_fresh_stacks() {
+        // The stack lives in a GlobalStates `property var`, whose change
+        // signal fires on reassignment and not on mutation - an in-place
+        // push would leave every observer reading a depth that never moves.
+        const original = ["only"];
+        const pushed = EditMode.undoPush(original, "more");
+        compare(original.length, 1);
+        verify(pushed !== original);
+        const popped = EditMode.undoPop(pushed);
+        compare(pushed.length, 2);
+        verify(popped.stack !== pushed);
+    }
+
+    function test_list_copy_walks_indices() {
+        // Store lists cross the QML boundary without their Array brand
+        // (enabledWithout's rule), so the snapshot an undo closure captures
+        // is taken by index and length, never by Array.prototype methods on
+        // the value itself.
+        const arrayLike = { length: 3 };
+        arrayLike[0] = "a";
+        arrayLike[1] = "b";
+        arrayLike[2] = "c";
+        const copy = EditMode.listCopy(arrayLike);
+        compare(copy.length, 3);
+        compare(copy[0], "a");
+        compare(copy[2], "c");
+        verify(Array.isArray(copy));
+        compare(EditMode.listCopy(null).length, 0);
+    }
 }
