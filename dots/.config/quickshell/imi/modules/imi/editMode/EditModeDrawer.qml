@@ -130,6 +130,11 @@ Item {
 
             RowLayout {
                 Layout.fillWidth: true
+                // A Layout nested in a Layout defaults to fillHeight TRUE, and
+                // a row of chrome that fills is a row that competes with the
+                // list below it for the column's height. Stated on every row
+                // here, never inherited.
+                Layout.fillHeight: false
                 Layout.leftMargin: Appearance.spacing.space75
                 Layout.rightMargin: Appearance.spacing.space75
                 spacing: Appearance.spacing.space100
@@ -150,6 +155,7 @@ Item {
             // One chip per target surface.
             RowLayout {
                 Layout.fillWidth: true
+                Layout.fillHeight: false
                 Layout.leftMargin: Appearance.spacing.space75
                 spacing: Appearance.spacing.space25
 
@@ -179,6 +185,7 @@ Item {
 
             StyledText {
                 Layout.fillWidth: true
+                Layout.fillHeight: false
                 Layout.leftMargin: Appearance.spacing.space75
                 Layout.rightMargin: Appearance.spacing.space75
                 text: root.section === "widgets"
@@ -324,6 +331,7 @@ Item {
             RowLayout {
                 visible: root.section === "bar"
                 Layout.fillWidth: true
+                Layout.fillHeight: false
                 Layout.leftMargin: Appearance.spacing.space75
                 spacing: Appearance.spacing.space25
 
