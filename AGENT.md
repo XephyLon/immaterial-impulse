@@ -2897,6 +2897,24 @@ mode is built out of are worth not re-deriving:
   (feat(editMode): one derivation of "the lock's look is on screen";
   fix(editMode): the Lockscreen tab carries the palette with it;
   test(editMode): the tab's palette is driven, and the derivation is pinned.)
+- **The lock screen's widget layout forks from the desktop's on the first Lockscreen-tab
+  edit, and the SPAN forks with the position.** Spec §4.3 chose one shared position and gave two
+  objections; the maintainer overruled it (2026-08-18) and both objections are answered rather than
+  waved off. `modules/common/plugins/layout_surfaces.js` is the arithmetic: `lockPositions` beside
+  `desktopPositions`, same shape, a screen ABSENT from it inherits the desktop's — so every user is
+  still in the one-position model until they move something there — and the first lock write is a
+  SNAPSHOT of the whole screen through one `forkedScreen()` that both writers share. The desktop's
+  span stays the per-plugin `__gridSize` option; a forked lock screen's lives IN the widget's lock
+  record as `gridSize`, so a media widget can be 3×2 on the desktop and 1×2 on the lock (the
+  report). `PluginState.currentSurface` resolves the default from `lockLookActive`; **every
+  undoable write captures the surface at push time** — a closure resolving it at pop time writes
+  the lock's position into the desktop store from the other tab, and the store still reads valid.
+  Planted and caught by name in `EditModeRuntimeTest` for both position and span. Presets carry
+  `lockPositions` under the same `has()` rule as the desktop map, so an older preset keeps a fork.
+  The drawer's Lock section shows "follows the desktop / is separate" and the re-link.
+  (feat(plugins): layout_surfaces.js - two widget layouts, one store, fork on first edit;
+  feat(editMode): every position and span write captures its surface into its undo;
+  test(editMode): the fork is driven through the real drag and the real grip.)
 - **A dragged widget holds a neighbour's edge through a Schmitt trigger, and
   both thresholds read the SHADOW — stage 10, spec §6.**
   `modules/common/functions/edge_snap.js` owns the arithmetic: four relations
