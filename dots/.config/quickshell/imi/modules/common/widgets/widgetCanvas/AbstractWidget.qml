@@ -279,13 +279,18 @@ MouseArea {
     // widget is in Y (the perpendicular filter) and vice versa.
     function updateEdgeSnap() {
         if (root.edgeSnapNeighbours.length === 0) return
+        // The gap two adjacent widgets keep is the design system's grid gap,
+        // scaled the way every widget's own span is - so a widget snapped
+        // beside another sits exactly one cell-gap away, as if the two were
+        // cells of one wider widget.
+        const gap = Appearance.sizes.widgetGridGap * Appearance.effectiveScale
         root.edgeSnapHeldX = EdgeSnap.resolveSnap(dragProxy.x,
             EdgeSnap.candidatesForAxis(root.edgeSnapNeighbours, "x",
-                root.width, dragProxy.y, root.height),
+                root.width, dragProxy.y, root.height, gap),
             root.edgeSnapHeldX)
         root.edgeSnapHeldY = EdgeSnap.resolveSnap(dragProxy.y,
             EdgeSnap.candidatesForAxis(root.edgeSnapNeighbours, "y",
-                root.height, dragProxy.x, root.width),
+                root.height, dragProxy.x, root.width, gap),
             root.edgeSnapHeldY)
         root.publishEdgeGuides()
     }
