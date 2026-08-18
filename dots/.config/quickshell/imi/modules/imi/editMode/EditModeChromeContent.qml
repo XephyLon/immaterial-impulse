@@ -66,6 +66,7 @@ Item {
 
     signal doneRequested()
     signal drawerToggleRequested()
+    signal snapToggleRequested()
     signal widgetDropRequested(var manifest, real dropX, real dropY)
     signal widgetToggleRequested(var manifest)
     signal barWidgetAddRequested(string widgetId, string bucket)
@@ -123,6 +124,27 @@ Item {
             text: Translation.tr("Add widgets")
             toggled: GlobalStates.editDrawerOpen
             onClicked: root.drawerToggleRequested()
+        }
+
+        // Edge snapping, as state like the drawer's toggle. It reads and
+        // toggles `background.showSnapLines` - the key Settings already
+        // offers and the key stage 10's detent rides - rather than a switch of
+        // its own: the guide and the hold travel together on it, and a second
+        // key would be the "two fields that must agree" AGENT.md keeps paying
+        // for. Icon-only, because the toolbar's width is the card's inset and
+        // "Add widgets" plus "Done" already spend the words; the toggled
+        // container says which state it is in.
+        IconToolbarButton {
+            id: snapButton
+            Layout.alignment: Qt.AlignVCenter
+            text: "align_horizontal_left"
+            toggled: Config.options.background.showSnapLines
+            onClicked: root.snapToggleRequested()
+            StyledToolTip {
+                text: Config.options.background.showSnapLines
+                    ? Translation.tr("Edge snapping on")
+                    : Translation.tr("Edge snapping off")
+            }
         }
 
         // The mode's real way out. Two things about it are deliberate. It

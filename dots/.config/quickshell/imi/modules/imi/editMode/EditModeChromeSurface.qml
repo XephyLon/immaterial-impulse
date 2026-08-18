@@ -346,5 +346,10 @@ PanelWindow {
         onLockIslandToggleRequested: (key) => root.toggleLockIsland(key)
         onLockLayoutResetRequested: root.resetLockLayout()
         screenName: root.screen?.name ?? ""
+        // A preference, not a layout mutation: it is not one of §7.3's five
+        // committed mutations and records no undo entry, same as the global
+        // widget lock. The write is here, not in the chrome, because this
+        // surface makes every store write the mode makes.
+        onSnapToggleRequested: Config.options.background.showSnapLines = !Config.options.background.showSnapLines
     }
 }

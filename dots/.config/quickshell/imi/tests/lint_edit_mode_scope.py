@@ -54,6 +54,12 @@ ALLOWED_CONFIG_PATHS = {
     "lock.islands.main",
     "lock.islands.left",
     "lock.islands.right",
+    # The edge-snap toggle on the mode's toolbar (maintainer, 2026-08-18). It
+    # is the SAME key Settings offers and stage 10's detent rides - the mode
+    # surfaces the switch where the snapping happens, it does not mint one -
+    # and it is a preference rather than a layout mutation, so it records no
+    # undo entry (like the global widget lock). Spelled out, not a prefix.
+    "background.showSnapLines",
 }
 # `lock.showWidgets` / `showToolbars` / `showMedia` are presence-on-a-surface,
 # which the rule admits (spec §9's second edge case).
