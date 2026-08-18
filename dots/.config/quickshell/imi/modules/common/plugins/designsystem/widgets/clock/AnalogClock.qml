@@ -49,7 +49,10 @@ Item {
         anchors.fill: parent
         
         RotationAnimation on rotation {
-            running: Config.ready && root.cfg.constantlyRotate
+            // On screen, not just enabled: an infinite animation dirties the
+            // scene every frame it runs, and the compositor repaints the whole
+            // output for every frame the shell commits.
+            running: Config.ready && root.cfg.constantlyRotate && rotateContainer.visible
             duration: 30000
             easing.type: Easing.Linear
             loops: Animation.Infinite

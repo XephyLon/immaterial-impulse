@@ -167,7 +167,11 @@ Item {
                         shape: MaterialShape.Shape.Cookie12Sided
                         color: Appearance.m3colors.darkmode ? Appearance.colors.colOnTertiaryContainer : Appearance.colors.colSecondaryContainer
 
-                        property bool spinning: MprisController.isPlaying
+                        // `visible` beside the transport state: a reel spinning
+                        // inside a hidden desktop still dirties the scene every
+                        // frame, and the compositor repaints the output for each
+                        // frame the shell commits.
+                        property bool spinning: MprisController.isPlaying && prevShape.visible
                         RotationAnimator on rotation {
                             from: 0
                             to: 360
@@ -267,7 +271,7 @@ Item {
                         shape: MaterialShape.Shape.Cookie12Sided
                         color: Appearance.m3colors.darkmode ? Appearance.colors.colOnTertiaryContainer : Appearance.colors.colSecondaryContainer
 
-                        property bool spinning: MprisController.isPlaying
+                        property bool spinning: MprisController.isPlaying && nextShape.visible
                         RotationAnimator on rotation {
                             from: 0
                             to: 360

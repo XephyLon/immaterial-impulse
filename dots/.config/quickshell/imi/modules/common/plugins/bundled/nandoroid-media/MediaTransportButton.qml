@@ -135,7 +135,10 @@ Item {
                     : Expressive.MaterialShape.Shape.Circle
                 color: root.controlColor
 
+                // `visible` beside the transport state - see DesktopMediaWidget:
+                // a hidden reel that keeps spinning keeps the compositor repainting.
                 property bool spinning: root.span === "3x2" && MprisController.isPlaying
+                    && reelShape.visible
                 RotationAnimator on rotation {
                     from: 0
                     to: 360
