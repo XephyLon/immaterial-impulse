@@ -71,6 +71,10 @@ Item {
     signal barWidgetAddRequested(string widgetId, string bucket)
     signal dockAppToggleRequested(string appId)
     signal lockIslandToggleRequested(string key)
+    signal lockLayoutResetRequested()
+
+    // The screen this chrome belongs to, for the drawer's fork question.
+    property string screenName: ""
 
     // Published for the surface's input mask: these three rects are the only
     // pixels of a screen-sized layer surface that may take a click, because
@@ -207,5 +211,7 @@ Item {
         onBarAddRequested: (widgetId, bucket) => root.barWidgetAddRequested(widgetId, bucket)
         onDockToggleRequested: (appId) => root.dockAppToggleRequested(appId)
         onLockToggleRequested: (key) => root.lockIslandToggleRequested(key)
+        onLockLayoutResetRequested: root.lockLayoutResetRequested()
+        screenName: root.screenName
     }
 }

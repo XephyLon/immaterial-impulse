@@ -63,6 +63,14 @@ Item {
     // while locked. A signal like everything else here; the surface makes the
     // write at the boolean's own literal path.
     signal lockToggleRequested(string key)
+    // The lock layout's re-link: this screen's widgets go back to following
+    // the desktop's arrangement. Only offered while the screen is forked.
+    signal lockLayoutResetRequested()
+
+    // Which screen this drawer is arranging - handed in by the surface, so
+    // the fork question below is asked about the right monitor.
+    property string screenName: ""
+    readonly property bool lockLayoutForked: PluginState.lockLayoutForked(root.screenName)
 
     // Which section is showing, and which bucket a bar-widget click appends
     // to. Session state of the drawer itself; neither survives the mode.
@@ -547,6 +555,70 @@ Item {
                                 ? Appearance.colors.colPrimary
                                 : Appearance.colors.colOnSurfaceVariant
                         }
+                    }
+                }
+            }
+
+            // ---- lock screen layout: forked or following ------------------
+            //
+            // The widgets' arrangement on the lock screen inherits the
+            // desktop's until the first move on the Lockscreen tab forks it
+            // (spec §4.3 as amended). This row says which state the screen is
+            // in, and while forked offers the way back - the drawer never
+            // forks by itself; a drag does that.
+            RippleButton {
+                id: lockLayoutRow
+                visible: root.section === "lock"
+                enabled: root.lockLayoutForked
+                Layout.fillWidth: true
+                Layout.fillHeight: false
+                implicitHeight: 60
+                buttonRadius: Appearance.rounding.large
+                colBackground: "transparent"
+                colBackgroundHover: Appearance.colors.colLayer2Hover
+                colRipple: Appearance.colors.colLayer2Active
+                onClicked: root.lockLayoutResetRequested()
+
+                contentItem: RowLayout {
+                    anchors {
+                        fill: parent
+                        leftMargin: Appearance.spacing.space100
+                        rightMargin: Appearance.spacing.space100
+                    }
+                    spacing: Appearance.spacing.space100
+
+                    MaterialSymbol {
+                        text: root.lockLayoutForked ? "call_split" : "link"
+                        iconSize: 22
+                        color: Appearance.colors.colOnSurfaceVariant
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: root.lockLayoutForked
+                                ? Translation.tr("Widget layout is separate")
+                                : Translation.tr("Widget layout follows the desktop")
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnSurface
+                            elide: Text.ElideRight
+                        }
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: root.lockLayoutForked
+                                ? Translation.tr("Click to use the desktop layout again")
+                                : Translation.tr("Move a widget here to arrange the lock screen on its own")
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            color: Appearance.colors.colOnSurfaceVariant
+                            elide: Text.ElideRight
+                        }
+                    }
+                    MaterialSymbol {
+                        visible: root.lockLayoutForked
+                        text: "restart_alt"
+                        iconSize: 20
+                        color: Appearance.colors.colOnSurfaceVariant
                     }
                 }
             }
