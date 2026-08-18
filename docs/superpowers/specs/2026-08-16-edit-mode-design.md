@@ -603,6 +603,15 @@ near-to-far, far-to-near — each carrying **two numbers**: the `target` the wid
 filter on the perpendicular axis (a widget more than ~600px away across the axis being snapped
 contributes no candidates) stops a widget left-aligning to something in the opposite corner.
 
+**The two adjacency relations land one grid gap off the neighbour, not flush** (amended
+2026-08-18, maintainer: *"There should be one gap of space between them. Gluing them together is a
+problem."*). The gap is `Appearance.sizes.widgetGridGap` — the same 12px that already separates the
+cells *inside* a multi-cell widget — scaled by `effectiveScale`, so two widgets side by side read as
+one continuous grid rather than a slab. The two alignment relations take no gap: aligning an edge to
+an edge is a line, not a distance. The guide is drawn at the neighbour's own edge for all four; the
+gap is only where the widget lands. `edge_snap.js` takes the gap as a parameter so the module stays
+free of `Appearance` and testable bare.
+
 Three things to get right, from the same research:
 
 - **Do not resurrect the stale duplicate.** A dead copy of this base class sits at

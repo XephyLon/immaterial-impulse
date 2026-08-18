@@ -38,11 +38,25 @@ function perpendicularGap(aPos, aSize, bPos, bSize) {
 // aligning our right edge to their right edge lands us at far - size, but the
 // alignment the line shows is at far.
 //
+// The two ADJACENCY relations - sitting beside or below a neighbour - land one
+// `gap` away from it, not flush. Flush was the first cut and it glued widgets
+// into one slab; the gap that already separates the cells INSIDE a multi-cell
+// widget (`Appearance.sizes.widgetGridGap`) is what makes two widgets side by
+// side read as one continuous grid instead. The two ALIGNMENT relations take
+// no gap: aligning our left edge to theirs is a line, not a distance. The
+// guide is still drawn at the neighbour's own edge for all four - the line
+// says what the widget aligned to; the gap is where the widget lands.
+//
+// `gap` is a parameter rather than a constant here so this module stays free
+// of Appearance (it is read by tst_edge_snap.qml with no shell around it) and
+// so a caller on a scaled canvas hands in the scaled value.
+//
 // `neighbours` is iterated by index and length rather than Array methods on
 // purpose: a list that has crossed a QML model boundary keeps its indices and
 // its length and loses its Array brand.
-function candidatesForAxis(neighbours, axis, size, perpPos, perpSize) {
+function candidatesForAxis(neighbours, axis, size, perpPos, perpSize, gap) {
     const isX = axis === "x";
+    const spacing = gap || 0;
     const out = [];
     for (let i = 0; i < neighbours.length; i++) {
         const n = neighbours[i];
@@ -53,10 +67,10 @@ function candidatesForAxis(neighbours, axis, size, perpPos, perpSize) {
         if (perpendicularGap(perpPos, perpSize, nPerpPos, nPerpSize)
                 >= PERPENDICULAR_LIMIT_PX)
             continue;
-        out.push({ target: near, guide: near });        // near-to-near
-        out.push({ target: far - size, guide: far });   // far-to-far
-        out.push({ target: far, guide: far });          // near-to-far
-        out.push({ target: near - size, guide: near }); // far-to-near
+        out.push({ target: near, guide: near });                  // near-to-near
+        out.push({ target: far - size, guide: far });             // far-to-far
+        out.push({ target: far + spacing, guide: far });          // near-to-far
+        out.push({ target: near - size - spacing, guide: near }); // far-to-near
     }
     return out;
 }
