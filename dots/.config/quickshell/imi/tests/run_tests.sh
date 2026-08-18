@@ -382,6 +382,15 @@ if ! python3 "$SCRIPT_DIR/test_edit_mode_chrome.py"; then
     exit 1
 fi
 
+# The drawer's column distributes its height, and a chrome row that fills eats
+# the list: stage 5 shipped with the tab row at 831px of 936 and the list at 24,
+# which no source check can see.
+echo "Running edit mode drawer layout tests..."
+if ! python3 "$SCRIPT_DIR/test_edit_mode_drawer_layout.py"; then
+    echo "Edit mode drawer layout tests failed."
+    exit 1
+fi
+
 echo "Running dock position contract tests..."
 if ! python3 "$SCRIPT_DIR/test_dock_position_contract.py"; then
     echo "Dock position contract tests failed."
