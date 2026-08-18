@@ -12,6 +12,101 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.25.0] — 2026-08-18
+
+The Edit Mode release. Press the button and the desktop shrinks into a card
+lifted off the wallpaper, and everything the shell normally hides comes out:
+drag widgets, drop new ones from a drawer, right-click one for its size, arrange
+the bar and the dock in place at full size, and lay out the lock screen from a
+preview that cannot authenticate. Undo is Ctrl+Z. Done puts it all back.
+
+Also in here: a fullscreen game gets its frames back, the wallpaper's subject
+can stand in front of the clock, and the OLED screensaver has a key.
+
+### Added
+- **Edit Mode.** One mode, four in-place editors, on one clock. The desktop
+  shrinks about its own centre into a card with a shadow and a glass edge; the
+  bar and the dock stay at full size and are edited where they are, with visible
+  bucket boundaries and remove badges; the Lockscreen tab filters the same
+  viewport into what the lock will show — its wallpaper, its palette, its
+  widgets, its islands — through a preview context that constructs no
+  authenticator by contract. A drawer catalogues every widget the shell can add
+  and drops it where you let go of it. Right-click a widget for Remove, Pin and a
+  Size stepper. A dragged widget holds a neighbour's edge through hysteresis
+  rather than snapping and unsnapping on the boundary. Ctrl+Z walks the whole
+  edit back, Ctrl+Shift+Z forward. The grid appears when you start dragging, not
+  when you enter the mode.
+- **The lock screen's islands reorder.** Drag the pieces of each island into the
+  order you want; the password field is the one that will not move. A list
+  written by a newer shell loses nothing when an older one reads it back.
+- **Clock depth.** The wallpaper's subject drawn over the desktop widgets, so
+  the clock sits behind the person or object in the picture. Off by default,
+  per-wallpaper, and accepted once by you rather than judged automatically — the
+  detectors' confidence numbers do not rank cutout quality, and this ships as a
+  verdict you give. Where the detectors find no subject at all (half of one real
+  library), click the subject yourself, on the desktop at full size, over the
+  real widgets, with undo — a thumbnail was too small to aim at a shoulder.
+- **The OLED screensaver has a key** (`CTRL+SUPER+L`), blanks the focused
+  monitor rather than the one under the cursor, and holds an idle inhibitor for
+  a screen you blanked on purpose so it never walks the session into a lock.
+- **Region capture grew a toolbar.** Shot/Record and full-screen in the overlay
+  itself, a loupe at the cursor while framing, and — while a region records —
+  stop, pause and save-clip beside the rectangle. The toolbar is never placed
+  inside the region, because it would be in every frame of a clip that cannot
+  be retaken.
+- **The privacy pill acts.** Click it for a card that mutes a stream, or ends
+  the capture, scoped to one app; hover still reads.
+- **A real XDG sound-theme engine.** System sounds resolve through the installed
+  theme and its `Inherits=` chain and play once, in place of two hand-built
+  paths and an `ffplay` at each, one of them always doomed.
+- **Launcher apps rank by how often you launch them.**
+- **An animation multiplier with a named reduce-motion floor**, one stagger
+  policy for every list, and content that swaps only after the shape it lives
+  in has finished moving. About 700 call sites take it without changing.
+- **Widget behaviour is a toggle bar**, not six switch rows.
+
+### Fixed
+- **A fullscreen game no longer loses half its frames to the shell.** One
+  infinite rotation — the cookie clock's dial, thirty seconds per turn — kept
+  the whole 5120×1440 output repainting behind an opaque game, because a running
+  animation is a scene the compositor must redraw every frame whether or not
+  anyone can see it. Measured against the game's own counter: 52 fps with the
+  shell running, 108 with it stopped; 92 against a 94 ceiling after. Every
+  looping animation now stops when what it animates is off screen, the bar's
+  hover-card surface unmaps when it has nothing to show, and the Activate Linux
+  watermark stands down under a fullscreen window — a 340×120 Overlay surface
+  was the last thing holding the compositor's fullscreen fast path shut. The
+  background surface stays mapped on purpose: destroying it is what once left
+  Wallpaper Engine strobing at 30 Hz.
+- **The launcher stopped spawning a calculator per keystroke** — eight
+  processes for the word "firefox".
+- **The updater no longer destroys local work** in the suite checkout: a
+  hard reset to the fetched head is now a rescue branch, a stash and a log.
+- **The vertical bar renders plugin bar widgets** instead of an empty stub.
+- **Four binding loops**, each the same shape: a property that read the thing
+  it drove.
+- **The dock's turn is a size, not a different set of anchors**, so switching
+  edges no longer resizes it from its parent.
+- **A settings deep link finds its page by id**, not by the page's translated
+  name.
+- **The anti-flashbang's weak rung has the shader it always named.**
+- **A tray menu opened from a bar hover card is blurred**, and the card's
+  translucent shadow is not.
+- **Two easing bugs.** The bar's util button and every resize grip had run on
+  `Easing.Linear` since they were written, from naming a motion tier's duration
+  and dropping its curve; a check now fails on a new one and holds the 40
+  existing partial takes as a ratchet.
+
+### Changed
+- **The shell's own test harnesses run on a private session bus.** One of them
+  read the developer's browser as a media player, which hides two lock-screen
+  slots, and failed on one machine while passing on every other with the code
+  identical. New harnesses must decide their bus; the 33 existing ones are a
+  register.
+- Reordering a widget moves it rather than swapping it with the neighbour it
+  lands on, at every call site.
+- The three shape tokens the design system reads are declared once.
+
 ## [0.24.0] — 2026-08-13
 
 The Material 3 Expressive morphing release: desktop widgets stopped disappearing
