@@ -74,6 +74,8 @@ PLUGIN_WIDGET = ROOT / "modules/common/plugins/PluginWidget.qml"
 CLOCK_DEPTH = ROOT / "modules/common/functions/clockDepth.js"
 CARD = ROOT / "modules/imi/background/EditModeCard.qml"
 LOOK_PROBE = ROOT / "EditModeLookProbe.qml"
+THEME_LOADER = ROOT / "services/MaterialThemeLoader.qml"
+APPEARANCE = ROOT / "modules/common/Appearance.qml"
 CHROME_SCOPE = ROOT / "modules/imi/editMode/EditModeChrome.qml"
 CHROME_SURFACE = ROOT / "modules/imi/editMode/EditModeChromeSurface.qml"
 CHROME_CONTENT = ROOT / "modules/imi/editMode/EditModeChromeContent.qml"
@@ -1093,38 +1095,63 @@ def test_the_tab_is_a_string_beside_the_mode_and_dies_with_it():
          "would greet the next entry already filtered to the lock screen")
 
 
+# "The lock's look is on screen" - either spelled out, or read off the one
+# derivation in GlobalStates. The disjunction was written at six sites and a
+# seventh (the palette) was missed, so the property exists and the sites read
+# it; the check below pins its DEFINITION, and every site may use either form.
+LOCK_LOOK = (r"(?:GlobalStates\.lockLookActive"
+             r"|GlobalStates\.screenLocked\s*\n?\s*\|\|\s*"
+             r"GlobalStates\.editLockPreview)")
+
+
 def test_the_viewport_draws_its_locked_inputs_on_the_lockscreen_tab():
     # Spec §4.3: the tab switches the viewport's wallpaper and blur to their
     # locked inputs - a gate change on things Background.qml already draws,
-    # with `GlobalStates.editLockPreview` joining `GlobalStates.screenLocked`
-    # in each gate rather than a second copy of any layer. Each binding is
-    # named individually because a missing term here is silent: the tab
-    # simply previews the wrong wallpaper, on machines that configured a lock
-    # wallpaper, which is not every machine.
+    # with the preview joining the session lock in each gate rather than a
+    # second copy of any layer. Each binding is named individually because a
+    # missing term here is silent: the tab simply previews the wrong
+    # wallpaper, on machines that configured a lock wallpaper, which is not
+    # every machine.
+    states = code(GLOBAL_STATES)
+    look = declaration(states, "lockLookActive")
+    assert look and re.search(r"screenLocked\s*\|\|\s*"
+                              r"root\.editLockPreview", look), \
+        ("GlobalStates.lockLookActive must stay `screenLocked || "
+         "editLockPreview` - every gate below reads it, so a narrowed "
+         "definition silently un-filters all of them at once")
     background = code(BACKGROUND)
     for name in ("effectiveWallpaperPath", "weProjectPath"):
         value = declaration(background, name)
         assert value, f"Background no longer declares {name}"
-        assert re.search(r"GlobalStates\.screenLocked\s*\|\|\s*"
-                         r"GlobalStates\.editLockPreview", value), \
+        assert re.search(LOCK_LOOK, value), \
             f"{name} does not take the lock preview's term"
     lock_wall = declaration(background, "lockWallShown")
-    assert lock_wall and re.search(
-        r"\(GlobalStates\.screenLocked\s*\|\|\s*GlobalStates\.editLockPreview\)",
-        lock_wall), "lockWallShown does not take the lock preview's term"
+    assert lock_wall and re.search(LOCK_LOOK, lock_wall), \
+        "lockWallShown does not take the lock preview's term"
     blur = re.search(r"id:\s*blurLoader\n(.*?)sourceComponent:", background, re.S)
     assert blur, "the lock blur loader is gone"
-    assert re.search(r"lockLook:\s*GlobalStates\.screenLocked\s*\n?\s*\|\|\s*"
-                     r"GlobalStates\.editLockPreview", blur.group(1)), \
+    assert re.search(r"lockLook:\s*" + LOCK_LOOK, blur.group(1)), \
         "the lock blur's lockLook must cover the preview"
     assert re.search(r"active:.*lockLook", blur.group(1)), \
         "the lock blur must be active for the locked look"
     # And the widget filter: the tab shows the widgets the lock screen will.
     widget = code(BACKGROUND_WIDGET)
-    assert re.search(r"opacity:\s*\(\(GlobalStates\.screenLocked\s*\|\|\s*"
-                     r"GlobalStates\.editLockPreview\)\s*&&\s*!visibleWhenLocked\)",
+    assert re.search(r"opacity:\s*\(" + LOCK_LOOK + r"\s*&&\s*!visibleWhenLocked\)",
                      widget), \
         "AbstractBackgroundWidget's lock filter does not cover the preview"
+    # The palette is a locked input too, and the one that was missed: the tab
+    # switched every SOURCE and left the colours the desktop's.
+    theme = code(THEME_LOADER)
+    gate = declaration(theme, "lockThemeActive")
+    assert gate and re.search(LOCK_LOOK, gate), \
+        ("MaterialThemeLoader.lockThemeActive must cover the preview, or the "
+         "Lockscreen tab shows the lock's wallpaper under the desktop's "
+         "palette")
+    appearance = code(APPEARANCE)
+    quantizer = re.search(r"id:\s*wallColorQuant\n(.*?)\n    \}", appearance, re.S)
+    assert quantizer and re.search(LOCK_LOOK, quantizer.group(1)), \
+        ("Appearance's wallpaper quantizer must cover the preview - it is "
+         "what the shell's transparency is derived from")
 
 
 def test_the_islands_ride_the_edit_transform_above_the_widgets():

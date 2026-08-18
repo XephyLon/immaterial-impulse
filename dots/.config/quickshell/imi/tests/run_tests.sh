@@ -429,6 +429,16 @@ fi
 # real LockSurface with the preview context - the overlay's eater, the shared
 # gesture, move semantics, the storedOrder merge, and both cancel paths.
 # Brings its own headless weston.
+# The Lockscreen tab is a filter on the desktop viewport, and the palette is one
+# of the things it filters: stage 9 switched every layer's source and left the
+# theme keyed on the session lock, so the tab drew the lock's wallpaper under
+# the desktop's colours.
+echo "Running lock look palette tests..."
+if ! python3 "$SCRIPT_DIR/test_lock_look_palette.py"; then
+    echo "Lock look palette tests failed."
+    exit 1
+fi
+
 echo "Running lock island reorder runtime tests..."
 if ! python3 "$SCRIPT_DIR/test_lock_island_reorder_runtime.py"; then
     echo "Lock island reorder runtime tests failed."
