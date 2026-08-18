@@ -102,7 +102,14 @@ Item {
         const next = GridSizes.steppedSize(root.manifest.grid ?? null,
             root.storedSpan, direction);
         if (!next) return;
-        PluginState.setOption(root.manifest.id, "__gridSize",
+        // A span commit is one of §7.3's committed mutations. The closure
+        // captures the id and the old stored choice, and reaches only the
+        // PluginState singleton - never this card or its widget, both of
+        // which the mode can destroy while the stack outlives them.
+        const id = root.manifest.id;
+        const before = PluginState.option(id, "__gridSize", null);
+        GlobalStates.editUndoPush(() => PluginState.setOption(id, "__gridSize", before));
+        PluginState.setOption(id, "__gridSize",
             GridSizes.formatSize(next));
     }
 
@@ -259,6 +266,13 @@ Item {
             // closes even where no widget instance exists to be destroyed.
             onClicked: {
                 if (!root.manifest) return;
+                // A remove is a committed mutation (§7.3): the closure holds
+                // the whole enabled list from before the write, so undoing
+                // re-enables the widget at the position the store still
+                // holds for it.
+                const before = EditMode.listCopy(Config.options.plugins.enabled);
+                GlobalStates.editUndoPush(() =>
+                    Config.setNestedValue("plugins.enabled", before));
                 Config.setNestedValue("plugins.enabled",
                     EditMode.enabledWithout(Config.options.plugins.enabled, root.manifest.id));
                 root.dismissRequested();

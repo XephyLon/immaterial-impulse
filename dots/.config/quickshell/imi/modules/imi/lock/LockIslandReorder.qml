@@ -2,6 +2,7 @@ import QtQuick
 import qs
 import qs.modules.common
 import "../../common/functions/layout_ops.js" as LayoutOps
+import "../../common/functions/edit_mode.js" as EditMode
 import "../../common/functions/lock_islands.js" as LockIslands
 
 /**
@@ -173,6 +174,27 @@ Item {
         if (!GlobalStates.editMode || !target) return;
         const destination = LayoutOps.moveTargetForInsertion(from, target.index);
         if (destination === from) return;
+        // A reorder drop is a committed mutation (spec §7.3). The restore is
+        // a literal path per island - the scope lint's rule about exactly
+        // these writes - and the closure reaches only the Config singleton
+        // and its captured list, never this controller: the Lockscreen tab
+        // tears these overlays down and the stack outlives them.
+        if (root.island === "main") {
+            const beforeMain = EditMode.listCopy(Config.options.lock.islands.main);
+            GlobalStates.editUndoPush(() => {
+                Config.options.lock.islands.main = beforeMain;
+            });
+        } else if (root.island === "left") {
+            const beforeLeft = EditMode.listCopy(Config.options.lock.islands.left);
+            GlobalStates.editUndoPush(() => {
+                Config.options.lock.islands.left = beforeLeft;
+            });
+        } else {
+            const beforeRight = EditMode.listCopy(Config.options.lock.islands.right);
+            GlobalStates.editUndoPush(() => {
+                Config.options.lock.islands.right = beforeRight;
+            });
+        }
         const moved = LayoutOps.move(root.orderedIds, from, destination);
         root.writeList(LockIslands.storedOrder(moved, root.storedList(), root.defaults()));
     }

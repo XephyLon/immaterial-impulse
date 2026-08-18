@@ -4,6 +4,7 @@ import qs.modules.common
 import qs.modules.common.plugins
 import qs.modules.common.widgets
 import "../../common/functions/layout_ops.js" as LayoutOps
+import "../../common/functions/edit_mode.js" as EditMode
 
 /**
  * One bar's worth of Edit Mode's reorder: the coordinator both content trees
@@ -208,6 +209,25 @@ Item {
         dropIndicator.shown = true;
     }
 
+    // A reorder drop and a badge remove are committed mutations (spec §7.3),
+    // so each pushes ONE undo entry before its writes - one entry even for a
+    // cross-bucket drop, which is one gesture making two writes. The closure
+    // captures the touched buckets' lists and reaches only the Config
+    // singleton, never this controller: the stack outlives the overlays the
+    // mode tears down. Restores are literal paths, writeLayout's own rule.
+    function pushUndoForBuckets(buckets) {
+        const snap = [];
+        for (const bucket of buckets)
+            snap.push({ bucket: bucket, list: EditMode.listCopy(root.storedLayout(bucket)) });
+        GlobalStates.editUndoPush(() => {
+            for (const entry of snap) {
+                if (entry.bucket === 0) Config.options.bar.layouts.leftLayout = entry.list;
+                else if (entry.bucket === 1) Config.options.bar.layouts.middleLayout = entry.list;
+                else Config.options.bar.layouts.rightLayout = entry.list;
+            }
+        });
+    }
+
     // The commits. Guarded on the mode because a drag can outlive it - Done
     // mid-gesture, the exit ladder - and an end the user meant as "stop" must
     // not store an order they never chose.
@@ -217,6 +237,7 @@ Item {
             const flags = root.flagsFor(fromBucket);
             const visibleDest = LayoutOps.moveTargetForInsertion(fromVisible, target.index);
             if (visibleDest === fromVisible) return;
+            root.pushUndoForBuckets([fromBucket]);
             root.writeLayout(fromBucket, LayoutOps.move(root.storedLayout(fromBucket),
                 LayoutOps.nthVisible(flags, fromVisible),
                 LayoutOps.nthVisible(flags, visibleDest)));
@@ -226,6 +247,7 @@ Item {
         const toFlags = root.flagsFor(target.bucket);
         const storedFrom = LayoutOps.nthVisible(fromFlags, fromVisible);
         if (storedFrom === -1) return;
+        root.pushUndoForBuckets([fromBucket, target.bucket]);
         const source = root.storedLayout(fromBucket);
         const id = source[storedFrom];
         root.writeLayout(fromBucket, LayoutOps.remove(source, storedFrom));
@@ -238,6 +260,7 @@ Item {
         const flags = root.flagsFor(bucket);
         const stored = LayoutOps.nthVisible(flags, visibleIndex);
         if (stored === -1) return;
+        root.pushUndoForBuckets([bucket]);
         root.writeLayout(bucket, LayoutOps.remove(root.storedLayout(bucket), stored));
     }
 
