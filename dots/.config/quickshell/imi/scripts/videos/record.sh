@@ -34,8 +34,31 @@ set_recording_state() {
 # Toggle: a recording we started is running -> stop it gracefully and exit.
 # The pidfile scopes the toggle to OUR recording, never the replay daemon
 # (both are gpu-screen-recorder processes - killing by process name would hit both).
+#
+# INT first, because that is gsr's "finish and save". Then an ESCALATION,
+# because INT is not always enough: gsr installs its own INT handler only once
+# it is capturing, and a recording that never got that far - the portal picker
+# never resolved, the compositor refused the stream - sits in poll() with INT
+# still ignored (a `&` job in non-interactive bash starts with INT and QUIT
+# ignored, and gsr had not yet undone it) and TERM caught but never acted on.
+# That is the recording the maintainer could not stop from the privacy card or
+# the overlay: every stop path funnels here, this sent one signal, and the
+# process was born deaf to it. There is no file to lose in that state, so the
+# ladder ends in KILL rather than leaving an unstoppable process behind an
+# indicator that says "recording".
 if [[ -f "$PIDFILE" ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-    kill -INT "$(cat "$PIDFILE")"
+    gsr_pid="$(cat "$PIDFILE")"
+    kill -INT "$gsr_pid"
+    for _ in $(seq 1 30); do   # 3s: gsr flushes a real capture well inside this
+        kill -0 "$gsr_pid" 2>/dev/null || exit 0
+        sleep 0.1
+    done
+    kill -TERM "$gsr_pid" 2>/dev/null
+    for _ in $(seq 1 20); do   # 2s
+        kill -0 "$gsr_pid" 2>/dev/null || exit 0
+        sleep 0.1
+    done
+    kill -KILL "$gsr_pid" 2>/dev/null
     exit 0
 fi
 rm -f "$PIDFILE"
@@ -179,8 +202,16 @@ else
     ARGS+=(-w region -region "$GEOMETRY")
 fi
 
+# Job control ON for the launch, so gsr is not born with INT and QUIT ignored:
+# a `&` job in a non-interactive shell inherits SIG_IGN for both, and the stop
+# path above leads with INT. gsr normally installs its own handler and undoes
+# that once capturing, but "normally" is the case that already worked; this is
+# for the one that did not. Turned back off after, so the script's own
+# job-control noise does not change anything else about how it runs.
+set -m
 "${ARGS[@]}" &
 GSR_PID=$!
+set +m
 echo "$GSR_PID" > "$PIDFILE"
 set_recording_state true "$REGION"
 notify-send "Recording started" "$(basename "$OUT")" -a 'Recorder' & disown
