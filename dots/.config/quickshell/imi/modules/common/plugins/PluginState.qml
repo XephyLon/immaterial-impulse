@@ -4,8 +4,10 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs
 import qs.modules.common
 import "gridSizes.js" as GridSizes
+import "layout_surfaces.js" as Surfaces
 
 Singleton {
     id: root
@@ -19,6 +21,11 @@ Singleton {
         return {
             version: root.schemaVersion,
             desktopPositions: {},
+            // The lock screen's layout, per screen, present only once that
+            // screen has been edited on the Lockscreen tab - an absent screen
+            // shows the desktop's layout (layout_surfaces.js, spec §4.3 as
+            // amended 2026-08-18).
+            lockPositions: {},
             pluginOptions: {},
             // Plugin ids whose options/positions/enabled state survive preset
             // application (never captured INTO presets - see presets.sh).
@@ -54,22 +61,92 @@ Singleton {
         };
     }
 
-    function position(pluginId, screenName) {
-        const screens = root.state?.desktopPositions;
-        const saved = screens?.[screenName]?.[pluginId];
-        return root.normalizedPosition(saved);
+    // ---- two layouts, one store ------------------------------------------
+    //
+    // Which layout the DESKTOP is drawing right now: the lock's while the
+    // session is locked or Edit Mode's Lockscreen tab is filtering the
+    // viewport into it, the desktop's otherwise. This is the default surface
+    // every position read and write takes, so the widget code that predates
+    // the fork keeps its call shape and follows the look automatically.
+    //
+    // A caller that must NOT follow the look names its surface explicitly.
+    // Undo is the one that must not: a closure pushed on the Lockscreen tab
+    // and popped on the Desktop tab would otherwise write the lock's position
+    // into the desktop's store. It captures `currentSurface` at push time.
+    readonly property string currentSurface: GlobalStates.lockLookActive
+        ? Surfaces.LOCK : Surfaces.DESKTOP
+    // The two surface names, exported so a caller that must name one (undo)
+    // spells it the way the module does rather than as a string of its own.
+    readonly property string lockSurface: Surfaces.LOCK
+    readonly property string desktopSurface: Surfaces.DESKTOP
+
+    // Has this screen's lock layout been edited apart from the desktop's?
+    function lockLayoutForked(screenName) {
+        return Surfaces.isForked(root.state, screenName);
     }
 
-    function setPosition(pluginId, screenName, value) {
-        if (!pluginId || !screenName) return;
+    // The raw stored entry, or undefined - for callers that need to tell
+    // "absent" from "at the default", which position() cannot.
+    function rawPosition(pluginId, screenName, surface) {
+        return Surfaces.rawPosition(root.state, surface ?? root.currentSurface,
+            screenName, pluginId);
+    }
 
-        const nextState = Object.assign({}, root.state);
-        const nextScreens = Object.assign({}, nextState.desktopPositions || {});
-        const nextScreen = Object.assign({}, nextScreens[screenName] || {});
-        nextScreen[pluginId] = root.normalizedPosition(value);
-        nextScreens[screenName] = nextScreen;
+    function position(pluginId, screenName, surface) {
+        return root.normalizedPosition(root.rawPosition(pluginId, screenName, surface));
+    }
+
+    function setPosition(pluginId, screenName, value, surface) {
+        if (!pluginId || !screenName) return;
+        const nextState = Surfaces.withPosition(root.state, surface ?? root.currentSurface,
+            screenName, pluginId, root.normalizedPosition(value));
         nextState.version = root.schemaVersion;
-        nextState.desktopPositions = nextScreens;
+        root.state = nextState;
+        writeTimer.restart();
+    }
+
+    // A widget's span, per surface (layout_surfaces.js): the desktop's is the
+    // `__gridSize` plugin option it has always been; a forked lock screen's
+    // lives in the widget's lock record. Same default-surface rule as
+    // position(), same explicit-surface rule for undo.
+    function gridSize(pluginId, screenName, surface) {
+        return Surfaces.rawGridSize(root.state, surface ?? root.currentSurface,
+            screenName, pluginId);
+    }
+
+    function setGridSize(pluginId, screenName, value, surface) {
+        if (!pluginId) return;
+        const nextState = Surfaces.withGridSize(root.state, surface ?? root.currentSurface,
+            screenName, pluginId, value);
+        nextState.version = root.schemaVersion;
+        root.state = nextState;
+        writeTimer.restart();
+    }
+
+    // The whole lock record for a widget on a screen, and its restore - for
+    // the re-link's undo, which has to put back position AND span together.
+    function lockRecords(screenName) {
+        return Object.assign({}, root.state?.lockPositions?.[screenName] ?? {});
+    }
+
+    function restoreLockRecords(screenName, records) {
+        if (!screenName || !records) return;
+        const nextState = Object.assign({}, root.state);
+        const store = Object.assign({}, nextState.lockPositions || {});
+        store[screenName] = Object.assign({}, records);
+        nextState.lockPositions = store;
+        nextState.version = root.schemaVersion;
+        root.state = nextState;
+        writeTimer.restart();
+    }
+
+    // Re-link a screen's lock layout to the desktop's: its lock entry goes,
+    // and every widget on that screen reads through again. A no-op on a
+    // screen that was never forked.
+    function resetLockLayout(screenName) {
+        const nextState = Surfaces.withoutLockLayout(root.state, screenName);
+        if (nextState === root.state) return;
+        nextState.version = root.schemaVersion;
         root.state = nextState;
         writeTimer.restart();
     }
@@ -324,6 +401,11 @@ Singleton {
                     && typeof parsed.desktopPositions === "object"
                     && !Array.isArray(parsed.desktopPositions)
                     ? parsed.desktopPositions
+                    : {},
+                lockPositions: parsed.lockPositions
+                    && typeof parsed.lockPositions === "object"
+                    && !Array.isArray(parsed.lockPositions)
+                    ? parsed.lockPositions
                     : {},
                 pluginOptions: parsed.pluginOptions
                     && typeof parsed.pluginOptions === "object"
