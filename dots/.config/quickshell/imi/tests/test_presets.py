@@ -243,6 +243,74 @@ class PresetTests(unittest.TestCase):
         )
 
 
+    def _sandbox(self, home, state):
+        """A HOME with a plugin state, stub helpers and a copy of presets.sh."""
+        config_dir = home / ".config/immaterial-impulse"
+        script_dir = home / ".config/quickshell/imi/scripts"
+        wallpaper_dir = script_dir / "wallpapers"
+        colors_dir = script_dir / "colors"
+        for d in (config_dir, wallpaper_dir, colors_dir):
+            d.mkdir(parents=True, exist_ok=True)
+        (config_dir / "config.json").write_text(json.dumps({
+            "background": {"wallpaperPath": "/tmp/wallpaper.jpg"},
+            "wallpaperSelector": {"wallpaperEngine": {"activePath": ""}},
+        }))
+        state_file = config_dir / "plugin-state.json"
+        state_file.write_text(json.dumps(state))
+        for helper in (wallpaper_dir / "wallpaper-engine.sh", colors_dir / "switchwall.sh"):
+            helper.write_text("#!/usr/bin/env bash\nexit 0\n")
+            helper.chmod(0o755)
+        presets = script_dir / "presets.sh"
+        shutil.copy(PRESETS, presets)
+        presets.chmod(0o755)
+        return config_dir, state_file, presets, dict(os.environ, HOME=str(home))
+
+    def test_the_lock_layout_round_trips_and_an_old_preset_keeps_the_fork(self):
+        """Two layouts, one store (spec §4.3 as amended 2026-08-18).
+
+        A preset saved by this shell carries `lockPositions`; applying it
+        restores the fork exactly. A preset from an OLDER shell has no such
+        key, and applying it must leave the user's fork alone rather than
+        wipe it - the same `has()` rule the desktop map already follows.
+        """
+        forked = {
+            "version": 2,
+            "desktopPositions": {"DP-1": {"clock": {"x": 100, "y": 200, "placementStrategy": "free"}}},
+            "lockPositions": {"DP-1": {"clock": {"x": 900, "y": 900, "placementStrategy": "free"}}},
+            "pluginOptions": {},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            config_dir, state_file, presets, env = self._sandbox(Path(directory), forked)
+
+            subprocess.run(["bash", str(presets), "--save", "forked"], env=env, check=True)
+            preset = json.loads((config_dir / "presets/forked.json").read_text())
+            self.assertEqual(preset["_pluginState"]["lockPositions"]["DP-1"]["clock"]["x"], 900,
+                             "a saved preset must carry the lock layout")
+
+            # Scribble on the fork, then apply the preset: the fork comes back.
+            state_file.write_text(json.dumps({
+                "version": 2,
+                "desktopPositions": {"DP-1": {"clock": {"x": 1, "y": 1}}},
+                "lockPositions": {"DP-1": {"clock": {"x": 2, "y": 2}}},
+                "pluginOptions": {},
+            }))
+            subprocess.run(["bash", str(presets), "--apply", "forked"], env=env, check=True)
+            restored = json.loads(state_file.read_text())
+            self.assertEqual(restored["desktopPositions"]["DP-1"]["clock"]["x"], 100)
+            self.assertEqual(restored["lockPositions"]["DP-1"]["clock"]["x"], 900)
+
+            # An OLDER preset: same document with the lock key removed, as a
+            # pre-fork shell would have written it.
+            old = json.loads((config_dir / "presets/forked.json").read_text())
+            del old["_pluginState"]["lockPositions"]
+            (config_dir / "presets/older.json").write_text(json.dumps(old))
+            state_file.write_text(json.dumps(forked))
+            subprocess.run(["bash", str(presets), "--apply", "older"], env=env, check=True)
+            after_old = json.loads(state_file.read_text())
+            self.assertEqual(after_old["desktopPositions"]["DP-1"]["clock"]["x"], 100)
+            self.assertEqual(after_old["lockPositions"]["DP-1"]["clock"]["x"], 900,
+                             "a preset without lockPositions must not wipe the user's fork")
+
     def test_saving_a_preset_does_not_publish_the_users_weather_key(self):
         """A preset is a document people share; config.json holds their key.
 

@@ -48,6 +48,7 @@ case "$action" in
             plugin_state="$(printf '%s' "$plugin_state_snapshot" | jq -ce '{
                 version: (.version // 2),
                 desktopPositions: (.desktopPositions // {}),
+                lockPositions: (.lockPositions // {}),
                 pluginOptions: (.pluginOptions // {})
             }' 2>/dev/null)" || plugin_state=""
         else
@@ -57,9 +58,10 @@ case "$action" in
             plugin_state="$(jq -c '{
             version: (.version // 2),
             desktopPositions: (.desktopPositions // {}),
+            lockPositions: (.lockPositions // {}),
             pluginOptions: (.pluginOptions // {})
         }' "$PLUGIN_STATE_FILE" 2>/dev/null \
-            || printf '{"version":2,"desktopPositions":{},"pluginOptions":{}}')"
+            || printf '{"version":2,"desktopPositions":{},"lockPositions":{},"pluginOptions":{}}')"
         fi
         # A preset is a document people SHARE, and `config.json` holds the
         # user's own OpenWeatherMap key. Saving one used to copy it verbatim,
@@ -99,10 +101,11 @@ case "$action" in
             current_plugin_state="$(jq -c '{
                 version: (.version // 2),
                 desktopPositions: (.desktopPositions // {}),
+                lockPositions: (.lockPositions // {}),
                 pluginOptions: (.pluginOptions // {}),
                 presetPersist: (.presetPersist // {})
             }' "$PLUGIN_STATE_FILE" 2>/dev/null \
-                || printf '{"version":2,"desktopPositions":{},"pluginOptions":{},"presetPersist":{}}')"
+                || printf '{"version":2,"desktopPositions":{},"lockPositions":{},"pluginOptions":{},"presetPersist":{}}')"
             # Top-level merging keeps fields omitted by older position-only
             # presets, while a new preset's complete maps replace current state.
             jq -n --argjson current "$current_plugin_state" --argjson preset "$preset_plugin_state" \
@@ -112,6 +115,9 @@ case "$action" in
                     | .desktopPositions = (if ($preset | has("desktopPositions"))
                         then ($preset.desktopPositions // {})
                         else ($current.desktopPositions // {}) end)
+                    | .lockPositions = (if ($preset | has("lockPositions"))
+                        then ($preset.lockPositions // {})
+                        else ($current.lockPositions // {}) end)
                     | .pluginOptions = (if ($preset | has("pluginOptions"))
                         then ($preset.pluginOptions // {})
                         else ($current.pluginOptions // {}) end)
