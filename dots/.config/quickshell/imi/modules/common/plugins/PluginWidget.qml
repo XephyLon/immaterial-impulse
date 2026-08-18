@@ -292,7 +292,7 @@ AbstractBackgroundWidget {
         const before = PluginState.option(id, "__gridSize", null);
         if (before !== next)
             GlobalStates.editUndoPush(() => PluginState.setOption(id, "__gridSize", before));
-        PluginState.setOption(id, "__gridSize", next);
+        PluginState.setOption(manifest.id, "__gridSize", next);
     }
 
     function beginGridResize() {
