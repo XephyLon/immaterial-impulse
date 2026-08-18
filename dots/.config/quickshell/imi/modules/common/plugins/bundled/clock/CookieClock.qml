@@ -117,8 +117,22 @@ Item {
         anchors.fill: parent
         dragging: root.dragging
 
+        // Gated on the item being ON SCREEN, not just on the setting. An
+        // infinite animation dirties the scene every frame for as long as it
+        // runs, and a dirty scene makes the shell commit a frame, and a commit
+        // makes the compositor repaint the whole output - so this one kept a
+        // 5120x1440 240Hz screen redrawing continuously while the desktop was
+        // completely hidden behind a fullscreen game. Measured against FFXIV's
+        // own counter on a static scene: 52 fps with it spinning, 94 with this
+        // gate, 108 with the shell not running at all.
+        //
+        // `visible` is EFFECTIVE visibility in QML - it is false while any
+        // ancestor is hidden - so this covers the fullscreen suppression the
+        // canvas already does, a widget scrolled out of a hidden surface, and
+        // any future reason the desktop is not on screen, without any of them
+        // having to know this animation exists.
         RotationAnimation on rotation {
-            running: root.constantlyRotate
+            running: root.constantlyRotate && cookieBody.visible
             duration: 30000
             easing.type: Easing.Linear
             loops: Animation.Infinite
