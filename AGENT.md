@@ -2864,11 +2864,22 @@ mode is built out of are worth not re-deriving:
   `test_lock_island_reorder_runtime.py` uses), never a `qs -p` against the
   session, and anything that genuinely needs a real `WlSessionLock` is
   recorded as unverified rather than attempted.
+  **The session BUS is part of that isolation, and was the half this harness
+  missed.** `islandItemVisible` hides `username` and `keyboardLayout` while a
+  media player is registered, so a harness on the developer's own bus drags
+  two invisible slots and commits nothing — the reorder check failed on the
+  maintainer's machine, where a browser held an MPRIS name, and passed
+  everywhere else with the shell's code identical. A harness that launches
+  `qs` now wraps it in `dbus-run-session` (or names a bus it starts itself);
+  `tests/lint_runtime_bus_isolation.py` fails a new one that does neither and
+  carries the 33 existing harnesses as a ratchet.
   (feat(lock): lock_islands.js, the islands' order as arithmetic;
   feat(config): three ordered island lists under lock.islands;
   refactor(lock): the three islands become data-driven;
   test(lint): the scope lint reaches the lock surface and admits its lists;
-  feat(lock): island contents reorder in the mode.)
+  feat(lock): island contents reorder in the mode;
+  test(lock): the reorder harness gets a session bus of its own;
+  test(lint): a qs harness must decide which session bus it talks to.)
 - **A dragged widget holds a neighbour's edge through a Schmitt trigger, and
   both thresholds read the SHADOW — stage 10, spec §6.**
   `modules/common/functions/edge_snap.js` owns the arithmetic: four relations
