@@ -2902,8 +2902,14 @@ mode is built out of are worth not re-deriving:
   `modules/common/functions/edge_snap.js` owns the arithmetic: four relations
   per neighbour per axis, each carrying the `target` the widget travels to AND
   the `guide` the line is drawn at (they differ for half the relations,
-  because the line belongs to the OTHER widget's edge); a perpendicular
-  relevance filter measured as the GAP between extents, boundary excluded; and
+  because the line belongs to the OTHER widget's edge); the two ADJACENCY
+  relations land one `Appearance.sizes.widgetGridGap` off the neighbour, not
+  flush — flush shipped first and glued widgets into a slab, and the gap that
+  already separates cells INSIDE a widget is what makes two widgets read as
+  one grid (the module takes the gap as a parameter to stay pure; the widget
+  hands in the scaled token; the guide is still at the neighbour's own edge);
+  a perpendicular relevance filter measured as the GAP between extents,
+  boundary excluded; and
   acquire-at-18/release-at-32 compared against `dragProxy`, never the rendered
   position — with one threshold the decision boundary and the resulting
   position are the same number and the widget flip-flops per event.
