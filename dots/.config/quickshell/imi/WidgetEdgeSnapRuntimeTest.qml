@@ -242,15 +242,18 @@ ShellRoot {
     }
 
     // ---- acquire, the detent, and the release, mid-drag -------------------
-    // mover walks left toward anchor's right edge (465). The shadow stops
-    // 10px short: inside the acquire band, and on a target the lattice cannot
-    // produce (465 is not a multiple of 12).
+    // mover walks left toward anchor's right edge (465). Sitting BESIDE a
+    // neighbour lands one grid gap off its edge, so the adjacency target is
+    // 465 + 12 = 477 - still a position the lattice cannot produce (477 is
+    // not a multiple of 12), which is what keeps this distinguishable from a
+    // lattice landing. The shadow stops 2px short of it: inside the acquire
+    // band.
     Timer {
         id: stepAcquire
         interval: 400
         onTriggered: {
             harness.beginDrag(moverWidget);
-            harness.moveShadowTo(475, 48);
+            harness.moveShadowTo(479, 48);
             stepAcquireVerify.running = true;
         }
     }
@@ -259,15 +262,17 @@ ShellRoot {
         id: stepAcquireVerify
         interval: 300
         onTriggered: {
-            harness.check("inside the acquire band the widget sits on the neighbour's edge, off the lattice",
-                          Math.round(moverWidget.x) === 465);
-            harness.check("and the vertical guide is up at that edge",
+            harness.check("inside the acquire band the widget sits one gap off the neighbour's edge, off the lattice",
+                          Math.round(moverWidget.x) === 477);
+            // The GUIDE is at the neighbour's own edge - the line says what
+            // was aligned to; the gap is where the widget lands.
+            harness.check("and the vertical guide is up at the neighbour's edge",
                           canvas.edgeGuideXActive === true
                               && Math.round(canvas.edgeGuideXPos) === 465);
             // 24px past the target: between the two thresholds. A single
             // threshold - or a resolver fed the rendered position - has
             // already let go here.
-            harness.moveShadowTo(441, 48);
+            harness.moveShadowTo(453, 48);
             stepDetentVerify.running = true;
         }
     }
@@ -277,12 +282,12 @@ ShellRoot {
         interval: 300
         onTriggered: {
             harness.check("between the thresholds the hold survives - the detent",
-                          Math.round(moverWidget.x) === 465);
+                          Math.round(moverWidget.x) === 477);
             harness.check("and the guide stays up with it",
                           canvas.edgeGuideXActive === true);
-            // 40px past: released, and the lattice takes back over (425
-            // rounds to 420).
-            harness.moveShadowTo(425, 48);
+            // 40px past: released, and the lattice takes back over (437
+            // rounds to 432).
+            harness.moveShadowTo(437, 48);
             stepReleaseVerify.running = true;
         }
     }
@@ -292,10 +297,10 @@ ShellRoot {
         interval: 300
         onTriggered: {
             harness.check("past the release threshold the lattice takes back over",
-                          Math.round(moverWidget.x) === 420);
+                          Math.round(moverWidget.x) === 432);
             harness.check("and the guide goes down",
                           canvas.edgeGuideXActive === false);
-            harness.releaseAtShadow(425, 48);
+            harness.releaseAtShadow(437, 48);
             stepCommitVerify.running = true;
         }
     }
@@ -305,12 +310,12 @@ ShellRoot {
         interval: 400
         onTriggered: {
             harness.check("the release commits the lattice landing",
-                          harness.at(moverWidget, 420, 48));
-            // A second drag released INSIDE the hold: the commit is the
-            // neighbour's edge, off the lattice, and it sticks.
+                          harness.at(moverWidget, 432, 48));
+            // A second drag released INSIDE the hold: the commit is one gap
+            // off the neighbour's edge, off the lattice, and it sticks.
             harness.beginDrag(moverWidget);
-            harness.moveShadowTo(470, 48);
-            harness.releaseAtShadow(470, 48);
+            harness.moveShadowTo(482, 48);
+            harness.releaseAtShadow(482, 48);
             stepHeldCommitVerify.running = true;
         }
     }
@@ -319,8 +324,8 @@ ShellRoot {
         id: stepHeldCommitVerify
         interval: 400
         onTriggered: {
-            harness.check("a release inside the hold commits the neighbour's edge, off the lattice",
-                          harness.at(moverWidget, 465, 48));
+            harness.check("a release inside the hold commits one gap off the neighbour's edge, off the lattice",
+                          harness.at(moverWidget, 477, 48));
             harness.check("the guides do not outlive the gesture",
                           canvas.edgeGuideXActive === false
                               && canvas.edgeGuideYActive === false);
