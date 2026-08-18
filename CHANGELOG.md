@@ -12,6 +12,45 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.26.0] — 2026-08-19
+
+The lock screen gets its own widget layout, snapping stops gluing widgets
+together, and two things that could not be stopped or found their place now
+can.
+
+### Added
+- **The lock screen's widget layout is its own.** Move a widget on Edit Mode's
+  Lockscreen tab and that screen forks: from then on the lock and the desktop
+  arrange — and size — their widgets independently, so the media widget can be
+  3×2 on the desktop and 1×2 on the lock. Nothing changes until you move
+  something; a screen you have never edited there keeps following the desktop,
+  and the drawer's Lock section says which state you are in and offers **Use
+  desktop layout** to re-link. Undo works across tabs, and presets carry both
+  layouts — a preset from an older shell leaves your fork alone.
+- **An edge-snapping toggle on Edit Mode's toolbar**, beside "Add widgets". It
+  is the same switch Settings already offers, surfaced where the snapping
+  happens.
+
+### Fixed
+- **Widgets snapped side by side keep one gap between them** — the same 12px
+  that already separates the cells inside a wider widget — instead of gluing
+  into a slab. Aligning an edge to an edge still lands exactly on the line.
+- **A recording you cannot stop.** Every stop path sends the recorder one
+  SIGINT, and a background job in a non-interactive shell is born ignoring it;
+  the recorder normally undoes that once capturing, but one stuck before its
+  first frame never did. The stop now escalates INT → TERM → KILL, the launch
+  no longer hands the recorder an ignored INT, and a recording that produces
+  no frames within 25 seconds is torn down and reported instead of sitting
+  behind an indicator that says "recording". (The underlying cause on the
+  reporting machine was a hung `xdg-desktop-portal-hyprland`; fullscreen
+  recordings go through the portal, region recordings do not, which is why
+  only one of them appeared broken.)
+- **A bar popup that opened in the top-left corner** rather than under its
+  widget. The popup surface now unmaps while idle (0.25.0's fullscreen frame
+  fix), and a layer surface that has just been shown reports a placeholder
+  size for its first tick — the card was being clamped against 500×500. It
+  places itself again once its real geometry arrives.
+
 ## [0.25.0] — 2026-08-18
 
 The Edit Mode release. Press the button and the desktop shrinks into a card
