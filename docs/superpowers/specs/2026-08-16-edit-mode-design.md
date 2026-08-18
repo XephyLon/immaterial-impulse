@@ -457,15 +457,35 @@ switched off. Not acceptable at any price.
   (`LockScreen.qml:15`, `:17-28`), so the tree is not welded to `WlSessionLockSurface` — only its
   one instantiation site is.
 
-**A widget has one position, and the lock screen shows it at that position.**
-`desktopPositions` is keyed `[screenName][pluginId]` and holds `{x, y, placementStrategy}`
-(`PluginState.qml:18-31`) — there is no locked variant. Arranging widgets "for the lock screen"
-arranges them for the desktop too. `lock.centerClock` is the one existing exception and it is a
-per-widget override applied at render, not a second stored position. **Accept it.** A second
-position doubles the placement model, and `scripts/presets.sh` captures `desktopPositions`
-wholesale, so every preset would silently gain one. AGENT.md's rule about two fields that must
-agree eventually disagreeing applies directly. What the tab edits is *which* widgets appear while
-locked, plus the islands.
+**~~A widget has one position, and the lock screen shows it at that position.~~** *Overruled
+2026-08-18* (maintainer: *"lockscreen widget layout is meant to be different from desktop layout if
+the user decides to alter the widgets and their order in lockscreen"*, and the same day: *"a widget
+state is not correctly saved when it's different between desktop and lockscreen (media widget being
+3x2 instead of 1x2 for example)"*). The original paragraph is kept struck through because its two
+objections were real and the replacement answers each:
+
+- *A second position doubles the placement model.* → **Fork on first edit**, not two stores from
+  day one. `lockPositions` sits beside `desktopPositions` with the same `[screen][pluginId]` shape,
+  and a screen **absent** from it shows the desktop's layout — so every user is still in the
+  one-position model until they move something on the Lockscreen tab. That first lock write copies
+  the whole screen across (a snapshot, not a one-widget overlay), and from then on the two are
+  independent. A "Widget layout follows the desktop / is separate" row in the drawer's Lock section
+  says which state a screen is in and, while forked, offers **Use desktop layout** to re-link it.
+- *Every preset would silently gain one.* → It should: a preset *is* the layout. `presets.sh`
+  captures `lockPositions` beside `desktopPositions` and applies it under the same `has()` rule, so
+  a preset from an older shell that lacks the key leaves a user's fork alone.
+- **The span forks with the position.** The desktop's stays the per-plugin `__gridSize` option; a
+  forked lock screen's lives *in* the widget's lock record as `gridSize`, copied by the fork
+  snapshot. A lock record without one reads through to the desktop's.
+- **Undo captures the surface at push time.** A closure that resolved it at pop time would write a
+  lock position into the desktop store when popped from the other tab; every position and span
+  writer names its surface into the closure. The re-link's undo restores whole records.
+
+`modules/common/plugins/layout_surfaces.js` is the arithmetic; `PluginState.currentSurface`
+resolves the default surface from the one lock-look derivation; `tst_layout_surfaces.qml`,
+`test_layout_surfaces_contract.py` and `EditModeRuntimeTest.qml` (a real drag and a real grip pull
+on the Lockscreen tab) hold it. `lock.centerClock` stays a render-time override, and what the tab
+edits for *presence* is unchanged: `visibleWhenLocked` is still the single toggle.
 
 What can be edited in the islands, and what cannot, is §14 — the one open question.
 
