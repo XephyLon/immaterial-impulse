@@ -2880,6 +2880,23 @@ mode is built out of are worth not re-deriving:
   feat(lock): island contents reorder in the mode;
   test(lock): the reorder harness gets a session bus of its own;
   test(lint): a qs harness must decide which session bus it talks to.)
+- **"The lock's look is on screen" is ONE derivation, and the palette is one
+  of the things it decides.** `GlobalStates.lockLookActive` is
+  `screenLocked || editLockPreview`, and it sits beside `editLockPreview`
+  rather than replacing it because the two answer different questions:
+  `editLockPreview` decides which SOURCE a layer draws, which every layer
+  answers for itself, and `lockLookActive` decides which THEME the picture is
+  in, of which the shell has exactly one. The disjunction had been written out
+  at six sites across three files and the seventh — `MaterialThemeLoader.
+  lockThemeActive` and Appearance's `wallColorQuant`, which the transparency
+  is derived from — was missed, so Edit Mode's Lockscreen tab drew the lock's
+  wallpaper under the desktop's colours. Six copies of a question is how the
+  seventh gets forgotten. `test_edit_mode_contract.py` pins the definition as
+  well as the sites, because every gate now reads it and a narrowed definition
+  un-filters all of them at once.
+  (feat(editMode): one derivation of "the lock's look is on screen";
+  fix(editMode): the Lockscreen tab carries the palette with it;
+  test(editMode): the tab's palette is driven, and the derivation is pinned.)
 - **A dragged widget holds a neighbour's edge through a Schmitt trigger, and
   both thresholds read the SHADOW — stage 10, spec §6.**
   `modules/common/functions/edge_snap.js` owns the arithmetic: four relations
