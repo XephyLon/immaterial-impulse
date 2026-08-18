@@ -270,13 +270,15 @@ Variants {
             GlobalStates.clockDepthViewports = published
         }
 
-        // The lock terms below say `screenLocked || editLockPreview` because
-        // Edit Mode's Lockscreen tab is a FILTER on this viewport (spec §1.4):
+        // The lock terms below read `GlobalStates.lockLookActive` - the one
+        // spelling of "the lock's look is on screen", which is the session
+        // lock OR Edit Mode's Lockscreen tab - because that tab is a FILTER on
+        // this viewport (spec §1.4):
         // it switches these same layers to their locked inputs rather than
         // drawing a second copy of any of them, so the preview inside the
         // shrunk card is the picture the lock screen will actually show.
         property string effectiveWallpaperPath: {
-            if ((GlobalStates.screenLocked || GlobalStates.editLockPreview)
+            if (GlobalStates.lockLookActive
                     && Config.options.background.lockWall !== "")
                 return Config.options.background.lockWall
             return Wallpapers.previewPath || Wallpapers.confirmedPath || Config.options.background.wallpaperPath
@@ -290,7 +292,7 @@ Variants {
         // on unlock): the WE surface reloads the lock project and the existing
         // WE<->WE peel plays, so one renderer covers both - no second surface.
         property string weProjectPath: {
-            if ((GlobalStates.screenLocked || GlobalStates.editLockPreview)
+            if (GlobalStates.lockLookActive
                     && Config.options.background.lockWallEngine !== "")
                 return Config.options.background.lockWallEngine
             return Config.options.wallpaperSelector.wallpaperEngine.activePath ?? ""
@@ -326,7 +328,7 @@ Variants {
         // Image lock wallpaper only. A WE lock wallpaper (lockWallEngine set) is
         // served by switching weProjectPath instead, so exclude it here even though
         // its preview lives in lockWall for palette generation.
-        property bool lockWallShown: (GlobalStates.screenLocked || GlobalStates.editLockPreview)
+        property bool lockWallShown: GlobalStates.lockLookActive
             && Config.options.background.lockWall !== ""
             && Config.options.background.lockWallEngine === "" && bgRoot.weActive
         property bool lockRevealWe: false // true = peeling back to WE (unlock)
@@ -1037,8 +1039,7 @@ Variants {
                 // Lockscreen tab shows the lock's own blur inside the shrunk
                 // card, through this same loader - a child of the viewport, so
                 // it takes the edit transform with everything else in here.
-                readonly property bool lockLook: GlobalStates.screenLocked
-                    || GlobalStates.editLockPreview
+                readonly property bool lockLook: GlobalStates.lockLookActive
                 active: Config.options.lock.blur.enable && (blurLoader.lockLook || scaleAnim.running)
                 anchors.fill: parent
                 scale: blurLoader.lockLook ? Config.options.lock.blur.extraZoom : 1
