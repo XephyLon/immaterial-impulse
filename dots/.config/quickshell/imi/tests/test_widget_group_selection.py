@@ -117,6 +117,12 @@ class GroupDragIsRigid(unittest.TestCase):
         """Clamp-then-snap can round the leader back off the group bound by up
         to half a grid cell, deforming the cluster at the edge by exactly the
         amount the lattice was supposed to guarantee.
+
+        The snap has two forms since edge snap landed (spec 6): a held
+        neighbour-edge target, else the lattice. The pin is the ORDERING -
+        the group clamp wraps whichever snap answered - so the regex admits
+        the held branch inside the clamp rather than freezing the lattice-only
+        spelling.
         """
         text = squashed(WIDGET)
         for axis in ("X", "Y"):
@@ -124,7 +130,9 @@ class GroupDragIsRigid(unittest.TestCase):
             self.assertRegex(
                 text,
                 rf"Math\.max\(root\.groupDragMin{axis}, Math\.min\("
-                rf"root\.groupDragMax{axis}, root\.snapEnabled \? "
+                rf"root\.groupDragMax{axis}, "
+                rf"root\.edgeSnapHeld{axis} !== null \? root\.edgeSnapHeld{axis}\.target : "
+                rf"root\.snapEnabled \? "
                 rf"root\.snap{axis}\({re.escape(proxy)}\) : {re.escape(proxy)}\)\)",
                 f"the {axis} drag binding must clamp the snapped value")
 
