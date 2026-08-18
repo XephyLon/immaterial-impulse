@@ -14,7 +14,14 @@ stored lists untouched.
 
 Headless weston because the harness opens a window; weston implements no
 wlr-layer-shell, so the real session lock surface is outside what this can
-say. Skips when weston or qs is missing, as in CI.
+say.
+
+A PRIVATE session bus, for the same reason the runtime dir is private: the
+left island's `username` and `keyboardLayout` slots hide while a media player
+is registered (`LockSurface.islandItemVisible`), so on the user's own session
+bus a browser holding an MPRIS name makes both invisible and the drag lands on
+nothing - the test then passes or fails on whether a tab was playing. Skips
+when weston, qs or dbus-run-session is missing, as in CI.
 """
 
 import os
@@ -45,10 +52,12 @@ def _stop(proc):
 
 
 def _runtime_available():
-    return shutil.which("qs") is not None and shutil.which("weston") is not None
+    return all(shutil.which(binary) is not None
+               for binary in ("qs", "weston", "dbus-run-session"))
 
 
-@unittest.skipUnless(_runtime_available(), "needs qs and weston on PATH")
+@unittest.skipUnless(_runtime_available(),
+                     "needs qs, weston and dbus-run-session on PATH")
 class LockIslandReorderRuntimeTest(unittest.TestCase):
     def setUp(self):
         self.home = Path(tempfile.mkdtemp(prefix="imi-lock-islands-"))
@@ -85,8 +94,12 @@ class LockIslandReorderRuntimeTest(unittest.TestCase):
         env["XDG_CONFIG_HOME"] = str(self.home / "config")
         env["XDG_STATE_HOME"] = str(self.home / "state")
 
-        proc = subprocess.run(["qs", "-p", str(HARNESS)], cwd=str(ROOT), env=env,
-                              capture_output=True, text=True, timeout=240)
+        # dbus-run-session, not the inherited DBUS_SESSION_BUS_ADDRESS: the
+        # harness must see the services this test declares, never the ones the
+        # user happens to be running.
+        proc = subprocess.run(
+            ["dbus-run-session", "--", "qs", "-p", str(HARNESS)],
+            cwd=str(ROOT), env=env, capture_output=True, text=True, timeout=240)
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\n{output}")
