@@ -123,6 +123,20 @@ Singleton {
     readonly property bool editLockPreview: root.editMode
         && root.editTab === EditMode.LOCKSCREEN_TAB
 
+    // "The lock's LOOK is on screen" - the real lock session OR the tab that
+    // filters the viewport into it. Separate from `editLockPreview` because
+    // the two questions have different consumers: the wallpaper, the islands
+    // and the widget filter ask which SOURCE to draw, and answer it per layer;
+    // the palette and the wallpaper's quantizer ask which THEME the picture is
+    // in, and there is only one of those for the whole shell.
+    //
+    // Stated here rather than spelled out at each site for the reason above:
+    // the theme sites keyed on `screenLocked` alone, so the tab switched every
+    // layer's source to the lock's and left the colours the desktop's - the
+    // preview showed the lock's wallpaper under the desktop's palette, which
+    // is a picture the lock screen never shows.
+    readonly property bool lockLookActive: root.screenLocked || root.editLockPreview
+
     // The drawer - Edit Mode's catalogue of desktop widgets. Session state for
     // the same reason the mode is, and beside it for the same reason the
     // progress is: the desktop it translates and the panel that slides in are
