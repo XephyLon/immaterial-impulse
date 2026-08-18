@@ -138,6 +138,12 @@ PanelWindow {
     }
 
     function togglePlugin(manifest) {
+        // Presence flips are §7.3's add and remove: one entry either way,
+        // holding the whole enabled list from before the write. The closure
+        // reaches only the Config singleton and captured data.
+        const before = EditMode.listCopy(Config.options.plugins.enabled);
+        GlobalStates.editUndoPush(() =>
+            Config.setNestedValue("plugins.enabled", before));
         if (Config.options.plugins.enabled.includes(manifest.id))
             Config.setNestedValue("plugins.enabled", root.enabledWithout(manifest.id));
         else
@@ -166,6 +172,24 @@ PanelWindow {
     // rule about this file. Arranging it further is the bar's in-place drag;
     // the widget arrives at the bucket's end, badged and draggable.
     function appendBarWidget(widgetId, bucket) {
+        // An add to a bar bucket (§7.3): the closure restores the one bucket
+        // it touched, at the same literal path the write below uses.
+        if (bucket === "left") {
+            const beforeLeft = EditMode.listCopy(Config.options.bar.layouts.leftLayout);
+            GlobalStates.editUndoPush(() => {
+                Config.options.bar.layouts.leftLayout = beforeLeft;
+            });
+        } else if (bucket === "middle") {
+            const beforeMiddle = EditMode.listCopy(Config.options.bar.layouts.middleLayout);
+            GlobalStates.editUndoPush(() => {
+                Config.options.bar.layouts.middleLayout = beforeMiddle;
+            });
+        } else {
+            const beforeRight = EditMode.listCopy(Config.options.bar.layouts.rightLayout);
+            GlobalStates.editUndoPush(() => {
+                Config.options.bar.layouts.rightLayout = beforeRight;
+            });
+        }
         if (bucket === "left")
             Config.options.bar.layouts.leftLayout = LayoutOps.insert(
                 Config.options.bar.layouts.leftLayout, widgetId,
@@ -186,12 +210,28 @@ PanelWindow {
     // keys are presence-on-a-surface (spec §9 names lock.show* as exactly
     // that), and the same booleans LockIdleConfig's rows write.
     function toggleLockIsland(key) {
-        if (key === "showToolbars")
+        // Presence on the lock surface is §9's fourth licence, so a flip is
+        // recorded like the drawer's widget toggles - one closure per key,
+        // each writing its own literal path back.
+        if (key === "showToolbars") {
+            const beforeToolbars = Config.options.lock.showToolbars;
+            GlobalStates.editUndoPush(() => {
+                Config.options.lock.showToolbars = beforeToolbars;
+            });
             Config.options.lock.showToolbars = !Config.options.lock.showToolbars;
-        else if (key === "showMedia")
+        } else if (key === "showMedia") {
+            const beforeMedia = Config.options.lock.showMedia;
+            GlobalStates.editUndoPush(() => {
+                Config.options.lock.showMedia = beforeMedia;
+            });
             Config.options.lock.showMedia = !Config.options.lock.showMedia;
-        else if (key === "showWidgets")
+        } else if (key === "showWidgets") {
+            const beforeWidgets = Config.options.lock.showWidgets;
+            GlobalStates.editUndoPush(() => {
+                Config.options.lock.showWidgets = beforeWidgets;
+            });
             Config.options.lock.showWidgets = !Config.options.lock.showWidgets;
+        }
     }
 
     function addWidgetAt(manifest, dropX, dropY) {
@@ -217,6 +257,25 @@ PanelWindow {
         // the widget up at the default position and then move it (spec §8.3 -
         // an added widget is placed the moment it is added, and there is no
         // "unplaced" state to park it in).
+        // A drop is ONE add (§7.3), so it is one entry even though it makes
+        // two writes: the closure puts the enabled list back whole and, where
+        // the store already held a position for this widget from an earlier
+        // life, restores that too. A position left behind for a disabled
+        // widget is invisible and harmless, so a first-ever add restores
+        // nothing there.
+        const id = manifest.id;
+        const screen = root.screen?.name ?? "";
+        const beforeEnabled = EditMode.listCopy(Config.options.plugins.enabled);
+        // Existence checked on the raw store: PluginState.position() answers
+        // the DEFAULT for an absent entry, which would read as a stored
+        // position that was never there.
+        const hadPosition = PluginState.state?.desktopPositions?.[screen]?.[id] !== undefined;
+        const beforePosition = hadPosition ? PluginState.position(id, screen) : null;
+        GlobalStates.editUndoPush(() => {
+            Config.setNestedValue("plugins.enabled", beforeEnabled);
+            if (beforePosition)
+                PluginState.setPosition(id, screen, beforePosition);
+        });
         PluginState.setPosition(manifest.id, root.screen?.name ?? "",
             { x: placed.x, y: placed.y, placementStrategy: "free" });
         root.enablePlugin(manifest.id);
@@ -250,7 +309,16 @@ PanelWindow {
         // The dock's presence write goes through its one existing writer -
         // the same togglePin the dock's own context menu calls - rather than
         // a second spelling of the pinnedApps edit here.
-        onDockAppToggleRequested: (appId) => TaskbarApps.togglePin(appId)
+        onDockAppToggleRequested: (appId) => {
+            // A dock pin flip is an add or a remove (§7.3). The write stays
+            // with TaskbarApps.togglePin - the one existing writer - and the
+            // closure restores the pinned list at its literal path.
+            const beforePins = EditMode.listCopy(Config.options.dock.pinnedApps);
+            GlobalStates.editUndoPush(() => {
+                Config.options.dock.pinnedApps = beforePins;
+            });
+            TaskbarApps.togglePin(appId);
+        }
         onLockIslandToggleRequested: (key) => root.toggleLockIsland(key)
     }
 }

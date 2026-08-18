@@ -282,7 +282,17 @@ AbstractBackgroundWidget {
 
     function commitGridSize(size) {
         if (!manifest || !size) return;
-        PluginState.setOption(manifest.id, "__gridSize", GridSizes.formatSize(size));
+        // A span commit is one of spec §7.3's five committed mutations. The
+        // undo closure captures plain data and the PluginState singleton,
+        // never `rootWidget` - the stack outlives any widget the mode can
+        // destroy - and an unchanged span pushes nothing, so a commit of the
+        // span the widget already has does not spend an entry.
+        const id = manifest.id;
+        const next = GridSizes.formatSize(size);
+        const before = PluginState.option(id, "__gridSize", null);
+        if (before !== next)
+            GlobalStates.editUndoPush(() => PluginState.setOption(id, "__gridSize", before));
+        PluginState.setOption(id, "__gridSize", next);
     }
 
     function beginGridResize() {
@@ -610,13 +620,33 @@ AbstractBackgroundWidget {
         // pan's worth every time it was dragged. It is clamped here as well as
         // on the way back in, so the store can never hold a position the
         // widget is not drawn at.
+        const beforeX = rootWidget.targetX;
+        const beforeY = rootWidget.targetY;
         rootWidget.targetX = rootWidget.clampX(ParallaxMath.placementFromDrawn(
             rootWidget.x, rootWidget.parallaxCancelX));
         rootWidget.targetY = rootWidget.clampY(ParallaxMath.placementFromDrawn(
             rootWidget.y, rootWidget.parallaxCancelY));
         rootWidget.restoreXYBinding();
         if (!manifest) return;
-        PluginState.setPosition(manifest.id, screenName, {
+        // A drag's release is a committed mutation (spec §7.3), and this is
+        // its one commit path - the leader's release and every group-drag
+        // follower both land here. The closure captures plain values and the
+        // PluginState singleton only; a commit that moved nothing (every
+        // click on a draggable widget releases through here) pushes nothing,
+        // or the stack would fill with entries that undo to where the widget
+        // already is. A group drag therefore records one entry per member -
+        // one entry per committed mutation is the spec's grain.
+        const id = manifest.id;
+        const screen = rootWidget.screenName;
+        if (beforeX !== rootWidget.targetX || beforeY !== rootWidget.targetY) {
+            const before = {
+                x: beforeX,
+                y: beforeY,
+                placementStrategy: rootWidget.placementStrategy
+            };
+            GlobalStates.editUndoPush(() => PluginState.setPosition(id, screen, before));
+        }
+        PluginState.setPosition(id, screenName, {
             x: rootWidget.targetX,
             y: rootWidget.targetY,
             placementStrategy: rootWidget.placementStrategy

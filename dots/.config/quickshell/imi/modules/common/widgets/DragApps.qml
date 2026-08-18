@@ -8,6 +8,7 @@ import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
+import "../functions/edit_mode.js" as EditMode
 import Quickshell.Io
 import Quickshell
 import Quickshell.Widgets
@@ -74,6 +75,18 @@ Item {
 
     function commitOrder() {
         const newOrder = _workOrder.slice()
+        // A reorder drop is a committed mutation (spec §7.3). The push is
+        // gated on the mode inside editUndoPush, so the dock's everyday
+        // reorder records nothing; a drop that changed no order pushes
+        // nothing either, since commitOrder runs for every drag end.
+        const before = EditMode.listCopy(Config.options.dock.pinnedApps)
+        let changed = before.length !== newOrder.length
+        for (let i = 0; !changed && i < newOrder.length; i++)
+            changed = before[i] !== newOrder[i]
+        if (changed)
+            GlobalStates.editUndoPush(() => {
+                Config.options.dock.pinnedApps = before
+            })
         Config.options.dock.pinnedApps = newOrder
         orderChanged(newOrder)
     }
@@ -353,6 +366,11 @@ Item {
                             // pointer (touch) could otherwise remove by a
                             // mid-drag index into the wrong list.
                             if (!GlobalStates.editMode || root._dragging) return;
+                            // A remove is a committed mutation (spec §7.3).
+                            const beforePins = EditMode.listCopy(Config.options.dock.pinnedApps);
+                            GlobalStates.editUndoPush(() => {
+                                Config.options.dock.pinnedApps = beforePins;
+                            });
                             Config.options.dock.pinnedApps =
                                 LayoutOps.remove(root.pinnedApps, slotItem.index);
                         }

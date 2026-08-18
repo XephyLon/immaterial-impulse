@@ -173,6 +173,35 @@ Singleton {
     property bool editLockDragActive: false
     signal editReorderCancel()
 
+    // The undo stack (spec §7.3): in memory, session-scoped, bounded, one
+    // entry per COMMITTED mutation - a drag's release, a span commit, a
+    // reorder drop, an add, a remove - and ONE stack across all surfaces,
+    // because the user's notion of "the last thing I did" does not partition
+    // by surface. Each entry is a closure over the store write that reverses
+    // the mutation, captured at the call site that committed it; the
+    // arithmetic (LIFO, the ~50 bound, copy-on-write) is edit_mode.js's so a
+    // test can reach it. §7.4's restart argument holds with no code: the
+    // stack only ever offered to reverse committed changes, and it is gone
+    // with the process while the changes are on disk.
+    //
+    // Recording is gated on the mode: the same gestures commit all day with
+    // the mode off, and a Ctrl+Z inside the mode reversing a drag made hours
+    // before it would be undo reaching further back than the editor whose
+    // affordance it is. The stack survives leaving and re-entering the mode
+    // within a session - session-scoped is the spec's word, and clearing on
+    // exit would make Done destroy the very history "I did not mean that"
+    // asks for.
+    property var editUndoStack: []
+    function editUndoPush(entry) {
+        if (!root.editMode) return;
+        root.editUndoStack = EditMode.undoPush(root.editUndoStack, entry);
+    }
+    function editUndo() {
+        const popped = EditMode.undoPop(root.editUndoStack);
+        root.editUndoStack = popped.stack;
+        if (popped.entry !== null) popped.entry();
+    }
+
     property bool dropShelfOpen: false
     property real dropShelfX: 0
     property real dropShelfY: 0

@@ -99,6 +99,22 @@ MouseArea {
     // to a Bottom-layer surface is not established, which is why the mode has a
     // pointer way out as well and no feature depends on this alone.
     focus: root.selectionEnabled
+    // Ctrl+Z, on this surface and no other, because this is the surface the
+    // probe says the keyboard actually works on: measured in a nested
+    // Hyprland, a Bottom-layer surface with keyboardFocus: OnDemand receives
+    // real compositor key events while it holds that focus - which is the
+    // state the mode arms (keyboardFocusHeld below includes editMode). The
+    // chrome surface stays WlrKeyboardFocus.None, exactly as its contract
+    // pins. The Escape ladder below is untouched: undo reverses the last
+    // COMMITTED mutation, Escape cancels the gesture still in flight, and
+    // the two never answer the same moment.
+    Keys.onPressed: (event) => {
+        if (!root.editMode) return
+        if (event.key === Qt.Key_Z && (event.modifiers & Qt.ControlModifier)) {
+            GlobalStates.editUndo()
+            event.accepted = true
+        }
+    }
     Keys.onEscapePressed: {
         const action = EditMode.resolveEscape({
             menuOpen: GlobalStates.editWidgetMenuOpen,
