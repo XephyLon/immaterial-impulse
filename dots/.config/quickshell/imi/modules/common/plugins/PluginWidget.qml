@@ -138,7 +138,7 @@ AbstractBackgroundWidget {
     readonly property bool gridResizable: rootWidget.offeredGridSizes.length > 1
     // Stored -> manifest default -> null, which is the content-sized path.
     readonly property var storedGridSize: GridSizes.resolveSize(rootWidget.gridSpec,
-        manifest ? PluginState.option(manifest.id, "__gridSize") : undefined)
+        manifest ? PluginState.gridSize(manifest.id, screenName) : undefined)
     // The span the grip's drag is currently previewing, null when no resize is
     // in flight. The widget resizes as the pointer moves, so the size on screen
     // is the size a release commits - and Escape cancels by clearing this, with
@@ -288,11 +288,15 @@ AbstractBackgroundWidget {
         // destroy - and an unchanged span pushes nothing, so a commit of the
         // span the widget already has does not spend an entry.
         const id = manifest.id;
+        const screen = rootWidget.screenName;
+        // The surface, captured now - see commitPosition for why the closure
+        // must not resolve it at pop time.
+        const surface = PluginState.currentSurface;
         const next = GridSizes.formatSize(size);
-        const before = PluginState.option(id, "__gridSize", null);
+        const before = PluginState.gridSize(id, screen, surface) ?? null;
         if (before !== next)
-            GlobalStates.editUndoPush(() => PluginState.setOption(id, "__gridSize", before));
-        PluginState.setOption(manifest.id, "__gridSize", next);
+            GlobalStates.editUndoPush(() => PluginState.setGridSize(id, screen, before, surface));
+        PluginState.setGridSize(id, screen, next, surface);
     }
 
     function beginGridResize() {
@@ -638,19 +642,24 @@ AbstractBackgroundWidget {
         // one entry per committed mutation is the spec's grain.
         const id = manifest.id;
         const screen = rootWidget.screenName;
+        // The surface this drag happened on, captured NOW: the undo closure
+        // runs later, from whichever tab the user is on then, and a closure
+        // that resolved the surface at pop time would write a lock position
+        // into the desktop store (or the reverse).
+        const surface = PluginState.currentSurface;
         if (beforeX !== rootWidget.targetX || beforeY !== rootWidget.targetY) {
             const before = {
                 x: beforeX,
                 y: beforeY,
                 placementStrategy: rootWidget.placementStrategy
             };
-            GlobalStates.editUndoPush(() => PluginState.setPosition(id, screen, before));
+            GlobalStates.editUndoPush(() => PluginState.setPosition(id, screen, before, surface));
         }
         PluginState.setPosition(id, screenName, {
             x: rootWidget.targetX,
             y: rootWidget.targetY,
             placementStrategy: rootWidget.placementStrategy
-        });
+        }, surface);
     }
 
     // A declared grid span drives the pixel size directly; otherwise the widget

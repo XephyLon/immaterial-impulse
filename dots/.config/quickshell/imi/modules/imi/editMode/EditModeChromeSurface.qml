@@ -157,7 +157,7 @@ PanelWindow {
     // size exists only once it instantiates.
     function spanSizeFor(manifest) {
         const span = GridSizes.resolveSize(manifest.grid,
-            PluginState.option(manifest.id, "__gridSize", ""));
+            PluginState.gridSize(manifest.id, root.screen?.name ?? "") ?? "");
         if (!span)
             return { width: 0, height: 0 };
         return {
@@ -234,6 +234,20 @@ PanelWindow {
         }
     }
 
+    // Re-link this screen's lock layout to the desktop's. One committed
+    // mutation, one undo entry: the closure puts the whole forked screen back
+    // by writing each widget's lock position again on the LOCK surface, named
+    // explicitly - the user may undo from the Desktop tab.
+    function resetLockLayout() {
+        const screen = root.screen?.name ?? "";
+        if (!PluginState.lockLayoutForked(screen)) return;
+        // The whole records - position AND span - so the undo puts back
+        // exactly the fork that was there, not a re-fork from the desktop.
+        const forked = PluginState.lockRecords(screen);
+        GlobalStates.editUndoPush(() => PluginState.restoreLockRecords(screen, forked));
+        PluginState.resetLockLayout(screen);
+    }
+
     function addWidgetAt(manifest, dropX, dropY) {
         // A release back over the drawer is the gesture being abandoned, not
         // an instruction to add the widget at the drawer.
@@ -266,18 +280,22 @@ PanelWindow {
         const id = manifest.id;
         const screen = root.screen?.name ?? "";
         const beforeEnabled = EditMode.listCopy(Config.options.plugins.enabled);
+        // The surface the drop lands on, captured now for the same reason the
+        // widget's own drag captures it: the closure runs from whichever tab
+        // the user is on when they undo.
+        const surface = PluginState.currentSurface;
         // Existence checked on the raw store: PluginState.position() answers
         // the DEFAULT for an absent entry, which would read as a stored
         // position that was never there.
-        const hadPosition = PluginState.state?.desktopPositions?.[screen]?.[id] !== undefined;
-        const beforePosition = hadPosition ? PluginState.position(id, screen) : null;
+        const beforeRaw = PluginState.rawPosition(id, screen, surface);
+        const beforePosition = beforeRaw !== undefined ? PluginState.position(id, screen, surface) : null;
         GlobalStates.editUndoPush(() => {
             Config.setNestedValue("plugins.enabled", beforeEnabled);
             if (beforePosition)
-                PluginState.setPosition(id, screen, beforePosition);
+                PluginState.setPosition(id, screen, beforePosition, surface);
         });
         PluginState.setPosition(manifest.id, root.screen?.name ?? "",
-            { x: placed.x, y: placed.y, placementStrategy: "free" });
+            { x: placed.x, y: placed.y, placementStrategy: "free" }, surface);
         root.enablePlugin(manifest.id);
     }
 
@@ -326,5 +344,7 @@ PanelWindow {
             TaskbarApps.togglePin(appId);
         }
         onLockIslandToggleRequested: (key) => root.toggleLockIsland(key)
+        onLockLayoutResetRequested: root.resetLockLayout()
+        screenName: root.screen?.name ?? ""
     }
 }

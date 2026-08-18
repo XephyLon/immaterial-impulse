@@ -88,6 +88,7 @@ Scope {
                 id: card
                 manifest: PluginManager.availablePlugins.find(
                     entry => entry.id === GlobalStates.editWidgetMenuPluginId) ?? null
+                screenName: menuWindow.screen?.name ?? ""
                 width: implicitWidth
                 height: implicitHeight
                 x: Math.min(Math.max(GlobalStates.editWidgetMenuX, 8),
