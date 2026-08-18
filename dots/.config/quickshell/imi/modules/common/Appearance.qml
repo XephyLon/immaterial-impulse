@@ -28,7 +28,7 @@ Singleton {
     // Transparency. The quadratic functions were derived from analysis of hand-picked transparency values.
     ColorQuantizer {
         id: wallColorQuant
-        property string wallpaperPath: (GlobalStates.screenLocked && Config.options.background.lockWall !== "")
+        property string wallpaperPath: (GlobalStates.lockLookActive && Config.options.background.lockWall !== "")
             ? Config.options.background.lockWall
             : Config.options.background.wallpaperPath
         property bool wallpaperIsVideo: wallpaperPath.endsWith(".mp4") || wallpaperPath.endsWith(".webm") || wallpaperPath.endsWith(".mkv") || wallpaperPath.endsWith(".avi") || wallpaperPath.endsWith(".mov")
