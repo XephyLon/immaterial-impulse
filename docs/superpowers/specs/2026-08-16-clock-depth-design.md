@@ -1,6 +1,6 @@
 # Clock depth mode — feasibility and design
 
-**Status:** partially implemented (v0.25.0; `aa6a8bfb0` — `subject_mask.py` producer, `clockDepth.js`, `clockDepthSelect/`, `Background.qml` `clockDepthLayer`). §8 (Wallpaper Engine) is designed, not landed. Open quality issue: mask separation is not crisp enough — fine structure such as hair claims more mask than it should. §1 is the feasibility evidence.
+**Status:** implemented (v0.25.0; `aa6a8bfb0` — `subject_mask.py` producer, `clockDepth.js`, `clockDepthSelect/`, `Background.qml` `clockDepthLayer`). Mask-separation quality (hair claiming a band of background, background bleed on wide wallpapers) is addressed by the edge hardening and aspect-true storage in §9. §8 (Wallpaper Engine) is designed, not landed. §1 is the feasibility evidence.
 **Scope:** `modules/imi/background/Background.qml`, a new `scripts/background/` producer, the
 wallpaper selector, `sdata/uv/`.
 
@@ -266,11 +266,19 @@ Invalidation therefore has exactly three sources and no explicit invalidation co
 - the wallpaper file changes in place → different key;
 - the user re-runs the picker on the same wallpaper → the picker overwrites that key's entry.
 
-The mask is stored at **model resolution (1024²), not at wallpaper resolution.** Upscaling to
-5120 px is a `smooth: true` texture fetch the GPU does for free, and storing a 7680×2160 grayscale
-PNG instead costs 3 MB per wallpaper and 0.88 s of write time for information that is not in the
-mask. The boundary is inherently ~5 screen px soft at 5120 wide; against a clock that reads as
-antialiasing, which is the one place this feature gets to be lucky.
+The mask is stored **aspect-true at 4096 on the long side, never larger than the wallpaper**
+(`storage_size` in the producer). It was the model's own 1024² square at first, on the reasoning
+that upscaling to 5120 px is a `smooth: true` texture fetch the GPU does for free, and that a
+7680×2160 grayscale PNG costs 3 MB per wallpaper and 0.88 s of write time for information that is
+not in the mask. Both halves of that are still true, and the second still rules out wallpaper
+resolution — but the first upscales the *softness* too: at 1024 wide over a 5760-wide picture each
+texel covers ~5.6 picture pixels, so the boundary was inherently ~5 screen px soft, and once §9's
+refinement gives the mask finer structure than that, 1024 texels throw it away again. 4096 keeps
+it: measured on the Violet Evergarden wallpaper (5760×2318), 4096×1648 at 357 KB against ~100 KB
+for the square. A wallpaper smaller than that is stored at its own size. The shell's `coverRect`
+maps the whole mask onto the whole picture without reading the mask's shape, so nothing on that
+side changed — `tst_clock_depth_eligibility.qml` had already pinned a non-square mask for the
+prompted model.
 
 ---
 
@@ -371,6 +379,8 @@ otherwise is how the parallax opt-out stayed green through its entire broken lif
   touching the file changes it, that a hit returns without constructing a session, and that the LRU
   sweep keeps the newest N. This is the piece with real edge cases and it is the piece the shell
   trusts blindly, so it is the piece that gets tested hardest.
+- *The refinement arithmetic* (§9), in `tests/test_subject_mask_refine.py`: the crop box and its
+  guard, the hardening curve's shape, and the storage size — pure numpy, no session.
 - *The eligibility predicate*, in `clockDepth.js`, via `tests/tst_clock_depth_eligibility.qml`.
   Six boolean inputs, and the cases that matter are the refusals: video, WE, mid-transition,
   opt-out marker present alongside a valid mask.
@@ -402,7 +412,8 @@ Four stages, each landable and reviewable on its own.
 
 **Stage 1 — the subject-mask producer and its cache.** `scripts/background/subject_mask.py`: takes a
 wallpaper path and a model name, computes the cache key, returns a hit immediately or runs
-ONNX Runtime and writes a 1024² mask plus a `.none` marker when the model returns nothing. Adds
+ONNX Runtime and writes a mask (1024² then; §9 and §3 for what it is now) plus a `.none` marker
+when the model returns nothing. Adds
 `onnxruntime` to `sdata/uv/requirements.in` and a first-use model fetch (two 176 MB files, not
 bundled). Ships with `tests/test_clock_depth_cache.py`. **No shell changes and no visible
 behaviour** — the deliverable is a CLI whose output can be inspected by hand, which is the right
@@ -516,3 +527,49 @@ probes cannot reach any of it; it has to be judged on the real desktop, by
 looking at a moving scene. That is a different kind of change from the ones this
 PR carries, all of which are pinned headlessly — and the instrument §8.4 depends
 on is the inspect mode this PR adds, so the order is the right way round.
+
+---
+
+## 9. Refinement — crisper masks, landed
+
+§1 judged the masks by eye and §3 accepted "~5 screen px soft" as the price of the model's 1024
+square. In use that price turned out to be paid in the wrong places: on the Violet Evergarden
+wallpaper (5760×2318, `isnet-general-use`) hair claimed a band of wall around itself, and a striped
+wall behind a hairline came through as subject — at ~5.6 picture pixels per mask texel the model
+cannot separate the two. Three changes, each measured on that wallpaper before it was written into
+the producer, and one thing tried and rejected.
+
+**Two-pass crop-refine (salient models only).** Pass 1 is the existing full-frame squash. Take the
+box of `mask > 0.5`, pad it by 12% of its own width and height each side, crop the wallpaper to
+it, run the model again on the crop (squashed to 1024² like everything else), upsample the fine
+answer to the crop and paste it over the coarse mask upsampled to the wallpaper. Cost +0.48 s. The
+stripe bleed is gone and the soft band tightens. Two guards: a box covering ≥85% of the frame skips
+pass 2 (same picture, same squash, nothing to gain), and a pass 1 that finds nothing keeps the
+existing `.none` path untouched — the `.none` verdict is pass 1's share, so the refinement can
+neither manufacture nor rescind one. Note what pass 2 also does: it re-decides low-contrast regions
+at the crop's resolution. On that wallpaper the collar and part of the white robe against the cream
+background, which the coarse pass claimed, are not claimed by the fine pass; the foreground share
+went 0.179 → 0.150. That is the model's answer at the better resolution, and the picker's
+accept/decline step (§6) is still where it is judged.
+
+**Edge hardening.** `1 / (1 + exp(-2·6·(m − 0.5)))` after the merge — a sigmoid with k = 6 around
+0.5, so 0.5 stays at 0.5 and no pixel changes sides. Soft band (0.16 < m < 0.84) 0.496 Mpx →
+0.235 Mpx. Applied to the prompted model's masks too.
+
+**Rejected: a guided filter.** He et al.'s fast guided filter on a downscaled luminance guide
+(r = 12, ε = 1e-3, /4) was tried between the merge and the hardening. It widened the band along
+every low-contrast outline — the opposite of the job — and is not in the producer. Recorded here
+and in `HARDEN_K`'s comment so it is not tried again.
+
+**Storage.** §3, amended: aspect-true at 4096 on the long side, still `LA` with the alpha
+duplicated for `OpacityMask`.
+
+**Follow-up, not landed:** the prompted path (`mobile-sam`) gets the hardening and the storage but
+not a crop-refine. Its embedding is cached once per wallpaper (that is what makes the second click
+cost 0.34 s), and refining a crop would need an embedding per crop — a per-click encode, which is
+exactly the cost the split exists to avoid. Whether a second, crop-local embedding is worth caching
+alongside the first is the open question there.
+
+`tests/test_subject_mask_refine.py` pins the arithmetic — box, guard, curve, storage size — with
+no model loaded; whether the result is *good* stays with the human at the picker, as §6 says.
+
