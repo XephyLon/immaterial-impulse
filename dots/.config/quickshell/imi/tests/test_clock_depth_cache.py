@@ -80,6 +80,80 @@ class CacheKeyTest(unittest.TestCase):
                          subject_mask.cache_key(link))
 
 
+class IdentityKeyTest(unittest.TestCase):
+    """A caller-supplied identity replaces the stat triple.
+
+    The Wallpaper Engine still is re-grabbed on every load of the project, so
+    its mtime moves every session - keyed on the file, the user's acceptance
+    would be minted a new key and lost on every restart. The shell hands in
+    `we:<projectId>` instead, and the file is only the picture to segment.
+    """
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+        self.cache = self.dir / "cache"
+        self.cache.mkdir()
+        self.still = self.dir / "3008040633.png"
+        self.still.write_bytes(b"a frame of a live scene")
+        self.addCleanup(self.tmp.cleanup)
+
+    def test_the_identity_key_ignores_the_files_stat_triple(self):
+        before = subject_mask.cache_key(self.still, identity="we:3008040633")
+        self.still.write_bytes(b"a different frame, grabbed a session later")
+        later = time.time() + 120
+        os.utime(self.still, (later, later))
+        self.assertEqual(before, subject_mask.cache_key(self.still, identity="we:3008040633"))
+        self.assertRegex(before, r"^[0-9a-f]{32}$")
+
+    def test_two_identities_over_one_file_are_two_keys(self):
+        self.assertNotEqual(subject_mask.cache_key(self.still, identity="we:1"),
+                            subject_mask.cache_key(self.still, identity="we:2"))
+
+    def test_the_identity_key_is_not_the_stat_key(self):
+        self.assertNotEqual(subject_mask.cache_key(self.still),
+                            subject_mask.cache_key(self.still, identity="we:3008040633"))
+
+    def test_status_answers_for_an_identity_whose_still_is_not_there_yet(self):
+        # A project that has not rendered this session has no still, and the
+        # picker has to say so rather than the query failing.
+        missing = self.dir / "never-rendered.png"
+        result = subject_mask.status(self.cache, missing, identity="we:never")
+        self.assertEqual(result["state"], "absent")
+        self.assertFalse(result["available"])
+        present = subject_mask.status(self.cache, self.still, identity="we:3008040633")
+        self.assertTrue(present["available"])
+
+    def test_the_verdicts_land_at_the_identity_key(self):
+        key = subject_mask.cache_key(self.still, identity="we:3008040633")
+        (self.cache / f"{key}.isnet-anime.png").write_bytes(b"a candidate")
+        result = subject_mask.accept(self.cache, self.still, "isnet-anime",
+                                     identity="we:3008040633")
+        self.assertEqual(result["state"], "accepted")
+        self.assertTrue((self.cache / f"{key}.png").exists())
+        result = subject_mask.decline(self.cache, self.still, identity="we:3008040633")
+        self.assertEqual(result["state"], "declined")
+        self.assertTrue((self.cache / f"{key}.off").exists())
+
+    def test_the_cli_carries_the_identity_on_every_verb(self):
+        key = subject_mask.cache_key(self.still, identity="we:3008040633")
+        (self.cache / f"{key}.isnet-anime.png").write_bytes(b"a candidate")
+        for verb, extra in (("status", []), ("accept", ["--model", "isnet-anime"]),
+                            ("decline", [])):
+            proc = run_cli("--cache-dir", str(self.cache), verb, str(self.still),
+                           "--identity", "we:3008040633", *extra)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertEqual(json.loads(proc.stdout)["key"], key, verb)
+
+    def test_a_run_on_a_missing_still_fails_in_words(self):
+        missing = self.dir / "never-rendered.png"
+        proc = run_cli("--cache-dir", str(self.cache), "run", str(missing),
+                       "--identity", "we:never", "--model", "isnet-anime")
+        self.assertNotEqual(proc.returncode, 0)
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload["state"], "error")
+        self.assertIn("never-rendered.png", payload["error"])
+
+
 class StatusTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
