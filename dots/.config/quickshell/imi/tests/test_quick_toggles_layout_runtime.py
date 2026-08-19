@@ -20,6 +20,12 @@ that goes unnoticed. A same-row reorder diffs as a move and was never broken -
 covering only that is how the first attempt at this fix passed while the panel
 stayed scrambled.
 
+The same harness scores what the keyed model added on top of that: a reorder
+must MOVE the tile's delegate, and the tile must be caught travelling to its new
+slot rather than found already in it. A settled position is the same number
+whether the tile animated or teleported, so the sample that can tell them apart
+is taken mid-flight.
+
 Needs a Wayland session and `qs` on PATH, so it skips in CI like the other
 runtime harnesses.
 """
@@ -40,7 +46,7 @@ SHIPPED_DEFAULT = ROOT / "defaults/config.json"
 # The harness prints how many checks it ran. This number is a literal rather
 # than anything read back from that output: a harness whose step list shrinks
 # must redden here instead of reporting `failures: 0` for a shorter run.
-EXPECTED_CHECKS = 6
+EXPECTED_CHECKS = 11
 
 
 def _runtime_available():
