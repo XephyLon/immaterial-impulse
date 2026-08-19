@@ -12,6 +12,16 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Clock depth masks are crisp.** On wide wallpapers the subject's outline
+  used to claim a band of background around fine structure like hair, and
+  swallow whatever was behind it — a striped wall came through as subject. The
+  producer now runs the detector a second time on just the subject's box,
+  hardens the edge around the model's own boundary, and stores the mask
+  aspect-true at 4096 on the long side instead of a 1024 square. Costs about
+  half a second more per run; re-run a wallpaper's models in the depth picker
+  to get the new mask.
+
 ## [0.26.0] — 2026-08-19
 
 The lock screen gets its own widget layout, snapping stops gluing widgets

@@ -3064,8 +3064,8 @@ question to answer about what its mask's alpha actually is.
 **A mask cut at the model's square input is not the wallpaper's aspect, and
 filling it into the same box is not the same crop.** `isnet-anime` squashes the
 whole picture to 1024² (padding is measurably worse — with black bars the model
-returns the entire picture as the subject), so the stored mask is square while
-the wallpaper is drawn `PreserveAspectCrop`. Filling both into the viewport
+returns the entire picture as the subject), so the stored mask WAS square (it is
+aspect-true since the entry below) while the wallpaper is drawn `PreserveAspectCrop`. Filling both into the viewport
 stretches them differently — by 3.5× on this monitor. `ClockDepthLogic.coverRect`
 returns the rectangle the whole wallpaper would occupy if nothing clipped it; the
 mask is `Image.Stretch`ed into that and the surface clips it back, which is
@@ -3074,6 +3074,31 @@ in `modules/common/functions/clockDepth.js` beside the eligibility predicate for
 the same reason `ParallaxMath.sampleOrigin` is: nothing about the rendered layer
 is reachable from `qmltestrunner`, so the arithmetic has to be.
 (feat(background): draw the wallpaper's subject over the desktop widgets.)
+
+**The model's square is the right INPUT and was the wrong STORAGE, and the two
+came apart the moment the mask had more detail than the square could carry.**
+Squashing a 5760x2318 wallpaper into 1024² gives every mask texel ~5.6 picture
+pixels, and the cost was measured to be worse than softness: hair claimed a
+band of wall around itself and a striped wall behind a hairline came through as
+subject, because at that scale the model cannot separate them. The producer
+now runs a salient model twice — the second time over the padded box of what
+the first pass claimed, pasted over the coarse answer (+0.48s; skipped when the
+box already covers 85% of the frame, and never reached when pass 1 found
+nothing, so `.none` is still pass 1's verdict) — hardens every mask around 0.5
+with a k=6 sigmoid (soft band 0.496 → 0.235 Mpx; 0.5 stays at 0.5, so no pixel
+changes sides), and stores the result aspect-true at 4096 on the long side,
+never larger than the wallpaper (357 KB against ~100 KB on that picture). Two
+things to carry forward. **A guided filter was tried between the merge and the
+hardening and rejected**: it widened the band along every low-contrast outline;
+do not put one back. And `coverRect` needed no change for a non-square salient
+mask, for the reason the prompted-model entry below already gives — it is a
+rectangle for the wallpaper and never reads the mask's shape — but the comments
+on both sides of it *said* the mask was square, and now say what it was and
+what it is. `tests/test_subject_mask_refine.py` pins the box, the guard, the
+curve and the storage size without loading a model. Design doc §9.
+038df1083 ("feat(background): run a salient model twice, the second time on the subject's box"),
+77497c63a ("feat(background): harden a mask's edge around the model's own boundary"),
+983e4c529 ("feat(background): store a mask aspect-true at 4096 on the long side").
 
 **Two captures separated in wall-clock time on a desktop somebody is using are
 not an A/B test, and the thing that changes between them becomes your signal.**
