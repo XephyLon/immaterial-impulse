@@ -12,7 +12,7 @@ import qs.modules.imi.bar
  * A settled check cannot tell the reposition from the teleport it replaces:
  * both end with every slot in the right place, and the difference exists only
  * in the frames in between. So this harness samples where each slot is DRAWN
- * 80ms and 240ms into a reflow and fails if it was already at its destination
+ * 40ms and 240ms into a reflow and fails if it was already at its destination
  * - the same question `WidgetResizeMotionRuntimeTest.qml` asks of a span
  * change, for the same reason.
  *
@@ -117,6 +117,15 @@ ShellRoot {
                         delegate: BarGroup {
                             required property var modelData
                             required property int index
+                            // As the content trees declare them: a horizontal
+                            // slot fills the bar's height and a vertical one
+                            // its width, so the CROSS coordinate is zero and
+                            // stays there. Without that the harness rescues an
+                            // implementation watching only the slot's own
+                            // coordinate - the cross-axis centring writes it
+                            // once at creation and that write alone triggers a
+                            // measurement the real bar never gets.
+                            Layout.fillHeight: true
                             currentIndex: index
                             totalCount: harness.nearModel.length
                             widgetId: modelData
@@ -160,6 +169,15 @@ ShellRoot {
                         delegate: BarGroup {
                             required property var modelData
                             required property int index
+                            // As the content trees declare them: a horizontal
+                            // slot fills the bar's height and a vertical one
+                            // its width, so the CROSS coordinate is zero and
+                            // stays there. Without that the harness rescues an
+                            // implementation watching only the slot's own
+                            // coordinate - the cross-axis centring writes it
+                            // once at creation and that write alone triggers a
+                            // measurement the real bar never gets.
+                            Layout.fillHeight: true
                             currentIndex: index
                             totalCount: harness.farModel.length
                             widgetId: modelData
@@ -206,6 +224,7 @@ ShellRoot {
                         delegate: BarGroup {
                             required property var modelData
                             required property int index
+                            Layout.fillWidth: true
                             vertical: true
                             currentIndex: index
                             totalCount: harness.colModel.length
@@ -236,20 +255,27 @@ ShellRoot {
         return null;
     }
 
-    // Where the slot is DRAWN - the translate included - which is the only
-    // number the eye can check a reposition against.
-    function drawnAlong(repeater, id, vertical) {
+    // Where the slot is DRAWN, read through Qt's own transform chain rather
+    // than through the reposition's arithmetic. `mapToItem` composes the
+    // Translate - which is exactly why BarGroup may not measure with it, and
+    // exactly why this may: a harness that read the implementation's own
+    // accounting back would agree with it by construction, including about an
+    // axis it had stopped applying.
+    function scenePoint(repeater, id) {
         const slot = harness.slotOf(repeater, id);
-        if (!slot) return NaN;
-        const origin = slot.flipDrawnOrigin();
-        return Math.round(vertical ? origin.y : origin.x);
+        return slot ? slot.mapToItem(null, 0, 0) : null;
+    }
+
+    function drawnAlong(repeater, id, vertical) {
+        const point = harness.scenePoint(repeater, id);
+        if (!point) return NaN;
+        return Math.round(vertical ? point.y : point.x);
     }
 
     function drawnAcross(repeater, id, vertical) {
-        const slot = harness.slotOf(repeater, id);
-        if (!slot) return NaN;
-        const origin = slot.flipDrawnOrigin();
-        return Math.round(vertical ? origin.x : origin.y);
+        const point = harness.scenePoint(repeater, id);
+        if (!point) return NaN;
+        return Math.round(vertical ? point.x : point.y);
     }
 
     // The slot's own coordinate, which is what the layout writes and what the
@@ -262,8 +288,15 @@ ShellRoot {
 
     // ---- sampling ----------------------------------------------------------
     //
-    // 80ms and 240ms are both well inside the 350ms tier the reposition takes,
+    // 40ms and 240ms are both well inside the 350ms tier the reposition takes,
     // and the runner's own tick is past its end, so a settled read is settled.
+    //
+    // The early one is deliberately EARLY rather than merely in flight. The
+    // spatial tier is front-loaded, so by 80ms a reposition is already ~90%
+    // of the way there - and so is one that started on the mirror side of its
+    // destination, which is what an inverse applied with the wrong sign
+    // produces. Measured: 0.55 of the travel at 40ms against 0.90 at 80ms, so
+    // only the earlier sample leaves the two apart.
 
     property var samples: ({})
     property var sampled: []
@@ -292,7 +325,7 @@ ShellRoot {
 
     Timer {
         id: earlySample
-        interval: 80
+        interval: 40
         onTriggered: harness.samples.early = harness.sampleNow()
     }
     Timer {
@@ -320,6 +353,18 @@ ShellRoot {
         harness.check(`${label}: was still travelling, `
                       + `got ${early[id].along} then ${mid[id].along}`,
                       early[id].along !== mid[id].along);
+        // ...and travelling the right WAY, which every check above is
+        // satisfied by: an inverse applied with the wrong sign puts the slot
+        // on the mirror side of its destination and eases it back across, so
+        // it is never at either endpoint and never stops moving. Scored as
+        // progress from the old place to the new, with a quarter of the travel
+        // of headroom past the end because the spatial tier's control points
+        // leave the unit box and a sample is allowed to overshoot. A mirrored
+        // start reads as 2.
+        const progress = (early[id].along - from) / (to - from);
+        harness.check(`${label}: was on its way there, `
+                      + `got ${early[id].along} at progress ${progress.toFixed(2)}`,
+                      progress >= 0 && progress <= 1.25);
     }
 
     function scoreSnapped(label, id, to) {
@@ -415,13 +460,16 @@ ShellRoot {
                           early.alpha.across === harness.before.alphaAcross);
         },
         // A record is worth one reflow. Switching the widget back on a second
-        // later finds nothing to invert from.
+        // later finds nothing to invert from - and it comes back at the END
+        // of the bucket, somewhere it has never been drawn, because a widget
+        // returning to the slot it left would snap whether or not its record
+        // had expired.
         () => {
             harness.before = ({
                 alpha: harness.drawnAlong(farRepeater, "alpha", false)
             });
             harness.startSampling(farRepeater, false, ["alpha", "beta"]);
-            harness.farModel = ["alpha", "beta", "gamma"];
+            harness.farModel = ["alpha", "gamma", "beta"];
         },
         () => {
             scoreSnapped("a widget switched back on later", "beta",

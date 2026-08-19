@@ -4,7 +4,7 @@
 `BarFlipRuntimeTest.qml` builds real `BarGroup`s in the three arrangements the
 bar's buckets use - near-edge, far-edge and a vertical strip - and takes a
 widget out of each model, which is what an emptying tray or a switched-off
-plugin does. It then samples where each surviving slot is DRAWN 80ms and 240ms
+plugin does. It then samples where each surviving slot is DRAWN 40ms and 240ms
 into the reflow.
 
 That sampling is the whole point. Every settled check passes identically on the
@@ -44,7 +44,7 @@ SOCKET = "wayland-imi-bar-flip"
 # A literal, never read back out of the harness's own output: a step list that
 # shrinks must redden here instead of reporting `failures: 0` for a shorter
 # run.
-EXPECTED_CHECKS = 35
+EXPECTED_CHECKS = 39
 
 
 def _stop(proc):
