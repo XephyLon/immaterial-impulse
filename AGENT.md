@@ -1147,6 +1147,21 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   height that is a literal rather than a measurement.
   cd607d416 ("feat(bar): the popup card runs on one driver, and unrolls from its first section"),
   d01879f4c ("test(lint): hold the popup card to one driver, and its unroll to a measured hero").
+- **A section added to a popup's content changes what the card opens at, and the hero is decided
+  by the BUILT tree rather than by source order.** `heroSectionHeight` walks the content root's
+  children and takes the first one that is drawn and taller than zero, so a row declared above the
+  hero card becomes the hero — the weather popup would open as a 99px strip with the temperature,
+  the city and the condition below the fold, which renders and looks deliberate. It also means a
+  section that comes and goes cannot be first: `Weather.hourly` is empty until a forecast parses,
+  and a hero that is a different section before and after the first fetch is a popup that opens two
+  different ways. The hourly row therefore sits between the hero card and the metrics grid, and the
+  measurement is checked on the built tree rather than in the source: hero 141 (the 125px hero card
+  at `contentPadding` 8) against an open height of 431, unchanged by the row's 99.
+  `tests/test_weather_popup_hero_runtime.py` parents the real popup's content into a window the way
+  the overlay parents it into the card and measures both;
+  `tests/test_weather_forecast_contract.py` holds the source order, which is the half a reviewer
+  can see. feat(bar): draw the weather popup's hourly row, growing from the axis,
+  test(weather): drive the popup's hero and the bars' growth in a real window.
 - **Moving content between windows is already how popups work here, and it has two traps.**
   `StyledPopup` reparented its content into its window at completion long before the overlay
   existed; the overlay does the same thing, one popup at a time, and never has more than two
@@ -1484,6 +1499,24 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   an engine context. Found by rendering the widget and reading the labels; the whole of it is
   invisible from the source. fix(weather): a forecast card is named for its weekday, not for its
   date.
+- **Both weather providers already return an hourly forecast in a response the shell has fetched,
+  and OpenWeatherMap's `dt_txt` is UTC while its `dt` is the instant.** The bar popup's hourly row
+  cost no new request: `/data/2.5/forecast`, fetched since the day cards landed, IS a three-hourly
+  list, and wttr.in's `weather[].hourly[]` arrives inside the one response the current conditions
+  come from. Before adding an endpoint for weather data, read what the existing responses carry —
+  `tests/test_weather_forecast_contract.py` pins the endpoint list and the fetcher count so a third
+  request has to be argued for rather than typed. The trap inside that data is the timestamp:
+  `dailyFromOwm` groups by the `dt_txt` DATE, which is fine a day at a time, but an hour label read
+  off the same field is the user's own clock wrong by their whole UTC offset — and right on a UTC
+  runner, which is CI and was also every fixture anyone would write. `weatherHourly.js` reads `dt`
+  and takes the local hour and the local date off it, and the contract test re-runs
+  `tst_weather_hourly.qml` at UTC+14 and UTC-11 for the same reason it already re-runs the daily
+  one. Planted: `getHours()` → `getUTCHours()` passes at UTC and fails at UTC+14.
+  A third thing about that module generalises past weather: `Number(null)` is 0 and `isFinite(0)`
+  is true, so the obvious "convert and test" guard reads an absent reading as a confident zero
+  degrees — a bar at the floor and a window range dragged down to it, with nothing in any log.
+  feat(weather): the hourly row's decisions, as arithmetic beside the daily ones,
+  feat(weather): publish the three-hourly slots both providers already return.
 - **`FileView` (`Quickshell.Io`) loads asynchronously - `.text()` right after calling `.reload()`
   is not guaranteed to return the new content.** The correct pattern (used throughout this codebase
   - `MaterialSymbolsSearch.qml`, `Notifications.qml`, `Emojis.qml`, `Profile.qml`) is to read
