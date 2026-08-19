@@ -13,6 +13,18 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **Long names scroll instead of being cut off.** Four places showed a name you
+  did not write and cannot look up anywhere else on the row, and cut it off with
+  an ellipsis: the dock's window preview — where the title is the only thing
+  telling several windows of one application apart — and the Wi-Fi network,
+  Bluetooth device and audio stream lists in the right sidebar. Those now scroll
+  to the end of the text and back whenever it does not fit, so a router that
+  names its two bands and its guest network off one prefix stops producing rows
+  that read identically. Everything the shell wrote itself — status lines,
+  buttons, settings captions — still elides. The scroll stops the moment the
+  panel it is on closes, its speed follows the motion speed setting, and with
+  reduce motion on it holds each end for three seconds and switches between them
+  rather than scrolling, so the whole name is still readable.
 - **Clock depth works on a live Wallpaper Engine scene.** The depth picker
   segments the still the shell already photographs of the active project, keyed
   on the project rather than on the still (which is re-grabbed every session),

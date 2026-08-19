@@ -461,7 +461,8 @@ modules/common/             Shared, feature-agnostic building blocks
                               PopupToolTip, StyledPopup, GroupedList, ConfigSwitch/ConfigSpinBox/
                               ConfigSelectionArray (settings-page form controls), DockIconMotion
                               (M3E feedback-motion wrapper for dock icons), SchemePaletteCircle
-                              (a colour scheme drawn as its own palette), etc.
+                              (a colour scheme drawn as its own palette), MarqueeText
+                              (a label that scrolls only while it overflows), etc.
   functions/, models/, utils/, panels/   Supporting JS logic, list models, window-panel base classes
 
 modules/imi/                 The "imi" (Immaterial Impulse) panel family - one directory per feature:
@@ -3838,7 +3839,64 @@ lift and the bounce are magnitudes travelling along `dock_geometry.js`'s inward 
 negative y),
 `SchemePaletteCircle` (an Android 12-style palette circle for a colour scheme, fed from
 `services/SchemePreview`, with the scheme's glyph as the fallback while the colour venv has not
-answered). All in `modules/common/widgets/`.
+answered),
+`MarqueeText` (a single-line label that scrolls only while it overflows its box, over the overflow
+and back, at a distance-proportional speed with a floor — see the entry below before adopting one).
+All in `modules/common/widgets/`.
+
+**A marquee is the answer for an IDENTITY, and where it may run is as much of the design as how it
+moves.** `MarqueeText` exists because every long label in this shell elides, which is honest about
+the truncation and useless about the content: a router that names its two bands and its guest
+network off one prefix produces list rows whose elided forms are byte-identical, so the list offers
+a choice it does not let the user make. It is *not* a general replacement for `elide`, and the four
+call sites it has (the dock's window-preview title, and the SSID, Bluetooth device name and audio
+stream name in the right sidebar) are a reviewed register in
+`tests/test_marquee_text_contract.py` rather than a starting point for a sweep. Two questions have
+to be answered before a fifth joins them, and neither is checkable from a pattern.
+
+- **Is the elided string something the user cannot recover from anything else on that row?** A
+  status line, a button label or a settings caption is a string this repo wrote; truncating one
+  loses nothing. A name a device or a network advertises for itself is the whole of what the row
+  is for.
+- **Is the surface hidden when idle?** This is an animation with `loops: Animation.Infinite` on a
+  label, i.e. exactly the class that took a fullscreen game from 94 fps to 52 — see the
+  infinite-animation entry above. Its `running` is `overflows && visible`, and `visible` is
+  effective visibility, which is the right question on the right sidebar (a `PanelWindow` whose
+  `visible` follows the sidebar's open state) and on the dock's preview (an xdg-popup that does not
+  exist while it is not shown). It is the *wrong* question on the bar, which sits on `WlrLayer.Top`
+  and stays `visible` while a fullscreen window covers it (53d1ff893 ("fix(bar): drop the cava
+  claim while a fullscreen window covers the bar")) — a marquee there is the performance bug
+  wearing the fix's clothes, so it is refused by the register rather than by a comment.
+
+Three things about its motion do not generalise from a tier and are pinned for that reason.
+
+- **The duration is distance-proportional rather than catalogued** (`modules/common/functions/
+  marquee.js`, 28ms per pixel of overflow with a 3500ms floor). What has to be held constant is the
+  speed the text passes the eye: one tier would run a three-word overrun and a whole sentence on
+  the same clock, so one of the two is unreadable. The floor is the same argument from the other
+  end — a six-pixel overflow twitches, and a movement that resolves before it can be looked at is
+  worse than the truncation.
+- **The travel goes through `Appearance.animation.scale()` and the dwell at each end deliberately
+  does not.** The travel is motion, so the speed slider retimes it and the reduce-motion floor
+  collapses it to zero — which is a *snap* between the two ends, and is how reduce motion still
+  leaves the whole string readable rather than permanently cut off. The dwell is reading time, and
+  it is the half that keeps that floor from being a strobe: with the traverse at zero the dwell is
+  the entire cycle, so a scaled dwell would swap a label's two ends every frame. `dwell()` takes
+  `reduceMotion` and gets **longer**; getting that direction backwards is invisible from either
+  constant on its own, which is why it is a test rather than a comment.
+- **The curve is `Easing.Linear`, spelled out.** An eased scroll reads at a speed that changes
+  under the eye, which is the whole thing a constant ms-per-pixel exists to hold still. This is a
+  curve somebody chose, not the one `lint_motion_tier_partial.py` exists to catch nobody choosing.
+
+Nothing about the rendered result is reachable from `qmltestrunner` — it can build neither a
+`StyledText` nor a laid-out box — so every decision lives in `marquee.js` and
+`tests/lint_infinite_animation_visibility.py`'s general gate rule is supplemented by the contract
+above, which checks the term that lint cannot see (`overflows`) and refuses to let the widget join
+that lint's ratchet.
+62da34c1b ("feat(widgets): marquee.js, what a label that does not fit costs to read"),
+d7e90dac8 ("feat(widgets): MarqueeText, a label that scrolls only when it overflows"),
+91d7f5fab ("feat(sidebar): three names the right sidebar used to cut in half now scroll"),
+281ca292c ("test(widgets): pin the marquee's gate, its two durations, and where it may run").
 
 **A colour scheme is shown as its colours, not as a glyph.** The desktop menu's nine scheme
 presets were nine abstract Material Symbols sitting directly above a list of transition
