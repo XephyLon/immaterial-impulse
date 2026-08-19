@@ -51,6 +51,7 @@
 # Lints are exempt: they read source, they start no shell.
 
 import pathlib
+import ast
 import re
 import sys
 
@@ -83,17 +84,55 @@ EXISTING = frozenset({
     "test_notes_surfaces_runtime.py",
     "test_parallax_migration_runtime.py",
     "test_quick_toggles_layout_runtime.py",
-    "test_widget_edge_snap_runtime.py",
     "test_widget_elevation.py",
-    "test_widget_grip_lock.py",
-    "test_widget_group_drag_runtime.py",
-    "test_widget_group_selection.py",
-    "test_widget_interaction_modes.py",
-    "test_widget_interaction_runtime.py",
-    "test_widget_parallax_optout.py",
-    "test_widget_resize_grip_runtime.py",
-    "test_widget_resize_motion_runtime.py",
 })
+
+
+def code_only(text: str) -> str:
+    """The file's executable text: docstrings and comments dropped.
+
+    A prose mention of `qs -p` in a module docstring is not a launch, and three
+    harnesses were registered on the strength of one - `test_widget_grip_lock`,
+    `test_widget_group_selection` and `test_widget_interaction_modes` are
+    source-contract checks that start no process at all and say so in the
+    sentence the pattern matched. A register carrying files that cannot be
+    fixed is a register nobody can finish, which is the failure mode the
+    ratchet exists to avoid.
+
+    Parsed rather than regexed: `ast` knows a docstring from a string literal
+    that happens to contain the same words, and `tokenize` knows a comment from
+    a `#` inside a string.
+    """
+    import io
+    import tokenize
+    out = []
+    try:
+        for token in tokenize.generate_tokens(io.StringIO(text).readline):
+            if token.type == tokenize.COMMENT:
+                continue
+            out.append((token.type, token.string, token.start, token.end, token.line))
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        return text
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return text
+    docstrings = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                                 ast.AsyncFunctionDef)):
+            continue
+        doc = ast.get_docstring(node, clean=False)
+        if doc is None:
+            continue
+        first = node.body[0]
+        docstrings.add((first.lineno, first.col_offset))
+    kept = []
+    for kind, string, start, end, line in out:
+        if kind == tokenize.STRING and (start[0], start[1]) in docstrings:
+            continue
+        kept.append(string)
+    return "\n".join(kept)
 
 
 def main():
@@ -101,12 +140,14 @@ def main():
     inherited = set()
     scanned = 0
 
+    launchers = set()
     for path in sorted(TESTS.glob("*.py")):
         if path.name.startswith("lint_"):
             continue
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = code_only(path.read_text(encoding="utf-8", errors="replace"))
         if not LAUNCHES_QS.search(text):
             continue
+        launchers.add(path.name)
         scanned += 1
         if DECIDES_BUS.search(text):
             continue
@@ -125,6 +166,12 @@ def main():
             failures.append(
                 f"{name}: registered in tests/lint_runtime_bus_isolation.py and "
                 f"no longer present. Drop it from EXISTING.")
+            continue
+        if name not in launchers:
+            failures.append(
+                f"{name}: registered, and starts no `qs` at all. Drop it from "
+                f"EXISTING - a register carrying files that cannot be fixed is "
+                f"a register nobody can finish.")
             continue
         failures.append(
             f"{name}: now decides its own session bus. Remove it from EXISTING "
