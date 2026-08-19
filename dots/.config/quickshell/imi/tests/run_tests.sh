@@ -1324,6 +1324,17 @@ if ! python3 "$SCRIPT_DIR/test_phone_connect_contract.py"; then
     exit 1
 fi
 
+# The stream's process lifetime, which no source check and no unit test can
+# reach: a real shell, a fake busctl whose monitor verb streams one signal in
+# one case and exits instantly in the other, and the spawn TIMESTAMPS read
+# back - because "it stopped after six spawns" is also true of six spawns in
+# six milliseconds, which is the starvation bug itself.
+echo "Running Phone Connect monitor runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_connect_monitor_runtime.py"; then
+    echo "Phone Connect monitor runtime tests failed."
+    exit 1
+fi
+
 echo "Running registry entry validator tests..."
 if ! python3 "$SCRIPT_DIR/test_registry_validate.py"; then
     echo "Registry entry validator tests failed."
