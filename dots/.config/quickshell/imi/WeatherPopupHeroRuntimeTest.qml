@@ -176,14 +176,6 @@ ShellRoot {
                               hero === harness.named("weatherHero").height + padding * 2);
                 harness.check("the hero is a fraction of the open height, so there is still an unroll",
                               hero > 0 && hero < openHeight);
-                // The feature's name, measured: every bar's bottom edge is the
-                // same line, so what moves is the top.
-                const feet = harness.bars(chart).map(function (bar) {
-                    return bar.mapToItem(chart, 0, bar.height).y;
-                });
-                harness.check("the bars stand on one axis, whatever their height",
-                              feet.length > 1
-                              && feet.every(function (foot) { return Math.abs(foot - feet[0]) < 0.5; }));
                 harness.check("the bars are flat while the popup is not showing",
                               harness.tallestBar() === 0);
 
@@ -199,6 +191,19 @@ ShellRoot {
                 harness.settledFirstSeries = harness.tallestBar();
                 harness.check("the bars settle at a height",
                               harness.settledFirstSeries > 0);
+                // The feature's name, measured, and measured while the bars
+                // have height: at rest they are all zero tall and every
+                // arrangement of them shares a line.
+                const heights = harness.bars(harness.chartItem()).map(function (bar) {
+                    return bar.height;
+                });
+                const feet = harness.bars(harness.chartItem()).map(function (bar) {
+                    return bar.mapToItem(harness.chartItem(), 0, bar.height).y;
+                });
+                harness.check("the bars stand on one axis, whatever their height",
+                              feet.length > 1
+                              && Math.max.apply(null, heights) - Math.min.apply(null, heights) > 1
+                              && feet.every(function (foot) { return Math.abs(foot - feet[0]) < 0.5; }));
                 harness.check("the bars grew from the axis rather than appearing at full height",
                               harness.growthSample > 0
                               && harness.growthSample < harness.settledFirstSeries - 1);
