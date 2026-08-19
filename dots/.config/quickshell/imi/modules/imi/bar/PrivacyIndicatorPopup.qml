@@ -35,7 +35,7 @@ StyledPopup {
     // same curve, no drift.
     readonly property int revealDuration: Appearance.animation.elementMove.duration
     readonly property list<real> revealCurve: Appearance.animationCurves.expressiveDefaultSpatial
-    readonly property int fadeDuration: Appearance.animationCurves.expressiveEffectsDuration
+    readonly property int fadeDuration: Appearance.animation.elementMoveFast.duration
     readonly property list<real> fadeCurve: Appearance.animationCurves.expressiveEffects
 
     // The indent that lines a row's text up under its section header's label.

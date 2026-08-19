@@ -22,11 +22,10 @@ Canvas {
     property var prevRoundedPolygon: null
     property double progress: 1
     property var morph: new Morph.Morph(roundedPolygon, roundedPolygon)
-    property Animation animation: NumberAnimation {
-        duration: Appearance.animationCurves.expressiveFastSpatialDuration
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
-    }
+    // `animationCurves.*Duration` is the tier's BASE - the multiplier and the
+    // reduce-motion floor are applied by `animation.*`, so reading the base
+    // takes the shape out of the shell's speed setting entirely.
+    property Animation animation: Appearance.animation.elementMoveSmall.numberAnimation.createObject(root)
 
     onRoundedPolygonChanged: {
         delete root.morph;

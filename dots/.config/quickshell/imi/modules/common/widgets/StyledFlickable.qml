@@ -117,9 +117,9 @@ Flickable {
         id: settleAnim
         target: root
         property: "contentY"
-        duration: Appearance.animationCurves.expressiveFastSpatialDuration
+        duration: Appearance.animation.elementMoveSmall.duration
         easing.type: Easing.BezierSpline
-        easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
+        easing.bezierCurve: Appearance.animation.elementMoveSmall.bezierCurve
     }
 
     // Edge rubber-band: quick push out, then a springy settle back to the bound.
@@ -129,15 +129,18 @@ Flickable {
         property real boundY: 0
         NumberAnimation {
             target: root; property: "contentY"; to: bounceAnim.overshootY
-            duration: Appearance.animationCurves.expressiveEffectsDuration
+            // A tier's duration against a different tier's curve, deliberately
+            // - so it is scaled through the policy's own door rather than
+            // borrowed from whichever tier happens to share the number.
+            duration: Appearance.animation.scale(Appearance.animationCurves.expressiveEffectsDuration)
             easing.type: Easing.BezierSpline
             easing.bezierCurve: Appearance.animationCurves.emphasizedDecel
         }
         NumberAnimation {
             target: root; property: "contentY"; to: bounceAnim.boundY
-            duration: Appearance.animationCurves.expressiveDefaultSpatialDuration
+            duration: Appearance.animation.elementMove.duration
             easing.type: Easing.BezierSpline
-            easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
+            easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
         }
     }
 

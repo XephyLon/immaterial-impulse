@@ -146,13 +146,13 @@ Scope {
                         alwaysRunToEnd: true
                         NumberAnimation {
                             to: 0.4
-                            duration: Appearance.animationCurves.expressiveDefaultSpatialDuration
+                            duration: Appearance.animation.scale(Appearance.animationCurves.expressiveDefaultSpatialDuration)
                             easing.type: Easing.BezierSpline
                             easing.bezierCurve: Appearance.animationCurves.expressiveEffects
                         }
                         NumberAnimation {
                             to: 1
-                            duration: Appearance.animationCurves.expressiveDefaultSpatialDuration
+                            duration: Appearance.animation.scale(Appearance.animationCurves.expressiveDefaultSpatialDuration)
                             easing.type: Easing.BezierSpline
                             easing.bezierCurve: Appearance.animationCurves.expressiveEffects
                         }

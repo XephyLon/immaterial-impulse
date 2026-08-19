@@ -27,11 +27,7 @@ Item {
         implicitWidth: tabBarColumn?.children[root.currentIndex]?.visualWidth ?? 100
 
         Behavior on anchors.topMargin {
-            NumberAnimation {
-                duration: Appearance.animationCurves.expressiveFastSpatialDuration
-                easing.type: Appearance.animation.elementMove.type
-                easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
-            }
+            animation: Appearance.animation.elementMoveSmall.numberAnimation.createObject(this)
         }
     }
 
