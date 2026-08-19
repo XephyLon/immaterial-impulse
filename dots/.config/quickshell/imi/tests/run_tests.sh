@@ -126,6 +126,16 @@ fi
 # Static lint: every mirror symlink under tests/imports resolves. A link there
 # outlives a deleted target silently - nothing fails until a test imports that
 # exact type, which for an untested singleton is never.
+# Contract: one logical-pixel multiplier, reading 1, with the reason attached.
+# It looks like dead compatibility plumbing and is not - 629 sites read it and
+# it multiplies the widget grid - so both "delete it" and "make it a zoom knob"
+# are mistakes this pins the shape against.
+echo "Running effective scale contract tests..."
+if ! python3 "$SCRIPT_DIR/test_effective_scale_contract.py"; then
+    echo "Effective scale contract tests failed."
+    exit 1
+fi
+
 echo "Running test import symlink lint..."
 if ! python3 "$SCRIPT_DIR/lint_test_import_symlinks.py"; then
     echo "Test import symlink lint failed."

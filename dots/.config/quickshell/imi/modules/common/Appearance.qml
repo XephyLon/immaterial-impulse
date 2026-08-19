@@ -9,8 +9,25 @@ pragma ComponentBehavior: Bound
 
 Singleton {
     id: root
-    // Compatibility scale used by nandoroid's expressive widget library. Immaterial Impulse
-    // already applies compositor/output scaling, so the logical-pixel multiplier is 1.
+    // The vendored expressive widget library's logical-pixel multiplier, and the
+    // decision is that it stays 1.
+    //
+    // It is not dead: 629 call sites read it, and it multiplies real geometry -
+    // `sizes.widgetGridSpanX/Y` and the drag lattice's gap go through it, so a
+    // value other than 1 moves every desktop widget's box and every span the
+    // store holds. It reads 1 because the shell already gets compositor/output
+    // scaling for free: Quickshell hands each screen its device pixel ratio and
+    // Qt lays the whole scene out in logical pixels, so a second multiplier here
+    // is a second scaling of the same thing, applied to widget geometry only,
+    // fighting the one the compositor already did.
+    //
+    // What it must NOT become is a hand-rolled zoom knob: the honest shape for
+    // "make the shell bigger" is the compositor's scale, and the shape for "make
+    // the corners rounder" is a rounding scale, which is its own decision
+    // (docs/p3drovfx-animation-research-2026-08-16.md §3.7). Either would be a
+    // declared setting with a migration, not this constant quietly leaving 1.
+    // `tests/test_effective_scale_contract.py` fails on a second multiplier
+    // declared beside it.
     readonly property real effectiveScale: 1.0
     property QtObject m3colors
     property QtObject animation
