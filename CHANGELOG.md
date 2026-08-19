@@ -12,25 +12,13 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
-### Changed
-- **Your phone's battery and connection state update the moment they change.**
-  The phone panel and its quick toggle used to redraw on a timer, so a phone
-  going out of range, coming back, or charging showed up in the shell up to ten
-  seconds late. With KDE Connect the shell now listens to the daemon instead of
-  asking it, and the change appears as it happens. Valent still updates on the
-  timer, unchanged: its signals could not be checked against a running Valent
-  daemon, and guessing at them would have been worse than the wait. If the
-  listener cannot stay up, the shell quietly goes back to asking on a timer
-  rather than showing nothing.
+## [0.27.0] — 2026-08-19
 
-### Fixed
-- **Spinners and pulses stop when nothing can see them.** Seven animations
-  looped forever regardless of whether the thing they animate was on screen —
-  the bar's update spinner turned for the whole session whether or not it was
-  shown, and the world map's location ping ran on a settings page that spends
-  most of its life closed. Each one keeps the compositor repainting the whole
-  screen while it runs, which is what halved a fullscreen game's frame rate
-  once already.
+The shell's motion catches up with itself: bar widgets travel instead of
+teleporting, popups unroll out of what they are about to show, and the speed
+slider finally reaches every animation there is. Clock depth learns live
+wallpapers, the weather popup grows an hourly forecast, and your phone stops
+being ten seconds behind.
 
 ### Added
 - **Bar widgets slide to their new place instead of teleporting.** When the
@@ -70,14 +58,38 @@ own repo; the installer pins which revision it builds.
   fallback the desktop shows when the renderer gives up.
 
 ### Changed
+- **Your phone's battery and connection state update the moment they change.**
+  The phone panel and its quick toggle used to redraw on a timer, so a phone
+  going out of range, coming back, or charging showed up in the shell up to ten
+  seconds late. With KDE Connect the shell now listens to the daemon instead of
+  asking it, and the change appears as it happens. Valent still updates on the
+  timer, unchanged: its signals could not be checked against a running Valent
+  daemon, and guessing at them would have been worse than the wait. If the
+  listener cannot stay up, the shell quietly goes back to asking on a timer
+  rather than showing nothing.
 - **Dragging a quick toggle moves it instead of redrawing the grid.** The tiles
   the dragged one passes now slide into their new places when you drop it,
   rather than the whole panel being rebuilt at the new order. Nothing about the
   layout, the sizes or where a drop lands has changed — and a row now fills the
   panel's width evenly instead of giving the leftover to whichever toggle
   happened to be first in it.
+- **A bar popup unrolls out of its own first card.** Hovering a bar widget used
+  to grow a card from a dot into its full height; it now appears already the
+  height of the first thing inside it — the weather hero, the calendar's month
+  header — and unfurls to reveal the rest, with the fade riding the same
+  motion. The top edge never moves, so what you came to read is legible on the
+  frame the popup appears rather than once it settles. On a bottom or a side
+  bar it is the bar-adjacent edge that stays put, and it stays put exactly, on
+  every frame of the open and the close.
 
 ### Fixed
+- **Spinners and pulses stop when nothing can see them.** Seven animations
+  looped forever regardless of whether the thing they animate was on screen —
+  the bar's update spinner turned for the whole session whether or not it was
+  shown, and the world map's location ping ran on a settings page that spends
+  most of its life closed. Each one keeps the compositor repainting the whole
+  screen while it runs, which is what halved a fullscreen game's frame rate
+  once already.
 - **The motion speed slider and reduce motion now reach every animation.** Nine
   places read a motion tier's base duration instead of the scaled one, so they
   ignored both settings — the settings-page scroll settle and its rubber band,
@@ -98,16 +110,6 @@ own repo; the installer pins which revision it builds.
   gesture. The reserved space is animated on the same curve as the bar now, on
   both the horizontal and the vertical bar. Nothing about where the bar sits at
   rest changes.
-
-### Changed
-- **A bar popup unrolls out of its own first card.** Hovering a bar widget used
-  to grow a card from a dot into its full height; it now appears already the
-  height of the first thing inside it — the weather hero, the calendar's month
-  header — and unfurls to reveal the rest, with the fade riding the same
-  motion. The top edge never moves, so what you came to read is legible on the
-  frame the popup appears rather than once it settles. On a bottom or a side
-  bar it is the bar-adjacent edge that stays put, and it stays put exactly, on
-  every frame of the open and the close.
 
 ## [0.26.0] — 2026-08-19
 
