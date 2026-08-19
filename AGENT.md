@@ -560,7 +560,10 @@ services/                  Singletons wrapping external state/processes - one pe
                               `busctl --json=short` Process calls (the shell has no D-Bus
                               binding) - backend detection from the bus name list, one
                               normalized device/battery model for both daemons, ring/ping/
-                              clipboard actions. Its parser logic is kept byte-for-byte in
+                              clipboard actions. KDE Connect's changes arrive as SIGNALS
+                              (`busctl monitor`, see the streaming note below); Valent's
+                              still arrive on the poll, which stays on for both as the
+                              reconcile. Its parser logic is kept byte-for-byte in
                               sync with a logic-only test double
                               (tests/test_phone_connect_contract.py enforces it)
   SchemePreview.qml            Per-scheme swatches for the scheme pickers: one venv run of
@@ -3602,6 +3605,52 @@ therefore needs a one-shot migration with a marker (`migrateDeadParallaxSwitches
 test that seeds a real config directory. Reset only the switches - a tuned number is a plausible
 preference and usually cannot disable the feature by itself.
 (fix(config): revive the parallax switches every stored config turned off.)
+
+**`busctl monitor` is how a Process streams D-Bus signals here, and the sender filter has to live
+in the match rule because the output does not carry one you can use.** `services/PhoneConnect.qml`
+is the case (`services/Clight.qml` is the sibling that only calls). Measured against a live KDE
+Connect daemon on systemd 261: a monitored signal's `sender` is the **unique** name it arrived on
+(`:1.55`), never the well-known name, so a QML-side check for "is this the daemon" has nothing to
+compare against — `--match=type='signal',sender='org.kde.kdeconnect.daemon',path_namespace='…'` is
+the only place the daemon can be named, and dbus-daemon resolves that well-known name for you
+across daemon restarts. Four more things about that path, each of which cost a measurement:
+
+- **A `SERVICE` argument to `busctl monitor` does not narrow it the way it reads.** Run as
+  `busctl --user --json=short monitor org.kde.kdeconnect.daemon`, the capture came back full of
+  other clients' traffic (an unrelated `name.giacomofurlan.ArctisManager` call, portal `Get`s).
+  `--match=` did narrow it, to zero lines over ten seconds on the same bus. Filter with the match
+  rule, not the positional argument.
+- **The output is one JSON document per line and it is flushed per message**, so a `SplitParser` on
+  `stdout` sees a signal as it happens — checked by watching the redirect file grow while the
+  process was still running, not by reading it after the exit.
+- **An instant exit is the normal failure, which is why CONTRIBUTING.md's backoff rule bites
+  here specifically.** A match rule the bus rejects fails with `Call to
+  org.freedesktop.DBus.Monitoring.BecomeMonitor failed: Invalid match rule` and exit 1, in
+  milliseconds. A `running:` binding on that Process is a tight respawn loop. `PhoneConnect`
+  starts it imperatively, restarts only through `monitorExitPlan` (capped exponential backoff, a
+  ceiling of five per **daemon appearance**, and a healthy-run reset so one daemon restart in a
+  long session does not spend the ceiling) and falls back to the poll past the ceiling. The poll
+  is never removed: nothing announces a daemon *appearing* — there is no monitor running to hear
+  it on — and a daemon that dies without a parting signal would otherwise freeze the model.
+- **Signals arrive in bursts, so a signal drives a coalesced re-read rather than a sweep.** One
+  device leaving the network emitted **seven** signals within a millisecond
+  (`statusIconNameChanged`, `deviceRemoved`, `deviceListChanged`, `reachableChanged`,
+  `linksChanged`, `deviceAdded`, `deviceListChanged`), and each re-read is a chain of `busctl`
+  spawns. The settle timer also has to **re-arm** rather than fire while a sweep is in flight,
+  because the sweep declines then and firing would drop the change that asked for it.
+
+The gate deciding whether to start it was first written as a `readonly property bool` derived from
+`backend` and read from `onBackendChanged` — the change-handler trap under
+[State propagation is reactive](#state-propagation-is-reactive-or-it-is-a-bug-waiting) — so it
+answered with the *previous* backend, the monitor never started, and nothing showed it because the
+poll kept the model correct the whole time. Only `tests/test_phone_connect_monitor_runtime.py`
+could see it: a source contract reads a gate that is spelled correctly, and `qmltestrunner` cannot
+construct the `Process` the gate guards. That harness is also where the *lifetime* is pinned, and
+it asserts the spawn **timestamps** as well as the count — "it stopped after six spawns" is equally
+true of six spawns in six milliseconds, which is the bug.
+(feat(phoneConnect): drive updates from the daemon's signals, not from the poll,
+fix(phoneConnect): the monitor's gate is a function, because a handler cannot read its own binding,
+test(phoneConnect): drive the monitor's start, its stream, its backoff and its ceiling.)
 
 **A player on the MPRIS bus may be a proxy for another player, and every field you would match on
 is the borrowed one.** `playerctld` is `playerctl`'s daemon, not a player: it re-publishes whichever
