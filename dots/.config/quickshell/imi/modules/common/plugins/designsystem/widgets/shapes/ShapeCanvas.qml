@@ -1,3 +1,4 @@
+import qs.modules.common
 import QtQuick
 import "./morph.js" as Morph
 import "./shape-fit.js" as ShapeFit
@@ -29,11 +30,10 @@ Canvas {
     property var prevRoundedPolygon: null
     property double progress: 1
     property var morph: new Morph.Morph(roundedPolygon, roundedPolygon)
-    property Animation animation: NumberAnimation {
-        duration: 350
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: [0.42, 1.67, 0.21, 0.90, 1, 1] // Material 3 Expressive fast spatial (https://m3.material.io/styles/motion/overview/specs)
-    }
+    // The tier whole, not its numbers copied: written out, a shape morph is
+    // the one animation in the shell the motion multiplier and the
+    // reduce-motion floor cannot reach, and nothing says so.
+    property Animation animation: Appearance.animation.elementMoveSmall.numberAnimation.createObject(root)
     
     onRoundedPolygonChanged: {
         delete root.morph
