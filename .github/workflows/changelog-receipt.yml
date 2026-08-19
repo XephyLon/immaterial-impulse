@@ -1,0 +1,52 @@
+# Every PR that changes the shell must say what happened to CHANGELOG.md - see
+# CONTRIBUTING.md, "Keep CHANGELOG.md fed". [Unreleased] was empty at two
+# consecutive releases (0.25.0 with 61 PRs behind it, 0.26.0 with five), so both
+# rebuilt the changelog from the git log afterwards.
+#
+# A sibling of docs-receipt.yml rather than a second step inside it, on purpose.
+# That one is a pure body grep: no checkout, no token, no network, and it is
+# unconditional. This one is conditional on the diff and VERIFIES the `updated`
+# claim against it, so it needs the PR's file list from the API - and folding
+# the two together would make the Docs receipt go red when this half cannot
+# reach GitHub, which is how a check becomes something people re-run instead of
+# read. Separate files also name themselves in the PR's check list, so which
+# receipt is missing is readable without opening a log.
+#
+# The rule itself is NOT spelled here. dots/.config/quickshell/imi/tests/
+# changelog_receipt.py is the one implementation, driven locally by
+# test_changelog_receipt.py and run verbatim below; a `grep -E` in this file
+# would be a second answer to the same question, free to drift from the one the
+# suite proves.
+name: changelog-receipt
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  receipt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Require a changelog receipt for a PR that changes the shell
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # printf, not a here-string: the body is arbitrary text and must reach
+          # the checker byte for byte, without a shell adding or eating one.
+          printf '%s' "$BODY" > "$RUNNER_TEMP/pr-body.txt"
+          gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" \
+            --jq '.[].filename' > "$RUNNER_TEMP/pr-files.txt"
+          python3 dots/.config/quickshell/imi/tests/changelog_receipt.py \
+            --body-file "$RUNNER_TEMP/pr-body.txt" \
+            --changed-files-file "$RUNNER_TEMP/pr-files.txt"
