@@ -12,6 +12,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Spinners and pulses stop when nothing can see them.** Seven animations
+  looped forever regardless of whether the thing they animate was on screen —
+  the bar's update spinner turned for the whole session whether or not it was
+  shown, and the world map's location ping ran on a settings page that spends
+  most of its life closed. Each one keeps the compositor repainting the whole
+  screen while it runs, which is what halved a fullscreen game's frame rate
+  once already.
+
 ### Added
 - **Long names scroll instead of being cut off.** Four places showed a name you
   did not write and cannot look up anywhere else on the row, and cut it off with
