@@ -632,12 +632,17 @@ Item {
                                 ButtonGroup {
                                     contentWidth: parent.width - anchors.margins * 2
 
-                                    StyledText {
+                                    // A marquee, not an ellipsis: this popup
+                                    // exists to tell several windows of the
+                                    // SAME application apart, and the title is
+                                    // the only thing that differs between
+                                    // them. Five browser windows elided at
+                                    // this width are five identical rows.
+                                    MarqueeText {
                                         Layout.margins: Appearance.spacing.space100
                                         Layout.fillWidth: true
                                         font.pixelSize: Appearance.font.pixelSize.small
-                                        text: windowButton.modelData?.title
-                                        elide: Text.ElideRight
+                                        text: windowButton.modelData?.title ?? ""
                                         color: Appearance.m3colors.m3onSurface
                                     }
 
