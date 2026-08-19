@@ -156,7 +156,7 @@ ShellRoot {
                         currentIndex: index
                         editController: controller
                         editBucket: bucketBox.bucketName
-                        editWidgetId: modelData
+                        widgetId: modelData
 
                         Rectangle {
                             implicitWidth: 30

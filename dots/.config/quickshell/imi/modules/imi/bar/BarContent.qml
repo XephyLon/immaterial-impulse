@@ -222,7 +222,7 @@ Item {
                             totalCount: root.effectiveLeftLayout.length
                             editController: barEditController
                             editBucket: "left"
-                            editWidgetId: modelData
+                            widgetId: modelData
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -260,7 +260,7 @@ Item {
                         totalCount: root.effectiveLeftLayout.length
                         editController: barEditController
                         editBucket: "left"
-                        editWidgetId: modelData
+                        widgetId: modelData
                         Loader {
                             Layout.fillHeight: true
                             source: root.getWidgetUrl(modelData)
@@ -335,7 +335,7 @@ Item {
                             totalCount: root.effectiveMiddleLayout.length
                             editController: barEditController
                             editBucket: "middle"
-                            editWidgetId: modelData
+                            widgetId: modelData
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -373,7 +373,7 @@ Item {
                         totalCount: root.effectiveMiddleLayout.length
                         editController: barEditController
                         editBucket: "middle"
-                        editWidgetId: modelData
+                        widgetId: modelData
                         Loader {
                             Layout.fillHeight: true
                             source: root.getWidgetUrl(modelData)
@@ -449,7 +449,7 @@ Item {
                             totalCount: root.effectiveRightLayout.length
                             editController: barEditController
                             editBucket: "right"
-                            editWidgetId: modelData
+                            widgetId: modelData
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -487,7 +487,7 @@ Item {
                         totalCount: root.effectiveRightLayout.length
                         editController: barEditController
                         editBucket: "right"
-                        editWidgetId: modelData
+                        widgetId: modelData
                         Loader {
                             Layout.fillHeight: true
                             source: root.getWidgetUrl(modelData)
