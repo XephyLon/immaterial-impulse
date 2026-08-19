@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 """Pins for the crisp-mask refinement in scripts/background/subject_mask.py.
 
-The salient path squashes the whole wallpaper to the model's 1024 square, so on
-a 5760x2318 wallpaper every mask texel covers ~5.6 picture pixels and the
+The salient path squashes the whole wallpaper to the model's 1024 square, so
+on a 5760x2318 wallpaper every mask texel covers ~5.6 picture pixels and the
 stored mask was that raw soft matte, upscaled bilinearly by Qt. Measured on
 that wallpaper: hair claimed a band of background around it, and a striped
-wall behind a hairline came through as subject. Three pieces of arithmetic fix
-it, and all three are testable without a model:
+wall behind a hairline came through as subject - the soft band, upscaled. Two
+pieces of arithmetic fix it, and both are testable without a model:
 
-- the crop the second pass runs on (bbox of the first pass, padded), and the
-  guard that skips it when the subject already fills the frame;
-- the hardening curve applied at the end;
+- the hardening curve, applied AFTER the mask is resampled to its storage
+  size, so the edge is ~1 storage pixel rather than a bilinear ramp;
 - the size the mask is stored at (aspect-true, 4096 long side, never larger
   than the wallpaper).
+
+A second model pass over the subject's box was here too, and was measured out
+again (see `segment`'s docstring); its tests went with it.
 
 Pure numpy and Pillow, no ONNX session - `test_clock_depth_cache.py` pins that
 `status` never constructs one, and nothing here may loosen that.
@@ -74,70 +76,6 @@ class HardenTest(unittest.TestCase):
         ends = subject_mask.harden(np.array([0.0, 1.0], np.float32))
         self.assertLess(float(ends[0]), 0.01)
         self.assertGreater(float(ends[1]), 0.99)
-
-
-class RefineBoxTest(unittest.TestCase):
-    """The crop the second pass runs on, in the wallpaper's own pixels."""
-    def setUp(self):
-        needs_numpy(self)
-
-    def coarse(self, x0, x1, y0, y1, side=64):
-        import numpy as np
-        mask = np.zeros((side, side), np.float32)
-        mask[y0:y1, x0:x1] = 1.0
-        return mask
-
-    def test_the_box_is_the_subject_scaled_to_the_wallpaper_and_padded(self):
-        # A subject over columns 16-31 and rows 32-47 of a 64-texel mask, on a
-        # 640x320 wallpaper: x spans 160-320, y spans 160-240 before padding.
-        box = subject_mask.refine_box(self.coarse(16, 32, 32, 48), 640, 320, pad=0.0)
-        self.assertEqual(box, (160, 160, 320, 240))
-        padded = subject_mask.refine_box(self.coarse(16, 32, 32, 48), 640, 320, pad=0.5)
-        # Half the width (80) each side in x, half the height (40) in y.
-        self.assertEqual(padded, (80, 120, 400, 280))
-
-    def test_the_padding_stops_at_the_frame(self):
-        box = subject_mask.refine_box(self.coarse(0, 8, 56, 64), 640, 320, pad=1.0)
-        self.assertEqual(box[0], 0)
-        self.assertEqual(box[3], 320)
-        self.assertGreaterEqual(box[1], 0)
-        self.assertLessEqual(box[2], 640)
-
-    def test_an_empty_mask_has_no_box(self):
-        import numpy as np
-        self.assertIsNone(subject_mask.refine_box(np.zeros((64, 64), np.float32), 640, 320))
-
-    def test_the_default_padding_is_the_measured_one(self):
-        # 12% each side is what the prototype was measured with; a smaller pad
-        # cuts hair at the crop's edge, a larger one hands the second pass the
-        # background the first pass was already wrong about.
-        self.assertAlmostEqual(subject_mask.REFINE_PAD, 0.12)
-
-
-class RefineGuardTest(unittest.TestCase):
-    """Pass 2 is skipped when it cannot gain anything.
-
-    A crop that covers ~85% of the frame is the same picture at the same
-    squash, so the second run costs 0.48s and changes nothing.
-    """
-    def test_a_small_subject_is_refined(self):
-        self.assertTrue(subject_mask.refine_wanted((100, 100, 700, 500), 1920, 1080))
-
-    def test_a_subject_filling_the_frame_is_not(self):
-        self.assertFalse(subject_mask.refine_wanted((0, 0, 1920, 1080), 1920, 1080))
-        # Just under the whole frame is still the whole frame for this purpose.
-        self.assertFalse(subject_mask.refine_wanted((10, 10, 1900, 1070), 1920, 1080))
-
-    def test_the_boundary_is_the_coverage_limit(self):
-        # Exactly the limit is not refined; a hair under it is.
-        w, h = 1000, 1000
-        limit = subject_mask.REFINE_SKIP_COVERAGE
-        side_at = int((limit ** 0.5) * w)
-        self.assertFalse(subject_mask.refine_wanted((0, 0, side_at + 1, side_at + 1), w, h))
-        self.assertTrue(subject_mask.refine_wanted((0, 0, side_at - 20, side_at - 20), w, h))
-
-    def test_no_box_means_nothing_to_refine(self):
-        self.assertFalse(subject_mask.refine_wanted(None, 1920, 1080))
 
 
 class StorageSizeTest(unittest.TestCase):
@@ -215,14 +153,11 @@ class ProducerContractTest(unittest.TestCase):
         self.assertEqual(heavy, [], "a module-scope import makes every status query "
                          "pay for it; the refinement's imports stay inside the functions")
 
-    def test_the_run_path_refines_and_hardens_before_writing(self):
+    def test_the_run_path_hardens_and_sizes_before_writing(self):
         source = SCRIPT.read_text()
         run_body = source.split("def run(", 1)[1].split("\ndef ", 1)[0]
         self.assertIn("storage_size(", run_body)
         self.assertIn("harden(", run_body)
-        segment_body = source.split("def segment(", 1)[1].split("\ndef ", 1)[0]
-        self.assertIn("refine_box(", segment_body)
-        self.assertIn("refine_wanted(", segment_body)
 
     def test_the_prompted_path_hardens_and_stores_at_the_same_size(self):
         source = SCRIPT.read_text()

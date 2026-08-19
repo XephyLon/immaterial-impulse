@@ -125,20 +125,6 @@ EMPTY_FOREGROUND = 0.005
 # resolution, which is the smallest thing worth compositing over a clock.
 EMPTY_PROMPTED_FOREGROUND = 0.0002
 
-# The second pass of a salient run. Squashing a whole 5760x2318 wallpaper into
-# the model's 1024 square gives every mask texel ~5.6 picture pixels, and the
-# damage is not just softness: measured on the Violet Evergarden wallpaper, hair
-# claimed a band of wall around it and a striped wall behind a hairline came
-# through as subject, because at that scale the model cannot tell them apart.
-# Running the model AGAIN on just the subject's box hands it the same picture at
-# up to several times the resolution, and the fine answer is pasted over the
-# coarse one. Cost +0.48s on that wallpaper; the stripe bleed is gone and the
-# soft band tightens. The box is padded so hair at its edge is inside the crop.
-REFINE_PAD = 0.12
-# A box covering this share of the frame is the same picture at the same
-# squash, so pass 2 would cost the time and change nothing.
-REFINE_SKIP_COVERAGE = 0.85
-
 # The sigmoid that steepens the model's matte around its own boundary. k=6 is
 # the value the soft band was measured under: pixels between 0.16 and 0.84 went
 # from 0.496 Mpx to 0.235 Mpx on the Violet Evergarden wallpaper. 0.5 stays at
@@ -237,37 +223,6 @@ def harden(mask, k=HARDEN_K):
     import numpy as np
 
     return 1.0 / (1.0 + np.exp(-2.0 * k * (np.asarray(mask, dtype=np.float32) - 0.5)))
-
-
-def refine_box(mask, width, height, threshold=0.5, pad=REFINE_PAD):
-    """The subject's box in the wallpaper's own pixels, padded, or None.
-
-    `mask` is the first pass's square; the box is where it claims more than
-    `threshold`, scaled back onto the picture and grown by `pad` of its own
-    width and height each side, clamped to the frame.
-    """
-    import numpy as np
-
-    rows, cols = np.where(np.asarray(mask) > threshold)
-    if rows.size == 0:
-        return None
-    mask_h, mask_w = np.asarray(mask).shape
-    x0 = cols.min() / mask_w * width
-    x1 = (cols.max() + 1) / mask_w * width
-    y0 = rows.min() / mask_h * height
-    y1 = (rows.max() + 1) / mask_h * height
-    pad_w, pad_h = (x1 - x0) * pad, (y1 - y0) * pad
-    return (int(max(0.0, x0 - pad_w)), int(max(0.0, y0 - pad_h)),
-            int(min(float(width), x1 + pad_w) + 0.999999),
-            int(min(float(height), y1 + pad_h) + 0.999999))
-
-
-def refine_wanted(box, width, height, limit=REFINE_SKIP_COVERAGE):
-    """Whether a second pass over `box` can see anything the first did not."""
-    if box is None:
-        return False
-    x0, y0, x1, y1 = box
-    return (x1 - x0) * (y1 - y0) < limit * width * height
 
 
 def parse_point(text):
@@ -538,15 +493,19 @@ def fetch_model(root, model, role="model", progress=None):
 
 
 def segment(image_path, onnx_path, side):
-    """Run one model over one image, twice, and return the mask and pass 1's share.
+    """Run one model over one image and return the normalised mask.
 
-    Pass 1 is the whole picture squashed to the model's square. Pass 2 is the
-    same model over just the subject's padded box (`refine_box`), whose answer
-    is upsampled to the box and pasted over the coarse mask upsampled to the
-    wallpaper - see REFINE_PAD for what that buys and what it costs. The mask
-    comes back at the WALLPAPER's resolution when pass 2 ran, and as pass 1's
-    square when it did not; the share is pass 1's, so a `.none` verdict is the
-    same verdict it always was and a refinement cannot manufacture one.
+    ONE pass, over the whole picture. A second pass over the subject's own box
+    was tried here (038df1083) on the reasoning that the model would separate
+    hair from background better with more pixels of it, and measured to be net
+    harmful on the picture that motivated it: where the coarse pass claimed the
+    subject and the crop pass did not, 17.7% of the coarse subject was LOST
+    (the neck went 0.994 -> 0.671, the collar 0.996 -> 0.317), while only 0.5%
+    was gained the other way; and the striped wall behind the hairline it was
+    meant to clean up was already at 0.257 in the coarse pass - the visible
+    bleed was the soft band, and it is the hardening (`harden`, applied at the
+    storage size) that removes it. Soft band after hardening: 0.112 Mpx from
+    the coarse pass alone against 0.230 Mpx with the crop pass pasted in.
 
     Imported here rather than at module scope so `status` never pays for
     onnxruntime, and so a machine without it can still answer cache questions.
@@ -556,32 +515,16 @@ def segment(image_path, onnx_path, side):
 
     Image.MAX_IMAGE_PIXELS = None
     image = Image.open(image_path).convert("RGB")
+    # Squash to the square input, never pad. With black bars the model reads the
+    # bars as background and returns the entire picture as the subject -
+    # measured at foreground 0.9999 on three separate wallpapers.
+    array = np.asarray(image.resize((side, side), Image.LANCZOS), np.float32) / 255.0
+    array = array - 0.5
     session = session_for(onnx_path)
     name = session.get_inputs()[0].name
-
-    def infer(picture):
-        # Squash to the square input, never pad. With black bars the model
-        # reads the bars as background and returns the entire picture as the
-        # subject - measured at foreground 0.9999 on three separate wallpapers.
-        array = np.asarray(picture.resize((side, side), Image.LANCZOS), np.float32) / 255.0
-        array = array - 0.5
-        mask = session.run(None, {name: array.transpose(2, 0, 1)[None]})[0][0][0]
-        return (mask - mask.min()) / (mask.max() - mask.min() + 1e-8)
-
-    coarse = infer(image)
-    foreground = float((coarse > 0.5).mean())
-    if foreground < EMPTY_FOREGROUND:
-        return coarse, foreground
-
-    box = refine_box(coarse, image.width, image.height)
-    if not refine_wanted(box, image.width, image.height):
-        return coarse, foreground
-
-    x0, y0, x1, y1 = box
-    fine = infer(image.crop(box))
-    merged = resample(coarse, (image.width, image.height))
-    merged[y0:y1, x0:x1] = resample(fine, (x1 - x0, y1 - y0))
-    return merged, foreground
+    mask = session.run(None, {name: array.transpose(2, 0, 1)[None]})[0][0][0]
+    mask = (mask - mask.min()) / (mask.max() - mask.min() + 1e-8)
+    return mask
 
 
 def resample(mask, size):
@@ -590,9 +533,7 @@ def resample(mask, size):
     from PIL import Image
 
     plane = Image.fromarray(np.ascontiguousarray(mask, dtype=np.float32), "F")
-    # np.array, not np.asarray: a view onto Pillow's buffer is read-only, and
-    # `segment` pastes the fine pass into this.
-    return np.array(plane.resize(size, Image.BILINEAR), dtype=np.float32)
+    return np.asarray(plane.resize(size, Image.BILINEAR), dtype=np.float32)
 
 
 def session_for(onnx_path):
@@ -795,7 +736,8 @@ def run(root, wallpaper, model, force=False):
     if not onnx_path.exists():
         onnx_path = fetch_model(root, model)
 
-    mask, foreground = segment(wallpaper, onnx_path, MODELS[model]["side"])
+    mask = segment(wallpaper, onnx_path, MODELS[model]["side"])
+    foreground = float((mask > 0.5).mean())
 
     candidate.unlink(missing_ok=True)
     negative.unlink(missing_ok=True)
