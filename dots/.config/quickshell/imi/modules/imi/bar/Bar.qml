@@ -72,8 +72,24 @@ Scope {
                 property var thisMonitorData: HyprlandData.monitors.find(m => m.name === barRoot.screen?.name)
                 property bool monitorHasFullscreen: HyprlandData.workspaceById[thisMonitorData?.activeWorkspace?.id]?.hasfullscreen ?? false
                 property bool monitorHasSpecialOpen: (thisMonitorData?.specialWorkspace?.name ?? "") !== ""
+                // The zone lives on barSpaceReserver below, so this surface
+                // never reconfigures for it. Do not put an `exclusiveZone`
+                // back here, not even 0: writing that property at all forces
+                // exclusionMode to Normal, and a Normal-mode surface is placed
+                // inside the area other surfaces reserve - so the bar would be
+                // pushed off the screen edge by its own reserver.
                 exclusionMode: ExclusionMode.Ignore
-                exclusiveZone: (Config?.options.bar.autoHide.enable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 : Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
+                // A second window, not something in the bar's item tree, which
+                // is why it is a property rather than a child.
+                property QtObject barSpaceReserver: BarExclusiveZoneReserver {
+                    screen: barLoader.modelData
+                    barNamespace: "quickshell:bar"
+                    farEdge: Config.options.bar.bottom
+                    edgeMargin: Config.options.bar.bottom
+                        ? Appearance.sizes.barBottomMargin : Appearance.sizes.barDetachMargin
+                    zone: (Config?.options.bar.autoHide.enable && (!barRoot.mustShow || !Config?.options.bar.autoHide.pushWindows))
+                        ? 0 : Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
+                }
                 WlrLayershell.namespace: "quickshell:bar"
                 // Overlay layer only while special workspace sits on top of a fullscreen window on this monitor,
                 // else Top layer so fullscreen apps cover the bar as normal (Hyprland buries Top layer under fullscreen+special).
