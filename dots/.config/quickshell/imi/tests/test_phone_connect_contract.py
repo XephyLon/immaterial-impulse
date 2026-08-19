@@ -14,9 +14,8 @@ The rest pins the busctl I/O the double deliberately omits:
 - device ids are filtered through validDeviceId before they are spliced
   into object paths, and Valent object paths pass validValentObjectPath
   before they are called into;
-- no `busctl monitor`: updates are bounded polling (a persistent streaming
-  Process needs backoff and a retry ceiling per CONTRIBUTING.md), and the
-  poll timer is gated on enableService && installed.
+- the poll survives the stream as the reconcile behind it, gated on
+  enableService && installed exactly as before.
 """
 
 import re
@@ -74,20 +73,23 @@ def test_only_shell_string_is_the_static_presence_probe():
 
 def test_busctl_calls_are_argv_arrays_via_busctl_call():
     source = SERVICE.read_text()
-    builder = re.search(
-        r'function busctlCall\(.*?\{\n(.*?)\n    \}', source, re.S
-    )
-    assert builder, "busctlCall builder missing"
-    assert '["busctl", "--user", "--json=short"' in builder.group(1)
-    # Every exec goes through the queue or the action process, both fed by
-    # busctlCall argv arrays - no other busctl literal should exist.
+    for name in ("busctlCall", "busctlMonitor"):
+        builder = re.search(
+            rf'function {name}\(.*?\{{\n(.*?)\n    \}}', source, re.S
+        )
+        assert builder, f"{name} builder missing"
+        assert '["busctl", "--user", "--json=short"' in builder.group(1), (
+            f"{name} does not build a --json=short argv array"
+        )
+    # Every exec goes through the queue, the action process or the monitor,
+    # all fed by those two argv builders - no other busctl literal exists.
     busctl_literals = [
         line.strip() for line in source.splitlines()
         if '"busctl"' in line
         and not line.strip().startswith('return ["busctl"')
         and "command -v" not in line
     ]
-    assert busctl_literals == [], f"busctl invoked outside busctlCall: {busctl_literals}"
+    assert busctl_literals == [], f"busctl invoked outside the argv builders: {busctl_literals}"
 
 
 def test_device_ids_are_validated_before_path_splicing():
@@ -108,16 +110,22 @@ def test_device_ids_are_validated_before_path_splicing():
         )
 
 
-def test_no_streaming_monitor_and_poll_timer_is_gated():
+def test_the_poll_survives_as_the_reconcile_and_stays_gated():
+    """The stream is not allowed to replace the poll. Nothing announces a
+    daemon appearing (there is no monitor to hear it on), and a daemon that
+    dies without a signal would leave the model frozen - so the timer stays
+    on, gated exactly as before, and only slows down while the stream is
+    live."""
     source = SERVICE.read_text()
-    assert '"monitor"' not in source, (
-        "busctl monitor is a persistent streaming Process; bounded polling was "
-        "the reviewed decision (see the service header comment)"
+    timers = re.findall(r"Timer \{(.*?)\n    \}", source, re.S)
+    poll = [body for body in timers if "root.refresh()" in body and "repeat: true" in body]
+    assert len(poll) == 1, f"expected exactly one poll Timer, found {len(poll)}"
+    body = poll[0]
+    assert "running: root.enableService && root.installed" in body
+    assert "triggeredOnStart: true" in body
+    assert "root.monitorLive ? root.reconcileInterval : root.pollInterval" in body, (
+        "the poll does not slow down behind a live stream"
     )
-    timer = re.search(r"Timer \{(.*?)\n    \}", source, re.S)
-    assert timer, "poll Timer missing"
-    assert "running: root.enableService && root.installed" in timer.group(1)
-    assert "repeat: true" in timer.group(1)
 
 
 if __name__ == "__main__":
