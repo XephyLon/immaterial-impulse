@@ -123,6 +123,15 @@ fi
 # default, Easing.Linear - the generic curve M3_GUIDELINES §2 forbids - and
 # nothing about the source or the log shows it. Two fixes in two days each
 # repaired the sites someone had noticed and left more in the same file.
+# Static lint: every mirror symlink under tests/imports resolves. A link there
+# outlives a deleted target silently - nothing fails until a test imports that
+# exact type, which for an untested singleton is never.
+echo "Running test import symlink lint..."
+if ! python3 "$SCRIPT_DIR/lint_test_import_symlinks.py"; then
+    echo "Test import symlink lint failed."
+    exit 1
+fi
+
 echo "Running motion tier lint..."
 if ! python3 "$SCRIPT_DIR/lint_motion_tier_partial.py"; then
     echo "Motion tier lint failed."
