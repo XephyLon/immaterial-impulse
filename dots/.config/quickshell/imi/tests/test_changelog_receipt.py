@@ -13,6 +13,7 @@ and exits zero without running one - three modules shipped as silent no-ops
 that way (CONTRIBUTING.md → "New features and bugfixes need tests").
 """
 
+import re
 import unittest
 from pathlib import Path
 
@@ -21,6 +22,7 @@ import changelog_receipt as receipt
 HERE = Path(__file__).resolve().parent
 REPO = next(p for p in HERE.parents if (p / "AGENT.md").exists())
 WORKFLOW = REPO / ".github" / "workflows" / "changelog-receipt.yml"
+CONTRIBUTING = REPO / "CONTRIBUTING.md"
 
 SHELL_FILE = "dots/.config/quickshell/imi/shell.qml"
 
@@ -158,6 +160,43 @@ class OneImplementation(unittest.TestCase):
         invoked = REPO / "dots/.config/quickshell/imi/tests/changelog_receipt.py"
         self.assertTrue(invoked.exists())
         self.assertIn(str(invoked.relative_to(REPO)), WORKFLOW.read_text())
+
+
+class ContributingExamples(unittest.TestCase):
+    """Every receipt CONTRIBUTING.md offers must be one the module accepts.
+
+    The workflow delegating to the module removes one second spelling; the doc
+    is the other, and it cannot delegate - an author copies the form out of
+    CONTRIBUTING.md and CI answers with the module. So the doc's own examples
+    are extracted and run through the matcher, which is the same pin
+    `test_bar_widget_parity.py` puts on the two bars: not "both exist" but
+    "both say the same thing".
+    """
+
+    def _examples(self):
+        found = re.findall(r"`(Changelog: [^`]+)`", CONTRIBUTING.read_text())
+        self.assertTrue(found, "CONTRIBUTING.md documents no Changelog receipt")
+        return found
+
+    def test_every_documented_form_is_accepted(self):
+        for example in self._examples():
+            with self.subTest(example=example):
+                self.assertIsNotNone(
+                    receipt.receipt_line(example),
+                    f"CONTRIBUTING.md offers {example!r}, which the matcher rejects",
+                )
+
+    def test_both_forms_are_documented(self):
+        # A doc that lost the `not user-visible` half would push every
+        # refactor toward a `updated` claim it cannot back, or toward silence.
+        examples = self._examples()
+        self.assertTrue(any(receipt.claims_updated(e) for e in examples))
+        self.assertTrue(any(not receipt.claims_updated(e) for e in examples))
+
+    def test_the_rule_names_its_own_workflow_and_module(self):
+        text = CONTRIBUTING.read_text()
+        self.assertIn(WORKFLOW.name, text)
+        self.assertIn("changelog_receipt.py", text)
 
 
 if __name__ == "__main__":
