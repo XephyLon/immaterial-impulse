@@ -1154,6 +1154,16 @@ if ! python3 "$SCRIPT_DIR/test_weather_forecast_contract.py"; then
     exit 1
 fi
 
+# Brings its own headless weston and its own bus. The card unrolls from the
+# content's first DRAWN section, so a section added to a popup silently changes
+# what that popup opens at - and a settled bar is the same height whether it
+# grew or teleported, so the bars are sampled in flight.
+echo "Running weather popup hero runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_weather_popup_hero_runtime.py"; then
+    echo "Weather popup hero runtime tests failed."
+    exit 1
+fi
+
 echo "Running currency service safety tests..."
 if ! python3 "$SCRIPT_DIR/test_currency_service_contract.py"; then
     echo "Currency service safety tests failed."
