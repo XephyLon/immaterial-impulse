@@ -40,7 +40,8 @@ EXPECTED_CHECKS = 6
 
 
 def _runtime_available():
-    return bool(os.environ.get("WAYLAND_DISPLAY")) and shutil.which("qs") is not None
+    return bool(os.environ.get("WAYLAND_DISPLAY")) and all(shutil.which(binary) is not None
+               for binary in ("qs", "dbus-run-session"))
 
 
 @unittest.skipUnless(_runtime_available(),
@@ -71,7 +72,11 @@ class ParallaxMigrationRuntimeTest(unittest.TestCase):
         env["XDG_CACHE_HOME"] = str(self.home / "cache")
         env["XDG_DATA_HOME"] = str(self.home / "data")
         env["PARALLAX_EXPECT"] = expected
-        proc = subprocess.run(["qs", "-p", str(HARNESS)], cwd=str(ROOT), env=env,
+        proc = subprocess.run(
+            # dbus-run-session, not the inherited DBUS_SESSION_BUS_ADDRESS: a
+            # shell reading MPRIS, UPower or a portal off the developer's bus
+            # measures their session rather than this tree.
+            ["dbus-run-session", "--", "qs", "-p", str(HARNESS)], cwd=str(ROOT), env=env,
                               capture_output=True, text=True, timeout=180)
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]

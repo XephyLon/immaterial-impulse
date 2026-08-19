@@ -116,7 +116,6 @@ def decides_at_the_launch(raw):
     return all(WRAPPER in strings for strings in lists)
 
 EXISTING = frozenset({
-    "test_app_usage_runtime.py",
     "test_bar_edit_runtime.py",
     "test_calendar_card.py",
     "test_card_shadow.py",
@@ -124,21 +123,14 @@ EXISTING = frozenset({
     "test_clock_depth_compositing.py",
     "test_clock_depth_noop.py",
     "test_config_control_write_back.py",
-    "test_config_dir_migration_runtime.py",
     "test_conflict_killer_contract.py",
     "test_dock_edge_runtime.py",
     "test_edit_mode_chrome.py",
-    "test_edit_mode_runtime.py",
     "test_get_keybinds.py",
-    "test_kboptions_migration_runtime.py",
     "test_keybind_overrides_runtime.py",
     "test_launcher_qalc_runtime.py",
-    "test_motion_multiplier_runtime.py",
     "test_nightlight_state_runtime.py",
-    "test_notes_migration_runtime.py",
     "test_notes_surfaces_runtime.py",
-    "test_parallax_migration_runtime.py",
-    "test_quick_toggles_layout_runtime.py",
     "test_widget_elevation.py",
 })
 
