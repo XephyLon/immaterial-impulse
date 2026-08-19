@@ -71,16 +71,19 @@ function eligible(state) {
 
 // Where the mask has to be drawn so it lines up with the wallpaper under it.
 //
-// The mask is the model's own output: the whole picture squashed to a square,
-// which is what the feasibility work rendered and judged by eye, so it is what
-// the user accepts. That means it is NOT the wallpaper's aspect, and a mask
-// simply filled into the same box as the wallpaper would be stretched
-// differently from the image it masks - by 3.5x on this monitor.
+// The mask covers the whole picture, whatever shape it is stored at. It was the
+// model's own square (the whole picture squashed to 1024x1024, NOT the
+// wallpaper's aspect) when this was written, and a mask simply filled into the
+// same box as the wallpaper would have been stretched differently from the
+// image it masks - by 3.5x on this monitor. The producer stores it aspect-true
+// now (4096 on the long side), and nothing here changed for that: this
+// function is a rectangle for the WALLPAPER and never reads the mask's shape.
 //
 // The wallpaper is drawn PreserveAspectCrop: scaled by whichever axis needs the
 // most, centred, and clipped by the box. So the mask, stretched, has to cover
 // exactly the rectangle the whole wallpaper would occupy if nothing clipped it.
-// Undoing the squash and re-applying the crop is the same operation.
+// Undoing whatever resample the mask carries and re-applying the crop is the
+// same operation.
 //
 // Returns a rect in the box's own coordinates; x and y are usually negative,
 // because most of the point is that the picture is bigger than the box.
