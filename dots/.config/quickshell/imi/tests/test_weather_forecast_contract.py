@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Weather forecast pins: the wiring the unit tests cannot see.
 
-`tst_weather_forecast.qml` proves the day-grouping arithmetic and
-`tst_weather_icons.qml` proves the provider-aware icon lookup, both against the
-real sources. Neither can see the service that has to call them or the second
-OpenWeatherMap request the forecast depends on, and each of those can break on
-its own without failing a single unit test.
+`tst_weather_forecast.qml` proves the day-grouping arithmetic,
+`tst_weather_hourly.qml` the hourly row's, and `tst_weather_icons.qml` the
+provider-aware icon lookup, all against the real sources. None of them can see
+the service that has to call them or the second OpenWeatherMap request the
+forecast depends on, and each of those can break on its own without failing a
+single unit test.
 
 The URL pins are the load-bearing ones. `city` comes from config and from
 shareable presets, and the existing calls carry a comment recording that they
@@ -23,9 +24,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TESTS = ROOT / "tests"
 FORECAST_QML_TEST = TESTS / "tst_weather_forecast.qml"
+HOURLY_QML_TEST = TESTS / "tst_weather_hourly.qml"
 SERVICE = ROOT / "services/Weather.qml"
 ICONS = ROOT / "modules/common/Icons.qml"
+POPUP = ROOT / "modules/imi/bar/WeatherPopup.qml"
 FORECAST_JS = ROOT / "modules/common/functions/weatherForecast.js"
+HOURLY_JS = ROOT / "modules/common/functions/weatherHourly.js"
 
 
 def _function_body(source, name):
@@ -116,6 +120,60 @@ class WeatherServiceForecastTests(unittest.TestCase):
             self.service, r'"\s*curl[^"]*\$\{',
             "a URL is being interpolated into a shell command string.")
 
+    def test_the_service_publishes_the_hourly_slots(self):
+        """The popup's hourly row reads this and nothing else."""
+        self.assertRegex(self.service, r"property\s+var\s+hourly\s*:",
+                         "Weather no longer publishes the hourly slots the "
+                         "popup's row is drawn from.")
+
+    def test_both_providers_fill_the_hourly_row(self):
+        """Either half missing is a permanently empty row for that provider's
+        users, with nothing in the log - the same failure the daily row had."""
+        self.assertIn("slotsFromWttr", self.service)
+        self.assertIn("slotsFromOwm", self.service)
+
+    def test_the_hourly_row_costs_no_new_request(self):
+        """It is a second reading of two payloads the service already fetches.
+
+        OpenWeatherMap's /data/2.5/forecast, already fetched for the day cards,
+        IS a three-hourly list, and wttr.in's weather[].hourly[] arrives with
+        the current conditions. A third endpoint here would double a call rate
+        the OWM path has already doubled once, for data that was in the
+        response - so the pin is the endpoint list and the number of fetchers,
+        not the parsing.
+        """
+        endpoints = set(re.findall(r"https://[a-zA-Z0-9./-]+", self.service))
+        self.assertEqual(
+            endpoints,
+            {"https://api.openweathermap.org/data/2.5/weather",
+             "https://api.openweathermap.org/data/2.5/forecast",
+             "https://wttr.in/"},
+            "the weather service names an endpoint it did not before")
+        self.assertEqual(
+            self.service.count("Process {"), 2,
+            "a third Process in this service is a third request; the hourly "
+            "slots come out of the two responses already collected.")
+
+    def test_the_popup_draws_the_row_after_its_hero(self):
+        """The card unrolls from the content's FIRST drawn section.
+
+        `BarPopupOverlay` opens at that section's height, so a row declared
+        above the hero card would open the weather popup as a strip with the
+        temperature and the city below the fold - which renders, and looks
+        deliberate. This is the source half; the built tree is measured by
+        tests/test_weather_popup_hero_runtime.py, because `heroSectionHeight`
+        skips undrawn and zero-height children and source order alone cannot
+        answer that.
+        """
+        popup = POPUP.read_text(encoding="utf-8")
+        row = popup.find("WeatherHourlyChart {")
+        self.assertNotEqual(row, -1, "the popup no longer draws the hourly row at all")
+        hero = popup.find("Rectangle {")
+        self.assertNotEqual(hero, -1, "the popup's hero card is gone")
+        self.assertLess(hero, row,
+                        "the hourly row is declared above the hero card, so the "
+                        "card would unroll from the row instead of from the hero.")
+
     def test_the_forecast_endpoint_carries_the_key_and_the_unit_system(self):
         """A forecast in the wrong unit system next to a correct current
         temperature reads as the forecast being wrong, not the request."""
@@ -145,15 +203,18 @@ class WeatherIconLookupTests(unittest.TestCase):
         forecast would simply stop being populated, with a line in the log and
         a widget that looks like the provider returned nothing.
         """
-        source = FORECAST_JS.read_text(encoding="utf-8")
-        self.assertTrue(source.lstrip().startswith(".pragma library"))
-        code = _without_comments(source)
-        self.assertNotRegex(code, r"\bQt\.", "a library JS file cannot use `Qt`.")
-        for singleton in ("Appearance", "Config", "Translation", "Icons"):
-            self.assertNotIn(
-                singleton + ".", code,
-                f"weatherForecast.js reaches the {singleton} singleton, which a "
-                "`.pragma library` file has no engine context for.")
+        for path in (FORECAST_JS, HOURLY_JS):
+            with self.subTest(library=path.name):
+                source = path.read_text(encoding="utf-8")
+                self.assertTrue(source.lstrip().startswith(".pragma library"))
+                code = _without_comments(source)
+                self.assertNotRegex(code, r"\bQt\.", "a library JS file cannot use `Qt`.")
+                for singleton in ("Appearance", "Config", "Translation", "Icons",
+                                  "DateTime", "Weather"):
+                    self.assertNotIn(
+                        singleton + ".", code,
+                        f"{path.name} reaches the {singleton} singleton, which a "
+                        "`.pragma library` file has no engine context for.")
 
 
 class LocalDateAcrossTimezonesTests(unittest.TestCase):
@@ -173,31 +234,38 @@ class LocalDateAcrossTimezonesTests(unittest.TestCase):
     """
 
     ZONES = ("Pacific/Kiritimati", "Pacific/Niue")   # UTC+14 and UTC-11
+    # Both files decide something local. The hourly one is the sharper case:
+    # OpenWeatherMap's `dt_txt` is UTC and its `dt` is the instant, and a row
+    # that labels its bars from the first is correct on a UTC runner and wrong
+    # by the user's whole offset everywhere else.
+    QML_TESTS = (FORECAST_QML_TEST, HOURLY_QML_TEST)
 
-    def test_the_forecast_unit_test_passes_east_and_west_of_utc(self):
+    def test_the_weather_unit_tests_pass_east_and_west_of_utc(self):
         runner = _qmltestrunner()
         self.assertIsNotNone(
             runner,
             "qmltestrunner was not found, so this check cannot run - and it must "
             "not pass quietly. run_tests.sh needs the same binary.")
         for zone in self.ZONES:
-            with self.subTest(timezone=zone):
-                if not Path("/usr/share/zoneinfo", zone).exists():
-                    self.fail(f"tzdata has no {zone}; this check needs a real "
-                              "non-UTC zone to mean anything.")
-                env = dict(os.environ, TZ=zone,
-                           QT_QPA_PLATFORM=os.environ.get("QT_QPA_PLATFORM", "offscreen"))
-                proc = subprocess.run(
-                    [runner,
-                     "-import", str(TESTS / "mocks"),
-                     "-import", str(TESTS / "imports"),
-                     "-input", str(FORECAST_QML_TEST)],
-                    env=env, capture_output=True, text=True)
-                self.assertEqual(
-                    proc.returncode, 0,
-                    f"tst_weather_forecast.qml fails under TZ={zone}, so a "
-                    "forecast card is labelled with the wrong day for part of "
-                    f"every day there.\n{proc.stdout}\n{proc.stderr}")
+            for qml_test in self.QML_TESTS:
+                with self.subTest(timezone=zone, test=qml_test.name):
+                    if not Path("/usr/share/zoneinfo", zone).exists():
+                        self.fail(f"tzdata has no {zone}; this check needs a real "
+                                  "non-UTC zone to mean anything.")
+                    env = dict(os.environ, TZ=zone,
+                               QT_QPA_PLATFORM=os.environ.get("QT_QPA_PLATFORM", "offscreen"))
+                    proc = subprocess.run(
+                        [runner,
+                         "-import", str(TESTS / "mocks"),
+                         "-import", str(TESTS / "imports"),
+                         "-input", str(qml_test)],
+                        env=env, capture_output=True, text=True)
+                    self.assertEqual(
+                        proc.returncode, 0,
+                        f"{qml_test.name} fails under TZ={zone}, so a forecast "
+                        "card is labelled with the wrong day - or an hourly bar "
+                        "with the wrong hour - for part of every day there."
+                        f"\n{proc.stdout}\n{proc.stderr}")
 
 
 if __name__ == "__main__":
