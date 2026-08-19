@@ -80,12 +80,14 @@ Item {
 
         Image {
             id: mask
-            // The mask is the model's own output: the whole picture squashed to
-            // a square. So it is NOT the wallpaper's aspect, and filling it
-            // into the same box would stretch it differently from the image it
-            // masks - by 3.5x on this monitor. Stretched into the rectangle the
-            // whole wallpaper would occupy if nothing clipped it, undoing the
-            // squash and re-applying the crop are the same operation.
+            // The mask covers the whole picture, at whatever size and shape
+            // the producer stored it (aspect-true, 4096 on the long side, now;
+            // the model's own 1024 square before, which was NOT the
+            // wallpaper's aspect and would have stretched 3.5x differently
+            // from the image it masks if filled into the same box). Stretched
+            // into the rectangle the whole wallpaper would occupy if nothing
+            // clipped it, undoing the mask's resample and re-applying the crop
+            // are the same operation - so the mask's shape never matters here.
             //
             // What masks is this file's ALPHA - Qt's OpacityMask reads nothing
             // else, so the producer writes the mask into the alpha channel as

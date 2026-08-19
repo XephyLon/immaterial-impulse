@@ -20,7 +20,7 @@ garbage the sweep collects.
 Four files can exist per key, and they are the four states of section 5 of
 docs/superpowers/specs/2026-08-16-clock-depth-design.md:
 
-    <key>.<model>.png   a candidate mask a model produced, at model resolution
+    <key>.<model>.png   a candidate mask a model produced (see `write_mask` for its size)
     <key>.<model>.none  that model looked and found no subject
     <key>.png           the candidate the user accepted - the ONLY file the shell draws
     <key>.off           the user declined every candidate for this wallpaper
@@ -148,6 +148,15 @@ REFINE_SKIP_COVERAGE = 0.85
 # what it was for.
 HARDEN_K = 6.0
 
+# The long side a mask is stored at. Model resolution (1024) was the storage
+# size before, on the reasoning that Qt's bilinear upscale is free - which it
+# is, but it upscales the softness too: a 1024-wide mask over a 5760-wide
+# picture is ~5.6 picture pixels per texel, and after the two-pass refinement
+# the mask HAS finer structure than that to keep. 4096 keeps it, at 357 KB on
+# that wallpaper against ~100 KB before; a mask is never stored larger than the
+# wallpaper it is for, since past that there is nothing to keep.
+MASK_STORE_SIDE = 4096
+
 # Keys, not files: dropping a key's `.off` while keeping its `.png` would
 # resurrect a mask the user declined.
 SWEEP_KEEP_KEYS = 200
@@ -202,6 +211,24 @@ def resize_longest_side(width, height, side):
         raise ValueError(f"image has no size: {width}x{height}")
     scale = side / float(max(width, height))
     # round, not floor: the transform SAM's own ResizeLongestSide applies.
+    return (max(1, int(width * scale + 0.5)), max(1, int(height * scale + 0.5)))
+
+
+def storage_size(width, height, side=MASK_STORE_SIDE):
+    """The size a mask is written at: `side` on the long side, aspect kept.
+
+    Aspect-true rather than the model's square, so the file is a picture of
+    the wallpaper's subject rather than a squashed one - and never larger than
+    the wallpaper, because a mask upsampled past its picture stores nothing.
+    `coverRect` on the shell's side maps the whole mask onto the whole picture
+    whatever the mask's own shape is, which is why this needs no partner there.
+    """
+    if width <= 0 or height <= 0:
+        raise ValueError(f"image has no size: {width}x{height}")
+    longest = max(width, height)
+    if longest <= side:
+        return (width, height)
+    scale = side / float(longest)
     return (max(1, int(width * scale + 0.5)), max(1, int(height * scale + 0.5)))
 
 
@@ -370,9 +397,10 @@ def accepted_model(root, key, candidates):
             if path is None:
                 continue
             candidate = Path(path)
-            # Size first: two 1024x1024 masks from different models are
-            # routinely both ~300 KB but never the same 300 KB, so this skips
-            # the read on the mismatching one without deciding anything by it.
+            # Size first: two masks of the same wallpaper from different
+            # models are routinely both a few hundred KB but never the same
+            # few hundred KB, so this skips the read on the mismatching one
+            # without deciding anything by it.
             if candidate.stat().st_size != size:
                 continue
             if blob is None:
@@ -735,7 +763,13 @@ def select(root, wallpaper, model, points):
         return {"state": "empty", "key": key, "model": model,
                 "foreground": foreground, "prompt": points}
 
-    write_mask(candidate, harden(mask), prompt=points)
+    # Hardened and stored at the same size as a salient mask. What this path
+    # does NOT do is re-embed a crop of the picture the way `segment` re-runs
+    # its model: the embedding is cached per wallpaper (see `image_embedding`)
+    # and a crop would need one of its own per click. Follow-up, noted in the
+    # design doc.
+    write_mask(candidate, harden(mask), prompt=points,
+               size=storage_size(*image_size(wallpaper)))
     return {"state": "produced", "key": key, "model": model,
             "mask": str(candidate), "foreground": foreground, "prompt": points}
 
@@ -770,18 +804,30 @@ def run(root, wallpaper, model, force=False):
         negative.write_text("")
         return {"state": "none", "key": key, "model": model, "foreground": foreground}
 
-    write_mask(candidate, harden(mask))
+    write_mask(candidate, harden(mask), size=storage_size(*image_size(wallpaper)))
     return {"state": "produced", "key": key, "model": model,
             "mask": str(candidate), "foreground": foreground}
 
 
-def write_mask(path, mask, prompt=None):
-    """Save a mask at model resolution, carrying it in BOTH channels.
+def image_size(path):
+    """A picture's pixel size without decoding it - Pillow reads the header."""
+    from PIL import Image
 
-    Model resolution rather than the wallpaper's: upscaling to 5120px is a smooth
-    texture fetch the GPU does for free, while a wallpaper-resolution mask costs
-    3MB and nearly a second of write time to store information the mask does not
-    have.
+    Image.MAX_IMAGE_PIXELS = None
+    with Image.open(path) as picture:
+        return picture.size
+
+
+def write_mask(path, mask, prompt=None, size=None):
+    """Save a mask, resampled to `size` if given, carrying it in BOTH channels.
+
+    `size` is `storage_size` of the wallpaper: 4096 on the long side, aspect
+    kept, never larger than the picture. Not the wallpaper's own resolution -
+    a 7680x2160 mask costs 3MB and nearly a second of write time - and no
+    longer the model's 1024 square either, because after the two-pass
+    refinement the mask has finer structure than 1024 texels can carry over a
+    wide picture (see MASK_STORE_SIDE). Without `size` the mask keeps its own
+    resolution, which is what the tests hand in.
 
     Grayscale AND alpha, both the same plane. The alpha is what the shell masks
     with - Qt's OpacityMask reads the mask's alpha channel and nothing else, so a
@@ -814,7 +860,10 @@ def write_mask(path, mask, prompt=None):
     from PIL import Image
     from PIL import PngImagePlugin
 
-    plane = (np.clip(np.asarray(mask, dtype="float32"), 0.0, 1.0) * 255).astype("uint8")
+    mask = np.asarray(mask, dtype="float32")
+    if size is not None and tuple(size) != (mask.shape[1], mask.shape[0]):
+        mask = resample(mask, tuple(size))
+    plane = (np.clip(mask, 0.0, 1.0) * 255).astype("uint8")
     info = None
     if prompt is not None:
         info = PngImagePlugin.PngInfo()
