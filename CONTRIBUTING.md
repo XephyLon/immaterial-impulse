@@ -344,6 +344,38 @@ subject line, because this repo merges with "Rebase and merge": a doc entry land
 as the commit it cites will have that SHA rewritten at merge, and the subject is the half that
 survives.
 
+## Keep CHANGELOG.md fed
+
+`CHANGELOG.md`'s `[Unreleased]` section is written by the PR that earns the entry, not by the
+release. A release that finds it empty has to reconstruct what shipped from the git log — a worse
+changelog, written weeks later by someone reading subject lines instead of the change.
+
+**Every PR that changes anything under `dots/` must carry a `Changelog:` receipt line, and CI
+rejects PRs without one** (`.github/workflows/changelog-receipt.yml`). One of:
+
+- `Changelog: updated` — the entry is in this PR, under `[Unreleased]`. **The diff must actually
+  touch `CHANGELOG.md`, and CI checks that**: a receipt satisfiable by typing the line is the prose
+  rule again with a green tick on it, which is what the two empty releases already had.
+- `Changelog: not user-visible — <reason>` — a refactor, a test, a lint, an internal rename.
+  Liberal about the separator (em dash, en dash or a plain hyphen, spaced however you like), strict
+  about the reason: everything after the dash *is* the receipt, so it may not be empty.
+
+A PR that changes nothing under `dots/` — docs-only, CI-only, a proposal — is not asked for one at
+all. Docs-only and CI-only PRs are the common case here, and a receipt every PR must carry whether
+or not it could possibly need one is a receipt people paste without reading.
+
+This exists because `[Unreleased]` was found **empty at two consecutive releases**: 43d1ffd01
+("release: 0.25.0"), with 61 PRs merged behind it, and 58bd53a30 ("release: 0.26.0"), with five
+more — whose own message says "the section was empty again". Both reconstructed the changelog after
+the fact. The rule was prose both times, so a third paragraph is the one repair already known not to
+work: a mistake made twice becomes a failing check in the same PR, never another note.
+
+The matching lives in `dots/.config/quickshell/imi/tests/changelog_receipt.py` and nowhere else —
+the workflow checks the repo out and runs that module rather than carrying its own `grep -E`, so the
+CI half and the local half cannot become two answers. `tests/test_changelog_receipt.py` drives it
+over in-memory PR fixtures, including the two forms offered above, so the rule is testable without
+pushing anything.
+
 ## Multi-agent / parallel workflows (git worktrees)
 
 This repo lives at `~/.config/quickshell/imi` and is loaded by exactly one running process,
