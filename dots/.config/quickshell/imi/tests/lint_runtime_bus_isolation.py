@@ -48,6 +48,14 @@
 # a bus the test starts itself is as deliberate as isolating from it, and
 # `test_notification_cards_runtime.py` needs exactly that.
 #
+# It has to be decided AT THE LAUNCH, and the first version of this check did
+# not require that: it searched the whole file, so a harness naming
+# `dbus-run-session` only in its `shutil.which` availability gate satisfied it
+# while launching `qs` bare. Found by planting exactly that - unwrapping one
+# converted harness's launch and watching the lint stay green. The argv list
+# carrying `qs` must carry the wrapper too, which is a question about one list
+# rather than about a file, so `ast` answers it.
+#
 # Lints are exempt: they read source, they start no shell.
 
 import pathlib
@@ -59,6 +67,53 @@ TESTS = pathlib.Path(__file__).resolve().parent
 
 LAUNCHES_QS = re.compile(r'"qs"|\bqs\s+-[pc]\b')
 DECIDES_BUS = re.compile(r"dbus-run-session|DBUS_SESSION_BUS_ADDRESS")
+WRAPPER = "dbus-run-session"
+EXPLICIT_BUS = "DBUS_SESSION_BUS_ADDRESS"
+
+
+def launch_lists(tree):
+    """Every argv list literal that carries `qs` as one of its executables.
+
+    A shell-string launch (`bash -c "... qs -p ..."`) is not one of these and
+    falls back to the file-wide question below.
+    """
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.List, ast.Tuple)):
+            continue
+        strings = [element.value for element in node.elts
+                   if isinstance(element, ast.Constant)
+                   and isinstance(element.value, str)]
+        if "qs" in strings:
+            yield strings
+
+
+def decides_at_the_launch(raw):
+    """Whether every argv list carrying `qs` also carries the wrapper.
+
+    Asked of the RAW source through `ast`, which is the point: a comment is not
+    in the tree at all, so the sentence a correct harness writes above its
+    wrapper ("dbus-run-session, not the inherited DBUS_SESSION_BUS_ADDRESS")
+    cannot be mistaken for the decision itself. Stripping the prose textually
+    and parsing THAT does not work - the token stream is no longer valid
+    Python, the parse fails, and the check falls back to the file-wide search
+    it was written to replace, which is how a planted unwrapped launch stayed
+    green twice while this was being written.
+
+    A file that sets the bus address explicitly in the env it passes has made
+    the decision somewhere this cannot see, and is trusted - the
+    `test_notification_cards_runtime.py` case the header describes.
+    """
+    try:
+        tree = ast.parse(raw)
+    except SyntaxError:
+        return WRAPPER in raw
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and node.value == EXPLICIT_BUS:
+            return True
+    lists = list(launch_lists(tree))
+    if not lists:
+        return WRAPPER in raw
+    return all(WRAPPER in strings for strings in lists)
 
 EXISTING = frozenset({
     "test_app_usage_runtime.py",
@@ -144,12 +199,15 @@ def main():
     for path in sorted(TESTS.glob("*.py")):
         if path.name.startswith("lint_"):
             continue
-        text = code_only(path.read_text(encoding="utf-8", errors="replace"))
+        raw = path.read_text(encoding="utf-8", errors="replace")
+        # The prose is stripped for the launch question. The bus question is
+        # asked of the raw source instead - see decides_at_the_launch.
+        text = code_only(raw)
         if not LAUNCHES_QS.search(text):
             continue
         launchers.add(path.name)
         scanned += 1
-        if DECIDES_BUS.search(text):
+        if decides_at_the_launch(raw):
             continue
         inherited.add(path.name)
         if path.name in EXISTING:
