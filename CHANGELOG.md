@@ -44,6 +44,16 @@ own repo; the installer pins which revision it builds.
   both the horizontal and the vertical bar. Nothing about where the bar sits at
   rest changes.
 
+### Changed
+- **A bar popup unrolls out of its own first card.** Hovering a bar widget used
+  to grow a card from a dot into its full height; it now appears already the
+  height of the first thing inside it — the weather hero, the calendar's month
+  header — and unfurls to reveal the rest, with the fade riding the same
+  motion. The top edge never moves, so what you came to read is legible on the
+  frame the popup appears rather than once it settles. On a bottom or a side
+  bar it is the bar-adjacent edge that stays put, and it stays put exactly, on
+  every frame of the open and the close.
+
 ## [0.26.0] — 2026-08-19
 
 The lock screen gets its own widget layout, snapping stops gluing widgets
