@@ -40,7 +40,9 @@ Rectangle {
     rotation: pullRotation + continuousRotation + leapRotation
 
     RotationAnimation on continuousRotation {
-        running: root.loading
+        // `loading` says the work is in flight; `visible` says anyone can see
+        // it. Only the conjunction is worth a repaint of the whole output.
+        running: root.loading && root.visible
         duration: 12000
         easing.type: Easing.Linear
         loops: Animation.Infinite

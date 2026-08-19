@@ -55,7 +55,7 @@ Item {
         // Breathing
         opacity: 0.9
         SequentialAnimation on opacity {
-            running: root.breathingBorderOnly
+            running: root.breathingBorderOnly && root.visible
             loops: Animation.Infinite
             NumberAnimation { from: 0.9; to: 0.3; duration: 1200; easing.type: Easing.InOutQuad }
             NumberAnimation { from: 0.3; to: 0.9; duration: 1200; easing.type: Easing.InOutQuad }

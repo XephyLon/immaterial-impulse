@@ -50,13 +50,6 @@ RUNNING = re.compile(r"running:\s*([^\n]+)")
 BOOL_PROPERTY = re.compile(r"property\s+bool\s+(\w+)\s*:\s*([^\n]+(?:\n\s+&&[^\n]+)*)")
 
 EXISTING = frozenset({
-    "common/widgets/DockIconMotion.qml",
-    "common/widgets/MaterialLoadingIndicator.qml",
-    "common/widgets/WorldMap.qml",
-    "imi/bar/UpdatesCount.qml",
-    "imi/overview/SearchBar.qml",
-    "imi/recordingRegion/RecordingRegionPanel.qml",
-    "imi/regionSelector/RectCornersSelectionDetails.qml",
 })
 
 
