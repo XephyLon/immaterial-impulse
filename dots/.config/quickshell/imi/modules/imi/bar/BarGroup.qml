@@ -2,6 +2,7 @@ import qs
 import qs.modules.common
 import QtQuick
 import QtQuick.Layouts
+import "bar_flip.js" as BarFlip
 
 Item {
     id: root
@@ -22,6 +23,11 @@ Item {
     // controller (a test, a future preview) gets no overlay at all.
     property var editController: null
     property string editBucket: ""
+
+    // Where this bar's slots were drawn, handed in by the content tree. A tree
+    // that passes none (the edit harness, a preview) simply has no motion -
+    // the same opt-out shape as editController.
+    property BarFlipRegistry flipRegistry: null
     property bool isMaterial: Config.options.bar.cornerStyle === 3
     property bool paintMaterialPill: false
     // Islands is the only style where each group *is* the visible shape, with
@@ -112,6 +118,129 @@ Item {
     opacity: editLoader.item && editLoader.item.dragging ? 0.4 : 1
     Behavior on opacity {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+    }
+
+    // ---- the reposition -----------------------------------------------------
+    //
+    // FLIP, declared HERE for the reason the edit overlay is: every widget in
+    // both bars is wrapped in a BarGroup, so one file turns by the `vertical`
+    // flag where a per-delegate copy would be twelve and the two bars would
+    // drift the way they already did over widget files (a47462fcc).
+    //
+    // What moves is a Translate, never `x`/`y`: a slot's coordinates belong to
+    // the layout, and writing them would fight it. What is animated is that
+    // translate toward zero, which nothing else writes - the layout's own
+    // motion is inverted from a measurement rather than eased, precisely
+    // because a Behavior handed a target that moves every frame restarts every
+    // frame and never ticks (b710ef731).
+    property real flipTravel: 0
+    property var flipOrigin: null
+    property bool flipPending: false
+    property var flipChain: []
+
+    transform: Translate {
+        x: root.vertical ? 0 : root.flipTravel
+        y: root.vertical ? root.flipTravel : 0
+    }
+
+    // The tier taken WHOLE - duration, easing type and curve from the tier's
+    // own component - and named so the reposition can be retargeted rather
+    // than restarted from scratch when a second reflow lands mid-flight.
+    readonly property NumberAnimation flipAnim:
+        Appearance.animation.elementMoveSmall.numberAnimation.createObject(root)
+
+    // The ancestors between this slot and the registry's frame, each of which
+    // can move it without its own x/y changing: the right-hand bucket's
+    // section is anchored to the screen's edge and takes its width from its
+    // row, so removing a widget moves the section and leaves the slot at
+    // row-local 0 exactly where it was. That slot travels the whole width of
+    // what left, and nothing on it announces the move.
+    function flipWalk() {
+        const frame = root.flipRegistry ? root.flipRegistry.frame : null;
+        const chain = [];
+        let node = root;
+        while (node && node !== frame) {
+            chain.push(node);
+            node = node.parent;
+        }
+        return chain;
+    }
+
+    function flipOriginNow() {
+        return BarFlip.chainOrigin(root.flipWalk());
+    }
+
+    // What the next slot for this widget inverts from: where this one is
+    // DRAWN, translate included, so a reflow interrupting another is continuous
+    // rather than starting from the layout position nobody ever saw.
+    function flipDrawnOrigin() {
+        const origin = root.flipOriginNow();
+        return root.vertical
+            ? { x: origin.x, y: origin.y + root.flipTravel }
+            : { x: origin.x + root.flipTravel, y: origin.y };
+    }
+
+    function flipMeasure() {
+        // Outside a reposition this slot is inert. A bar widget's content
+        // changes width constantly - the clock every minute, the media title
+        // per track - and animating every one of those would keep the bar
+        // repainting the whole output for reasons the user never asked about.
+        if (!root.flipPending && !root.flipAnim.running) return;
+        const origin = root.flipOriginNow();
+        const step = BarFlip.repositionTravel(root.flipTravel, root.flipOrigin,
+                                              origin, root.vertical, BarFlip.MIN_TRAVEL);
+        root.flipOrigin = origin;
+        root.flipPending = false;
+        if (!step.play) return;
+        root.flipTravel = step.travel;
+        root.flipAnim.restart();
+    }
+
+    // A reorder drag is the one motion this must not join. The gesture reads
+    // slot centres through `mapToItem`, which composes transforms, so a slot
+    // part-way through a reposition would offer the drop arithmetic a centre
+    // that moves every frame - and the drag's own ghost and indicator are
+    // already the moving parts. The drop's reflow still animates: the
+    // controller clears this flag before the layout pass that follows it.
+    readonly property bool flipAllowed: !GlobalStates.editBarDragActive
+    onFlipAllowedChanged: if (!root.flipAllowed) {
+        root.flipAnim.stop();
+        root.flipTravel = 0;
+        root.flipPending = false;
+    }
+
+    Connections {
+        target: root.flipAnim
+        // `finished`, not `stopped`: a retarget stops the animation to restart
+        // it, and standing the reposition down there would end it half way.
+        function onFinished() {
+            root.flipTravel = 0;
+        }
+    }
+
+    Component.onCompleted: {
+        if (!root.flipRegistry) return;
+        root.flipAnim.target = root;
+        root.flipAnim.property = "flipTravel";
+        root.flipAnim.to = 0;
+        root.flipChain = root.flipWalk();
+        for (const node of root.flipChain) {
+            node.xChanged.connect(root, root.flipMeasure);
+            node.yChanged.connect(root, root.flipMeasure);
+        }
+        const recalled = root.flipAllowed ? root.flipRegistry.recall(root.widgetId) : null;
+        if (!recalled) return;
+        root.flipOrigin = recalled;
+        root.flipPending = true;
+    }
+
+    Component.onDestruction: {
+        if (!root.flipRegistry) return;
+        root.flipRegistry.deposit(root.widgetId, root.flipDrawnOrigin());
+        for (const node of root.flipChain) {
+            node.xChanged.disconnect(root, root.flipMeasure);
+            node.yChanged.disconnect(root, root.flipMeasure);
+        }
     }
 
     Loader {

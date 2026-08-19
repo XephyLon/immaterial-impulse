@@ -223,6 +223,7 @@ Item {
                             editController: barEditController
                             editBucket: "left"
                             widgetId: modelData
+                            flipRegistry: flipRegistry
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -261,6 +262,7 @@ Item {
                         editController: barEditController
                         editBucket: "left"
                         widgetId: modelData
+                        flipRegistry: flipRegistry
                         Loader {
                             Layout.fillHeight: true
                             source: root.getWidgetUrl(modelData)
@@ -336,6 +338,7 @@ Item {
                             editController: barEditController
                             editBucket: "middle"
                             widgetId: modelData
+                            flipRegistry: flipRegistry
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -374,6 +377,7 @@ Item {
                         editController: barEditController
                         editBucket: "middle"
                         widgetId: modelData
+                        flipRegistry: flipRegistry
                         Loader {
                             Layout.fillHeight: true
                             source: root.getWidgetUrl(modelData)
@@ -450,6 +454,7 @@ Item {
                             editController: barEditController
                             editBucket: "right"
                             widgetId: modelData
+                            flipRegistry: flipRegistry
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -488,6 +493,7 @@ Item {
                         editController: barEditController
                         editBucket: "right"
                         widgetId: modelData
+                        flipRegistry: flipRegistry
                         Loader {
                             Layout.fillHeight: true
                             source: root.getWidgetUrl(modelData)
@@ -530,5 +536,12 @@ Item {
         leftZone: leftBoundary
         middleZone: middleBoundary
         rightZone: rightBoundary
+    }
+
+    // Where each widget was drawn, so the slot that replaces it after a reflow
+    // has a First to invert from. Declared as a child of this root because
+    // that is the frame every position is measured in - see BarFlipRegistry.
+    BarFlipRegistry {
+        id: flipRegistry
     }
 }

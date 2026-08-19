@@ -223,6 +223,7 @@ Item {
                             editController: barEditController
                             editBucket: "left"
                             widgetId: modelData
+                            flipRegistry: flipRegistry
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -257,6 +258,7 @@ Item {
                         editController: barEditController
                         editBucket: "left"
                         widgetId: modelData
+                        flipRegistry: flipRegistry
                         Loader {
                             Layout.fillWidth: true
                             source: root.getWidgetUrl(modelData)
@@ -318,6 +320,7 @@ Item {
                             editController: barEditController
                             editBucket: "middle"
                             widgetId: modelData
+                            flipRegistry: flipRegistry
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -352,6 +355,7 @@ Item {
                         editController: barEditController
                         editBucket: "middle"
                         widgetId: modelData
+                        flipRegistry: flipRegistry
                         Loader {
                             Layout.fillWidth: true
                             source: root.getWidgetUrl(modelData)
@@ -415,6 +419,7 @@ Item {
                             editController: barEditController
                             editBucket: "right"
                             widgetId: modelData
+                            flipRegistry: flipRegistry
                             paintMaterialPill: root.shouldPaintMaterialPill(modelData)
                             bgColor: root.getMaterialPillColor(modelData)
                             Loader {
@@ -449,6 +454,7 @@ Item {
                         editController: barEditController
                         editBucket: "right"
                         widgetId: modelData
+                        flipRegistry: flipRegistry
                         Loader {
                             Layout.fillWidth: true
                             source: root.getWidgetUrl(modelData)
@@ -478,5 +484,11 @@ Item {
         leftZone: leftBoundary
         middleZone: middleBoundary
         rightZone: rightBoundary
+    }
+
+    // The same registry, in the vertical bar's own frame: the ids are shared
+    // between the two bars and between screens, and the positions are not.
+    Bar.BarFlipRegistry {
+        id: flipRegistry
     }
 }
