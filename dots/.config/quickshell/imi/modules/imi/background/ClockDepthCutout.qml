@@ -26,6 +26,15 @@ Item {
     // frame first, so reading the path would put the incoming image under the
     // outgoing image's mask for the length of every switch.
     property url wallpaperSource
+    // A live Wallpaper Engine surface to mask INSTEAD of the wallpaper image
+    // (spec §8.3). Set, it is what the OpacityMask paints, so the pixels under
+    // the silhouette are live and only the silhouette is static; the mask was
+    // cut from that surface's own still, grabbed at the viewport's size, so it
+    // is at the surface's aspect and covers the box exactly - the un-squash
+    // below is the identity for it. Null draws the wallpaper image, which is
+    // every call site but the desktop layer's.
+    property Item liveSource: null
+    readonly property Item paintedSource: root.liveSource ?? cutoutWallpaper
     property string maskPath: ""
     // A token that changes when the mask file's bytes do, hung on the URL as a
     // fragment. Qt caches a pixmap by URL and a mask is rewritten at the SAME
@@ -94,8 +103,12 @@ Item {
             // well as the luminance. A plain grayscale mask is opaque
             // everywhere and lets the whole wallpaper through, which draws the
             // picture flat over the clock rather than the subject behind it.
+            // A live surface's picture is the box: the still it was masked
+            // from IS the box photographed, so the source has the box's own
+            // size and the rect comes back as the box.
             readonly property var coverRect: ClockDepthLogic.coverRect(
-                cutoutWallpaper.implicitWidth, cutoutWallpaper.implicitHeight,
+                root.liveSource ? maskSurface.width : cutoutWallpaper.implicitWidth,
+                root.liveSource ? maskSurface.height : cutoutWallpaper.implicitHeight,
                 maskSurface.width, maskSurface.height)
             x: mask.coverRect.x
             y: mask.coverRect.y
@@ -115,7 +128,7 @@ Item {
     // degrades to today's flat clock instead of to a wallpaper pasted over it.
     OpacityMask {
         anchors.fill: parent
-        source: cutoutWallpaper
+        source: root.paintedSource
         maskSource: maskSurface
     }
 }

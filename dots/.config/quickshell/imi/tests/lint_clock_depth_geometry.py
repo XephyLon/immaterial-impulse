@@ -34,6 +34,8 @@ CANVAS_ID = "widgetCanvas"
 CUTOUT_TYPE = "ClockDepthCutout"
 DEPTH_IMAGE_ID = "cutoutWallpaper"
 MASK_SURFACE_ID = "maskSurface"
+PAINTED_SOURCE = "paintedSource"
+LIVE_SOURCE = "liveSource"
 WALLPAPER_ID = "wallpaper"
 
 # The registration - un-squashing the model's square mask and re-applying the
@@ -268,8 +270,18 @@ def check(raw, cutout_raw=None):
              f"whole wallpaper over the clock, not the subject")
     else:
         body = mask.group(1)
-        if declaration(body, "source") != DEPTH_IMAGE_ID:
-            fail(f"the OpacityMask does not mask {DEPTH_IMAGE_ID}")
+        # The mask paints the wallpaper image OR a live Wallpaper Engine surface
+        # handed in by the desktop layer (spec §8.3), through one property whose
+        # fallback has to be the image - so a call site that hands in nothing
+        # still draws the wallpaper, and the source the two-image sharing rule
+        # above is about is still the one that gets painted.
+        painted = declaration(cutout, PAINTED_SOURCE)
+        if declaration(body, "source") != f"root.{PAINTED_SOURCE}":
+            fail(f"the OpacityMask does not paint root.{PAINTED_SOURCE}")
+        if painted != f"root.{LIVE_SOURCE} ?? {DEPTH_IMAGE_ID}":
+            fail(f"{PAINTED_SOURCE} is {painted!r}, expected "
+                 f"'root.{LIVE_SOURCE} ?? {DEPTH_IMAGE_ID}': with no live surface "
+                 f"the mask must fall back to {DEPTH_IMAGE_ID}")
         if declaration(body, "maskSource") != MASK_SURFACE_ID:
             fail(f"the OpacityMask's maskSource is not {MASK_SURFACE_ID}")
     surface = block_for(cutout, MASK_SURFACE_ID)
@@ -314,6 +326,8 @@ Image {
 SELF_CHECK_CUTOUT = """
 Item {
     id: root
+    property Item liveSource: null
+    readonly property Item paintedSource: root.liveSource ?? cutoutWallpaper
     Image {
         id: cutoutWallpaper
         anchors.fill: parent
@@ -333,7 +347,7 @@ Item {
     }
     OpacityMask {
         anchors.fill: parent
-        source: cutoutWallpaper
+        source: root.paintedSource
         maskSource: maskSurface
     }
 }
@@ -419,6 +433,13 @@ def self_check():
             "        clip: true\n", ""),
         "the OpacityMask masking something else": SELF_CHECK_CUTOUT.replace(
             "        maskSource: maskSurface", "        maskSource: somethingElse"),
+        "the OpacityMask painting the image directly, live surface unreachable":
+            SELF_CHECK_CUTOUT.replace(
+                "        source: root.paintedSource", "        source: cutoutWallpaper"),
+        "the painted source no longer falling back to the wallpaper image":
+            SELF_CHECK_CUTOUT.replace(
+                "readonly property Item paintedSource: root.liveSource ?? cutoutWallpaper",
+                "readonly property Item paintedSource: root.liveSource"),
         "the cutout image no longer shares the wallpaper's request":
             SELF_CHECK_CUTOUT.replace(
                 "        fillMode: Image.PreserveAspectCrop", "        fillMode: Image.Stretch"),

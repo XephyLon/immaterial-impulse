@@ -45,12 +45,37 @@ Singleton {
     readonly property bool watching: root.enabled || root.picking
         || GlobalStates.clockDepthSelectOpen
 
+    // A live Wallpaper Engine project, as the config names it. Case-insensitive
+    // on the type because the scanner emits "Web"; a web project falls back to
+    // the static wallpaper and is that wallpaper's question, not this one.
+    readonly property string weProject: Config.options.wallpaperSelector.wallpaperEngine.activeProject ?? ""
+    readonly property bool weActive: root.weProject !== ""
+        && (Config.options.wallpaperSelector.wallpaperEngine.activePath ?? "") !== ""
+        && (Config.options.wallpaperSelector.wallpaperEngine.activeType ?? "").toLowerCase() !== "web"
+    // The project has no file to segment; the shell photographs it (spec §8.1,
+    // Background.captureGreeterStill) and that still is the picture. The path
+    // is derived from the project the config already names, never stored -
+    // see the note where `activeStill` used to be declared in Config.qml.
+    readonly property string weStillPath: root.weProject === "" ? ""
+        : `${Directories.wallpaperEngineStills}/${root.weProject}.png`
+    // Whether the question on the table is the project's. A preview always wins
+    // - the selector is showing a still picture over the live scene and the
+    // picker beside it is about THAT picture - and outside a preview it is the
+    // project's exactly when the project is what the desktop draws.
+    readonly property bool askingWe: Wallpapers.previewPath === "" && root.weActive
+    // The producer keys a project's cache on this rather than on the still's
+    // stat triple, which moves every session (spec §8.2).
+    readonly property string identity: root.askingWe ? `we:${root.weProject}` : ""
     // The wallpaper on screen, not the one in the config: the selector previews
     // by path while the user arrows through the grid, and a mask belonging to
     // the previous wallpaper drawn over this one is a silhouette in the wrong
     // place rather than a missing effect.
-    readonly property string wallpaperPath:
-        Wallpapers.previewPath || Wallpapers.confirmedPath || Config.options.background.wallpaperPath
+    readonly property string wallpaperPath: root.askingWe ? root.weStillPath
+        : (Wallpapers.previewPath || Wallpapers.confirmedPath || Config.options.background.wallpaperPath)
+    // False only for a project whose still has not been grabbed yet - the one
+    // query that can be answered before its picture exists. Reported by the
+    // producer's status, so the shell never stats the file itself.
+    property bool stillAvailable: true
 
     // One of: "" (nothing asked yet), "absent", "candidate", "none",
     // "accepted", "declined", "unreadable", "error".
@@ -86,7 +111,9 @@ Singleton {
     readonly property bool selectable: ClockDepthLogic.selectable({
         wallpaperPath: root.wallpaperPath,
         previewing: Wallpapers.previewPath !== "",
-        weActive: (Config.options.wallpaperSelector.wallpaperEngine.activePath ?? "") !== "",
+        weActive: root.weActive,
+        maskIsWe: root.askingWe,
+        stillMissing: root.askingWe && !root.stillAvailable,
         centeredWallpaper: Config.options.background.centeredWallpaper ?? false,
         screenLocked: GlobalStates.screenLocked
     })
@@ -216,7 +243,7 @@ Singleton {
             `source "\${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV}/bin/activate" && ` +
             `python3 '${Directories.scriptPath}/background/subject_mask.py' select ` +
             `'${StringUtils.shellSingleQuoteEscape(root.wallpaperPath)}' ` +
-            `--model ${root.promptedModel} ${args}`]
+            `--model ${root.promptedModel} ${args}${root.identityArg()}`]
         selectProcess.running = true
     }
 
@@ -232,7 +259,7 @@ Singleton {
         maskProcess.command = ["bash", "-c",
             `source "\${IMMATERIAL_IMPULSE_VIRTUAL_ENV:-$ILLOGICAL_IMPULSE_VIRTUAL_ENV}/bin/activate" && ` +
             `python3 '${Directories.scriptPath}/background/subject_mask.py' run ` +
-            `'${StringUtils.shellSingleQuoteEscape(root.wallpaperPath)}' --model ${model}`]
+            `'${StringUtils.shellSingleQuoteEscape(root.wallpaperPath)}' --model ${model}${root.identityArg()}`]
         maskProcess.running = true
     }
 
@@ -253,7 +280,16 @@ Singleton {
         verdictProcess.command = ["python3",
             `${Directories.scriptPath}/background/subject_mask.py`,
             args[0], root.wallpaperPath].concat(args.slice(1))
+            .concat(root.identity === "" ? [] : ["--identity", root.identity])
         verdictProcess.running = true
+    }
+
+    // The identity as a shell argument, for the two verbs that go through
+    // bash. A project id is digits, and the prefix is ours, but it is quoted
+    // like the path anyway rather than trusted.
+    function identityArg(): string {
+        return root.identity === "" ? ""
+            : ` --identity '${StringUtils.shellSingleQuoteEscape(root.identity)}'`
     }
 
     function refresh(): void {
@@ -266,6 +302,7 @@ Singleton {
 
     function forget(): void {
         root.state = ""
+        root.stillAvailable = true
         root.key = ""
         root.maskPath = ""
         root.candidates = ({})
@@ -320,7 +357,7 @@ Singleton {
         // shell's read path fail on a machine whose venv has not been built -
         // silently, and identically to a wallpaper that has no mask.
         command: ["python3", `${Directories.scriptPath}/background/subject_mask.py`,
-            "status", root.queriedPath]
+            "status", root.queriedPath].concat(root.identity === "" ? [] : ["--identity", root.identity])
         stdout: StdioCollector {
             id: statusCollector
             onStreamFinished: {
@@ -344,6 +381,7 @@ Singleton {
                 }
                 root.state = parsed.state ?? "error"
                 root.key = parsed.key ?? ""
+                root.stillAvailable = parsed.available ?? true
                 root.maskPath = parsed.state === "accepted" ? (parsed.mask ?? "") : ""
                 root.candidates = parsed.candidates ?? ({})
                 root.acceptedModel = parsed.acceptedModel ?? ""

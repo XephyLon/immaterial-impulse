@@ -45,10 +45,14 @@ function eligible(state) {
     // one part of the screen that is supposed to be what is OUTSIDE the desktop.
     if (s.editing) return false;
     if (!s.maskPath) return false;
-    // A live Wallpaper Engine project is a moving surface with no file to
-    // segment, and a mask of the frozen greeter still would be a stale
-    // silhouette over animated content.
-    if (s.weActive) return false;
+    // The mask has to have been cut from the picture on screen. A live
+    // Wallpaper Engine project is masked by a mask of its own STILL (spec §8:
+    // the silhouette is static, the pixels under it are live) and never by the
+    // static wallpaper's; and when the desktop has fallen back to the static
+    // wallpaper - a `web` project, a renderer that failed, the safety screen -
+    // the project's mask is the wrong silhouette the other way round. One
+    // comparison for both directions, so the two halves cannot drift.
+    if (!!s.weActive !== !!s.maskIsWe) return false;
     // mpvpaper is a separate Wayland client on its own layer surface. The shell
     // does not own those pixels and parallaxViewport does not move them, so a
     // cutout built from the ffmpeg first frame would be a still ghost of frame 1
@@ -176,9 +180,14 @@ function selectable(state) {
     // gesture is entered by closing it - so the picture under the click would
     // not be the picture the clicks get stored against.
     if (s.previewing) return false;
-    // A live Wallpaper Engine project owns the screen; the still this service
-    // names is not what is being drawn, so a cutout of it is a sticker.
-    if (s.weActive) return false;
+    // A live Wallpaper Engine project is picked on through its still: the
+    // clicks are measured in the box the live surface fills, and the still is
+    // that box photographed, so the geometry is the identity. What refuses is
+    // the service asking about a different picture than the one on screen -
+    // and a project whose still has not been grabbed yet, because then there
+    // is no picture to send the clicks to at all.
+    if (!!s.weActive !== !!s.maskIsWe) return false;
+    if (s.stillMissing) return false;
     // Centred mode draws the wallpaper at its own size in its own shape, which
     // is not the geometry the cutout is registered against.
     if (s.centeredWallpaper) return false;
