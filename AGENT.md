@@ -1179,6 +1179,49 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   blanked, nothing leaks — a `zwp_idle_inhibitor` is destroyed with the `wl_surface` it was created
   on, and a client's surfaces die with its Wayland connection. 83544dedb ("feat(idle): a
   deliberately blanked monitor holds the keep-awake").
+- **An exclusive zone that has to animate belongs on a surface of its own, and
+  `exclusionMode: ExclusionMode.Ignore` is not in force while an `exclusiveZone`
+  sits beside it.** A zone is a protocol value on the surface, so every write is
+  a `set_exclusive_zone` plus a commit plus a compositor-wide re-arrange —
+  animating one in place reconfigures the surface its own contents are being
+  drawn on, once per frame. The bar therefore slid on a margin `Behavior` while
+  its zone snapped between two integers, and the windows behind it jumped at the
+  two ends of a gesture the bar spends 200ms on.
+  `modules/imi/bar/BarExclusiveZoneReserver.qml` is where that animation lives
+  instead: one `PanelWindow` per bar, one pixel thick, `color: "transparent"`,
+  `mask: Region {}`, painting nothing, so a per-frame reconfigure costs a
+  re-arrange and no repaint. **Both bars use the one component** — the zone is
+  exactly the kind of decision the two have drifted on before. Five things about
+  it are worth not re-deriving. Writing `exclusiveZone` at *any* value calls
+  `WlrLayershell::setExclusiveZone`, which forces `exclusionMode` to `Normal`,
+  and a `Normal` surface is placed inside what other surfaces reserve — so both
+  bars had been in `Normal` all along despite declaring `Ignore`, and a bar
+  keeping `exclusiveZone: 0` after this split would be pushed off the screen
+  edge by its own reserver. Hyprland adds the anchored-edge **margin** to a live
+  zone (measured: the bar's 40px zone under its 5px top margin reserves 45), and
+  that margin is folded into the animated value rather than onto the reserver's
+  own `margins`, or the last frame of a hide is a jump from the margin to zero.
+  The namespace is the visible bar's, **passed in rather than minted**, for the
+  reason `BarPopupOverlay` reuses `quickshell:popup`: a new one falls through
+  the catch-all `ignore_alpha = 0.05` and asks the compositor to blur behind a
+  surface that paints nothing — and since both bars' namespaces already carry
+  `blur = false`, borrowing needs no `rules.lua` entry at all, which matters
+  because that file ships separately and the two halves would otherwise come
+  apart on any machine that updated one and not the other. The layer is `Top`
+  and does **not** follow the bar's fullscreen+special promotion: an `Overlay`
+  surface holds the fullscreen fast path shut whatever its size, the promotion
+  exists to stop the bar's *pixels* being buried, and the reserved area is the
+  same on every layer. And the zone must take the **same motion tier** as the
+  bar's own slide — a different one disagrees with the bar for the whole gesture
+  rather than only at its ends. None of this is reachable from the suite:
+  `qmltestrunner` cannot construct the window and weston implements no
+  wlr-layer-shell, so `tests/test_bar_exclusive_zone_reserver.py` pins the
+  source shape and `tests/run_bar_exclusive_zone_probe.sh` reads the reserved
+  area back out of a **nested Hyprland** while the zone animates (45 27 4 1 0
+  through a hide, against 45 0 before). Design taken from
+  `docs/p3drovfx-animation-research-2026-08-16.md` §3.4.
+  97689e338 ("feat(bar): give the bar's exclusive zone a surface of its own"),
+  7b703fc42 ("feat(bar): both bars hand their exclusive zone to the one reserver").
 
 ## State propagation is reactive, or it is a bug waiting
 

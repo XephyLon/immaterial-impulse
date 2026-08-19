@@ -37,6 +37,12 @@ own repo; the installer pins which revision it builds.
   boundary at that size, so the outline is about a pixel wide instead of a
   five-pixel ramp. Same cost per run; re-run a wallpaper's models in the depth
   picker to get the new mask.
+- **Windows now follow the auto-hidden bar instead of jumping.** The bar has
+  always slid in and out over ~200ms while the space it reserves changed in one
+  step, so everything behind it snapped a whole bar height at one end of the
+  gesture. The reserved space is animated on the same curve as the bar now, on
+  both the horizontal and the vertical bar. Nothing about where the bar sits at
+  rest changes.
 
 ## [0.26.0] — 2026-08-19
 
