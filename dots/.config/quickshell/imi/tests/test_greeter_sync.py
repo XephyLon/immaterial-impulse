@@ -43,8 +43,11 @@ class ObserverTests(unittest.TestCase):
         # announced the wallpaper - the grab's completion is the event that
         # closes the copy-before-still race, and it must fire only on a write
         # that actually happened.
+        # A block now, because the depth picker observes the same completion
+        # (a project's still is what it segments) - the poke has to be the
+        # first thing inside the guarded write, not merely near it.
         self.assertRegex(BACKGROUND,
-                         r"if \(result\.saveToFile\(target\)\)\s*\n\s*GreeterSync\.request\(\)")
+                         r"if \(result\.saveToFile\(target\)\)\s*\{?\s*\n\s*GreeterSync\.request\(\)")
 
     def test_requests_are_debounced(self):
         # A wallpaper switch writes several observed leaves back to back.
