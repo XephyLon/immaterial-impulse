@@ -12,6 +12,17 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- **Your phone's battery and connection state update the moment they change.**
+  The phone panel and its quick toggle used to redraw on a timer, so a phone
+  going out of range, coming back, or charging showed up in the shell up to ten
+  seconds late. With KDE Connect the shell now listens to the daemon instead of
+  asking it, and the change appears as it happens. Valent still updates on the
+  timer, unchanged: its signals could not be checked against a running Valent
+  daemon, and guessing at them would have been worse than the wait. If the
+  listener cannot stay up, the shell quietly goes back to asking on a timer
+  rather than showing nothing.
+
 ### Fixed
 - **Spinners and pulses stop when nothing can see them.** Seven animations
   looped forever regardless of whether the thing they animate was on screen —

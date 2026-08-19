@@ -1,6 +1,7 @@
 # Proposal: Phone Connect (KDE Connect / Valent integration)
 
-> Draft / tracking proposal. First slice implemented on this branch.
+> Draft / tracking proposal. The service, its sidebar surface and
+> signal-driven updates are implemented; the slices below are what remains.
 
 ## Goal
 
@@ -15,8 +16,7 @@ The first slice exists on this branch:
 - `services/PhoneConnect.qml` — `busctl --json=short` transport (the
   recommendation below), backend detection from the bus name list, one
   normalized device/battery model for both daemons, ring/ping/clipboard
-  actions, clean degraded state when neither daemon runs. Bounded polling for
-  now; `busctl monitor` streaming remains open (see below).
+  actions, clean degraded state when neither daemon runs.
 - Sidebar surface: a quick toggle (classic + android styles) and a device
   dialog, following the Tailscale surface pattern rather than a bundled
   plugin — the toggle hides when no daemon runs (classic) or is opt-in
@@ -26,6 +26,55 @@ The first slice exists on this branch:
 - Config (`networking.phoneConnect`) + settings rows, and a contract test
   keeping the service's parser logic byte-for-byte in sync with the QML
   suite's logic-only double.
+
+**Slice 1 (signal-driven updates) has landed.** KDE Connect's state now
+arrives when it changes rather than on the next tick:
+
+- One `busctl --user --json=short monitor --match=…` per daemon appearance,
+  subscribed to `type='signal',sender='org.kde.kdeconnect.daemon',
+  path_namespace='/modules/kdeconnect'`. The filter is at the BUS because it
+  has to be: `busctl monitor` reports a signal's sender as the unique name it
+  arrived on (`:1.55`, captured live), so nothing in QML can tell the daemon's
+  signals from anyone else's on the same path.
+- The event set came from introspecting a live daemon rather than from the
+  fork's source — `/modules/kdeconnect` emits `deviceAdded`, `deviceRemoved`,
+  `deviceListChanged`, `deviceVisibilityChanged`, `pairingRequestsChanged`; a
+  device path emits `reachableChanged`, `pairStateChanged`, `nameChanged`,
+  `typeChanged`, `pluginsChanged`; the battery leaf emits `refreshed`. It is an
+  allowlist because the SMS plugin's conversation signals share the device
+  path. A signal restarts a 120ms settle rather than sweeping: one device
+  leaving the network emitted **seven** signals within a millisecond of each
+  other on the live daemon.
+- Lifetime, which is what CONTRIBUTING.md forbids getting wrong: no `running`
+  binding, capped exponential backoff (1s…30s), a retry ceiling of five per
+  daemon appearance, and a healthy-run reset so one daemon restart in a long
+  session does not spend the ceiling. Past the ceiling the poll is the whole
+  update path again. Measured: `busctl` handed a match rule the bus rejects
+  exits in milliseconds (`Invalid match rule`, exit 1), which is exactly the
+  respawn loop the rule exists for.
+- The poll did **not** go away. Nothing announces a daemon *appearing* (there
+  is no monitor running to hear it on), and a daemon that dies without a
+  parting signal would freeze the model — so the timer stays on, gated exactly
+  as before, at a reconcile cadence while the stream is live.
+- **Valent still polls, explicitly.** No live Valent daemon was reachable to
+  verify its signal set, so `monitorMatchRule("valent")` is `""` and nothing
+  spawns a monitor for it. A signal path that only works for one backend is a
+  regression in the other. Verifying it is the prerequisite for changing this,
+  and the shape is already there: an ObjectManager `InterfacesAdded`/`Removed`
+  plus `PropertiesChanged` on the device paths and `org.gtk.Actions.Changed`
+  are the *plausible* rule, and plausible is not verified.
+- Covered by `tests/tst_phone_connect.qml` (the match rule, the monitor-line
+  parser against verbatim captured lines, the event allowlist, the backoff
+  ladder and the restart plan), `tests/test_phone_connect_contract.py` (the
+  lifetime as source shape) and `tests/test_phone_connect_monitor_runtime.py`
+  (a real shell against a fake `busctl` that streams in one case and exits
+  instantly in the other, with the spawn timestamps read back).
+
+One finding worth carrying into slice 2: the monitor's gate was first written
+as a `readonly property bool` read from `onBackendChanged`, which is AGENT.md's
+change-handler trap — it answered with the previous backend, the monitor never
+started, and nothing showed it because the poll kept the model correct. It is a
+function now.
 
 ## Prior art: P3DROVFX/ii-p3drovfx
 
@@ -141,17 +190,14 @@ Ordered by value. Each borrows the fork's shape and none of its transport:
 every read is a `busctl` argv, every write goes through `runAction`, and both
 backends stay behind the one model.
 
-1. **Signal-driven updates.** Replace the poll with `busctl --user
-   --json=short monitor` on the daemon's bus name, keyed on the same signals
-   the fork's `monitor.py` subscribes to (`PropertiesChanged`,
-   `battery.refreshed`, `deviceAdded`/`Removed`/`VisibilityChanged`,
-   `pairingRequestsChanged`, `pairStateChanged`, `notifications.*`,
-   `share.shareReceived`). Borrow the event set and the initial `GetAll` dump;
-   not the sidecar, not the 4 s restart with no backoff (CONTRIBUTING.md
-   already forbids a persistent `running` binding without backoff and a
-   ceiling). Valent's signal set has to be verified against a live daemon the
-   same way KDE Connect's is.
-2. **Notification mirroring.** Borrow: the leaf `notification.dismiss` (not
+**Slice 1 (signal-driven updates) is done** — see "Current state" above. The
+next slice is now notification mirroring, and it inherits the stream: its
+signals go in `signalChangesDevices`' allowlist and the match rule already
+covers the whole `/modules/kdeconnect` namespace, so nothing about the
+transport has to be rebuilt for it. What is still open from slice 1 is Valent:
+its signal set was not verifiable and it keeps the poll until it is.
+
+1. **Notification mirroring.** Borrow: the leaf `notification.dismiss` (not
    `sendAction("cancel")`), `sendReply` with a re-fetch, `internalId` →
    package, group-by-app, and the dedupe rule against kdeconnectd's own
    desktop notifications with its "only while we are showing them" gate. Not:
@@ -161,23 +207,23 @@ backends stay behind the one model.
    necessary. Not: the qdbus/`fetch_notifications.py` split; one `busctl`
    `GetAll` per leaf covers it. Not: "open on phone" — that is scrcpy+adb,
    out of scope.
-3. **`connectivity_report` and `reachableAddresses`.** One more `GetAll` on
+2. **`connectivity_report` and `reachableAddresses`.** One more `GetAll` on
    the device path and one more signal, both already in the fork's event set;
-   the model gains cellular type/strength. Cheap once (1) exists.
-4. **Pairing requests.** Accept/decline banners in the device dialog, fed by
+   the model gains cellular type/strength. Cheap now the stream exists.
+3. **Pairing requests.** Accept/decline banners in the device dialog, fed by
    `pairingRequestsChanged` and `pairStateChanged`; the calls are
    `acceptPairing`/`cancelPairing` on the device path. This closes the "Open
    questions" item — the fork shows it wraps cleanly. Not: interpolating
    `devId` into a shell string; the id is validated (`validDeviceId`) and
    passed as an argument.
-5. **Send and receive.** `share.shareUrl("file://…")` for file send, drop
+4. **Send and receive.** `share.shareUrl("file://…")` for file send, drop
    target on the drop shelf (`modules/imi/dropShelf/`) rather than a picker
    dialog, and `share.shareReceived` surfaced as a notification. Not: the
    kdialog/zenity picker chain.
-6. **SFTP mount/browse.** `sftp.mount`/`unmount` plus a file-manager open;
+5. **SFTP mount/browse.** `sftp.mount`/`unmount` plus a file-manager open;
    the fork's `3a7f653b4` records that the mount root is not the user's
    storage — open `<mount>/storage/emulated/0` when it exists.
-7. **Persisted active device, MRU, and low-battery hooks.** Small; take the
+6. **Persisted active device, MRU, and low-battery hooks.** Small; take the
    thresholds (<20% not charging, recover at ≥25% or charging) as they are.
 
 Still open regardless: media (`mprisremote`), clipboard *receive*, and Valent
