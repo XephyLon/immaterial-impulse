@@ -3516,6 +3516,41 @@ straight out of `animationCurves` (a drift risk, not a live defect, and it would
 for no bug). 1c728dd6a ("test(lint): fail on an animation that takes a tier's duration and leaves
 its curve").
 
+**...and the sibling defect is the one that lint deliberately waved through: a duration read out
+of `animationCurves` is the tier's BASE, and the speed multiplier is not in it.**
+`Appearance.animation.<tier>.duration` is `motion.scale(...)` applied to
+`animationCurves.<x>Duration`, so a site reading the second spelling is an animation the motion
+slider and the reduce-motion switch cannot reach — silently, in the one tree where 954a7885a
+("feat(motion): one policy for the speed, the floor and the stagger") exists so that they can.
+Nine sites were doing it, and every one of them reads as compliant: they name tokens, carry no
+millisecond literal, and pair with the matching curve. Two of the nine are worse than the rest —
+both `ShapeCanvas.qml` copies, so a shape morph was the one animation in the shell that could not
+be retimed from `Appearance` at all, the design system's copy having the 350 and the six control
+points written out by hand. Nothing in the suite could see any of it; a survey found it
+(`docs/p3drovfx-animation-research-2026-08-16.md` §7). Where the duration and the curve are the
+same tier, take the tier whole. Where they are deliberately different — `StyledFlickable`'s rubber
+band pushes out on the effects duration against `emphasizedDecel`, the recording panel pulses on
+500ms against `expressiveEffects` — scale the base through the policy's own door,
+`Appearance.animation.scale()`, rather than borrowing whichever tier happens to share the number
+and tying the site to a curve it does not use. `tests/lint_motion_multiplier_bypass.py` fails on a
+new one; its second fixture is the one that earns its place, because a bare search for the token
+reports the honest fix as an offender.
+("fix(motion): every catalogued duration goes through the policy").
+
+**There is ONE desktop-widget base class, and a dead copy of it is more dangerous than a live
+duplicate.** The vendored design system arrived carrying its own `AbstractWidget.qml` and
+`WidgetCanvas.qml` under `designsystem/widgets/widgetCanvas/`, which nothing has ever imported —
+`PluginWidget`, `AbstractBackgroundWidget` and the canvas itself all resolve
+`modules/common/widgets/widgetCanvas/`. Dead code is not why it was deleted: it still carried the
+`MouseArea.drag` + `dragProxy { x: root.x }` pair that d2ebb5aeb ("fix(widgetCanvas): compute the
+drag by hand - MouseArea.drag cannot track it") removed against measurements, and it was gated on
+a config path that does not exist — three fixes behind the live one and the richer-looking of the
+two, so the next agent looking for how a widget drag works finds a plausible file with more snap
+code in it and nothing to say it never runs. `tests/lint_no_stale_widget_canvas.py` fails on a
+second file of either name and on an import of the deleted path; the first half is the one that
+matters, because a dead copy is invisible to every other check in the suite.
+("refactor(designsystem): delete the dead copy of the widget base class").
+
 **An animation that loops forever must stop when what it animates is off screen, because a
 running animation is a repaint of the whole output — including the parts nobody can see.** The
 chain is not visible from the animation: a running animation writes a property every frame; that

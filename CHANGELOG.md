@@ -13,6 +13,12 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **The motion speed slider and reduce motion now reach every animation.** Nine
+  places read a motion tier's base duration instead of the scaled one, so they
+  ignored both settings — the settings-page scroll settle and its rubber band,
+  the navigation rail's tab highlight, the privacy popup's fade, the recording
+  panel's pulse, and both shape-morph canvases. A shape morph could not be
+  retimed at all.
 - **Clock depth masks are crisp.** On wide wallpapers the subject's outline
   used to claim a soft band of background around fine structure like hair, and
   whatever was behind it showed through — a striped wall came through as
