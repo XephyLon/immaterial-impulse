@@ -429,8 +429,15 @@ Variants {
             // next unrelated color event. The grab's completion is the event
             // the sync has to observe - see GreeterSync.
             weLoader.item.grabToImage(result => {
-                if (result.saveToFile(target))
+                if (result.saveToFile(target)) {
                     GreeterSync.request();
+                    // The depth picker's other consumer of this still. A
+                    // project on screen for the first time had no still when
+                    // it was asked about, and the grab's completion is the
+                    // event that changes the answer - observed, not polled.
+                    if (ClockDepth.watching)
+                        ClockDepth.refresh();
+                }
             });
         }
 
@@ -1424,6 +1431,14 @@ Variants {
                 selecting: GlobalStates.clockDepthSelectOpen,
                 editing: GlobalStates.editMode,
                 weActive: bgRoot.weActive,
+                // Whether the mask on offer was cut from the project's still
+                // rather than the static wallpaper. Compared against
+                // weActive INSIDE the predicate: this instance can fall back
+                // to the static image on its own (weFailed, the safety
+                // screen) while the service is still asking about the
+                // project, and that mismatch is the wrong silhouette either
+                // way round.
+                maskIsWe: ClockDepth.askingWe,
                 wallpaperIsVideo: bgRoot.wallpaperIsVideo,
                 centeredWallpaper: bgRoot.centeredWallpaperEnabled,
                 screenLocked: GlobalStates.screenLocked,
@@ -1453,7 +1468,14 @@ Variants {
                     y: clockDepthLayer.y,
                     width: clockDepthLayer.width,
                     height: clockDepthLayer.height,
-                    source: String(wallpaper.source)
+                    // A live project's picture is its still (spec §8): the
+                    // selector is another window and cannot sample this
+                    // scene's surface, so it draws the candidate cut from the
+                    // still over the live scene - frozen inside the
+                    // silhouette, live everywhere else - which is exactly the
+                    // honesty question §8.4 asks the user to judge.
+                    source: bgRoot.weActive && ClockDepth.askingWe
+                        ? `file://${ClockDepth.weStillPath}` : String(wallpaper.source)
                 })
                 : null
             onPublishedViewportChanged: bgRoot.publishDepthViewport(clockDepthLayer.publishedViewport)
@@ -1470,6 +1492,11 @@ Variants {
                 // outgoing frame, and reading the path would put the incoming
                 // image under the outgoing image's mask for the length of it.
                 wallpaperSource: wallpaper.source
+                // The live surface, never its still (spec §8.3): a masked
+                // still would freeze every animated pixel inside the
+                // silhouette. weLiveSource is the texture the WE transition
+                // already samples, so this adds no second render pass.
+                liveSource: bgRoot.weActive ? weLiveSource : null
                 maskPath: ClockDepth.maskPath
                 maskRevision: ClockDepth.maskRevision
             }

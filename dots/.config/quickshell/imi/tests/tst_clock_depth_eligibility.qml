@@ -22,6 +22,7 @@ TestCase {
             selecting: false,
             editing: false,
             weActive: false,
+            maskIsWe: false,
             wallpaperIsVideo: false,
             centeredWallpaper: false,
             screenLocked: false,
@@ -94,8 +95,23 @@ TestCase {
         }), false);
     }
 
-    function test_a_live_wallpaper_engine_project_refuses() {
-        compare(showing({ weActive: true }), false);
+    function test_a_live_wallpaper_engine_project_refuses_a_still_pictures_mask() {
+        // The mask was cut from the static wallpaper; the screen is showing a
+        // live scene. A silhouette of the wrong picture.
+        compare(showing({ weActive: true, maskIsWe: false }), false);
+    }
+
+    function test_a_live_wallpaper_engine_project_shows_its_own_mask() {
+        // Spec §8: the mask was cut from the project's still, and the layer
+        // masks the live surface with it.
+        compare(showing({ weActive: true, maskIsWe: true }), true);
+    }
+
+    function test_a_projects_mask_refuses_when_the_desktop_fell_back_to_the_still_picture() {
+        // The renderer gave up (a `web` project, `weFailed`, the safety screen)
+        // and the desktop shows the static wallpaper, while the service is
+        // still asking about the project. The other half of the same mismatch.
+        compare(showing({ weActive: false, maskIsWe: true }), false);
     }
 
     function test_a_video_wallpaper_refuses() {
@@ -359,6 +375,8 @@ TestCase {
             wallpaperPath: "/home/user/Pictures/Wallpapers/aishot-3263.jpg",
             previewing: false,
             weActive: false,
+            maskIsWe: false,
+            stillMissing: false,
             centeredWallpaper: false,
             screenLocked: false
         };
@@ -383,8 +401,18 @@ TestCase {
         compare(picking({ previewing: true }), false);
     }
 
-    function test_a_live_wallpaper_engine_project_cannot_be_picked_on() {
-        compare(picking({ weActive: true }), false);
+    function test_a_live_wallpaper_engine_project_cannot_be_picked_on_with_a_still_pictures_identity() {
+        compare(picking({ weActive: true, maskIsWe: false }), false);
+    }
+
+    function test_a_live_wallpaper_engine_project_can_be_picked_on_through_its_still() {
+        compare(picking({ weActive: true, maskIsWe: true }), true);
+    }
+
+    function test_a_project_whose_still_has_not_been_grabbed_yet_cannot_be_picked_on() {
+        // There is no picture to send the clicks to. The picker says "show
+        // this wallpaper first" (spec §8.5) instead of the gesture failing.
+        compare(picking({ weActive: true, maskIsWe: true, stillMissing: true }), false);
     }
 
     function test_centred_mode_cannot_be_picked_on() {

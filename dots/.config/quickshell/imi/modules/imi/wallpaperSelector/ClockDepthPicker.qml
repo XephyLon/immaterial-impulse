@@ -167,6 +167,19 @@ Item {
                         : Appearance.colors.colSubtext
                     wrapMode: Text.WordWrap
                 }
+                StyledText {
+                    Layout.fillWidth: true
+                    // Spec §8.4: a static silhouette over a moving scene is
+                    // right exactly while the subject stands still, and no
+                    // measurement can tell. It is judged the same way the
+                    // mask's own quality is - said here, where the verdict is
+                    // given, and only for a live scene.
+                    visible: ClockDepth.askingWe
+                    text: Translation.tr("This is a live scene, cut from a still of it. The silhouette stays put while the picture moves - keep it only if the subject does too. Turn on Inspect and let the scene run.")
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colSubtext
+                    wrapMode: Text.WordWrap
+                }
             }
             // A RippleButton rather than the IconToolbarButton this started as:
             // ToolbarButton carries `Layout.fillHeight: true` for the toolbars
@@ -502,6 +515,8 @@ Item {
                                             ? Translation.tr("Cutting…")
                                             : Translation.tr("Looking for a subject…")
                                     if (candidate.prompted) {
+                                        if (ClockDepth.askingWe && !ClockDepth.stillAvailable)
+                                            return Translation.tr("Waiting for the scene's first frame")
                                         if (!ClockDepth.selectable)
                                             return Translation.tr("Apply this wallpaper to pick on the desktop")
                                         if (candidate.points.length === 0)
@@ -512,6 +527,13 @@ Item {
                                     }
                                     if (candidate.maskPath !== "")
                                         return ""
+                                    // A live project is segmented from its
+                                    // still, which the shell grabs a moment
+                                    // after the scene's first frame (spec
+                                    // §8.5) - so there is nothing to run on
+                                    // yet, rather than nothing found.
+                                    if (ClockDepth.askingWe && !ClockDepth.stillAvailable)
+                                        return Translation.tr("Waiting for the scene's first frame")
                                     return candidate.refused
                                         ? (candidate.otherFound
                                             ? Translation.tr("Nothing here — another column found something")
@@ -531,7 +553,7 @@ Item {
                         DialogButton {
                             id: runButton
                             visible: !candidate.prompted
-                            enabled: !root.busy && root.wallpaper !== ""
+                            enabled: !root.busy && root.wallpaper !== "" && ClockDepth.stillAvailable
                             buttonText: candidate.maskPath !== "" || candidate.refused
                                 ? Translation.tr("Run again")
                                 : Translation.tr("Run")

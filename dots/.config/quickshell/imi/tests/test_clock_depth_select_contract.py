@@ -422,8 +422,12 @@ class TheDesktopHandsOverItsGeometry(unittest.TestCase):
                 f"the published {axis} is not the depth layer's own - the "
                 "surface would draw its cutout somewhere the desktop does not")
         # The wallpaper ITEM's source, not the config path: a switch assigns
-        # that source imperatively so it can snapshot the outgoing frame.
-        self.assertRegex(value, r"source:\s*String\(wallpaper\.source\)")
+        # that source imperatively so it can snapshot the outgoing frame. A
+        # live Wallpaper Engine project publishes its STILL instead (spec §8):
+        # the selector is another window and cannot sample this scene's
+        # surface, and the still is what the project's mask was cut from.
+        self.assertRegex(value, r"source:\s*bgRoot\.weActive && ClockDepth\.askingWe\s*\n?\s*"
+                                r"\?\s*`file://\$\{ClockDepth\.weStillPath\}`\s*:\s*String\(wallpaper\.source\)")
         # Null while disarmed, so the binding is a comparison rather than a
         # fresh object on every frame of every pan for the rest of the session.
         self.assertRegex(value, r"GlobalStates\.clockDepthSelectOpen\s*\?")
