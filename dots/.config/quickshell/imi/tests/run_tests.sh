@@ -129,6 +129,25 @@ if ! python3 "$SCRIPT_DIR/lint_motion_tier_partial.py"; then
     exit 1
 fi
 
+# Static lint: a duration read out of animationCurves is the tier's BASE, so
+# the speed multiplier and the reduce-motion floor never reach it. Eight sites
+# and one hand-copied tier were doing that, invisibly - the sibling lint above
+# passes them, because they name tokens and pair with the right curve.
+echo "Running motion multiplier bypass lint..."
+if ! python3 "$SCRIPT_DIR/lint_motion_multiplier_bypass.py"; then
+    echo "Motion multiplier bypass lint failed."
+    exit 1
+fi
+
+# Static lint: one desktop-widget base class. The design system arrived with a
+# dead copy that nothing imported and that still carried a drag idiom d2ebb5aeb
+# removed - unreachable, three fixes behind, and the richer-looking of the two.
+echo "Running stale widget canvas lint..."
+if ! python3 "$SCRIPT_DIR/lint_no_stale_widget_canvas.py"; then
+    echo "Stale widget canvas lint failed."
+    exit 1
+fi
+
 # Static lint: a drag that reorders a list reorders it through layout_ops.js.
 # Four surfaces had written that out for themselves and two of the four
 # exchanged the two entries instead of moving one - the same list for a step of
