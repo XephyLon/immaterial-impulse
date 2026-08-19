@@ -74,6 +74,15 @@ ShellRoot {
         });
     }
 
+    function named(name) {
+        const children = popup.contentItem?.children ?? [];
+        for (let index = 0; index < children.length; index++) {
+            if (children[index].objectName === name)
+                return children[index];
+        }
+        return null;
+    }
+
     function chartItem() {
         const children = popup.contentItem?.children ?? [];
         for (let index = 0; index < children.length; index++) {
@@ -160,12 +169,21 @@ ShellRoot {
                               !!chart && chart.visible && chart.height > 0);
                 harness.check("the row is not the popup's first section",
                               harness.chartIndex() > 0);
+                // Against the hero card BY NAME, never against `children[0]`:
+                // a row that became the first child would satisfy that
+                // comparison by being what it measured.
                 harness.check("the card still unrolls from the hero card",
-                              hero === content.children[0].height + padding * 2);
+                              hero === harness.named("weatherHero").height + padding * 2);
                 harness.check("the hero is a fraction of the open height, so there is still an unroll",
                               hero > 0 && hero < openHeight);
-                harness.check("the row added its own height to what the card opens to",
-                              !!chart && openHeight > hero + chart.height);
+                // The feature's name, measured: every bar's bottom edge is the
+                // same line, so what moves is the top.
+                const feet = harness.bars(chart).map(function (bar) {
+                    return bar.mapToItem(chart, 0, bar.height).y;
+                });
+                harness.check("the bars stand on one axis, whatever their height",
+                              feet.length > 1
+                              && feet.every(function (foot) { return Math.abs(foot - feet[0]) < 0.5; }));
                 harness.check("the bars are flat while the popup is not showing",
                               harness.tallestBar() === 0);
 
@@ -212,7 +230,7 @@ ShellRoot {
                               !!chart && !chart.visible);
                 harness.check("and the card still opens at the hero card",
                               BarPopupUnroll.heroSectionHeight(content.children, padding)
-                              === content.children[0].height + padding * 2);
+                              === harness.named("weatherHero").height + padding * 2);
                 harness.finish();
                 break;
             }
