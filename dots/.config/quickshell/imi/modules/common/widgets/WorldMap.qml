@@ -117,11 +117,19 @@ Item {
             border.color: root.markerColor
             opacity: 0.8
 
+            // The marker's ping runs forever, so it is gated on the ring
+            // being drawn: this map lives on a settings page that spends most
+            // of its life closed, and an ungated pulse there is a repaint of
+            // the whole output for a widget nobody has open. `visible` is
+            // effective, so the marker's own `hasMarker` gate and the page's
+            // Loader both reach it without either being named here.
             SequentialAnimation on scale {
+                running: ring.visible
                 loops: Animation.Infinite
                 NumberAnimation { from: 0.5; to: 2.2; duration: 1400; easing.type: Easing.OutCubic }
             }
             SequentialAnimation on opacity {
+                running: ring.visible
                 loops: Animation.Infinite
                 NumberAnimation { from: 0.7; to: 0.0; duration: 1400; easing.type: Easing.OutCubic }
             }
@@ -136,6 +144,7 @@ Item {
             color: root.markerColor
 
             SequentialAnimation on opacity {
+                running: core.visible
                 loops: Animation.Infinite
                 NumberAnimation { from: 1.0; to: 0.4; duration: 900; easing.type: Easing.InOutSine }
                 NumberAnimation { from: 0.4; to: 1.0; duration: 900; easing.type: Easing.InOutSine }

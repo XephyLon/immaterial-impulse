@@ -141,7 +141,7 @@ Scope {
                     animateChange: true
 
                     SequentialAnimation on opacity {
-                        running: !ScreenRecord.recordPaused
+                        running: !ScreenRecord.recordPaused && root.visible
                         loops: Animation.Infinite
                         alwaysRunToEnd: true
                         NumberAnimation {

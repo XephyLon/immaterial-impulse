@@ -65,7 +65,7 @@ Item {
     property real bounceOffset: 0
     SequentialAnimation {
         id: bounceAnimation
-        running: root.launching && !root.dragging
+        running: root.launching && !root.dragging && root.visible
         loops: Animation.Infinite
         alwaysRunToEnd: true
         NumberAnimation {
