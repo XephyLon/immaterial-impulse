@@ -129,6 +129,17 @@ StyledPopup {
         }
 
 
+        // Deliberately not the first child: BarPopupOverlay unrolls the card
+        // from the height of the content's first DRAWN section, so a row that
+        // comes and goes would keep changing what the popup opens at - and a
+        // 60px strip is not the section this card should be legible at on
+        // frame one. The hero stays first.
+        WeatherHourlyChart {
+            charted: root.popupVisible
+            Layout.leftMargin: Appearance.spacing.space25
+            Layout.rightMargin: Appearance.spacing.space25
+        }
+
         GridLayout {
             id: gridLayout
             columns: 2
