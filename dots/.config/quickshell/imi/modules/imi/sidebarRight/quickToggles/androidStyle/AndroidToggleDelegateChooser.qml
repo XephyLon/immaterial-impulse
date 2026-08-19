@@ -13,7 +13,6 @@ DelegateChooser {
     required property real baseCellWidth
     required property real baseCellHeight
     required property real spacing
-    required property int startingIndex
     property var dropIndicatorRef: null 
     property bool isUnused: false
     property var gridRef: null 
@@ -25,12 +24,17 @@ DelegateChooser {
     signal openTailscaleDialog()
     signal openPhoneConnectDialog()
 
+    // The role a choice is picked by is the one `StableQuickToggleModel`
+    // binds permanently to a row's id, and it is the whole reason a delegate
+    // may be reused across a reorder: a chooser reading anything a surviving
+    // row can be rewritten with is a delegate left showing the toggle that
+    // used to be in that slot.
     role: "type"
 
     DelegateChoice { roleValue: "antiFlashbang"; AndroidAntiFlashbangToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -47,7 +51,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "instantReplay"; AndroidInstantReplayToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -63,7 +67,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "audio"; AndroidAudioToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -80,7 +84,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "bluetooth"; AndroidBluetoothToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -97,7 +101,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "tailscale"; AndroidTailscaleToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -114,7 +118,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "phoneConnect"; AndroidPhoneConnectToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -131,7 +135,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "vpn"; AndroidVpnToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -147,7 +151,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "cloudflareWarp"; AndroidCloudflareWarpToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -163,7 +167,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "colorPicker"; AndroidColorPickerToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -179,7 +183,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "darkMode"; AndroidDarkModeToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -195,7 +199,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "easyEffects"; AndroidEasyEffectsToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -211,7 +215,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "gameMode"; AndroidGameModeToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -227,7 +231,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "idleInhibitor"; AndroidIdleInhibitorToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -243,7 +247,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "mic"; AndroidMicToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -260,7 +264,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "musicRecognition"; AndroidMusicRecognition {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -276,7 +280,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "network"; AndroidNetworkToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -293,7 +297,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "nightLight"; AndroidNightLightToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -310,7 +314,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "notifications"; AndroidNotificationToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -326,7 +330,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "onScreenKeyboard"; AndroidOnScreenKeyboardToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -342,7 +346,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "powerProfile"; AndroidPowerProfileToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef
@@ -358,7 +362,7 @@ DelegateChooser {
     DelegateChoice { roleValue: "screenSnip"; AndroidScreenSnipToggle {
         required property int index
         required property var modelData
-        buttonIndex: root.startingIndex + index
+        buttonIndex: modelData.sourceIndex
         buttonData: modelData
         editMode: root.editMode
         gridRef: root.gridRef

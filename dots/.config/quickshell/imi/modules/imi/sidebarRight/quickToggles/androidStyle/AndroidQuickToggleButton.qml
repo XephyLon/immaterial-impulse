@@ -51,6 +51,30 @@ GroupButton {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
 
+    // The grid is one flat container and a tile places itself in it, so a
+    // reorder is a delegate travelling to another slot rather than a row of
+    // delegates being rebuilt. Both terms come from the SETTLED pack - a slot
+    // counts the cells consumed before this tile, never a neighbour's live
+    // width - so the Behaviors have a target that rests between edits. Keyed
+    // on anything the press bounce moves they would restart every frame and
+    // never tick at all (b710ef731).
+    x: (root.buttonData?.layoutSlot ?? 0) * (root.baseCellWidth + root.cellSpacing)
+    y: (root.buttonData?.layoutRow ?? 0) * (root.baseCellHeight + root.cellSpacing)
+    Behavior on x {
+        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+    }
+    Behavior on y {
+        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+    }
+
+    // The press bounce widens the tile while its slot stays where it is, so
+    // left alone the tile would grow into whatever sits to its right. A
+    // transform is not `x`: it composes after placement, so it may move every
+    // frame without reaching the Behavior above.
+    transform: Translate {
+        x: -(root.width - root.baseWidth) / 2
+    }
+
     enabled: available || editMode
     padding: Appearance.spacing.space100
     horizontalPadding: padding
@@ -164,30 +188,29 @@ GroupButton {
             id: dragHandler
             target: null
 
+            // Every tile is a direct child of the one flat grid now, so this is
+            // a filter rather than a walk. The drop indicator and the Repeater
+            // itself are children too; a tile is what carries buttonData.
             function getAllSiblings() {
                 const siblings = [];
                 if (!root.gridRef) return siblings;
-                for (let r = 0; r < root.gridRef.children.length; r++) {
-                    const row = root.gridRef.children[r];
-                    if (!row || !row.visible) continue;
-                    const rowLayout = row.children[0];
-                    if (!rowLayout) continue;
-                    for (let c = 0; c < rowLayout.children.length; c++) {
-                        const sib = rowLayout.children[c];
-                        if (!sib || !sib.visible || !sib.buttonData) continue;
-                        siblings.push(sib);
-                    }
+                for (let i = 0; i < root.gridRef.children.length; i++) {
+                    const sib = root.gridRef.children[i];
+                    if (!sib || !sib.visible || !sib.buttonData) continue;
+                    siblings.push(sib);
                 }
                 return siblings;
             }
 
             // The dragged tile is a hole rather than a candidate: it stays
             // where it was laid out for the whole gesture, so it would be its
-            // own nearest neighbour.
+            // own nearest neighbour. Compared by id rather than by type,
+            // because a config naming one type twice would otherwise punch two
+            // holes and leave the drag unable to reach either.
             function findNearest(sceneX, sceneY) {
                 const siblings = getAllSiblings();
                 const centres = siblings.map(sib =>
-                    sib.buttonData.type === root.buttonData.type
+                    sib.buttonData.itemId === root.buttonData.itemId
                         ? null
                         : sib.mapToItem(null, sib.width / 2, sib.height / 2));
                 const nearest = LayoutOps.indexAt(centres, Qt.point(sceneX, sceneY), null);
@@ -204,10 +227,12 @@ GroupButton {
                     const nearest = findNearest(sceneX, sceneY);
                     if (nearest) {
                         const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-                        const myType = root.buttonData.type;
-                        const sibType = nearest.buttonData.type;
-                        const myIdx = toggleList.findIndex(t => t.type === myType);
-                        const sibIdx = toggleList.findIndex(t => t.type === sibType);
+                        // The model carries each row's index in the stored
+                        // list, so the commit addresses the entry the tile was
+                        // built from. Looking it up by type again asks a
+                        // question the list may answer twice.
+                        const myIdx = root.buttonIndex;
+                        const sibIdx = nearest.buttonIndex;
                         // Mutated in place, deliberately: 26b625905 measured
                         // that every mutation form notifies and reverted the
                         // copy-and-reassign indirection added on the belief
@@ -298,9 +323,8 @@ GroupButton {
             cursorShape: Qt.PointingHandCursor
             onClicked: {
                 const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-                const buttonType = root.buttonData.type;
-                const idx = toggleList.findIndex(t => t.type === buttonType);
-                if (idx !== -1) toggleList.splice(idx, 1);
+                if (root.buttonIndex >= 0 && root.buttonIndex < toggleList.length)
+                    toggleList.splice(root.buttonIndex, 1);
             }
         }
     }
@@ -357,9 +381,8 @@ GroupButton {
                 const newSize = Math.max(1, Math.min(3, pressSize + steps));
                 if (newSize !== root.cellSize) {
                     const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-                    const buttonType = root.buttonData.type;
-                    const idx = toggleList.findIndex(t => t.type === buttonType);
-                    if (idx !== -1) toggleList[idx].size = newSize;
+                    if (root.buttonIndex >= 0 && root.buttonIndex < toggleList.length)
+                        toggleList[root.buttonIndex].size = newSize;
                 }
             }
         }
