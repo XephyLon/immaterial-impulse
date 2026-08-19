@@ -1123,6 +1123,12 @@ if ! python3 "$SCRIPT_DIR/test_clock_depth_cache.py"; then
     exit 1
 fi
 
+echo "Running subject mask refinement tests..."
+if ! python3 "$SCRIPT_DIR/test_subject_mask_refine.py"; then
+    echo "Subject mask refinement tests failed."
+    exit 1
+fi
+
 echo "Running clock depth model list tests..."
 if ! python3 "$SCRIPT_DIR/test_clock_depth_models.py"; then
     echo "Clock depth model list tests failed."

@@ -132,7 +132,8 @@ class StatusTest(unittest.TestCase):
     def test_two_candidates_of_the_same_size_are_told_apart_by_content(self):
         """Size is a shortcut past a read, never the decision.
 
-        Two 1024x1024 masks are routinely both about 300 KB, so deciding on the
+        Two masks of the same wallpaper (both stored at the same size, see
+        `storage_size`) are routinely both a few hundred KB, so deciding on the
         size alone would credit whichever model happened to be listed first.
         """
         (self.cache / f"{self.key}.isnet-anime.png").write_bytes(b"aaaaaaaa")
