@@ -82,8 +82,11 @@ for transform in ("scale", "rotation"):
             f"animates {transform}; a Region does not track transforms, so the mask would "
             "stop matching the card")
 
-for axis in ("width", "height"):
-    if not re.search(rf"^\s*{axis}\s*:\s*0\b", code, re.MULTILINE):
+# The card's height is derived from the driver, so the two properties that must
+# start at and return to zero are the inputs that produce it: a zero open height
+# is zero at every progress, including one the exit's curve has undershot past.
+for axis in ("width", "openHeight"):
+    if not re.search(rf"^\s*(?:property real )?{axis}\s*:\s*0\b", code, re.MULTILINE):
         failures.append(f"the card does not start at {axis} 0")
     if not re.search(rf"\bcard\.{axis}\s*=\s*0\b", code):
         failures.append(

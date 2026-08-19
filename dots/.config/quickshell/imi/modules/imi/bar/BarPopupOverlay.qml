@@ -7,6 +7,7 @@ import Quickshell.Wayland
 import qs
 import qs.modules.common
 import qs.modules.common.widgets
+import "bar_popup_unroll.js" as BarPopupUnroll
 
 // One always-mapped layer surface per screen, hosting the single card every bar
 // popup morphs. The surface itself never moves, resizes or unmaps: on a
@@ -51,12 +52,21 @@ Scope {
             // this window while it shows - so the window may only go once
             // `finishExit()` has released both trees and collapsed the card,
             // which is exactly the state this reads.
+            //
+            // It reads the card's INPUTS - the open height, the width and the
+            // driver - rather than its drawn height and opacity, and that is
+            // load-bearing rather than tidiness. The drawn ones are derived, and
+            // the card's own across-the-bar coordinate is derived from the
+            // window's size, so a predicate reading them closes a circle through
+            // this very property: measured as `Binding loop detected for
+            // property "visible"` on a real compositor, twice per window, where
+            // the same probe against the assigned geometry logged nothing.
             visible: overlayWindow.current !== null
                 || overlayWindow.outgoing !== null
                 || overlayWindow.exiting
-                || card.opacity > 0
+                || card.openProgress > 0
                 || card.width > 0
-                || card.height > 0
+                || card.openHeight > 0
             exclusionMode: ExclusionMode.Ignore
             exclusiveZone: 0
 
@@ -99,12 +109,14 @@ Scope {
             property var current: null
             property var outgoing: null
             property bool exiting: false
-            // Where the card collapses to on exit. Remembered rather than
-            // recomputed, because the popup that owns it may have been
-            // destroyed by the time the exit runs.
-            property var exitSpot: null
-            readonly property bool morphing: xAnim.running || yAnim.running
-                || widthAnim.running || heightAnim.running
+            // Where along the bar the card collapses to on exit. Remembered
+            // rather than recomputed, because the popup that owns it may have
+            // been destroyed by the time the exit runs. One number, not a
+            // rectangle: the card's across-the-bar coordinate is derived from
+            // its live size, so nothing about the parked square is stored.
+            property var exitAnchor: null
+            readonly property bool morphing: card.alongBarAnim.running || card.widthAnim.running
+                || card.openAnim.running
 
             readonly property var requested: {
                 const popup = GlobalStates.activeBarPopup;
@@ -119,10 +131,14 @@ Scope {
             }
 
             function takeOver(popup) {
-                exitShrinkTimer.stop();
-                exitFadeTimer.stop();
+                exitTimer.stop();
                 overlayWindow.exiting = false;
-                card.opacity = 1;
+                // No opacity or progress write here: retarget() drives the one
+                // scalar, one turn of the event loop from now, and it is the
+                // only place that knows what the card is opening to. Reversing
+                // an exit from here would ramp the card back up against the
+                // outgoing popup's height for a frame.
+                //
                 // An exit disables the leaving content; a re-hover of the very
                 // widget the card was leaving has to hand its controls back.
                 if (overlayWindow.current?.contentItem)
@@ -156,8 +172,8 @@ Scope {
 
                 const arriving = popup.contentItem;
                 if (arriving) {
-                    arriving.parent = contentHost;
-                    arriving.anchors.centerIn = contentHost;
+                    arriving.parent = contentSlot;
+                    arriving.anchors.centerIn = contentSlot;
                     arriving.enabled = true;
                     arriving.opacity = 0;
                     contentEnter.stop();
@@ -169,7 +185,7 @@ Scope {
 
                 // Coming from idle there is no geometry to morph from, so put
                 // the card at the widget it belongs to before anything animates.
-                if (card.width <= 0 || card.height <= 0) overlayWindow.park();
+                if (card.width <= 0 || card.openHeight <= 0) overlayWindow.park();
                 retargetTimer.restart();
             }
 
@@ -187,107 +203,89 @@ Scope {
                 const cardWidth = content.implicitWidth + popup.contentPadding * 2;
                 const cardHeight = content.implicitHeight + popup.contentPadding * 2;
 
-                let cardX;
-                let cardY;
-                if (popup.barVertical) {
+                // The clamp reads the SETTLED size, never the card's animating
+                // one: a rect measured from the far edge of a box that is still
+                // moving crawls behind it.
+                if (overlayWindow.barVertical) {
                     const base = target.QsWindow.mapFromItem(target, 0, (target.height - cardHeight) / 2).y;
-                    cardY = Math.max(margin, Math.min(base, overlayWindow.height - cardHeight - margin - 15));
-                    cardX = popup.barEdge === "right"
-                        ? overlayWindow.width - popup.barThickness - margin - cardWidth
-                        : popup.barThickness + margin;
+                    card.alongBar = Math.max(margin, Math.min(base, overlayWindow.height - cardHeight - margin - 15));
                 } else {
                     const base = target.QsWindow.mapFromItem(target, (target.width - cardWidth) / 2, 0).x;
-                    cardX = Math.max(margin, Math.min(base, overlayWindow.width - cardWidth - margin - 10));
-                    cardY = popup.barEdge === "bottom"
-                        ? overlayWindow.height - popup.barThickness - margin - cardHeight
-                        : popup.barThickness + margin;
+                    card.alongBar = Math.max(margin, Math.min(base, overlayWindow.width - cardWidth - margin - 10));
                 }
 
-                // Assigned, never bound: nothing the card's geometry feeds may
-                // also feed the computation of it, and on the bottom/right
-                // edges the fixed axis is a function of the animating size.
                 card.width = cardWidth;
-                card.height = cardHeight;
-                card.x = cardX;
-                card.y = cardY;
-                overlayWindow.exitSpot = overlayWindow.anchorSpot();
+                card.openHeight = cardHeight;
+                card.heroHeight = BarPopupUnroll.heroSectionHeight(content.children, popup.contentPadding);
+                // The driver, written last and only here: the hero and the full
+                // height it interpolates between have to be the arriving
+                // popup's before the ramp can mean anything. Writing 1 while it
+                // is already 1 is not a restart - Qt drops a Behavior write of
+                // the value it is already animating to.
+                card.openProgress = 1;
+                overlayWindow.exitAnchor = overlayWindow.anchorAlongBar();
             }
 
-            // The card's exit target: a small square on the bar-adjacent edge,
-            // centred on the widget the card belongs to.
-            function anchorSpot() {
+            // Where the card parks: the point ALONG the bar, centred on the
+            // widget the card belongs to. The coordinate across the bar is not
+            // part of it - that one is derived from the card's live size, so
+            // the far edges keep their bar-adjacent edge still by construction
+            // rather than by two Behaviors happening to share a curve.
+            function anchorAlongBar() {
                 const popup = overlayWindow.current ?? overlayWindow.outgoing;
                 const target = popup?.hoverTarget;
-                if (!target?.QsWindow?.window) return overlayWindow.exitSpot;
+                if (!target?.QsWindow?.window) return overlayWindow.exitAnchor;
 
-                const margin = Appearance.sizes.elevationMargin;
-                const floor = margin * 2;
                 const centre = target.QsWindow.mapFromItem(target, target.width / 2, target.height / 2);
-                if (popup.barVertical) {
-                    return {
-                        x: popup.barEdge === "right"
-                            ? overlayWindow.width - popup.barThickness - margin - floor
-                            : popup.barThickness + margin,
-                        y: centre.y - floor / 2,
-                        width: floor,
-                        height: floor
-                    };
-                }
-                return {
-                    x: centre.x - floor / 2,
-                    y: popup.barEdge === "bottom"
-                        ? overlayWindow.height - popup.barThickness - margin - floor
-                        : popup.barThickness + margin,
-                    width: floor,
-                    height: floor
-                };
+                return (overlayWindow.barVertical ? centre.y : centre.x) - card.parkedSize / 2;
             }
 
             function park() {
-                const spot = overlayWindow.anchorSpot();
-                if (!spot) return;
+                const anchor = overlayWindow.anchorAlongBar();
+                if (anchor === null || anchor === undefined) return;
                 card.animate = false;
-                card.opacity = 0;
-                card.x = spot.x;
-                card.y = spot.y;
-                card.width = spot.width;
-                card.height = spot.height;
+                card.openProgress = 0;
+                card.heroHeight = 0;
+                card.openHeight = card.parkedSize;
+                card.width = card.parkedSize;
+                card.alongBar = anchor;
                 card.animate = true;
-                card.opacity = 1;
-                overlayWindow.exitSpot = spot;
+                overlayWindow.exitAnchor = anchor;
             }
 
-            // Shrink toward the owning widget, then fade, then collapse. The
-            // collapse is not cosmetic: an opacity-0 card still publishes a
-            // full-size input region and would eat every click in its rectangle.
+            // Shrink toward the owning widget and fade, on the one scalar, then
+            // collapse. The collapse is not cosmetic: an opacity-0 card still
+            // publishes a full-size input region and would eat every click in
+            // its rectangle.
             function beginExit() {
                 if (overlayWindow.exiting) return;
                 // Already idle. Returning rather than collapsing again matters:
                 // finishExit() vacates the slot, which re-enters here.
                 if (!overlayWindow.current && !overlayWindow.outgoing
-                        && card.width <= 0 && card.height <= 0) return;
-                if (card.width <= 0 && card.height <= 0) {
+                        && card.width <= 0 && card.openHeight <= 0) return;
+                if (card.width <= 0 && card.openHeight <= 0) {
                     overlayWindow.finishExit();
                     return;
                 }
-                const spot = overlayWindow.anchorSpot();
-                if (!spot) {
+                const anchor = overlayWindow.anchorAlongBar();
+                if (anchor === null || anchor === undefined) {
                     overlayWindow.finishExit();
                     return;
                 }
+                // Before the progress write, not after: the card's rest height
+                // becomes the parked square's here, and at progress 1 that
+                // changes nothing, so the exit starts where the card already is.
                 overlayWindow.exiting = true;
                 if (overlayWindow.current?.contentItem)
                     overlayWindow.current.contentItem.enabled = false;
-                card.x = spot.x;
-                card.y = spot.y;
-                card.width = spot.width;
-                card.height = spot.height;
-                exitShrinkTimer.restart();
+                card.alongBar = anchor;
+                card.width = card.parkedSize;
+                card.openProgress = 0;
+                exitTimer.restart();
             }
 
             function finishExit() {
-                exitShrinkTimer.stop();
-                exitFadeTimer.stop();
+                exitTimer.stop();
                 contentEnter.stop();
                 contentExit.stop();
 
@@ -299,9 +297,13 @@ Scope {
                 overlayWindow.exiting = false;
 
                 card.animate = false;
-                card.opacity = 0;
+                card.openProgress = 0;
+                card.heroHeight = 0;
+                // The card's height is derived, so emptying the input region
+                // means emptying what it is derived FROM: a zero open height is
+                // zero at every progress.
+                card.openHeight = 0;
                 card.width = 0;
-                card.height = 0;
                 card.animate = true;
 
                 if (leaving && GlobalStates.activeBarPopup === leaving)
@@ -336,18 +338,16 @@ Scope {
                 onTriggered: overlayWindow.retarget()
             }
 
+            // One timer where there were two chained ones. The shrink and the
+            // fade were staged so they would not fight over the same frames;
+            // riding one scalar makes them the same motion, so what is left to
+            // wait for is that motion finishing. The interval is the driver's
+            // own tier, which is also how the motion multiplier reaches it - a
+            // Timer is one of the two things a Behavior's scaled duration does
+            // not cover.
             Timer {
-                id: exitShrinkTimer
-                interval: Appearance.animation.elementMoveExit.duration
-                onTriggered: {
-                    card.opacity = 0;
-                    exitFadeTimer.restart();
-                }
-            }
-
-            Timer {
-                id: exitFadeTimer
-                interval: Appearance.animation.elementMoveFast.duration
+                id: exitTimer
+                interval: Appearance.animation.elementMove.duration
                 onTriggered: overlayWindow.finishExit()
             }
 
@@ -436,6 +436,15 @@ Scope {
             }
             onBarEdgeChanged: overlayWindow.finishExit()
 
+            // Derived here for the same reason barEdge is: the card's own
+            // across-the-bar coordinate is a binding now, and a binding that
+            // reached through whichever popup currently holds the card would
+            // re-evaluate against a null popup on every takeover.
+            readonly property bool barVertical: Config.options.bar.vertical
+            readonly property real barThickness: overlayWindow.barVertical
+                ? Appearance.sizes.verticalBarWidth
+                : Appearance.sizes.barHeight
+
             SequentialAnimation {
                 id: contentEnter
                 property Item item: null
@@ -485,16 +494,53 @@ Scope {
                 // Gates the Behaviors so the card can be placed instantly when
                 // there is no previous geometry to travel from.
                 property bool animate: true
-                readonly property int motionDuration: overlayWindow.exiting
-                    ? Appearance.animation.elementMoveExit.duration
-                    : Appearance.animation.elementMove.duration
-                readonly property var motionCurve: overlayWindow.exiting
-                    ? Appearance.animationCurves.emphasizedAccel
-                    : Appearance.animationCurves.expressiveDefaultSpatial
+
+                // THE driver. One `real` 0 -> 1 that the fade and the unroll
+                // both ride, so they cannot disagree about where the card is in
+                // its own transition. Everything derivable from it is derived,
+                // never animated a second time: a second Behavior on a quantity
+                // this one already carries is a second timing to keep in step,
+                // and the one place they would visibly differ is mid-flight,
+                // which is the only place nobody looks.
+                property real openProgress: 0
+                // What the card unrolls between. Assigned by retarget(), which
+                // is a turn of the event loop behind the takeover because an
+                // unparented tree does not polish and its implicit size is
+                // stale until it does.
+                property real openHeight: 0
+                property real heroHeight: 0
+                // The parked square on the bar, which the card grows out of and
+                // collapses back into.
+                readonly property real parkedSize: Appearance.sizes.elevationMargin * 2
+                // The card's coordinate ALONG the bar. The only travel left:
+                // the across-the-bar one is derived below.
+                property real alongBar: 0
 
                 width: 0
-                height: 0
-                opacity: 0
+                height: BarPopupUnroll.cardHeight(card.openHeight, card.heroHeight,
+                    card.parkedSize, overlayWindow.exiting, card.openProgress)
+                // Bindings, not assignments, and that is what the driver bought.
+                // On the bottom and right edges the bar-adjacent coordinate is a
+                // function of the animating size, which is why this used to be
+                // assigned: two Behaviors easing x and width apart put the
+                // card's edge where its content is not. Deriving it from the
+                // size the driver already produces cannot drift from it, and
+                // neither carries a Behavior of its own, so nothing here is a
+                // target that moves every frame.
+                x: overlayWindow.barVertical
+                    ? (overlayWindow.barEdge === "right"
+                        ? overlayWindow.width - overlayWindow.barThickness - Appearance.sizes.elevationMargin - card.width
+                        : overlayWindow.barThickness + Appearance.sizes.elevationMargin)
+                    : card.alongBar
+                y: overlayWindow.barVertical
+                    ? card.alongBar
+                    : (overlayWindow.barEdge === "bottom"
+                        ? overlayWindow.height - overlayWindow.barThickness - Appearance.sizes.elevationMargin - card.height
+                        : overlayWindow.barThickness + Appearance.sizes.elevationMargin)
+                // Clamped because the spatial tier overshoots past 1 and
+                // undershoots below 0 on the way back; the geometry keeps the
+                // overshoot deliberately, an alpha cannot use it.
+                opacity: Math.max(0, Math.min(1, card.openProgress))
                 visible: width > 0 && height > 0
 
                 color: Appearance.colors.colLayer1Base
@@ -502,51 +548,35 @@ Scope {
                 border.width: Appearance.borderWidth.standard
                 border.color: Appearance.colors.colLayer0Border
 
-                Behavior on x {
-                    // Position too, for the same reason as width and height: a
-                    // right-anchored card's x is derived from its width, so
-                    // easing one while the other tracks the content puts the
-                    // card's edge where its content is not.
-                    enabled: card.animate && !(overlayWindow.current?.contentDrivesSize ?? false)
-                    NumberAnimation {
-                        id: xAnim
-                        duration: card.motionDuration
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: card.motionCurve
-                    }
+                // Every tier is taken WHOLE - duration, easing type and curve
+                // together, from the tier's own component. Naming the created
+                // objects is what lets `morphing` ask whether the card is still
+                // travelling: the focus grab must not arm while the card is
+                // still the parked square, and a Behavior does not publish its
+                // own animation until after completion.
+                readonly property NumberAnimation openAnim: Appearance.animation.elementMove.numberAnimation.createObject(card)
+                readonly property NumberAnimation alongBarAnim: Appearance.animation.elementMove.numberAnimation.createObject(card)
+                readonly property NumberAnimation widthAnim: Appearance.animation.elementMove.numberAnimation.createObject(card)
+
+                // The only Behavior on the driver, and the one tier serves both
+                // directions. A Behavior's animation cannot be swapped after
+                // construction (Qt refuses the second write), so a directional
+                // pair would have to be a duration and a curve written onto a
+                // bare NumberAnimation - half a tier, which is silently
+                // Easing.Linear the day someone drops the curve.
+                Behavior on openProgress {
+                    enabled: card.animate
+                    animation: card.openAnim
                 }
-                Behavior on y {
-                    enabled: card.animate && !(overlayWindow.current?.contentDrivesSize ?? false)
-                    NumberAnimation {
-                        id: yAnim
-                        duration: card.motionDuration
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: card.motionCurve
-                    }
-                }
-                Behavior on width {
+                Behavior on alongBar {
                     // See StyledPopup.contentDrivesSize: a popup animating its
                     // own size must not be chased by the card.
                     enabled: card.animate && !(overlayWindow.current?.contentDrivesSize ?? false)
-                    NumberAnimation {
-                        id: widthAnim
-                        duration: card.motionDuration
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: card.motionCurve
-                    }
+                    animation: card.alongBarAnim
                 }
-                Behavior on height {
+                Behavior on width {
                     enabled: card.animate && !(overlayWindow.current?.contentDrivesSize ?? false)
-                    NumberAnimation {
-                        id: heightAnim
-                        duration: card.motionDuration
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: card.motionCurve
-                    }
-                }
-                Behavior on opacity {
-                    enabled: card.animate
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    animation: card.widthAnim
                 }
 
                 HoverHandler {
@@ -564,6 +594,24 @@ Scope {
                     anchors.fill: parent
                     anchors.margins: overlayWindow.current?.contentPadding ?? 0
                     clip: true
+
+                    // The content's own box, held at the SETTLED height for the
+                    // whole unroll and pinned to the top of the host.
+                    //
+                    // Centring the content in a host that is shrinking would
+                    // show the middle band of it while the card is short, so the
+                    // first section - the one the card opens at the height of -
+                    // would be the one thing not on screen on frame one. Holding
+                    // the box still is the other half: a block re-centred
+                    // through every intermediate height reads as being squeezed
+                    // rather than as being revealed, and it is the same reason a
+                    // one-tree widget pins a fading block to its own span's box.
+                    Item {
+                        id: contentSlot
+                        width: parent.width
+                        height: Math.max(0, card.openHeight
+                            - 2 * (overlayWindow.current?.contentPadding ?? 0))
+                    }
                 }
             }
         }
