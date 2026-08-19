@@ -103,9 +103,13 @@ TestCase {
 
     function test_wttrSurvivesAJunkResponse() {
         compare(WeatherHourly.slotsFromWttr(undefined, false), []);
-        compare(WeatherHourly.slotsFromWttr([{}], false), [],
-                "a day with no date cannot be placed on a time axis");
         compare(WeatherHourly.slotsFromWttr([wttrDay("2026-08-04", undefined)], false), []);
+        // Hours WITH readings under a day with no date: the date is what places
+        // them on the axis, so dropping the guard has to be visible here rather
+        // than only where the day is empty anyway.
+        compare(WeatherHourly.slotsFromWttr(
+            [{ hourly: [{ time: "1200", tempC: "5", tempF: "41", weatherCode: "113" }] }], false), [],
+                "a day with no date cannot be placed on a time axis");
     }
 
     function series(hours) {
@@ -134,9 +138,12 @@ TestCase {
     }
 
     function test_upcomingIsCappedAndExcludesTheSlotOnTheHour() {
+        // Seven slots, of which six are ahead of the fixture's clock: a cap of
+        // five is only exercised while more than five remain.
         const slots = series([
             [2026, 8, 4, 15, 21], [2026, 8, 4, 18, 18], [2026, 8, 4, 21, 14],
-            [2026, 8, 5, 0, 12], [2026, 8, 5, 3, 11], [2026, 8, 5, 6, 13]
+            [2026, 8, 5, 0, 12], [2026, 8, 5, 3, 11], [2026, 8, 5, 6, 13],
+            [2026, 8, 5, 9, 17]
         ]);
         const shown = WeatherHourly.upcoming(slots, at(2026, 8, 4, 15).getTime(), 5);
         compare(shown.length, 5, "the window is capped");
@@ -185,10 +192,14 @@ TestCase {
     // The coldest hour of the window is still an hour, so its bar is still a
     // bar - a zero-height one reads as a hole in the row.
     function test_theColdestBarKeepsAVisibleFloorAndTheWarmestFillsTheTrack() {
-        compare(WeatherHourly.barFraction(14, 14, 21), WeatherHourly.MIN_FRACTION);
+        // The floor is a number the row was drawn around, so it is written out
+        // here rather than read back off the module: comparing the function
+        // against the constant the function used asserts only that it agrees
+        // with itself, and stays green with the floor set to zero.
+        compare(WeatherHourly.barFraction(14, 14, 21), 0.18);
         compare(WeatherHourly.barFraction(21, 14, 21), 1);
         const middle = WeatherHourly.barFraction(17.5, 14, 21);
-        verify(middle > WeatherHourly.MIN_FRACTION && middle < 1,
+        verify(middle > 0.18 && middle < 1,
                `a middling hour lands between the two: ${middle}`);
     }
 
@@ -196,7 +207,7 @@ TestCase {
     // place anything between. Full height would claim heat and the floor would
     // claim cold.
     function test_aFlatWindowDrawsFlatBarsRatherThanDividingByZero() {
-        compare(WeatherHourly.barFraction(18, 18, 18), WeatherHourly.FLAT_FRACTION);
+        compare(WeatherHourly.barFraction(18, 18, 18), 0.55);
     }
 
     function test_anAbsentReadingHasNoBarRatherThanAZeroOne() {
@@ -207,14 +218,15 @@ TestCase {
 
     function test_aReadingOutsideTheRangeIsClampedIntoTheTrack() {
         compare(WeatherHourly.barFraction(30, 14, 21), 1);
-        compare(WeatherHourly.barFraction(2, 14, 21), WeatherHourly.MIN_FRACTION);
+        compare(WeatherHourly.barFraction(2, 14, 21), 0.18);
     }
 
     // One bar is scaled against itself, so it is full height whatever the
     // temperature is: a confident drawing of nothing.
     function test_aSeriesTooShortToBeAChartIsNotDrawn() {
         const one = series([[2026, 8, 4, 15, 21]]);
-        verify(!WeatherHourly.isRenderable(one));
+        verify(!WeatherHourly.isRenderable(one),
+               "one bar is scaled against itself, so it is full height whatever it says");
         verify(!WeatherHourly.isRenderable([]));
         verify(!WeatherHourly.isRenderable(undefined));
         verify(WeatherHourly.isRenderable(
