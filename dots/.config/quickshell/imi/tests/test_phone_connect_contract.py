@@ -14,8 +14,11 @@ The rest pins the busctl I/O the double deliberately omits:
 - device ids are filtered through validDeviceId before they are spliced
   into object paths, and Valent object paths pass validValentObjectPath
   before they are called into;
-- the poll survives the stream as the reconcile behind it, gated on
-  enableService && installed exactly as before.
+- the streaming monitor's lifetime, which is the half of this feature that
+  cannot be unit tested and the half CONTRIBUTING.md names outright: the
+  monitor Process must carry no `running` binding, every restart must go
+  through the backoff plan, and the poll must stay on (gated on
+  enableService && installed) as the reconcile behind it.
 """
 
 import re
@@ -92,6 +95,22 @@ def test_busctl_calls_are_argv_arrays_via_busctl_call():
     assert busctl_literals == [], f"busctl invoked outside the argv builders: {busctl_literals}"
 
 
+def test_the_match_rule_is_one_argv_element_and_never_a_shell_string():
+    """The D-Bus match grammar puts single quotes inside the rule
+    (`sender='org.kde.kdeconnect.daemon'`), which is exactly the string a
+    shell would re-interpret. It is one argv element, appended to
+    `--match=`, and the presence probe stays the only shell in the file
+    (pinned separately above)."""
+    source = SERVICE.read_text()
+    builder = re.search(r'function busctlMonitor\(.*?\{\n(.*?)\n    \}', source, re.S)
+    assert builder, "busctlMonitor builder missing"
+    body = builder.group(1)
+    assert '`--match=${matchRule}`' in body, (
+        f"the match rule must be one argv element: {body}"
+    )
+    assert '"monitor"' in body, "the monitor argv must name the monitor verb"
+
+
 def test_device_ids_are_validated_before_path_splicing():
     source = SERVICE.read_text()
     assert ".filter(id => root.validDeviceId(id))" in source, (
@@ -110,6 +129,100 @@ def test_device_ids_are_validated_before_path_splicing():
         )
 
 
+def _process_block(source: str, process_id: str) -> str:
+    """The `Process { ... }` block declaring `id: <process_id>`.
+
+    Brace-counted rather than regexed to a fixed indent: a check that bakes
+    in indentation passes vacuously after any reformat, and this one has to
+    be able to say a `running:` binding is absent.
+    """
+    for match in re.finditer(r"\bProcess\s*\{", source):
+        depth, index = 1, match.end()
+        while index < len(source) and depth:
+            if source[index] == "{":
+                depth += 1
+            elif source[index] == "}":
+                depth -= 1
+            index += 1
+        block = source[match.start():index]
+        if re.search(rf"\bid:\s*{process_id}\b", block):
+            return block
+    raise AssertionError(f"Process block for id {process_id} not found")
+
+
+def test_the_monitor_process_has_no_running_binding():
+    """The rule CONTRIBUTING.md states outright. `busctl monitor` handed a
+    match rule the bus rejects exits in milliseconds, so a `running:`
+    binding keeping it alive is a tight respawn loop that starves
+    Quickshell. It is started imperatively and the only assignment to
+    `running` is the deliberate stop."""
+    block = _process_block(SERVICE.read_text(), "monitorProc")
+    bindings = re.findall(r"^\s*running\s*:", block, re.M)
+    assert bindings == [], f"monitorProc declares a running binding: {bindings}"
+    assert "monitorProc.exec(" in SERVICE.read_text(), (
+        "the monitor must be started imperatively through exec()"
+    )
+    assert "process-lifecycle: restart-safe" in block, (
+        "the monitor block must carry the restart-safe marker the plugin "
+        "lifecycle lint recognises"
+    )
+
+
+def test_every_monitor_restart_goes_through_the_backoff_plan():
+    """No path may restart the monitor without a delay: the exit handler
+    consults monitorExitPlan, honours its refusal, and arms the restart
+    timer with the delay it returned."""
+    source = SERVICE.read_text()
+    block = _process_block(source, "monitorProc")
+    assert "root.monitorExitPlan(" in block, "the exit handler does not consult the plan"
+    assert "monitorRestart.interval = plan.delay" in block, (
+        "the restart timer is armed with something other than the plan's delay"
+    )
+    assert re.search(r"if\s*\(!plan\.retry\)", block), (
+        "the exit handler does not honour the plan's refusal"
+    )
+    # startMonitor is the only other way in, and it is reached either from a
+    # backend change or from that timer.
+    starts = [line.strip() for line in source.splitlines()
+              if "startMonitor()" in line and "function startMonitor" not in line]
+    assert starts, "nothing starts the monitor"
+    for line in starts:
+        assert ("root.startMonitor()" in line), f"unexpected monitor start path: {line}"
+
+
+def test_the_ceiling_is_declared_and_the_stream_falls_back_to_polling():
+    """A ceiling that is never reached is not a ceiling; a ceiling with no
+    fallback is a feature that silently stops working. Both halves."""
+    source = SERVICE.read_text()
+    assert re.search(r"readonly property int monitorAttemptCeiling:\s*\d+", source), (
+        "no declared retry ceiling"
+    )
+    assert re.search(r"readonly property int monitorHealthyMs:\s*\d+", source), (
+        "no declared healthy-run threshold"
+    )
+    assert 'root.monitorState = "failed"' in source, (
+        "the ceiling never lands the monitor in a terminal state"
+    )
+    assert 'root.monitorState !== "failed"' in source, (
+        "wantMonitor does not read the terminal state, so the ceiling is "
+        "reachable again immediately"
+    )
+
+
+def test_valent_keeps_the_poll_because_its_signals_are_unverified():
+    """A signal path that only works for one backend is a regression in the
+    other. Valent gets no match rule, so nothing ever spawns a monitor for
+    it, and its updates stay on the timer."""
+    source = SERVICE.read_text()
+    rule = re.search(r"function monitorMatchRule\(.*?\{\n(.*?)\n    \}", source, re.S)
+    assert rule, "monitorMatchRule missing"
+    body = rule.group(1)
+    assert "kdeconnect" in body
+    assert "andyholmes" not in body and "Valent" not in body, (
+        f"an unverified Valent rule has been added: {body}"
+    )
+
+
 def test_the_poll_survives_as_the_reconcile_and_stays_gated():
     """The stream is not allowed to replace the poll. Nothing announces a
     daemon appearing (there is no monitor to hear it on), and a daemon that
@@ -125,6 +238,25 @@ def test_the_poll_survives_as_the_reconcile_and_stays_gated():
     assert "triggeredOnStart: true" in body
     assert "root.monitorLive ? root.reconcileInterval : root.pollInterval" in body, (
         "the poll does not slow down behind a live stream"
+    )
+
+
+def test_signal_bursts_are_coalesced_and_never_dropped():
+    """One device going out of range emitted seven signals within a
+    millisecond on a live daemon, and each re-read is a chain of busctl
+    spawns - so they coalesce. The half that is easy to get wrong: refresh()
+    declines while a sweep is in flight, so the settle timer has to re-arm
+    rather than drop the change that asked for it."""
+    source = SERVICE.read_text()
+    settle = re.search(r"Timer \{\n\s*id: signalSettle(.*?)\n    \}", source, re.S)
+    assert settle, "signalSettle timer missing"
+    body = settle.group(1)
+    assert "root.callQueue.length > 0" in body and "signalSettle.restart()" in body, (
+        f"a signal arriving mid-sweep is dropped: {body}"
+    )
+    assert "signalSettle.restart()" in re.search(
+        r"function handleMonitorLine\(.*?\n    \}", source, re.S).group(0), (
+        "monitor lines do not go through the settle timer"
     )
 
 
