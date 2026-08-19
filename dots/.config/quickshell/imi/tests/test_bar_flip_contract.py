@@ -58,10 +58,23 @@ def code(path):
 def test_every_bucket_delegate_in_both_trees_hands_over_the_registry():
     for path in TREES:
         text = code(path)
-        wired = text.count("flipRegistry: flipRegistry")
+        # `flipRegistry: flipRegistry` is what this used to pin, and it is the
+        # one spelling that cannot work: inside a BarGroup the bare name
+        # resolves to the delegate's OWN property before it reaches the id in
+        # the enclosing scope, so the binding is the property bound to itself.
+        # QML reports it as `Binding loop detected for property
+        # "flipRegistry"` on every delegate and hands each group a null
+        # registry, which is a bar with no reposition at all - and neither the
+        # QML suite nor the runtime harness sees it, because the harness
+        # declares its own groups and wires them by a distinct id.
+        wired = text.count("flipRegistry: barFlipRegistry")
         assert wired == 6, (
             f"{path.name} wires flipRegistry into {wired} delegates, not 6 - a "
             f"bucket or a style still teleports, in that orientation only")
+        assert "flipRegistry: flipRegistry" not in text, (
+            f"{path.name} binds the registry to a name that resolves to the "
+            f"delegate's own property first - a binding loop, and a null "
+            f"registry in every group")
 
 
 def test_each_tree_declares_exactly_one_registry_on_its_own_root():
