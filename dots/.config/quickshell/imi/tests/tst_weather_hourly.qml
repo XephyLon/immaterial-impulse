@@ -90,6 +90,17 @@ TestCase {
         compare(slots.map(slot => slot.date), ["2026-08-04", "2026-08-05"]);
     }
 
+    // Both providers return their entries in order, so this is about a
+    // malformed payload rather than a normal one - and a single bar out of
+    // sequence has no other symptom.
+    function test_slotsComeBackInTimeOrder() {
+        const slots = WeatherHourly.slotsFromWttr([
+            wttrDay("2026-08-05", [{ time: "0", tempC: "10", tempF: "50", weatherCode: "113" }]),
+            wttrDay("2026-08-04", [{ time: "2100", tempC: "12", tempF: "54", weatherCode: "113" }])
+        ], false);
+        compare(slots.map(slot => slot.date), ["2026-08-04", "2026-08-05"]);
+    }
+
     function test_wttrSurvivesAJunkResponse() {
         compare(WeatherHourly.slotsFromWttr(undefined, false), []);
         compare(WeatherHourly.slotsFromWttr([{}], false), [],
