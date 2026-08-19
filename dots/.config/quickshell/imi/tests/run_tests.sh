@@ -505,6 +505,15 @@ if ! python3 "$SCRIPT_DIR/test_bar_flip_contract.py"; then
     exit 1
 fi
 
+# ...and the half that can tell the reposition from the teleport it replaces:
+# it samples where each slot is DRAWN mid-reflow, at three bucket anchorings
+# and both orientations. Brings its own headless weston and its own session bus.
+echo "Running bar reposition runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_flip_runtime.py"; then
+    echo "Bar reposition runtime tests failed."
+    exit 1
+fi
+
 # Stage 9b: the lock islands' reorder, driven with real mouse events on the
 # real LockSurface with the preview context - the overlay's eater, the shared
 # gesture, move semantics, the storedOrder merge, and both cancel paths.
