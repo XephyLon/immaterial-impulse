@@ -57,10 +57,20 @@ def test_popups_own_no_surface_and_share_one_static_overlay():
 
     overlay = Path("modules/imi/bar/BarPopupOverlay.qml").read_text()
     # Map through the target's window, never the overlay's own, and assign the
-    # result imperatively so the card's geometry never feeds its own input.
+    # travel imperatively so the card's geometry never feeds its own input.
+    #
+    # This used to read `card.x = cardX`, and both coordinates were assigned for
+    # one reason: on the bottom and right edges the bar-adjacent coordinate is a
+    # function of the animating size, so easing a second copy of that size puts
+    # the card's edge where its content is not. The card runs on one driver
+    # scalar now, so that coordinate is DERIVED from the size the driver already
+    # produces - which cannot drift from it and carries no Behavior of its own,
+    # so there is no chase to lose. What is still assigned is the one axis that
+    # travels, along the bar.
     assert "target.QsWindow.mapFromItem(" in overlay
     assert "overlayWindow.QsWindow" not in overlay
-    assert "card.x = cardX" in overlay and "card.width = cardWidth" in overlay
+    assert "card.alongBar = " in overlay and "card.width = cardWidth" in overlay
+    assert "card.x =" not in overlay and "card.y =" not in overlay
     assert re.search(r"Behavior\s+on\s+width", overlay)
     # An unparented content tree does not polish, so its implicit size is not
     # readable until it is in a window: measure one frame after the reparent.
