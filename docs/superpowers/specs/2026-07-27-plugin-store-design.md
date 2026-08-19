@@ -1,6 +1,6 @@
 # Plugin Store — Design Spec
 
-Status: draft for review
+Status: implemented (`a1124aec4` onward — `services/PluginStore.qml`, `PluginStorePage.qml`, `install_plugin.py --upgrade`, `registry_validate.py`); shipped behind `plugins.storeEnabled: false`.
 Date: 2026-07-27
 Prior art studied: DankMaterialShell (danklinux.com/plugins, dms-plugin-registry) and
 Noctalia (noctalia.dev/plugins, official-plugins + community-plugins). Findings that

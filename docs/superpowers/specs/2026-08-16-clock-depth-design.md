@@ -1,7 +1,6 @@
 # Clock depth mode — feasibility and design
 
-**Status:** design, not implemented. The feasibility question is settled with measurements; §1 is the
-evidence and §2 onward is what to build on top of it.
+**Status:** partially implemented (v0.25.0; `aa6a8bfb0` — `subject_mask.py` producer, `clockDepth.js`, `clockDepthSelect/`, `Background.qml` `clockDepthLayer`). §8 (Wallpaper Engine) is designed, not landed. Open quality issue: mask separation is not crisp enough — fine structure such as hair claims more mask than it should. §1 is the feasibility evidence.
 **Scope:** `modules/imi/background/Background.qml`, a new `scripts/background/` producer, the
 wallpaper selector, `sdata/uv/`.
 
