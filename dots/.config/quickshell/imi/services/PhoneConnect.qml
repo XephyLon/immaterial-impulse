@@ -16,9 +16,20 @@ import qs.modules.common
  * both daemons double-pairs phones anyway). No daemon at all is a clean
  * degraded state: backend "none", no devices, UI hides.
  *
- * Updates are bounded polling like Tailscale.qml, not `busctl monitor`
- * streaming - a persistent streaming Process needs backoff and a retry
- * ceiling (see CONTRIBUTING.md) that this feature does not justify yet.
+ * Updates are signal-driven where the signal set has been verified against a
+ * live daemon, and polled where it has not. KDE Connect gets a
+ * `busctl --json=short monitor` subscribed to a match rule; Valent keeps the
+ * poll, because no Valent daemon was reachable to check its signals against
+ * and a stream that only works for one backend is a regression in the other.
+ * The poll stays on either way as the reconcile that notices a daemon
+ * disappearing - slower while the monitor is live.
+ *
+ * The monitor is a streaming Process, so it is started imperatively and
+ * never by a `running` binding: busctl exits in milliseconds on a rule the
+ * bus rejects, and a binding would answer that with a tight respawn loop
+ * (CONTRIBUTING.md). Restarts go through monitorExitPlan - capped exponential
+ * backoff, a per-daemon-appearance retry ceiling, and a healthy-run reset -
+ * after which polling is the whole update path again.
  *
  * Device ids and object paths get spliced into D-Bus object paths, so both
  * are validated first (validDeviceId / validValentObjectPath); anything that
@@ -257,6 +268,12 @@ Singleton {
         return ["busctl", "--user", "--json=short", "--timeout=5", "call", dest, path, iface, member, ...extra];
     }
 
+    // The match rule is one argv element. It carries quotes the D-Bus match
+    // grammar requires, which is exactly why it never goes near a shell.
+    function busctlMonitor(matchRule: string): var {
+        return ["busctl", "--user", "--json=short", "monitor", `--match=${matchRule}`];
+    }
+
     function refresh(): void {
         if (!root.enableService || !root.installed) return;
         if (busProc.running || root.callQueue.length > 0) return; // previous sweep still in flight
@@ -311,6 +328,107 @@ Singleton {
                 });
             }
         });
+    }
+
+    // ---- signal streaming ----
+
+    property string monitorState: "idle" // idle | running | backoff | failed
+    property int monitorAttempts: 0
+    property real monitorStartedAt: 0
+
+    readonly property int monitorAttemptCeiling: 5
+    // A monitor that held the bus this long was doing its job; anything
+    // shorter counts toward the ceiling (see monitorExitPlan).
+    readonly property int monitorHealthyMs: 30000
+
+    readonly property bool monitorLive: root.monitorState === "running"
+    readonly property bool wantMonitor: root.enableService && root.installed
+        && root.monitorState !== "failed" && root.monitorMatchRule(root.backend) !== ""
+
+    function startMonitor(): void {
+        if (monitorProc.running || !root.wantMonitor) return;
+        monitorRestart.stop();
+        root.monitorStartedAt = Date.now();
+        root.monitorState = "running";
+        monitorProc.exec(root.busctlMonitor(root.monitorMatchRule(root.backend)));
+    }
+
+    function stopMonitor(): void {
+        monitorRestart.stop();
+        root.monitorAttempts = 0;
+        root.monitorState = "idle";
+        monitorProc.running = false;
+    }
+
+    function handleMonitorLine(line: string): void {
+        if (!root.signalChangesDevices(root.parseMonitorLine(line))) return;
+        // Signals arrive in bursts - one device going out of range emitted
+        // seven within a millisecond of each other on a live daemon - and
+        // every re-read is a chain of busctl spawns, so they coalesce.
+        signalSettle.restart();
+    }
+
+    Timer {
+        id: signalSettle
+        interval: 120
+        onTriggered: {
+            // refresh() declines while a sweep is in flight; re-arm rather
+            // than drop the change that asked for it.
+            if (busProc.running || root.callQueue.length > 0) {
+                signalSettle.restart();
+                return;
+            }
+            root.refresh();
+        }
+    }
+
+    Timer {
+        id: monitorRestart
+        onTriggered: root.startMonitor()
+    }
+
+    Process {
+        id: monitorProc
+        // process-lifecycle: restart-safe -- capped exponential backoff; no running binding.
+        environment: ({
+            LANG: "C",
+            LC_ALL: "C"
+        })
+        stdout: SplitParser {
+            onRead: data => root.handleMonitorLine(data)
+        }
+        // busctl says nothing here on a rule the bus accepts, and exits
+        // non-zero with one line on a rule it does not; either way the exit
+        // is what the plan reads.
+        stderr: SplitParser {}
+        onExited: (exitCode, exitStatus) => {
+            const plan = root.monitorExitPlan(root.monitorAttempts, Date.now() - root.monitorStartedAt,
+                root.wantMonitor, root.monitorHealthyMs, root.monitorAttemptCeiling);
+            root.monitorAttempts = plan.attempts;
+            if (!plan.retry) {
+                if (root.wantMonitor) {
+                    root.monitorState = "failed";
+                    console.warn(`[PhoneConnect] busctl monitor gave up after ${root.monitorAttemptCeiling} restarts; falling back to polling`);
+                } else {
+                    root.monitorState = "idle";
+                }
+                return;
+            }
+            root.monitorState = "backoff";
+            monitorRestart.interval = plan.delay;
+            monitorRestart.restart();
+        }
+    }
+
+    onBackendChanged: {
+        // The ceiling is per daemon appearance, not per session: a daemon
+        // that has just come back is a new opportunity rather than the sixth
+        // rung of the loop that gave up on the old one. Nothing can reach
+        // this faster than a ListNames sweep, so it cannot itself become one.
+        root.monitorAttempts = 0;
+        if (root.monitorState === "failed") root.monitorState = "idle";
+        if (root.monitorMatchRule(root.backend) === "") root.stopMonitor();
+        else root.startMonitor();
     }
 
     // ---- actions ----
@@ -401,6 +519,7 @@ Singleton {
         if (!root.enableService) {
             root.callQueue = [];
             root.activeCallback = null;
+            root.stopMonitor();
             root.applyBackend("none");
         } else if (root.installed) {
             root.refresh();
@@ -418,8 +537,14 @@ Singleton {
         }
     }
 
+    // While the monitor is live this is no longer the update path - every
+    // change already arrives as a signal - but it stays on, slower, as the
+    // reconcile that notices a daemon which went away without saying so, and
+    // as the detector that notices one arriving in the first place.
+    readonly property int reconcileInterval: Math.max(root.pollInterval * 6, 60000)
+
     Timer {
-        interval: root.pollInterval
+        interval: root.monitorLive ? root.reconcileInterval : root.pollInterval
         running: root.enableService && root.installed
         repeat: true
         triggeredOnStart: true
