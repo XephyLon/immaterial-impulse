@@ -162,6 +162,80 @@ Singleton {
     function validDeviceId(id: var): bool {
         return typeof id === "string" && /^[A-Za-z0-9_-]+$/.test(id);
     }
+
+    // The monitor's subscription, as one D-Bus match rule. Narrowing it at
+    // the BUS is the only filter there is: `busctl monitor` reports a signal's
+    // sender as the unique name it arrived on (":1.55", captured live), so
+    // nothing downstream can tell the daemon's signals from anyone else's
+    // emitted on the same path. An empty rule means "this backend has no
+    // verified signal set" and leaves it on the poll - Valent's case.
+    function monitorMatchRule(backend: string): string {
+        if (backend === "kdeconnect")
+            return "type='signal',sender='org.kde.kdeconnect.daemon',path_namespace='/modules/kdeconnect'";
+        return "";
+    }
+
+    // One `busctl --json=short monitor` line as { path, iface, member, args },
+    // or null. A monitor sees method calls, returns and errors on the same
+    // stream; only a signal carries a change.
+    function parseMonitorLine(line: string): var {
+        const trimmed = (line ?? "").trim();
+        if (trimmed.length === 0) return null;
+        let doc;
+        try {
+            doc = JSON.parse(trimmed);
+        } catch (e) {
+            return null;
+        }
+        if (!doc || typeof doc !== "object" || doc.type !== "signal") return null;
+        return {
+            path: doc.path ?? "",
+            iface: doc.interface ?? "",
+            member: doc.member ?? "",
+            args: doc.payload?.data ?? []
+        };
+    }
+
+    // Which of the daemon's signals can move the device model. An allowlist
+    // rather than "anything under org.kde.kdeconnect": the SMS plugin's
+    // conversation signals share the device path, and re-reading every device
+    // per incoming message is a chain of busctl spawns for a change this
+    // service does not model. Members verified by introspecting a live
+    // daemon's /modules/kdeconnect and device paths.
+    function signalChangesDevices(signal: var): bool {
+        if (!signal) return false;
+        // PropertiesChanged names the interface it is about in its first arg.
+        if (signal.iface === "org.freedesktop.DBus.Properties")
+            return signal.member === "PropertiesChanged"
+                && String((signal.args ?? [])[0] ?? "").startsWith("org.kde.kdeconnect");
+        const members = {
+            "org.kde.kdeconnect.daemon": ["deviceAdded", "deviceRemoved", "deviceListChanged",
+                "deviceVisibilityChanged", "pairingRequestsChanged"],
+            "org.kde.kdeconnect.device": ["reachableChanged", "pairStateChanged", "nameChanged",
+                "typeChanged", "pluginsChanged"],
+            "org.kde.kdeconnect.device.battery": ["refreshed"]
+        }[signal.iface];
+        return Array.isArray(members) && members.includes(signal.member);
+    }
+
+    // Delay before the Nth consecutive fast monitor exit is retried: 1s, 2s,
+    // 4s, 8s, 16s, capped at 30s.
+    function monitorBackoffDelay(attempt: int): int {
+        return Math.min(30000, 1000 * Math.pow(2, Math.max(1, attempt) - 1));
+    }
+
+    // What a monitor exit means, as one decision: the attempt count it leaves
+    // behind, whether to restart, and after how long. A run that lasted at
+    // least `healthyMs` was working, so it clears the count rather than
+    // counting as the next rung of a respawn loop - without that, one daemon
+    // restart in a day-long session spends the ceiling and the shell never
+    // streams again.
+    function monitorExitPlan(attempts: int, ranForMs: int, wanted: bool, healthyMs: int, ceiling: int): var {
+        const settled = ranForMs >= healthyMs ? 0 : attempts;
+        if (!wanted || settled >= ceiling)
+            return { attempts: settled, retry: false, delay: 0 };
+        return { attempts: settled + 1, retry: true, delay: root.monitorBackoffDelay(settled + 1) };
+    }
     // END phone-connect parser logic
 
     function applyBackend(newBackend: string): void {

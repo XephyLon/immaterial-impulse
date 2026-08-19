@@ -255,6 +255,150 @@ TestCase {
         compare(PhoneConnect.materialSymbol, "mobile_off")
     }
 
+    // ---- monitor match rule ----
+
+    function test_monitor_match_rule_narrows_at_the_bus() {
+        // busctl reports a signal's sender as the unique name it arrived on
+        // (":1.55" in the capture these fixtures come from), so the rule is
+        // the only place the daemon can be named.
+        const rule = PhoneConnect.monitorMatchRule("kdeconnect")
+        verify(rule.includes("type='signal'"))
+        verify(rule.includes("sender='org.kde.kdeconnect.daemon'"))
+        verify(rule.includes("path_namespace='/modules/kdeconnect'"))
+    }
+
+    function test_monitor_match_rule_is_empty_for_unverified_backends() {
+        // Valent has no rule because no live Valent daemon was reachable to
+        // verify its signal set against; an empty rule keeps it on the poll.
+        compare(PhoneConnect.monitorMatchRule("valent"), "")
+        compare(PhoneConnect.monitorMatchRule("none"), "")
+        compare(PhoneConnect.monitorMatchRule(""), "")
+    }
+
+    // ---- parseMonitorLine ----
+    //
+    // Every fixture below is a line captured verbatim from
+    // `busctl --user --json=short monitor` against the live KDE Connect
+    // daemon on the development machine, with the device id left as it came.
+
+    readonly property string reachableLine: '{"type":"signal","endian":"l","flags":1,"version":1,"cookie":325,"timestamp-realtime":1787149977815500,"sender":":1.55","path":"/modules/kdeconnect/devices/3b767a2479954eceaf9f1e7fa212f48e","interface":"org.kde.kdeconnect.device","member":"reachableChanged","payload":{"type":"b","data":[false]}}'
+    readonly property string deviceAddedLine: '{"type":"signal","endian":"l","flags":1,"version":1,"cookie":326,"timestamp-realtime":1787149977815282,"sender":":1.55","path":"/modules/kdeconnect","interface":"org.kde.kdeconnect.daemon","member":"deviceAdded","payload":{"type":"s","data":["3b767a2479954eceaf9f1e7fa212f48e"]}}'
+    readonly property string methodCallLine: '{"type":"method_call","endian":"l","flags":0,"version":1,"cookie":2,"timestamp-realtime":1787149465537256,"sender":":1.18439","destination":"org.kde.kdeconnect.daemon","path":"/modules/kdeconnect","interface":"org.kde.kdeconnect.daemon","member":"devices","payload":{"type":"","data":[]}}'
+
+    function test_parse_monitor_line_reads_a_real_signal() {
+        const signal = PhoneConnect.parseMonitorLine(reachableLine)
+        compare(signal.path, "/modules/kdeconnect/devices/3b767a2479954eceaf9f1e7fa212f48e")
+        compare(signal.iface, "org.kde.kdeconnect.device")
+        compare(signal.member, "reachableChanged")
+        compare(signal.args[0], false)
+    }
+
+    function test_parse_monitor_line_rejects_everything_that_is_not_a_signal() {
+        // A monitor sees the whole conversation, calls and returns included.
+        compare(PhoneConnect.parseMonitorLine(methodCallLine), null)
+        compare(PhoneConnect.parseMonitorLine(""), null)
+        compare(PhoneConnect.parseMonitorLine("   \n"), null)
+        compare(PhoneConnect.parseMonitorLine(null), null)
+        compare(PhoneConnect.parseMonitorLine("Failed to become monitor: Invalid match rule"), null)
+        compare(PhoneConnect.parseMonitorLine('{"type":"signal"'), null)
+        compare(PhoneConnect.parseMonitorLine('"just a string"'), null)
+    }
+
+    // ---- signalChangesDevices ----
+
+    function test_signal_changes_devices_accepts_the_verified_event_set() {
+        verify(PhoneConnect.signalChangesDevices(PhoneConnect.parseMonitorLine(reachableLine)))
+        verify(PhoneConnect.signalChangesDevices(PhoneConnect.parseMonitorLine(deviceAddedLine)))
+        for (const member of ["deviceRemoved", "deviceListChanged", "deviceVisibilityChanged",
+                              "pairingRequestsChanged"])
+            verify(PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.daemon", member: member, args: [] }),
+                   `daemon.${member} should re-read`)
+        for (const member of ["pairStateChanged", "nameChanged", "typeChanged", "pluginsChanged"])
+            verify(PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device", member: member, args: [] }),
+                   `device.${member} should re-read`)
+        verify(PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device.battery", member: "refreshed", args: [true, 87] }))
+    }
+
+    function test_signal_changes_devices_reads_the_interface_out_of_properties_changed() {
+        verify(PhoneConnect.signalChangesDevices({
+            iface: "org.freedesktop.DBus.Properties", member: "PropertiesChanged",
+            args: ["org.kde.kdeconnect.device.battery", { "charge": 41 }, []]
+        }))
+        verify(!PhoneConnect.signalChangesDevices({
+            iface: "org.freedesktop.DBus.Properties", member: "PropertiesChanged",
+            args: ["org.freedesktop.UPower.Device", {}, []]
+        }))
+        verify(!PhoneConnect.signalChangesDevices({
+            iface: "org.freedesktop.DBus.Properties", member: "PropertiesChanged", args: []
+        }))
+    }
+
+    function test_signal_changes_devices_ignores_traffic_the_model_does_not_hold() {
+        // Both fire in the same burst as reachableChanged on a real daemon,
+        // and the SMS plugin's are the reason this is an allowlist: they
+        // share the device path and would re-read every device per message.
+        verify(!PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device", member: "linksChanged", args: [] }))
+        verify(!PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device", member: "statusIconNameChanged", args: [] }))
+        verify(!PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device.conversations", member: "conversationUpdated", args: [] }))
+        verify(!PhoneConnect.signalChangesDevices({ iface: "org.freedesktop.DBus", member: "NameOwnerChanged", args: [] }))
+        verify(!PhoneConnect.signalChangesDevices(null))
+    }
+
+    // ---- restart plan ----
+
+    function test_monitor_backoff_delay_doubles_and_caps() {
+        compare(PhoneConnect.monitorBackoffDelay(1), 1000)
+        compare(PhoneConnect.monitorBackoffDelay(2), 2000)
+        compare(PhoneConnect.monitorBackoffDelay(3), 4000)
+        compare(PhoneConnect.monitorBackoffDelay(4), 8000)
+        compare(PhoneConnect.monitorBackoffDelay(5), 16000)
+        compare(PhoneConnect.monitorBackoffDelay(6), 30000)
+        compare(PhoneConnect.monitorBackoffDelay(40), 30000)
+        // A caller that has not counted yet still waits a full rung, never 0.
+        compare(PhoneConnect.monitorBackoffDelay(0), 1000)
+        compare(PhoneConnect.monitorBackoffDelay(-3), 1000)
+    }
+
+    function test_monitor_exit_plan_backs_off_a_fast_exit() {
+        // busctl handed a rule the bus rejects exits in milliseconds; this is
+        // the case an unguarded `running` binding turns into a respawn loop.
+        const first = PhoneConnect.monitorExitPlan(0, 40, true, 30000, 5)
+        compare(first.retry, true)
+        compare(first.attempts, 1)
+        compare(first.delay, 1000)
+        const second = PhoneConnect.monitorExitPlan(1, 40, true, 30000, 5)
+        compare(second.attempts, 2)
+        compare(second.delay, 2000)
+    }
+
+    function test_monitor_exit_plan_stops_at_the_ceiling() {
+        const capped = PhoneConnect.monitorExitPlan(5, 40, true, 30000, 5)
+        compare(capped.retry, false)
+        compare(capped.delay, 0)
+        compare(capped.attempts, 5)
+    }
+
+    function test_monitor_exit_plan_resets_after_a_healthy_run() {
+        // Otherwise one daemon restart in a day-long session spends the
+        // ceiling and the shell never streams again.
+        const healthy = PhoneConnect.monitorExitPlan(4, 30000, true, 30000, 5)
+        compare(healthy.retry, true)
+        compare(healthy.attempts, 1)
+        compare(healthy.delay, 1000)
+        // ...including from the ceiling itself.
+        const recovered = PhoneConnect.monitorExitPlan(5, 120000, true, 30000, 5)
+        compare(recovered.retry, true)
+        compare(recovered.attempts, 1)
+    }
+
+    function test_monitor_exit_plan_does_not_restart_what_nobody_wants() {
+        const unwanted = PhoneConnect.monitorExitPlan(0, 40, false, 30000, 5)
+        compare(unwanted.retry, false)
+        compare(unwanted.delay, 0)
+        // A deliberate stop after a healthy run leaves no debt behind.
+        compare(PhoneConnect.monitorExitPlan(3, 90000, false, 30000, 5).attempts, 0)
+    }
+
     // ---- device id guard ----
 
     function test_valid_device_id_accepts_kdeconnect_and_valent_ids() {
