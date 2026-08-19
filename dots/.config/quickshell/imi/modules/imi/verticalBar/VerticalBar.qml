@@ -10,6 +10,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
+import qs.modules.imi.bar as Bar
 
 Scope {
     id: bar
@@ -59,10 +60,22 @@ Scope {
                 property bool mustShow: hoverRegion.containsMouse || superShow
                     || GlobalStates.editMode
                     || ((GlobalStates.mediaControlsOpen || GlobalStates.sysTrayOverflowOpen) && Config?.options.bar.autoHide.dismissPopups)
+                // Bar.qml's split, through the same component: the animated
+                // zone is on barSpaceReserver and never on this surface, and
+                // an `exclusiveZone` here - even 0 - would put this window back
+                // into Normal mode and let the reserver push it off the edge.
                 exclusionMode: ExclusionMode.Ignore
-                exclusiveZone: (Config?.options.bar.autoHide.enable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
-                    Appearance.sizes.baseVerticalBarWidth + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
-                    + (Config.options.bar.cornerStyle === 3 ? (Config.options.hyprland.general.gapsOut || 5) : 0)
+                property QtObject barSpaceReserver: Bar.BarExclusiveZoneReserver {
+                    screen: barLoader.modelData
+                    barNamespace: "quickshell:verticalBar"
+                    vertical: true
+                    farEdge: Config.options.bar.bottom
+                    // No edgeMargin: this surface declares no margins, so the
+                    // compositor adds nothing to the zone.
+                    zone: (Config?.options.bar.autoHide.enable && (!barRoot.mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
+                        Appearance.sizes.baseVerticalBarWidth + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
+                        + (Config.options.bar.cornerStyle === 3 ? (Config.options.hyprland.general.gapsOut || 5) : 0)
+                }
                 WlrLayershell.namespace: "quickshell:verticalBar"
                 // In Appearance for the reason Bar.qml's height is: Edit Mode
                 // keeps its chrome clear of this surface and cannot measure it.
