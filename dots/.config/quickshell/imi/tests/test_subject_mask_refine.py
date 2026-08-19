@@ -99,49 +99,83 @@ class StorageSizeTest(unittest.TestCase):
             subject_mask.storage_size(0, 100)
 
 
-class WriteMaskSizeTest(unittest.TestCase):
-    """`write_mask` resamples to the storage size it is handed, and stays LA."""
+class PrepareMaskTest(unittest.TestCase):
+    """`prepare_mask` resamples to the storage size and hardens AFTER that.
+
+    The order is what makes the stored edge ~1 pixel: a bilinear upsample of an
+    already-hardened edge is a ramp as wide as the scale factor, which is the
+    band the hardening exists to remove. Measured on the Violet Evergarden
+    wallpaper: soft band 0.112 Mpx this way round, 0.235 the other.
+    """
     def setUp(self):
         needs_numpy(self)
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
 
-    def write(self, mask, size):
+    def step(self, side=64):
+        import numpy as np
+        mask = np.zeros((side, side), np.float32)
+        mask[:, side // 2:] = 1.0
+        return mask
+
+    def written(self, mask, size):
         from PIL import Image
         path = Path(self.tmp.name) / "mask.png"
-        subject_mask.write_mask(path, mask, size=size)
+        subject_mask.write_mask(path, subject_mask.prepare_mask(mask, size))
         with Image.open(path) as opened:
             return opened.copy()
 
     def test_the_file_is_the_storage_size_not_the_models(self):
-        import numpy as np
-        mask = np.zeros((64, 64), np.float32)
-        mask[:, 32:] = 1.0
-        image = self.write(mask, subject_mask.storage_size(6000, 3000))
+        image = self.written(self.step(), subject_mask.storage_size(6000, 3000))
         self.assertEqual(image.size, (4096, 2048))
         self.assertEqual(image.mode, "LA", "Qt's OpacityMask reads the alpha and "
                          "nothing else - see write_mask")
 
     def test_a_small_wallpaper_gets_a_mask_its_own_size(self):
-        import numpy as np
-        mask = np.zeros((64, 64), np.float32)
-        image = self.write(mask, subject_mask.storage_size(800, 600))
+        image = self.written(self.step(), subject_mask.storage_size(800, 600))
         self.assertEqual(image.size, (800, 600))
 
-    def test_no_size_keeps_the_masks_own_resolution(self):
+    def test_write_mask_itself_keeps_the_masks_own_resolution(self):
         import numpy as np
-        image = self.write(np.zeros((8, 8), np.float32), None)
-        self.assertEqual(image.size, (8, 8))
+        from PIL import Image
+        path = Path(self.tmp.name) / "raw.png"
+        subject_mask.write_mask(path, np.zeros((8, 8), np.float32))
+        with Image.open(path) as opened:
+            self.assertEqual(opened.size, (8, 8))
 
     def test_the_resampled_alpha_is_still_the_mask(self):
-        import numpy as np
-        mask = np.zeros((64, 64), np.float32)
-        mask[:, 32:] = 1.0
-        image = self.write(mask, (640, 320))
+        image = self.written(self.step(), (640, 320))
         alpha = image.getchannel("A")
-        self.assertEqual(alpha.getpixel((0, 0)), 0)
-        self.assertEqual(alpha.getpixel((639, 319)), 255)
+        # The rails after k=6 hardening are 0.0025 and 0.9975, i.e. 1 and 254
+        # in the file - hardening never quite reaches the ends, by design.
+        self.assertLessEqual(alpha.getpixel((0, 0)), 1)
+        self.assertGreaterEqual(alpha.getpixel((639, 319)), 254)
         self.assertEqual(alpha.tobytes(), image.getchannel("L").tobytes())
+
+    def test_the_edge_is_hardened_after_the_upsample_not_before(self):
+        """A step upsampled 8x bilinearly is a ramp eight pixels wide, four of
+        them between 0.25 and 0.75. Hardening THEN upsampling keeps all four
+        (0.313, 0.438, 0.562, 0.687); upsampling THEN hardening (k=6) leaves
+        two (0.321, 0.679) with the rest pulled to the rails."""
+        import numpy as np
+
+        def mid_band(row):
+            return int(((row > 0.25) & (row < 0.75)).sum())
+
+        row = subject_mask.prepare_mask(self.step(16), (128, 128))[8]
+        control = subject_mask.resample(subject_mask.harden(self.step(16)), (128, 128))[8]
+        self.assertGreaterEqual(mid_band(control), 4, "the control must carry the "
+                                "ramp, or this test cannot tell the two orders apart")
+        self.assertLessEqual(mid_band(row) * 2, mid_band(control),
+                        f"{mid_band(row)} mid-band pixels against {mid_band(control)} "
+                        "for harden-then-resample - the hardening must run after "
+                        "the resample")
+        # And the ramp as a whole is pulled in, not just its middle: distance
+        # from the rails summed across the row (measured 1.19 against 2.31).
+        softness = float(np.minimum(row, 1.0 - row).sum())
+        control_softness = float(np.minimum(control, 1.0 - control).sum())
+        self.assertLess(softness, 0.7 * control_softness)
+        self.assertTrue(np.all(np.diff(row) >= 0), "the edge is still one edge")
 
 
 class ProducerContractTest(unittest.TestCase):
@@ -156,14 +190,20 @@ class ProducerContractTest(unittest.TestCase):
     def test_the_run_path_hardens_and_sizes_before_writing(self):
         source = SCRIPT.read_text()
         run_body = source.split("def run(", 1)[1].split("\ndef ", 1)[0]
+        self.assertIn("prepare_mask(", run_body)
         self.assertIn("storage_size(", run_body)
-        self.assertIn("harden(", run_body)
 
     def test_the_prompted_path_hardens_and_stores_at_the_same_size(self):
         source = SCRIPT.read_text()
         select_body = source.split("def select(", 1)[1].split("\ndef ", 1)[0]
+        self.assertIn("prepare_mask(", select_body)
         self.assertIn("storage_size(", select_body)
-        self.assertIn("harden(", select_body)
+
+    def test_prepare_mask_is_the_only_place_the_order_is_decided(self):
+        source = SCRIPT.read_text()
+        body = source.split("def prepare_mask(", 1)[1].split("\ndef ", 1)[0]
+        self.assertIn("harden(resample(", body.replace(" ", ""),
+                      "prepare_mask must resample first and harden second")
 
 
 if __name__ == "__main__":
