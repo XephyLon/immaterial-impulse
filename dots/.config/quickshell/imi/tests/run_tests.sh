@@ -929,6 +929,14 @@ if ! python3 "$SCRIPT_DIR/test_sddm_theme_source.py"; then
     exit 1
 fi
 
+# The CI-visible half of the quick toggle grid's delegate rules: the runtime
+# harness below needs a Wayland session and skips where these would be undone.
+echo "Running quick toggle model contract tests..."
+if ! python3 "$SCRIPT_DIR/test_quick_toggle_model_contract.py"; then
+    echo "Quick toggle model contract tests failed."
+    exit 1
+fi
+
 # Renders the real quick toggle panel and performs the layout edits edit mode
 # performs. The failure is invisible in the config and a restart hides it, so
 # it needs a real shell rather than a unit test. See the module docstring.
