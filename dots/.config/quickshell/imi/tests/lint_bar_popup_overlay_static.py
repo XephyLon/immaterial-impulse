@@ -28,6 +28,29 @@ Two more properties this file must keep, both from the same design:
     publishes a full-size input region and would eat every click in its
     rectangle for the rest of the session.
 
+THE DRIVER, which is the last group of checks.
+
+The card runs on ONE `real` 0 -> 1, `openProgress`. The fade rides it and so
+does the hero-height unroll, and everything else that scalar can produce is a
+binding on it rather than a second animation - a quantity carried by two
+animations is two timings that agree at rest, which is the only place anybody
+looks, and disagree exactly mid-flight. So the checks below refuse a `Behavior`
+on anything the driver already carries, refuse a second one on the driver
+itself, and require the height and the opacity to be derived from it.
+
+The height is a plain binding rather than a Behavior for a second reason: a
+Behavior whose target moves every frame restarts every frame and never ticks
+(b710ef731 ("fix(plugins): stop the position Behavior swallowing the parallax
+cancellation")). The card's bar-adjacent coordinate is a function of that
+height, so on the bottom and right edges an animated height would be exactly
+that shape.
+
+The unroll's start height is the height of the content's FIRST drawn section,
+measured through `bar_popup_unroll.js` once the content has been parented - not
+a literal and not the parked square. A literal there is the failure the whole
+technique exists to avoid: it renders, it looks deliberate, and it is wrong for
+every popup but the one it was tuned against.
+
 Run from `tests/run_tests.sh`. Prove it can fail by planting one of the banned
 forms in a clean tree.
 """
@@ -117,6 +140,114 @@ if "function onBarEdgeChanged" in code:
 
 if "readonly property string barEdge:" not in code:
     failures.append("does not derive barEdge from the config itself")
+
+# --- the one driver, and what may not be animated beside it -------------------
+
+DRIVER = "openProgress"
+
+
+def block_from(text, brace):
+    """The body of the brace block opening at `brace`."""
+    depth = 0
+    for index in range(brace, len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[brace + 1:index]
+    return ""
+
+
+def block_declaring(text, ident):
+    """The body of the object declaring `id: <ident>`."""
+    marker = re.search(rf"\bid:\s*{ident}\b", text)
+    if not marker:
+        return ""
+    brace = text.rfind("{", 0, marker.start())
+    return block_from(text, brace) if brace >= 0 else ""
+
+
+# The shadow follows the card and reads its opacity, so "which opacity" has to
+# be answered by position rather than by the first match in the file.
+card = block_declaring(code, "card")
+if not card:
+    failures.append("has no `id: card` object; the whole design is one card on one surface")
+
+if not re.search(rf"^\s*property real {DRIVER}\s*:\s*0\b", code, re.MULTILINE):
+    failures.append(
+        f"declares no `property real {DRIVER}: 0`; the card's motion is one scalar and "
+        "the checks below are about what may be derived from it")
+
+behaviors = re.findall(r"Behavior\s+on\s+(\w+)", code)
+
+if behaviors.count(DRIVER) != 1:
+    failures.append(
+        f"carries {behaviors.count(DRIVER)} Behaviors on {DRIVER}; the driver is one scalar "
+        "with one transition, and a second one is a second timing that agrees only at rest")
+
+# `height` and `opacity` ARE the driver, expressed. `x` and `y` are functions of
+# the size it produces on the two far bar edges, so an animation on either is
+# the same defect one step removed.
+for derived in ("height", "opacity", "x", "y"):
+    if derived in behaviors:
+        failures.append(
+            f"animates {derived} with a Behavior; that value is derived from {DRIVER}, and "
+            f"two animations of one quantity disagree exactly mid-flight - for height it is "
+            f"also a target that moves every frame, which restarts every frame and never ticks")
+
+# A Behavior taking a bare NumberAnimation is half a motion tier: it names a
+# duration and leaves easing.type at Qt's default, which is Easing.Linear.
+for behavior in re.finditer(r"Behavior\s+on\s+\w+\s*\{", code):
+    body = block_from(code, behavior.end() - 1)
+    if re.search(r"\b(NumberAnimation|PropertyAnimation)\s*\{", body):
+        failures.append(
+            f"declares an inline animation in `{behavior.group(0).strip()}`; take the motion "
+            "tier whole through its own numberAnimation component, or the curve is whatever "
+            "Qt defaults to")
+
+if not re.search(r"numberAnimation\.createObject\(", code):
+    failures.append("takes no motion tier through its own numberAnimation component")
+
+# The height and the fade must both be the driver, spelled out. Read as whole
+# declarations rather than as lines: both are written across two lines here, and
+# a line-scoped check sees `height: BarPopupUnroll.cardHeight(` and stops.
+def declaration(text, name):
+    match = re.search(rf"^([ \t]*){name}:[ \t]*(.*(?:\n\1[ \t]+.*)*)", text, re.MULTILINE)
+    return match.group(2) if match else ""
+
+
+height_binding = declaration(card, "height")
+if "BarPopupUnroll.cardHeight(" not in height_binding or f"card.{DRIVER}" not in height_binding:
+    failures.append(
+        f"the card's height is not a binding on {DRIVER} through bar_popup_unroll.js; the "
+        "unroll and the fade must be the same scalar or they are two motions")
+
+if f"card.{DRIVER}" not in declaration(card, "opacity"):
+    failures.append(
+        f"the card's opacity is not derived from {DRIVER}; the fade rides the same progress "
+        "as the unroll")
+
+# The hero is measured, never chosen. Zeroing it is how the card is idled, so
+# the only literal allowed on that property is 0.
+if not re.search(r"card\.heroHeight\s*=\s*BarPopupUnroll\.heroSectionHeight\(", code):
+    failures.append(
+        "does not measure the unroll's start height from the content's first section; a "
+        "literal hero renders, looks deliberate, and is wrong for every popup but one")
+
+for literal in re.findall(r"card\.heroHeight\s*=\s*([0-9][\w.]*)", code):
+    if literal != "0":
+        failures.append(
+            f"assigns a literal hero height ({literal}); the card opens at the height of the "
+            "section it is showing, which only the content can answer")
+
+# Measuring the incoming content before it is parented reads a stale implicit
+# size, so the first correct target is one turn of the event loop away.
+if not re.search(r"interval:\s*0\b[\s\S]{0,120}?onTriggered:[^\n]*retarget\(\)", code):
+    failures.append(
+        "has no zero-interval retarget; an unparented content tree does not polish, so its "
+        "implicit size - and its first section's height - are stale until the turn after "
+        "the takeover")
 
 if failures:
     for failure in failures:
