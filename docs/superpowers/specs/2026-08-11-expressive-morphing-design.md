@@ -1,6 +1,6 @@
 # Expressive morphing, and a motion model for interaction — design
 
-**Status:** design, not implemented
+**Status:** implemented (v0.24.0; `b88c5a018` landed the shared `WidgetCard`/`MediaCard`/`WeatherCard`). Two items remain narrower than designed: the calendar rebuild uses `calendar_geometry.js` but not `WidgetCard`, and the interaction-model retrofit reaches `RippleButton`, `MediaTransportButton` and `DockIconMotion` only.
 **Scope:** the bundled `nandoroid-media` widget first; `modules/common/plugins/` and
 `modules/common/widgets/` once the reusable parts are extracted
 

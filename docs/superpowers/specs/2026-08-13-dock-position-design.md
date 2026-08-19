@@ -1,7 +1,6 @@
 # The dock's edge, the way the bar already does it — design
 
-**Status:** design, not implemented. §9 holds seven questions that must be answered before an
-implementation plan; four of them change the shape of the work rather than a detail of it.
+**Status:** implemented (v0.24.0; `c43d00cb2` — `dock.edge` string key, `dock_geometry.js`, `DockEdgeRuntimeTest.qml`). §9's questions were answered in the implementation.
 **Scope:** `modules/imi/dock/`, `modules/common/widgets/Dock*.qml` + `DragApps.qml`,
 `modules/common/Config.qml`, `modules/imi/settings/pages/BarConfig.qml`, `defaults/config.json`,
 and one line of repo-relative `dots/.config/hypr/hyprland/rules.lua`.

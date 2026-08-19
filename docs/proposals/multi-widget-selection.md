@@ -1,6 +1,6 @@
 # Proposal: drag-select multiple widgets to move together
 
-> Draft / tracking proposal. Not scheduled.
+> Implemented (v0.18.0, `1bd7e8899`). The outcome section below records what was built.
 
 ## Outcome (implemented on this branch)
 

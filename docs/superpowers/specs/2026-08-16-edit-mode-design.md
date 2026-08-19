@@ -1,6 +1,6 @@
 # Edit Mode — design
 
-**Status:** design, not implemented. §14 holds **one** open question.
+**Status:** implemented and closed for now (v0.25.0 shipped the mode, v0.26.0 the lock-layout fork and edge-snap toggle — `4bda94505`). §4.3 is overruled in place; §14's question was answered by the implementation.
 **Scope:** `GlobalStates.qml`, `modules/imi/background/`, `modules/imi/desktopMenu/`,
 `modules/common/widgets/widgetCanvas/`, `modules/common/widgets/` (`WidgetsSubmenu.qml`,
 `LayoutSection.qml`, `DragApps.qml`), `modules/common/plugins/`, `modules/imi/bar/`,
