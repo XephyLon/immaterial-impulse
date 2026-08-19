@@ -127,11 +127,12 @@ EMPTY_PROMPTED_FOREGROUND = 0.0002
 
 # The sigmoid that steepens the model's matte around its own boundary. k=6 is
 # the value the soft band was measured under: pixels between 0.16 and 0.84 went
-# from 0.496 Mpx to 0.235 Mpx on the Violet Evergarden wallpaper. 0.5 stays at
-# 0.5, so no pixel changes sides - it is an edge that gets crisper, never one
-# that moves. A guided filter was tried in the same place and REJECTED: it
-# widened the band along every low-contrast outline, which is the opposite of
-# what it was for.
+# from 0.496 Mpx to 0.235 Mpx on the Violet Evergarden wallpaper (and to 0.112
+# once applied AFTER the resample to storage size - see `prepare_mask`). 0.5
+# stays at 0.5, so no pixel changes sides - it is an edge that gets crisper,
+# never one that moves. A guided filter was tried in the same place and
+# REJECTED: it widened the band along every low-contrast outline, which is the
+# opposite of what it was for.
 HARDEN_K = 6.0
 
 # The long side a mask is stored at. Model resolution (1024) was the storage
@@ -223,6 +224,21 @@ def harden(mask, k=HARDEN_K):
     import numpy as np
 
     return 1.0 / (1.0 + np.exp(-2.0 * k * (np.asarray(mask, dtype=np.float32) - 0.5)))
+
+
+def prepare_mask(mask, size):
+    """A model's matte as the plane that is written: resampled, THEN hardened.
+
+    The order is the whole point. The matte arrives at the model's resolution
+    (1024 on a side) and the file is 4096 on its long side, so between the two
+    is a bilinear upsample - and a bilinear upsample of a hardened edge is a
+    ramp as wide as the scale factor, exactly the band the hardening exists to
+    remove. Hardening the upsampled ramp instead leaves an edge about one
+    storage pixel wide: measured on the Violet Evergarden wallpaper, the soft
+    band is 0.112 Mpx this way round against 0.235 the other. Both are pure
+    functions of the matte, so this is the only order that has to be pinned.
+    """
+    return harden(resample(mask, tuple(size)))
 
 
 def parse_point(text):
@@ -532,7 +548,10 @@ def resample(mask, size):
     import numpy as np
     from PIL import Image
 
-    plane = Image.fromarray(np.ascontiguousarray(mask, dtype=np.float32), "F")
+    mask = np.ascontiguousarray(mask, dtype=np.float32)
+    if tuple(size) == (mask.shape[1], mask.shape[0]):
+        return mask
+    plane = Image.fromarray(mask, "F")
     return np.asarray(plane.resize(size, Image.BILINEAR), dtype=np.float32)
 
 
@@ -704,13 +723,10 @@ def select(root, wallpaper, model, points):
         return {"state": "empty", "key": key, "model": model,
                 "foreground": foreground, "prompt": points}
 
-    # Hardened and stored at the same size as a salient mask. What this path
-    # does NOT do is re-embed a crop of the picture the way `segment` re-runs
-    # its model: the embedding is cached per wallpaper (see `image_embedding`)
-    # and a crop would need one of its own per click. Follow-up, noted in the
-    # design doc.
-    write_mask(candidate, harden(mask), prompt=points,
-               size=storage_size(*image_size(wallpaper)))
+    # Resampled and hardened exactly as a salient mask is (`prepare_mask`),
+    # so both kinds of file have the same edge.
+    write_mask(candidate, prepare_mask(mask, storage_size(*image_size(wallpaper))),
+               prompt=points)
     return {"state": "produced", "key": key, "model": model,
             "mask": str(candidate), "foreground": foreground, "prompt": points}
 
@@ -746,7 +762,7 @@ def run(root, wallpaper, model, force=False):
         negative.write_text("")
         return {"state": "none", "key": key, "model": model, "foreground": foreground}
 
-    write_mask(candidate, harden(mask), size=storage_size(*image_size(wallpaper)))
+    write_mask(candidate, prepare_mask(mask, storage_size(*image_size(wallpaper))))
     return {"state": "produced", "key": key, "model": model,
             "mask": str(candidate), "foreground": foreground}
 
@@ -760,16 +776,16 @@ def image_size(path):
         return picture.size
 
 
-def write_mask(path, mask, prompt=None, size=None):
-    """Save a mask, resampled to `size` if given, carrying it in BOTH channels.
+def write_mask(path, mask, prompt=None):
+    """Save a mask at the resolution it arrives at, carrying it in BOTH channels.
 
-    `size` is `storage_size` of the wallpaper: 4096 on the long side, aspect
-    kept, never larger than the picture. Not the wallpaper's own resolution -
-    a 7680x2160 mask costs 3MB and nearly a second of write time - and no
-    longer the model's 1024 square either, because after the two-pass
-    refinement the mask has finer structure than 1024 texels can carry over a
-    wide picture (see MASK_STORE_SIDE). Without `size` the mask keeps its own
-    resolution, which is what the tests hand in.
+    The producers hand in `prepare_mask`'s output - `storage_size` of the
+    wallpaper, 4096 on the long side, aspect kept, never larger than the
+    picture. Not the wallpaper's own resolution (a 7680x2160 mask costs 3MB
+    and nearly a second of write time) and no longer the model's 1024 square
+    either, because the hardened edge is finer than 1024 texels can carry
+    over a wide picture (see MASK_STORE_SIDE). This function does no resample
+    of its own, so a test can hand it an 8x8 plane and read the 8x8 back.
 
     Grayscale AND alpha, both the same plane. The alpha is what the shell masks
     with - Qt's OpacityMask reads the mask's alpha channel and nothing else, so a
@@ -802,10 +818,7 @@ def write_mask(path, mask, prompt=None, size=None):
     from PIL import Image
     from PIL import PngImagePlugin
 
-    mask = np.asarray(mask, dtype="float32")
-    if size is not None and tuple(size) != (mask.shape[1], mask.shape[0]):
-        mask = resample(mask, tuple(size))
-    plane = (np.clip(mask, 0.0, 1.0) * 255).astype("uint8")
+    plane = (np.clip(np.asarray(mask, dtype="float32"), 0.0, 1.0) * 255).astype("uint8")
     info = None
     if prompt is not None:
         info = PngImagePlugin.PngInfo()
