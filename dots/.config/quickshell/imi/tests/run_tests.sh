@@ -843,6 +843,17 @@ if ! python3 "$SCRIPT_DIR/test_bar_geometry_contract.py"; then
     exit 1
 fi
 
+# The bar's exclusive zone lives on an invisible reserver window so the
+# compositor's reflow can ride the same curve as the bar's slide. Nothing about
+# a layer surface's exclusive zone is observable from qmltestrunner or from
+# headless weston, so this is the source contract; the measurement lives in
+# tests/run_bar_exclusive_zone_probe.sh, which needs a nested Hyprland.
+echo "Running bar exclusive zone reserver contract tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_exclusive_zone_reserver.py"; then
+    echo "Bar exclusive zone reserver contract tests failed."
+    exit 1
+fi
+
 echo "Running dock motion contract tests..."
 if ! python3 "$SCRIPT_DIR/test_dock_motion.py"; then
     echo "Dock motion contract tests failed."
