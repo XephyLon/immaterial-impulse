@@ -9,15 +9,19 @@ Item {
     property int currentIndex: 0
     property int totalCount: 0
 
+    // Which widget this slot draws. Not the edit overlay's alone any more -
+    // the reposition at the bottom of this file keys its record on it too, and
+    // a slot cannot have two answers to which widget it is - so the name lost
+    // the `edit` prefix it carried while the overlay was its only reader.
+    property string widgetId: ""
+
     // Edit Mode's per-widget affordances, declared HERE because every widget
     // in both bars is wrapped in a BarGroup - one Loader in this file covers
     // both orientations, where a per-delegate copy would be twelve. The
-    // delegates pass which bucket this slot draws and which widget id it is;
-    // a tree that passes no controller (a test, a future preview) gets no
-    // overlay at all.
+    // delegates pass which bucket this slot draws; a tree that passes no
+    // controller (a test, a future preview) gets no overlay at all.
     property var editController: null
     property string editBucket: ""
-    property string editWidgetId: ""
     property bool isMaterial: Config.options.bar.cornerStyle === 3
     property bool paintMaterialPill: false
     // Islands is the only style where each group *is* the visible shape, with
@@ -122,7 +126,7 @@ Item {
         sourceComponent: BarWidgetEditItem {
             controller: root.editController
             bucket: root.editBucket
-            widgetId: root.editWidgetId
+            widgetId: root.widgetId
             visibleIndex: root.currentIndex
         }
     }

@@ -218,7 +218,7 @@ def test_every_bucket_delegate_in_both_trees_wires_the_edit_overlay():
             assert count == 2, (
                 f'{path.name} declares editBucket: "{bucket}" {count} times, '
                 f"not 2 (one per style)")
-        assert text.count("editWidgetId: modelData") == 6, (
+        assert text.count("widgetId: modelData") == 6, (
             f"{path.name} does not hand every delegate its widget id")
 
 
