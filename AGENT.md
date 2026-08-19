@@ -1691,6 +1691,47 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   every mutation of the motion. fa1e2a8b5 ("feat(plugins): animate a resizable widget's size
   between its offered spans"), 4e33a332a ("test(widgets): score a span change as in flight, not
   as a snap").
+- **The third member of that family: where the layout writes the target, the motion is INVERTED
+  from a measurement rather than eased onto the value.** A bar widget sits in a `Repeater` of
+  `BarGroup`s inside a `RowLayout`, so its `x` is the layout's to write - a `Behavior` on it is
+  handed a target that moves on every reflow, which is b710ef731 again. `modules/imi/bar/
+  BarGroup.qml` therefore animates a `Translate` toward zero, set from the offset back to where
+  the slot was drawn, which is FLIP (First, Last, Invert, Play); the arithmetic is
+  `modules/imi/bar/bar_flip.js` because nothing about the rendered bar is reachable from
+  `qmltestrunner`. Four things about it are worth not re-deriving.
+  **The "First" cannot live on the slot.** Measured with a `qml6` probe: a `Repeater` whose model
+  is a JS array answers a reassignment by destroying EVERY delegate and building the replacements,
+  in one turn of the event loop - so the widget about to slide is not the object that was standing
+  there, and a naive `onXChanged` inverse would start it from `x: 0`.
+  `modules/imi/bar/BarFlipRegistry.qml` is one deposit-and-recall per bar, keyed on the widget id
+  and expiring at the end of that turn: one per content tree rather than a singleton, because the
+  ids are identical on every screen and the positions are not, and expiring because a widget
+  switched back on ten minutes later has no honest position to fly in from.
+  **What is measured is not what moves.** The survey's source watches the widget's own `x`. That is
+  right in a near-edge bucket and wrong in a far-edge one: the section is sized by its row and
+  anchored to the screen's edge, so removing a widget moves the SECTION and leaves the first slot
+  at row-local zero - it travels the whole width of what left while its own `x` never changes, and
+  the last slot's `x` changes while it does not move at all. Each slot sums its ancestors' x/y up
+  to the registry's frame and watches every one of them. Deliberately a sum and never `mapToItem`,
+  which composes transforms: measured through that, a slot part-way through its own reposition
+  reports where it is DRAWN and the next invert comes off a number that is still moving.
+  **It is inert outside a reflow**, because a bar widget's content changes width constantly - the
+  clock every minute - and a running animation is a repaint of the whole output.
+  **And it stands down for a reorder drag**, whose `layout_ops.dropTarget` centres are read through
+  a `mapToItem` that composes exactly this transform; the drop's own reflow still animates, because
+  `BarEditController` clears `editBarDragActive` before the layout pass that follows it. The popup
+  overlay's card is unaffected for a different reason - its target is read only by its own
+  `retarget()`, which a reposition never calls.
+  Checked from both sides, because a settled position passes identically on the teleport this
+  replaced: `tests/test_bar_flip_contract.py` holds the source shape (one registry per tree on the
+  tree's own root, six delegate wirings each, no `Behavior` on a layout-written coordinate, no
+  `mapToItem`) and `BarFlipRuntimeTest.qml` samples where each slot is DRAWN 40ms in. That sample
+  is early on purpose - the spatial tier is front-loaded, so by 80ms a correct reposition and one
+  started on the mirror side of its destination are both ~90% of the way there. Design taken from
+  `docs/p3drovfx-animation-research-2026-08-16.md` §3.5.
+  b155851422 ("feat(bar): a bar widget slides to its new slot instead of teleporting"),
+  2bc474d53a ("feat(bar): bar_flip.js, a slot's reposition as arithmetic"),
+  bd60b78a31 ("test(bar): the harness stops rescuing the idiom it exists to fail").
 - **A sweep over ordered PAIRS is not a walk, and a trail's floor is in the trail's own units.**
   Two ways a span-motion harness reports confidently about a transition it never ran.
   `WeatherTreeMotionProbe` drives a list of `[from, to]` pairs but only ever committed `to` — so
