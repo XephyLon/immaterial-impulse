@@ -215,6 +215,17 @@ if ! python3 "$SCRIPT_DIR/lint_doc_citations.py"; then
     exit 1
 fi
 
+# The `Changelog:` PR-body receipt, testable without pushing. CHANGELOG.md's
+# [Unreleased] section was empty at two consecutive releases, so both rebuilt
+# it from the git log; changelog_receipt.py is the rule and this drives it over
+# in-memory PR fixtures. The CI half runs the same module rather than carrying
+# a second copy of its pattern.
+echo "Running changelog receipt tests..."
+if ! python3 "$SCRIPT_DIR/test_changelog_receipt.py"; then
+    echo "Changelog receipt tests failed."
+    exit 1
+fi
+
 # Static lint: a manifest's option keys and the host's own per-plugin state
 # share one PluginState namespace, so the `__` prefix is the host's alone.
 echo "Running plugin option key lint..."
