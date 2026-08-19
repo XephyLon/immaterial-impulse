@@ -112,6 +112,12 @@ ShellRoot {
                 // defect a47462fcc ("fix(verticalBar): render plugin bar
                 // widgets instead of an empty stub") came out of.
                 Quickshell.shellPath("modules/imi/bar/BarContent.qml"),
+                // The bar's own window. A live load finds anything wrong with
+                // it because it is built on every startup - but only a live
+                // load did, and the two bars' windows are now one edit apart
+                // (they share BarExclusiveZoneReserver), so the horizontal one
+                // belongs in the sweep beside the vertical one.
+                Quickshell.shellPath("modules/imi/bar/Bar.qml"),
                 Quickshell.shellPath("modules/imi/verticalBar/VerticalBar.qml"),
                 Quickshell.shellPath("modules/imi/verticalBar/VerticalBarContent.qml"),
                 Quickshell.shellPath("modules/common/plugins/bundled/docker/DockerPopup.qml"),
