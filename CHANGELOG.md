@@ -22,6 +22,13 @@ own repo; the installer pins which revision it builds.
   once already.
 
 ### Added
+- **Bar widgets slide to their new place instead of teleporting.** When the
+  system tray empties, a plugin's bar widget is switched off, or the layouts
+  are reordered, every widget after it used to be drawn somewhere else on the
+  very next frame. They now travel there. Both bars, every corner style, and
+  the widget that returns still appears where it belongs rather than flying in
+  from wherever it last sat; a reorder drag in Edit Mode is left alone while it
+  is in flight.
 - **Long names scroll instead of being cut off.** Four places showed a name you
   did not write and cannot look up anywhere else on the row, and cut it off with
   an ellipsis: the dock's window preview — where the title is the only thing
