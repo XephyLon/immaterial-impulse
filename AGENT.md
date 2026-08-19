@@ -1103,6 +1103,49 @@ Two non-obvious behaviors have bitten this codebase before and are worth knowing
   per-surface rather than per-region and nothing in-tree had done it before.
   (d29cd6e45 ("feat(bar): add the static overlay surface the popup card will live on"),
   b22a923a5 ("refactor(bar): delete the per-popup layer surface").)
+- **That card runs on ONE scalar, and the properties that used to be assigned are derived from
+  it — including the coordinate the assignment existed to protect.** `card.openProgress` is a
+  `real` 0 → 1 with a single `Behavior` on it; the fade *is* that number, and the height is a plain
+  binding on it through `modules/imi/bar/bar_popup_unroll.js`. Four things about the arrangement
+  are not obvious.
+  1. **The hero-height unroll is why it is worth doing.** The card opens at the height of the
+     content's **first drawn section** and unfurls to the full height along the same progress the
+     fade rides, so the top edge never moves and the primary content is legible on frame one. The
+     section is measured at its **drawn** height: a `Layout` child states its size through
+     `Layout.preferredHeight` and carries no implicit height, so `implicitHeight` answers 0 for
+     exactly the popups whose first section is a card. Measured on the real compositor with a
+     125/100/75 stack at `contentPadding` 8 — hero 141, open 316, height tracking progress exactly.
+  2. **A derived height is what finally lets the bar-adjacent coordinate be a binding.** On the
+     bottom and right edges that coordinate is a function of the animating size, which is why
+     `card.x`/`card.y` were *assigned* — two `Behavior`s easing a position and a size apart put the
+     card's edge where its content is not. Deriving the coordinate from the size the driver already
+     produces cannot drift from it, and neither side carries a `Behavior`, so it is not
+     b710ef731's moving target. Measured: a bottom bar holds its card's bottom edge at 1390.0 on
+     every frame of the open, the overshoot and the exit; a right bar holds 5064.0. Only the
+     coordinate *along* the bar still travels.
+  3. **The window's own `visible` predicate must read the card's INPUTS, never its derived
+     height or opacity.** Reading the derived ones closes a circle through `visible` itself — the
+     card's across-the-bar coordinate is derived from the window's size — and logs
+     `Binding loop detected for property "visible"` twice per window on a live compositor, where
+     the same probe against the old assigned geometry logged nothing. `openProgress`, `width` and
+     `openHeight` are the safe three, and they are also what "collapse to 0x0 when idle" means
+     now: a zero open height answers 0 at every progress, which is what empties the input region.
+  4. **The content sits in a slot held at the settled height, not centred in the host.** A host
+     that is shrinking centres what it holds, so the band on screen while the card is short would
+     be the *middle* of the content — the first section, the one the card opens at the height of,
+     would be the one thing not visible. Pinning it to the top of the host also keeps a leaving
+     block still instead of reflowing it through every intermediate size.
+
+  One tier serves both directions deliberately. Qt refuses a second write to a `Behavior`'s
+  `animation`, so a directional pair would have to be a duration and a curve written onto a bare
+  `NumberAnimation` — half a tier, and silently `Easing.Linear` the day someone drops the curve.
+  The created animations are named properties so `morphing` can still ask whether the card is
+  travelling, which the focus grab needs in order not to arm on a parked square.
+  `tests/lint_bar_popup_overlay_static.py` refuses a second `Behavior` on the driver, any
+  `Behavior` on `height`/`opacity`/`x`/`y`, an inline animation inside a `Behavior`, and a hero
+  height that is a literal rather than a measurement.
+  cd607d416 ("feat(bar): the popup card runs on one driver, and unrolls from its first section"),
+  d01879f4c ("test(lint): hold the popup card to one driver, and its unroll to a measured hero").
 - **Moving content between windows is already how popups work here, and it has two traps.**
   `StyledPopup` reparented its content into its window at completion long before the overlay
   existed; the overlay does the same thing, one popup at a time, and never has more than two
