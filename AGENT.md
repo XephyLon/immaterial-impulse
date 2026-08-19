@@ -3246,6 +3246,32 @@ Four things about that column generalise past it:
   back at 1.6-10% because SAM answers with the sky.
   (fix(background): a click's floor is not the detectors' floor.)
 
+**A live Wallpaper Engine scene is masked by a mask of its own STILL, keyed on the
+project, and the predicate refuses the wrong silhouette from both sides.** The
+shell already photographs every project it renders (`captureGreeterStill`), and
+that still is the viewport itself at the viewport's size, so a mask cut from it
+registers 1:1 - but the still is re-grabbed every session, so keying its cache
+on the file's stat triple would forget the user's acceptance on every restart.
+`subject_mask.py` takes `--identity we:<projectId>` on every verb and
+`ClockDepth.askingWe` decides when to send it (never during a preview - a
+preview is a still picture over the live scene and the question is about that
+picture). `ClockDepthCutout.liveSource` paints the live surface through the same
+`OpacityMask` (a masked still would freeze every animated pixel inside the
+silhouette), falling back to the wallpaper image, which
+`lint_clock_depth_geometry.py` pins. `clockDepth.js` compares `weActive` against
+`maskIsWe` rather than refusing `weActive`: a project's mask over the static
+fallback (`web`, `weFailed`, the safety screen) is the same wrong silhouette as
+a still picture's mask over a live scene, and one comparison holds both. Two
+things a first cut would get wrong: `status` answers before its picture exists
+(`available: false` - a project on screen for the first time has no still until
+600ms after its first frame), so the picker says "waiting for the first frame"
+and the grab's completion pokes `ClockDepth.refresh()` - observed, not polled -
+and the desktop selector cannot sample another window's surface, so it draws the
+candidate cut from the still over the live scene, frozen inside the silhouette,
+which is exactly the §8.4 honesty question the user is asked to judge.
+(feat(clockDepth): the producer takes an identity in place of the stat triple,
+feat(clockDepth): mask a live Wallpaper Engine scene with a mask of its still.)
+
 **And the click belongs on the desktop, because a mask judged at screen size
 cannot be authored on a thumbnail.** The gesture shipped on a ~300px preview
 inside the depth picker, which is a structural mismatch rather than a matter of

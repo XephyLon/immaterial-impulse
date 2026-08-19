@@ -435,7 +435,31 @@ Start with **Stage 1: the subject-mask producer and its cache.**
 
 ---
 
-## 8. Wallpaper Engine — designed, not landed
+## 8. Wallpaper Engine — landed
+
+> Landed 2026-08-19 (feat(clockDepth): the producer takes an identity in place
+> of the stat triple; feat(clockDepth): mask a live Wallpaper Engine scene with a
+> mask of its still). What shipped follows §8.1–8.5 as written, with three
+> things decided in the doing:
+>
+> - The predicates compare `weActive` against `maskIsWe` rather than refusing
+>   `weActive` outright, so the wrong silhouette is refused from BOTH sides — a
+>   project's mask over the static fallback (a `web` project, `weFailed`, the
+>   safety screen) as well as a still picture's mask over a live scene.
+> - `status` reports `available` — whether the picture exists — because an
+>   identity-keyed query is the one query answerable before its picture; the
+>   picker turns that into "Waiting for the scene's first frame", and
+>   `Background.captureGreeterStill` pokes a refresh when the grab lands.
+> - The desktop selector draws the candidate cut from the still over the live
+>   scene (it is another window and cannot sample the scene's surface): frozen
+>   inside the silhouette, live everywhere else — which is the honesty question
+>   §8.4 asks the user to judge, made visible for free.
+>
+> Verified on the real desktop against project 3008040633 (a seated figure in a
+> rain scene): the clock widget placed under the figure is hidden with depth on
+> and shown with it off, and 1% of the pixels inside the silhouette change
+> between two frames — the rain — so the surface under the mask is live.
+
 
 §4 refused a live Wallpaper Engine project on the reasoning that it is "a moving
 surface with no file to segment". The first half is true and the second is not:

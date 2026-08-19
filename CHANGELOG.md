@@ -12,6 +12,16 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Clock depth works on a live Wallpaper Engine scene.** The depth picker
+  segments the still the shell already photographs of the active project, keyed
+  on the project rather than on the still (which is re-grabbed every session),
+  and the desktop layer masks the *live* surface with it — the silhouette stays
+  put while the pixels inside it keep moving. The picker says so, and says when
+  a project has not drawn its first frame yet. A mask cut from a still picture
+  never lands on a live scene, and a project's mask never lands on the static
+  fallback the desktop shows when the renderer gives up.
+
 ### Fixed
 - **The motion speed slider and reduce motion now reach every animation.** Nine
   places read a motion tier's base duration instead of the scaled one, so they
