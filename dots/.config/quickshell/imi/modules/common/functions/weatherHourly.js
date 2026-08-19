@@ -99,11 +99,13 @@ function slotsFromWttr(weather, useUSCS) {
     (weather || []).forEach(function (day) {
         var date = (day && day.date) || "";
         var parts = date.split("-");
-        if (parts.length !== 3)
-            return;
         var year = Number(parts[0]);
         var month = Number(parts[1]);
         var dayOfMonth = Number(parts[2]);
+        // A day with no date, or one whose date is not a date, cannot be placed
+        // on a time axis at all. The NaN test is the whole of the check: a
+        // missing field is `undefined`, which converts to NaN, so a separate
+        // length test could never fire on its own.
         if (!isFinite(year) || !isFinite(month) || !isFinite(dayOfMonth))
             return;
         ((day && day.hourly) || []).forEach(function (entry) {
@@ -192,15 +194,16 @@ function barFraction(temp, low, high) {
 
 // Whether there is a chart here at all.
 //
-// Two conditions rather than one: a short payload, and a payload whose
+// Counted in READINGS rather than in slots, which answers both ways of having
+// too little at once: a payload that is nearly spent, and a payload whose
 // temperatures are missing. Both end as a row of hour labels with nothing over
 // them, which looks like a rendering fault rather than like a provider that
-// answered thinly - so the caller hides the section instead.
+// answered thinly - so the caller hides the section instead. A separate length
+// test would be a second condition that can never fire on its own, since a
+// reading needs a slot to sit in.
 function isRenderable(slots) {
-    if (!slots || slots.length < MIN_SLOTS)
-        return false;
     var withReadings = 0;
-    slots.forEach(function (slot) {
+    (slots || []).forEach(function (slot) {
         if (_reading(slot && slot.temp) !== null)
             withReadings++;
     });
