@@ -14,8 +14,13 @@ that way (CONTRIBUTING.md → "New features and bugfixes need tests").
 """
 
 import unittest
+from pathlib import Path
 
 import changelog_receipt as receipt
+
+HERE = Path(__file__).resolve().parent
+REPO = next(p for p in HERE.parents if (p / "AGENT.md").exists())
+WORKFLOW = REPO / ".github" / "workflows" / "changelog-receipt.yml"
 
 SHELL_FILE = "dots/.config/quickshell/imi/shell.qml"
 
@@ -107,6 +112,52 @@ class Verdict(unittest.TestCase):
         self.assertTrue(ok)
         ok, _ = receipt.verdict("", ["dots/.config/hypr/hyprland.conf"])
         self.assertFalse(ok)
+
+
+class OneImplementation(unittest.TestCase):
+    """The workflow delegates to the module; it does not re-spell the rule.
+
+    Two copies of one decision is what this repo keeps paying for -
+    `PluginValidator.js`'s whitelist against `PluginNode.qml`'s renderer switch,
+    `registry_validate.py`'s vocabulary against `PluginManager`'s, the two bars'
+    two answers to one widget url. The usual repair is a source contract pinning
+    the two spellings to each other (`test_phone_connect_contract.py`); the
+    cheaper one, available here because the CI half can check the repo out, is
+    to have one spelling. These checks are what keeps it that way: a `grep -E`
+    inlined back into the workflow reddens the suite instead of quietly becoming
+    a second answer that agrees today.
+    """
+
+    def test_the_workflow_runs_the_module(self):
+        text = WORKFLOW.read_text()
+        self.assertIn("changelog_receipt.py", text)
+        self.assertIn("--body-file", text)
+        self.assertIn("--changed-files-file", text)
+
+    def test_the_workflow_carries_no_pattern_of_its_own(self):
+        text = WORKFLOW.read_text()
+        for spelling in ("Changelog: (", "not user-visible", "^Changelog:"):
+            self.assertNotIn(
+                spelling,
+                text,
+                f"{WORKFLOW.name} spells the receipt itself ({spelling!r}); the "
+                "pattern lives in changelog_receipt.py and nowhere else",
+            )
+
+    def test_the_workflow_asks_github_for_the_changed_files(self):
+        # The `dots/` exemption and the `updated` verification are both
+        # functions of the diff. A workflow that never fetched the file list
+        # would pass every PR and look exactly like this one.
+        text = WORKFLOW.read_text()
+        self.assertIn("/files", text)
+        self.assertIn("pull-requests: read", text)
+
+    def test_the_module_is_reachable_from_the_repository_root(self):
+        # The workflow runs it by repo-relative path from the checkout, which a
+        # move under tests/ would break with nothing else noticing.
+        invoked = REPO / "dots/.config/quickshell/imi/tests/changelog_receipt.py"
+        self.assertTrue(invoked.exists())
+        self.assertIn(str(invoked.relative_to(REPO)), WORKFLOW.read_text())
 
 
 if __name__ == "__main__":
