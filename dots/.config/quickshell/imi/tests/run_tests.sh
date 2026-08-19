@@ -494,6 +494,17 @@ if ! python3 "$SCRIPT_DIR/test_bar_edit_runtime.py"; then
     exit 1
 fi
 
+# The bar's reposition: one registry per bar wired into every bucket delegate
+# of both trees, animating a transform rather than a coordinate the layout
+# writes. Source-only, because the runtime half below skips wherever weston is
+# missing - which is CI, which is where a divergence between the two bars would
+# go unseen.
+echo "Running bar reposition contract tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_flip_contract.py"; then
+    echo "Bar reposition contract tests failed."
+    exit 1
+fi
+
 # Stage 9b: the lock islands' reorder, driven with real mouse events on the
 # real LockSurface with the preview context - the overlay's eater, the shared
 # gesture, move semantics, the storedOrder merge, and both cancel paths.
