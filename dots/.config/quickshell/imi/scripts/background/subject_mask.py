@@ -139,6 +139,15 @@ REFINE_PAD = 0.12
 # squash, so pass 2 would cost the time and change nothing.
 REFINE_SKIP_COVERAGE = 0.85
 
+# The sigmoid that steepens the model's matte around its own boundary. k=6 is
+# the value the soft band was measured under: pixels between 0.16 and 0.84 went
+# from 0.496 Mpx to 0.235 Mpx on the Violet Evergarden wallpaper. 0.5 stays at
+# 0.5, so no pixel changes sides - it is an edge that gets crisper, never one
+# that moves. A guided filter was tried in the same place and REJECTED: it
+# widened the band along every low-contrast outline, which is the opposite of
+# what it was for.
+HARDEN_K = 6.0
+
 # Keys, not files: dropping a key's `.off` while keeping its `.png` would
 # resurrect a mask the user declined.
 SWEEP_KEEP_KEYS = 200
@@ -194,6 +203,13 @@ def resize_longest_side(width, height, side):
     scale = side / float(max(width, height))
     # round, not floor: the transform SAM's own ResizeLongestSide applies.
     return (max(1, int(width * scale + 0.5)), max(1, int(height * scale + 0.5)))
+
+
+def harden(mask, k=HARDEN_K):
+    """Steepen a matte around 0.5 without moving its boundary. See HARDEN_K."""
+    import numpy as np
+
+    return 1.0 / (1.0 + np.exp(-2.0 * k * (np.asarray(mask, dtype=np.float32) - 0.5)))
 
 
 def refine_box(mask, width, height, threshold=0.5, pad=REFINE_PAD):
@@ -719,7 +735,7 @@ def select(root, wallpaper, model, points):
         return {"state": "empty", "key": key, "model": model,
                 "foreground": foreground, "prompt": points}
 
-    write_mask(candidate, mask, prompt=points)
+    write_mask(candidate, harden(mask), prompt=points)
     return {"state": "produced", "key": key, "model": model,
             "mask": str(candidate), "foreground": foreground, "prompt": points}
 
@@ -754,7 +770,7 @@ def run(root, wallpaper, model, force=False):
         negative.write_text("")
         return {"state": "none", "key": key, "model": model, "foreground": foreground}
 
-    write_mask(candidate, mask)
+    write_mask(candidate, harden(mask))
     return {"state": "produced", "key": key, "model": model,
             "mask": str(candidate), "foreground": foreground}
 
