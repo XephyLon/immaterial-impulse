@@ -25,6 +25,14 @@ own repo; the installer pins which revision it builds.
   panel it is on closes, its speed follows the motion speed setting, and with
   reduce motion on it holds each end for three seconds and switches between them
   rather than scrolling, so the whole name is still readable.
+- **The bar's weather popup has an hourly forecast.** Five three-hourly slots
+  under the current conditions, each a bar grown from the axis with its
+  temperature above it and its own condition glyph and hour below — night-aware
+  on the hour it describes rather than on the time you opened the popup, and
+  labelled with the weekday where the window crosses midnight. It follows the
+  clock format you already set, and it costs no extra request: both providers
+  were already returning this data in responses the shell fetches. A provider
+  that answers with nothing hourly leaves no empty row behind.
 - **Clock depth works on a live Wallpaper Engine scene.** The depth picker
   segments the still the shell already photographs of the active project, keyed
   on the project rather than on the still (which is re-grabbed every session),
