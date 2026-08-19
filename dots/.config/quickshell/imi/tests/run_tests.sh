@@ -314,6 +314,17 @@ if ! python3 "$SCRIPT_DIR/lint_rich_text_optin.py"; then
     exit 1
 fi
 
+# The one marquee in the shell is an infinite animation sitting on a label, so
+# WHERE it may run is as much of the contract as how it runs: the gate has to
+# ask whether the text overflows as well as whether it is on screen, the travel
+# is scaled by the motion policy and the dwell deliberately is not, and every
+# adoption is reviewed against a surface that is hidden when idle.
+echo "Running marquee text contract tests..."
+if ! python3 "$SCRIPT_DIR/test_marquee_text_contract.py"; then
+    echo "Marquee text contract tests failed."
+    exit 1
+fi
+
 echo "Running expandable panel contract tests..."
 if ! python3 "$SCRIPT_DIR/test_expandable_panel.py"; then
     echo "Expandable panel contract tests failed."
