@@ -2236,6 +2236,44 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   0bc44f475 ("fix(dock): a dragged icon moves to where it was dropped, it does not swap"),
   52da8b43e ("fix(quickToggles): a dropped toggle moves into place instead of swapping"),
   893bfc31a ("test(lint): fail on a reorder spelled out beside a DragHandler").
+- **A drag can only be ANIMATED by a model that moves a delegate, and a row of delegates is not
+  something a model can move one between.** The Android quick toggles are the case: the panel drew a
+  `Column` of row containers, each with a plain array model, deliberately — 81379796b
+  ("fix(sidebar): choose a delegate for the toggle each row entry now holds") reset the row because
+  `DelegateChooser` picks a component when a delegate is *created* and never re-picks for one that
+  survives, so an entry that changed identity in place kept the previous toggle's icon, name and
+  action. That fix is correct and its cost is the delegate: a reorder that rebuilds every tile
+  cannot animate, because there is nothing left to move. Rows repack on nearly every edit (they are
+  packed by toggle size), so an entry crossing a row boundary left one row's model and landed in
+  another's at an index some other toggle held, which is not a move in either.
+  `modules/common/functions/quick_toggle_layout.js` answers both at once: `pack` gives every entry a
+  stable id, its toggle TYPE, a row and a slot, and `syncPlan` diffs one packed list against another
+  into the ops a `ListModel` applies. A reorder comes out as a `move`, so the delegate survives; an
+  id is derived from the type, so the role the chooser reads can never change under a surviving row;
+  and the ops the plan may emit against a live row are the PAYLOAD roles only, so no spelling in
+  `StableQuickToggleModel.qml` can retype one. A row is a coordinate now, not a container — one flat
+  `Item` per section, each tile placed at its own slot from the SETTLED pack (a placement keyed on
+  anything the press bounce moves is b710ef731's frozen `Behavior` again, so the press growth is
+  centred with a `transform` instead). The list edits the plan is simulated against are
+  `layout_ops.js`'s, for the reason the entry above gives.
+  **The half that had to be measured: a live `list<var>` notifies per ELEMENT written.** One
+  `layout_ops.moveInPlace` on the stored toggle list — the splice-out and splice-in a drop commits —
+  was observed in *nine* intermediate states, each a list with a toggle duplicated or missing, and
+  each one a plan that rebuilds rows rather than moving them. So a model synced straight from the
+  observer destroys most of the grid in the middle of the one gesture the delegates exist to
+  survive, and the panel is correct only because the sync is deferred to the end of the turn with
+  `Qt.callLater`. This was invisible until the delegates mattered: the old panel rebuilt the row on
+  every notification anyway, so it paid ten rebuilds per drop and looked right. Anything else here
+  that observes a `Config` array someone mutates in place has the same question to answer.
+  The panel is also why the observation is a SIGNATURE rather than the array: the toggles mutate
+  the live array on purpose (26b625905), so its identity never changes.
+  `tests/tst_quick_toggle_layout.qml` scores the plan's ops rather than the list they produce (a
+  rebuild produces exactly the right list), `tests/test_quick_toggle_model_contract.py` is the half
+  CI can see, and `QuickTogglesLayoutRuntimeTest.qml` compares the delegate by identity across a
+  reorder and samples its position 80ms in — a settled position is the same number whether the tile
+  animated or teleported. 8930baa3c ("feat(quickToggles): the grid's packing and its keyed diff as
+  arithmetic"), b1074b3c1 ("refactor(quickToggles): one flat keyed grid per section, placed by
+  arithmetic"), cb24f9046 ("test(quickToggles): drive the reorder the way a drop spells it").
 - **`MouseArea.drag` cannot accurately drag a target the MouseArea itself follows.** QQuickDrag
   rebases its press origin when the grab is established, silently swallowing the arming move's
   delta — a few threshold pixels under a real pointer, invisible behind the widget lattice's 12px

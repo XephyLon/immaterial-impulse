@@ -22,6 +22,14 @@ own repo; the installer pins which revision it builds.
   never lands on a live scene, and a project's mask never lands on the static
   fallback the desktop shows when the renderer gives up.
 
+### Changed
+- **Dragging a quick toggle moves it instead of redrawing the grid.** The tiles
+  the dragged one passes now slide into their new places when you drop it,
+  rather than the whole panel being rebuilt at the new order. Nothing about the
+  layout, the sizes or where a drop lands has changed — and a row now fills the
+  panel's width evenly instead of giving the leftover to whichever toggle
+  happened to be first in it.
+
 ### Fixed
 - **The motion speed slider and reduce motion now reach every animation.** Nine
   places read a motion tier's base duration instead of the scaled one, so they
