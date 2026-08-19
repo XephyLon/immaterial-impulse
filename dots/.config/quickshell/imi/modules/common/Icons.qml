@@ -32,7 +32,15 @@ Singleton {
     }
 
     function isNight(): bool {
-        const hour = new Date().getHours();
+        return isNightAt(new Date().getHours());
+    }
+
+    // A forecast hour is not this hour: the weather popup's hourly row draws
+    // 21:00 at two in the afternoon, and asking isNight() there gives every bar
+    // the daytime glyph until eight in the evening and then all of them the
+    // night one. The threshold stays in one place rather than being restated
+    // wherever an hour is already known.
+    function isNightAt(hour: int): bool {
         return hour < 6 || hour >= 20;
     }
 
