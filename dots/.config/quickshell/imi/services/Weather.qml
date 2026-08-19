@@ -8,6 +8,7 @@ import QtPositioning
 
 import qs.modules.common
 import "../modules/common/functions/weatherForecast.js" as WeatherForecast
+import "../modules/common/functions/weatherHourly.js" as WeatherHourly
 
 Singleton {
     id: root
@@ -62,6 +63,16 @@ Singleton {
     // the response the current conditions already come from, but OWM needs a
     // second request that can fail on its own.
     property var forecast: []
+
+    // The same two responses read a second way: every three-hourly entry they
+    // carry, normalised to `[{ ms, date, hour, temp, wCode }]`. NOT cut to the
+    // hours a chart shows - that window depends on the time of day, and this is
+    // written once per fetch while the popup reads it once a minute, so the
+    // caller does the cutting through WeatherHourly.upcoming(). Neither
+    // provider is asked for anything new: OpenWeatherMap's /data/2.5/forecast
+    // is already fetched for the day cards and IS a three-hourly list, and
+    // wttr.in's weather[].hourly[] arrives with the current conditions.
+    property var hourly: []
 
     function refineData(data) {
         let temp = {}
@@ -163,6 +174,7 @@ Singleton {
         // Already in the response the current conditions came from - wttr.in
         // returns three days of it whether or not anything asks.
         root.forecast = WeatherForecast.dailyFromWttr(data?.weather, root.useUSCS)
+        root.hourly = WeatherHourly.slotsFromWttr(data?.weather, root.useUSCS)
     }
 
     function getData() {
@@ -310,6 +322,7 @@ Singleton {
                         return
                     }
                     root.forecast = WeatherForecast.dailyFromOwm(parsedData.list)
+                    root.hourly = WeatherHourly.slotsFromOwm(parsedData.list)
                 } catch (e) {
                     console.error("[WeatherService] Forecast JSON parse error:", e.message)
                 }
