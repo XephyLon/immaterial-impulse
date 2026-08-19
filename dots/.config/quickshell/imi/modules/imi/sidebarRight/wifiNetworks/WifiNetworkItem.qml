@@ -35,12 +35,15 @@ DialogListItem {
                 text: strength > 80 ? "signal_wifi_4_bar" : strength > 60 ? "network_wifi_3_bar" : strength > 40 ? "network_wifi_2_bar" : strength > 20 ? "network_wifi_1_bar" : "signal_wifi_0_bar"
                 color: Appearance.colors.colOnSurfaceVariant
             }
-            StyledText {
+            // An SSID is the whole of what identifies a network to connect to,
+            // and it is a name the user did not write and cannot look up from
+            // this row. A router that names its bands and its guest network
+            // off one prefix produces several entries whose elided forms are
+            // byte-identical.
+            MarqueeText {
                 Layout.fillWidth: true
                 color: Appearance.colors.colOnSurfaceVariant
-                elide: Text.ElideRight
                 text: root.wifiNetwork?.ssid ?? Translation.tr("Unknown")
-                textFormat: Text.PlainText
             }
             MaterialSymbol {
                 visible: (root.wifiNetwork?.isSecure || root.wifiNetwork?.active) ?? false

@@ -44,12 +44,15 @@ DialogListItem {
             ColumnLayout {
                 spacing: Appearance.spacing.space25
                 Layout.fillWidth: true
-                StyledText {
+                // The device's own advertised name is the only thing telling
+                // two of the same model apart, and a Bluetooth name is
+                // routinely long enough to reach this row's width - the
+                // sibling status line below is this repo's own short string
+                // and stays elided.
+                MarqueeText {
                     Layout.fillWidth: true
                     color: Appearance.colors.colOnSurfaceVariant
-                    elide: Text.ElideRight
                     text: root.device?.name || Translation.tr("Unknown device")
-                    textFormat: Text.PlainText
                 }
                 StyledText {
                     visible: (root.device?.connected || root.device?.paired) ?? false
