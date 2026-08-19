@@ -342,11 +342,21 @@ Singleton {
     readonly property int monitorHealthyMs: 30000
 
     readonly property bool monitorLive: root.monitorState === "running"
-    readonly property bool wantMonitor: root.enableService && root.installed
-        && root.monitorState !== "failed" && root.monitorMatchRule(root.backend) !== ""
+
+    // A function rather than a binding, and that is not a style choice:
+    // onBackendChanged is the caller, and nothing orders a change handler
+    // against the re-evaluation of a binding derived from the same property,
+    // so a binding here answers with the PREVIOUS backend. Written as one it
+    // read false on the transition that arms the stream and the monitor
+    // never started - measured against the runtime harness, silently, with
+    // the model still updating from the poll.
+    function monitorWanted(): bool {
+        return root.enableService && root.installed
+            && root.monitorState !== "failed" && root.monitorMatchRule(root.backend) !== "";
+    }
 
     function startMonitor(): void {
-        if (monitorProc.running || !root.wantMonitor) return;
+        if (monitorProc.running || !root.monitorWanted()) return;
         monitorRestart.stop();
         root.monitorStartedAt = Date.now();
         root.monitorState = "running";
@@ -403,10 +413,10 @@ Singleton {
         stderr: SplitParser {}
         onExited: (exitCode, exitStatus) => {
             const plan = root.monitorExitPlan(root.monitorAttempts, Date.now() - root.monitorStartedAt,
-                root.wantMonitor, root.monitorHealthyMs, root.monitorAttemptCeiling);
+                root.monitorWanted(), root.monitorHealthyMs, root.monitorAttemptCeiling);
             root.monitorAttempts = plan.attempts;
             if (!plan.retry) {
-                if (root.wantMonitor) {
+                if (root.monitorWanted()) {
                     root.monitorState = "failed";
                     console.warn(`[PhoneConnect] busctl monitor gave up after ${root.monitorAttemptCeiling} restarts; falling back to polling`);
                 } else {

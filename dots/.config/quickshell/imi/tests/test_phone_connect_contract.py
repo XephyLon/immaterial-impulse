@@ -204,9 +204,28 @@ def test_the_ceiling_is_declared_and_the_stream_falls_back_to_polling():
         "the ceiling never lands the monitor in a terminal state"
     )
     assert 'root.monitorState !== "failed"' in source, (
-        "wantMonitor does not read the terminal state, so the ceiling is "
+        "monitorWanted() does not read the terminal state, so the ceiling is "
         "reachable again immediately"
     )
+
+
+def test_the_monitor_gate_is_a_function_not_a_binding():
+    """AGENT.md's change-handler rule, paid for here. onBackendChanged is
+    what arms the stream, and nothing orders a handler against the
+    re-evaluation of a binding derived from the same property - written as a
+    `readonly property bool` this answered with the PREVIOUS backend, read
+    false on the one transition that matters, and the monitor never started
+    while the model kept updating from the poll."""
+    source = SERVICE.read_text()
+    assert re.search(r"function monitorWanted\(\): bool \{", source), (
+        "the monitor's gate must be a function"
+    )
+    assert not re.search(r"property bool (wantMonitor|monitorWanted)", source), (
+        "the monitor's gate is a binding on the property its own handler hangs off"
+    )
+    handler = re.search(r"onBackendChanged: \{(.*?)\n    \}", source, re.S)
+    assert handler, "onBackendChanged missing"
+    assert "root.startMonitor()" in handler.group(1)
 
 
 def test_valent_keeps_the_poll_because_its_signals_are_unverified():
