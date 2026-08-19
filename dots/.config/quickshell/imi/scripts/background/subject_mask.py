@@ -177,8 +177,22 @@ def cache_root(explicit=None):
     return Path(base) / "quickshell" / "clock-depth"
 
 
-def cache_key(wallpaper):
-    """The wallpaper's identity for this cache: path, mtime and size."""
+def cache_key(wallpaper, identity=None):
+    """The wallpaper's identity for this cache: path, mtime and size.
+
+    Or a caller-supplied identity in place of all three. A Wallpaper Engine
+    project has no file of its own to segment - the shell photographs it into a
+    still, and that still is re-grabbed on every load of the project, so its
+    mtime moves every session. Keyed on the file, the user's acceptance would be
+    minted a new key on every restart and silently forgotten. The shell hands in
+    `we:<projectId>` and the still is only the picture. The trade is the mirror
+    of the stat triple's: editing the project does NOT invalidate its mask, and
+    that is the right way round - an edited project is something the user did on
+    purpose and can re-judge from the picker, where an edited file is the case
+    nothing prompts them about.
+    """
+    if identity:
+        return hashlib.sha256(f"identity\0{identity}".encode("utf-8")).hexdigest()[:32]
     path = Path(wallpaper).expanduser().resolve()
     st = path.stat()
     material = f"{path}\0{st.st_mtime_ns}\0{st.st_size}".encode("utf-8")
@@ -384,15 +398,33 @@ def accepted_model(root, key, candidates):
     return None
 
 
-def status(root, wallpaper):
+def require_picture(wallpaper):
+    """A verb that loads a model needs the picture to exist, in words.
+
+    The stat-keyed path fails on its own inside `cache_key`; the identity-keyed
+    one keys without touching the file, so a still that has not been grabbed
+    yet would otherwise surface as whatever Pillow says about a missing path.
+    """
+    path = Path(wallpaper).expanduser()
+    if not path.exists():
+        raise RuntimeError(f"nothing to segment: {path} does not exist yet")
+
+
+def status(root, wallpaper, identity=None):
     """What the shell asks. Reads directory entries; loads nothing."""
     try:
-        key = cache_key(wallpaper)
+        key = cache_key(wallpaper, identity)
     except OSError as exc:
         return {"state": "unreadable", "error": str(exc), "wallpaper": str(wallpaper)}
 
     result = {"key": key, "wallpaper": str(Path(wallpaper).expanduser().resolve()),
               "cacheDir": str(root),
+              # Only an identity-keyed query can answer without its picture: a
+              # Wallpaper Engine project that has not rendered this session has
+              # no still yet, and the picker says so rather than failing. For
+              # the stat-keyed path this is always true, because the key
+              # itself came from the file.
+              "available": Path(wallpaper).expanduser().exists(),
               # The models and what each one is asked with, so the picker draws
               # one column per model without carrying its own copy of the list -
               # a second list of model names is the pair that drifts, and the
@@ -695,7 +727,7 @@ def decode_mask(root, model, embedding, resized, points):
     return 1.0 / (1.0 + np.exp(-masks[0][best].astype(np.float32)))
 
 
-def select(root, wallpaper, model, points):
+def select(root, wallpaper, model, points, identity=None):
     """Cut a mask from clicks, or clear the one that is there.
 
     No `.none` marker is ever written here, and that is the difference between a
@@ -707,7 +739,8 @@ def select(root, wallpaper, model, points):
     """
     if MODELS.get(model, {}).get("kind") != "prompted":
         raise RuntimeError(f"{model!r} takes no clicks; use `run --model {model}`")
-    key = cache_key(wallpaper)
+    require_picture(wallpaper)
+    key = cache_key(wallpaper, identity)
     root.mkdir(parents=True, exist_ok=True)
     candidate = root / f"{key}.{model}.png"
 
@@ -732,13 +765,14 @@ def select(root, wallpaper, model, points):
             "mask": str(candidate), "foreground": foreground, "prompt": points}
 
 
-def run(root, wallpaper, model, force=False):
+def run(root, wallpaper, model, force=False, identity=None):
     if model not in MODELS:
         raise SystemExit(f"unknown model {model!r}; expected one of {', '.join(MODELS)}")
     if MODELS[model]["kind"] == "prompted":
         raise RuntimeError(f"{model!r} needs clicks; use `select --model {model} "
                            f"--point x,y`")
-    key = cache_key(wallpaper)
+    require_picture(wallpaper)
+    key = cache_key(wallpaper, identity)
     root.mkdir(parents=True, exist_ok=True)
     candidate = root / f"{key}.{model}.png"
     negative = root / f"{key}.{model}.none"
@@ -828,7 +862,7 @@ def write_mask(path, mask, prompt=None):
     Image.fromarray(np.dstack([plane, plane]), "LA").save(path, pnginfo=info)
 
 
-def accept(root, wallpaper, model):
+def accept(root, wallpaper, model, identity=None):
     """Promote one model's candidate to the mask the shell draws.
 
     A copy rather than a link or a rename: the candidate stays where it is so the
@@ -842,7 +876,7 @@ def accept(root, wallpaper, model):
     """
     if model not in MODELS:
         raise SystemExit(f"unknown model {model!r}; expected one of {', '.join(MODELS)}")
-    key = cache_key(wallpaper)
+    key = cache_key(wallpaper, identity)
     candidate = root / f"{key}.{model}.png"
     if not candidate.exists():
         raise RuntimeError(f"no {model} candidate to accept for this wallpaper")
@@ -857,7 +891,7 @@ def accept(root, wallpaper, model):
     return {"state": "accepted", "key": key, "model": model, "mask": str(accepted)}
 
 
-def decline(root, wallpaper):
+def decline(root, wallpaper, identity=None):
     """Record that this wallpaper gets no depth, and drop any accepted mask.
 
     A file beside the mask rather than a config entry: a per-wallpaper map keyed
@@ -865,7 +899,7 @@ def decline(root, wallpaper):
     keeping the marker at the key means it invalidates with the key - edit the
     wallpaper in place and the refusal goes with the mask it was about.
     """
-    key = cache_key(wallpaper)
+    key = cache_key(wallpaper, identity)
     root.mkdir(parents=True, exist_ok=True)
     (root / f"{key}.off").write_text("")
     (root / f"{key}.png").unlink(missing_ok=True)
@@ -908,16 +942,23 @@ def main(argv=None):
                         help="override the cache root (tests)")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_status = sub.add_parser("status", help="what the cache holds for a wallpaper")
+    def with_identity(sub_parser):
+        # `we:<projectId>` for a Wallpaper Engine still. See `cache_key`.
+        sub_parser.add_argument("--identity", default=None,
+                                help="key the cache on this string instead of the "
+                                     "file's path, mtime and size")
+        return sub_parser
+
+    p_status = with_identity(sub.add_parser("status", help="what the cache holds for a wallpaper"))
     p_status.add_argument("wallpaper")
 
-    p_run = sub.add_parser("run", help="produce a candidate mask, or return a cached one")
+    p_run = with_identity(sub.add_parser("run", help="produce a candidate mask, or return a cached one"))
     p_run.add_argument("wallpaper")
     p_run.add_argument("--model", default="isnet-anime", choices=salient_models())
     p_run.add_argument("--force", action="store_true",
                        help="re-run even when a candidate is already cached")
 
-    p_select = sub.add_parser("select", help="cut a mask from clicks on the picture")
+    p_select = with_identity(sub.add_parser("select", help="cut a mask from clicks on the picture"))
     p_select.add_argument("wallpaper")
     p_select.add_argument("--model", default="mobile-sam", choices=prompted_models())
     p_select.add_argument("--point", action="append", default=[], metavar="X,Y[,LABEL]",
@@ -927,11 +968,11 @@ def main(argv=None):
                                "for one it must not. Repeatable; no points at all "
                                "clears the candidate.")
 
-    p_accept = sub.add_parser("accept", help="draw this model's candidate from now on")
+    p_accept = with_identity(sub.add_parser("accept", help="draw this model's candidate from now on"))
     p_accept.add_argument("wallpaper")
     p_accept.add_argument("--model", required=True, choices=sorted(MODELS))
 
-    p_decline = sub.add_parser("decline", help="this wallpaper gets no depth")
+    p_decline = with_identity(sub.add_parser("decline", help="this wallpaper gets no depth"))
     p_decline.add_argument("wallpaper")
 
     p_sweep = sub.add_parser("sweep", help="drop the oldest keys")
@@ -942,16 +983,18 @@ def main(argv=None):
 
     try:
         if args.command == "status":
-            result = status(root, args.wallpaper)
+            result = status(root, args.wallpaper, identity=args.identity)
         elif args.command == "run":
-            result = run(root, args.wallpaper, args.model, force=args.force)
+            result = run(root, args.wallpaper, args.model, force=args.force,
+                         identity=args.identity)
         elif args.command == "select":
             result = select(root, args.wallpaper, args.model,
-                            [parse_point(p) for p in args.point])
+                            [parse_point(p) for p in args.point],
+                            identity=args.identity)
         elif args.command == "accept":
-            result = accept(root, args.wallpaper, args.model)
+            result = accept(root, args.wallpaper, args.model, identity=args.identity)
         elif args.command == "decline":
-            result = decline(root, args.wallpaper)
+            result = decline(root, args.wallpaper, identity=args.identity)
         else:
             result = sweep(root, keep=args.keep)
     except Exception as exc:  # noqa: BLE001 - the shell needs a parseable failure
