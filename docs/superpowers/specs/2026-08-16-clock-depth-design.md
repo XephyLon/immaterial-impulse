@@ -272,10 +272,10 @@ that upscaling to 5120 px is a `smooth: true` texture fetch the GPU does for fre
 7680×2160 grayscale PNG costs 3 MB per wallpaper and 0.88 s of write time for information that is
 not in the mask. Both halves of that are still true, and the second still rules out wallpaper
 resolution — but the first upscales the *softness* too: at 1024 wide over a 5760-wide picture each
-texel covers ~5.6 picture pixels, so the boundary was inherently ~5 screen px soft, and once §9's
-refinement gives the mask finer structure than that, 1024 texels throw it away again. 4096 keeps
-it: measured on the Violet Evergarden wallpaper (5760×2318), 4096×1648 at 357 KB against ~100 KB
-for the square. A wallpaper smaller than that is stored at its own size. The shell's `coverRect`
+texel covers ~5.6 picture pixels, so the boundary was inherently ~5 screen px soft — and §9's
+hardening only makes it crisp if it is applied *after* that upscale, at a resolution fine enough
+to hold a ~1 px edge. 4096 is that resolution: measured on the Violet Evergarden wallpaper
+(5760×2318), 4096×1648 at 253 KB against ~100 KB for the square. A wallpaper smaller than that is stored at its own size. The shell's `coverRect`
 maps the whole mask onto the whole picture without reading the mask's shape, so nothing on that
 side changed — `tst_clock_depth_eligibility.qml` had already pinned a non-square mask for the
 prompted model.
@@ -379,8 +379,8 @@ otherwise is how the parallax opt-out stayed green through its entire broken lif
   touching the file changes it, that a hit returns without constructing a session, and that the LRU
   sweep keeps the newest N. This is the piece with real edge cases and it is the piece the shell
   trusts blindly, so it is the piece that gets tested hardest.
-- *The refinement arithmetic* (§9), in `tests/test_subject_mask_refine.py`: the crop box and its
-  guard, the hardening curve's shape, and the storage size — pure numpy, no session.
+- *The refinement arithmetic* (§9), in `tests/test_subject_mask_refine.py`: the hardening curve's
+  shape, the resample-then-harden order, and the storage size — pure numpy, no session.
 - *The eligibility predicate*, in `clockDepth.js`, via `tests/tst_clock_depth_eligibility.qml`.
   Six boolean inputs, and the cases that matter are the refusals: video, WE, mid-transition,
   opt-out marker present alongside a valid mask.
@@ -535,41 +535,39 @@ on is the inspect mode this PR adds, so the order is the right way round.
 §1 judged the masks by eye and §3 accepted "~5 screen px soft" as the price of the model's 1024
 square. In use that price turned out to be paid in the wrong places: on the Violet Evergarden
 wallpaper (5760×2318, `isnet-general-use`) hair claimed a band of wall around itself, and a striped
-wall behind a hairline came through as subject — at ~5.6 picture pixels per mask texel the model
-cannot separate the two. Three changes, each measured on that wallpaper before it was written into
-the producer, and one thing tried and rejected.
+wall behind a hairline showed through as subject. Two changes landed, and two things were tried,
+measured on that wallpaper, and rejected.
 
-**Two-pass crop-refine (salient models only).** Pass 1 is the existing full-frame squash. Take the
-box of `mask > 0.5`, pad it by 12% of its own width and height each side, crop the wallpaper to
-it, run the model again on the crop (squashed to 1024² like everything else), upsample the fine
-answer to the crop and paste it over the coarse mask upsampled to the wallpaper. Cost +0.48 s. The
-stripe bleed is gone and the soft band tightens. Two guards: a box covering ≥85% of the frame skips
-pass 2 (same picture, same squash, nothing to gain), and a pass 1 that finds nothing keeps the
-existing `.none` path untouched — the `.none` verdict is pass 1's share, so the refinement can
-neither manufacture nor rescind one. Note what pass 2 also does: it re-decides low-contrast regions
-at the crop's resolution. On that wallpaper the collar and part of the white robe against the cream
-background, which the coarse pass claimed, are not claimed by the fine pass; the foreground share
-went 0.179 → 0.150. That is the model's answer at the better resolution, and the picker's
-accept/decline step (§6) is still where it is judged.
+**Edge hardening, after the resample.** `1 / (1 + exp(-2·6·(m − 0.5)))` — a sigmoid with k = 6
+around 0.5, so 0.5 stays at 0.5 and no pixel changes sides — applied to the matte *after* it is
+resampled to its storage size (`prepare_mask` in the producer). The order is the point: a
+hardened edge put through the 4× bilinear upscale comes back out as a 4 px ramp, which is the band
+the hardening exists to remove. Soft band (0.16 < m < 0.84) on that wallpaper: 0.307 Mpx for the
+shipped 1024² matte upscaled by Qt, 0.235 for harden-then-resample, **0.119 for resample-then-
+harden**. Foreground share unchanged (0.179 → 0.179); the neck (0.98 → 0.996) and collar
+(0.942 → 0.946) are kept. Applied to the prompted model's masks too.
 
-**Edge hardening.** `1 / (1 + exp(-2·6·(m − 0.5)))` after the merge — a sigmoid with k = 6 around
-0.5, so 0.5 stays at 0.5 and no pixel changes sides. Soft band (0.16 < m < 0.84) 0.496 Mpx →
-0.235 Mpx. Applied to the prompted model's masks too.
+**Storage.** §3, amended: aspect-true at 4096 on the long side, never larger than the wallpaper,
+still `LA` with the alpha duplicated for `OpacityMask`.
+
+**Rejected: a second model pass over the subject's box.** Landed as 038df1083 and reverted in the
+same PR after measurement: take the box of `mask > 0.5`, pad 12%, run the model again on the
+crop, paste the fine answer over the coarse. On the reference picture it is net harmful — where the
+coarse pass claimed the subject and the crop pass did not, **17.7% of the coarse subject is lost**
+(neck 0.994 → 0.671, collar 0.996 → 0.317, robe 0.996 → 0.918), against 0.5% gained the other
+way; visually it punches a speckled hole through the neck and collar. And it was not what cleaned
+the stripes: the striped wall above the head is at 0.257 in the coarse pass — already below 0.5 —
+so the visible bleed was the soft band, which the hardening removes on its own. Soft band after
+hardening: 0.112 Mpx from the coarse pass alone, 0.113 for `max(coarse, fine)`, 0.230 for the
+pasted crop. `harden(coarse)` and `harden(max(coarse, fine))` are indistinguishable at the
+hairline. Cost would have been +0.48 s per run.
 
 **Rejected: a guided filter.** He et al.'s fast guided filter on a downscaled luminance guide
-(r = 12, ε = 1e-3, /4) was tried between the merge and the hardening. It widened the band along
-every low-contrast outline — the opposite of the job — and is not in the producer. Recorded here
-and in `HARDEN_K`'s comment so it is not tried again.
+(r = 12, ε = 1e-3, /4) was tried between the matte and the hardening. It widened the band along
+every low-contrast outline — the opposite of the job.
 
-**Storage.** §3, amended: aspect-true at 4096 on the long side, still `LA` with the alpha
-duplicated for `OpacityMask`.
+Both rejections are recorded in the producer (`segment`'s docstring, `HARDEN_K`'s comment) so they
+are not tried a second time.
 
-**Follow-up, not landed:** the prompted path (`mobile-sam`) gets the hardening and the storage but
-not a crop-refine. Its embedding is cached once per wallpaper (that is what makes the second click
-cost 0.34 s), and refining a crop would need an embedding per crop — a per-click encode, which is
-exactly the cost the split exists to avoid. Whether a second, crop-local embedding is worth caching
-alongside the first is the open question there.
-
-`tests/test_subject_mask_refine.py` pins the arithmetic — box, guard, curve, storage size — with
-no model loaded; whether the result is *good* stays with the human at the picker, as §6 says.
-
+`tests/test_subject_mask_refine.py` pins the arithmetic — curve, order, storage size — with no
+model loaded; whether the result is *good* stays with the human at the picker, as §6 says.

@@ -3076,29 +3076,32 @@ is reachable from `qmltestrunner`, so the arithmetic has to be.
 (feat(background): draw the wallpaper's subject over the desktop widgets.)
 
 **The model's square is the right INPUT and was the wrong STORAGE, and the two
-came apart the moment the mask had more detail than the square could carry.**
-Squashing a 5760x2318 wallpaper into 1024² gives every mask texel ~5.6 picture
-pixels, and the cost was measured to be worse than softness: hair claimed a
-band of wall around itself and a striped wall behind a hairline came through as
-subject, because at that scale the model cannot separate them. The producer
-now runs a salient model twice — the second time over the padded box of what
-the first pass claimed, pasted over the coarse answer (+0.48s; skipped when the
-box already covers 85% of the frame, and never reached when pass 1 found
-nothing, so `.none` is still pass 1's verdict) — hardens every mask around 0.5
-with a k=6 sigmoid (soft band 0.496 → 0.235 Mpx; 0.5 stays at 0.5, so no pixel
-changes sides), and stores the result aspect-true at 4096 on the long side,
-never larger than the wallpaper (357 KB against ~100 KB on that picture). Two
-things to carry forward. **A guided filter was tried between the merge and the
-hardening and rejected**: it widened the band along every low-contrast outline;
-do not put one back. And `coverRect` needed no change for a non-square salient
-mask, for the reason the prompted-model entry below already gives — it is a
-rectangle for the wallpaper and never reads the mask's shape — but the comments
-on both sides of it *said* the mask was square, and now say what it was and
-what it is. `tests/test_subject_mask_refine.py` pins the box, the guard, the
-curve and the storage size without loading a model. Design doc §9.
-038df1083 ("feat(background): run a salient model twice, the second time on the subject's box"),
+came apart because the softness was being upscaled with the mask.** Squashing a
+5760x2318 wallpaper into 1024² gives every mask texel ~5.6 picture pixels, and
+what shipped was that raw matte upscaled bilinearly by Qt: hair claimed a band
+of wall around itself and a striped wall behind a hairline showed through as
+subject. The producer now hardens every mask around 0.5 with a k=6 sigmoid
+(0.5 stays at 0.5, so no pixel changes sides) AFTER resampling it to the
+storage size — 4096 on the long side, aspect-true, never larger than the
+wallpaper — and the order is what makes it work: soft band 0.307 Mpx as
+shipped, 0.235 with harden-then-resample, 0.119 with resample-then-harden.
+Three things to carry forward. **A second model pass over the subject's box
+was landed and reverted in the same PR**: measured, it lost 17.7% of the
+coarse subject (the neck went 0.994 → 0.671) for 0.5% gained, and the stripe
+cleanup it was credited with was the hardening's — the stripes were already at
+0.257 in the single pass. **A guided filter was tried and rejected** for
+widening the band along low-contrast outlines. And `coverRect` needed no
+change for a non-square salient mask, for the reason the prompted-model entry
+below already gives — it is a rectangle for the wallpaper and never reads the
+mask's shape — but the comments on both sides of it *said* the mask was
+square, and now say what it was and what it is.
+`tests/test_subject_mask_refine.py` pins the curve, the resample-then-harden
+order (against a control that must itself show the ramp) and the storage size
+without loading a model. Design doc §9.
 77497c63a ("feat(background): harden a mask's edge around the model's own boundary"),
-983e4c529 ("feat(background): store a mask aspect-true at 4096 on the long side").
+983e4c529 ("feat(background): store a mask aspect-true at 4096 on the long side"),
+7e0dc5f16 ("revert(background): drop the second model pass over the subject's box"),
+1a6a2b970 ("feat(background): harden the edge after the resample to storage size, not before").
 
 **Two captures separated in wall-clock time on a desktop somebody is using are
 not an A/B test, and the thing that changes between them becomes your signal.**

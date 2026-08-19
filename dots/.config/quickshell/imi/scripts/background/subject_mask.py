@@ -138,10 +138,11 @@ HARDEN_K = 6.0
 # The long side a mask is stored at. Model resolution (1024) was the storage
 # size before, on the reasoning that Qt's bilinear upscale is free - which it
 # is, but it upscales the softness too: a 1024-wide mask over a 5760-wide
-# picture is ~5.6 picture pixels per texel, and after the two-pass refinement
-# the mask HAS finer structure than that to keep. 4096 keeps it, at 357 KB on
-# that wallpaper against ~100 KB before; a mask is never stored larger than the
-# wallpaper it is for, since past that there is nothing to keep.
+# picture is ~5.6 picture pixels per texel, and an edge hardened at that size
+# comes back out of the upscale as a ramp. Hardening AFTER the resample
+# (`prepare_mask`) needs a size fine enough to hold a ~1 px edge, and 4096 is
+# it: 253 KB on that wallpaper against ~100 KB before. A mask is never stored
+# larger than the wallpaper it is for, since past that there is nothing to keep.
 MASK_STORE_SIDE = 4096
 
 # Keys, not files: dropping a key's `.off` while keeping its `.png` would
