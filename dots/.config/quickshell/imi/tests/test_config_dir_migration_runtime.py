@@ -81,7 +81,8 @@ def _stop(proc):
 
 
 def _runtime_available():
-    return shutil.which("qs") is not None and shutil.which("weston") is not None
+    return all(shutil.which(binary) is not None
+               for binary in ("qs", "weston", "dbus-run-session"))
 
 
 @unittest.skipUnless(_runtime_available(), "needs qs and weston on PATH")
@@ -138,7 +139,11 @@ class ConfigDirMigrationRuntimeTest(unittest.TestCase):
         env["CONFIGDIR_MODE"] = mode
         if delay is not None:
             env["IMI_MIGRATE_DELAY"] = delay
-        proc = subprocess.run(["qs", "-p", str(HARNESS)], cwd=str(ROOT), env=env,
+        proc = subprocess.run(
+            # dbus-run-session, not the inherited DBUS_SESSION_BUS_ADDRESS: a
+            # shell reading MPRIS, UPower or a portal off the developer's bus
+            # measures their session rather than this tree.
+            ["dbus-run-session", "--", "qs", "-p", str(HARNESS)], cwd=str(ROOT), env=env,
                               capture_output=True, text=True, timeout=240)
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
