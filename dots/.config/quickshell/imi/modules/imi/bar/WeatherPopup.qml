@@ -19,6 +19,10 @@ StyledPopup {
         Layout.rightMargin: -Appearance.spacing.space100
 
         Rectangle {
+            // Named so WeatherPopupHeroRuntimeTest.qml can ask whether this is
+            // still the section the card unrolls from, rather than asking
+            // whether the first child is the first child.
+            objectName: "weatherHero"
             Layout.fillWidth: true
             Layout.preferredHeight: 125
 
