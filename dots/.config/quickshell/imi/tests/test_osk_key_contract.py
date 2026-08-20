@@ -7,10 +7,11 @@ see is the conversion from a unit to a pixel, which lives in OskKey.qml - and
 all three of the ways that conversion has already gone wrong are invisible from
 the data:
 
-  - a second copy of the shape tables. They used to be declared inside
-    OskKey.qml, which is why the QML test would have been testing a
-    transcription; a table growing back there is a second answer to how wide a
-    key is, and the layouts are written against the other one.
+  - a second copy of the shape tables or of the cap's own metrics. Both used to
+    be declared inside OskKey.qml, which is why the QML test would have been
+    testing a transcription; a table growing back there is a second answer to
+    how wide a key is, and the layouts - and the lattice the keys are placed
+    on - are written against the other one.
   - a key gap that is not the row's gap. A key spanning several units swallows
     the gaps it covers, so OskKey subtracts exactly what OskContent's RowLayout
     puts between two keys. Two different tokens leave every wide key short by a
@@ -34,6 +35,13 @@ OSK_KEY = OSK_DIR / "OskKey.qml"
 OSK_CONTENT = OSK_DIR / "OskContent.qml"
 KEY_SHAPES = OSK_DIR / "key_shapes.js"
 APPEARANCE = ROOT / "modules/common/Appearance.qml"
+
+
+def _shape_metric(name):
+    """The pixel value behind a key_shapes.js cap metric."""
+    match = re.search(rf"(?m)^const {name} = (\d+);", KEY_SHAPES.read_text())
+    assert match is not None, f"key_shapes.js declares no {name}"
+    return int(match.group(1))
 
 
 def _spacing_token(name):
@@ -65,6 +73,14 @@ class OskKeyContractTests(unittest.TestCase):
         self.assertNotRegex(
             self.key, r"property\s+var\s+\w*(?:Multiplier|Units)\s*:\s*\(?\{",
             "OskKey declares a shape table of its own")
+        # The cap's own box lives there too, because osk_lattice.js derives the
+        # grid column from it. A literal here is a second answer to the pitch,
+        # and the lattice would keep placing keys on the old one.
+        for prop, metric in (("baseWidth", "baseKeyWidth"),
+                             ("baseHeight", "baseKeyHeight")):
+            self.assertRegex(
+                self.key, rf"property real {prop}:\s*KeyShapes\.{metric}\b",
+                f"OskKey does not take {prop} from KeyShapes.{metric}")
 
     def test_a_key_subtracts_the_gap_its_row_puts_between_keys(self):
         gap = re.search(r"property real keyGap:\s*(Appearance\.spacing\.\w+)", self.key)
@@ -87,11 +103,9 @@ class OskKeyContractTests(unittest.TestCase):
         # The pitch has to stay a multiple of four or a quarter-unit span lands
         # on a half pixel, which QQuickLayout rounds up - seven pixels of drift
         # across the function row's fourteen spacers.
-        base = re.search(r"property real baseWidth:\s*(\d+)", self.key)
-        self.assertIsNotNone(base, "OskKey declares no baseWidth")
         gap = re.search(r"property real keyGap:\s*Appearance\.spacing\.(\w+)", self.key)
         self.assertIsNotNone(gap, "OskKey declares no keyGap")
-        pitch = int(base.group(1)) + _spacing_token(gap.group(1))
+        pitch = _shape_metric("baseKeyWidth") + _spacing_token(gap.group(1))
         self.assertEqual(pitch % 4, 0,
                          f"the key pitch is {pitch}, which cannot draw a "
                          f"quarter unit in whole pixels")
