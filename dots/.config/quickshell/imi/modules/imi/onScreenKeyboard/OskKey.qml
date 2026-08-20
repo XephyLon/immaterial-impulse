@@ -63,7 +63,13 @@ RippleButton {
         : Appearance.colors.colLayer1
     buttonRadius: Appearance.rounding.small
     implicitWidth: root.baseWidth * root.widthUnits + root.keyGap * (root.widthUnits - 1)
+    // A key TALLER than one unit spans whole rows and covers the gaps between
+    // them, the same way a wide key covers the gaps along its row. A key
+    // shorter than one unit - the function row's cap, a spacer - covers no gap
+    // at all: it is drawn inside its own row rather than reaching into the
+    // next, so the term is clamped instead of going negative.
     implicitHeight: root.baseHeight * root.heightUnits
+        + root.keyGap * Math.max(0, root.heightUnits - 1)
 
     Connections {
         target: Ydotool
