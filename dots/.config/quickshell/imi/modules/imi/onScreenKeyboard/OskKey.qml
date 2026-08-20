@@ -2,6 +2,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
+import "key_shapes.js" as KeyShapes
 import QtQuick
 import QtQuick.Layouts
 
@@ -17,29 +18,20 @@ RippleButton {
     property bool isEnter: (key.toLowerCase() == "enter" || key.toLowerCase() == "return")
     property real baseWidth: 45
     property real baseHeight: 45
-    property var widthMultiplier: ({
-        "normal": 1,
-        "fn": 1,
-        "tab": 1.6,
-        "caps": 1.9,
-        "shift": 2.5,
-        "control": 1.3
-    })
-    property var heightMultiplier: ({
-        "normal": 1,
-        "fn": 0.7,
-        "tab": 1,
-        "caps": 1,
-        "shift": 1,
-        "control": 1
-    })
+    // The gap a row leaves between two keys. A key spanning several units
+    // covers the gaps it swallows as well as the key bodies, so this has to be
+    // the same value OskContent gives its RowLayout or every wide key ends up
+    // shorter than the keys it is supposed to span.
+    readonly property real keyGap: Appearance.spacing.space100
+    readonly property real widthUnits: KeyShapes.widthUnits[root.shape] ?? 1
+    readonly property real heightUnits: KeyShapes.heightUnits[root.shape] ?? 1
     toggled: isShift ? Ydotool.shiftMode : false
 
     enabled: shape != "empty"
     colBackground: shape == "empty" ? ColorUtils.transparentize(Appearance.colors.colLayer1) : Appearance.colors.colLayer1
     buttonRadius: Appearance.rounding.small
-    implicitWidth: baseWidth * widthMultiplier[shape] || baseWidth
-    implicitHeight: baseHeight * heightMultiplier[shape] || baseHeight
+    implicitWidth: root.baseWidth * root.widthUnits + root.keyGap * (root.widthUnits - 1)
+    implicitHeight: root.baseHeight * root.heightUnits
     Layout.fillWidth: shape == "space" || shape == "expand"
 
     Connections {
