@@ -1363,6 +1363,17 @@ if ! python3 "$SCRIPT_DIR/test_media_layouts_contract.py"; then
     exit 1
 fi
 
+# Contract: what turns an on-screen keyboard key's span into pixels. The
+# layouts themselves are data and are checked by tst_osk_layouts.qml; this is
+# the conversion, which the data cannot see - a second shape table, a key gap
+# that is not the row's gap, or a key that fills the row and so decides where
+# every key after it goes.
+echo "Running on-screen keyboard key contract tests..."
+if ! python3 "$SCRIPT_DIR/test_osk_key_contract.py"; then
+    echo "On-screen keyboard key contract tests failed."
+    exit 1
+fi
+
 if [[ "${RUN_DOCKER_RUNTIME_MEMORY_TEST:-0}" == "1" ]]; then
     echo "Running capped Docker runtime memory test..."
     bash "$SCRIPT_DIR/run_docker_memory_test.sh"
