@@ -30,6 +30,8 @@ own repo; the installer pins which revision it builds.
   are worth knowing: it runs **only while the on-screen keyboard is open** and
   is stopped the moment it closes, it knows key *positions* and not letters
   (nothing it handles can say what you typed), and it writes nothing down.
+  Caps Lock and Num Lock show their **lock** rather than the press, so they
+  stay lit while the lock is on.
   Turn it off with `osk.showPhysicalKeys`. On a machine whose user cannot read
   input devices it simply does not highlight, and asks for nothing.
 
