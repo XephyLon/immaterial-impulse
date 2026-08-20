@@ -74,6 +74,16 @@ Scope {
                 }
             }
 
+            // The selector's card carries its own shadow, and the catch-all
+            // surface blur frosted it - the same defect #82 fixed for the
+            // panels. The region covers the card and not the elevation margin
+            // the shadow lives in.
+            WindowBlurRegion {
+                targetWindow: panelWindow
+                regionItem: content.blurTarget
+                regionRadius: content.blurTargetRadius
+            }
+
             WallpaperSelectorContent {
                 id: content
                 width: parent.width

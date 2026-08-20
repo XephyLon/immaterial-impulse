@@ -65,6 +65,21 @@ Scope { // Scope
                 GlobalFocusGrab.removePersistent(oskRoot);
             }
 
+            // Blur is scoped to the body rather than left to the surface.
+            // The catch-all `blur = true` for `quickshell:.*` frosts every
+            // pixel over `ignore_alpha` (0.05), and this shadow sits well
+            // above that - so the compositor blurred the shadow along with
+            // the keyboard, which reads as a keyboard with a smudge under it
+            // instead of a shadow. Same fix the bars, the dock, the OSDs and
+            // the cheatsheet already carry (#82, #89); the layer rule turning
+            // the surface-wide blur off is the other half and
+            // `lint_blur_region_pairing.py` fails if either half is missing.
+            WindowBlurRegion {
+                targetWindow: oskRoot
+                regionItem: oskBackground
+                regionRadius: oskBackground.radius
+            }
+
             // Background
             StyledRectangularShadow {
                 target: oskBackground

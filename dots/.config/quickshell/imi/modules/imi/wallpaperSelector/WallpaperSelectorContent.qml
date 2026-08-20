@@ -197,6 +197,13 @@ MouseArea {
     implicitHeight: mainLayout.implicitHeight
     implicitWidth: mainLayout.implicitWidth
 
+    // The blurred body, published rather than reached into: the window owns
+    // the region (it is a property of the surface) and this component owns the
+    // rectangle, so the two meet at a named property instead of an id lookup
+    // through the tree - the pattern the panels' `backgroundItem` pair uses.
+    readonly property alias blurTarget: wallpaperGridBackground
+    readonly property real blurTargetRadius: wallpaperGridBackground.radius
+
     StyledRectangularShadow {
         target: wallpaperGridBackground
     }
