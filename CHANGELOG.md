@@ -12,6 +12,13 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Running the test suite no longer opens windows over what you are doing.**
+  Five test harnesses started the shell on the session's own display, so a
+  suite run flashed real windows across the screen — and a harness that draws a
+  panel there covers it outright. They bring their own headless compositor now,
+  like the rest already did.
+
 ## [0.29.0] — 2026-08-20
 
 The on-screen keyboard becomes a real keyboard: every key a full-size board
