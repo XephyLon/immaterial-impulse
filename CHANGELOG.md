@@ -12,6 +12,11 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.28.0] — 2026-08-20
+
+Desktop widgets can be moved from the keyboard, and an undo that reversed a
+multi-step gesture stopped landing halfway through it.
+
 ### Added
 - **Arrow keys move a selected desktop widget.** Click a widget — or drag a
   marquee over several — and each arrow press moves the selection one grid
