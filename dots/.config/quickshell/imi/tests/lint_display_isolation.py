@@ -88,6 +88,26 @@ def delegates_to_nested_probe(text):
     return isolated
 
 
+def calls_nested_display(tree):
+    """Whether the harness actually CALLS the helper, not merely imports it.
+
+    A first version searched the text for the module's name, and a planted
+    mutation - the call replaced by `dict(os.environ)`, the import left in
+    place - sailed through it. An import is not isolation; the call is. Same
+    hole the bus-isolation lint had, found the same way.
+    """
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        function = node.func
+        if (isinstance(function, ast.Attribute)
+                and isinstance(function.value, ast.Name)
+                and function.value.id == NESTS
+                and function.attr in ("start", "session")):
+            return True
+    return False
+
+
 def starts_weston(tree):
     """Whether the file launches its own compositor rather than importing the
     helper that does. Both are isolation; only the spelling differs."""
@@ -118,7 +138,7 @@ def main() -> int:
                 f"{path.name}: listed as source-only and yet builds a `qs` argv "
                 f"list. Drop it from SOURCE_ONLY and nest a display.")
             continue
-        if (NESTS not in text and not starts_weston(tree)
+        if (not calls_nested_display(tree) and not starts_weston(tree)
                 and not delegates_to_nested_probe(text)):
             failures.append(
                 f"{path.name}: launches `qs` without nesting a compositor, so "
