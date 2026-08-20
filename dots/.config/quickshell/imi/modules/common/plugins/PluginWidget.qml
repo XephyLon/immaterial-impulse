@@ -631,6 +631,16 @@ AbstractBackgroundWidget {
         rootWidget.targetY = rootWidget.clampY(ParallaxMath.placementFromDrawn(
             rootWidget.y, rootWidget.parallaxCancelY));
         rootWidget.restoreXYBinding();
+        rootWidget.commitPlacement(beforeX, beforeY);
+    }
+
+    // The store write, from targetX/targetY rather than from the drawn
+    // coordinate. Split out because a nudge has no drawn coordinate to read:
+    // `x` carries a position Behavior, so a keyboard step that assigned to it
+    // and committed in the same turn read the value the animation had not left
+    // yet, wrote it back as the target, and the widget snapped home - a move
+    // that looked like the keys doing nothing at all.
+    function commitPlacement(beforeX, beforeY) {
         if (!manifest) return;
         // A drag's release is a committed mutation (spec §7.3), and this is
         // its one commit path - the leader's release and every group-drag

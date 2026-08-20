@@ -2,6 +2,7 @@ import QtQuick
 import qs
 import qs.modules.common
 import "../../functions/edit_mode.js" as EditMode
+import "../../functions/widget_nudge.js" as Nudge
 
 MouseArea {
     id: root
@@ -109,6 +110,21 @@ MouseArea {
     // COMMITTED mutation, Escape cancels the gesture still in flight, and
     // the two never answer the same moment.
     Keys.onPressed: (event) => {
+        // The arrows come first and are NOT gated on the mode. Selecting a
+        // widget is what takes this surface's keyboard focus (see
+        // keyboardFocusHeld), in the mode and out of it, so a selection the
+        // user can make is a selection they can move. Outside the mode the
+        // move still commits - it goes through the same commitPosition the
+        // drag does - and simply records no undo entry, because
+        // GlobalStates.editUndoPush is a no-op there. That is the existing
+        // grain rather than a new rule: a drag outside the mode is already
+        // unrecorded.
+        const nudge = Nudge.direction(event.key, root.arrowKeys)
+        if (nudge && root.selectedWidgets.length > 0) {
+            root.nudgeSelection(nudge.dx, nudge.dy)
+            event.accepted = true
+            return
+        }
         if (!root.editMode) return
         // Exactly Control, not "Control among others": Ctrl+Shift+Z is
         // convention's redo, and a redo stack is deliberately not built -
@@ -146,6 +162,86 @@ MouseArea {
         else if (action === "desktopTab") GlobalStates.editTab = EditMode.DESKTOP_TAB
         else if (root.editMode) GlobalStates.editMode = false
     }
+    // The four keys, named once. The module takes them as an argument rather
+    // than reaching for Qt itself, because a `.pragma library` has no engine
+    // context - the same reason the weather forecast's locale is passed in.
+    readonly property var arrowKeys: ({
+        left: Qt.Key_Left, right: Qt.Key_Right,
+        up: Qt.Key_Up, down: Qt.Key_Down
+    })
+
+    // A burst of presses is ONE undo entry, the way a group drag's release is.
+    // Auto-repeat delivers presses every ~30ms, and an entry each would fill a
+    // fifty-deep stack in a second and a half - so Ctrl+Z would answer a held
+    // arrow key with fifty presses of its own. The batch closes a beat after
+    // the last press rather than on release: a key repeat has no release to
+    // hang it on.
+    Timer {
+        id: nudgeBatch
+        interval: 400
+        onTriggered: GlobalStates.editUndoEndBatch()
+    }
+
+    // Move every selected widget one lattice cell. The delta is decided by the
+    // FIRST selected widget - the group translates rigidly, which is the same
+    // answer widgetDragStarted gives its followers - and then shrunk to what
+    // every member's own clamp allows, so a cluster stops at the first wall
+    // instead of deforming against it.
+    function nudgeSelection(dirX, dirY) {
+        const members = []
+        for (const widget of root.selectedWidgets) {
+            if (!widget || !widget.draggable) continue
+            members.push(widget)
+        }
+        if (members.length === 0) return
+        const leader = members[0]
+        // The canvas's own lattice, never the widget's. `AbstractWidget.gridSize`
+        // IS this number, but `PluginWidget` shadows the name with its
+        // component-grid span, so a lattice read off a widget from out here is
+        // `{"cols":2,"rows":1}` and every step silently becomes NaN. Same
+        // number, and the one the grid is drawn at (8a534a7da).
+        const lattice = root.gridSize
+        // Where the LEADER would land: a whole cell along, snapped back onto
+        // the lattice in its own frame. Every member then travels by that
+        // difference, so the cluster keeps its shape.
+        // Measured against the PLACEMENT coordinate, which is what the step
+        // moves and what the store holds - `x` is the drawn one and lags it
+        // through the position animation.
+        const wantX = dirX === 0 ? leader.targetX
+            : Nudge.step(leader.targetX, dirX * lattice, lattice, leader.snapOffsetX)
+        const wantY = dirY === 0 ? leader.targetY
+            : Nudge.step(leader.targetY, dirY * lattice, lattice, leader.snapOffsetY)
+        // Each member's own bounds, asked of its own clamp rather than
+        // recomputed here: the widgets differ in size, and a second derivation
+        // of "how far may this go" is the disagreement 705e9006d fixed between
+        // the two sides of the store.
+        const bounded = Nudge.groupDelta(members.map(widget => ({
+            x: widget.targetX,
+            y: widget.targetY,
+            minX: widget.clampX(-Infinity),
+            maxX: widget.clampX(Infinity),
+            minY: widget.clampY(-Infinity),
+            maxY: widget.clampY(Infinity)
+        })), wantX - leader.targetX, wantY - leader.targetY)
+        if (bounded.dx === 0 && bounded.dy === 0) return
+
+        // One entry for the burst, opened on the first press of it. Opening it
+        // per press would be one entry each; opening it once and never closing
+        // it would swallow every later mutation into the same undo.
+        if (!nudgeBatch.running) GlobalStates.editUndoBeginBatch()
+        nudgeBatch.restart()
+
+        for (const widget of members) {
+            const beforeX = widget.targetX
+            const beforeY = widget.targetY
+            widget.moveTargetBy(bounded.dx, bounded.dy)
+            // The same store write the drag's release performs, from the same
+            // place, so the two ways of moving a widget cannot disagree about
+            // what gets persisted or what an undo reverses.
+            if (widget.commitPlacement) widget.commitPlacement(beforeX, beforeY)
+        }
+    }
+
     readonly property bool keyboardFocusHeld: root.selectedWidgets.length > 0 || root.editMode
     onKeyboardFocusHeldChanged: {
         root.setKeyboardFocusRequest(root, root.keyboardFocusHeld)
