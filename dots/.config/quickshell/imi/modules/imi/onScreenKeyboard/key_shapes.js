@@ -1,5 +1,18 @@
 .pragma library
 
+// A keycap's own box, in pixels. 44 rather than a round 45 so that the PITCH -
+// a key plus the gap after it - is a multiple of four, and a quarter unit is
+// therefore a whole number of pixels. QQuickLayout rounds every item's width
+// UP, so a key whose span lands on a half pixel is drawn half a pixel wide of
+// where its units put it, and fourteen spacers into the function row that is
+// seven pixels of drift against the row below.
+//
+// They live here rather than in OskKey because osk_lattice.js derives the
+// column the keys are placed on from the same two numbers, and two homes for a
+// pitch is two answers to where a column starts.
+const baseKeyWidth = 44;
+const baseKeyHeight = 45;
+
 // How wide and how tall every `shape` a layout in layouts.js may name is, in
 // KEYBOARD UNITS - the same unit a keycap is sold in, where a plain letter is
 // 1u and a US Enter is 2.25u.
