@@ -223,6 +223,22 @@ MouseArea {
     // object from out there. Nothing warns.
     property real snapOffsetX: 0
     property real snapOffsetY: 0
+    // Move by a delta without a gesture: the keyboard's step.
+    //
+    // It writes targetX/targetY - the coordinate the widget is PLACED at -
+    // rather than `x`, which is the drawn one and carries a position Behavior.
+    // Assigning the drawn coordinate and committing in the same turn reads the
+    // value the animation has not reached yet and stores it back, so the widget
+    // returns to where it started and the keys look inert (measured: three
+    // presses, x unchanged at 36). A translation is the same delta in both
+    // frames, so nothing has to be converted here - the parallax cancellation
+    // is a constant across the step.
+    function moveTargetBy(dx, dy) {
+        root.targetX = root.clampX(root.targetX + dx)
+        root.targetY = root.clampY(root.targetY + dy)
+        root.restoreXYBinding()
+    }
+
     function snapX(value) { return root.snap(value - root.snapOffsetX) + root.snapOffsetX }
     function snapY(value) { return root.snap(value - root.snapOffsetY) + root.snapOffsetY }
 
