@@ -1,4 +1,8 @@
 import QtQuick
+// For the attached Layout the rows are read back through - an attached type
+// is only resolvable where its module is imported, and without this every
+// key's `Layout` reads undefined.
+import QtQuick.Layouts
 import Quickshell
 import "modules/imi/onScreenKeyboard" as Osk
 import "modules/imi/onScreenKeyboard/layouts.js" as Layouts
@@ -68,14 +72,31 @@ ShellRoot {
             // Every row is drawn to the same width or the clusters on the
             // right drift; measured off the built tree rather than asserted
             // from the units, which is the half the contract test cannot see.
-            const column = keyboard.children[0];
-            const widths = [];
-            for (let i = 0; i < column.children.length; i++) {
-                const row = column.children[i];
-                if (row.children.length > 0)
-                    widths.push(Math.round(row.width * 100) / 100);
+            // A row is no longer an item - the keyboard is one grid, so a row
+            // is whatever covers it, tall keys from the row above included.
+            const grid = keyboard.children[0];
+            const rows = [];
+            const tall = [];
+            for (let i = 0; i < grid.children.length; i++) {
+                const key = grid.children[i];
+                if (key.keyData === undefined)
+                    continue;
+                const span = key.Layout.rowSpan;
+                for (let r = key.Layout.row; r < key.Layout.row + span; r++) {
+                    if (rows[r] === undefined)
+                        rows[r] = { left: key.x, right: key.x + key.width };
+                    rows[r].left = Math.min(rows[r].left, key.x);
+                    rows[r].right = Math.max(rows[r].right, key.x + key.width);
+                }
+                if (span > 1)
+                    tall.push(`${key.keyData.label}@${Math.round(key.x)},${Math.round(key.y)}`
+                        + ` ${Math.round(key.width)}x${Math.round(key.height)}`);
             }
+            const widths = rows.map(row => Math.round((row.right - row.left) * 100) / 100);
             console.log(`[OskLayout] rowWidths ${widths.join(" ")}`);
+            // A double-height key is ONE key of two rows. Printed because two
+            // keys stacked and one key spanning look identical in a total.
+            console.log(`[OskLayout] tallKeys ${tall.length} ${tall.join(" ")}`);
             field.grabToImage(result => {
                 result.saveToFile(shot);
                 console.log("[OskLayout] saved");
