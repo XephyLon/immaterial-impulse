@@ -109,6 +109,12 @@ RippleButton {
         font.pixelSize: root.shape == "fn" ? Appearance.font.pixelSize.small : 
             (isBackspace || isEnter) ? Appearance.font.pixelSize.huge :
             Appearance.font.pixelSize.large
+        // A full-size keyboard puts four- and five-letter labels (Home, PgUp,
+        // Super) on 1u and 1.25u caps, and a Text that does not fit paints
+        // straight over its neighbours - there is no eliding that still reads
+        // as a key. Shrink the label to the cap instead.
+        fontSizeMode: Text.HorizontalFit
+        minimumPixelSize: Appearance.font.pixelSize.smallest
         horizontalAlignment: Text.AlignHCenter
         color: root.toggled ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer1
         text: root.isBackspace ? "backspace" : root.isEnter ? "subdirectory_arrow_left" :
