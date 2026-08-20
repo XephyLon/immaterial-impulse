@@ -143,6 +143,16 @@ fi
 # The one thing in this shell that reads every key on the machine: what it
 # emits (keycodes, never characters), what it keeps (nothing), and when it is
 # allowed to run at all (only while the on-screen keyboard is open).
+# Static lint: a harness that launches qs brings its own compositor. Without
+# it, `qs -p` maps on the session's display and a suite run opens and closes
+# real windows over whatever the user is doing - and a layer surface there
+# covers their screen outright.
+echo "Running display isolation lint..."
+if ! python3 "$SCRIPT_DIR/lint_display_isolation.py"; then
+    echo "Display isolation lint failed."
+    exit 1
+fi
+
 echo "Running key monitor tests..."
 if ! python3 "$SCRIPT_DIR/test_key_monitor.py"; then
     echo "Key monitor tests failed."
