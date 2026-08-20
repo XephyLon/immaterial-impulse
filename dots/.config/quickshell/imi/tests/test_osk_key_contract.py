@@ -12,14 +12,20 @@ the data:
     testing a transcription; a table growing back there is a second answer to
     how wide a key is, and the layouts - and the lattice the keys are placed
     on - are written against the other one.
-  - a key gap that is not the row's gap. A key spanning several units swallows
-    the gaps it covers, so OskKey subtracts exactly what OskContent's RowLayout
-    puts between two keys. Two different tokens leave every wide key short by a
-    few pixels per unit and every column after it displaced.
+  - a key gap that is not the grid's gap. A key spanning several units swallows
+    the gaps it covers, so OskKey subtracts exactly what OskContent's grid puts
+    between two cells. Two different tokens leave every wide key short by a few
+    pixels per unit and every column after it displaced.
   - a key that fills the row. `Layout.fillWidth` is how the rows used to come
     out the same width, and it works only while the fill key is the last thing
     in the row. Behind a nav cluster and a numpad it hands every key after it a
     position that depends on that row's own leftover.
+  - a lattice that is not declared. A GridLayout spreads a multi-column item's
+    width over the columns it spans and does NOT arrive at equal columns:
+    measured over these three layouts, 92 columns come out 1197px wide instead
+    of 1188, with a 13px gap before Backspace where every other gap is 8. The
+    zero-height item per column is what pins it, and dropping it is silent -
+    the keyboard still lays out, one column at a time out of true.
 
 Run: python3 tests/test_osk_key_contract.py
 """
@@ -82,17 +88,69 @@ class OskKeyContractTests(unittest.TestCase):
                 self.key, rf"property real {prop}:\s*KeyShapes\.{metric}\b",
                 f"OskKey does not take {prop} from KeyShapes.{metric}")
 
-    def test_a_key_subtracts_the_gap_its_row_puts_between_keys(self):
+    def test_a_key_subtracts_the_gap_the_grid_puts_between_cells(self):
         gap = re.search(r"property real keyGap:\s*(Appearance\.spacing\.\w+)", self.key)
         self.assertIsNotNone(gap, "OskKey declares no keyGap")
-        spacing = re.findall(r"spacing:\s*(Appearance\.spacing\.\w+)", self.content)
-        self.assertTrue(spacing, "OskContent declares no row spacing")
-        for token in spacing:
-            self.assertEqual(
-                token, gap.group(1),
-                "OskContent lays its keys out on a different gap from the one "
-                "OskKey subtracts, so every key wider than one unit is drawn "
-                "short by the difference and every column after it moves.")
+        content_gap = re.search(
+            r"property real keyGap:\s*(Appearance\.spacing\.\w+)", self.content)
+        self.assertIsNotNone(content_gap, "OskContent declares no keyGap")
+        self.assertEqual(
+            content_gap.group(1), gap.group(1),
+            "OskContent lays its keys out on a different gap from the one "
+            "OskKey subtracts, so every key wider than one unit is drawn "
+            "short by the difference and every column after it moves.")
+        # Both axes, from that one property. A rowSpacing that is not the gap a
+        # tall key covers leaves the numpad's + and Enter short or overlapping
+        # the row beneath them.
+        for axis in ("columnSpacing", "rowSpacing"):
+            self.assertRegex(
+                self.content, rf"{axis}:\s*root\.keyGap\b",
+                f"OskContent's {axis} is not the gap OskKey subtracts")
+
+    def test_a_key_covers_the_row_gaps_its_height_spans(self):
+        # The numpad's + and Enter are two units tall, so each covers the one
+        # row gap inside its span. Clamped rather than signed, because the
+        # function row's cap and the spacer are SHORTER than a unit and reach
+        # into no row at all - the unclamped term would make a spacer 8px tall
+        # and shrink every fn key by 2.4.
+        self.assertRegex(
+            self.key,
+            r"implicitHeight:\s*root\.baseHeight \* root\.heightUnits\s*"
+            r"\+ root\.keyGap \* Math\.max\(0, root\.heightUnits - 1\)",
+            "a key's height no longer covers the row gaps its span swallows")
+
+    def test_the_keyboard_is_one_grid_with_its_lattice_declared(self):
+        # A row layout cannot span rows, which is why a double-height key used
+        # to be two keys on one keycode.
+        self.assertNotRegex(
+            self.content, r"\bRowLayout\b",
+            "OskContent draws its keys in rows again, and a row cannot hold a "
+            "key that reaches into the next one")
+        self.assertRegex(self.content, r"\bGridLayout\b",
+                         "OskContent no longer draws its keys on a grid")
+        for prop in ("Layout.row", "Layout.column", "Layout.columnSpan", "Layout.rowSpan"):
+            self.assertIn(prop, self.content,
+                          f"OskContent places no key by {prop}")
+        # The declared lattice. Without it the grid's own distribution decides
+        # where a column starts, and it does not decide the same thing twice.
+        self.assertRegex(
+            self.content, r"Layout\.preferredWidth:\s*Lattice\.columnWidth\(",
+            "OskContent does not pin its columns to the lattice's own width, "
+            "so a multi-column key's span is spread by the grid instead")
+        self.assertRegex(
+            self.content, r"model:\s*keyGrid\.columns\b",
+            "OskContent declares fewer ruler items than the grid has columns, "
+            "and an unpinned column is one the grid sizes for itself")
+
+    def test_the_walk_that_places_a_key_has_one_home(self):
+        self.assertIn('import "osk_lattice.js" as Lattice', self.content,
+                      "OskContent no longer places its keys through the lattice")
+        # Cells worked out in the QML are cells tst_osk_layouts.qml cannot
+        # check, and the row-span bookkeeping is the whole of what the data
+        # does not carry.
+        self.assertRegex(
+            self.content, r"placements:\s*Lattice\.place\(",
+            "OskContent does not take its placements from the lattice module")
 
     def test_a_key_computes_its_width_from_units_and_that_gap(self):
         self.assertRegex(
