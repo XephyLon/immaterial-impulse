@@ -1555,6 +1555,23 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   merges (clock, battery) because `plugins.enabled` in the shared config was empty the whole time -
   the manifests were validated and rendered structurally, but never with `Appearance.colors.*`/
   `Appearance.rounding.*` bindings actually resolving against a real running instance.
+- **A `RowLayout` rounds every item's width UP, so a fractional implicit width is drift rather
+  than a fraction — and the repair is arithmetic that lands on whole pixels, not a `Math.round` at
+  the call site.** The on-screen keyboard's rows are a grid of keys measured in keycap units, and
+  a key spanning `u` of them has to cover the `u - 1` gaps it swallows or the rows come out
+  different widths for the same span. At the old 45px key the pitch was 53, so a quarter-unit
+  spacer was 18.5px wide and drawn at 19: the function row, which pads itself out with fourteen of
+  them, came out **seven pixels** wider than the row below it, and every cluster to the right of
+  the main block sat somewhere different on every row. Nothing errors, every row is still a
+  perfectly good row, and the only way to see it is to print the drawn widths
+  (`tests/run_osk_layout_probe.sh` does). Rounding at the call site would have kept the drift and
+  merely made it consistent; a 44px key makes the pitch 52, and every quarter unit is then a whole
+  number of pixels with nothing left to round. The sibling rule from the same file: a
+  `Layout.fillWidth` item decides where every item *after* it goes, because what it absorbs is that
+  row's own leftover — which is invisible while the fill item is last in the row and is why the
+  keyboard's rows agreed before there was anything to the right of the spacebar.
+  afd3bf661 ("fix(osk): make the key pitch a multiple of four, so a quarter unit is whole pixels"),
+  e119c7b1d ("refactor(osk): no key fills the row any more").
 - **Never `anchors.fill: parent` a `Loader` whose *own* size is meant to be derived from the loaded
   item's implicit size.** `Loader` forces the loaded item to match the Loader's size whenever the
   Loader itself has an explicit size (anchors count as explicit sizing) - but if the wrapping

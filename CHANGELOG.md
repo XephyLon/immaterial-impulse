@@ -12,6 +12,23 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **The on-screen keyboard is a full-size keyboard.** It was missing Caps
+  Lock (the home row started at `a`), both Super keys, Scroll Lock, Pause, the
+  navigation cluster (Insert, Home, PgUp, Delete, End, PgDn), the arrow keys
+  and the entire numpad. All of them are there now, in all three layouts — a
+  keyboard layout decides what the letters spell, not whether the board has a
+  numpad — and laid out on real keycap proportions, so the numpad's columns
+  line up and the arrows form the usual inverted T. The numpad's `+` and
+  `Enter`, and the German layout's L-shaped Enter, are drawn as two keys
+  rather than pretending the board is smaller.
+
+### Fixed
+- **The Menu key does something.** It was sending an evdev code that nothing
+  in a normal session listens to, in every layout, silently.
+- **A key's label no longer paints over the keys either side of it.** Longer
+  labels shrink to fit their cap instead.
+
 ## [0.28.0] — 2026-08-20
 
 Desktop widgets can be moved from the keyboard, and an undo that reversed a
