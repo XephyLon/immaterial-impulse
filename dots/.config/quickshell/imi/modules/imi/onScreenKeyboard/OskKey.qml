@@ -17,7 +17,13 @@ RippleButton {
     // own pressed state on purpose: this one is not a gesture on this widget,
     // it is a report about the hardware, and a key can be both (the user
     // taps the OSK's Shift while holding the real one).
-    readonly property bool physicallyDown: KeyMonitor.isDown(root.keycode)
+    // Read the property, do not call a function that reads it. A binding
+    // captures the properties touched while it evaluates, and routing that
+    // through `KeyMonitor.isDown()` made the dependency easy to lose - the map
+    // updated (measured, live: `pressed now {"30":true}`) and the key never
+    // redrew. This is the same shape as the `heuristicLookup` trap in
+    // AGENT.md: bind to the data, not to a call over it.
+    readonly property bool physicallyDown: KeyMonitor.pressed[root.keycode] === true
     property bool isBackspace: (key.toLowerCase() == "backspace")
     property bool isEnter: (key.toLowerCase() == "enter" || key.toLowerCase() == "return")
     // 44 rather than a round 45 so that the PITCH - a key plus the gap after
@@ -35,18 +41,32 @@ RippleButton {
     readonly property real keyGap: Appearance.spacing.space100
     readonly property real widthUnits: KeyShapes.widthUnits[root.shape] ?? 1
     readonly property real heightUnits: KeyShapes.heightUnits[root.shape] ?? 1
-    toggled: isShift ? Ydotool.shiftMode : false
+    // Caps Lock and Num Lock are LATCHES, so what they show is the lock, not
+    // the finger: a key that lit only while held would be the one pair on the
+    // board whose lit state said the opposite of what the keyboard was doing
+    // half the time. `KeyboardLocks` is the shell's existing answer for both
+    // (it already drives the OSD), so this reads it rather than deriving a
+    // second one from the LED events - which would be two sources that
+    // disagree the moment one of them misses a toggle.
+    //
+    // Scroll Lock is deliberately not in here: `hyprctl devices` does not
+    // report it, so it keeps the momentary treatment rather than being given
+    // a lock state nothing can answer for.
+    readonly property bool isCapsLock: root.keycode === 58
+    readonly property bool isNumLock: root.keycode === 69
+    readonly property bool locked: (root.isCapsLock && KeyboardLocks.capsLockOn)
+        || (root.isNumLock && KeyboardLocks.numLockOn)
+
+    // A held physical key wears the toggled treatment rather than a surface a
+    // tier up: `colLayer1` and `colLayer2` differ by a few levels on this
+    // palette, which is legible on a panel and invisible on a key the size of
+    // a fingertip. The toggled colour is the shell's own "this control is
+    // active" language and needs no new token.
+    toggled: root.locked || root.physicallyDown || (isShift ? Ydotool.shiftMode : false)
 
     enabled: shape != "empty"
-    // A held physical key reads as the same surface a hovered one does, one
-    // tier up - loud enough to find at a glance across a full-size keyboard,
-    // and not so loud that a burst of typing strobes. The `empty` spacers are
-    // excluded because they are not keys.
     colBackground: shape == "empty" ? ColorUtils.transparentize(Appearance.colors.colLayer1)
-        : (root.physicallyDown ? Appearance.colors.colLayer2 : Appearance.colors.colLayer1)
-    Behavior on colBackground {
-        animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-    }
+        : Appearance.colors.colLayer1
     buttonRadius: Appearance.rounding.small
     implicitWidth: root.baseWidth * root.widthUnits + root.keyGap * (root.widthUnits - 1)
     implicitHeight: root.baseHeight * root.heightUnits
