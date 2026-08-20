@@ -3199,6 +3199,29 @@ mode is built out of are worth not re-deriving:
   feat(editMode): Ctrl+Z reverses the last committed mutation, on the surface the keyboard reaches;
   test(editMode): drive undo's record, reverse and gate, and pin its shape;
   fix(editMode): a group release is one undo entry, and undoing a first commit leaves no null behind.)
+- **An undo BATCH replays backwards, and a keyboard step moves the PLACEMENT
+  coordinate rather than the drawn one.** Both were found building the arrow-key
+  nudge, and both are traps the mouse could never spring. A batch is one
+  gesture's commits, so reversing it means walking from the end: three arrow
+  steps on one widget push "back to 36", "back to 48", "back to 60", and
+  replaying those in order leaves the widget where the second press left it —
+  Ctrl+Z appearing to move it *forward*. The group drag that introduced batches
+  could not show it, because its entries are one per widget and independent, so
+  any order looks right. And `x` is the DRAWN coordinate, carrying a position
+  Behavior: a step that assigned to it and committed in the same turn read the
+  value the animation had not reached yet and stored that back, so the widget
+  returned to where it started — measured as three presses with `x` unchanged at
+  36, the keys reading as completely inert. `AbstractWidget.moveTargetBy` moves
+  `targetX`/`targetY` and `PluginWidget.commitPlacement` — the tail of
+  `commitPosition`, shared rather than copied — writes the store from them, so a
+  translation needs no conversion (the parallax cancellation is constant across
+  the step) and the two ways of moving a widget cannot disagree about what is
+  persisted. The lattice for the step comes from the CANVAS: `PluginWidget`
+  shadows `gridSize` with its component-grid span, so one read off a widget from
+  the canvas is an object and every step is silently NaN (8a534a7da).
+  (feat(widgetCanvas): widget_nudge.js, a keyboard step as arithmetic;
+  feat(widgetCanvas): arrow keys move a selected widget one lattice cell;
+  fix(editMode): an undo batch replays its entries backwards.)
 (feat(editMode): shrink the desktop into a viewport on the background surface,
 feat(editMode): stand the per-widget frost down for the mode,
 feat(editMode): draw the shrunk desktop as a card, not as a cropped screenshot,
