@@ -45,9 +45,12 @@ Singleton {
     property bool available: false
     property int deviceCount: 0
 
-    function isDown(code): bool {
-        return root.pressed[code] === true;
-    }
+    // There is deliberately no `isDown(code)` helper. One existed, every key
+    // bound `KeyMonitor.isDown(keycode)`, and the highlight never appeared:
+    // a binding captures the properties it touches while evaluating, and the
+    // call lost that dependency, so the map updated and nothing redrew.
+    // Consumers read `pressed[code] === true`, which is a property read and
+    // cannot fail that way.
 
     onWatchingChanged: {
         if (root.watching) {
