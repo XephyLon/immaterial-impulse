@@ -1572,6 +1572,44 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   keyboard's rows agreed before there was anything to the right of the spacebar.
   afd3bf661 ("fix(osk): make the key pitch a multiple of four, so a quarter unit is whole pixels"),
   e119c7b1d ("refactor(osk): no key fills the row any more").
+- **A keyboard is a LATTICE, not a stack of rows, and a `GridLayout` does not
+  hand out equal columns on its own.** The numpad's `+` and its Enter are one
+  key two rows tall, which a `RowLayout` cannot say — so each of them shipped
+  as two keys carrying one keycode, and the pad drew two Enters. The tool for
+  it is `Layout.rowSpan`, and reaching it needs a column: every width in
+  `modules/imi/onScreenKeyboard/key_shapes.js` is a multiple of 0.25u, so the
+  quarter unit is the column, 1u is four of them and a row is 92.
+  `osk_lattice.js` is the walk that turns the row-major layout data into cells
+  — a key takes the next free columns in its row, a key taller than one unit
+  claims the cells beneath it, and the row below steps over the claim — kept
+  pure because nothing about a drawn key is reachable from `qmltestrunner`.
+  The **layouts carry no coordinates**, which is what keeps a new key a line of
+  data rather than a re-numbering.
+  Three things about the grid are not obvious and all three were measured
+  rather than reasoned about. **The engine spreads a multi-column item's width
+  over the columns it spans and arrives at columns of different widths**: on
+  the real component with nothing pinning them, the keyboard comes out 1197px
+  wide against the 1188 its units buy, with a 13px gap before Backspace where
+  every other gap is 8 — which is afd3bf661's drift arriving from the other
+  side, and it is visible in a screenshot and in nothing else. A **declared
+  lattice** fixes it: one zero-height item per column asking for exactly one
+  column's width (`Lattice.columnWidth`, the pitch's quarter minus the spacing
+  that follows it) puts every key back on a multiple of 13. It needs a **row of
+  its own** — `QGridLayoutEngine::addItem` refuses a second item in a cell that
+  is taken, so a ruler spanning the key rows is dropped with a console warning
+  — and that row costs one `rowSpacing` which `OskContent` reports off its
+  implicit height rather than resizing the grid to hide (a grid given less
+  height than it asked for takes the difference out of a row of keys; a
+  negative `Layout.bottomMargin` to cancel the spacing is clamped away).
+  The ISO Enter is the one key that stays two: 1.5u on the top row against
+  1.25u on the bottom, offset by the wider Caps, so it is an L and no cell of a
+  rectangular lattice has that shape. `tst_osk_layouts.qml` allows a repeated
+  keycode for that one alone, and counts a row's width off the lattice rather
+  than by summing the row's own keys — the row under a double-height key does
+  not declare the columns that key already took, so the old arithmetic reports
+  the home row four units short.
+  fix(osk): the numpad's + and its Enter become one key two rows tall,
+  feat(osk): draw the keyboard on one grid, with the lattice declared.
 - **Never `anchors.fill: parent` a `Loader` whose *own* size is meant to be derived from the loaded
   item's implicit size.** `Loader` forces the loaded item to match the Loader's size whenever the
   Loader itself has an explicit size (anchors count as explicit sizing) - but if the wrapping

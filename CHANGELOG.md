@@ -28,8 +28,9 @@ own repo; the installer pins which revision it builds.
   keyboard layout decides what the letters spell, not whether the board has a
   numpad — and laid out on real keycap proportions, so the numpad's columns
   line up and the arrows form the usual inverted T. The numpad's `+` and
-  `Enter`, and the German layout's L-shaped Enter, are drawn as two keys
-  rather than pretending the board is smaller.
+  `Enter` are one key two rows tall, as they are on the board beside you. The
+  German layout's Enter stays two keys, because an ISO Enter is an L rather
+  than a taller rectangle.
 - **The on-screen keyboard lights up the key you press on the real one.** Hold a
   key and its twin on the OSK is highlighted for as long as you hold it, which
   is what makes the keyboard usable as a key tester or a screencast overlay
@@ -47,7 +48,9 @@ own repo; the installer pins which revision it builds.
 - **The Menu key does something.** It was sending an evdev code that nothing
   in a normal session listens to, in every layout, silently.
 - **A key's label no longer paints over the keys either side of it.** Longer
-  labels shrink to fit their cap instead.## [0.28.0] — 2026-08-20
+  labels shrink to fit their cap instead.
+
+## [0.28.0] — 2026-08-20
 
 Desktop widgets can be moved from the keyboard, and an undo that reversed a
 multi-step gesture stopped landing halfway through it.
