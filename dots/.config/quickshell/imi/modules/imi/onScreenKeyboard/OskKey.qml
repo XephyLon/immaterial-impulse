@@ -4,7 +4,6 @@ import qs.modules.common.widgets
 import qs.modules.common.functions
 import "key_shapes.js" as KeyShapes
 import QtQuick
-import QtQuick.Layouts
 
 RippleButton {
     id: root
@@ -38,7 +37,6 @@ RippleButton {
     buttonRadius: Appearance.rounding.small
     implicitWidth: root.baseWidth * root.widthUnits + root.keyGap * (root.widthUnits - 1)
     implicitHeight: root.baseHeight * root.heightUnits
-    Layout.fillWidth: shape == "space" || shape == "expand"
 
     Connections {
         target: Ydotool
