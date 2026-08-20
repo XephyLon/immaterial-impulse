@@ -3764,6 +3764,31 @@ box. Derive the growing axis too, but compute it *arithmetically* from the input
 child layout's `implicitWidth`: the content is anchored to this item's width, so reading its implicit
 size back would bind width to itself. Cap the result and let the grid wrap instead of growing forever.
 
+**A Wayland client is never told about keys aimed at something else, so the OSK's
+physical-key highlight reads /dev/input — and its LIFETIME is the safeguard, not
+a promise in a comment.** `scripts/keyboard/key_monitor.py` needs membership of
+the `input` group and nothing more (no root, no setuid), and reports evdev
+keycodes - the same codes the OSK's keys already carry for ydotool, so a code off
+the wire matches a drawn key with no table in between. Three properties are
+structural rather than documented, because a program that reads every key on the
+machine has to be answerable for it: it carries **keycodes, never characters**
+(there is no keymap and no modifier state in it, so `30` is a position whether
+the user typed `a`, `A` or a password's first letter - and
+`test_key_monitor.py` pins the output's SHAPE, since a later "make this
+readable" change is what would turn a position report into a transcript); it
+**keeps nothing** (no file writes, and the shell's side holds only what is
+down); and `KeyMonitor.watching` is **`readonly` and bound to the OSK's own open
+state**, so no second writer can extend it - measured on the live shell as zero
+readers at rest, one while the keyboard is up, zero after it closes. Two smaller
+findings: a single keyboard appears under several `by-path` names (this machine's
+shows up twice), and two descriptors on one device report every press twice with
+the second's release clearing a key the first still holds - so devices are
+deduplicated by `realpath`; and ydotool's own synthetic keys are NOT seen,
+because it creates its uinput device after the scan, which is why a synthetic
+press cannot be used as evidence that this works and why the OSK's own taps do
+not echo back at it.
+(feat(osk): light a key while the physical keyboard holds it.)
+
 ## Design language
 
 The shell follows **Material 3 / Material 3 Expressive**. `Appearance.qml` is the single source of
