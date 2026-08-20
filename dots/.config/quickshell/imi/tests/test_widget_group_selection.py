@@ -194,15 +194,36 @@ class GroupDragIsRigid(unittest.TestCase):
     def test_the_plugin_commit_still_restores_the_binding_and_persists(self):
         """Dropping `restoreXYBinding()` leaves every group member frozen at
         its last dragged position for the session (forceCenter dies with it);
-        dropping `setPosition` makes a group move revert on restart. Both
+        dropping the store write makes a group move revert on restart. Both
         halves read fine on their own.
+
+        The write lives in `commitPlacement` now, which the keyboard step
+        also calls - it takes the placement coordinate the caller already
+        knows, because `x` lags it through the position Behavior and a step
+        that read `x` stored a value the animation had not reached. So the
+        guarantee is the same and spread over two functions: the drag's
+        commit must still restore the binding AND still reach the write,
+        and the write must still be a `setPosition`. Checking only
+        `commitPosition` for the call would pass on a `commitPlacement`
+        that had quietly stopped persisting anything.
         """
+        source = uncommented(HOST)
         match = re.search(r"function commitPosition\(\)\s*\{(.*?)\n    \}",
-                          uncommented(HOST), re.S)
+                          source, re.S)
         self.assertIsNotNone(match)
         body = match.group(1)
         self.assertIn("restoreXYBinding()", body)
-        self.assertIn("PluginState.setPosition", body)
+        self.assertIn("commitPlacement(", body)
+
+        placement = re.search(
+            r"function commitPlacement\(beforeX, beforeY\)\s*\{(.*?)\n    \}",
+            source, re.S)
+        self.assertIsNotNone(
+            placement,
+            "commitPlacement is gone - the drag and the keyboard step share it, "
+            "so both stop persisting together")
+        self.assertIn("PluginState.setPosition", placement.group(1))
+        self.assertIn("GlobalStates.editUndoPush", placement.group(1))
 
 
 class TheSelectionIsVisible(unittest.TestCase):
