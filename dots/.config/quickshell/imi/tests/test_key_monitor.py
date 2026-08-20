@@ -16,6 +16,7 @@ parse, the repeat suppression and the device dedup with no hardware, no fake
 """
 
 import json
+import re
 import os
 import struct
 import subprocess
@@ -28,6 +29,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts/keyboard/key_monitor.py"
 SERVICE = ROOT / "services/KeyMonitor.qml"
 OSK_KEY = ROOT / "modules/imi/onScreenKeyboard/OskKey.qml"
+LOCKS = ROOT / "services/KeyboardLocks.qml"
 
 EVENT_FORMAT = "llHHi"
 EV_KEY = 0x01
@@ -150,13 +152,69 @@ class WhenItIsAllowedToRun(unittest.TestCase):
         after = text.split("onWatchingChanged", 1)[1]
         self.assertIn("root.pressed = ({})", after)
 
-    def test_the_key_draws_the_physical_state_separately_from_its_own(self):
-        """A key can be both: the user taps the OSK's Shift while holding the
-        real one. Folding the two into one flag makes the tap clear the
-        hardware's state or the reverse."""
+    def test_the_key_binds_the_map_rather_than_a_call_over_it(self):
+        """The bug that made this feature not work at all, and it is invisible
+        in the source: a binding captures the properties it touches while
+        evaluating, and routing the read through `KeyMonitor.isDown(code)`
+        lost the dependency. Measured live - the service's map updated
+        (`pressed now {"30":true}`) and no key ever redrew. Same shape as the
+        `heuristicLookup` trap in AGENT.md: bind to the data, not to a call
+        over the data."""
         text = OSK_KEY.read_text(encoding="utf-8")
-        self.assertIn("physicallyDown: KeyMonitor.isDown(root.keycode)", text)
-        self.assertIn("root.physicallyDown ?", text)
+        self.assertIn("KeyMonitor.pressed[root.keycode] === true", text)
+        # Comments stripped first: the sentence explaining why the call is
+        # wrong necessarily contains the call, and a check that reads prose
+        # fails on its own documentation. Same trap as the bus-isolation lint.
+        code = re.sub(r"//[^\n]*", "", text)
+        self.assertNotIn("KeyMonitor.isDown(", code)
+        self.assertNotIn("isDown", re.sub(r"//[^\n]*", "",
+                                          (ROOT / "services/KeyMonitor.qml").read_text()),
+                         "the helper is back - a binding through it loses the "
+                         "dependency on `pressed` and nothing redraws")
+
+    def test_the_key_draws_the_physical_state_beside_its_own_not_instead(self):
+        """A key can be both: the user taps the OSK's Shift while holding the
+        real one, and a latched Caps is lit while nothing is held at all.
+        Folding them into one flag makes one clear the other."""
+        text = OSK_KEY.read_text(encoding="utf-8")
+        self.assertRegex(
+            text,
+            r"toggled:\s*root\.locked\s*\|\|\s*root\.physicallyDown\s*\|\|\s*\(isShift")
+
+
+class TheLatchedKeys(unittest.TestCase):
+    """Caps and Num show the LOCK, not the finger."""
+
+    def test_the_lock_keys_read_the_shell_s_one_lock_service(self):
+        """Deriving them from the reader's own LED events would be a second
+        source of truth, and two of them disagree the first time either misses
+        a toggle. `KeyboardLocks` already answers this for the OSD."""
+        text = OSK_KEY.read_text(encoding="utf-8")
+        self.assertIn("KeyboardLocks.capsLockOn", text)
+        self.assertIn("KeyboardLocks.numLockOn", text)
+        self.assertNotIn("EV_LED", text)
+
+    def test_a_lock_key_is_lit_by_its_lock_and_not_only_by_the_press(self):
+        """A latch drawn from the momentary press is the one pair on the board
+        whose lit state says the opposite of the truth half the time."""
+        text = OSK_KEY.read_text(encoding="utf-8")
+        self.assertRegex(text, r"toggled:\s*root\.locked\s*\|\|\s*root\.physicallyDown")
+
+    def test_the_lock_poll_runs_for_the_keyboard_too(self):
+        """It was gated on the OSD's own switch, which was right while the OSD
+        was its only consumer. With the switch off, the keyboard's Caps and Num
+        would sit frozen at whatever they read when polling stopped - stale,
+        and with nothing saying so."""
+        text = LOCKS.read_text(encoding="utf-8")
+        self.assertRegex(
+            text,
+            r"running:\s*\(Config\.options\.osd\.lockKeys \?\? true\)\s*\|\|\s*GlobalStates\.oskOpen")
+
+    def test_scroll_lock_is_left_momentary_on_purpose(self):
+        """`hyprctl devices` reports caps and num and nothing else, so a lock
+        state for Scroll Lock would be invented rather than read."""
+        text = OSK_KEY.read_text(encoding="utf-8")
+        self.assertNotIn("scrollLockOn", text)
 
 
 if __name__ == "__main__":

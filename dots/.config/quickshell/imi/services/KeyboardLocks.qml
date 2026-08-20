@@ -1,5 +1,6 @@
 pragma Singleton
 
+import qs
 import qs.modules.common
 import Quickshell
 import Quickshell.Io
@@ -42,7 +43,14 @@ Singleton {
 
     Timer {
         interval: root.pollInterval
-        running: Config.options.osd.lockKeys ?? true
+        // The OSD was the only consumer when this was written, so the poll
+        // was gated on the OSD's own switch. The on-screen keyboard draws
+        // Caps and Num as latched keys now, and a user who turned the OSD off
+        // would have had those two keys frozen at whatever they read when
+        // the poll stopped - stale, and silently so. Polling while either
+        // consumer is watching keeps one source of truth instead of growing
+        // a second poller for the keyboard.
+        running: (Config.options.osd.lockKeys ?? true) || GlobalStates.oskOpen
         repeat: true
         triggeredOnStart: true
         onTriggered: devicesProc.running = true
