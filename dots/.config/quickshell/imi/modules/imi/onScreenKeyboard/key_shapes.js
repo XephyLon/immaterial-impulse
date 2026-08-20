@@ -19,12 +19,18 @@
 const widthUnits = {
     "normal": 1,
     "fn": 1,
-    "empty": 1,
+    "empty": 0.5,
     "expand": 1,
     "control": 1.25,
+    "mod": 1.25,
     "tab": 1.5,
+    "backslash": 1.5,
     "caps": 1.75,
+    "backspace": 2,
+    "numpadZero": 2,
+    "enter": 2.25,
     "shift": 2.25,
+    "shiftRight": 2.75,
     "space": 6.25
 };
 
@@ -37,8 +43,14 @@ const heightUnits = {
     "empty": 0,
     "expand": 1,
     "control": 1,
+    "mod": 1,
     "tab": 1,
+    "backslash": 1,
     "caps": 1,
+    "backspace": 1,
+    "numpadZero": 1,
+    "enter": 1,
     "shift": 1,
+    "shiftRight": 1,
     "space": 1
 };
