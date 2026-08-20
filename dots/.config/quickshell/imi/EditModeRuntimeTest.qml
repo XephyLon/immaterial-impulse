@@ -452,6 +452,98 @@ ShellRoot {
             canvas.clearSelection();
         },
 
+        // ---- arrow-key nudge: one lattice cell, the group rigid -----------
+        //
+        // The keys themselves are not driven here. A key event has no explicit
+        // target - TestCase sends it to the focused item of ITS OWN window -
+        // and the canvas takes its focus from the background LAYER surface,
+        // which weston does not implement. What a harness can hold is
+        // everything after the key: the step, the group's rigidity, the clamp
+        // at the wall, the store write and the undo grain. That the surface
+        // receives real compositor keys at all was measured once, in a nested
+        // Hyprland, for the undo that shares this handler (spec §11.4 probe 4).
+        () => { canvas.clearSelection(); harness.placeWidgets(); },
+        () => {
+            canvas.applySelection([movableWidget]);
+            harness.before = { x: movableWidget.x, y: movableWidget.y };
+            canvas.nudgeSelection(1, 0);
+        },
+        () => {
+            harness.check("an arrow moves the widget one lattice cell",
+                          movableWidget.x - harness.before.x === canvas.gridSize);
+            harness.check("...and the move is in the store, not only on screen",
+                          Math.round(harness.storedPosition("edit-move-probe").x)
+                              === Math.round(harness.before.x + canvas.gridSize));
+        },
+        () => {
+            // Off the lattice on purpose: the edge snap parks a widget one gap
+            // off a neighbour's edge, and a stored position can predate a
+            // lattice change. The first press is the one that gets it back on.
+            movableWidget.x = harness.before.x + 5;
+            movableWidget.commitPosition();
+            harness.before = { x: movableWidget.x, y: movableWidget.y };
+            canvas.nudgeSelection(1, 0);
+        },
+        () => harness.check("a press from off the lattice lands back on it",
+                            movableWidget.x % canvas.gridSize === 0),
+        () => {
+            // Both widgets, and the follower is the one against the wall.
+            canvas.clearSelection();
+            harness.placeWidgets();
+            canvas.applySelection([movableWidget, resizableWidget]);
+            resizableWidget.moveTargetBy(
+                resizableWidget.clampX(Infinity) - resizableWidget.targetX, 0);
+            resizableWidget.commitPlacement(0, resizableWidget.targetY);
+            harness.before = {
+                leader: movableWidget.targetX, follower: resizableWidget.targetX
+            };
+            canvas.nudgeSelection(1, 0);
+        },
+        () => {
+            harness.check("a member already at the wall does not pass it",
+                          resizableWidget.targetX === harness.before.follower);
+            // The cluster is rigid: the one with room does not travel on
+            // alone, which is the answer a group drag gives at an edge and
+            // the reason the delta is shrunk once for every member rather
+            // than clamped per widget.
+            harness.check("...and the member with room stays with it",
+                          movableWidget.targetX === harness.before.leader);
+            canvas.clearSelection();
+        },
+        () => {
+            // One burst, one undo entry: a held arrow key delivers a press
+            // every ~30ms, and an entry each would fill a fifty-deep stack in
+            // under two seconds.
+            harness.placeWidgets();
+            GlobalStates.editUndoStack = [];
+            canvas.applySelection([movableWidget]);
+            harness.before = { x: movableWidget.targetX, y: movableWidget.targetY };
+            canvas.nudgeSelection(1, 0);
+            canvas.nudgeSelection(1, 0);
+            canvas.nudgeSelection(1, 0);
+            harness.check("three presses travel three cells",
+                          movableWidget.targetX - harness.before.x === canvas.gridSize * 3);
+            // Asserted in THIS step rather than the next: the batch closes on
+            // a 400ms timer (a key repeat has no release to hang it on) and
+            // the harness ticks at 700, so by the next step it is already
+            // closed and the check would be vacuous.
+            harness.check("...a burst mid-flight has not pushed its entry yet",
+                          GlobalStates.editUndoStack.length === 0);
+        },
+        () => {
+            harness.check("a settled burst is exactly one undo entry",
+                          GlobalStates.editUndoStack.length === 1);
+            GlobalStates.editUndo();
+        },
+        () => {
+            harness.check("undoing the burst returns the widget to where it started",
+                          Math.round(harness.storedPosition("edit-move-probe").x)
+                              === Math.round(harness.before.x));
+            harness.check("...all three cells at once, not one press at a time",
+                          GlobalStates.editUndoStack.length === 0);
+            canvas.clearSelection();
+        },
+
         // ---- leaving mid-drag cancels, it does not commit ------------------
         () => { harness.placeWidgets(); },
         () => {
