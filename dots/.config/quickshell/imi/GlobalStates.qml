@@ -227,8 +227,15 @@ Singleton {
             root.editUndoStack = EditMode.undoPush(root.editUndoStack, entries[0]);
             return;
         }
+        // BACKWARDS. A batch of one gesture's commits is a sequence, and
+        // reversing a sequence means walking it from the end: three arrow-key
+        // steps on one widget push "back to 36", "back to 48", "back to 60",
+        // and replaying those in order leaves it at 60 - the last entry wins
+        // and the undo appears to move the widget forward. The group drag that
+        // introduced batches never showed it, because its entries are one per
+        // widget and independent, so any order looks right.
         root.editUndoStack = EditMode.undoPush(root.editUndoStack, () => {
-            for (const entry of entries) entry();
+            for (let index = entries.length - 1; index >= 0; index--) entries[index]();
         });
     }
     function editUndoPush(entry) {
