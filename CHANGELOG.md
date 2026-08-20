@@ -22,14 +22,22 @@ own repo; the installer pins which revision it builds.
   line up and the arrows form the usual inverted T. The numpad's `+` and
   `Enter`, and the German layout's L-shaped Enter, are drawn as two keys
   rather than pretending the board is smaller.
+- **The on-screen keyboard lights up the key you press on the real one.** Hold a
+  key and its twin on the OSK is highlighted for as long as you hold it, which
+  is what makes the keyboard usable as a key tester or a screencast overlay
+  rather than only as an input. It reads the keyboard device directly — the
+  compositor never tells a window about keys aimed elsewhere — so three things
+  are worth knowing: it runs **only while the on-screen keyboard is open** and
+  is stopped the moment it closes, it knows key *positions* and not letters
+  (nothing it handles can say what you typed), and it writes nothing down.
+  Turn it off with `osk.showPhysicalKeys`. On a machine whose user cannot read
+  input devices it simply does not highlight, and asks for nothing.
 
 ### Fixed
 - **The Menu key does something.** It was sending an evdev code that nothing
   in a normal session listens to, in every layout, silently.
 - **A key's label no longer paints over the keys either side of it.** Longer
-  labels shrink to fit their cap instead.
-
-## [0.28.0] — 2026-08-20
+  labels shrink to fit their cap instead.## [0.28.0] — 2026-08-20
 
 Desktop widgets can be moved from the keyboard, and an undo that reversed a
 multi-step gesture stopped landing halfway through it.
