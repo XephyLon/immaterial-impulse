@@ -21,11 +21,15 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import nested_display  # noqa: E402
 HARNESS = ROOT / "NotesMigrationRuntimeTest.qml"
 
 LEGACY_NOTES = json.dumps([
@@ -41,8 +45,7 @@ EXPECTED_CHECKS = 7
 
 
 def _runtime_available():
-    return bool(os.environ.get("WAYLAND_DISPLAY")) and all(shutil.which(binary) is not None
-               for binary in ("qs", "dbus-run-session"))
+    return nested_display.available()
 
 
 def _digest(path):
@@ -50,7 +53,7 @@ def _digest(path):
 
 
 @unittest.skipUnless(_runtime_available(),
-                     "needs a Wayland session and qs on PATH")
+                     "needs qs, weston and dbus-run-session on PATH")
 class NotesMigrationRuntimeTest(unittest.TestCase):
     def setUp(self):
         self.home = Path(tempfile.mkdtemp(prefix="imi-notes-runtime-"))
@@ -77,7 +80,7 @@ class NotesMigrationRuntimeTest(unittest.TestCase):
             self.legacy_file.write_text(legacy)
 
     def launch(self, expected):
-        env = dict(os.environ)
+        env = nested_display.start(self, "notes")
         env["XDG_STATE_HOME"] = str(self.home / "state")
         env["XDG_CONFIG_HOME"] = str(self.home / "config")
         env["NOTES_EXPECT"] = json.dumps(expected)

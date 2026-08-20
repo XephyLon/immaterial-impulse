@@ -34,11 +34,15 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import nested_display  # noqa: E402
 HARNESS = ROOT / "QuickTogglesLayoutRuntimeTest.qml"
 SHIPPED_DEFAULT = ROOT / "defaults/config.json"
 
@@ -50,12 +54,11 @@ EXPECTED_CHECKS = 11
 
 
 def _runtime_available():
-    return bool(os.environ.get("WAYLAND_DISPLAY")) and all(shutil.which(binary) is not None
-               for binary in ("qs", "dbus-run-session"))
+    return nested_display.available()
 
 
 @unittest.skipUnless(_runtime_available(),
-                     "needs a Wayland session and qs on PATH")
+                     "needs qs, weston and dbus-run-session on PATH")
 class QuickTogglesLayoutRuntimeTest(unittest.TestCase):
     def setUp(self):
         self.home = Path(tempfile.mkdtemp(prefix="imi-quicktoggles-runtime-"))
@@ -81,7 +84,7 @@ class QuickTogglesLayoutRuntimeTest(unittest.TestCase):
         (shell_config / "config.json").write_text(json.dumps(config, indent=2))
 
     def test_layout_edits_keep_every_toggle_on_its_own_button(self):
-        env = dict(os.environ)
+        env = nested_display.start(self, "quicktoggles")
         env["XDG_CONFIG_HOME"] = str(self.config_home)
         env["XDG_STATE_HOME"] = str(self.home / "state")
         env["XDG_CACHE_HOME"] = str(self.home / "cache")
