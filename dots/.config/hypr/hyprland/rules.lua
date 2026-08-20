@@ -228,6 +228,13 @@ hl.layer_rule({ match = { namespace = "quickshell:cheatsheet" }, blur = false})
 -- instead, leaving the gaps between them unblurred. See WindowBlurRegion in
 -- NotificationPopup.qml.
 hl.layer_rule({ match = { namespace = "quickshell:notificationPopup" }, blur = false})
+-- The on-screen keyboard and the wallpaper selector were the last two panels
+-- still frosting their own shadow: both draw a StyledRectangularShadow inside
+-- an elevation margin, and the catch-all blur above takes every pixel over
+-- ignore_alpha (0.05), which a shadow clears easily. See WindowBlurRegion in
+-- OnScreenKeyboard.qml / WallpaperSelector.qml.
+hl.layer_rule({ match = { namespace = "quickshell:osk" }, blur = false})
+hl.layer_rule({ match = { namespace = "quickshell:wallpaperSelector" }, blur = false})
 -- The popups those surfaces open (the tray menu, the dock's context menu, the
 -- drag-apps sheet, every tooltip) draw shadows too, and blur_popups above
 -- frosts them the same way. The fix above does not reach them: an
