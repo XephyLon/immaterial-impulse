@@ -94,9 +94,7 @@ const byName = {
                 { keytype: "normal", label: "7", shape: "normal", keycode: 71 },
                 { keytype: "normal", label: "8", shape: "normal", keycode: 72 },
                 { keytype: "normal", label: "9", shape: "normal", keycode: 73 },
-                // The numpad's + is two rows tall on a real keyboard and a row
-                // cannot say so, so it is two keys on one keycode.
-                { keytype: "normal", label: "+", shape: "normal", keycode: 78 }
+                { keytype: "normal", label: "+", shape: "numpadTall", keycode: 78 }
             ],
             [
                 { keytype: "normal", label: "Caps", shape: "caps", keycode: 58 },
@@ -115,8 +113,7 @@ const byName = {
                 gap, gap, gap, gap, gap, gap, gap, gap,
                 { keytype: "normal", label: "4", shape: "normal", keycode: 75 },
                 { keytype: "normal", label: "5", shape: "normal", keycode: 76 },
-                { keytype: "normal", label: "6", shape: "normal", keycode: 77 },
-                { keytype: "normal", label: "+", shape: "normal", keycode: 78 }
+                { keytype: "normal", label: "6", shape: "normal", keycode: 77 }
             ],
             [
                 { keytype: "modkey", label: "Shift", labelShift: "Shift", labelCaps: "Caps", shape: "shift", keycode: 42 },
@@ -139,8 +136,7 @@ const byName = {
                 { keytype: "normal", label: "1", shape: "normal", keycode: 79 },
                 { keytype: "normal", label: "2", shape: "normal", keycode: 80 },
                 { keytype: "normal", label: "3", shape: "normal", keycode: 81 },
-                // The numpad's Enter, upper half - see the + two rows up.
-                { keytype: "normal", label: "Enter", shape: "normal", keycode: 96 }
+                { keytype: "normal", label: "Enter", shape: "numpadTall", keycode: 96 }
             ],
             [
                 { keytype: "modkey", label: "Ctrl", shape: "control", keycode: 29 },
@@ -157,8 +153,7 @@ const byName = {
                 { keytype: "normal", label: "→", shape: "normal", keycode: 106 },
                 gap,
                 { keytype: "normal", label: "0", shape: "numpadZero", keycode: 82 },
-                { keytype: "normal", label: ".", shape: "normal", keycode: 83 },
-                { keytype: "normal", label: "Enter", shape: "normal", keycode: 96 }
+                { keytype: "normal", label: ".", shape: "normal", keycode: 83 }
             ]
         ]
     },
@@ -229,8 +224,12 @@ const byName = {
                 { keytype: "normal", label: "p", labelShift: "P", labelAlt: "þ", shape: "normal", keycode: 25 },
                 { keytype: "normal", label: "ü", labelShift: "Ü", labelAlt: "¨", shape: "normal", keycode: 26 },
                 { keytype: "normal", label: "+", labelShift: "*", labelAlt: "~", shape: "normal", keycode: 27 },
-                // The ISO Enter is an L: this is its upper arm, and the lower
-                // one is the last key of the row below on the same keycode.
+                // The ISO Enter is an L, and stays two keys where the numpad's
+                // + and Enter became one: 1.5u on this row against 1.25u on
+                // the next, offset a quarter unit by the wider Caps below it,
+                // so no single rectangle on the lattice is that shape. This is
+                // its upper arm; the lower one is the last key of the row
+                // below, on the same keycode.
                 { keytype: "normal", label: "↵", shape: "enterIsoTop", keycode: 28 },
                 gap,
                 { keytype: "normal", label: "Entf", shape: "normal", keycode: 111 },
@@ -240,7 +239,7 @@ const byName = {
                 { keytype: "normal", label: "7", shape: "normal", keycode: 71 },
                 { keytype: "normal", label: "8", shape: "normal", keycode: 72 },
                 { keytype: "normal", label: "9", shape: "normal", keycode: 73 },
-                { keytype: "normal", label: "+", shape: "normal", keycode: 78 }
+                { keytype: "normal", label: "+", shape: "numpadTall", keycode: 78 }
             ],
             [
                 { keytype: "normal", label: "Feststell", shape: "caps", keycode: 58 },
@@ -260,8 +259,7 @@ const byName = {
                 gap, gap, gap, gap, gap, gap, gap, gap,
                 { keytype: "normal", label: "4", shape: "normal", keycode: 75 },
                 { keytype: "normal", label: "5", shape: "normal", keycode: 76 },
-                { keytype: "normal", label: "6", shape: "normal", keycode: 77 },
-                { keytype: "normal", label: "+", shape: "normal", keycode: 78 }
+                { keytype: "normal", label: "6", shape: "normal", keycode: 77 }
             ],
             [
                 { keytype: "modkey", label: "Shift", labelShift: "Shift ⇧", labelCaps: "Locked ⇩", shape: "shiftIso", keycode: 42 },
@@ -285,7 +283,7 @@ const byName = {
                 { keytype: "normal", label: "1", shape: "normal", keycode: 79 },
                 { keytype: "normal", label: "2", shape: "normal", keycode: 80 },
                 { keytype: "normal", label: "3", shape: "normal", keycode: 81 },
-                { keytype: "normal", label: "↵", shape: "normal", keycode: 96 }
+                { keytype: "normal", label: "↵", shape: "numpadTall", keycode: 96 }
             ],
             [
                 { keytype: "modkey", label: "Strg", shape: "control", keycode: 29 },
@@ -302,8 +300,7 @@ const byName = {
                 { keytype: "normal", label: "→", shape: "normal", keycode: 106 },
                 gap,
                 { keytype: "normal", label: "0", shape: "numpadZero", keycode: 82 },
-                { keytype: "normal", label: ",", shape: "normal", keycode: 83 },
-                { keytype: "normal", label: "↵", shape: "normal", keycode: 96 }
+                { keytype: "normal", label: ",", shape: "normal", keycode: 83 }
             ]
         ]
     },
@@ -383,7 +380,7 @@ const byName = {
                 { keytype: "normal", label: "7", shape: "normal", keycode: 71 },
                 { keytype: "normal", label: "8", shape: "normal", keycode: 72 },
                 { keytype: "normal", label: "9", shape: "normal", keycode: 73 },
-                { keytype: "normal", label: "+", shape: "normal", keycode: 78 }
+                { keytype: "normal", label: "+", shape: "numpadTall", keycode: 78 }
             ],
             [
                 { keytype: "normal", label: "Caps", shape: "caps", keycode: 58 },
@@ -402,8 +399,7 @@ const byName = {
                 gap, gap, gap, gap, gap, gap, gap, gap,
                 { keytype: "normal", label: "4", shape: "normal", keycode: 75 },
                 { keytype: "normal", label: "5", shape: "normal", keycode: 76 },
-                { keytype: "normal", label: "6", shape: "normal", keycode: 77 },
-                { keytype: "normal", label: "+", shape: "normal", keycode: 78 }
+                { keytype: "normal", label: "6", shape: "normal", keycode: 77 }
             ],
             [
                 { keytype: "modkey", label: "Shift", labelShift: "Shift", labelCaps: "Caps", shape: "shift", keycode: 42 },
@@ -426,7 +422,7 @@ const byName = {
                 { keytype: "normal", label: "1", shape: "normal", keycode: 79 },
                 { keytype: "normal", label: "2", shape: "normal", keycode: 80 },
                 { keytype: "normal", label: "3", shape: "normal", keycode: 81 },
-                { keytype: "normal", label: "Enter", shape: "normal", keycode: 96 }
+                { keytype: "normal", label: "Enter", shape: "numpadTall", keycode: 96 }
             ],
             [
                 { keytype: "modkey", label: "Ctrl", shape: "control", keycode: 29 },
@@ -443,8 +439,7 @@ const byName = {
                 { keytype: "normal", label: "→", shape: "normal", keycode: 106 },
                 gap,
                 { keytype: "normal", label: "0", shape: "numpadZero", keycode: 82 },
-                { keytype: "normal", label: ".", shape: "normal", keycode: 83 },
-                { keytype: "normal", label: "Enter", shape: "normal", keycode: 96 }
+                { keytype: "normal", label: ".", shape: "normal", keycode: 83 }
             ]
         ]
     }
