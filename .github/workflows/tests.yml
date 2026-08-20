@@ -9,6 +9,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # The suite runs in about two and a half minutes. Without a ceiling a job
+    # that wedges runs until GitHub's own six-hour limit kills it, and every
+    # other PR queues behind the runner it is holding - which is what happened
+    # to 2be6995c9 ("release: 0.27.0") and, on the same day, to most of an
+    # eighteen-PR series. Ten times the normal run is generous for a slow
+    # runner and still fails within the hour.
+    timeout-minutes: 25
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,14 +26,36 @@ jobs:
           fetch-depth: 0
 
       - name: Install Qt6 Dependencies
+        # Every observed wedge has been here rather than in the suite: apt
+        # hangs against a mirror and the step never returns. A step timeout
+        # turns that into a red run in minutes instead of a held runner, and
+        # the retry covers the transient case a rerun would otherwise be
+        # needed for.
+        timeout-minutes: 10
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
+          set -euo pipefail
+          # Bounded per attempt as well as per step: a single apt call that
+          # hangs would otherwise consume the whole step budget and leave no
+          # room for the retry to be worth having.
+          apt_get() {
+            for attempt in 1 2 3; do
+              if timeout 150 sudo -E apt-get "$@"; then
+                return 0
+              fi
+              echo "apt-get $1 failed (attempt $attempt of 3), retrying"
+              sleep $((attempt * 10))
+            done
+            return 1
+          }
+          apt_get update
           # ffmpeg: test_tonemap_sdr.py builds a real HDR10 fixture (libx265)
           # and drives the actual tonemap script; without ffmpeg those tests
           # skip and the SDR delivery path ships unexercised.
           # qt5compat supplies FastBlur, which WallpaperBlurSurface imports; without
           # it that type is simply "unavailable" and its test fails to compile.
-          sudo apt-get install -y qt6-declarative-dev qml6-module-qttest qml6-module-qtquick qml6-module-qtqml qml6-module-qtquick-controls qml6-module-qtquick-templates qml6-module-qtquick-layouts qml6-module-qtqml-workerscript qml6-module-qtquick-window qml6-module-qt5compat-graphicaleffects ffmpeg
+          apt_get install -y qt6-declarative-dev qml6-module-qttest qml6-module-qtquick qml6-module-qtqml qml6-module-qtquick-controls qml6-module-qtquick-templates qml6-module-qtquick-layouts qml6-module-qtqml-workerscript qml6-module-qtquick-window qml6-module-qt5compat-graphicaleffects ffmpeg
 
       # zstd builds the fixture release tarballs in
       # test_wallpaperengine_prebuilt.py and extracts them in the installer under

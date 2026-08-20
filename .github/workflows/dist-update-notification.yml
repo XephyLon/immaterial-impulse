@@ -12,6 +12,9 @@ on:
 jobs:
   comment_on_discussion:
     runs-on: ubuntu-latest
+    # One api call; a job with no ceiling holds a runner until
+    # GitHub's six-hour limit and queues every other PR behind it.
+    timeout-minutes: 10
     if: github.ref == 'refs/heads/main' && github.repository == 'end-4/dots-hyprland'
     steps:
       - name: Create comment on discussion #2140

@@ -12,6 +12,9 @@ on:
 jobs:
   receipt:
     runs-on: ubuntu-latest
+    # A body grep; a job with no ceiling holds a runner until
+    # GitHub's six-hour limit and queues every other PR behind it.
+    timeout-minutes: 5
     steps:
       - name: Require a Docs receipt in the PR body
         env:
