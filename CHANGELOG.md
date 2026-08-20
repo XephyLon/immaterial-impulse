@@ -12,6 +12,21 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Arrow keys move a selected desktop widget.** Click a widget — or drag a
+  marquee over several — and each arrow press moves the selection one grid
+  cell, on the plain desktop as well as in Edit Mode. A widget sitting off the
+  grid is put back on it by the first press, so a widget placed by keyboard
+  ends up on the same lattice as one placed by mouse, and a group travels as a
+  block, stopping when its first member reaches the screen edge rather than
+  spreading out against it. Holding a key down is one undo, not fifty.
+
+### Fixed
+- **Undoing a multi-step gesture no longer stops halfway.** A gesture that
+  moved one widget several times in a row undid to the second-to-last step
+  instead of the start, because the steps were replayed in the order they were
+  made. Group drags were never affected.
+
 ## [0.27.0] — 2026-08-19
 
 The shell's motion catches up with itself: bar widgets travel instead of
