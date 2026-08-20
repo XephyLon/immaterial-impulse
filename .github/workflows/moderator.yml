@@ -10,6 +10,9 @@ on:
 jobs:
   spam-detection:
     runs-on: ubuntu-latest
+    # One model call; a job with no ceiling holds a runner until
+    # GitHub's six-hour limit and queues every other PR behind it.
+    timeout-minutes: 10
     permissions:
       issues: write
       pull-requests: write

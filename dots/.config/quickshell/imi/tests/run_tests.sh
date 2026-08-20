@@ -136,6 +136,16 @@ if ! python3 "$SCRIPT_DIR/test_effective_scale_contract.py"; then
     exit 1
 fi
 
+# Static lint: every workflow job declares a timeout. A job with no ceiling
+# runs until GitHub's six-hour limit when a step wedges, holding the only
+# runner while every other PR queues behind it - measured on the 0.27.0
+# release run, which spent six hours inside apt.
+echo "Running workflow timeout lint..."
+if ! python3 "$SCRIPT_DIR/lint_workflow_timeouts.py"; then
+    echo "Workflow timeout lint failed."
+    exit 1
+fi
+
 echo "Running test import symlink lint..."
 if ! python3 "$SCRIPT_DIR/lint_test_import_symlinks.py"; then
     echo "Test import symlink lint failed."
