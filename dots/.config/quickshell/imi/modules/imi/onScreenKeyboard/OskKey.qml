@@ -16,7 +16,13 @@ RippleButton {
     property bool isShift: Ydotool.shiftKeys.includes(keycode)
     property bool isBackspace: (key.toLowerCase() == "backspace")
     property bool isEnter: (key.toLowerCase() == "enter" || key.toLowerCase() == "return")
-    property real baseWidth: 45
+    // 44 rather than a round 45 so that the PITCH - a key plus the gap after
+    // it - is a multiple of four, and a quarter-unit span is therefore a whole
+    // number of pixels. QQuickLayout rounds every item's width UP, so a key
+    // whose span lands on a half pixel is drawn half a pixel wide of where its
+    // units put it, and fourteen spacers into the function row that is seven
+    // pixels of drift against the row below.
+    property real baseWidth: 44
     property real baseHeight: 45
     // The gap a row leaves between two keys. A key spanning several units
     // covers the gaps it swallows as well as the key bodies, so this has to be
