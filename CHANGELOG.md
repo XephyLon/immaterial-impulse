@@ -12,6 +12,14 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **The on-screen keyboard and the wallpaper selector stop frosting their own
+  shadow.** Both were still asking the compositor to blur their whole surface,
+  which takes the drop shadow with it — so what should have been a shadow under
+  the panel read as a smudge. They now blur only the panel body, the way the
+  bars, the dock, the OSDs, the overview, the cheatsheet and the notification
+  popups already do.
+
 ### Added
 - **The on-screen keyboard is a full-size keyboard.** It was missing Caps
   Lock (the home row started at `a`), both Super keys, Scroll Lock, Pause, the
