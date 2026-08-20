@@ -28,9 +28,9 @@ RippleButton {
     property bool isEnter: (key.toLowerCase() == "enter" || key.toLowerCase() == "return")
     property real baseWidth: KeyShapes.baseKeyWidth
     property real baseHeight: KeyShapes.baseKeyHeight
-    // The gap a row leaves between two keys. A key spanning several units
+    // The gap the grid leaves between two cells. A key spanning several units
     // covers the gaps it swallows as well as the key bodies, so this has to be
-    // the same value OskContent gives its RowLayout or every wide key ends up
+    // the same value OskContent gives its GridLayout or every wide key ends up
     // shorter than the keys it is supposed to span.
     readonly property real keyGap: Appearance.spacing.space100
     readonly property real widthUnits: KeyShapes.widthUnits[root.shape] ?? 1
