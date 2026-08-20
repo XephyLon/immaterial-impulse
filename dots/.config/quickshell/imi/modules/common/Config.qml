@@ -1323,6 +1323,12 @@ Singleton {
             property JsonObject osk: JsonObject {
                 property string layout: "qwerty_full"
                 property bool pinnedOnStartup: false
+                // Light a key on the on-screen keyboard while the physical one
+                // holds it. Reading /dev/input is what makes that possible, so
+                // the switch is here to be turned OFF - the reader itself runs
+                // only while the OSK is open and reports keycodes rather than
+                // characters (services/KeyMonitor.qml).
+                property bool showPhysicalKeys: true
             }
 
             property JsonObject overlay: JsonObject {

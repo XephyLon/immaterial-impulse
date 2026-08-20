@@ -140,6 +140,15 @@ fi
 # runs until GitHub's six-hour limit when a step wedges, holding the only
 # runner while every other PR queues behind it - measured on the 0.27.0
 # release run, which spent six hours inside apt.
+# The one thing in this shell that reads every key on the machine: what it
+# emits (keycodes, never characters), what it keeps (nothing), and when it is
+# allowed to run at all (only while the on-screen keyboard is open).
+echo "Running key monitor tests..."
+if ! python3 "$SCRIPT_DIR/test_key_monitor.py"; then
+    echo "Key monitor tests failed."
+    exit 1
+fi
+
 echo "Running workflow timeout lint..."
 if ! python3 "$SCRIPT_DIR/lint_workflow_timeouts.py"; then
     echo "Workflow timeout lint failed."

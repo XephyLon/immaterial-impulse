@@ -13,6 +13,11 @@ RippleButton {
     property var keycode: keyData.keycode
     property string shape: keyData.shape
     property bool isShift: Ydotool.shiftKeys.includes(keycode)
+    // The PHYSICAL key of the same code is down. Separate from the button's
+    // own pressed state on purpose: this one is not a gesture on this widget,
+    // it is a report about the hardware, and a key can be both (the user
+    // taps the OSK's Shift while holding the real one).
+    readonly property bool physicallyDown: KeyMonitor.isDown(root.keycode)
     property bool isBackspace: (key.toLowerCase() == "backspace")
     property bool isEnter: (key.toLowerCase() == "enter" || key.toLowerCase() == "return")
     // 44 rather than a round 45 so that the PITCH - a key plus the gap after
@@ -33,7 +38,15 @@ RippleButton {
     toggled: isShift ? Ydotool.shiftMode : false
 
     enabled: shape != "empty"
-    colBackground: shape == "empty" ? ColorUtils.transparentize(Appearance.colors.colLayer1) : Appearance.colors.colLayer1
+    // A held physical key reads as the same surface a hovered one does, one
+    // tier up - loud enough to find at a glance across a full-size keyboard,
+    // and not so loud that a burst of typing strobes. The `empty` spacers are
+    // excluded because they are not keys.
+    colBackground: shape == "empty" ? ColorUtils.transparentize(Appearance.colors.colLayer1)
+        : (root.physicallyDown ? Appearance.colors.colLayer2 : Appearance.colors.colLayer1)
+    Behavior on colBackground {
+        animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+    }
     buttonRadius: Appearance.rounding.small
     implicitWidth: root.baseWidth * root.widthUnits + root.keyGap * (root.widthUnits - 1)
     implicitHeight: root.baseHeight * root.heightUnits
