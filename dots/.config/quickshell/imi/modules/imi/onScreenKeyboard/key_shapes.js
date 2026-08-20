@@ -42,6 +42,7 @@ const widthUnits = {
     "enterIsoTop": 1.5,
     "caps": 1.75,
     "backspace": 2,
+    "numpadTall": 1,
     "numpadZero": 2,
     "enter": 2.25,
     "shift": 2.25,
@@ -51,7 +52,9 @@ const widthUnits = {
 
 // Only two shapes are not a full key tall: the function row is a short key,
 // and a spacer has no height at all so it can pad any row without deciding
-// how tall that row is.
+// how tall that row is. One is TALLER than a key: the numpad's + and its
+// Enter are one key across two rows, which is a rowSpan of two on the lattice
+// osk_lattice.js places them on.
 const heightUnits = {
     "normal": 1,
     "fn": 0.7,
@@ -65,6 +68,7 @@ const heightUnits = {
     "enterIsoTop": 1,
     "caps": 1,
     "backspace": 1,
+    "numpadTall": 2,
     "numpadZero": 1,
     "enter": 1,
     "shift": 1,
