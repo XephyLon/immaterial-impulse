@@ -1,20 +1,23 @@
 import QtTest
 import "../modules/imi/onScreenKeyboard/layouts.js" as Layouts
 import "../modules/imi/onScreenKeyboard/key_shapes.js" as KeyShapes
+import "../modules/imi/onScreenKeyboard/osk_lattice.js" as Lattice
 
-// The on-screen keyboard's layouts are plain data, which makes them the one
-// part of that module a test can reach: nothing about a rendered key is
-// reachable from qmltestrunner, and OskLayoutProbe.qml exists for the half
-// that is a picture.
+// The on-screen keyboard's layouts are plain data and osk_lattice.js turns
+// them into cells without touching a pixel, which makes the pair the one part
+// of that module a test can reach: nothing about a rendered key is reachable
+// from qmltestrunner, and OskLayoutProbe.qml exists for the half that is a
+// picture.
 //
 // What is worth pinning here is what breaks silently. A key with the wrong
 // evdev keycode types the wrong character and nothing anywhere reports it. A
-// row that spans anything other than the full width puts that row's nav
-// cluster and numpad somewhere the rows above and below do not, and the row is
-// still a perfectly good row. A shape in one multiplier table and not the
-// other falls back to one unit, which is a plausible size for most keys. And a
-// keycode that appears twice is a typo everywhere except the three places a
-// real keyboard draws one key across two rows.
+// row that does not cover the whole lattice puts that row's nav cluster and
+// numpad somewhere the rows above and below do not, and the row is still a
+// perfectly good row. A shape in one multiplier table and not the other falls
+// back to one unit, which is a plausible size for most keys. A width that is
+// not a whole number of columns is drawn at a rounded span, which moves every
+// column after it. And a keycode that appears twice is a typo everywhere
+// except the one place a keyboard draws a key that is not a rectangle.
 TestCase {
     name: "OskLayoutsTest"
 
@@ -26,13 +29,17 @@ TestCase {
     readonly property real rowUnits: mainBlock + clusterGap + navCluster + clusterGap + numpad
     readonly property real numpadStart: mainBlock + clusterGap + navCluster + clusterGap
 
-    // The keys a real keyboard draws as ONE key spanning two rows, which a row
-    // of keys cannot say - each is two keys carrying the one keycode.
-    readonly property var splitKeys: ({
+    // The numpad's + and its Enter are ONE key two rows tall.
+    readonly property var tallKeys: ({
         78: "numpad +",
-        96: "numpad Enter",
-        28: "ISO Enter"
+        96: "numpad Enter"
     })
+
+    // The only key that is still two keys, because it is the only one that is
+    // not a rectangle: an ISO Enter is 1.5u on the top row and 1.25u on the
+    // bottom, so no cell of the lattice has that shape.
+    readonly property int isoEnter: 28
+    readonly property var isoEnterShapes: ["enterIsoBottom", "enterIsoTop"]
 
     // Everything outside a layout's own alphabet: the function row, the nav
     // cluster, the arrows, the numpad and the modifiers. A keyboard layout
@@ -55,17 +62,19 @@ TestCase {
         return Object.keys(Layouts.byName);
     }
 
+    // Every key of a layout, where the lattice puts it. The offset is in
+    // keyboard units, which is what the clusters are described in; the lattice
+    // counts in quarters of one.
     function keysOf(name) {
-        const rows = Layouts.byName[name].keys;
         const out = [];
-        for (let r = 0; r < rows.length; r++) {
-            let offset = 0;
-            for (let c = 0; c < rows[r].length; c++) {
-                const key = rows[r][c];
-                const units = KeyShapes.widthUnits[key.shape];
-                out.push({ key: key, row: r, offset: offset, units: units });
-                offset += units;
-            }
+        for (const placed of Lattice.place(Layouts.byName[name].keys)) {
+            out.push({
+                key: placed.key,
+                row: placed.row,
+                offset: placed.column / Lattice.COLUMNS_PER_UNIT,
+                units: placed.columnSpan / Lattice.COLUMNS_PER_UNIT,
+                rows: placed.rowSpan
+            });
         }
         return out;
     }
@@ -94,7 +103,7 @@ TestCase {
         }
     }
 
-    function test_a_keycode_repeats_only_where_one_key_spans_two_rows() {
+    function test_a_keycode_repeats_only_where_the_key_is_not_a_rectangle() {
         for (const name of layoutNames()) {
             const rowsFor = ({});
             for (const entry of keysOf(name)) {
@@ -107,19 +116,50 @@ TestCase {
                 const rows = rowsFor[code];
                 if (rows.length === 1)
                     continue;
-                verify(splitKeys.hasOwnProperty(code),
+                // A key that spans rows is ONE key now. The ISO Enter is the
+                // only thing left that two keys is the honest spelling of.
+                compare(Number(code), isoEnter,
                     `${name} sends keycode ${code} from ${rows.length} keys`);
-                compare(rows.length, 2, `${name}: ${splitKeys[code]} is not two keys`);
-                // The halves of a key that is two rows tall are in those two
-                // rows. Two halves anywhere else is a keycode typed twice.
+                compare(rows.length, 2, `${name}: the ISO Enter is not two keys`);
                 compare(rows[1] - rows[0], 1,
-                    `${name}: ${splitKeys[code]}'s halves are not in adjacent rows`);
+                    `${name}: the ISO Enter's arms are not in adjacent rows`);
+                const shapes = placed(name, isoEnter).map(entry => entry.key.shape).sort();
+                compare(shapes.join(","), isoEnterShapes.join(","),
+                    `${name}: the ISO Enter's arms are not the two ISO shapes`);
             }
-            // ...and the two the numpad always has are always there: a half
-            // deleted by hand leaves a keyboard that still lays out.
-            compare(placed(name, 78).length, 2, `${name} numpad + is not two keys`);
-            compare(placed(name, 96).length, 2, `${name} numpad Enter is not two keys`);
+            // ...and the two the numpad draws across two rows are ONE key
+            // each, which is what stops the pad showing two Enters.
+            for (const code of Object.keys(tallKeys))
+                compare(placed(name, Number(code)).length, 1,
+                    `${name}: ${tallKeys[code]} is more than one key`);
         }
+    }
+
+    function test_a_double_height_key_is_one_key_of_two_units() {
+        for (const name of layoutNames()) {
+            for (const code of Object.keys(tallKeys)) {
+                const entries = placed(name, Number(code));
+                compare(entries.length, 1, `${name}: ${tallKeys[code]} is not one key`);
+                const entry = entries[0];
+                // Two units tall AND reaching two rows, because a height table
+                // saying 2 while the lattice hands out one row is a key drawn
+                // over the row below it, and a rowSpan of 2 on a one-unit-tall
+                // key is a key half the height of its own cell.
+                compare(KeyShapes.heightUnits[entry.key.shape], 2,
+                    `${name}: ${tallKeys[code]} is not two units tall`);
+                compare(entry.rows, 2, `${name}: ${tallKeys[code]} does not span two rows`);
+                compare(entry.units, 1, `${name}: ${tallKeys[code]} is not one unit wide`);
+            }
+        }
+    }
+
+    function test_every_width_is_a_whole_number_of_columns() {
+        // The lattice's column is a quarter unit, so a shape whose width is
+        // not a multiple of 0.25u is drawn at a rounded span - every column
+        // after it moves, and nothing reports it.
+        const offenders = Lattice.widthsAreWholeColumns();
+        compare(offenders.join(","), "",
+            `these shapes are not a whole number of quarter units: ${offenders.join(", ")}`);
     }
 
     function test_every_shape_a_layout_names_is_in_both_tables() {
@@ -145,15 +185,19 @@ TestCase {
             verify(used[shape] === true, `shape "${shape}" is declared and never used`);
     }
 
-    function test_every_row_spans_the_whole_keyboard() {
+    function test_every_row_covers_the_whole_keyboard() {
         for (const name of layoutNames()) {
             const rows = Layouts.byName[name].keys;
             compare(rows.length, 6, `${name} does not have six rows`);
+            const placements = Lattice.place(rows);
+            compare(Lattice.columnsIn(placements) / Lattice.COLUMNS_PER_UNIT, rowUnits,
+                `${name} is not ${rowUnits} units wide`);
             for (let r = 0; r < rows.length; r++) {
-                let units = 0;
-                for (const key of rows[r])
-                    units += KeyShapes.widthUnits[key.shape];
-                compare(units, rowUnits, `${name} row ${r} spans ${units} units`);
+                // Counted off the lattice rather than by summing the row's own
+                // keys, because a row under a double-height key does not
+                // declare the columns that key already took.
+                const units = Lattice.columnsCovered(placements, r) / Lattice.COLUMNS_PER_UNIT;
+                compare(units, rowUnits, `${name} row ${r} covers ${units} units`);
             }
         }
     }
