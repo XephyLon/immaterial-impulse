@@ -12,13 +12,12 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
-### Fixed
-- **The on-screen keyboard and the wallpaper selector stop frosting their own
-  shadow.** Both were still asking the compositor to blur their whole surface,
-  which takes the drop shadow with it — so what should have been a shadow under
-  the panel read as a smudge. They now blur only the panel body, the way the
-  bars, the dock, the OSDs, the overview, the cheatsheet and the notification
-  popups already do.
+## [0.29.0] — 2026-08-20
+
+The on-screen keyboard becomes a real keyboard: every key a full-size board
+has, the key you are holding lit up on it, and Caps and Num showing their
+locks. Its shadow — and the wallpaper selector's — stops being frosted by
+the compositor.
 
 ### Added
 - **The on-screen keyboard is a full-size keyboard.** It was missing Caps
@@ -45,6 +44,12 @@ own repo; the installer pins which revision it builds.
   input devices it simply does not highlight, and asks for nothing.
 
 ### Fixed
+- **The on-screen keyboard and the wallpaper selector stop frosting their own
+  shadow.** Both were still asking the compositor to blur their whole surface,
+  which takes the drop shadow with it — so what should have been a shadow under
+  the panel read as a smudge. They now blur only the panel body, the way the
+  bars, the dock, the OSDs, the overview, the cheatsheet and the notification
+  popups already do.
 - **The Menu key does something.** It was sending an evdev code that nothing
   in a normal session listens to, in every layout, silently.
 - **A key's label no longer paints over the keys either side of it.** Longer
