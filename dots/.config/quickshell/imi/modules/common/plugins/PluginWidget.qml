@@ -29,8 +29,27 @@ AbstractBackgroundWidget {
     // stay visible while locked regardless of `lock.showWidgets` - which
     // exists to hide the *other* desktop widgets - and to centre itself there,
     // which is what `lock.centerClock` has always done.
+    //
+    // Which of those other widgets the lock shows is two decisions now, and
+    // the order of them is what keeps an upgrade silent: `lock.showWidgets` is
+    // the master gate over the feature ("does the lock show desktop widgets at
+    // all"), and the per-widget choice under it says which - inherited from
+    // the desktop's enabled set until the user picks something on the
+    // Lockscreen tab (layout_surfaces.js). With the gate off nothing shows, as
+    // before; with it on and the choice still following, all of them do, as
+    // before.
     visibleWhenLocked: pluginNode.wantsVisibleWhenLocked
-        || Config.options.lock.showWidgets
+        || (Config.options.lock.showWidgets
+            && PluginState.lockWidgetEnabled(rootWidget.manifest?.id ?? ""))
+    // Am I on screen only because the LOCK asked for me? That is the one case
+    // the desktop has to filter, and it is deliberately narrower than "not in
+    // plugins.enabled": a widget being removed from BOTH is in neither list,
+    // and hiding it from here would race the host loader's exit fade to zero
+    // and cut the transition short.
+    readonly property bool lockOnlyWidget: Config.options.lock.showWidgets
+        && PluginState.lockWidgetEnabled(rootWidget.manifest?.id ?? "")
+        && !Config.options.plugins.enabled.includes(rootWidget.manifest?.id ?? "")
+    visibleOnDesktop: !rootWidget.lockOnlyWidget
     readonly property bool forceCenter: pluginNode.wantsForceCenter
 
     // Drives AbstractBackgroundWidget's least-busy-region pass, whose real

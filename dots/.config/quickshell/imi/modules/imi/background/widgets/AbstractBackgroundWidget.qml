@@ -16,6 +16,13 @@ AbstractWidget {
     required property int scaledScreenHeight
     required property real wallpaperScale
     property bool visibleWhenLocked: Config.options.lock.showWidgets
+    // The other half of the same question, now that the lock's widget CHOICE
+    // can fork from the desktop's: a widget picked for the lock alone is built
+    // on both surfaces - the host cannot instantiate it for one and not the
+    // other - so the desktop needs a filter of its own, or it draws a widget
+    // the desktop was never asked for. Defaults true, so a widget that states
+    // nothing behaves exactly as it did.
+    property bool visibleOnDesktop: true
     property var configEntry: Config.options.background.widgets[configEntryName]
     property string placementStrategy: configEntry.placementStrategy
     property real targetX: Math.max(0, Math.min(configEntry.x, scaledScreenWidth - width))
@@ -25,8 +32,10 @@ AbstractWidget {
     visible: opacity > 0
     // `editLockPreview` beside the real lock: Edit Mode's Lockscreen tab shows
     // the widgets the lock screen will show, through this same filter rather
-    // than a second one that could disagree with it.
-    opacity: (GlobalStates.lockLookActive && !visibleWhenLocked) ? 0 : 1
+    // than a second one that could disagree with it. One expression asks which
+    // surface is on screen and then that surface's own filter, so neither
+    // answer can leak into the other.
+    opacity: (GlobalStates.lockLookActive ? visibleWhenLocked : visibleOnDesktop) ? 1 : 0
     Behavior on opacity {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
