@@ -225,8 +225,9 @@ Item {
         id: scrollAnim
         target: flickable
         property: "contentY"
-        duration: Appearance.animation.elementMoveExit.duration
-        easing.type: Appearance.animation.elementMove.type
+        duration: Appearance.animation.scroll.duration
+        easing.type: Appearance.animation.scroll.type
+        easing.bezierCurve: Appearance.animation.scroll.bezierCurve
     }
 
     Item {
