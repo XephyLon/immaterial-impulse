@@ -114,8 +114,11 @@ Never use raw integer durations (e.g., `duration: 150`), generic QML easing curv
 leaves `easing.type` at Qt's default, which is `Easing.Linear`, the generic curve this section
 forbids. Prefer the tier's own `numberAnimation`/`colorAnimation` factory, which carries the
 duration, the type and the curve together; write out `<tier>.type` and `<tier>.bezierCurve` beside
-the duration only where the factory's `alwaysRunToEnd` would change the behaviour (a transition the
-user can reverse mid-flight). `tests/lint_motion_tier_partial.py` fails the suite on a new partial
+the duration only where the factory's `alwaysRunToEnd` would change the behaviour — which means an
+animation something calls `start()` on, **not** a `Behavior`. Measured: `QQuickBehavior::write` stops
+the animation instance directly, so a `Behavior` reversed mid-flight reads the same value with and
+without the flag, while a started animation stopped mid-flight runs on to its target. A `Behavior`
+may take any tier's factory. `tests/lint_motion_tier_partial.py` fails the suite on a new partial
 take; its per-file register of pre-existing ones is **empty**, so the rule now holds for the whole
 tree with no exceptions. Note what that check cannot see: an easing that is *present* but does not
 resolve — `easing.type: Easing.BezierSpline` with no `bezierCurve` beside it is measurably
