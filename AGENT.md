@@ -4441,6 +4441,70 @@ unrolls from the height of its first drawn section precisely so that section is 
 one, and its content is reparented between windows with a stale implicit size for a frame.
 ("test(motion): ratchet the surfaces that stagger, and scope the rank check").
 
+**...and that ratchet needed a second half, because a surface can be adopted, looked at, and
+REFUSED — and a register that only grows is a target.** 9e10b8a9c ("feat(sidebar): the right
+sidebar's sections arrive in sequence") gave the right sidebar a wave; the user's verdict was *"I
+don't like the cascading animation effect in the sidebar… This one feels slow. There's a frame drop
+the moment it opens and the moment it closes."* It is off that surface again, and
+`STAGGER_DECLINED` in `tests/test_motion_policy_contract.py` reddens if it comes back. Take the
+reasoning rather than the removal, because both halves of the complaint were right and only one of
+them was the wave's:
+
+- **A `leadIn` is a guess, and on a layer surface it is the only option there is** — which is why
+  this surface could not be tuned out of the "feels slow" half. `staggerStep` is 40ms base,
+  the sidebar's `leadIn` was `staggerStep * 3` = 120ms, each member fades over
+  `elementMoveFast.duration` = 200ms, and `STAGGER_MAX_RANK` is 5. On the panel 9e10b8a9c measured
+  (ranks `[0,-1,1,2,-1,3,4]`) the last member starts at 120 + 4×40 = 280ms and lands at 480ms;
+  with all seven sections on screen the clamp puts it at 320ms and 520ms. `sidebarSlideEnter` is
+  **300ms**. So the group finished arriving 180–220ms after the container had stopped moving, and
+  the fix for that is `Appearance.animation.contentsArrived` — which needs a progress scalar the
+  compositor's own slide does not give QML. Edit Mode's drawer is the adopter that has one; this
+  one never could.
+- **The frame drop is NOT the wave, and it is not any of the three obvious suspects.** Measured in
+  a nested Hyprland (1920x1080@60, its own `XDG_RUNTIME_DIR`), 12 open/close cycles per run, three
+  runs of the wave-removed build as a control against two of the wave build, scored off
+  `QSG_RENDER_TIMING`'s own per-frame numbers plus a 1ms heartbeat measuring how long the GUI
+  thread was unavailable. **`polish` is 0ms in all 36 control gestures, IQR 0–0**, so the GUI
+  thread does no measurable work at either end: it is blocked in `polishAndSync` for a median of
+  69.5/76/78ms per open (IQR 66.5–72, 74.5–78.5, 76–84) waiting for the render thread, which is
+  waiting on the compositor. What it is waiting for is the surface: `quickshell:sidebarRight`
+  appears and disappears from `hyprctl layers` **24 times over 12 cycles**, because
+  `PanelWindow.visible` follows `GlobalStates.sidebarRightOpen` and layer-shell forbids window
+  reuse — the same teardown-and-rebuild the `hideWhenFullscreen` note under
+  [Layer-shell gotchas](#layer-shell-wlr-layer-shell-gotchas) records. It costs that with the wave
+  and without it.
+- **What the wave added was FRAMES, not a longer block.** Per open, rendered frames go from a
+  median of 5 (IQR 5–5 in every control run) to 30, at unchanged per-frame render cost (median
+  15–16.5ms in both arms), and the blocked total stays inside the control's own band (79/72ms
+  against 69.5–78). Per close the control renders **zero** frames — the surface is gone the same
+  frame — while the wave renders a median of 13, every one of them with `render=0`: the exit fade
+  keeps the window committing frames for 200ms after the panel has been asked to close, drawing
+  nothing. A wave on a surface whose container is torn down by the same gesture is animating
+  something that is already leaving.
+- **The two cheap suspects are eliminated with numbers rather than by argument.** `StaggerWave`'s
+  per-member `createObject`/`destroy` pair costs **55µs** for five members and **80µs** for seven
+  (offscreen `qml6`, 2000 repetitions, against a control pass running the same loop without the
+  objects) — 1.3% of one frame at 240Hz — and it would show up in `polish`, which is zero. And
+  `mediaPlayerLoader`, whose `active` is bound to the open state, never fires for the reporter at
+  all: `sidebar.mediaPlayer` is off in their config.
+- **Which of the surfaces that still stagger share the mechanism**: `ContentPage` and
+  `ExpandablePanel` have no window of their own, and `EditModeDrawer`'s surface exists for the
+  length of the mode rather than per drawer open. `SessionScreen` does — it is a `PanelWindow`
+  whose `visible` follows its `LazyLoader`, so its wave rides a surface the same gesture creates.
+  That is unmeasured here and is a modal opened rarely rather than a panel opened all day, so it
+  is named, not changed.
+
+What generalises past the sidebar: **`polish` is where a group entrance's own cost would appear,
+and if it is zero the stall is the surface, not the QML.** Before attributing a hitch at a panel's
+edge to whatever animation was most recently added there, take one control run with that animation
+removed and read `polish` against `blockedForSync`. Two limits of what was measured, stated because
+neither is closed: the nested compositor's vsync period is 16.7ms against the reporter's 4.17ms, so
+the absolute milliseconds are inflated and only the arm-against-arm comparison carries; and
+Hyprland publishes no per-frame present statistics, so the compositor's own timeline — the thing
+the user is actually looking at — is inferred from the client's stall rather than observed.
+7a7c1b794 ("revert(sidebar): the right sidebar's sections stop cascading"),
+1b8d4ac52 ("test(motion): the stagger ratchet runs in both directions").
+
 **`Behavior on <non-animatable>` with a trailing bare `PropertyAction {}` defers a write instead of
 animating it.** A `Loader.source` is a `url`, which QML cannot interpolate, so the `Behavior` cannot
 animate it — and the *bare* `PropertyAction` (no `target`, no `property`, no `value`) means "apply
