@@ -4120,7 +4120,9 @@ islands, the lock layout row), `ConfigSwitch` a sixth and the store card a seven
 in ways nobody chose: the same plugin's description wraps in one, elides in another and is absent
 from the third, and the byline sits beside the title in the settings card and under it in the store's.
 `modules/common/widgets/CatalogueRow.qml` is the one shape now, with the differences as properties
-(`titleElides`, `descriptionWraps`, the colours, `rowSpacing`), four content slots (`titleContent`
+(`titleFillsWidth` and `titleElides` — two questions, not one, and folding them
+together cost the store card the elide it has always had — `descriptionWraps`, the colours,
+`rowSpacing`), four content slots (`titleContent`
 on the title's own line, `trailingContent` before the affordance, `affordance` for the terminal
 control, `detailContent` full-width beneath) and an `iconComponent` escape hatch for a leading visual
 that is not a Material Symbol — a dock app's own icon — so the shared row never learns what a dock
