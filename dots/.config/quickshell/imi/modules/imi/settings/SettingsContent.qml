@@ -606,7 +606,7 @@ Item {
                                                 iconSize: Appearance.font.pixelSize.large
                                                 color: Appearance.colors.colSubtext
                                                 Behavior on rotation {
-                                                    NumberAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                                                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                                                 }
                                             }
                                         }

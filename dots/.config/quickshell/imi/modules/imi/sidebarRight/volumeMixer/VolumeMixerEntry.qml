@@ -60,14 +60,10 @@ Item {
                 opacity: root.node?.audio.muted ? 0.4 : 1.0
 
                 Behavior on opacity {
-                    NumberAnimation {
-                        duration: Appearance.animation.elementMoveFaster.duration
-                    }
+                    animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)
                 }
                 Behavior on desaturation {
-                    NumberAnimation {
-                        duration: Appearance.animation.elementMoveFaster.duration
-                    }
+                    animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)
                 }
             }
 

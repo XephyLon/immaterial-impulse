@@ -90,10 +90,6 @@ EASING = re.compile(r"\beasing\s*\.\s*\w+\s*:")
 # May only go DOWN. See the header for why it exists at all.
 EXISTING = {
     "modules/imi/overview/NiriOverview.qml": 10,
-    "modules/imi/sessionScreen/SessionScreen.qml": 2,
-    "modules/imi/settings/SettingsContent.qml": 1,
-    "modules/imi/sidebarRight/volumeMixer/VolumeMixerEntry.qml": 2,
-    "modules/imi/settings/pages/QuickConfig.qml": 1,
 }
 
 
