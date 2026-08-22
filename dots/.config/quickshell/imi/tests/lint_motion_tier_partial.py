@@ -89,11 +89,9 @@ EASING = re.compile(r"\beasing\s*\.\s*\w+\s*:")
 # path (repo-relative, POSIX) -> number of partial takes it is allowed to keep.
 # May only go DOWN. See the header for why it exists at all.
 EXISTING = {
-    "modules/common/plugins/bundled/calendar/Widget.qml": 4,
-    "modules/common/plugins/bundled/custom-image/Widget.qml": 1,
+    "modules/common/plugins/bundled/calendar/Widget.qml": 2,
     "modules/common/plugins/bundled/discordVoice/ParticipantAvatar.qml": 1,
     "modules/common/plugins/bundled/nandoroid-media/MediaTransportButton.qml": 2,
-    "modules/common/plugins/bundled/world-clock/Widget.qml": 1,
     "modules/common/plugins/designsystem/widgets/DesktopCurrencyWidget.qml": 3,
     "modules/imi/overview/NiriOverview.qml": 10,
     "modules/imi/sessionScreen/SessionScreen.qml": 2,

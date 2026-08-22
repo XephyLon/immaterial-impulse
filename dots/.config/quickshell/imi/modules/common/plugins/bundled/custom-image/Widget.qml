@@ -196,7 +196,7 @@ Item {
             z: 1
 
             Behavior on opacity {
-                NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration }
+                animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)
             }
 
             MouseArea {

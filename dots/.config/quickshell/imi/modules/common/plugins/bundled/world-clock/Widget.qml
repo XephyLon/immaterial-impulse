@@ -544,7 +544,7 @@ Item {
                 opacity: (widgetHover.hovered || toggleArea.containsMouse || toggleArea.pressed) ? 0.5 : 0
                 visible: opacity > 0 && !root.hostInteractionLocked
 
-                Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration } }
+                Behavior on opacity { animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this) }
 
                 MaterialSymbol {
                     anchors.centerIn: parent
