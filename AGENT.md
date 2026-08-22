@@ -3175,6 +3175,34 @@ mode is built out of are worth not re-deriving:
   (feat(plugins): layout_surfaces.js - two widget layouts, one store, fork on first edit;
   feat(editMode): every position and span write captures its surface into its undo;
   test(editMode): the fork is driven through the real drag and the real grip.)
+- **PRESENCE forks under that same rule, and the setting it grew out of became the master
+  gate rather than being superseded.** `lock.showWidgets` ("show every desktop widget while
+  locked") was one all-or-nothing boolean beside a layout that had already forked, so a widget
+  could not be on the desktop and off the lock. `lockPresence` in the same store answers "which":
+  **null** while the lock follows the desktop's `plugins.enabled`, a MAP once the first pick on
+  the Lockscreen tab snapshots that set — and absence is a null rather than a `{}` precisely
+  because an empty map is a legitimate forked state, a lock screen with no widgets on it. It is
+  **not per screen** while the layout is: `plugins.enabled` is one global list drawn on every
+  monitor (the reason the mode's Remove row removes everywhere), and a per-screen presence store
+  would invent a capability the desktop has not got. The desktop's set lives in `Config`, which
+  the pure module cannot see, so it arrives as an argument — and both the map check and the
+  membership walk go by `length` and indices, since a `list<string>` that crossed into a
+  `.pragma library` is `typeof "object"` and fails `Array.isArray` (109e6d897).
+  Three consequences worth not re-deriving. **The gate keeps the upgrade silent**: off, nothing
+  shows, as before; on with the choice still following, all of them do, as before — superseding
+  it instead would have needed a migration to turn `showWidgets: false` into a forked empty set,
+  in a key every preset already carries. **A lock-only pick costs two edits**, because the host
+  builds a widget or it does not: `Background.qml`'s loader gate is the UNION of the two choices,
+  and `AbstractBackgroundWidget` gained `visibleOnDesktop` beside `visibleWhenLocked` so one
+  expression asks which surface is on screen and then that surface's own filter. And
+  `PluginWidget.lockOnlyWidget` is deliberately **narrower than "not in `plugins.enabled`"** — a
+  widget being removed from BOTH is in neither list, and hiding it from the widget's own opacity
+  would race the loader's exit fade to zero and cut that transition short. No migration entry
+  accompanies the field, for the reason `lockPositions` needed none (2262040bc): its absence IS
+  the correct upgrade state.
+  (feat(plugins): layout_surfaces.js - the lock's widget choice forks too;
+  feat(plugins): a widget's presence is asked per surface, not once;
+  feat(editMode): the Lock section picks which widgets the lock screen shows.)
 - **A dragged widget holds a neighbour's edge through a Schmitt trigger, and
   both thresholds read the SHADOW — stage 10, spec §6.**
   `modules/common/functions/edge_snap.js` owns the arithmetic: four relations
