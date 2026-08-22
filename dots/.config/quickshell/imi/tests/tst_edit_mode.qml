@@ -504,6 +504,34 @@ TestCase {
         compare(EditMode.drawerRect(narrow, 0, 1, 1600, 1000).width, 0);
     }
 
+    function test_the_reveal_overshoots_with_the_desktop_and_floors_at_zero() {
+        // `elementMove`'s curve leaves the unit box - it peaks at 1.0139 and
+        // spends the last 271ms of its 500ms coming back - and the desktop's
+        // own `drawerTravel * editDrawerProgress` is unclamped, so a reveal
+        // clamped at 1 froze at full width while the desktop was still moving.
+        // The panel takes the overshoot too, which is what puts the two halves
+        // of one gesture back on one curve.
+        const open = EditMode.drawerRect(narrow, 1, 1, 1600, 1000);
+        const peak = EditMode.drawerRect(narrow, 1, 1.0139, 1600, 1000);
+        fuzzyCompare(peak.width, 400 * 1.0139, 1e-9);
+        // ...and it overshoots on the side it opens FROM: the right edge is
+        // pinned, so the extra width is spent travelling further left.
+        verify(peak.x < open.x);
+        fuzzyCompare(open.x - peak.x, peak.width - open.width, 1e-9);
+
+        // The floor is the half that stays. The same curve run backwards
+        // undershoots to -0.0139, and a negative width is not a settle - it is
+        // a rect the surface's input mask cannot build.
+        compare(EditMode.drawerRect(narrow, 1, -0.0139, 1600, 1000).width, 0);
+        compare(EditMode.drawerRect(narrow, 1, -5, 1600, 1000).width, 0);
+
+        // ...and the mode's own progress still multiplies in, so an overshooting
+        // drawer scalar cannot outlive the mode's exit.
+        compare(EditMode.drawerRect(narrow, 0, 1.0139, 1600, 1000).width, 0);
+        fuzzyCompare(EditMode.drawerRect(narrow, 0.5, 1.0139, 1600, 1000).width,
+            400 * 1.0139 * 0.5, 1e-9);
+    }
+
     function test_a_screen_point_maps_back_into_the_canvas() {
         // The inverse of the one transform, for the drop: a drop lands in
         // SCREEN coordinates and the store speaks canvas ones. Round-tripped

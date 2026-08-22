@@ -409,9 +409,26 @@ function areaRect(geometry, progress, screenWidth, screenHeight) {
 // from the edge itself, so the panel keeps a gap on the side it opens against.
 // Expressed as an offset on the ORIGIN rather than a smaller width, because the
 // width is the reveal and the reveal must still reach the drawer's full size.
+//
+// The drawer's scalar is NOT clamped to 1, and that asymmetry is the whole
+// point of this line. `elementMove`'s curve overshoots to 1.0139 at 280ms and
+// only comes back inside 1 at the end of its 500ms, so `Math.min(1, ...)` froze
+// the panel at its full width for the last 271ms of every open while the
+// desktop's own `drawerTravel * editDrawerProgress` - which nothing clamps -
+// went on overshooting and settling. One gesture, two halves, two effective
+// curves: measured on the real Behavior, the panel's last drawn movement was at
+// 226ms and the desktop's was at 497ms. Letting the reveal overshoot with it
+// costs ~1.4% of the drawer's width, which lands inside the `edgeMargin` gap
+// the panel already keeps against the screen edge.
+//
+// The floor stays. Run backwards the same curve undershoots to -0.0139, and a
+// negative width is not an expressive settle - it is a rect the input mask
+// cannot build. The desktop is free to undershoot past its resting x, because
+// that IS the settle; the panel simply has nowhere further to go once it is
+// gone.
 function drawerRect(geometry, progress, drawerProgress, screenWidth, screenHeight) {
     const t = Math.max(0, Math.min(1, progress || 0));
-    const p = Math.max(0, Math.min(1, drawerProgress || 0)) * t;
+    const p = Math.max(0, drawerProgress || 0) * t;
     const area = areaRect(geometry, progress, screenWidth, screenHeight);
     const card = cardRect(geometry, progress, screenWidth, screenHeight);
     const width = (geometry.drawer || 0) * p;
