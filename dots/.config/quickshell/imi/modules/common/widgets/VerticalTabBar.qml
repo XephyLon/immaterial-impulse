@@ -94,7 +94,7 @@ Item {
                     color: parent.parent.isCurrent
                         ? Appearance.colors.colOnLayer1
                         : Appearance.colors.colOnPrimaryContainer
-                    Behavior on color { ColorAnimation { duration: Appearance.animation.elementMoveFast.duration } }
+                    Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
                 }
 
                 StyledText {
@@ -102,7 +102,7 @@ Item {
                     color: parent.parent.isCurrent
                         ? Appearance.colors.colOnLayer1
                         : Appearance.colors.colOnPrimaryContainer
-                    Behavior on color { ColorAnimation { duration: Appearance.animation.elementMoveFast.duration } }
+                    Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
                 }
             }
 

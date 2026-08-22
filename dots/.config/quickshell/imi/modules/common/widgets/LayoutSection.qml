@@ -123,7 +123,7 @@ ContentSubsection {
 
                 Behavior on x { NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration; easing.type: Easing.OutCubic } }
                 Behavior on y { NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration; easing.type: Easing.OutCubic } }
-                Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration } }
+                Behavior on opacity { animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this) }
 
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
