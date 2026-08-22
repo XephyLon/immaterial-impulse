@@ -44,8 +44,30 @@ STAGGER_ADOPTERS = {
     "modules/common/widgets/ExpandablePanel.qml",
     "modules/common/widgets/ContentPage.qml",
     "modules/imi/sessionScreen/SessionScreen.qml",
-    "modules/imi/sidebarRight/SidebarRightContent.qml",
     "modules/imi/editMode/EditModeDrawer.qml",
+}
+
+# The other half of that ratchet: a surface that adopted a wave, was judged on
+# screen, and had it taken back off. Without this the register only ever grows -
+# the next agent reads "a group arrives in sequence" in the guidelines, sees a
+# column of independent cards, and re-adopts the one surface where that was
+# tried and refused. A refusal is invisible in the source, exactly like the
+# adoption it mirrors.
+#
+# The right sidebar is the entry. 9e10b8a9c ("feat(sidebar): the right
+# sidebar's sections arrive in sequence") gave it one and the user rejected it:
+# "I don't like the cascading animation effect in the sidebar... This one feels
+# slow. There's a frame drop the moment it opens and the moment it closes."
+# Two properties of THIS surface are why, and neither is a tuning. Its
+# container is a layer surface the compositor slides, so there is no progress
+# to gate on and the head start can only be a guessed `leadIn` - which put the
+# last member's landing 180ms past the end of `sidebarSlideEnter`. And the
+# wave's per-member animation objects are created and destroyed on the exact
+# frame the panel opens or closes, which is also the frame `mediaPlayerLoader`
+# - bound to the open state - instantiates its whole subtree on. Re-adopting is
+# a decision to be argued, not a line to be copied.
+STAGGER_DECLINED = {
+    "modules/imi/sidebarRight/SidebarRightContent.qml",
 }
 
 # A cascade whose rank is bounded by the shape of its own model rather than by
@@ -232,7 +254,14 @@ def test_nothing_else_ranks_its_own_wave():
 
 
 def test_the_stagger_is_adopted_where_a_group_arrives():
-    """A ratchet on adoption, because adoption is the thing that decayed."""
+    """A ratchet on adoption, because adoption is the thing that decayed.
+
+    It runs in both directions: a surface that stops staggering reddens, and so
+    does one that starts again after being refused. The second half exists
+    because the first half only ever pushes one way - a register of adopters
+    reads as a target, and the surface a user has already turned down is
+    exactly the one a later sweep would put back.
+    """
     declared = {relative for relative, path in qml_files()
                 if "StaggerWave {" in path.read_text(encoding="utf-8", errors="ignore")}
     missing = STAGGER_ADOPTERS - declared
@@ -241,6 +270,27 @@ def test_the_stagger_is_adopted_where_a_group_arrives():
         f"surface whose members arrive as a GROUP; without one they arrive in a "
         f"single frame again, which is invisible in the source and reads on "
         f"screen as the shell being flat rather than as a bug.")
+
+    # A file that moved or was renamed would empty the declined register
+    # silently, and a register that sweeps nothing is greener than one that is
+    # wrong.
+    for relative in STAGGER_DECLINED:
+        assert (ROOT / relative).is_file(), (
+            f"{relative} is in STAGGER_DECLINED and is not on disk. Point the "
+            f"entry at wherever the surface moved to, or drop it with the same "
+            f"argument that put it there - a register naming nothing passes.")
+
+    readopted = STAGGER_DECLINED & declared
+    assert not readopted, (
+        f"{sorted(readopted)} declare a StaggerWave again. Each of these had "
+        f"one, was looked at on screen, and had it removed - see "
+        f"STAGGER_DECLINED for the reasoning and AGENT.md's design-language "
+        f"section for what it cost. Re-adopting needs that argument answered, "
+        f"not a line copied from a sibling surface.")
+
+    assert not STAGGER_ADOPTERS & STAGGER_DECLINED, (
+        "a surface is in both registers, so one of the two checks above can "
+        "never pass.")
 
 
 def test_the_drawer_gates_its_wave_on_the_container_it_lands_in():
