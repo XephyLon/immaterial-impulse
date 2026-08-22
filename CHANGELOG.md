@@ -45,6 +45,17 @@ own repo; the installer pins which revision it builds.
   whole thing is gone and everything is simply there.
 
 ### Fixed
+- **The password box in the authentication prompt draws the same animated
+  characters as the lock screen.** Both are the shell asking for your password,
+  and only one of them showed the shell's own masked characters — a Material
+  shape per letter, each popping in as you type it. The prompt showed plain
+  system dots. It is one control now, so the two cannot drift apart again, and
+  clicking the box focuses it whichever prompt you are looking at.
+- **A dialog's buttons line up with the dialog.** Every dialog's action row sat
+  eight pixels outside the box the rest of its content lines up with, which
+  also left less space under the buttons than above the title. It shows most in
+  the authentication prompt, where the OK button hung past the right edge of
+  the password box directly above it.
 - **Edit Mode's widget drawer stops drawing over an open sidebar.** The drawer
   shares the right sidebar's edge and sits on a layer above it, so a sidebar
   left open was painted through by the panel. Entering Edit Mode now closes both
