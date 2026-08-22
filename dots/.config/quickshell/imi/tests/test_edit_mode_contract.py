@@ -1561,12 +1561,18 @@ def test_the_drawer_arms_its_entrance_before_the_reveal_draws():
     click, while the wave hangs off the container's progress.
     """
     text = code(DRAWER)
-    assert "onOpeningChanged" in text and "entrance.park()" in text, (
-        "the drawer no longer parks its members when the gesture starts, so "
-        "its contents are visible until the gate and then blink out")
-    opening = text[text.index("onOpeningChanged"):]
-    opening = opening[:opening.index("\n    }")]
-    assert "root.opening" in opening and "editDrawerProgress" not in opening, (
+    # The HANDLER's own body, not a substring search: the first version of this
+    # asserted `"onOpeningChanged" in text`, which a renamed handler satisfies -
+    # planted as `onOpeningChangedXX:` and it stayed green.
+    handler = re.search(r"\n    onOpeningChanged:\s*\{(.*?)\n    \}", text, re.S)
+    assert handler, (
+        "the drawer has no `onOpeningChanged` handler, so nothing parks its "
+        "members when the gesture starts and its contents are visible until "
+        "the gate and then blink out")
+    body = handler.group(1)
+    assert "park()" in body, (
+        "the drawer's intent handler no longer parks its members.")
+    assert "root.opening" in body and "editDrawerProgress" not in body, (
         "the park hangs off something other than the intent flag. The gate is "
         "the container's progress and the arm is the click - two events, or "
         "the members are put away at the moment they are meant to come out.")
