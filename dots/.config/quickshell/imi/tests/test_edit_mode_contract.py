@@ -360,17 +360,22 @@ def test_the_chrome_yields_to_a_workspace_summoned_over_the_desktop():
     assert re.search(r"monitor\.name === surfaceLoader\.modelData\?\.name", text), \
         "the monitor must be matched by name; screens and monitors are two " \
         "lists that are not promised to share an order"
-    # ...and the gate has to reach the Loader's `active`. A property computed
-    # and never spent is the shape that passes a grep and changes nothing.
-    assert re.search(r"active:.*\n?.*specialShown", text), \
-        "the special-workspace gate is computed but not applied to the loader"
-    # A layer change is the wrong fix and must not be what someone reaches for:
-    # Overlay and Top are both above every window, and Bottom is where the
-    # desktop already is.
+    # ...and it has to reach the surface. A property computed and never spent is
+    # the shape that passes a grep and changes nothing.
+    assert re.search(r"underneath:\s*surfaceLoader\.specialShown", text), \
+        "the special-workspace state is computed but never handed to the surface"
+    # It moves the chrome UNDER the window rather than removing it. The first
+    # attempt stood the surface down, and a mode popping out of existence while
+    # everything around it is being dimmed is uglier than the overlap it fixed -
+    # so the check pins the layer switch, not the disappearance.
     surface = read(CHROME_SURFACE)
-    assert "WlrLayer.Overlay" in surface, \
-        "the chrome left Overlay; if this was an attempt to get under a " \
-        "window, no layer does that except the one the desktop is already on"
+    assert re.search(r"WlrLayershell\.layer:\s*root\.underneath\s*\?\s*WlrLayer\.Bottom\s*:\s*WlrLayer\.Overlay",
+                     surface), \
+        "the chrome must drop to the desktop's own layer while something is " \
+        "summoned over it, not vanish"
+    assert not re.search(r"active:[^\n]*specialShown", text), \
+        "the chrome must not be gated out of existence by the special " \
+        "workspace; that is the version that snapped"
 
 
 def test_the_lattice_declares_where_it_sits_rather_than_inheriting_it():
@@ -737,17 +742,22 @@ def test_the_chrome_surface_mints_a_namespace_and_declares_it_to_the_compositor(
                      rules), \
         f"{namespace} has no alpha threshold in rules.lua"
     # Above the bar and the dock, or the chrome renders underneath the two
-    # surfaces the mode deliberately leaves at full size.
-    assert re.search(r"WlrLayershell\.layer:\s*WlrLayer\.Overlay", text), \
+    # surfaces the mode deliberately leaves at full size. That is the DEFAULT
+    # branch: the other one is `Bottom`, taken only while something is summoned
+    # over the desktop, where being below the bar and the dock is correct
+    # because the chrome is below the window too.
+    assert re.search(r"WlrLayershell\.layer:[^\n]*WlrLayer\.Overlay", text), \
         "the chrome must sit above the bar and the dock"
+    assert not re.search(r"WlrLayershell\.layer:\s*WlrLayer\.Bottom\s*$", text, re.M), \
+        "Bottom must be the conditional branch, never the resting layer"
 
 
-def test_the_chrome_stands_down_through_three_gates_of_its_own():
+def test_the_chrome_stands_down_through_two_gates_of_its_own():
     # The same lesson as the desktop card's, on a surface this time: any gate
     # alone hides the chrome, so a frame comparison passes on a tree with the
-    # others deleted - and then the survivors get deleted as redundant. Each is
-    # pinned by what it reads, not by the whole expression, so adding a fourth
-    # does not have to edit this test to keep the first three honest.
+    # other deleted - and then the survivor gets deleted as redundant. Each is
+    # pinned by what it reads, not by the whole expression, so adding a third
+    # does not have to edit this test to keep the first two honest.
     scope = read(CHROME_SCOPE)
     active = re.search(r"active:(.*?)\n\n", scope, re.S)
     assert active, "the chrome loader has no `active` binding"
@@ -756,8 +766,6 @@ def test_the_chrome_stands_down_through_three_gates_of_its_own():
         "the chrome surface must not exist while the mode is off"
     assert "GlobalStates.editProgress > 0" in body, \
         "the chrome must outlive the flag to travel back out with the desktop"
-    assert "specialShown" in body, \
-        "the chrome must stand down while a scratchpad is summoned over the desktop"
     assert re.search(r"opacity:\s*GlobalStates\.editProgress", read(CHROME_SURFACE)), \
         "the chrome must be transparent while the mode is off"
 
