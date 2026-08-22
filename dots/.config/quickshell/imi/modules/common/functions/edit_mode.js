@@ -211,12 +211,18 @@ function viewportGeometry(input) {
     const area = usableArea(input);
     // Two margins horizontally (outside the desktop, and between the desktop
     // and the drawer). Vertically the desktop gives up a whole band on each
-    // side: a margin, the chrome, and another margin - so the toolbar centred
-    // in that band has `margin` above and below it by construction, whatever
-    // the screen is and wherever the bar happens to be. With no chrome the band
-    // collapses back to one margin, which is what the geometry was before the
-    // chrome existed.
-    const band = chromeThickness > 0 ? margin * 2 + chromeThickness : margin;
+    // side, and the band is ASYMMETRIC: an edge margin, the chrome, and a full
+    // margin - the tight gap on the outside where the toolbar floats against
+    // the screen, the generous one on the inside between it and the desktop.
+    //
+    // Symmetric was the wrong shape. This axis is the one that binds on a wide
+    // screen, so both outer margins come straight off the desktop the mode
+    // exists to show: at 5120x1440 the symmetric band cost 24px of desktop
+    // height and 85px of width to put air above a toolbar that already floats
+    // over the wallpaper. With no chrome the band collapses back to one margin,
+    // which is what the geometry was before the chrome existed.
+    const band = chromeThickness > 0
+        ? edgeMargin + chromeThickness + margin : margin;
     // Horizontally, left to right: a margin, the desktop, a margin, the
     // drawer, and the drawer's own edge gap. The last term is what stops the
     // open drawer sitting flush on the screen's edge - it was missing, so the
@@ -280,6 +286,29 @@ function drawerTravel(geometry) {
         ? geometry.edgeMargin : (geometry.margin || 0);
     return Math.max(0,
         (geometry.drawer || 0) + (geometry.margin || 0) + edge - free);
+}
+
+// Where a chrome piece sits in its band, as a FRACTION of the band's slack
+// rather than as a pixel offset from the edge.
+//
+// A fraction because the band has no height at progress 0 - it grows out of
+// nothing as the desktop shrinks away from it - and a piece placed at a fixed
+// `edgeMargin` from the area's edge would be sitting fully on screen before the
+// mode had started. At a fraction it is parked off the edge at 0 and lands at
+// exactly `edgeMargin` at 1, with no Behavior of its own; a piece whose target
+// moves every frame must not have one (b710ef731).
+//
+// The band is `edgeMargin + chrome + margin`, so its slack is
+// `edgeMargin + margin` and the piece starts `edgeMargin` into it. The BOTTOM
+// band is the mirror, which is `1 - this`: from the card's edge it is the
+// margin first and the edge gap last.
+function chromeBandFraction(geometry) {
+    if (!geometry)
+        return 0.5;
+    const margin = geometry.margin || 0;
+    const edge = geometry.edgeMargin !== undefined ? geometry.edgeMargin : margin;
+    const slack = edge + margin;
+    return slack > 0 ? edge / slack : 0.5;
 }
 
 // The entry and exit animation, expressed as one scalar the shell can put a

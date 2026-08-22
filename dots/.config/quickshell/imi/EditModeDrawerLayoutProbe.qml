@@ -3,6 +3,7 @@ import Quickshell
 import qs
 import qs.modules.common
 import qs.modules.imi.editMode
+import "modules/common/functions/edit_mode.js" as EditMode
 
 /*
  * What the drawer's column gives its list, in pixels.
@@ -39,6 +40,13 @@ ShellRoot {
             card: Qt.rect(120, 120, 900, 900)
             area: Qt.rect(0, 0, win.width, win.height)
             drawer: Qt.rect(1100, 120, 370, 960)
+            // This probe hands the chrome hand-written rects rather than a
+            // geometry, so it states the split from the same two tokens the
+            // geometry would have derived it from.
+            bandFraction: EditMode.chromeBandFraction({
+                margin: Appearance.sizes.editModeMargin,
+                edgeMargin: Appearance.sizes.editModeEdgeMargin
+            })
         }
 
         // The drawer's own column, found by shape rather than by id: the probe

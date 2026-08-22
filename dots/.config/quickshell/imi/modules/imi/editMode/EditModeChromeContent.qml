@@ -74,6 +74,13 @@ Item {
     signal lockIslandToggleRequested(string key)
     signal lockLayoutResetRequested()
 
+    // Where in its band each chrome piece sits, as a fraction of the band's
+    // slack - `edit_mode.js`'s `chromeBandFraction`, which is 0.5 exactly when
+    // the two margins that bound the band are equal. Defaults to 0.5 so an
+    // unconnected instance centres its chrome the way it did before the band
+    // was told apart into an outer gap and an inner one.
+    property real bandFraction: 0.5
+
     // The screen this chrome belongs to, for the drawer's fork question.
     property string screenName: ""
 
@@ -92,11 +99,14 @@ Item {
         // point today and stop being one the moment stage 5's drawer
         // translates the desktop, and the chrome belongs to the desktop.
         x: root.card.x + (root.card.width - width) / 2
-        // Centred in the band between the usable area's top edge and the card's
+        // Placed in the band between the usable area's top edge and the card's
         // - the screen's top edge only while nothing is on that edge. The
-        // viewport reserves `margin + toolbarHeight + margin` there, so this
-        // lands with a margin above and below it and cannot reach the bar.
-        y: root.area.y + (root.card.y - root.area.y - height) / 2
+        // viewport reserves `edgeMargin + toolbarHeight + margin` there, and
+        // `bandFraction` is the split, so this lands with the tight gap above
+        // it and the generous one below and cannot reach the bar. A fraction
+        // rather than `area.y + edgeMargin`, because the band has no height at
+        // progress 0 and the piece has to be parked off the edge there.
+        y: root.area.y + (root.card.y - root.area.y - height) * root.bandFraction
         spacing: Appearance.spacing.space150
 
         MaterialSymbol {
@@ -175,9 +185,13 @@ Item {
         // area's. The card is centred in that area, so the two bands are the
         // same height and the two pieces travel by the same amount - which is
         // true with a bar on one edge and a dock on the other, and was true
-        // before only because neither was accounted for.
+        // before only because neither was accounted for. Mirrored means
+        // `1 - bandFraction` as well as the other edge: measured from the
+        // card, the bottom band spends the generous margin first and the tight
+        // edge gap last.
         y: root.card.y + root.card.height
-            + (root.area.y + root.area.height - root.card.y - root.card.height - height) / 2
+            + (root.area.y + root.area.height - root.card.y - root.card.height - height)
+                * (1 - root.bandFraction)
 
         // The mode's two tabs (spec §1.4): the tab is a FILTER on what the
         // viewport draws, so the bar's index and `GlobalStates.editTab` must
