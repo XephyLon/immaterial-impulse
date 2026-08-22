@@ -99,13 +99,38 @@ def test_force_field_focus_returns_before_reaching_the_field():
          f"surface is not interactive; its first statement is: {first!r}")
 
 
+
+def _block_end(text: str, start: int) -> int:
+    """The index just past the `}` closing the block that opens at `start`."""
+    depth = 0
+    for index in range(text.index("{", start), len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    return len(text)
+
+
 def test_the_password_field_is_disabled_and_read_only_without_interactive():
     # Anchored to the field's own block rather than matched anywhere in the
     # file: a term on any OTHER control would otherwise satisfy the sweep
     # while the field's own gate silently went.
     text = code(LOCK_SURFACE)
-    start = text.find("ToolbarTextField {")
-    assert start != -1, "the password field is no longer a ToolbarTextField"
+    # Found by walking BACK from the field's publication of itself, not by
+    # naming its type: the field became a `PasswordField` when the shell's two
+    # password prompts were folded onto one control, and a check anchored on a
+    # type name fails on the rename rather than on the gate it guards.
+    publication = text.find("root.passwordField = ")
+    assert publication != -1, \
+        "LockSurface no longer publishes its password field - the anchor has moved"
+    start = max((match.start() for match in re.finditer(r"(?<![\w.])[A-Z][A-Za-z0-9_]*\s*\{", text)
+                 if match.start() < publication
+                 and text[match.start():].split("{", 1)[0].strip() not in ("Component",)
+                 and _block_end(text, match.start()) > publication),
+                default=-1)
+    assert start != -1, "the password field's own declaration is no longer findable"
     depth = 0
     end = start
     for index in range(text.index("{", start), len(text)):
