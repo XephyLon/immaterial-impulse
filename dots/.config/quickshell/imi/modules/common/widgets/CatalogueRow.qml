@@ -51,9 +51,13 @@ ColumnLayout {
     property string title: ""
     property alias titleFont: titleLabel.font
     property color titleColor: Appearance.colors.colOnSecondaryContainer
-    // A title that must fit its row fills the width and elides; one that is
-    // followed by `titleContent` on the same line does not, or the byline is
-    // pushed to the far edge. The two are exclusive, so it is one flag.
+    // Two separate questions, and conflating them cost the store card its
+    // eliding title. FILLING is about where `titleContent` sits: a title that
+    // fills pushes the byline to the far edge, so a row carrying one must not.
+    // ELIDING is about what happens when the row is too narrow, and a title
+    // that does not fill still needs it - it just shrinks from its implicit
+    // width instead of to a share of the row.
+    property bool titleFillsWidth: false
     property bool titleElides: false
 
     // Always one size down from the title - every one of the seven rows this
@@ -146,7 +150,7 @@ ColumnLayout {
 
                 StyledText {
                     id: titleLabel
-                    Layout.fillWidth: root.titleElides
+                    Layout.fillWidth: root.titleFillsWidth
                     text: root.title
                     textFormat: Text.PlainText
                     color: root.titleColor
@@ -160,8 +164,8 @@ ColumnLayout {
                 // Keeps the title left-aligned when it is not the thing that
                 // fills the line itself.
                 Item {
-                    visible: !root.titleElides
-                    Layout.fillWidth: !root.titleElides
+                    visible: !root.titleFillsWidth
+                    Layout.fillWidth: !root.titleFillsWidth
                 }
             }
 

@@ -315,6 +315,7 @@ Item {
                         title: entry.modelData.name
                         titleFont.pixelSize: Appearance.font.pixelSize.normal
                         titleColor: Appearance.colors.colOnSurface
+                        titleFillsWidth: true
                         titleElides: true
                         description: entry.modelData.description ?? ""
                         descriptionColor: Appearance.colors.colOnSurfaceVariant
@@ -393,6 +394,7 @@ Item {
                         title: modelData.name
                         titleFont.pixelSize: Appearance.font.pixelSize.normal
                         titleColor: Appearance.colors.colOnSurface
+                        titleFillsWidth: true
                         titleElides: true
 
                         affordance: [
@@ -471,6 +473,7 @@ Item {
                         title: appRow.modelData.name ?? appRow.appId
                         titleFont.pixelSize: Appearance.font.pixelSize.normal
                         titleColor: Appearance.colors.colOnSurface
+                        titleFillsWidth: true
                         titleElides: true
 
                         affordance: [
@@ -530,6 +533,7 @@ Item {
                         title: lockRow.modelData.name
                         titleFont.pixelSize: Appearance.font.pixelSize.normal
                         titleColor: Appearance.colors.colOnSurface
+                        titleFillsWidth: true
                         titleElides: true
                         description: lockRow.modelData.description
                         descriptionColor: Appearance.colors.colOnSurfaceVariant
@@ -584,6 +588,7 @@ Item {
                         : Translation.tr("Widget layout follows the desktop")
                     titleFont.pixelSize: Appearance.font.pixelSize.normal
                     titleColor: Appearance.colors.colOnSurface
+                    titleFillsWidth: true
                     titleElides: true
                     description: root.lockLayoutForked
                         ? Translation.tr("Click to use the desktop layout again")

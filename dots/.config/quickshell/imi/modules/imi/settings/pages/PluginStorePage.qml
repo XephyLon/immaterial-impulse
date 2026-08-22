@@ -250,6 +250,10 @@ ContentPage {
                             titleFont.pixelSize: Appearance.font.pixelSize.large
                             titleFont.weight: Font.DemiBold
                             titleColor: Appearance.colors.colOnLayer1
+                            // Not filling - the version and the star sit
+                            // right after the name - but eliding, which is
+                            // what this card has always done.
+                            titleElides: true
                             description: Translation.tr("By %1")
                                 .arg(card.modelData.author ?? Translation.tr("Unknown creator"))
                             descriptionWraps: false
