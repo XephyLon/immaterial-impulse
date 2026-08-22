@@ -103,7 +103,7 @@ Item {
         scale: (root.speaking ? 1.1 : 1) * root.transitionScale
         rotation: root.transitionRotation
 
-        Behavior on color { ColorAnimation { duration: Appearance.animation.elementMoveFast.duration } }
+        Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
 
         Image {
             id: avatar

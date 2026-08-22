@@ -164,7 +164,7 @@ Item {
                         ? Appearance.colors.colTertiaryContainer
                         : Appearance.colors.colPrimary)
                     : root.controlIconColor
-                Behavior on color { ColorAnimation { duration: Appearance.animation.elementMoveFast.duration } }
+                Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
             }
         }
     }
@@ -420,7 +420,7 @@ Item {
                     radius: width / 2
                     color: Appearance.colors.colOnPrimary
                     opacity: !artClip.artLoaded ? 0 : (root.hoveredNow ? 0.55 : 0)
-                    Behavior on opacity { NumberAnimation { duration: Appearance.animation.elementMoveFast.duration } }
+                    Behavior on opacity { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
                 }
             }
 
