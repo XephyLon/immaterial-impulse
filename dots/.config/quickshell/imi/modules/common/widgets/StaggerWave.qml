@@ -83,6 +83,24 @@ QtObject {
         root.active = [];
     }
 
+    // Every member where its entrance STARTS from, with nothing running. Two
+    // callers: the deferral below, and a container that knows its gesture has
+    // begun before it knows its container has arrived - Edit Mode's drawer
+    // flips its intent at the click and gates the wave on the reveal's own
+    // progress, so without this its rows are drawn at full strength for the
+    // whole run up to the gate and then blink out to cascade back in.
+    // Assigned rather than animated: a start value written through the same
+    // animated property the end value goes through is swallowed by the
+    // retarget, which is the defect that left the wallpaper selector with no
+    // entrance at all.
+    function park() {
+        root.stop();
+        const kids = root.members();
+        for (let i = 0; i < kids.length; i++)
+            if (kids[i].appear !== undefined)
+                kids[i].appear = 0;
+    }
+
     // Every member at rest and on screen, with nothing running - what a
     // surface that is not staggering at all should look like.
     function settle() {
@@ -101,9 +119,7 @@ QtObject {
         if (!root.target?.visible) {
             // Park the members where the entrance will start from, so nothing
             // is on screen at full strength for the frame the container maps.
-            for (let i = 0; i < kids.length; i++)
-                if (kids[i].appear !== undefined)
-                    kids[i].appear = 0;
+            root.park();
             root.pendingEnter = true;
             return;
         }

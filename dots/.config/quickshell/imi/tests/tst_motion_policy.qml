@@ -104,6 +104,49 @@ TestCase {
         compare(Motion.staggerRanks([]).length, 0);
     }
 
+    // The gate is what makes a staggered group read as composed rather than
+    // loose: the contents wait for their container instead of racing the reveal
+    // they are meant to land in.
+    function test_contents_wait_for_the_container_on_the_way_in() {
+        verify(!Motion.contentsArrived(0, true), "nothing arrives before the container does");
+        verify(!Motion.contentsArrived(Motion.CONTAINER_CONTENT_GATE - 0.01, true));
+        verify(Motion.contentsArrived(Motion.CONTAINER_CONTENT_GATE, true),
+               "the gate is inclusive - a container exactly at it has arrived");
+        verify(Motion.contentsArrived(1, true));
+        // A spatial tier that overshoots hands this numbers above 1, and a
+        // container past its destination is emphatically open.
+        verify(Motion.contentsArrived(1.0139, true));
+    }
+
+    // ...and the asymmetry IS the rule: on the way out the contents do not
+    // leave, they ride the container off as one rigid transform. So the closing
+    // branch holds until the container has nothing left, which is where the
+    // reset belongs - off screen, where nobody sees a member snap back.
+    function test_contents_ride_the_container_out() {
+        verify(Motion.contentsArrived(1, false));
+        verify(Motion.contentsArrived(0.2, false),
+               "a container still on screen still has its contents in it");
+        verify(Motion.contentsArrived(0.001, false));
+        verify(!Motion.contentsArrived(0, false), "gone is gone");
+        // The same overshooting curve run backwards undershoots below zero, and
+        // a container past its exit is not an arrival.
+        verify(!Motion.contentsArrived(-0.0139, false));
+    }
+
+    // No guard is needed for these and none is written: every comparison
+    // against NaN is false, so an absent or unparseable progress answers "not
+    // arrived" on both branches by itself. Pinned because the tempting repair
+    // is an isFinite() that no test can redden.
+    function test_a_gate_asked_about_nothing_answers_no() {
+        verify(!Motion.contentsArrived(undefined, true));
+        verify(!Motion.contentsArrived(undefined, false));
+        verify(!Motion.contentsArrived(NaN, false));
+        verify(!Motion.contentsArrived("nonsense", true));
+        // ...and null converts to 0, which is honestly "not open yet" rather
+        // than a value that has to be rejected.
+        verify(!Motion.contentsArrived(null, false));
+    }
+
     // Expressed as a fraction of a catalogued duration rather than as a
     // literal, so it moves with any retiming of the tiers - and unscaled, so
     // whatever consumes it applies the multiplier exactly once.

@@ -515,6 +515,17 @@ Singleton {
         // the catalogue. Unscaled on purpose: whatever consumes it scales it
         // once, and scaling here too would apply the multiplier twice.
         readonly property int staggerStep: MotionPolicy.staggerStep(animationCurves.expressiveEffectsDuration)
+        // How far a container must have opened before its contents start
+        // arriving, and the predicate that reads it. A wave with no gate races
+        // the reveal it is meant to land in, which is what makes a staggered
+        // group read as loose instead of composed. Unitless and unscaled - it
+        // is a fraction of the container's OWN progress, so the speed slider
+        // and the reduce-motion floor reach it through that scalar's tier
+        // rather than through a second gate here.
+        readonly property real contentGate: MotionPolicy.CONTAINER_CONTENT_GATE
+        function contentsArrived(progress: real, opening: bool): bool {
+            return MotionPolicy.contentsArrived(progress, opening);
+        }
         function staggerRanks(included: var): var {
             return MotionPolicy.staggerRanks(included);
         }

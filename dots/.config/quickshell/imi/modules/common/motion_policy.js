@@ -116,6 +116,49 @@ function staggerDelay(rank, step, leadIn) {
     return base + Math.min(rank, STAGGER_MAX_RANK) * Math.max(0, Number(step) || 0);
 }
 
+// ---------------------------------------------------------------------------
+// The container-progress gate
+// ---------------------------------------------------------------------------
+//
+// How far a container has to have opened before the things inside it start
+// arriving. Without it a wave races the reveal it is meant to land in and the
+// group reads as loose rather than composed - measured off the sibling fork's
+// popups (docs/p3drovfx-motion-measured-2026-08-22.md §2.1), whose container is
+// at 90% by 133ms while its first child does not reach 50% until 233ms. It is
+// the one technique in that survey that is theirs rather than M3's: M3 says a
+// group enters in sequence and says nothing about what the group's own
+// container is doing while it happens.
+//
+// Declared here rather than written out as `> 0.6` wherever it is wanted, for
+// the reason the step is: a number nobody can find is a number the next surface
+// picks again.
+var CONTAINER_CONTENT_GATE = 0.6;
+
+// Whether a container's contents belong on screen, given the container's own
+// progress and which way it is going.
+//
+// The two directions are deliberately different and the asymmetry IS the rule
+// (§3, item 4): on the way IN the contents wait for the gate; on the way OUT
+// they do not leave at all - they stay drawn and ride the container off, which
+// is what makes an exit one rigid transform rather than a second, contradictory
+// cascade. So the closing branch holds until the container has nothing left,
+// and whatever reset the next entrance needs happens there, off screen.
+//
+// `opening` is the caller's own intent flag, never a direction inferred from
+// the progress. An intent flips at the click and the progress follows, so the
+// two branches are entered by different events and there is no ordering to get
+// wrong; inferring the direction would need a previous value, which is state,
+// which is the thing this module deliberately does not have.
+// No isFinite guard, deliberately: every comparison against NaN is false, so an
+// absent or unparseable progress already answers "not arrived" on both
+// branches. A guard here would be a line no test could redden - the shape
+// AGENT.md warns about from the other side, where `Number(null)` is 0 and
+// `isFinite(0)` is true.
+function contentsArrived(progress, opening) {
+    var p = Number(progress);
+    return opening ? p >= CONTAINER_CONTENT_GATE : p > 0;
+}
+
 // Rank by VISIBLE position, not by index in the list. A member that is not on
 // screen must not spend a slot: it leaves a hole in the middle of the cascade
 // that reads as the wave stalling, and it is not compensated for by anything

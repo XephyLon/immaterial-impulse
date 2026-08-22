@@ -166,6 +166,75 @@ Item {
     // the picker's own scroll position somewhere the islands are not.
     readonly property var lockRows: root.lockIslandRows.concat(root.lockWidgetRows)
 
+    // ---- the entrance --------------------------------------------------------
+    //
+    // The panel arrives as a surface and THEN fills, rather than sliding in with
+    // everything already in it. That is the one grammar the motion survey found
+    // measured off the sibling fork and missing here
+    // (docs/p3drovfx-motion-measured-2026-08-22.md §2.1, §4.2): their container
+    // is at 90% by 133ms and its first child does not reach 50% until 233ms,
+    // while every group in this shell arrived all at once because nothing asked
+    // it not to.
+    //
+    // Three rules, none of them this file's. The wave itself is a `StaggerWave`
+    // declared beside the column it walks - the ranking, the clamp, the scaled
+    // step and the cancellation are the shared runner's, so this file decides
+    // only WHEN.
+    //
+    //  - the contents wait for the container (`Appearance.animation.contentGate`),
+    //  - they are ranked by VISIBLE position, which matters more here than
+    //    anywhere else that staggers: only one of the four sections is drawn at
+    //    a time, so most of the column is hidden on any given open and an
+    //    unranked wave would spend most of its clamped slots on nothing,
+    //  - and they do NOT leave on the close. `contentsIn` stays true for the
+    //    whole exit, so the rows ride the panel off as one rigid transform, and
+    //    the reset happens once the reveal has no width left - off screen, where
+    //    nobody sees a member snap back to its start.
+    readonly property bool opening: GlobalStates.editDrawerOpen
+    readonly property bool contentsIn: Appearance.animation.contentsArrived(
+        GlobalStates.editDrawerProgress, root.opening)
+
+    // A member arrives with three properties moving together, not as a fade:
+    // opacity, a scale, and a small rise. One `appear` scalar drives all three
+    // so they cannot finish on different schedules, which is what
+    // docs/M3_GUIDELINES.md §2 ("Component Entrance and Exit") requires and what
+    // reads as a hiccup when it is missed.
+    //
+    // The rise is a spacing token. The scale is DERIVED from it rather than
+    // picked: the survey measured 0.85, but that is a popup's compact cards, and
+    // on this panel's full-width rows the same factor is a 52px horizontal swing
+    // inside a 380px drawer - a zoom, not a settle. Matching the scale's own
+    // excursion to the rise keeps the two terms one motion at any drawer width,
+    // with the measured 0.85 as the floor so a narrow panel cannot invert it.
+    readonly property real entranceRise: Appearance.spacing.space250
+    readonly property real entranceScaleFrom: Math.max(0.85,
+        1 - root.entranceRise / Math.max(1, root.panelWidth))
+    function entranceScale(appear) {
+        return root.entranceScaleFrom + (1 - root.entranceScaleFrom) * appear;
+    }
+    function entranceOffset(appear) {
+        return (1 - appear) * root.entranceRise;
+    }
+
+    // Arming and running are two events, not one, and measuring showed why.
+    // Setting the members to zero inside the wave meant they were drawn at full
+    // strength inside the first 100ms of reveal - the whole run up to the gate -
+    // and then blinked out to cascade back in. Nothing about a gate implies
+    // "and the contents were visible until now": they have to be put away when
+    // the gesture starts, which is the intent flipping, and let out when the
+    // container has arrived, which is the gate.
+    onOpeningChanged: {
+        if (root.opening)
+            entrance.park();
+    }
+
+    onContentsInChanged: {
+        if (root.contentsIn)
+            entrance.enter();
+        else
+            entrance.settle();
+    }
+
     Rectangle {
         id: panel
         anchors.left: parent.left
@@ -179,11 +248,36 @@ Item {
         radius: Appearance.rounding.verylarge
 
         ColumnLayout {
+            id: drawerColumn
             anchors.fill: parent
             anchors.margins: Appearance.spacing.space150
             spacing: Appearance.spacing.space100
 
+            // The group's arrival, through the one runner every staggered
+            // surface in this shell asks - the ranking, the clamp, the scaled
+            // step and the cancellation are all its, so the drawer cannot
+            // disagree with the sidebar about any of them.
+            //
+            // No `leadIn`, deliberately, and it is the one thing this adopter
+            // does differently: every other container's motion is something
+            // QML has no scalar for - a settings page's cross-fade, a layer
+            // surface the compositor slides - so a fixed head start is the
+            // best available guess at "the container is there now". This
+            // drawer's reveal IS `GlobalStates.editDrawerProgress`, so the
+            // gate above asks the real question and the wave is simply not
+            // started until it answers. A lead-in as well would be two waits
+            // in front of one wave, only one of them answerable.
+            StaggerWave {
+                id: entrance
+                target: drawerColumn
+            }
+
             RowLayout {
+                id: addHeaderRow
+                property real appear: 1
+                opacity: addHeaderRow.appear
+                scale: root.entranceScale(addHeaderRow.appear)
+                transform: Translate { y: root.entranceOffset(addHeaderRow.appear) }
                 Layout.fillWidth: true
                 // A Layout nested in a Layout defaults to fillHeight TRUE, and
                 // a row of chrome that fills is a row that competes with the
@@ -209,6 +303,11 @@ Item {
 
             // One chip per target surface.
             RowLayout {
+                id: sectionChipRow
+                property real appear: 1
+                opacity: sectionChipRow.appear
+                scale: root.entranceScale(sectionChipRow.appear)
+                transform: Translate { y: root.entranceOffset(sectionChipRow.appear) }
                 Layout.fillWidth: true
                 Layout.fillHeight: false
                 Layout.leftMargin: Appearance.spacing.space75
@@ -239,6 +338,11 @@ Item {
             }
 
             StyledText {
+                id: sectionHint
+                property real appear: 1
+                opacity: sectionHint.appear
+                scale: root.entranceScale(sectionHint.appear)
+                transform: Translate { y: root.entranceOffset(sectionHint.appear) }
                 Layout.fillWidth: true
                 Layout.fillHeight: false
                 Layout.leftMargin: Appearance.spacing.space75
@@ -258,6 +362,10 @@ Item {
             // ---- desktop widgets (stage 5's list, unchanged) ---------------
             ListView {
                 id: list
+                property real appear: 1
+                opacity: list.appear
+                scale: root.entranceScale(list.appear)
+                transform: Translate { y: root.entranceOffset(list.appear) }
                 visible: root.section === "widgets"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -374,6 +482,11 @@ Item {
 
             // ---- bar widgets ----------------------------------------------
             RowLayout {
+                id: barBucketRow
+                property real appear: 1
+                opacity: barBucketRow.appear
+                scale: root.entranceScale(barBucketRow.appear)
+                transform: Translate { y: root.entranceOffset(barBucketRow.appear) }
                 visible: root.section === "bar"
                 Layout.fillWidth: true
                 Layout.fillHeight: false
@@ -401,6 +514,10 @@ Item {
 
             ListView {
                 id: barList
+                property real appear: 1
+                opacity: barList.appear
+                scale: root.entranceScale(barList.appear)
+                transform: Translate { y: root.entranceOffset(barList.appear) }
                 visible: root.section === "bar"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -449,6 +566,10 @@ Item {
             // ---- dock apps ------------------------------------------------
             MaterialTextField {
                 id: appSearchField
+                property real appear: 1
+                opacity: appSearchField.appear
+                scale: root.entranceScale(appSearchField.appear)
+                transform: Translate { y: root.entranceOffset(appSearchField.appear) }
                 visible: root.section === "dock"
                 Layout.fillWidth: true
                 placeholderText: Translation.tr("Search apps")
@@ -456,6 +577,10 @@ Item {
 
             ListView {
                 id: appList
+                property real appear: 1
+                opacity: appList.appear
+                scale: root.entranceScale(appList.appear)
+                transform: Translate { y: root.entranceOffset(appList.appear) }
                 visible: root.section === "dock"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -530,6 +655,10 @@ Item {
             // ---- lock screen presence -------------------------------------
             ListView {
                 id: lockList
+                property real appear: 1
+                opacity: lockList.appear
+                scale: root.entranceScale(lockList.appear)
+                transform: Translate { y: root.entranceOffset(lockList.appear) }
                 visible: root.section === "lock"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -674,6 +803,15 @@ Item {
             // (spec §4.3 as amended). This row says which state the screen is
             // in, and while forked offers the way back - the drawer never
             // forks by itself; a drag does that.
+            //
+            // The one member of this column that takes NO entrance. A
+            // `RippleButton` already owns both channels the entrance writes:
+            // `interactionMotion.scale` (so a second scale here would multiply
+            // rather than replace - lint_interaction_motion_double.py) and the
+            // disabled dim on `opacity` (so a second opacity binding would draw
+            // this row as enabled while it is not - lint_disabled_opacity.py,
+            // and the bug ExpandablePanel's `appear` indirection exists for).
+            // It appears with its section rather than arriving after it.
             RippleButton {
                 id: lockLayoutRow
                 visible: root.section === "lock"

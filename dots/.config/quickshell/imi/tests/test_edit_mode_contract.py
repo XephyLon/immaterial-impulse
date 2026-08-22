@@ -1496,5 +1496,91 @@ def test_every_committed_mutation_records_exactly_its_entries():
         widget), "the drag-release push lost its moved-something guard"
 
 
+def test_every_staggered_drawer_member_arrives_on_all_three_channels():
+    """The drawer's entrance is one scalar driving three properties.
+
+    A member arriving on opacity alone is a fade, which is what
+    `docs/M3_GUIDELINES.md` §2 ("Component Entrance and Exit") says a component
+    entrance is not - and a member that folds `appear` into two of the three
+    finishes its scale on a different schedule from its opacity, which reads as
+    a hiccup rather than as one motion. The realistic regression is a fifth
+    section added to the column and dressed by copying half of a neighbour, so
+    the sweep finds the members rather than naming them.
+    """
+    text = code(DRAWER)
+    ids = re.findall(r"id: (\w+)\n\s*property real appear: 1", text)
+    assert len(ids) >= 9, (
+        f"only {len(ids)} drawer members declare an `appear` - the column has "
+        f"nine that should, so either a member lost its entrance or this sweep "
+        f"stopped finding them")
+    for name in ids:
+        for channel in (f"opacity: {name}.appear",
+                        f"scale: root.entranceScale({name}.appear)",
+                        f"transform: Translate {{ y: root.entranceOffset({name}.appear) }}"):
+            assert channel in text, (
+                f"{name} does not fold `appear` into `{channel.split(':')[0]}`. "
+                f"All three channels ride one scalar so they cannot land on "
+                f"different schedules.")
+
+    # ...and the members that must NOT be dressed this way are the column's own
+    # RippleButtons - the lock section's two re-link rows. A `RippleButton`
+    # already declares `appear` and folds it into its `opacity`, and it owns
+    # `scale` through the interaction model and the disabled dim through that
+    # same opacity binding - so it rides the wave through the property the
+    # runner writes, and a second writer of either channel here would REPLACE
+    # the control's binding rather than compose with it: a press that stops
+    # squishing, and a disabled row drawn as enabled. Swept rather than named,
+    # because the first version of this named the one row that existed and went
+    # quiet the moment a second was added beside it.
+    ripple_rows = re.findall(r"\n {12}RippleButton \{\n {16}id: (\w+)", text)
+    assert len(ripple_rows) >= 2, (
+        f"this sweep found {len(ripple_rows)} column-level RippleButtons in the "
+        f"drawer - the lock section has two re-link rows, so either they moved "
+        f"or the sweep stopped finding them")
+    for name in ripple_rows:
+        assert name not in ids, (
+            f"{name} redeclares `appear`. It is a RippleButton, which already "
+            f"has one and already folds it into the opacity that carries its "
+            f"disabled dim - a second declaration here shadows the control's "
+            f"own and draws the row as enabled while it is not.")
+        for channel in (f"opacity: {name}.appear",
+                        f"scale: root.entranceScale({name}.appear)"):
+            assert channel not in text, (
+                f"{name} writes `{channel.split(':')[0]}` itself. On a control "
+                f"that already writes it, that replaces the binding rather "
+                f"than composing with it - lint_interaction_motion_double.py "
+                f"and lint_disabled_opacity.py exist for the same doubling.")
+
+
+def test_the_drawer_arms_its_entrance_before_the_reveal_draws():
+    """Putting the members away is the gesture's start, not the gate's.
+
+    Measured: with the reset inside the wave the rows were drawn at full
+    strength for the whole 100ms run up to the gate and then blinked out to
+    cascade back in. The arm hangs off the intent flag, which flips at the
+    click, while the wave hangs off the container's progress.
+    """
+    text = code(DRAWER)
+    assert "onOpeningChanged" in text and "entrance.park()" in text, (
+        "the drawer no longer parks its members when the gesture starts, so "
+        "its contents are visible until the gate and then blink out")
+    opening = text[text.index("onOpeningChanged"):]
+    opening = opening[:opening.index("\n    }")]
+    assert "root.opening" in opening and "editDrawerProgress" not in opening, (
+        "the park hangs off something other than the intent flag. The gate is "
+        "the container's progress and the arm is the click - two events, or "
+        "the members are put away at the moment they are meant to come out.")
+    # ...and the park is an assignment, in the runner both adopters share: a
+    # start value written through the same animated property the end value
+    # goes through is swallowed by the retarget, which is the defect that left
+    # the wallpaper selector with no entrance at all.
+    wave = code(ROOT / "modules/common/widgets/StaggerWave.qml")
+    park = wave[wave.index("function park()"):]
+    park = park[:park.index("\n    }")]
+    assert "= 0;" in park and "Animation" not in park, (
+        "StaggerWave.park animates the entrance's START state instead of "
+        "assigning it.")
+
+
 if __name__ == "__main__":
     raise SystemExit(run(globals()))

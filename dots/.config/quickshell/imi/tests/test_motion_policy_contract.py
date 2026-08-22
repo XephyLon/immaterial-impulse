@@ -31,6 +31,7 @@ SETTINGS_PAGE = ROOT / "modules/imi/settings/pages/AppearanceConfig.qml"
 EXPANDABLE_PANEL = ROOT / "modules/common/widgets/ExpandablePanel.qml"
 CAROUSEL = ROOT / "modules/common/plugins/designsystem/widgets/Carousel.qml"
 STAGGER_WAVE = ROOT / "modules/common/widgets/StaggerWave.qml"
+EDIT_MODE_DRAWER = ROOT / "modules/imi/editMode/EditModeDrawer.qml"
 
 # Every container that staggers a group, as a RATCHET rather than a list: a new
 # adopter is a line here, and an adopter that quietly stops staggering fails the
@@ -44,6 +45,7 @@ STAGGER_ADOPTERS = {
     "modules/common/widgets/ContentPage.qml",
     "modules/imi/sessionScreen/SessionScreen.qml",
     "modules/imi/sidebarRight/SidebarRightContent.qml",
+    "modules/imi/editMode/EditModeDrawer.qml",
 }
 
 # A cascade whose rank is bounded by the shape of its own model rather than by
@@ -239,6 +241,27 @@ def test_the_stagger_is_adopted_where_a_group_arrives():
         f"surface whose members arrive as a GROUP; without one they arrive in a "
         f"single frame again, which is invisible in the source and reads on "
         f"screen as the shell being flat rather than as a bug.")
+
+
+def test_the_drawer_gates_its_wave_on_the_container_it_lands_in():
+    """The one adopter whose container has a progress to gate on.
+
+    Every other adopter's container is animated by something QML has no scalar
+    for - a settings page cross-fade, a layer surface the compositor slides -
+    so `StaggerWave.leadIn` stands in for the head start. Edit Mode's drawer
+    reveal IS `GlobalStates.editDrawerProgress`, so it can ask the real
+    question instead of guessing at a delay: the wave is not started until the
+    container has actually arrived. Without the gate it races the reveal it is
+    meant to land in, which is what makes a staggered group read as loose.
+    """
+    drawer = EDIT_MODE_DRAWER.read_text(encoding="utf-8")
+    assert "Appearance.animation.contentsArrived(" in drawer, (
+        "Edit Mode's drawer no longer gates its contents on the container's "
+        "own progress.")
+    assert not re.search(r"^\s*leadIn:", drawer, re.MULTILINE), (
+        "the drawer's wave carries a lead-in as well as the gate. Two waits in "
+        "front of one wave, and only one of them is answerable from the "
+        "container's own motion.")
 
 
 def test_nothing_else_computes_a_ranked_wait():
