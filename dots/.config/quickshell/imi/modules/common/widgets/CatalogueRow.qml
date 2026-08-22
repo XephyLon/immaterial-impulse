@@ -120,6 +120,12 @@ ColumnLayout {
     RowLayout {
         id: mainRow
         Layout.fillWidth: true
+        // A Layout nested in a Layout defaults to fillHeight TRUE, so the two
+        // rows here would SPLIT any height the row is given beyond its
+        // implicit one - which is exactly what a fixed-height list row hands
+        // it. Stated on both, never inherited: the main row takes the slack
+        // and stays centred, the detail row takes what it needs.
+        Layout.fillHeight: true
         spacing: root.rowSpacing
 
         Loader {
@@ -191,6 +197,7 @@ ColumnLayout {
     RowLayout {
         id: detailRow
         Layout.fillWidth: true
+        Layout.fillHeight: false
         // Only when the slot is actually filled, so a row that leaves it empty
         // keeps its height exactly.
         Layout.topMargin: detailRow.children.length > 0
