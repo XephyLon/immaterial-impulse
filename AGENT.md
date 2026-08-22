@@ -2993,26 +2993,54 @@ mode is built out of are worth not re-deriving:
   226ms reveal plus a settle. What was missing is that everything inside
   the panel arrived with it, which is
   `docs/p3drovfx-motion-measured-2026-08-22.md` §4.2's finding about
-  adoption. The column's members now arrive individually through
-  `Appearance.animation.contentsArrived` and the stagger helpers, at
-  their final positions, on the three properties §3 measured - opacity, a
-  scale, and a small rise - all driven by one `appear` scalar so they
-  cannot land on different schedules. Three things about doing that are
-  not obvious. Ranking by VISIBLE position matters more here than
-  anywhere else in the tree, because four of the ten column members are
-  the sections that are not showing and an unranked wave spends four of
-  its five clamped slots on nothing. Arming and running are two events -
-  the first version reset the members at the gate, so they were drawn at
-  full strength through the whole 100ms run up to it and then blinked out
-  to cascade back in; the arm hangs off the intent flag and the wave off
-  the container's progress. And `lockLayoutRow` is deliberately left out,
-  because a `RippleButton` already writes both channels the entrance
-  wants (`interactionMotion.scale` and the disabled dim on `opacity`), so
-  a second writer of either is what `lint_interaction_motion_double.py`
-  and `lint_disabled_opacity.py` exist to fail on.
+  adoption. The column's members now arrive individually, at their final
+  positions, on the three properties §3 measured - opacity, a scale, and
+  a small rise - all driven by one `appear` scalar so they cannot land on
+  different schedules. The wave itself is a `StaggerWave` declared beside
+  the column it walks, so the ranking, the clamp, the scaled step and the
+  cancellation are the shared runner's and this file decides only WHEN.
+  Three things about doing that are not obvious.
+  **This is the one adopter whose container has a progress to gate on**,
+  and it therefore carries NO `leadIn`. Every other container's motion is
+  something QML has no scalar for - a settings page's cross-fade, a layer
+  surface the compositor slides - so a fixed head start is the best
+  available guess at "the container is there now"; the drawer's reveal IS
+  `GlobalStates.editDrawerProgress`, so
+  `Appearance.animation.contentsArrived` asks the real question and the
+  wave is simply not started until it answers. A lead-in as well would be
+  two waits in front of one wave, only one of them answerable.
+  **Ranking by VISIBLE position matters more here than anywhere else that
+  staggers**, because only one of the four sections is drawn at a time -
+  most of the column is hidden on any given open, and an unranked wave
+  would spend most of its clamped slots on nothing while the one list the
+  user is looking at arrived last. Measured through the probe, the
+  Widgets section's four members and the Lock section's six land on the
+  same frame ladder for the ranks they share, which is the check that the
+  ranks are visible positions rather than indices in `children`.
+  **Arming and running are two events** - the first version reset the
+  members at the gate, so they were drawn at full strength through the
+  whole run up to it and then blinked out to cascade back in; the park
+  hangs off the intent flag and the wave off the container's progress.
+  That parked state is `StaggerWave.park()`, shared with the runner's own
+  wait-for-an-unmapped-container branch rather than spelled twice.
+  A correction worth keeping, because it was written down before it was
+  measured: the lock section's two re-link rows are **not** left out of
+  the wave. They are `RippleButton`s, and a `RippleButton` declares
+  `appear` itself and folds it into its own opacity and a 6px rise - so
+  they ride the wave through exactly the property the runner writes, one
+  and two ranks behind the list above them. What they must not do is take
+  the drawer's own three-channel dressing: `scale` is the interaction
+  model's and that same opacity binding carries the disabled dim, so a
+  second writer of either REPLACES the control's binding rather than
+  composing with it, which is what `lint_interaction_motion_double.py`
+  and `lint_disabled_opacity.py` exist to fail on. The earlier wording
+  ("the one member that takes no entrance") was true of the drawer's
+  dressing and false of the wave, and nothing distinguished the two until
+  the probe was pointed at the section those rows are in.
   (fix(editMode): the drawer's reveal rides the curve the desktop rides;
   feat(editMode): the drawer arrives as a surface and then fills;
-  test(editMode): a probe that samples the drawer's motion per frame.)
+  test(editMode): a probe that samples the drawer's motion per frame;
+  test(editMode): point the motion probe at the section the rows moved to.)
 - **What the mode may write is a failing check now**
   (`tests/lint_edit_mode_scope.py`): a write from any file under the edit-mode
   directories to a `Config.options.*` path outside spec §7.1's placement and
@@ -4221,8 +4249,16 @@ under [Dynamic/data-driven QML gotchas](#dynamicdata-driven-qml-gotchas)). A mem
 declaring `property real appear: 1` and folding it into its own opacity — `RippleButton` has done
 that since the stagger was written, which is why the session screen's nine buttons needed no change
 at all. `step` and `leadIn` arrive in BASE milliseconds and are scaled inside, once: handing either
-an already-scaled `Appearance.animation.*.duration` applies the multiplier twice.
-("feat(widgets): StaggerWave, the one runner for a group's arrival").
+an already-scaled `Appearance.animation.*.duration` applies the multiplier twice. `leadIn` is a
+GUESS at when the container has arrived, and an adopter whose container animates on a scalar QML can
+read should gate on that instead and pass no lead-in at all — Edit Mode's drawer is the one that
+can, and its entry above (`GlobalStates.editDrawerProgress` through
+`Appearance.animation.contentsArrived`) says what that costs and buys.
+`park()` is the entrance's start state, called both by the runner's own wait for an unmapped
+container and by an adopter that learns its gesture has begun before it learns its container has
+arrived.
+("feat(widgets): StaggerWave, the one runner for a group's arrival";
+"feat(editMode): the drawer arrives as a surface and then fills").
 
 **A wave asked for while its container is off screen writes nothing, and leaves the surface blank
 for ever.** Ranking asks each member whether it is on screen, and `visible` is EFFECTIVE visibility
