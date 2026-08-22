@@ -345,7 +345,7 @@ MouseArea {
 
     Component {
         id: passwordComponent
-        ToolbarTextField {
+        PasswordField {
             id: passwordBox
             placeholderText: GlobalStates.screenUnlockFailed ? Translation.tr("Incorrect password") : Translation.tr("Enter password")
 
@@ -361,18 +361,13 @@ MouseArea {
             Component.onDestruction: if (root.passwordField === passwordBox) root.passwordField = null
 
             // Style
-            clip: true
             font.pixelSize: Appearance.font.pixelSize.small
-            selectedTextColor: materialShapeChars ? "transparent" : Appearance.colors.colOnSecondaryContainer
-            selectionColor: materialShapeChars ? "transparent" : Appearance.colors.colSecondaryContainer
 
             // Password. Both halves of the preview gate on purpose: `enabled`
             // stops pointer and key input, `readOnly` closes the programmatic
             // paths a disabled field still leaves open.
             enabled: !root.context.unlockInProgress && root.interactive
             readOnly: !root.interactive
-            echoMode: TextInput.Password
-            inputMethodHints: Qt.ImhSensitiveData
 
             // Synchronizing (across monitors) and unlocking
             onTextChanged: root.context.currentText = this.text
@@ -417,24 +412,6 @@ MouseArea {
                 target: GlobalStates
                 function onScreenUnlockFailedChanged() {
                     if (GlobalStates.screenUnlockFailed) wrongPasswordShakeAnim.restart();
-                }
-            }
-
-            // We're drawing dots manually
-            property bool materialShapeChars: Config.options.lock.materialShapeChars
-            color: ColorUtils.transparentize(Appearance.colors.colOnLayer1, materialShapeChars ? 1 : 0)
-            Loader {
-                active: passwordBox.materialShapeChars
-                anchors {
-                    fill: parent
-                    leftMargin: passwordBox.padding
-                    rightMargin: passwordBox.padding
-                }
-                sourceComponent: PasswordChars {
-                    length: root.context.currentText.length
-                    selectionStart: passwordBox.selectionStart
-                    selectionEnd: passwordBox.selectionEnd
-                    cursorPosition: passwordBox.cursorPosition
                 }
             }
         }

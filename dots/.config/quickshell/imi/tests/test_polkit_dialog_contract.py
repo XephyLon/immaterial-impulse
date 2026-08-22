@@ -10,8 +10,8 @@ pill, the shape every field in this shell has) and polkit's `MaterialTextField`,
 which hands its container to QtQuick Controls' Material style
 (`Material.containerStyle: Material.Outlined`) and draws a boxed outline with the
 prompt floating in a notch cut through it. That shape appears nowhere else here.
-The check reads the LOCK screen's own field type rather than naming
-`ToolbarTextField` in a string, so the two cannot drift apart by a rename.
+The check reads the LOCK screen's own field type rather than naming a type in a
+string, so the two cannot drift apart by a rename.
 
 **Exactly one filled button, and it is the confirming one.** Cancel and OK were
 both flat, so the one question a modal authentication prompt has to answer - which
@@ -76,14 +76,17 @@ def blocks(text: str, type_name: str):
 
 
 def password_field_type(text: str) -> str:
-    """The type of the INNERMOST declaration carrying `echoMode:
-    TextInput.Password`.
+    """The type of the INNERMOST declaration that publishes itself as the lock
+    screen's password field.
 
-    Innermost, because every enclosing block contains the property too - a scan
+    Anchored on the publication (`root.passwordField = ...`) rather than on a
+    masking property, because every masking property now belongs to the shared
+    control and would name that control's own file instead of the call site.
+    Innermost, because every enclosing block contains the statement too - a scan
     that takes the first match answers with whatever the file's root object
     happens to be.
     """
-    needle = text.find("echoMode: TextInput.Password")
+    needle = text.find("root.passwordField = ")
     if needle < 0:
         return ""
     best = ""
@@ -113,6 +116,9 @@ def test_the_polkit_field_is_the_control_the_lock_screen_uses():
     assert lock_field, \
         ("no password field found in LockSurface.qml - this check derives the "
          "shell's password control from it and has nothing to compare against")
+    assert lock_field not in ("Component", "Item"), \
+        (f"the lock screen's password field resolved to {lock_field!r}, which is "
+         "a container rather than a control - the anchor has moved")
 
     assert re.search(rf"(?<![\w.]){lock_field}\s*\{{[^}}]*id: inputField", polkit, re.S), \
         (f"the polkit prompt's field is not a {lock_field} - the shell's two "
