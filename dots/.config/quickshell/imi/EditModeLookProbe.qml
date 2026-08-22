@@ -395,18 +395,25 @@ ShellRoot {
                 && harness.tabBar.y + harness.tabBar.height <= harness.screenHeight,
             `toolbar=${harness.toolbar?.y.toFixed(1)}+${harness.toolbar?.height.toFixed(1)}`
                 + ` band=${harness.card.y.toFixed(1)}`);
-        // ...and clear of the two edges the bar and the dock own, by a whole
+        // ...and clear of the two edges the bar and the dock own, by the edge
         // margin at each end. This is the check stage 4 did not have: its bands
         // were whatever the ceiling left over, so the toolbar started 22px into
         // a screen whose bar occupies the first 68 and the tab bar landed on the
         // dock. Asserted against the reserved insets rather than against the
         // area, so it cannot be satisfied by an area that forgot to subtract
         // them.
+        //
+        // The gap is `edgeMargin`, not `margin`: the band is asymmetric, with
+        // the tight gap on the outside against the panel and the generous one
+        // on the inside against the desktop. Clearing the panel is what this
+        // check is about, so it is the outer number that belongs here - and
+        // the inner one is asserted by the band check above.
         harness.check("...clear of the bar's and the dock's own edges",
             harness.toolbar !== null && harness.tabBar !== null
-                && harness.toolbar.y >= harness.insetTop + harness.margin - 0.5
+                && harness.toolbar.y >= harness.insetTop + harness.edgeMargin - 0.5
                 && harness.tabBar.y + harness.tabBar.height
-                    <= harness.screenHeight - harness.insetBottom - harness.margin + 0.5
+                    <= harness.screenHeight - harness.insetBottom
+                        - harness.edgeMargin + 0.5
                 && harness.card.y >= harness.insetTop
                 && harness.card.y + harness.card.height
                     <= harness.screenHeight - harness.insetBottom,
@@ -425,8 +432,13 @@ ShellRoot {
                     - (harness.card.x + harness.card.width / 2)) < 0.5
                 && Math.abs((harness.tabBar.x + harness.tabBar.width / 2)
                     - (harness.card.x + harness.card.width / 2)) < 0.5
-                && Math.abs(gapAbove - gapBelow) < 0.5,
-            `gaps=${gapAbove.toFixed(1)},${gapBelow.toFixed(1)}`);
+                && Math.abs(gapAbove - gapBelow) < 0.5
+                // ...and both are the EDGE margin. Equal to each other alone
+                // passes at any symmetric value, including the old one, so it
+                // could not see the band's split arrive or leave.
+                && Math.abs(gapAbove - harness.edgeMargin) < 0.5,
+            `gaps=${gapAbove.toFixed(1)},${gapBelow.toFixed(1)}`
+                + ` edgeMargin=${harness.edgeMargin.toFixed(1)}`);
         harness.check("in the mode at rest the lattice is down",
             !widgetCanvas.gridVisible && widgetCanvas.gridStrength === 0);
         harness.reportGeometry("geometry");
