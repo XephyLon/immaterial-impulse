@@ -92,6 +92,15 @@ own repo; the installer pins which revision it builds.
   beside a label sitting flat in a row of controls, which is exactly how the
   toolbar draws an unfilled button. It now reads as the title it is, with a
   rule separating it from the buttons.
+- **The password prompt looks like the rest of the shell.** The dialog that
+  asks for your password when something needs administrator rights was drawn
+  out of Qt's own parts rather than the shell's: a boxed, outlined text field
+  with the word "Password" floating in a notch cut through its border — a shape
+  that appears nowhere else here — and two flat text buttons, so nothing said
+  which of Cancel and OK the dialog was actually asking for. The field is now
+  the same filled pill the lock screen asks for your password in, OK carries a
+  filled accent, and the dialog card casts a shadow like every other floating
+  panel in the shell. Every dialog gets that shadow, not just this one.
 - **Running the test suite no longer opens windows over what you are doing.**
   Five test harnesses started the shell on the session's own display, so a
   suite run flashed real windows across the screen — and a harness that draws a

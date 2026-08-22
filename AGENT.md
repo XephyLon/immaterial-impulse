@@ -4387,6 +4387,8 @@ the per-popup layer surface")), `StyledRectangularShadow`, `DockIconMotion` (wra
 press-squish / launch-bounce / appear-pop feedback, driven by `services/DockLaunchTracker`; the
 lift and the bounce are magnitudes travelling along `dock_geometry.js`'s inward vector, not a
 negative y),
+`ToolbarTextField` (the shell's text field: a filled pill, from the launcher's search box to the
+lock screen's password box - see the note above on why `MaterialTextField` is not this),
 `SchemePaletteCircle` (an Android 12-style palette circle for a colour scheme, fed from
 `services/SchemePreview`, with the scheme's glyph as the fallback while the colour venv has not
 answered),
@@ -4515,6 +4517,48 @@ animations drawn the same way, so the grid read as more animations
 known without running the quantize — that is what `SchemePreview` is for — so the glyph stays as
 the fallback rather than as the design.
 (782be8329 ("feat(desktopMenu): draw each scheme preset as the palette it produces").)
+
+**`MaterialTextField`/`MaterialTextArea` are not "the shell's text field", and the name is the
+whole trap.** Both set `Material.containerStyle: Material.Outlined`, so what they draw is QtQuick
+Controls' own outlined container - a boxed border with the placeholder floating in a notch cut
+through its top edge. Nothing else in this shell looks like that. Every field the user actually
+meets is a filled surface: `ToolbarTextField` (a pill on `colLayer1`, used by the launcher's search
+box, the wallpaper selector, the screen translator, the fps limiter - and by the lock screen's own
+password box) or `ConfigTextArea`'s bordered field (the settings-row form control). The polkit
+authentication dialog had reached for `MaterialTextField`, which meant the shell's **two password
+prompts were two different controls**; `tests/test_polkit_dialog_contract.py` now derives the
+control from `LockSurface` rather than naming a type, so the two cannot drift again. This is the
+same failure shape as the `colLayer0`/`colLayer1` note below - "it uses a real shared widget" is not
+"it uses the right shared widget for this position". The four remaining call sites are unreviewed
+rather than sanctioned; `modules/imi/sidebarRight/wifiNetworks/WifiNetworkItem.qml` is the next one
+of them that is a password prompt.
+f957d9e59 ("fix(polkit): give the auth prompt the field the rest of the shell uses").
+
+**A confirming action in a dialog carries a FILLED container; the dismissing one stays flat.**
+`DialogButton` defaults to a fully transparent background (`transparentize(colLayer3)` with the
+default 100%), which is right for Cancel and wrong for the button the dialog exists to offer - two
+flat buttons side by side say nothing about which is which. Set `colBackground`/`colBackgroundHover`/
+`colRipple` on the primary role and `colEnabled: colOnPrimary` (not `colText`, which is *bound* to
+`enabled ? colEnabled : colDisabled` and would lose that binding to an assignment). No disabled
+branch is needed: `RippleButton.buttonColor` already transparentizes the fill while `enabled` is
+false. The reasoning is `EditModeChromeContent.qml`'s `doneButton` verbatim, arrived at from the
+other end.
+e8cd6bd04 ("fix(polkit): the confirming action carries a filled primary container").
+
+**`WindowDialog` freezes its card's height at the moment `show` flips, and that is load-bearing for
+how a dialog is built.** `onShowChanged` *assigns* `dialogBackground.implicitHeight`, which destroys
+the binding to `contentColumn.implicitHeight` - so the card is whatever the content measured at that
+instant, for the rest of its life. Every caller does `Component.onCompleted: show = true`, and at
+completion a wrapping `StyledText` has not been given its width yet, so its `implicitHeight` is the
+UNWRAPPED single-line one. The consequence: a dialog whose content is populated *after* it is
+constructed comes out short and its button row hangs outside the card, painting on the scrim.
+Measured with a probe that assigned the polkit message after the dialog was built - the buttons drew
+21px below the card's bottom edge. It is not a live defect, because every dialog here is built by a
+`Loader` whose gate is the thing that supplies the content (`PolkitService.active`,
+`PluginManager.pendingUninstallId`), so the text exists before the component does. Anything that
+wants a dialog to *grow* - a message that changes mid-flow, a field that appears on a second step -
+has to fix the binding rather than assume it resizes.
+15541101a ("fix(polkit): the dialog's own numbers come off the grid the rest of it uses").
 
 `ConfigTextArea` is the text-entry counterpart to `ConfigSwitch` (icon + label/description on the
 left, a bordered `TextArea` field on the right) and is the standard single-line settings field -
