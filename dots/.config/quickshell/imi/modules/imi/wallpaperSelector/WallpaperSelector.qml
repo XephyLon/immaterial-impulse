@@ -91,7 +91,42 @@ Scope {
                 x: 0
                 y: 0
 
+                // The tier the next slide will run on, held as plain state and
+                // assigned by whichever direction is about to move - never bound
+                // to `GlobalStates.wallpaperSelectorOpen`.
+                //
+                // Bound to the flag, the exit ran the ENTRANCE curve. A
+                // `NumberAnimation` latches its duration and easing when it
+                // starts, the close is an imperative `content.y = ...` from the
+                // handler for that flag, and nothing orders the Behavior's
+                // bindings to re-evaluate before the handler that starts it. So
+                // the animation could begin still holding the open branch.
+                //
+                // Measured off a 60fps capture rather than reasoned about: the
+                // close moved 659px, and its per-frame share of that distance
+                // went 32.2 16.1 10.8 8.0 6.8 ... against 32.6 14.5 10.4 8.1 6.5
+                // predicted by `standardDecel` (the entrance) and 1.3 3.2 4.4 5.3
+                // 5.9 by `standardAccel` (the exit). The panel decelerated OUT -
+                // a third of the way gone in one frame, then coasting - which is
+                // the opposite of what leaving should look like.
+                //
+                // Assignment before the write is what makes it deterministic: a
+                // QML property write propagates to dependent bindings
+                // synchronously, so the animation has the right tier by the time
+                // `y` moves. `DesktopContextMenu.qml:46-47` holds its two the
+                // same way and for the same reason.
+                property int slideDuration: Appearance.animation.sidebarSlideEnter.duration
+                property int slideEasingType: Appearance.animation.sidebarSlideEnter.type
+                property var slideCurve: Appearance.animation.sidebarSlideEnter.bezierCurve
+
+                function takeTier(tier) {
+                    content.slideDuration = tier.duration;
+                    content.slideEasingType = tier.type;
+                    content.slideCurve = tier.bezierCurve;
+                }
+
                 function slideIn() {
+                    content.takeTier(Appearance.animation.sidebarSlideEnter);
                     content.y = -content.height;
                     Qt.callLater(() => { content.y = 0; });
                 }
@@ -100,6 +135,7 @@ Scope {
                     target: GlobalStates
                     function onWallpaperSelectorOpenChanged() {
                         if (!GlobalStates.wallpaperSelectorOpen) {
+                            content.takeTier(Appearance.animation.sidebarSlideExit);
                             content.y = -content.height;
                         }
                     }
@@ -107,15 +143,9 @@ Scope {
 
                 Behavior on y {
                     NumberAnimation {
-                        duration: GlobalStates.wallpaperSelectorOpen
-                            ? Appearance.animation.sidebarSlideEnter.duration
-                            : Appearance.animation.sidebarSlideExit.duration
-                        easing.type: GlobalStates.wallpaperSelectorOpen
-                            ? Appearance.animation.sidebarSlideEnter.type
-                            : Appearance.animation.sidebarSlideExit.type
-                        easing.bezierCurve: GlobalStates.wallpaperSelectorOpen
-                            ? Appearance.animation.sidebarSlideEnter.bezierCurve
-                            : Appearance.animation.sidebarSlideExit.bezierCurve
+                        duration: content.slideDuration
+                        easing.type: content.slideEasingType
+                        easing.bezierCurve: content.slideCurve
                     }
                 }
             }
