@@ -455,21 +455,34 @@ AbstractBackgroundWidget {
     readonly property var editDrawerReveal:
         GlobalStates.editDrawerReveals[rootWidget.screenName] ?? null
 
-    function dropWouldRemove(mouseX, mouseY) {
+    // Takes SCREEN coordinates, because its two callers reach them differently
+    // and only one of them may map through this item - see the drag handler
+    // below.
+    function dropWouldRemoveAt(screenX, screenY) {
         if (!GlobalStates.editMode || !GlobalStates.editDrawerOpen || !manifest)
             return false;
-        const point = rootWidget.mapToItem(null, mouseX, mouseY);
         return EditMode.pointInDrawerReveal(rootWidget.editDrawerReveal,
-            point.x, point.y);
+            screenX, screenY);
     }
 
     // The drawer lights up while the release would remove rather than move -
     // the widget itself cannot say so, because it is drawn on the surface
     // BELOW the chrome and passes under the panel it is being carried into.
-    onPositionChanged: (mouse) => {
+    //
+    // The pointer comes from `dragPointerParentX/Y` rather than from this
+    // event's own `mouse.x/y`: a base class's handlers run first, so
+    // AbstractWidget has already moved the item those coordinates are relative
+    // to, and mapping them out again overshoots the pointer by that event's
+    // delta. Measured - with `mouse.x/y` the hint never lit up on a drag that
+    // ends on the drawer, while the release, whose handler moves nothing, was
+    // exact.
+    onPositionChanged: {
         if (!rootWidget.dragging) return;
-        GlobalStates.editDrawerDropScreen = rootWidget.dropWouldRemove(mouse.x, mouse.y)
-            ? rootWidget.screenName : "";
+        const point = rootWidget.parent.mapToItem(null,
+            rootWidget.dragPointerParentX, rootWidget.dragPointerParentY);
+        GlobalStates.editDrawerDropScreen =
+            rootWidget.dropWouldRemoveAt(point.x, point.y)
+                ? rootWidget.screenName : "";
     }
 
     // Runs BEFORE AbstractBackgroundWidget's commit, which is why the decision
@@ -478,8 +491,16 @@ AbstractBackgroundWidget {
     // widget was, and that is exactly what makes undoing the removal put it
     // back there rather than at the drawer or at a default - the same
     // arrangement the menu's Remove already relies on.
+    //
+    // This one DOES map through the item, and correctly: nothing moves the
+    // widget on a release (the drag Binding stands down with RestoreNone), so
+    // the event's own coordinates are the pointer's. It needs no "was this a
+    // drag" term either - the chrome surface's input mask covers the reveal, so
+    // a press can never land there, and the only way a release reaches it is a
+    // gesture that began somewhere else and kept the implicit grab.
     function releaseRemovesWidget(mouseX, mouseY) {
-        if (!rootWidget.dropWouldRemove(mouseX, mouseY)) return false;
+        const point = rootWidget.mapToItem(null, mouseX, mouseY);
+        if (!rootWidget.dropWouldRemoveAt(point.x, point.y)) return false;
         rootWidget.restoreXYBinding();
         GlobalStates.editWidgetDroppedOnDrawer(manifest.id);
         return true;
