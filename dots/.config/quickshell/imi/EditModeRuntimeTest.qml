@@ -59,7 +59,8 @@ ShellRoot {
         screenWidth: harness.screenWidth,
         screenHeight: harness.screenHeight,
         drawerWidth: Appearance.sizes.editModeDrawerWidth,
-        margin: Appearance.sizes.editModeMargin
+        margin: Appearance.sizes.editModeMargin,
+        edgeMargin: Appearance.sizes.editModeEdgeMargin
     })
     // The drawer's shift, from the REAL scalar: GlobalStates derives
     // editDrawerProgress from the mode and the open flag exactly as the shell

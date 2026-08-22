@@ -78,6 +78,7 @@ ShellRoot {
 
     readonly property real drawerWidth: Appearance.sizes.editModeDrawerWidth
     readonly property real margin: Appearance.sizes.editModeMargin
+    readonly property real edgeMargin: Appearance.sizes.editModeEdgeMargin
     readonly property real chromeThickness: Appearance.sizes.toolbarHeight
 
     // What the bar and the dock occupy. `EditModeInsets` answers this on the
@@ -100,6 +101,7 @@ ShellRoot {
         screenHeight: harness.screenHeight,
         drawerWidth: harness.drawerWidth,
         margin: harness.margin,
+        edgeMargin: harness.edgeMargin,
         chromeThickness: harness.chromeThickness,
         insetTop: harness.insetTop,
         insetBottom: harness.insetBottom

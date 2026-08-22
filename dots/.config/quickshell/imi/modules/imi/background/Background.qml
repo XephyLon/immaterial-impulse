@@ -574,6 +574,7 @@ Variants {
             screenHeight: bgRoot.height,
             drawerWidth: Appearance.sizes.editModeDrawerWidth,
             margin: Appearance.sizes.editModeMargin,
+            edgeMargin: Appearance.sizes.editModeEdgeMargin,
             chromeThickness: Appearance.sizes.toolbarHeight,
             insetTop: bgRoot.editInsets.top,
             insetBottom: bgRoot.editInsets.bottom,

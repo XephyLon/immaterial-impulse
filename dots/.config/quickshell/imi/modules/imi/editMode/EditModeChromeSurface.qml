@@ -93,6 +93,7 @@ PanelWindow {
         screenHeight: root.height,
         drawerWidth: Appearance.sizes.editModeDrawerWidth,
         margin: Appearance.sizes.editModeMargin,
+        edgeMargin: Appearance.sizes.editModeEdgeMargin,
         chromeThickness: Appearance.sizes.toolbarHeight,
         insetTop: root.insets.top,
         insetBottom: root.insets.bottom,
