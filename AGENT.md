@@ -4548,16 +4548,17 @@ e8cd6bd04 ("fix(polkit): the confirming action carries a filled primary containe
 **`WindowDialog` freezes its card's height at the moment `show` flips, and that is load-bearing for
 how a dialog is built.** `onShowChanged` *assigns* `dialogBackground.implicitHeight`, which destroys
 the binding to `contentColumn.implicitHeight` - so the card is whatever the content measured at that
-instant, for the rest of its life. Every caller does `Component.onCompleted: show = true`, and at
-completion a wrapping `StyledText` has not been given its width yet, so its `implicitHeight` is the
-UNWRAPPED single-line one. The consequence: a dialog whose content is populated *after* it is
-constructed comes out short and its button row hangs outside the card, painting on the scrim.
-Measured with a probe that assigned the polkit message after the dialog was built - the buttons drew
-21px below the card's bottom edge. It is not a live defect, because every dialog here is built by a
-`Loader` whose gate is the thing that supplies the content (`PolkitService.active`,
-`PluginManager.pendingUninstallId`), so the text exists before the component does. Anything that
-wants a dialog to *grow* - a message that changes mid-flow, a field that appears on a second step -
-has to fix the binding rather than assume it resizes.
+instant, for the rest of its life. Note what this is NOT: wrapping is fine at completion, because
+`dialogBackground.implicitWidth` is the caller's `backgroundWidth` constant rather than anything
+derived from the surface, so a `StyledText` already knows its width and its wrapped height when
+`show` flips. Measured - a three-line paragraph declared inline sizes its card correctly. What
+breaks is content that arrives or changes *after* that: measured with a probe that assigned the
+polkit message once the dialog was already up, the card stayed at the one-line height and the button
+row drew 21px BELOW its bottom edge, on the scrim. It is not a live defect, because every dialog
+here is built by a `Loader` whose gate is the thing that supplies the content
+(`PolkitService.active`, `PluginManager.pendingUninstallId`), so the text exists before the component
+does. Anything that wants a dialog to *grow* - a message that changes mid-flow, a field that appears
+on a second step - has to repair the binding rather than assume it resizes.
 15541101a ("fix(polkit): the dialog's own numbers come off the grid the rest of it uses").
 
 `ConfigTextArea` is the text-entry counterpart to `ConfigSwitch` (icon + label/description on the
