@@ -71,10 +71,13 @@ interaction on the strength of the partial result.
 
 ## Also queued, outside Edit Mode
 
-- **The 40 partial tier takes.** `tests/lint_motion_tier_partial.py` (#242)
-  registers 40 animations across 17 files that name a tier's `duration` and drop
-  its curve, so they run on `Easing.Linear`. The register is a ratchet — a file
-  that shrinks also fails — so fixing them is safe and incremental.
+- ~~**The 40 partial tier takes.**~~ Done. `tests/lint_motion_tier_partial.py`
+  (#242) registered 40 animations across 17 files that named a tier's `duration`
+  and dropped its curve, so they ran on `Easing.Linear`. All 40 were taken whole
+  and the register is empty; see AGENT.md's design-language section for how the
+  tiers were decided and for the two things measured on the way (an
+  `Easing.BezierSpline` with no `bezierCurve` is Linear and the lint cannot see
+  it; `alwaysRunToEnd` is inert inside a `Behavior`).
 - **Motion survey items not yet done**: #2 single-scalar driver, #3 the keyed
   quick-toggle model (the survey's strongest recommendation; #233 was shaped to
   keep it open), #6 FLIP reposition, #7 rounding scale knob, #11 `SpringAnimation`,
