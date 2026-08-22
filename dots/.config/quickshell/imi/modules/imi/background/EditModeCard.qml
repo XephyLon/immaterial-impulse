@@ -52,6 +52,38 @@ Item {
     // interpolate from "the whole screen, square" so that at rest there is
     // nothing inset, nothing rounded and nothing to stand down.
     property rect card: Qt.rect(0, 0, root.width, root.height)
+
+    // How far the card's MASK is grown past the card itself: half a pixel, the
+    // standard cure for a compositing seam.
+    //
+    // `surround` is an OpacityMask taken from the card's shape and INVERTED, so
+    // what survives is the complement - the backdrop, everywhere the card is
+    // not. Where the card's edge falls between two pixels, that boundary pixel
+    // is partly inside both: the mask leaves it partly opaque, the backdrop
+    // keeps a fraction of its own alpha there, and the backdrop is brighter
+    // than the desktop. The seam renders as a bright rim down the flank - the
+    // difference between an object with an edge and an object with a border
+    // drawn round it.
+    //
+    // Fractional is the normal case, not the exception. The card is a screen
+    // scaled to fit a room measured in whole pixels, so its width is
+    // `screenWidth * (room / screenHeight)` and lands on an integer only by
+    // coincidence: at 5120x1440 the resting card is 4465.778 wide at x 327.111.
+    //
+    // The overlap is INWARD. Grown the other way it opens a gap instead of
+    // closing one: the desktop is a scaled screen and ends at its own edge, so
+    // a complement that starts half a pixel further out leaves half a pixel
+    // where neither the desktop nor the backdrop draws. Shrunk, the backdrop
+    // laps half a pixel over the desktop, the boundary pixel is fully covered
+    // by one layer, and there is no fraction of anything left to show.
+    //
+    // Adjusted rather than rounded, because the card is the arithmetic the
+    // transform interpolates and it has to stay continuous - and because
+    // rounding the mask alone is worse than the seam it fixes: a mask on a
+    // whole pixel and a desktop on a fractional one disagree by up to a whole
+    // pixel rather than by the fraction of one.
+    readonly property real maskBleed: -0.5
+
     property real cardRadius: 0
 
     // ---- the glass edge ---------------------------------------------------
@@ -175,10 +207,16 @@ Item {
         // as the corner, because it is the same mask that makes the corner.
         Rectangle {
             id: edgeSpecular
-            x: root.card.x - root.edgeSpecularWidth
-            y: root.card.y - root.edgeSpecularWidth
-            width: root.card.width + 2 * root.edgeSpecularWidth
-            height: root.card.height + 2 * root.edgeSpecularWidth
+            // The bleed too, or the catch loses it. This ring is drawn INSIDE
+            // `surround`, so what is seen of it is the annulus between the
+            // mask's edge and this rectangle's - and the mask's edge just moved
+            // out by `maskBleed`. Extending the outer bound by the same amount
+            // keeps the drawn width at `edgeSpecularWidth`, which is a single
+            // pixel and had half of itself masked away.
+            x: root.card.x - root.edgeSpecularWidth - root.maskBleed
+            y: root.card.y - root.edgeSpecularWidth - root.maskBleed
+            width: root.card.width + 2 * (root.edgeSpecularWidth + root.maskBleed)
+            height: root.card.height + 2 * (root.edgeSpecularWidth + root.maskBleed)
             radius: root.cardRadius > 0 ? root.cardRadius + root.edgeSpecularWidth : 0
             antialiasing: true
             // The non-uniformity is not a flourish on top of a rim, it IS the
@@ -220,10 +258,10 @@ Item {
         visible: false
 
         Rectangle {
-            x: root.card.x
-            y: root.card.y
-            width: root.card.width
-            height: root.card.height
+            x: root.card.x - root.maskBleed
+            y: root.card.y - root.maskBleed
+            width: root.card.width + root.maskBleed * 2
+            height: root.card.height + root.maskBleed * 2
             radius: root.cardRadius
             color: "white"
             antialiasing: true
