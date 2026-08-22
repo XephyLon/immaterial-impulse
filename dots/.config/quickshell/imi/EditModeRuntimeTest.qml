@@ -863,7 +863,13 @@ ShellRoot {
             // The lock has to SHOW the widgets for there to be a lock layout
             // to arrange - a widget the lock hides is at opacity 0 and takes
             // no drag, which is the product's own rule and not this test's.
+            // Both halves of "shows": the master gate, and the per-widget
+            // choice under it, which inherits the DESKTOP's enabled list - so
+            // the probes have to be on that list the way a real placed widget
+            // is. This harness builds its PluginWidgets by hand rather than
+            // through Background's Repeater, so nothing else puts them there.
             Config.options.lock.showWidgets = true;
+            Config.options.plugins.enabled = ["edit-move-probe", "edit-resize-probe"];
             GlobalStates.editMode = true;
         },
         () => {
@@ -972,6 +978,63 @@ ShellRoot {
             harness.check("...and the desktop option is still 2x2",
                           PluginState.option("edit-resize-probe", "__gridSize", "") === "2x2");
             PluginState.resetLockLayout(harness.testScreen);
+        },
+
+        // ---- and PRESENCE forks the same way -------------------------------
+        //
+        // The store's arithmetic is tst_layout_surfaces and the drawer-to-
+        // surface wiring is the contract's; what only a real widget under the
+        // real transform can answer is whether the pick reaches the PIXELS -
+        // whether a widget picked off the lock actually stops being drawn
+        // there while it keeps being drawn on the desktop, and whether the
+        // mirror (a widget the desktop does not show, kept for the lock) is
+        // hidden on the desktop rather than merely uninstantiated. The pick
+        // itself goes through PluginState rather than the drawer, which lives
+        // on a layer surface this harness does not build.
+        () => {
+            harness.check("before any pick the lock shows what the desktop shows",
+                          !PluginState.lockPresenceForked()
+                          && movableWidget.visibleWhenLocked
+                          && resizableWidget.visibleWhenLocked);
+            GlobalStates.editTab = EditMode.LOCKSCREEN_TAB;
+        },
+        () => {
+            harness.check("...and an inherited widget is drawn on the Lockscreen tab",
+                          movableWidget.opacity === 1 && movableWidget.visible);
+            PluginState.setLockWidgetEnabled("edit-move-probe", false);
+        },
+        () => {
+            harness.check("the first pick forks the choice",
+                          PluginState.lockPresenceForked());
+            harness.check("...the picked widget leaves the lock screen",
+                          movableWidget.opacity === 0 && !movableWidget.visible);
+            harness.check("...and the other one stays, at the desktop's answer",
+                          resizableWidget.opacity === 1);
+            GlobalStates.editTab = EditMode.DESKTOP_TAB;
+        },
+        () => {
+            harness.check("...while the desktop goes on showing it",
+                          movableWidget.opacity === 1 && movableWidget.visible);
+            // The mirror, which one shared list cannot express: a widget the
+            // desktop does not show, kept for the lock screen alone.
+            Config.options.plugins.enabled = ["edit-move-probe"];
+        },
+        () => {
+            harness.check("a lock-only widget is hidden on the desktop",
+                          resizableWidget.opacity === 0 && !resizableWidget.visible);
+            GlobalStates.editTab = EditMode.LOCKSCREEN_TAB;
+        },
+        () => {
+            harness.check("...and drawn on the lock screen",
+                          resizableWidget.opacity === 1 && resizableWidget.visible);
+            PluginState.resetLockPresence();
+        },
+        () => {
+            harness.check("the re-link puts both widgets back on the desktop's answer",
+                          !PluginState.lockPresenceForked()
+                          && movableWidget.opacity === 1
+                          && resizableWidget.opacity === 0);
+            GlobalStates.editTab = EditMode.DESKTOP_TAB;
             GlobalStates.editMode = false;
         }
     ]
