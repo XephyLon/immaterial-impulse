@@ -229,107 +229,90 @@ ContentPage {
                         }
                         spacing: Appearance.spacing.space75
 
-                        RowLayout {
+                        // The catalogue row - the same one Edit Mode's drawer
+                        // and every settings row draw. The registry's strings
+                        // reach it through `title`/`description`, which it
+                        // renders `Text.PlainText` on both sides, so a
+                        // malicious index still cannot inject rich text.
+                        CatalogueRow {
                             Layout.fillWidth: true
-                            spacing: Appearance.spacing.space100
+                            rowSpacing: Appearance.spacing.space100
 
                             // The icon name is registry-sourced but only ever
                             // rendered as a Material Symbols ligature; an
-                            // unknown name shows nothing harmful. Plain text
-                            // regardless.
-                            MaterialSymbol {
-                                Layout.alignment: Qt.AlignVCenter
-                                textFormat: Text.PlainText
-                                text: (card.modelData.icon && card.modelData.icon.length > 0)
-                                    ? card.modelData.icon : "extension"
-                                iconSize: Appearance.font.pixelSize.hugeass
-                                color: Appearance.colors.colOnLayer1
-                            }
+                            // unknown name shows nothing harmful.
+                            rowIcon: (card.modelData.icon && card.modelData.icon.length > 0)
+                                ? card.modelData.icon : "extension"
+                            rowIconSize: Appearance.font.pixelSize.hugeass
+                            rowIconColor: Appearance.colors.colOnLayer1
 
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 0
+                            title: card.modelData.name
+                            titleFont.pixelSize: Appearance.font.pixelSize.large
+                            titleFont.weight: Font.DemiBold
+                            titleColor: Appearance.colors.colOnLayer1
+                            description: Translation.tr("By %1")
+                                .arg(card.modelData.author ?? Translation.tr("Unknown creator"))
+                            descriptionWraps: false
 
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: Appearance.spacing.space75
-
-                                    StyledText {
-                                        textFormat: Text.PlainText
-                                        text: card.modelData.name
-                                        font.pixelSize: Appearance.font.pixelSize.large
-                                        font.weight: Font.DemiBold
-                                        color: Appearance.colors.colOnLayer1
-                                        elide: Text.ElideRight
-                                    }
-                                    StyledText {
-                                        textFormat: Text.PlainText
-                                        text: `v${card.modelData.version}`
-                                        font.pixelSize: Appearance.font.pixelSize.smaller
-                                        color: Appearance.colors.colSubtext
-                                    }
-                                    MaterialSymbol {
-                                        visible: card.modelData.featured === true
-                                        text: "star"
-                                        fill: 1
-                                        iconSize: Appearance.font.pixelSize.normal
-                                        color: Appearance.colors.colPrimary
-                                    }
-                                    Item { Layout.fillWidth: true }
-                                }
-
+                            titleContent: [
                                 StyledText {
-                                    Layout.fillWidth: true
                                     textFormat: Text.PlainText
-                                    text: Translation.tr("By %1")
-                                        .arg(card.modelData.author ?? Translation.tr("Unknown creator"))
+                                    text: `v${card.modelData.version}`
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                     color: Appearance.colors.colSubtext
-                                    elide: Text.ElideRight
+                                },
+                                MaterialSymbol {
+                                    visible: card.modelData.featured === true
+                                    text: "star"
+                                    fill: 1
+                                    iconSize: Appearance.font.pixelSize.normal
+                                    color: Appearance.colors.colPrimary
                                 }
-                            }
+                            ]
 
-                            RippleButton {
-                                id: actionButton
-                                readonly property var actionSpec: {
-                                    switch (card.status) {
-                                    case "available":
-                                        return { label: Translation.tr("Install"), actionable: true };
-                                    case "update":
-                                        return { label: Translation.tr("Update"), actionable: true };
-                                    case "installed":
-                                        return { label: Translation.tr("Installed"), actionable: false };
-                                    case "bundled":
-                                        return { label: Translation.tr("Bundled"), actionable: false };
-                                    default: // incompatible
-                                        return { label: Translation.tr("Needs newer shell"), actionable: false };
+                            affordance: [
+                                RippleButton {
+                                    id: actionButton
+                                    readonly property var actionSpec: {
+                                        switch (card.status) {
+                                        case "available":
+                                            return { label: Translation.tr("Install"), actionable: true };
+                                        case "update":
+                                            return { label: Translation.tr("Update"), actionable: true };
+                                        case "installed":
+                                            return { label: Translation.tr("Installed"), actionable: false };
+                                        case "bundled":
+                                            return { label: Translation.tr("Bundled"), actionable: false };
+                                        default: // incompatible
+                                            return { label: Translation.tr("Needs newer shell"), actionable: false };
+                                        }
+                                    }
+                                    Layout.alignment: Qt.AlignVCenter
+                                    implicitWidth: actionLabel.implicitWidth + Appearance.spacing.space300
+                                    implicitHeight: 36
+                                    enabled: actionSpec.actionable && !PluginManager.installing
+                                    buttonRadius: Appearance.rounding.full
+                                    colBackground: actionSpec.actionable
+                                        ? Appearance.colors.colSecondaryContainer
+                                        : Appearance.colors.colLayer2
+                                    onClicked: {
+                                        if (card.status === "available")
+                                            PluginStore.requestInstall(card.modelData);
+                                        else if (card.status === "update")
+                                            PluginStore.requestUpgrade(card.modelData);
+                                    }
+
+                                    contentItem: StyledText {
+                                        id: actionLabel
+                                        anchors.centerIn: parent
+                                        text: actionButton.actionSpec.label
+                                        font.pixelSize: Appearance.font.pixelSize.small
+                                        color: actionButton.enabled
+                                            ? Appearance.colors.colOnSecondaryContainer
+                                            : Appearance.colors.colSubtext
                                     }
                                 }
-                                Layout.alignment: Qt.AlignVCenter
-                                implicitWidth: actionLabel.implicitWidth + Appearance.spacing.space300
-                                implicitHeight: 36
-                                enabled: actionSpec.actionable && !PluginManager.installing
-                                buttonRadius: Appearance.rounding.full
-                                colBackground: actionSpec.actionable
-                                    ? Appearance.colors.colSecondaryContainer
-                                    : Appearance.colors.colLayer2
-                                onClicked: {
-                                    if (card.status === "available")
-                                        PluginStore.requestInstall(card.modelData);
-                                    else if (card.status === "update")
-                                        PluginStore.requestUpgrade(card.modelData);
-                                }
-
-                                contentItem: StyledText {
-                                    id: actionLabel
-                                    anchors.centerIn: parent
-                                    text: actionButton.actionSpec.label
-                                    font.pixelSize: Appearance.font.pixelSize.small
-                                    color: actionButton.enabled
-                                        ? Appearance.colors.colOnSecondaryContainer
-                                        : Appearance.colors.colSubtext
-                                }
-                            }
+                            ]
                         }
 
                         StyledText {
