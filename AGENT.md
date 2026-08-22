@@ -3981,18 +3981,45 @@ below in the same file**, and 8d81d7471 ("fix(editMode): take the motion tiers w
 of one each") found the resize grip doing it after every grip in the shell had faded linearly since
 the file was written. Both fixes repaired the sites someone had noticed.
 
-The tree carries **40** of these across 17 files, and they are deliberately **not** fixed — the
-register in that file holds a count per file, for the reason `docs/M3_GUIDELINES.md` §3 already
-gives for this whole class: a curve shape is visually perceptible and cannot be verified from a
-test, so forty unverified visual changes in one branch is worse than forty known ones written down.
-It is a **ratchet**, not an allowlist: a file outside it may have none, a registered file may not
-grow, and a registered file that *shrinks* also fails, so fixing one forces the number down and the
-register cannot rot into something nobody rechecks. Two things it deliberately ignores, with the
-reasoning in the file: an easing that is present but generic (§3's separate register — a curve
-somebody chose, where this is a curve nobody chose), and a duration paired with a curve read
-straight out of `animationCurves` (a drift risk, not a live defect, and it would triple the register
-for no bug). 1c728dd6a ("test(lint): fail on an animation that takes a tier's duration and leaves
-its curve").
+The tree carried **40** of these across 17 files, deliberately **not** fixed at first — the register
+in that file held a count per file, for the reason `docs/M3_GUIDELINES.md` §3 already gives for this
+whole class: a curve shape is visually perceptible and cannot be verified from a test, so forty
+unverified visual changes in one branch is worse than forty known ones written down. It is a
+**ratchet**, not an allowlist: a file outside it may have none, a registered file may not grow, and
+a registered file that *shrinks* also fails, so fixing one forces the number down and the register
+cannot rot into something nobody rechecks. Two things it deliberately ignores, with the reasoning in
+the file: an easing that is present but generic (§3's separate register — a curve somebody chose,
+where this is a curve nobody chose), and a duration paired with a curve read straight out of
+`animationCurves` (a drift risk, not a live defect, and it would triple the register for no bug).
+1c728dd6a ("test(lint): fail on an animation that takes a tier's duration and leaves its curve").
+
+**The register is empty now, and how it emptied is the part worth carrying.** All 40 were taken
+whole, one coherent group at a time, each group deciding its tier against what the same gesture
+already does elsewhere in the shell rather than against a pattern — the desktop widgets' own hover
+handles adopted the spelling `PluginWidget`'s resize grip already used, the settings chevron adopted
+the four sibling chevrons', and the niri overview's window rects kept `elementMoveFast` precisely
+because `OverviewWidget.qml` animates the same thumbnails for the same gesture on it, so retiering
+one of the two overview styles to fix a curve would have made them disagree. Nothing was retiered by
+rule: a colour or an opacity that was already on an effects tier stayed there, and the five span-morph
+ink colours stayed on `elementMove` because the colour is a term of the morph rather than an
+independent effect. Where `alwaysRunToEnd` would have changed behaviour the three properties are
+written out instead of taking a factory — `ConfigTextArea`'s focus transition is the case, because
+`numberAnimation` carries `alwaysRunToEnd` and `colorAnimation` does not, so its border width and its
+border colour would have resolved differently on an interrupted hover. Do not re-open the register to
+land a new one: an entry is a promise somebody comes back, that promise has been kept once, and a
+second register growing from zero is an allowlist.
+
+**Its one blind spot, measured while emptying it: `easing.type: Easing.BezierSpline` with no
+`bezierCurve` beside it satisfies the check and is Linear.** The lint asks whether an easing is
+present, not whether it resolves — which is the right question for §3's "a curve somebody chose", and
+the wrong one here. Probed with `qml6`: a 400ms animation declared `Easing.BezierSpline` with an empty
+curve and one declared `Easing.Linear` read 52.00 at the same sample, and nothing is logged either
+way. `NiriOverview`'s `scrollAnim` had been that since it was written — `elementMoveExit`'s duration
+beside `elementMove`'s type — so the overview's scroll-to-workspace was linear while every other
+scrolling surface here eased on `Appearance.animation.scroll`, whose duration, type and bezierCurve
+both `StyledFlickable`s and both `StyledListView`s already write out. Naming two tiers in one
+animation is the tell.
+(fix(overview): the niri overview scrolls on the scroll tier, whole.)
 
 **...and the sibling defect is the one that lint deliberately waved through: a duration read out
 of `animationCurves` is the tier's BASE, and the speed multiplier is not in it.**

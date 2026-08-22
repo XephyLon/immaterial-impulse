@@ -61,6 +61,17 @@ own repo; the installer pins which revision it builds.
   hint and the list, each landing where it will sit rather than sliding there.
   Closing is unchanged on purpose: the contents stay drawn and ride the panel
   off in one piece.
+- **Forty animations across the shell stopped moving at a constant speed.** Each
+  one asked for a motion tier's timing and never picked up its curve, so it slid
+  linearly instead of easing — the util buttons in the bar, the settings fields
+  and navigation chevron, the session screen's boot entries, the volume mixer's
+  mute fade, the desktop widgets' resize and toggle handles, the media transport
+  and Discord voice ring, the display arrangement's monitor tiles, and every
+  window and highlight in the niri-style overview. They now move the way their
+  neighbours already did.
+- **The niri-style overview scrolls smoothly to the workspace you switch to.**
+  Its scroll had asked for one tier's timing and another's curve, which resolved
+  to no curve at all.
 - **Edit Mode's widget drawer no longer sits flush on the screen edge.** The
   panel's rounded right corner met the edge of the display with nothing between
   them, while its other side had a full margin against the desktop. It now

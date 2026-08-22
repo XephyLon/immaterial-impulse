@@ -116,8 +116,12 @@ forbids. Prefer the tier's own `numberAnimation`/`colorAnimation` factory, which
 duration, the type and the curve together; write out `<tier>.type` and `<tier>.bezierCurve` beside
 the duration only where the factory's `alwaysRunToEnd` would change the behaviour (a transition the
 user can reverse mid-flight). `tests/lint_motion_tier_partial.py` fails the suite on a new partial
-take and holds the existing ones in a per-file register that may only shrink; the durations quoted
-below are the *base* values, before the user's speed multiplier.
+take; its per-file register of pre-existing ones is **empty**, so the rule now holds for the whole
+tree with no exceptions. Note what that check cannot see: an easing that is *present* but does not
+resolve — `easing.type: Easing.BezierSpline` with no `bezierCurve` beside it is measurably
+`Easing.Linear` — so an animation naming two different tiers is worth a second look even when the
+lint is green. The durations quoted below are the *base* values, before the user's speed
+multiplier.
 
 ### Speed, and the reduce-motion floor
 
