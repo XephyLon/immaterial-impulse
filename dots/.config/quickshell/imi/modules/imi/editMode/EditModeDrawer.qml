@@ -33,6 +33,15 @@ import qs.modules.common.plugins
  * arranged. The bar section's bucket picker names the buckets the way the
  * current orientation draws them.
  *
+ * ---- what a row is ----------------------------------------------------------
+ *
+ * `CatalogueRow` - the icon/name/description/affordance shape this file used to
+ * spell out five times, shared with every settings row and the widget store.
+ * The rows' INTERACTION is still each section's own, and deliberately: the
+ * desktop section's rows are `MouseArea`s (see above), the other four are
+ * `RippleButton`s, and the shared component is not interactive at all so it can
+ * sit inside either.
+ *
  * ---- what this file writes --------------------------------------------------
  *
  * Nothing, same as stage 5: every gesture is a signal, and the chrome surface
@@ -294,43 +303,32 @@ Item {
                         }
                     }
 
-                    RowLayout {
+                    CatalogueRow {
                         anchors.fill: parent
                         anchors.leftMargin: Appearance.spacing.space100
                         anchors.rightMargin: Appearance.spacing.space100
-                        spacing: Appearance.spacing.space100
+                        rowSpacing: Appearance.spacing.space100
 
-                        MaterialSymbol {
-                            text: "widgets"
-                            iconSize: 22
-                            color: Appearance.colors.colOnSurfaceVariant
-                        }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 0
-                            StyledText {
-                                Layout.fillWidth: true
-                                text: entry.modelData.name
-                                font.pixelSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colOnSurface
-                                elide: Text.ElideRight
+                        rowIcon: "widgets"
+                        rowIconSize: 22
+                        rowIconColor: Appearance.colors.colOnSurfaceVariant
+                        title: entry.modelData.name
+                        titleFont.pixelSize: Appearance.font.pixelSize.normal
+                        titleColor: Appearance.colors.colOnSurface
+                        titleElides: true
+                        description: entry.modelData.description ?? ""
+                        descriptionColor: Appearance.colors.colOnSurfaceVariant
+                        descriptionWraps: false
+
+                        affordance: [
+                            MaterialSymbol {
+                                text: entry.widgetEnabled ? "check_circle" : "add"
+                                iconSize: 20
+                                color: entry.widgetEnabled
+                                    ? Appearance.colors.colPrimary
+                                    : Appearance.colors.colOnSurfaceVariant
                             }
-                            StyledText {
-                                Layout.fillWidth: true
-                                visible: (entry.modelData.description ?? "").length > 0
-                                text: entry.modelData.description ?? ""
-                                font.pixelSize: Appearance.font.pixelSize.smaller
-                                color: Appearance.colors.colOnSurfaceVariant
-                                elide: Text.ElideRight
-                            }
-                        }
-                        MaterialSymbol {
-                            text: entry.widgetEnabled ? "check_circle" : "add"
-                            iconSize: 20
-                            color: entry.widgetEnabled
-                                ? Appearance.colors.colPrimary
-                                : Appearance.colors.colOnSurfaceVariant
-                        }
+                        ]
                     }
                 }
             }
@@ -381,31 +379,29 @@ Item {
                     colRipple: Appearance.colors.colLayer2Active
                     onClicked: root.barAddRequested(modelData.id, root.barBucket)
 
-                    contentItem: RowLayout {
+                    contentItem: CatalogueRow {
                         anchors {
                             fill: parent
                             leftMargin: Appearance.spacing.space100
                             rightMargin: Appearance.spacing.space100
                         }
-                        spacing: Appearance.spacing.space100
+                        rowSpacing: Appearance.spacing.space100
 
-                        MaterialSymbol {
-                            text: modelData.icon || "extension"
-                            iconSize: 22
-                            color: Appearance.colors.colOnSurfaceVariant
-                        }
-                        StyledText {
-                            Layout.fillWidth: true
-                            text: modelData.name
-                            font.pixelSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnSurface
-                            elide: Text.ElideRight
-                        }
-                        MaterialSymbol {
-                            text: "add"
-                            iconSize: 20
-                            color: Appearance.colors.colOnSurfaceVariant
-                        }
+                        rowIcon: modelData.icon || "extension"
+                        rowIconSize: 22
+                        rowIconColor: Appearance.colors.colOnSurfaceVariant
+                        title: modelData.name
+                        titleFont.pixelSize: Appearance.font.pixelSize.normal
+                        titleColor: Appearance.colors.colOnSurface
+                        titleElides: true
+
+                        affordance: [
+                            MaterialSymbol {
+                                text: "add"
+                                iconSize: 20
+                                color: Appearance.colors.colOnSurfaceVariant
+                            }
+                        ]
                     }
                 }
             }
@@ -456,33 +452,36 @@ Item {
                     colRipple: Appearance.colors.colLayer2Active
                     onClicked: root.dockToggleRequested(appRow.appId)
 
-                    contentItem: RowLayout {
+                    contentItem: CatalogueRow {
                         anchors {
                             fill: parent
                             leftMargin: Appearance.spacing.space100
                             rightMargin: Appearance.spacing.space100
                         }
-                        spacing: Appearance.spacing.space100
+                        rowSpacing: Appearance.spacing.space100
 
-                        Image {
+                        // An app's leading visual is its own icon, not a
+                        // glyph - the one thing in this catalogue that is not
+                        // a Material Symbol, and what iconComponent is for.
+                        iconComponent: Image {
                             sourceSize.width: 26
                             sourceSize.height: 26
                             source: Quickshell.iconPath(appRow.modelData.icon, "image-missing")
                         }
-                        StyledText {
-                            Layout.fillWidth: true
-                            text: appRow.modelData.name ?? appRow.appId
-                            font.pixelSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnSurface
-                            elide: Text.ElideRight
-                        }
-                        MaterialSymbol {
-                            text: appRow.pinned ? "check_circle" : "add"
-                            iconSize: 20
-                            color: appRow.pinned
-                                ? Appearance.colors.colPrimary
-                                : Appearance.colors.colOnSurfaceVariant
-                        }
+                        title: appRow.modelData.name ?? appRow.appId
+                        titleFont.pixelSize: Appearance.font.pixelSize.normal
+                        titleColor: Appearance.colors.colOnSurface
+                        titleElides: true
+
+                        affordance: [
+                            MaterialSymbol {
+                                text: appRow.pinned ? "check_circle" : "add"
+                                iconSize: 20
+                                color: appRow.pinned
+                                    ? Appearance.colors.colPrimary
+                                    : Appearance.colors.colOnSurfaceVariant
+                            }
+                        ]
                     }
                 }
             }
@@ -517,44 +516,34 @@ Item {
                     colRipple: Appearance.colors.colLayer2Active
                     onClicked: root.lockToggleRequested(lockRow.modelData.key)
 
-                    contentItem: RowLayout {
+                    contentItem: CatalogueRow {
                         anchors {
                             fill: parent
                             leftMargin: Appearance.spacing.space100
                             rightMargin: Appearance.spacing.space100
                         }
-                        spacing: Appearance.spacing.space100
+                        rowSpacing: Appearance.spacing.space100
 
-                        MaterialSymbol {
-                            text: lockRow.modelData.icon
-                            iconSize: 22
-                            color: Appearance.colors.colOnSurfaceVariant
-                        }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 0
-                            StyledText {
-                                Layout.fillWidth: true
-                                text: lockRow.modelData.name
-                                font.pixelSize: Appearance.font.pixelSize.normal
-                                color: Appearance.colors.colOnSurface
-                                elide: Text.ElideRight
+                        rowIcon: lockRow.modelData.icon
+                        rowIconSize: 22
+                        rowIconColor: Appearance.colors.colOnSurfaceVariant
+                        title: lockRow.modelData.name
+                        titleFont.pixelSize: Appearance.font.pixelSize.normal
+                        titleColor: Appearance.colors.colOnSurface
+                        titleElides: true
+                        description: lockRow.modelData.description
+                        descriptionColor: Appearance.colors.colOnSurfaceVariant
+                        descriptionWraps: false
+
+                        affordance: [
+                            MaterialSymbol {
+                                text: lockRow.islandOn ? "check_circle" : "add"
+                                iconSize: 20
+                                color: lockRow.islandOn
+                                    ? Appearance.colors.colPrimary
+                                    : Appearance.colors.colOnSurfaceVariant
                             }
-                            StyledText {
-                                Layout.fillWidth: true
-                                text: lockRow.modelData.description
-                                font.pixelSize: Appearance.font.pixelSize.smaller
-                                color: Appearance.colors.colOnSurfaceVariant
-                                elide: Text.ElideRight
-                            }
-                        }
-                        MaterialSymbol {
-                            text: lockRow.islandOn ? "check_circle" : "add"
-                            iconSize: 20
-                            color: lockRow.islandOn
-                                ? Appearance.colors.colPrimary
-                                : Appearance.colors.colOnSurfaceVariant
-                        }
+                        ]
                     }
                 }
             }
@@ -579,47 +568,37 @@ Item {
                 colRipple: Appearance.colors.colLayer2Active
                 onClicked: root.lockLayoutResetRequested()
 
-                contentItem: RowLayout {
+                contentItem: CatalogueRow {
                     anchors {
                         fill: parent
                         leftMargin: Appearance.spacing.space100
                         rightMargin: Appearance.spacing.space100
                     }
-                    spacing: Appearance.spacing.space100
+                    rowSpacing: Appearance.spacing.space100
 
-                    MaterialSymbol {
-                        text: root.lockLayoutForked ? "call_split" : "link"
-                        iconSize: 22
-                        color: Appearance.colors.colOnSurfaceVariant
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 0
-                        StyledText {
-                            Layout.fillWidth: true
-                            text: root.lockLayoutForked
-                                ? Translation.tr("Widget layout is separate")
-                                : Translation.tr("Widget layout follows the desktop")
-                            font.pixelSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnSurface
-                            elide: Text.ElideRight
-                        }
-                        StyledText {
-                            Layout.fillWidth: true
-                            text: root.lockLayoutForked
-                                ? Translation.tr("Click to use the desktop layout again")
-                                : Translation.tr("Move a widget here to arrange the lock screen on its own")
-                            font.pixelSize: Appearance.font.pixelSize.smaller
+                    rowIcon: root.lockLayoutForked ? "call_split" : "link"
+                    rowIconSize: 22
+                    rowIconColor: Appearance.colors.colOnSurfaceVariant
+                    title: root.lockLayoutForked
+                        ? Translation.tr("Widget layout is separate")
+                        : Translation.tr("Widget layout follows the desktop")
+                    titleFont.pixelSize: Appearance.font.pixelSize.normal
+                    titleColor: Appearance.colors.colOnSurface
+                    titleElides: true
+                    description: root.lockLayoutForked
+                        ? Translation.tr("Click to use the desktop layout again")
+                        : Translation.tr("Move a widget here to arrange the lock screen on its own")
+                    descriptionColor: Appearance.colors.colOnSurfaceVariant
+                    descriptionWraps: false
+
+                    affordance: [
+                        MaterialSymbol {
+                            visible: root.lockLayoutForked
+                            text: "restart_alt"
+                            iconSize: 20
                             color: Appearance.colors.colOnSurfaceVariant
-                            elide: Text.ElideRight
                         }
-                    }
-                    MaterialSymbol {
-                        visible: root.lockLayoutForked
-                        text: "restart_alt"
-                        iconSize: 20
-                        color: Appearance.colors.colOnSurfaceVariant
-                    }
+                    ]
                 }
             }
         }
