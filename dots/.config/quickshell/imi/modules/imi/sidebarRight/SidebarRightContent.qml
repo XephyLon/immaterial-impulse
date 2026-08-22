@@ -48,21 +48,9 @@ Item {
     readonly property MprisPlayer activePlayer: MprisController.activePlayer
     readonly property var meaningfulPlayers: MprisController.meaningfulPlayers
 
-    // The content is built when the sidebar opens, so the open that asked for
-    // it has already been announced by the time this tree exists and the
-    // handler above never sees it. With `keepRightSidebarLoaded` the tree is
-    // built while the panel is closed instead, and this parks the sections
-    // where the next open can reveal them.
-    Component.onCompleted: sectionEntrance.run(GlobalStates.sidebarRightOpen)
-
     Connections {
         target: GlobalStates
         function onSidebarRightOpenChanged() {
-            // Runs on close as well, because the content Loader is kept alive
-            // when `sidebar.keepRightSidebarLoaded` is set - without the exit
-            // the sections would already be at rest on the next open and the
-            // wave would have nothing to reveal.
-            sectionEntrance.run(GlobalStates.sidebarRightOpen);
             if (!GlobalStates.sidebarRightOpen) {
                 root.showWifiDialog = false;
                 root.showTailscaleDialog = false;
@@ -110,32 +98,12 @@ Item {
         radius: Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut + 5
 
         ColumnLayout {
-            id: sidebarColumn
             anchors.fill: parent
             anchors.margins: sidebarPadding
             spacing: sidebarPadding
 
-            // The panel's sections arrive in sequence rather than in one
-            // frame. The container's own motion is the compositor's - a layer
-            // surface sliding in, which QML has no progress for - so the head
-            // start is a fixed lead-in rather than a gate on it.
-            //
-            // Members are the sections themselves, each folding `appear` into
-            // its own opacity. Ranking by VISIBLE position matters here: the
-            // sliders row, the media player and the quick-panel styles are all
-            // switched off in some configurations, and a hidden one spending a
-            // slot would leave a hole in the middle of the wave.
-            StaggerWave {
-                id: sectionEntrance
-                target: sidebarColumn
-                step: Appearance.animation.staggerStep
-                leadIn: Appearance.animation.staggerStep * 3
-            }
-
             // Banner
             Loader {
-                property real appear: 1
-                opacity: appear
                 Layout.fillWidth: true
                 Layout.fillHeight: false
                 sourceComponent: Config.options.sidebar.banner ? bannerComponent : normalComponent
@@ -335,8 +303,6 @@ Item {
 
             Loader {
                 id: slidersLoader
-                property real appear: 1
-                opacity: appear
                 Layout.fillWidth: true
                 visible: active
                 active: {
@@ -350,8 +316,6 @@ Item {
 
             Loader {
                 id: mediaPlayerLoader
-                property real appear: 1
-                opacity: appear
                 active: root.activePlayer !== null && GlobalStates.sidebarRightOpen && Config.options.sidebar.mediaPlayer
                 visible: active
                 Layout.fillWidth: true
@@ -377,8 +341,6 @@ Item {
             }
 
             CenterWidgetGroup {
-                property real appear: 1
-                opacity: appear
                 Layout.alignment: Qt.AlignHCenter
                 Layout.fillHeight: true
                 Layout.fillWidth: true
@@ -386,8 +348,6 @@ Item {
 
             BottomWidgetGroup {
                 id: bottomWidgetGroup
-                property real appear: 1
-                opacity: appear
                 Layout.alignment: Qt.AlignHCenter
                 Layout.fillHeight: false
                 Layout.fillWidth: true
@@ -488,8 +448,6 @@ Item {
 
     component LoaderedQuickPanelImplementation: Loader {
         id: quickPanelImplLoader
-        property real appear: 1
-        opacity: appear
         required property string styleName
         Layout.alignment: item?.Layout.alignment ?? Qt.AlignHCenter
         Layout.fillWidth: item?.Layout.fillWidth ?? false
