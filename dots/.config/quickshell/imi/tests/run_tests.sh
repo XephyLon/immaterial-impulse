@@ -414,6 +414,15 @@ if ! python3 "$SCRIPT_DIR/test_polkit_dialog_contract.py"; then
     exit 1
 fi
 
+# ...and the half the source cannot state: where the action row lands in the
+# card, whether the two buttons answer a real pointer, and whether the field
+# draws one Material shape per typed character. Brings its own headless weston.
+echo "Running polkit dialog runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_polkit_dialog_runtime.py"; then
+    echo "Polkit dialog runtime tests failed."
+    exit 1
+fi
+
 echo "Running expandable panel contract tests..."
 if ! python3 "$SCRIPT_DIR/test_expandable_panel.py"; then
     echo "Expandable panel contract tests failed."
