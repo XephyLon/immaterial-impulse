@@ -284,10 +284,11 @@ PanelWindow {
 
     function addWidgetAt(manifest, dropX, dropY) {
         // A release back over the drawer is the gesture being abandoned, not
-        // an instruction to add the widget at the drawer.
-        const reveal = chrome.drawer;
-        if (dropX >= reveal.x && dropX <= reveal.x + reveal.width
-                && dropY >= reveal.y && dropY <= reveal.y + reveal.height)
+        // an instruction to add the widget at the drawer. Asked through the
+        // module because the INVERSE gesture - a widget carried off the
+        // desktop and let go here, which removes it - asks the same question
+        // of the same rectangle from the other surface.
+        if (EditMode.pointInDrawerReveal(chrome.drawer, dropX, dropY))
             return;
         const point = EditMode.canvasPointFromScreen(root.viewport,
             GlobalStates.editProgress, root.editShift, dropX, dropY);
