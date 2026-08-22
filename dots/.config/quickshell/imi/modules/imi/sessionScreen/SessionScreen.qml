@@ -350,7 +350,7 @@ Scope {
                                     iconSize: Appearance.font.pixelSize.large
                                     color: efiEntryButton.colContent
                                     Behavior on color {
-                                        ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                                        animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
                                     }
                                 }
                                 StyledText {
@@ -360,7 +360,7 @@ Scope {
                                         + (efiEntryButton.modelData.current ? " " + Translation.tr("(current)") : "")
                                     color: efiEntryButton.colContent
                                     Behavior on color {
-                                        ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                                        animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
                                     }
                                 }
                                 StyledText {

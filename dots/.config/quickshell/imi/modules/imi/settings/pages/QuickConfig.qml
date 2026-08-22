@@ -202,7 +202,7 @@ ContentPage {
                                 color: hovered ? Appearance.colors.colSecondaryContainerHover
                                     : Appearance.colors.colSecondaryContainer
                                 Behavior on color {
-                                    ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                                    animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
                                 }
 
                                 ColumnLayout {
