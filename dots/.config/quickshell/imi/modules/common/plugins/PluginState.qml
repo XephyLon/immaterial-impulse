@@ -26,6 +26,16 @@ Singleton {
             // shows the desktop's layout (layout_surfaces.js, spec §4.3 as
             // amended 2026-08-18).
             lockPositions: {},
+            // WHICH widgets the lock screen shows, once the user has picked -
+            // null until then, meaning "whatever the desktop shows". An empty
+            // map is a lock screen with no widgets on it, which is why absence
+            // is a null rather than a `{}` (layout_surfaces.js).
+            //
+            // No migration accompanies it, for the reason `lockPositions`
+            // needed none: the field's ABSENCE is the correct upgrade state.
+            // Every existing install lands in "following", where the lock
+            // shows exactly the set `lock.showWidgets` shows it today.
+            lockPresence: null,
             pluginOptions: {},
             // Plugin ids whose options/positions/enabled state survive preset
             // application (never captured INTO presets - see presets.sh).
@@ -135,6 +145,61 @@ Singleton {
         const store = Object.assign({}, nextState.lockPositions || {});
         store[screenName] = Object.assign({}, records);
         nextState.lockPositions = store;
+        nextState.version = root.schemaVersion;
+        root.state = nextState;
+        writeTimer.restart();
+    }
+
+    // ---- the lock's widget choice, forked the same way -------------------
+    //
+    // Presence is not per screen (`plugins.enabled` is one global list drawn
+    // on every monitor), so none of these take a screen name. The desktop's
+    // set is Config's, and layout_surfaces.js is pure, so it is handed in
+    // here - the one place that can see both files.
+    //
+    // `Config.options.lock.showWidgets` is NOT consulted here. It is the
+    // master gate over the whole feature and belongs to the widget's own
+    // visibility expression; folding it in would make "is this widget picked"
+    // and "does the lock show widgets at all" one answer, and the drawer's
+    // check marks would then all clear the moment the gate went off.
+    function lockPresenceForked() {
+        return Surfaces.isPresenceForked(root.state);
+    }
+
+    function lockWidgetEnabled(pluginId) {
+        return Surfaces.lockPresent(root.state, Config.options.plugins.enabled, pluginId);
+    }
+
+    function setLockWidgetEnabled(pluginId, enabled) {
+        if (!pluginId) return;
+        const nextState = Surfaces.withLockPresence(root.state,
+            Config.options.plugins.enabled, pluginId, enabled === true);
+        nextState.version = root.schemaVersion;
+        root.state = nextState;
+        writeTimer.restart();
+    }
+
+    // The whole choice and its restore - for undo, which has to be able to put
+    // back "following" as well as a map, so it carries null through.
+    function lockPresenceRecords() {
+        return Surfaces.isPresenceForked(root.state)
+            ? Object.assign({}, root.state.lockPresence)
+            : null;
+    }
+
+    function restoreLockPresence(records) {
+        const nextState = Object.assign({}, root.state);
+        nextState.lockPresence = records ? Object.assign({}, records) : null;
+        nextState.version = root.schemaVersion;
+        root.state = nextState;
+        writeTimer.restart();
+    }
+
+    // Re-link the lock's widget choice to the desktop's. A no-op while the two
+    // are already linked.
+    function resetLockPresence() {
+        const nextState = Surfaces.withoutLockPresence(root.state);
+        if (nextState === root.state) return;
         nextState.version = root.schemaVersion;
         root.state = nextState;
         writeTimer.restart();
@@ -407,6 +472,14 @@ Singleton {
                     && !Array.isArray(parsed.lockPositions)
                     ? parsed.lockPositions
                     : {},
+                // Anything that is not a map reads as "following", including a
+                // stored list: the fork is the presence of a map, so a shape
+                // this cannot use must not be mistaken for one.
+                lockPresence: parsed.lockPresence
+                    && typeof parsed.lockPresence === "object"
+                    && !Array.isArray(parsed.lockPresence)
+                    ? parsed.lockPresence
+                    : null,
                 pluginOptions: parsed.pluginOptions
                     && typeof parsed.pluginOptions === "object"
                     && !Array.isArray(parsed.pluginOptions)
