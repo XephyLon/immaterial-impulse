@@ -1211,6 +1211,14 @@ def test_the_drawers_two_directions_ask_one_predicate_of_one_rectangle():
     assert decide, "PluginWidget no longer decides the drop"
     assert "mapToItem" not in decide.group(1), \
         "the predicate maps a point itself, so its two callers cannot differ"
+    # ...and it asks the MEMBERSHIP question the write asks. A widget can be on
+    # screen and draggable without being in `plugins.enabled` - `lockOnlyWidget`
+    # is exactly that - and `EditModeDrawerDrop` declines such an id, so a
+    # predicate that did not ask lit the drawer for a drop that then did
+    # nothing at all: the release swallowed the commit on the strength of the
+    # hint, and the removal was declined after it.
+    assert "Config.options.plugins.enabled.includes(" in decide.group(1), \
+        "the drop hint promises a removal the write is going to decline"
 
     # The release maps through Qt's own transform chain - the same contract the
     # right-click carries, and correct there because nothing moves the widget
