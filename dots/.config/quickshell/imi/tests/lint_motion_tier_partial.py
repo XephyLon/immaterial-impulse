@@ -99,8 +99,6 @@ EXISTING = {
     "modules/common/widgets/LayoutSection.qml": 1,
     "modules/common/widgets/MonitorRect.qml": 1,
     "modules/common/widgets/VerticalTabBar.qml": 2,
-    "modules/imi/bar/UtilButton.qml": 3,
-    "modules/imi/bar/UtilButtons.qml": 2,
     "modules/imi/overview/NiriOverview.qml": 10,
     "modules/imi/sessionScreen/SessionScreen.qml": 2,
     "modules/imi/settings/SettingsContent.qml": 1,
