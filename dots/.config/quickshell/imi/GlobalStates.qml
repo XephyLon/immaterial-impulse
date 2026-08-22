@@ -155,6 +155,29 @@ Singleton {
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
     }
 
+    // The drawer's REVEAL, in screen coordinates, keyed by screen name and
+    // published by each chrome surface. The two halves of the drawer's drag
+    // live on different layer surfaces - the panel and its rectangle are on
+    // `quickshell:editMode`, the widget being carried back into it and the
+    // pointer deciding where the drop lands are on the background surface -
+    // and a layer surface cannot read another window's items. So the rect is
+    // published rather than derived a second time on the desktop's side, the
+    // shape `clockDepthViewports` above already uses; the entry is removed
+    // when a chrome surface goes, so the map's contents are always "the
+    // screens whose drawer exists".
+    property var editDrawerReveals: ({})
+    // The screen whose drawer a dragged desktop widget is currently over, ""
+    // for none - what the drawer paints its own row-press tint from. It has to
+    // come from here for the same reason: the widget being carried passes
+    // UNDER the chrome surface, so it cannot say on its own behalf that the
+    // release will remove rather than move.
+    property string editDrawerDropScreen: ""
+    // ...and the drop itself, announced for the chrome side to answer. A
+    // signal rather than a property pair, because dropping the same widget on
+    // the drawer twice is two gestures and a property that did not change
+    // announces nothing.
+    signal editWidgetDroppedOnDrawer(string pluginId)
+
     // The per-widget context menu - Edit Mode's right-click on a widget
     // (spec §4.1: Remove / Pin / Size). Session state like the mode itself,
     // and shaped like the desktop menu's quad: which screen, where on it, and
@@ -301,6 +324,10 @@ Singleton {
             // gesture is still in flight.
             root.editBarDragActive = false;
             root.editLockDragActive = false;
+            // The drop hint is the mode's too - a drag cut short by Done never
+            // reaches the widget's own release, and a latched screen name
+            // would light the next entry's drawer for a gesture nobody made.
+            root.editDrawerDropScreen = "";
         }
     }
     onClockDepthSelectOpenChanged: if (root.clockDepthSelectOpen) root.editMode = false

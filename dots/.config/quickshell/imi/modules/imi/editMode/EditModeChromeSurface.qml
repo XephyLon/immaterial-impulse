@@ -127,6 +127,27 @@ PanelWindow {
         }
     }
 
+    // The drawer's reveal, handed to the surface that owns the desktop. A
+    // widget dragged back into the drawer is removed, and the widget deciding
+    // that is on `quickshell:background`, in another window, which cannot read
+    // this item - so the rect crosses the boundary rather than being derived
+    // there a second time. The entry is dropped on the way out, so the map is
+    // exactly "the screens whose drawer exists" and a mode that has ended
+    // leaves no rectangle behind for a later drag to land on.
+    readonly property rect drawerReveal: chrome.drawer
+    onDrawerRevealChanged: root.publishDrawerReveal(root.drawerReveal)
+    Component.onCompleted: root.publishDrawerReveal(root.drawerReveal)
+    Component.onDestruction: root.publishDrawerReveal(null)
+    function publishDrawerReveal(reveal) {
+        const name = root.screen?.name ?? "";
+        const published = Object.assign({}, GlobalStates.editDrawerReveals);
+        if (reveal === null)
+            delete published[name];
+        else
+            published[name] = reveal;
+        GlobalStates.editDrawerReveals = published;
+    }
+
     // What the drop writes, and the only file in the mode that writes it. The
     // drawer reports gestures; the surface owns the geometry that turns a
     // release into a canvas point, and the two stores the catalogue may touch
