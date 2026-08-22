@@ -39,10 +39,10 @@ Item {
         color: root.hovered ? Appearance.colors.colPrimary : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.8)
 
         Behavior on color {
-            ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
         }
         Behavior on opacity {
-            NumberAnimation { duration: Appearance.animation.elementMoveFast.duration }
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
         }
 
         MaterialSymbol {
@@ -52,7 +52,7 @@ Item {
             color: root.hovered ? Appearance.colors.colOnPrimary : Appearance.colors.colPrimary
 
             Behavior on color {
-                ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
             }
         }
     }
