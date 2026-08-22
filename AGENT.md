@@ -3041,6 +3041,78 @@ mode is built out of are worth not re-deriving:
   feat(editMode): the drawer arrives as a surface and then fills;
   test(editMode): a probe that samples the drawer's motion per frame;
   test(editMode): point the motion probe at the section the rows moved to.)
+- **The drawer's drag has two directions and ONE rectangle, and the two halves
+  live in different windows.** A row dragged out of the drawer lands on the
+  desktop; a widget dragged back over the drawer and let go there is REMOVED —
+  and a release back over the drawer from the *outward* gesture is still an
+  abandon, which is the same rectangle answering a third question.
+  `edit_mode.js`'s `pointInDrawerReveal` is the one predicate all three ask; a
+  closed drawer needs no "is it open" term, because `drawerRect` animates the
+  WIDTH and an empty rect is the same answer. Four things about wiring it up:
+  - **The rect is PUBLISHED, not re-derived on the desktop's side.** Everything
+    else in the mode is re-derived on both surfaces (see the chrome-surface
+    entry above), but `test_the_drawer_reaches_the_desktops_x_and_nothing_else`
+    counts `GlobalStates.editDrawerProgress` in `Background.qml` and admits
+    exactly one occurrence — the shift — so a second derivation there is a
+    contract failure rather than a style choice, and rightly: the check exists
+    because the drawer's *state* reaching the geometry rescales every widget
+    mid-drag. `EditModeChromeSurface` writes its own `chrome.drawer` into
+    `GlobalStates.editDrawerReveals` keyed by screen, the `clockDepthViewports`
+    shape, and drops the entry on destruction so the map is always "the screens
+    whose drawer exists".
+  - **A subclass cannot get in front of a base class's `onReleased`.** Signal
+    handlers declared at two levels of one component BOTH run, base first —
+    probed with `qml6` rather than reasoned about (`base;mid;leaf;` for three
+    levels, with the mid level's call to an overridden function reaching the
+    leaf's version). So a second `onReleased` on `PluginWidget` arrives *after*
+    `AbstractBackgroundWidget` has already committed the placement. The
+    decision is therefore an overridable predicate the one release handler
+    asks — `releaseRemovesWidget(mouseX, mouseY)`, false in the base — and the
+    subclass overriding it is what the base's handler resolves.
+  - **The drop commits NO position, and that is what makes undo correct.** The
+    store still holds where the widget was, so the undo entry — the whole
+    `plugins.enabled` list from before, exactly the menu's Remove — brings it
+    back where it stood rather than under the panel it was dropped on. A commit
+    on the way out would store the drawer's own coordinates as a placement the
+    user never chose, which is 705e9006d's defect arriving through a new door.
+  - **The write is one `QtObject` beside the chrome, not a method on the
+    surface.** `plugins.enabled` is one global list drawn on every monitor, so a
+    listener per chrome surface answers one drop once per screen and spends an
+    undo entry on each; and the surface is a `PanelWindow`, which weston cannot
+    build, so a write put there is a write no harness can drive — the reason
+    `EditWidgetMenuContent` owns its own Remove. `EditModeDrawerDrop.qml` is
+    declared once in `EditModeChrome.qml` and the runtime harness builds it
+    directly. The FEEDBACK crosses the same boundary the other way
+    (`GlobalStates.editDrawerDropScreen`): the widget being carried is drawn on
+    the surface BELOW the chrome, so it passes under the panel and cannot show
+    anything itself — the drawer paints its own row-press tint on its body
+    instead, which is the vocabulary its rows already use for "the pointer is
+    down on me".
+  (feat(editMode): one predicate for both directions of the drawer's drop;
+  feat(editMode): publish the drawer's reveal to the surface that owns the desktop;
+  feat(editMode): a widget dragged back into the drawer leaves the desktop;
+  feat(editMode): the drawer says a drop will remove, in its rows' own tint.)
+- **The sidebars are closed on entry and refused for the length of the mode,
+  and that is a decision about what the mode EDITS rather than about layers.**
+  Both sidebars are `WlrLayer.Top` and the chrome is `Overlay`, so the widget
+  drawer — which shares the right sidebar's edge — is painted straight over an
+  open one. Neither sidebar is editable in the mode: no drawer section, no
+  remove badge, no reorder the mode drives, and no key in
+  `lint_edit_mode_scope.py`'s allowlist (the quick toggles' own drag is the
+  sidebar's gesture and works with the mode off). So it is a panel covering the
+  thing being edited, which is exactly what `activeBarPopup` beside it already
+  answers by closing. Two alternatives lose. Dropping the chrome *under* the
+  sidebar leaves the drawer half unusable while one is open, and
+  `EditModeChromeSurface.underneath` — the mode's one layer trick — exists for
+  a special workspace covering the WHOLE desktop, where being as invisible as
+  the desktop is the point; a panel on one edge is not that case. And closing
+  on entry alone is half a fix: the screen corners, the bar's buttons and the
+  IPC handlers can all open one again while the mode is on, so the refusal
+  lives on the flag in `GlobalStates` — the one gate every path shares, the
+  same argument `StyledPopup.claimSlot` records for refusing there. It sits
+  BEFORE the notification sweep in `onSidebarRightOpenChanged`, or a refused
+  open marks as read what it never showed.
+  (fix(editMode): the sidebars close for the mode and stay closed.)
 - **What the mode may write is a failing check now**
   (`tests/lint_edit_mode_scope.py`): a write from any file under the edit-mode
   directories to a `Config.options.*` path outside spec §7.1's placement and

@@ -13,6 +13,14 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **You can put a widget away by dragging it back into Edit Mode's drawer.**
+  Dragging a widget out of the drawer has always placed it on the desktop; the
+  other direction did nothing. Now letting a widget go over the open drawer
+  takes it off the desktop, and the drawer lights up while you are over it so
+  you can see the drop will remove rather than move. Ctrl+Z brings the widget
+  back exactly where it was, not at some default spot — the drag never writes a
+  new position on its way out. Which section the drawer happens to be showing
+  makes no difference; the panel is the target, not the list on it.
 - **You can choose which widgets the lock screen shows.** "Show desktop widgets
   while locked" was all or nothing: every widget on your desktop, or none of
   them. Edit Mode's Lock section now lists your widgets under that switch, and
@@ -37,6 +45,13 @@ own repo; the installer pins which revision it builds.
   whole thing is gone and everything is simply there.
 
 ### Fixed
+- **Edit Mode's widget drawer stops drawing over an open sidebar.** The drawer
+  shares the right sidebar's edge and sits on a layer above it, so a sidebar
+  left open was painted through by the panel. Entering Edit Mode now closes both
+  sidebars, and they stay closed for as long as the mode is on — the same thing
+  the mode already does to a bar popup that would sit over the bar it is
+  editing. Nothing about the sidebars changes outside the mode, and they are not
+  reopened for you when you press Done.
 - **The wallpaper selector now leaves the way it should.** Closing it ran the
   *entrance* curve: the panel lurched a third of the way off screen in a single
   frame and then coasted, instead of easing away. Measured off a 60fps capture —
