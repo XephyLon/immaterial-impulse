@@ -82,6 +82,7 @@ CHROME_CONTENT = ROOT / "modules/imi/editMode/EditModeChromeContent.qml"
 DRAWER = ROOT / "modules/imi/editMode/EditModeDrawer.qml"
 MENU = ROOT / "modules/imi/editMode/EditWidgetMenu.qml"
 MENU_CONTENT = ROOT / "modules/imi/editMode/EditWidgetMenuContent.qml"
+DRAWER_DROP = ROOT / "modules/imi/editMode/EditModeDrawerDrop.qml"
 INSETS = ROOT / "modules/imi/editMode/EditModeInsets.qml"
 DESKTOP_MENU = ROOT / "modules/imi/desktopMenu/DesktopMenu.qml"
 LOCK_SURFACE = ROOT / "modules/imi/lock/LockSurface.qml"
@@ -97,7 +98,7 @@ CATALOGUE_ROW = ROOT / "modules/common/widgets/CatalogueRow.qml"
 # reads what the rules are.
 PARTICIPANTS = [BACKGROUND, CANVAS, WIDGET, BACKGROUND_WIDGET, PLUGIN_WIDGET,
                 CHROME_SCOPE, CHROME_SURFACE, CHROME_CONTENT, DRAWER,
-                MENU, MENU_CONTENT]
+                MENU, MENU_CONTENT, DRAWER_DROP]
 
 
 def read(path: Path) -> str:
@@ -1164,6 +1165,169 @@ def test_remove_is_presence_through_the_one_spelling():
         "the menu spells its own removal loop instead of the shared one"
     assert "EditMode.enabledWithout(" in code(CHROME_SURFACE), \
         "the drawer's toggle left the shared spelling"
+
+
+def test_the_drawers_two_directions_ask_one_predicate_of_one_rectangle():
+    """A row let go back over the drawer is abandoned; a widget carried in off
+    the desktop and let go there is removed. Same rectangle, opposite
+    directions, and they run in two different windows - so the rect crosses the
+    boundary once (published, the `clockDepthViewports` shape) and the question
+    is asked through the module on both sides.
+
+    Two hand-written bounds checks would be the "two fields that must agree"
+    this file already forbids elsewhere, and the second one is the one nobody
+    looks at: it is on the desktop's release path, which fires on every click
+    on every widget.
+    """
+    surface = code(CHROME_SURFACE)
+    widget = code(PLUGIN_WIDGET)
+    for name, text in (("the chrome surface", surface), ("PluginWidget", widget)):
+        assert "EditMode.pointInDrawerReveal(" in text, \
+            f"{name} decides the drop without the shared predicate"
+        # ...and does not carry its own. The comparison chain the surface used
+        # to spell out is what this replaced, and it is easy to write again.
+        assert not re.search(r"\.width\s*&&", text), \
+            f"{name} still compares against a reveal's edges by hand"
+
+    # The rect itself is derived ONCE and published, because a layer surface
+    # cannot read another window's items. Both halves, because either alone is
+    # silent: a publisher nobody reads changes nothing, and a reader with no
+    # publisher answers null for ever and the gesture simply never fires.
+    assert "GlobalStates.editDrawerReveals" in surface, \
+        "the chrome surface no longer publishes the reveal it owns"
+    assert "chrome.drawer" in declaration(surface, "drawerReveal"), \
+        "the published reveal is a second derivation instead of the drawn rect"
+    assert re.search(r"Component\.onDestruction:\s*root\.publishDrawerReveal\(null\)",
+                     surface), \
+        ("a chrome surface that goes must take its rectangle with it, or a "
+         "later drag lands on a drawer that is not there")
+    assert "GlobalStates.editDrawerReveals[" in widget, \
+        "the widget works the drawer's rectangle out again instead of reading it"
+
+    # The point is mapped through Qt's own transform chain - the same contract
+    # the right-click carries. A hand-multiplied viewport scale is right at
+    # scale 1 and wrong at every scale the mode actually draws.
+    decide = re.search(r"function dropWouldRemove\([^)]*\)\s*\{(.*?)\n    \}",
+                       widget, re.S)
+    assert decide, "PluginWidget no longer decides the drop"
+    assert "mapToItem(null" in decide.group(1), \
+        "the drop point is not mapped to the scene through the transform chain"
+
+
+def test_a_drop_on_the_drawer_removes_and_commits_nothing():
+    """The release has to reach the removal INSTEAD of the commit, and the
+    position must not be written on the way out.
+
+    Both halves are load-bearing. A commit would store the drawer's own
+    coordinates as where the user left the widget, so undoing the removal would
+    bring it back under the panel it was dropped on - where the click path's
+    Remove correctly brings it back to where it was, because it writes no
+    position at all.
+
+    The ordering cannot be arranged from the subclass: signal handlers declared
+    at two levels of one component both run, base first, so a second
+    `onReleased` on PluginWidget would arrive after the commit it exists to
+    prevent (measured with a qml6 probe). Hence the overridable predicate.
+    """
+    base = code(BACKGROUND_WIDGET)
+    handler = re.search(r"onReleased: \(mouse\) => \{(.*?)\n    \}", base, re.S)
+    assert handler, "the one release handler is gone or has changed shape"
+    body = handler.group(1)
+    assert "releaseRemovesWidget(" in body and "commitPosition()" in body, \
+        "the release no longer offers the subclass a way out before committing"
+    assert body.index("releaseRemovesWidget(") < body.index("commitPosition()"), \
+        "the commit runs before the question that is supposed to prevent it"
+    assert re.search(r"function releaseRemovesWidget\([^)]*\)\s*\{\s*return false;\s*\}",
+                     base), \
+        "the base must answer false, so every non-plugin widget commits as before"
+
+    answer = re.search(r"function releaseRemovesWidget\([^)]*\)\s*\{(.*?)\n    \}",
+                       code(PLUGIN_WIDGET), re.S)
+    assert answer, "PluginWidget no longer answers the release"
+    assert "setPosition" not in answer.group(1) \
+        and "commitPlacement" not in answer.group(1) \
+        and "commitPosition" not in answer.group(1), \
+        "the drop commits a placement on its way off the desktop"
+    assert "GlobalStates.editWidgetDroppedOnDrawer(" in answer.group(1), \
+        "the drop is not announced, so nothing can answer it"
+
+    # The write stays in the edit-mode directory, which is the one
+    # lint_edit_mode_scope.py polices - a plugins.enabled write moved one
+    # directory sideways is that lint's own worked example of the rule getting
+    # lost. It is not on the chrome PanelWindow, because weston implements no
+    # wlr-layer-shell and a write there is a write no harness can drive.
+    drop = code(DRAWER_DROP)
+    assert 'Config.setNestedValue("plugins.enabled"' in drop, \
+        "the drop's answer no longer writes presence"
+    assert "EditMode.enabledWithout(" in drop, \
+        "the drop spells its own removal loop instead of the shared one"
+    assert "GlobalStates.editUndoPush(" in drop, \
+        "a removal by drag is a committed mutation and records an undo entry"
+    assert "setPosition" not in drop, \
+        "the removal touches the stored position, which is what undo restores"
+    assert "PanelWindow" not in drop and "Item {" not in drop, \
+        "the drop's answer grew a surface a harness cannot build"
+    assert code(PLUGIN_WIDGET).count("editWidgetDroppedOnDrawer") == 1, \
+        "a second announcer would remove one widget twice"
+
+    # ONE listener. plugins.enabled is a single global list drawn on every
+    # monitor, so one per chrome surface would answer a drop once per screen
+    # and spend an undo entry on each.
+    instances = []
+    for path in ROOT.rglob("*.qml"):
+        if "/tests/" in str(path):
+            continue
+        if re.search(r"^\s*EditModeDrawerDrop \{", path.read_text(), re.M):
+            instances.append(path.name)
+    assert instances.count("EditModeChrome.qml") == 1, \
+        f"EditModeDrawerDrop is not declared exactly once beside the chrome: {instances}"
+
+
+def test_the_sidebars_close_for_the_mode_and_stay_closed():
+    """Both sidebars are `WlrLayer.Top`; the mode's chrome is `Overlay`. So the
+    widget drawer, which shares the right sidebar's edge, is painted over an
+    open sidebar - reported by the user as the drawer drawing through it.
+
+    Neither sidebar is EDITABLE in the mode: it has no drawer section, no
+    remove badge, no reorder the mode drives, and no key in
+    `lint_edit_mode_scope.py`'s allowlist. It is a panel covering the thing
+    being edited, which is the case `activeBarPopup` beside it already answers
+    the same way.
+
+    Closing them on entry is only half of it - the corners, the bar's buttons
+    and the IPC handlers can all open one again while the mode is on - so the
+    refusal lives on the flag, which is the one gate every path shares.
+    """
+    states = code(GLOBAL_STATES)
+    entry = re.search(r"onEditModeChanged: \{(.*?)\n        else", states, re.S)
+    assert entry, "the mode's entry branch is gone or has changed shape"
+    for flag in ("sidebarLeftOpen", "sidebarRightOpen"):
+        assert re.search(rf"root\.{flag} = false;", entry.group(1)), \
+            f"entering the mode leaves {flag} open under the chrome"
+        handler = re.search(rf"on{flag[0].upper()}{flag[1:]}Changed: \{{(.*?)\n    \}}",
+                            states, re.S)
+        assert handler, f"{flag} has no change handler to refuse an open"
+        assert re.search(rf"root\.{flag} && root\.editMode", handler.group(1)), \
+            f"{flag} can still be opened over the mode's chrome"
+
+    # The refusal comes before the notification sweep, or a refused open counts
+    # as the user having read what it would have shown them.
+    right = re.search(r"onSidebarRightOpenChanged: \{(.*?)\n    \}", states, re.S)
+    assert right.group(1).index("root.editMode") \
+        < right.group(1).index("Notifications.markAllRead"), \
+        "a refused sidebar open still marks the notifications read"
+
+    # And the chrome's layer is untouched. `underneath` exists because REMOVING
+    # the chrome popped it out of existence while the compositor dimmed
+    # everything around it, and it answers a special workspace covering the
+    # whole desktop - not a panel on one edge of it.
+    surface = code(CHROME_SURFACE)
+    assert re.search(r"WlrLayershell\.layer: root\.underneath \? WlrLayer\.Bottom "
+                     r": WlrLayer\.Overlay", surface), \
+        "the chrome's layer stopped being the special-workspace switch alone"
+    for name in ("sidebarLeftOpen", "sidebarRightOpen"):
+        assert name not in surface, \
+            f"the chrome surface decides its layer from {name}"
 
 
 def test_the_menu_window_is_the_desktop_menus_shape():

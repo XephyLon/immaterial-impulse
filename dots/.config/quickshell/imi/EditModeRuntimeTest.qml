@@ -172,6 +172,12 @@ ShellRoot {
         }
     }
 
+    // The answer to a widget dropped back on the drawer. Built directly, which
+    // is the whole reason the write lives in a `QtObject` rather than on the
+    // chrome's `PanelWindow`: weston implements no wlr-layer-shell, so a write
+    // put on that surface would be a write no harness can reach.
+    EditModeDrawerDrop {}
+
     function placeWidgets() {
         PluginState.setPosition("edit-resize-probe", harness.testScreen,
                                 { x: 36, y: 36, placementStrategy: "free" });
@@ -203,6 +209,42 @@ ShellRoot {
         driver.mouseMove(canvas, point.x + dx / 2, point.y + dy / 2, 20, Qt.LeftButton);
         driver.mouseMove(canvas, point.x + dx, point.y + dy, 20, Qt.LeftButton);
         driver.mouseRelease(canvas, point.x + dx, point.y + dy, Qt.LeftButton);
+    }
+
+    // The drawer's reveal, in screen coordinates. On the shell this is the
+    // chrome surface's own rect, published across the window boundary; that
+    // surface is a `PanelWindow` this harness cannot build, so the harness
+    // stands in with the SAME module call rather than a rectangle of its own.
+    readonly property var drawerReveal: EditMode.drawerRect(harness.viewport,
+        GlobalStates.editMode ? 1 : 0, GlobalStates.editDrawerProgress,
+        harness.screenWidth, harness.screenHeight)
+
+    function publishReveal() {
+        const published = {};
+        published[harness.testScreen] = harness.drawerReveal;
+        GlobalStates.editDrawerReveals = published;
+    }
+
+    // The hint the drawer paints, sampled while the pointer is still down: it
+    // is cleared by the release, so a check taken after the gesture reads ""
+    // whether or not the drawer ever lit up.
+    property string hintDuringDrag: ""
+
+    // A drag whose RELEASE lands on the drawer's reveal. Driven to a screen
+    // point mapped back into canvas coordinates, because that is the frame
+    // every other gesture here is driven in and QtTest maps it through the
+    // mode's transform on the way to the window.
+    function dragOntoDrawer(widget) {
+        const reveal = harness.drawerReveal;
+        const target = canvas.mapFromItem(null,
+            reveal.x + reveal.width / 2, reveal.y + reveal.height / 2);
+        const x = widget.x + widget.width / 2;
+        const y = widget.y + widget.height / 2;
+        driver.mousePress(canvas, x, y, Qt.LeftButton);
+        driver.mouseMove(canvas, (x + target.x) / 2, (y + target.y) / 2, 20, Qt.LeftButton);
+        driver.mouseMove(canvas, target.x, target.y, 20, Qt.LeftButton);
+        harness.hintDuringDrag = GlobalStates.editDrawerDropScreen;
+        driver.mouseRelease(canvas, target.x, target.y, Qt.LeftButton);
     }
 
     function storedPosition(id) { return PluginState.position(id, harness.testScreen); }
@@ -844,6 +886,90 @@ ShellRoot {
                           Math.round(harness.storedPosition("edit-move-probe").x) === 36
                           && Math.round(harness.storedPosition("edit-resize-probe").x) === 36);
             canvas.clearSelection();
+            GlobalStates.editMode = false;
+        },
+
+        // ---- a widget dragged back INTO the drawer leaves the desktop ------
+        //
+        // The inverse of §8.3's drag out, and the half nothing static can
+        // answer: the decision is made on the background surface from a
+        // rectangle published by another window, and the release has to reach
+        // the removal INSTEAD of the commit that runs on every other release.
+        // Both directions are driven, because "the widget was removed" is also
+        // what a release handler that removed on every drop would report.
+        () => {
+            GlobalStates.editMode = true;
+            GlobalStates.editTab = EditMode.DESKTOP_TAB;
+            Config.options.plugins.enabled = ["edit-move-probe", "edit-resize-probe"];
+            harness.placeWidgets();
+            GlobalStates.editDrawerOpen = true;
+        },
+        () => {
+            harness.publishReveal();
+            GlobalStates.editUndoStack = [];
+        },
+        () => {
+            harness.check("the drawer's reveal reaches the widget on the other surface",
+                          movableWidget.editDrawerReveal !== null
+                          && movableWidget.editDrawerReveal.width > 0);
+            harness.dragBy(movableWidget, 96, 0);
+        },
+        () => {
+            // The control. A drag ending on the DESKTOP still commits a move,
+            // so what the next steps score is the drop POINT and not the mode.
+            harness.check("a drag that ends on the desktop still commits a move",
+                          Config.options.plugins.enabled.length === 2
+                          && Math.round(harness.storedPosition("edit-move-probe").x) === 132);
+            harness.hintDuringDrag = "";
+            harness.dragOntoDrawer(movableWidget);
+        },
+        () => {
+            harness.check("a drag that ends on the drawer takes the widget off the desktop",
+                          Config.options.plugins.enabled.indexOf("edit-move-probe") === -1
+                          && Config.options.plugins.enabled.indexOf("edit-resize-probe") !== -1);
+            // The store still says where the widget WAS. That is not a detail:
+            // it is the whole of how undo puts the widget back at the position
+            // it had rather than under the panel it was dropped on.
+            harness.check("...and commits no position on the way out",
+                          Math.round(harness.storedPosition("edit-move-probe").x) === 132
+                          && Math.round(harness.storedPosition("edit-move-probe").y) === 396);
+            harness.check("...as exactly one undo entry",
+                          GlobalStates.editUndoStack.length === 1);
+            // Sampled with the pointer still down, because the release clears
+            // it - a check taken after the gesture reads "" whether or not the
+            // drawer ever lit up.
+            harness.check("...and the drawer was told it was the drop target",
+                          harness.hintDuringDrag === harness.testScreen);
+            harness.check("...which the release clears again",
+                          GlobalStates.editDrawerDropScreen === "");
+        },
+        () => {
+            GlobalStates.editUndo();
+            harness.check("undo puts the widget back on the desktop",
+                          Config.options.plugins.enabled.indexOf("edit-move-probe") !== -1);
+            harness.check("...at the position it had, not at a default",
+                          Math.round(harness.storedPosition("edit-move-probe").x) === 132
+                          && Math.round(harness.storedPosition("edit-move-probe").y) === 396);
+        },
+        () => {
+            // A closed drawer is a zero-width rect, so the same gesture at the
+            // same screen point is a MOVE again. Without this the check above
+            // passes on a release handler that removes for the whole mode.
+            GlobalStates.editDrawerOpen = false;
+            harness.placeWidgets();
+        },
+        () => {
+            harness.publishReveal();
+            harness.hintDuringDrag = "";
+        },
+        () => harness.dragOntoDrawer(movableWidget),
+        () => {
+            harness.check("with the drawer closed the same drop moves the widget instead",
+                          Config.options.plugins.enabled.indexOf("edit-move-probe") !== -1
+                          && harness.hintDuringDrag === ""
+                          && Math.round(harness.storedPosition("edit-move-probe").x)
+                              > 36);
+            Config.options.plugins.enabled = [];
             GlobalStates.editMode = false;
         },
 
