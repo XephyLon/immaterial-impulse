@@ -325,6 +325,17 @@ if ! python3 "$SCRIPT_DIR/lint_behavior_tier_race.py"; then
     exit 1
 fi
 
+# Static lint: a handler that writes an animated property and then defers a
+# second write to it has written a start value the retarget swallows, so the
+# animation runs from its destination to its destination. Measured, that is why
+# the wallpaper selector's entrance never animated once: 99.6% of its travel
+# landed in a single frame.
+echo "Running animated start-write lint..."
+if ! python3 "$SCRIPT_DIR/lint_animated_start_write.py"; then
+    echo "Animated start-write lint failed."
+    exit 1
+fi
+
 # Static lint: a toolbar title written as an icon beside a label IS
 # IconAndTextToolbarButton's construction, so it renders as an unfilled button.
 # Nothing errors and no frame comparison can see it; it is only wrong to a
