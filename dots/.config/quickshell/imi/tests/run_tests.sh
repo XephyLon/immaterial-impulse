@@ -315,6 +315,16 @@ if ! python3 "$SCRIPT_DIR/lint_blur_region_pairing.py"; then
     exit 1
 fi
 
+# Static lint: a toolbar title written as an icon beside a label IS
+# IconAndTextToolbarButton's construction, so it renders as an unfilled button.
+# Nothing errors and no frame comparison can see it; it is only wrong to a
+# person deciding what to click.
+echo "Running toolbar title lint..."
+if ! python3 "$SCRIPT_DIR/lint_toolbar_title_is_not_a_button.py"; then
+    echo "Toolbar title lint failed."
+    exit 1
+fi
+
 # Static lint: Edit Mode's chrome band is asymmetric, so a piece still centred
 # in it with `/ 2`, or a call site that forgets `bandFraction` and takes the
 # 0.5 default, renders off its gap without erroring.
