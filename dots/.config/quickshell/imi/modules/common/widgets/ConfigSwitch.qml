@@ -11,7 +11,7 @@ RippleButton {
     // Shown as a hoverable "i" beside the control rather than inline, so a long
     // explanation doesn't stretch the row.
     property string infoText: ""
-    property alias iconSize: iconWidget.iconSize
+    property alias iconSize: catalogueRow.rowIconSize
     // A full-width row beneath everything else, for detail about the row - a
     // byline, tags stating a fact about it. It spans the whole control rather
     // than just the label block, so a call site can push trailing items to the
@@ -20,16 +20,16 @@ RippleButton {
     //
     // Empty for every caller that does not set it, and an empty RowLayout has
     // no height, so this costs nothing elsewhere.
-    property alias detailContent: detailRow.data
+    property alias detailContent: catalogueRow.detailContent
     // Sits on the label's own line, immediately after it. For a secondary
     // phrase that belongs to the title rather than under it - a byline, a
     // version. The label is one StyledText, so a caller cannot mix type sizes
     // into it directly.
-    property alias titleContent: titleRow.data
+    property alias titleContent: catalogueRow.titleContent
     // Sits immediately before the switch. Row actions have to go in here: the
     // switch is the last thing in this component, so anything a call site
     // appends to its own row can only land beyond it.
-    property alias trailingContent: trailingRow.data
+    property alias trailingContent: catalogueRow.trailingContent
     // A click is an intent to flip, not a state change of its own. Assigning to
     // `checked` from a handler destroys the call site's `checked:` binding on
     // the very first click, after which nothing external - a preset, a
@@ -58,60 +58,20 @@ RippleButton {
 
     onClicked: root.toggleRequested()
 
-    contentItem: ColumnLayout {
-        spacing: 0
+    // The catalogue row is where the icon/name/description/affordance shape
+    // lives now - the same one Edit Mode's drawer and the widget store draw.
+    // Everything specific to a settings row stays here: the switch in the
+    // affordance slot, and the label taking the Control's own font.
+    contentItem: CatalogueRow {
+        id: catalogueRow
+        rowIcon: root.buttonIcon
+        rowIconSize: Appearance.font.pixelSize.larger
+        title: root.text
+        titleFont: root.font
+        description: root.description
+        infoText: root.infoText
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Appearance.spacing.space150
-            OptionalMaterialSymbol {
-                id: iconWidget
-                icon: root.buttonIcon
-                iconSize: Appearance.font.pixelSize.larger
-            }
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space100
-
-                    StyledText {
-                        id: labelWidget
-                        text: root.text
-                        textFormat: Text.PlainText
-                        font: root.font
-                        color: Appearance.colors.colOnSecondaryContainer
-                    }
-                    RowLayout {
-                        id: titleRow
-                        Layout.alignment: Qt.AlignBaseline
-                        spacing: Appearance.spacing.space50
-                    }
-                    // Keeps the label left-aligned now that it no longer fills
-                    // the row itself.
-                    Item { Layout.fillWidth: true }
-                }
-                StyledText {
-                    Layout.fillWidth: true
-                    visible: root.description.length > 0
-                    text: root.description
-                    textFormat: Text.PlainText
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colSubtext
-                    wrapMode: Text.Wrap
-                }
-            }
-            InfoTooltipIcon {
-                tooltipText: root.infoText
-            }
-
-            RowLayout {
-                id: trailingRow
-                Layout.alignment: Qt.AlignVCenter
-                spacing: Appearance.spacing.space50
-            }
-
+        affordance: [
             StyledSwitch {
                 id: switchWidget
                 down: root.down
@@ -125,16 +85,6 @@ RippleButton {
                 checked: root.checked
                 onClicked: root.clicked()
             }
-        }
-
-        RowLayout {
-            id: detailRow
-            Layout.fillWidth: true
-            // Only when the slot is actually filled, so the 164 callers that
-            // leave it empty keep their current row height exactly.
-            Layout.topMargin: detailRow.children.length > 0
-                ? Appearance.spacing.space100 : 0
-            spacing: Appearance.spacing.space50
-        }
+        ]
     }
 }
