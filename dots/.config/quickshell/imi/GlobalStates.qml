@@ -304,6 +304,25 @@ Singleton {
             // is the popup already holding the card when the mode opens, whose
             // card would otherwise sit over the bar being edited.
             root.activeBarPopup = null;
+            // ...and the same argument, one layer up. Both sidebars are
+            // `WlrLayer.Top` and the mode's chrome is `Overlay`, so an open
+            // right sidebar is painted over by the widget drawer that shares
+            // its edge - reported as the drawer drawing through the sidebar.
+            // Neither sidebar is EDITABLE in the mode: its surfaces have no
+            // drawer section, no remove badge, no reorder the mode drives, and
+            // no key in lint_edit_mode_scope.py's allowlist. So it is a panel
+            // covering the thing being edited, and the answer is the one the
+            // bar popup above already gets.
+            //
+            // Not a layer change, on either side: dropping the chrome under
+            // the sidebar leaves the drawer half unusable while it is open,
+            // and the mode already spends its one layer trick on
+            // `EditModeChromeSurface.underneath` - which exists because
+            // REMOVING the chrome popped it out of existence, and is aimed at
+            // a special workspace covering the whole desktop rather than at a
+            // panel on one edge of it.
+            root.sidebarLeftOpen = false;
+            root.sidebarRightOpen = false;
         }
         // The open flag does not outlive the mode: a drawer left latched open
         // would greet the NEXT entry mid-slide, with the desktop already
@@ -332,7 +351,24 @@ Singleton {
     }
     onClockDepthSelectOpenChanged: if (root.clockDepthSelectOpen) root.editMode = false
 
+    // ...and closing them on entry is only half of it: the corners, the bar's
+    // buttons and the IPC handlers can all open a sidebar again while the mode
+    // is on. The refusal lives on the flag rather than at those call sites for
+    // the reason `StyledPopup.claimSlot` gives for refusing there - it is the
+    // one gate every path already shares, and a rule spelled at six call sites
+    // is a rule the seventh does not carry.
+    onSidebarLeftOpenChanged: {
+        if (root.sidebarLeftOpen && root.editMode)
+            root.sidebarLeftOpen = false;
+    }
+
     onSidebarRightOpenChanged: {
+        // Before the notification sweep, not after: a refused open must not
+        // count as the user having read what it would have shown them.
+        if (root.sidebarRightOpen && root.editMode) {
+            root.sidebarRightOpen = false;
+            return;
+        }
         if (GlobalStates.sidebarRightOpen) {
             Notifications.timeoutAll();
             Notifications.markAllRead();
