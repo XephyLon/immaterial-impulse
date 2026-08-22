@@ -16,6 +16,9 @@ would be silent between them:
   directions - a preset saved by this shell carries the lock layout, and a
   preset from an older shell that lacks the key does not wipe a user's fork
   (the same `has()` shape the desktop map already uses);
+- PRESENCE forks under that same rule and in the same file, and the master
+  gate stays above it: `lock.showWidgets` is what a user already has set, so
+  the per-widget choice is a term beside it rather than a replacement for it;
 - the surface a read or write follows by DEFAULT is the one derivation of the
   lock look, so a widget on the Lockscreen tab and a widget under a real lock
   read the same store.
@@ -175,6 +178,123 @@ def test_the_module_states_the_inheritance_rule():
         "forkedScreen must copy each widget's desktop span into its lock record"
     assert module.count("forkedScreen(state, screenName)") >= 3, \
         "both withPosition and withGridSize must fork through forkedScreen()"
+
+
+
+# ---- presence forks the same way -------------------------------------------
+
+DRAWER = ROOT / "modules/imi/editMode/EditModeDrawer.qml"
+BACKGROUND = ROOT / "modules/imi/background/Background.qml"
+
+
+def test_the_module_states_the_presence_rule():
+    module = code(MODULE)
+    for fn in ("isPresenceForked", "forkedPresence", "lockPresent",
+               "withLockPresence", "withoutLockPresence", "containsId"):
+        assert re.search(rf"function {fn}\(", module), \
+            f"layout_surfaces.js lost {fn}()"
+    fork = re.search(r"function withLockPresence\((.*?)\n\}", module, re.S)
+    assert fork, "layout_surfaces.js lost withLockPresence()"
+    assert "forkedPresence(desktopEnabled)" in fork.group(1), \
+        ("the first pick must snapshot the desktop's enabled set - a fork that "
+         "starts empty is a lock screen the first toggle cleared")
+    # Neither shape check may go through Array's brand: a `list<string>` that
+    # crossed into a .pragma library is typeof "object" and fails
+    # Array.isArray (109e6d897), and an empty map is a legitimate forked state.
+    assert "Array.isArray" not in module, \
+        ("layout_surfaces.js must not test a QML sequence with Array.isArray - "
+         "the brand does not survive the boundary")
+
+
+def test_the_store_carries_the_lock_presence_from_empty_through_load():
+    state = code(STATE)
+    empty = re.search(r"function emptyState\(\)\s*\{(.*?)\n    \}", state, re.S)
+    assert empty and "lockPresence: null" in empty.group(1), \
+        ("PluginState.emptyState() must declare lockPresence as null - absence "
+         "is 'the lock follows the desktop', and an empty map is not that")
+    assert re.search(r"lockPresence: parsed\.lockPresence\s*&&\s*"
+                     r"typeof parsed\.lockPresence === \"object\"", state), \
+        "PluginState's loader must shape-check lockPresence"
+    for fn in ("lockPresenceForked", "lockWidgetEnabled", "setLockWidgetEnabled",
+               "lockPresenceRecords", "restoreLockPresence", "resetLockPresence"):
+        assert re.search(rf"function {fn}\(", state), f"PluginState lost {fn}()"
+    # None of them take a screen: presence is one global set, the way
+    # `plugins.enabled` is, and a per-screen one would invent a capability the
+    # desktop itself does not have.
+    for fn in ("lockPresenceForked", "lockWidgetEnabled", "resetLockPresence"):
+        sig = re.search(rf"function {fn}\(([^)]*)\)", state)
+        assert sig and "screen" not in sig.group(1), \
+            f"PluginState.{fn} takes a screen - presence is not per screen"
+
+
+def test_the_master_gate_stays_above_the_per_widget_choice():
+    # The upgrade guarantee, and the reason `lock.showWidgets` is not
+    # superseded: it is a setting users already have set. With it off nothing
+    # shows, as before; with it on and the choice following, all of them do.
+    widget = code(WIDGET)
+    assert re.search(r"visibleWhenLocked:\s*pluginNode\.wantsVisibleWhenLocked\s*"
+                     r"\|\|\s*\(Config\.options\.lock\.showWidgets\s*"
+                     r"&&\s*PluginState\.lockWidgetEnabled\(", widget), \
+        ("a widget's lock visibility must be the master gate AND the per-widget "
+         "choice - either alone drops a setting the user has already made")
+    assert re.search(r"visibleOnDesktop:\s*!rootWidget\.lockOnlyWidget", widget), \
+        ("the desktop needs a filter of its own, or a widget picked for the "
+         "lock alone is drawn on the desktop too")
+    only = re.search(r"readonly property bool lockOnlyWidget:(.*?)\n    visibleOnDesktop",
+                     widget, re.S)
+    assert only and "!Config.options.plugins.enabled.includes" in only.group(1), \
+        ("lockOnlyWidget must be narrower than 'not enabled': a widget being "
+         "removed from BOTH is in neither list, and hiding it here races the "
+         "host loader's exit fade")
+    # The host builds a widget or it does not, so the loader gate is the union.
+    background = code(BACKGROUND)
+    shown = re.search(r"shown: modelData\.desktopWidget !== undefined(.*?)enterDuration",
+                      background, re.S)
+    assert shown, "Background's plugin loader gate is gone"
+    assert "PluginState.lockWidgetEnabled(modelData.id)" in shown.group(1), \
+        ("the loader gate must be the union of the two choices, or a widget "
+         "picked for the lock alone is never built")
+
+
+def test_presets_carry_the_lock_widget_choice_both_ways():
+    presets = read(PRESETS)
+    saves = re.findall(r"lockPresence: \(\.lockPresence // null\)", presets)
+    assert len(saves) >= 3, \
+        (f"presets.sh captures lockPresence at {len(saves)} sites; the two "
+         f"--save paths and the --apply current-state read all need it")
+    apply_rule = re.search(
+        r"\.lockPresence = \(if \(\$preset \| has\(\"lockPresence\"\)\)\s*"
+        r"then \$preset\.lockPresence\s*"
+        r"else \$current\.lockPresence end\)", presets)
+    assert apply_rule, \
+        ("presets.sh --apply must take the preset's lockPresence only if the "
+         "preset HAS the key - an older preset must not wipe a picked set, and "
+         "a null from a newer one must re-link rather than read as absent")
+
+
+def test_the_drawer_offers_the_choice_and_the_surface_writes_it():
+    drawer = code(DRAWER)
+    assert "lockWidgetToggleRequested" in drawer and "lockPresenceResetRequested" in drawer, \
+        "the drawer's Lock section no longer offers the per-widget choice"
+    assert "PluginState.lockPresenceForked()" in drawer, \
+        ("the drawer must say which state the choice is in - the following/"
+         "forked row is how a user finds out that it forked")
+    for wording in ("Widget choice follows the desktop", "Widget choice is separate"):
+        assert wording in drawer, \
+            (f"the presence row must reuse the layout row's vocabulary, not "
+             f"invent a second one ({wording!r} missing)")
+    assert "PluginState.set" not in drawer, \
+        "the drawer writes the choice itself - it reports gestures, the surface writes"
+    surface = code(CHROME_SURFACE)
+    for fn in ("toggleLockWidget", "resetLockPresence"):
+        body = re.search(rf"function {fn}\([^)]*\)(.*?)\n    \}}", surface, re.S)
+        assert body, f"the chrome surface lost {fn}()"
+        assert "GlobalStates.editUndoPush" in body.group(1), \
+            f"{fn} must be undoable - it is a committed mutation"
+        assert "PluginState.restoreLockPresence(" in body.group(1), \
+            (f"{fn}'s undo must restore the whole choice, including the null "
+             f"that means 'following' - a re-pick from the desktop is a "
+             f"different set the moment the enabled list has moved")
 
 
 if __name__ == "__main__":
