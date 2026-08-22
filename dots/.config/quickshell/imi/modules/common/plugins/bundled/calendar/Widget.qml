@@ -516,9 +516,7 @@ Item {
             opacity: (widgetHover.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
             visible: opacity > 0 && !root.hostInteractionLocked
             Behavior on opacity {
-                NumberAnimation {
-                    duration: Appearance.animation.elementMoveFaster.duration
-                }
+                animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)
             }
 
             MouseArea {
@@ -566,9 +564,7 @@ Item {
             opacity: (widgetHover.hovered || toggleArea.containsMouse) && root.sizeMode !== "1x1" ? 0.5 : 0
             visible: opacity > 0 && !root.hostInteractionLocked
             Behavior on opacity {
-                NumberAnimation {
-                    duration: Appearance.animation.elementMoveFaster.duration
-                }
+                animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)
             }
 
             MaterialSymbol {
