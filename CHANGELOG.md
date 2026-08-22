@@ -76,8 +76,9 @@ own repo; the installer pins which revision it builds.
   workspace while editing left the toolbar, the tab bar and the widget drawer
   painted over the window, with the desktop they belong to hidden underneath
   it — so the mode was not merely untidy, it was unusable: the widgets being
-  arranged could not be seen at all. The chrome now stands down while a special
-  workspace is up on that monitor, and comes back when it goes.
+  arranged could not be seen at all. The chrome now drops to the desktop's own
+  layer while a special workspace is up, so the compositor blurs and dims both
+  halves of the mode together instead.
 - **Edit Mode's widget drawer no longer sits flush on the screen edge.** The
   panel's rounded right corner met the edge of the display with nothing between
   them, while its other side had a full margin against the desktop. It now

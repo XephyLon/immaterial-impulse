@@ -28,11 +28,16 @@ import qs.modules.common
  * bar and the drawer. The mode is not merely untidy in that state, it is
  * unusable - the widgets being arranged cannot be seen at all.
  *
- * A layer change cannot fix it. `Overlay` is above all windows by protocol and
- * so is `Top`; the only layer below a window is `Bottom`, where the chrome
- * would be as invisible as the desktop and unclickable besides. So the chrome
- * stands down instead, and the desktop needs no gate of its own because being
- * under the window is already the whole of its problem.
+ * So the chrome joins the desktop under the window rather than standing down.
+ * `Bottom` is the only layer below a window, and being "as invisible as the
+ * desktop" there is not the objection it first looks like - it is the entire
+ * point. Under the window both halves are occluded together, blurred and dimmed
+ * together by the compositor, and nothing snaps: the first attempt at this
+ * destroyed the surface instead, and a mode popping out of existence while its
+ * surroundings dim is uglier than the overlap it fixed.
+ *
+ * `Bar.qml:96` switches its own layer on the same pair of conditions, which is
+ * the precedent for doing it this way rather than with visibility.
  *
  * Gated on the SPECIAL workspace rather than on "anything covering", because a
  * special workspace is the one surface that is deliberately summoned over
@@ -63,13 +68,16 @@ Scope {
 
             // The mode itself, plus the tail of the exit animation: the flag
             // goes false at the first frame of the leave, and the chrome has to
-            // stay on screen to travel back out with the desktop. And not while
-            // something is summoned over the desktop this chrome frames.
-            active: (GlobalStates.editMode || GlobalStates.editProgress > 0)
-                && !surfaceLoader.specialShown
+            // stay on screen to travel back out with the desktop.
+            active: GlobalStates.editMode || GlobalStates.editProgress > 0
 
             sourceComponent: EditModeChromeSurface {
                 screen: surfaceLoader.modelData
+                // Not a visibility gate. Standing the chrome down made it pop
+                // out of existence while everything around it was being blurred
+                // and dimmed by the compositor; going UNDER the window instead
+                // means it takes that treatment with the desktop it frames.
+                underneath: surfaceLoader.specialShown
             }
         }
     }

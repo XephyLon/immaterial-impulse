@@ -58,7 +58,14 @@ PanelWindow {
     // (deba3e3f6).
     color: "transparent"
     WlrLayershell.namespace: "quickshell:editMode"
-    WlrLayershell.layer: WlrLayer.Overlay
+    // Whether something is summoned over the desktop this chrome frames - a
+    // special workspace, today. Under it the chrome drops to the desktop's own
+    // layer, so the compositor blurs and dims both halves of the mode together
+    // instead of painting the toolbar over the window. `Bar.qml:96` switches
+    // its layer on the same kind of condition.
+    property bool underneath: false
+
+    WlrLayershell.layer: root.underneath ? WlrLayer.Bottom : WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore
     exclusiveZone: 0
