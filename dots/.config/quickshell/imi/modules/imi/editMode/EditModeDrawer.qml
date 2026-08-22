@@ -748,6 +748,19 @@ Item {
             // in and offers the way back. Only while the master gate is on -
             // with the lock showing no widgets at all, "follows the desktop"
             // is a claim about a set nobody can see.
+            //
+            // Neither this row nor the layout re-link below it is DRESSED with
+            // the three channels above, and both still arrive with the wave.
+            // A `RippleButton` declares `appear` itself and folds it into its
+            // own opacity and a 6px rise, so the runner reaches it like any
+            // other member - measured, these two land one and two steps behind
+            // the list. What it must not be handed is a second writer of
+            // either channel: `scale` is `interactionMotion`'s (a scale here
+            // replaces the control's rather than composing with it -
+            // lint_interaction_motion_double.py) and that same opacity binding
+            // carries the disabled dim (a second one draws this row as enabled
+            // while it is not - lint_disabled_opacity.py, and the bug
+            // ExpandablePanel's `appear` indirection exists for).
             RippleButton {
                 id: lockPresenceRow
                 visible: root.section === "lock" && Config.options.lock.showWidgets
@@ -804,14 +817,9 @@ Item {
             // in, and while forked offers the way back - the drawer never
             // forks by itself; a drag does that.
             //
-            // The one member of this column that takes NO entrance. A
-            // `RippleButton` already owns both channels the entrance writes:
-            // `interactionMotion.scale` (so a second scale here would multiply
-            // rather than replace - lint_interaction_motion_double.py) and the
-            // disabled dim on `opacity` (so a second opacity binding would draw
-            // this row as enabled while it is not - lint_disabled_opacity.py,
-            // and the bug ExpandablePanel's `appear` indirection exists for).
-            // It appears with its section rather than arriving after it.
+            // Undressed, for the reason stated on the widget-choice row above:
+            // this is a `RippleButton` and it rides the wave through its own
+            // `appear`.
             RippleButton {
                 id: lockLayoutRow
                 visible: root.section === "lock"
