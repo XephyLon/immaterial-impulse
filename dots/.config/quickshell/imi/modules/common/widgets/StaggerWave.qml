@@ -44,6 +44,30 @@ QtObject {
     // `stop()` does not raise `finished`.
     property var active: []
 
+    // An entrance asked for while the container is still off screen, held
+    // until it is not.
+    //
+    // Ranking asks each member whether it is on screen, and `visible` is
+    // EFFECTIVE visibility - so a container that is not yet mapped answers
+    // `false` for every one of them, every rank comes back -1, and the wave is
+    // empty. The members then keep whatever `appear` the last exit left them
+    // at, which is zero: a permanently blank surface, with nothing in any log
+    // and QML that reads correctly. Measured on the right sidebar, whose
+    // trigger is `GlobalStates.sidebarRightOpen` - the state that ASKS for the
+    // panel, a beat before the compositor maps its layer surface. Four
+    // consecutive opens came up empty.
+    //
+    // So the wave waits for the container rather than trusting whatever
+    // announced the open, and every adopter gets that without re-deriving it.
+    property bool pendingEnter: false
+    property Connections targetVisibility: Connections {
+        target: root.target
+        function onVisibleChanged() {
+            if (root.pendingEnter && root.target?.visible)
+                root.enter();
+        }
+    }
+
     function members(): var {
         return root.target ? root.target.children : [];
     }
@@ -63,6 +87,7 @@ QtObject {
     // surface that is not staggering at all should look like.
     function settle() {
         root.stop();
+        root.pendingEnter = false;
         const kids = root.members();
         for (let i = 0; i < kids.length; i++)
             if (kids[i].appear !== undefined)
@@ -72,6 +97,18 @@ QtObject {
     function enter() {
         root.stop();
         const kids = root.members();
+
+        if (!root.target?.visible) {
+            // Park the members where the entrance will start from, so nothing
+            // is on screen at full strength for the frame the container maps.
+            for (let i = 0; i < kids.length; i++)
+                if (kids[i].appear !== undefined)
+                    kids[i].appear = 0;
+            root.pendingEnter = true;
+            return;
+        }
+        root.pendingEnter = false;
+
         const wave = [];
 
         // Rank by VISIBLE position through the one policy, never by position
@@ -113,6 +150,7 @@ QtObject {
     // than as content vanishing.
     function leave() {
         root.stop();
+        root.pendingEnter = false;
         const kids = root.members();
         const wave = [];
         for (let i = 0; i < kids.length; i++) {
