@@ -1,0 +1,164 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import qs.modules.common
+
+/**
+ * One group's arrival, as one cancellable thing.
+ *
+ * A member opts in by declaring `property real appear: 1` and folding it into
+ * its own opacity - `RippleButton` already does, and so do the containers that
+ * adopted this. The wave animates THAT, never `opacity` itself: an imperative
+ * write to `opacity` destroys whatever binding the member had, and
+ * `RippleButton` expresses its disabled state through exactly that binding, so
+ * a wave written the obvious way leaves every disabled control looking enabled
+ * for the rest of the session.
+ *
+ * `step` and `leadIn` arrive in BASE milliseconds and are scaled here, once -
+ * which is what makes a wave collapse to nothing under reduce motion with no
+ * second gate. Do not hand either of them an `Appearance.animation.*.duration`:
+ * those are already scaled, and the multiplier would be applied twice.
+ *
+ * A QtObject rather than an Item on purpose: a wave declared inside the
+ * container it walks must not become a member of it, and only Items land in
+ * `children`.
+ */
+QtObject {
+    id: root
+
+    // The item whose children are the wave's members.
+    property Item target: null
+
+    // BASE milliseconds. The step is a fraction of a catalogued duration
+    // rather than a literal, so it moves with any retiming of the tiers.
+    property int step: Appearance.animation.staggerStep
+    // The container's head start: the members land in space that already
+    // exists rather than racing the surface they are arriving on.
+    property int leadIn: 0
+
+    // The wave, as a list rather than as loose animations. A trigger flipping
+    // twice inside the first wave's own length used to leave it running: the
+    // exit created a fade to 0 per member without stopping the entrances, so a
+    // member still sitting in its PauseAnimation faded back IN onto a surface
+    // that had already gone, and its spent object was never destroyed, because
+    // `stop()` does not raise `finished`.
+    property var active: []
+
+    function members(): var {
+        return root.target ? root.target.children : [];
+    }
+
+    function stop() {
+        for (let i = 0; i < root.active.length; i++) {
+            const spent = root.active[i];
+            if (!spent)
+                continue;
+            spent.stop();
+            spent.destroy();
+        }
+        root.active = [];
+    }
+
+    // Every member at rest and on screen, with nothing running - what a
+    // surface that is not staggering at all should look like.
+    function settle() {
+        root.stop();
+        const kids = root.members();
+        for (let i = 0; i < kids.length; i++)
+            if (kids[i].appear !== undefined)
+                kids[i].appear = 1;
+    }
+
+    function enter() {
+        root.stop();
+        const kids = root.members();
+        const wave = [];
+
+        // Rank by VISIBLE position through the one policy, never by position
+        // in `children`. A member that is not on screen must not spend a slot:
+        // it leaves a hole one step wide in the middle of the cascade, and
+        // nothing downstream compensates, because every later member is still
+        // counted from its own index. The policy also clamps the rank -
+        // `leadIn + index * step` is unbounded, so a twenty-member group's last
+        // member arrives most of a second after the container has finished
+        // opening, by which point the wave has stopped reading as one gesture.
+        const included = [];
+        for (let i = 0; i < kids.length; i++)
+            included.push(kids[i].appear !== undefined && kids[i].visible);
+        const ranks = Appearance.animation.staggerRanks(included);
+        const step = Appearance.animation.scale(root.step);
+        const leadIn = Appearance.animation.scale(root.leadIn);
+
+        for (let i = 0; i < kids.length; i++) {
+            if (ranks[i] < 0)
+                continue;
+            kids[i].appear = 0;
+            wave.push(root.fade.createObject(root, {
+                item: kids[i],
+                to: 1,
+                span: Appearance.animation.elementMoveFast.duration,
+                delay: Appearance.animation.staggerDelay(ranks[i], step, leadIn)
+            }));
+        }
+
+        root.active = wave;
+        for (let i = 0; i < wave.length; i++)
+            wave[i].start();
+    }
+
+    // No ranking on the way out: an exit is one gesture, and a member that has
+    // since been hidden still needs its `appear` put back for the next
+    // entrance to start from. Animated rather than assigned, so a group whose
+    // container does not itself leave still reads as content leaving rather
+    // than as content vanishing.
+    function leave() {
+        root.stop();
+        const kids = root.members();
+        const wave = [];
+        for (let i = 0; i < kids.length; i++) {
+            if (kids[i].appear === undefined)
+                continue;
+            wave.push(root.fade.createObject(root, {
+                item: kids[i],
+                delay: 0,
+                to: 0,
+                span: Appearance.animation.elementMoveExit.duration
+            }));
+        }
+        root.active = wave;
+        for (let i = 0; i < wave.length; i++)
+            wave[i].start();
+    }
+
+    function run(entering: bool) {
+        if (entering)
+            root.enter();
+        else
+            root.leave();
+    }
+
+    property Component fade: Component {
+        SequentialAnimation {
+            id: seq
+            property Item item
+            property int delay: 0
+            property real to: 1
+            property int span: 200
+            PauseAnimation { duration: seq.delay }
+            NumberAnimation {
+                target: seq.item
+                property: "appear"
+                to: seq.to
+                duration: seq.span
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animationCurves.expressiveEffects
+            }
+            // Drops itself from the wave before destroying, or `stop()` would
+            // later reach a destroyed object.
+            onFinished: {
+                root.active = root.active.filter(member => member !== seq);
+                seq.destroy();
+            }
+        }
+    }
+}
