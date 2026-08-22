@@ -394,6 +394,17 @@ if ! python3 "$SCRIPT_DIR/test_marquee_text_contract.py"; then
     exit 1
 fi
 
+# The shell has two password prompts - the lock screen and the polkit dialog -
+# and they were two different text fields, one of them Material's outlined
+# container with the prompt floating in a notch. The check derives the control
+# from the LOCK screen rather than naming a type, so the two cannot drift. It
+# also holds the dialog to exactly one filled button, the confirming one.
+echo "Running polkit dialog contract tests..."
+if ! python3 "$SCRIPT_DIR/test_polkit_dialog_contract.py"; then
+    echo "Polkit dialog contract tests failed."
+    exit 1
+fi
+
 echo "Running expandable panel contract tests..."
 if ! python3 "$SCRIPT_DIR/test_expandable_panel.py"; then
     echo "Expandable panel contract tests failed."
