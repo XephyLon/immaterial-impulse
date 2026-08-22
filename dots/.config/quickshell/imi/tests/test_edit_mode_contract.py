@@ -1198,7 +1198,11 @@ def test_the_viewport_draws_its_locked_inputs_on_the_lockscreen_tab():
         "the lock blur must be active for the locked look"
     # And the widget filter: the tab shows the widgets the lock screen will.
     widget = code(BACKGROUND_WIDGET)
-    assert re.search(r"opacity:\s*\(" + LOCK_LOOK + r"\s*&&\s*!visibleWhenLocked\)",
+    # One expression asks WHICH surface is on screen and then that surface's
+    # own filter, so a widget picked for the lock alone cannot leak onto the
+    # desktop and one the desktop shows cannot leak onto the lock.
+    assert re.search(r"opacity:\s*\(" + LOCK_LOOK
+                     + r"\s*\?\s*visibleWhenLocked\s*:\s*visibleOnDesktop\)",
                      widget), \
         "AbstractBackgroundWidget's lock filter does not cover the preview"
     # The palette is a locked input too, and the one that was missed: the tab

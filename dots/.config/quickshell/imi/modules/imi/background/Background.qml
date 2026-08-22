@@ -1317,9 +1317,19 @@ Variants {
                     id: pluginLoader
 
                     required property var modelData
+                    // The union of the two surfaces' choices: the desktop's
+                    // enabled list, plus whatever the lock screen's own choice
+                    // holds once it has forked from it (layout_surfaces.js).
+                    // The host builds a widget or it does not - there is no
+                    // per-surface instantiation - so the widget's own
+                    // visibleOnDesktop/visibleWhenLocked pair is what keeps a
+                    // lock-only pick off the desktop. While the two are linked
+                    // this term answers exactly what the list alone did.
                     shown: modelData.desktopWidget !== undefined
                         && modelData.startupSafe !== false
-                        && Config.options.plugins.enabled.includes(modelData.id)
+                        && (Config.options.plugins.enabled.includes(modelData.id)
+                            || (Config.options.lock.showWidgets
+                                && PluginState.lockWidgetEnabled(modelData.id)))
                     // Keep the loader untransformed. Hyprland derives live
                     // background blur from this surface's alpha map; wrapping
                     // plugin widgets in a Scale transform offsets that map
