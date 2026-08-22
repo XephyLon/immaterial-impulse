@@ -30,16 +30,7 @@ CONFIG = ROOT / "modules/common/Config.qml"
 SETTINGS_PAGE = ROOT / "modules/imi/settings/pages/AppearanceConfig.qml"
 EXPANDABLE_PANEL = ROOT / "modules/common/widgets/ExpandablePanel.qml"
 CAROUSEL = ROOT / "modules/common/plugins/designsystem/widgets/Carousel.qml"
-
-# A cascade whose rank is bounded by the shape of its own model rather than by
-# a clamp, and whose step is deliberately tighter than a group entrance's. The
-# lyric strip is a fixed five-slot window that ripples outward from the active
-# line, so `Math.abs(distanceFromActive)` can only ever be 0, 1 or 2 - there is
-# no long-list case to terminate, and folding it into the group-entrance policy
-# would widen a deliberate 25ms ripple to a 40ms wave for no defect fixed.
-STAGGER_EXEMPT = {
-    "modules/common/plugins/designsystem/widgets/DesktopMediaWidget.qml",
-}
+STAGGER_WAVE = ROOT / "modules/common/widgets/StaggerWave.qml"
 
 # `Appearance.animation`'s body, between its opening brace and `sizes:`.
 TIER_DURATION = re.compile(r"^\s*property int duration:\s*(.+)$", re.MULTILINE)
@@ -172,64 +163,43 @@ def test_the_speed_slider_cannot_reach_the_floor():
         "and then lies about the setting for the rest of the session (#158).")
 
 
-def test_the_two_group_cascades_share_one_spelling():
-    for path in (EXPANDABLE_PANEL, CAROUSEL):
-        text = path.read_text(encoding="utf-8")
-        relative = path.relative_to(ROOT).as_posix()
-        assert "Appearance.animation.staggerDelay(" in text, (
-            f"{relative} no longer reaches the shared stagger policy. The two "
-            f"cascades in this shell disagreed about the clamp and about the "
-            f"step before they were joined - one clamped at ten members and "
-            f"the other not at all - which is exactly the drift one spelling "
-            f"exists to stop.")
+def test_the_group_cascades_share_one_runner():
+    wave = STAGGER_WAVE.read_text(encoding="utf-8")
+    for call in ("Appearance.animation.staggerRanks(",
+                 "Appearance.animation.staggerDelay(",
+                 "Appearance.animation.scale("):
+        assert call in wave, (
+            f"StaggerWave no longer reaches {call}. It is the one runner every "
+            f"container in this shell asks for a group entrance, so a clamp, a "
+            f"rank or a scaling missing here is missing everywhere at once.")
+    enter = wave[wave.index("function enter("):wave.index("function leave(")]
+    assert ".visible" in enter, (
+        "StaggerWave's rank list no longer consults `visible`, so the ranks it "
+        "hands the policy are positions in `children` again - and a member "
+        "that is not on screen leaves a hole one step wide in the wave.")
 
-    panel = EXPANDABLE_PANEL.read_text(encoding="utf-8")
-    assert "Appearance.animation.staggerRanks(" in panel, (
-        "ExpandablePanel no longer ranks by visible position. A hidden child "
-        "that spends a slot leaves a hole one step wide in the middle of the "
-        "cascade, and nothing downstream compensates.")
-    assert ".visible" in panel[panel.index("function runStagger"):], (
-        "ExpandablePanel's rank list no longer consults `visible`, so the "
-        "ranks it hands the policy are model positions again.")
+    assert "Appearance.animation.staggerDelay(" in CAROUSEL.read_text(encoding="utf-8"), (
+        "Carousel no longer reaches the shared stagger policy. Its rank stays "
+        "the model index because a delegate cannot see its siblings, but the "
+        "clamp and the scaled step are still the policy's - which is the half "
+        "that was wrong when the two cascades were separate.")
 
 
-def test_nothing_else_computes_a_ranked_wait():
+def test_nothing_else_ranks_its_own_wave():
+    """One runner. A second is how the first two cascades came to disagree."""
     offenders = []
     for relative, path in qml_files():
-        if relative in STAGGER_EXEMPT:
+        if relative == STAGGER_WAVE.relative_to(ROOT).as_posix():
             continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue
-        waits = []
-        for match in PAUSE_BLOCK.finditer(text):
-            brace = text.index("{", match.start())
-            depth = 0
-            for index in range(brace, len(text)):
-                if text[index] == "{":
-                    depth += 1
-                elif text[index] == "}":
-                    depth -= 1
-                    if depth == 0:
-                        break
-            waits.append((match.start(), text[brace:index + 1]))
-        for match in DELAY_BINDING.finditer(text):
-            waits.append((match.start(), match.group(0)))
-
-        for position, wait in waits:
-            if not RANKED.search(wait):
-                continue
-            if "Appearance.animation.staggerDelay(" in wait:
-                continue
-            line = text.count("\n", 0, position) + 1
-            offenders.append(f"{relative}:{line}: {' '.join(wait.split())}")
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "Appearance.animation.staggerRanks(" in text:
+            offenders.append(relative)
     assert not offenders, (
-        "a cascade computes its own delay instead of asking the policy:\n  "
-        + "\n  ".join(offenders)
-        + "\nUse Appearance.animation.staggerDelay(rank, step, leadIn) - it "
-          "clamps the rank, which `index * step` does not, and it collapses "
-          "at the reduce-motion floor without a second gate.")
+        f"{offenders} rank a wave of their own. Ranking, clamping, scaling and "
+        f"cancelling a group entrance live in StaggerWave - declare one and "
+        f"call enter()/leave() instead of spelling a second copy, which is how "
+        f"ExpandablePanel and Carousel came to disagree about both the clamp "
+        f"and the step.")
 
 
 def test_the_policy_has_one_door():
