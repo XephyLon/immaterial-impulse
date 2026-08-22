@@ -25,6 +25,17 @@ own repo; the installer pins which revision it builds.
   above still decides whether the lock screen shows desktop widgets at all.
   Your presets carry the choice.
 
+### Changed
+- **The session screen, the settings pages and the right sidebar now arrive in
+  sequence instead of all at once.** The session screen's nine action buttons,
+  a settings page's sections and the sidebar's cards each fade in one after the
+  other, a few hundredths of a second apart, so a panel reads as content
+  arriving rather than as a picture switching on. The wave is bounded, so a
+  long list never cascades for seconds, and anything hidden in the group is
+  skipped rather than leaving a gap in the middle of it. Both the animation
+  speed slider and the reduce-motion switch reach it: with reduced motion the
+  whole thing is gone and everything is simply there.
+
 ### Fixed
 - **Edit Mode's widget drawer no longer sits flush on the screen edge.** The
   panel's rounded right corner met the edge of the display with nothing between

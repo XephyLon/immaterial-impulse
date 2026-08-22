@@ -137,6 +137,24 @@ wave), take the clamp (`index * step` is unbounded and a long list cascades for 
 the step be a fraction of a catalogued duration rather than a literal. Scale the step and the lead-in
 once, at the call site, so a wave collapses to nothing under reduce motion with no second gate.
 
+In practice a container does not call those three itself: it declares a
+`modules/common/widgets/StaggerWave.qml`, points it at the item whose children are the members, and
+calls `enter()` / `leave()`. That component is where all four rules above are applied, and it is the
+only file permitted to call `staggerRanks` — `tests/test_motion_policy_contract.py` fails the suite
+on a second one, because a second runner is how the two cascades that predate the policy came to
+disagree about both the clamp and the step. A member opts in by declaring `property real appear: 1`
+and folding it into its own opacity; `RippleButton` already does.
+
+Prefer the container's own *effective* `visible` as the trigger over the state that opens it. A wave
+asked for before the container is on screen ranks every member as hidden, writes nothing, and leaves
+the surface blank — `StaggerWave` holds the entrance until the container is visible for exactly that
+reason, but a trigger that is already the right one needs no rescuing.
+
+Not every group wants one. A list the user is about to type into — the launcher's results — is a
+group whose entrance is latency on the thing being waited for, and one that rebuilds per keystroke
+restarts the wave before it finishes. Say why a surface was left alone rather than staggering
+everything that happens to be a `Repeater`.
+
 ### Swapping content that cannot be interpolated
 
 To make a `url`/`string`/`Component` swap wait for the outgoing content's exit, put a `Behavior` on

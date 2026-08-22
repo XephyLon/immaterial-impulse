@@ -4082,6 +4082,50 @@ owns them, and a Docker refresh destroys the whole `ExpandablePanel` rather than
 under it. fb92b4f5d ("fix(widgets): rank a stagger by visible position, clamp it, and let a wave be
 cancelled").
 
+**...and the RUNNER is one component too, because the policy being shared is not the same as the
+wave being shared.** `modules/common/widgets/StaggerWave.qml` owns the ranking, the zeroing, the
+scaling and the cancellation; `ExpandablePanel` declares one rather than carrying the only copy, and
+so does every surface that has adopted a group entrance since. It is a `QtObject`, not an `Item`: a
+wave declared inside the container it walks must not become a member of it, and only Items land in
+`children` (its animation `Component` is a declared property for the `QtObject`-has-no-`data` reason
+under [Dynamic/data-driven QML gotchas](#dynamicdata-driven-qml-gotchas)). A member opts in by
+declaring `property real appear: 1` and folding it into its own opacity — `RippleButton` has done
+that since the stagger was written, which is why the session screen's nine buttons needed no change
+at all. `step` and `leadIn` arrive in BASE milliseconds and are scaled inside, once: handing either
+an already-scaled `Appearance.animation.*.duration` applies the multiplier twice.
+("feat(widgets): StaggerWave, the one runner for a group's arrival").
+
+**A wave asked for while its container is off screen writes nothing, and leaves the surface blank
+for ever.** Ranking asks each member whether it is on screen, and `visible` is EFFECTIVE visibility
+(see the `GroupedList` entry under
+[Dynamic/data-driven QML gotchas](#dynamicdata-driven-qml-gotchas)) — so a container that is not
+mapped yet answers `false` for every member, every rank comes back `-1`, the wave is empty, and the
+members keep whatever `appear` the last exit left them at, which is zero. Nothing errors, nothing
+logs, and the QML reads correctly. That is precisely what a trigger hung on the state that *asks*
+for a panel produces: `GlobalStates.sidebarRightOpen` flips a beat before the compositor maps the
+layer surface, and four consecutive opens of the right sidebar came up as an empty panel body
+(measured with a temporary print: `included=[false x7]`). `StaggerWave` therefore holds an entrance
+until its target is visible rather than trusting whatever announced the open — in the runner, not at
+the call site, because the next adopter has the same beat to get wrong and the same silence to debug.
+A surface whose trigger is already the container's own `visible` (`ContentPage`, which follows the
+settings window's page switch) never showed it.
+("fix(widgets): a wave waits for its container to be on screen").
+
+**The adoption is the thing that decays, so the adoption is what is pinned.**
+`docs/p3drovfx-motion-measured-2026-08-22.md` §4.2 measured the sibling fork's motion off screen and
+found our arithmetic correct, our guideline written, and the wiring at **three** files against their
+twenty — a missing capability nowhere, and every surface arriving all at once because nothing asked
+it not to. `tests/test_motion_policy_contract.py` now carries a `STAGGER_ADOPTERS` ratchet (a
+surface that stops declaring a `StaggerWave` reddens; a new adopter is a line) and fails the suite on
+a second file calling `staggerRanks`, which is the only way a second runner can exist. Two surfaces
+were assessed and deliberately **not** taken, and the reasoning is the reusable part: the launcher's
+results are a list the user is about to type into and that rebuilds on every keystroke, so a wave
+there is latency on the one thing being waited for and restarts before it finishes; and the bar
+popups' content wants the container-progress gate (§5.1 item 2) rather than a lead-in — its card
+unrolls from the height of its first drawn section precisely so that section is legible on frame
+one, and its content is reparented between windows with a stale implicit size for a frame.
+("test(motion): ratchet the surfaces that stagger, and scope the rank check").
+
 **`Behavior on <non-animatable>` with a trailing bare `PropertyAction {}` defers a write instead of
 animating it.** A `Loader.source` is a `url`, which QML cannot interpolate, so the `Behavior` cannot
 animate it — and the *bare* `PropertyAction` (no `target`, no `property`, no `value`) means "apply
