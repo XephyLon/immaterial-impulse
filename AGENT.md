@@ -4000,12 +4000,15 @@ handles adopted the spelling `PluginWidget`'s resize grip already used, the sett
 the four sibling chevrons', and the niri overview's window rects kept `elementMoveFast` precisely
 because `OverviewWidget.qml` animates the same thumbnails for the same gesture on it, so retiering
 one of the two overview styles to fix a curve would have made them disagree. Nothing was retiered by
-rule: a colour or an opacity that was already on an effects tier stayed there, and the five span-morph
-ink colours stayed on `elementMove` because the colour is a term of the morph rather than an
-independent effect. The five span-morph colours are the only ones written out rather than
-taken from a factory, and for a plain reason: `elementMove` publishes a `numberAnimation` and no
-`colorAnimation`. Do not re-open the register to land a new one: an entry is a promise somebody comes
-back, that promise has been kept once, and a second register growing from zero is an allowlist.
+rule: a colour or an opacity already on an effects tier stayed there, and the five span-morph ink
+colours stayed on `elementMove` because the colour is a term of the morph rather than an independent
+effect — those five are also the only ones written out rather than taken from a factory, and for a
+plain reason, which is that `elementMove` publishes a `numberAnimation` and no `colorAnimation`. Do
+not re-open the register to land a new one: an entry is a promise somebody comes back, that promise
+has been kept once, and a second register growing from zero is an allowlist.
+(fix(widgets): a span morph's ink colour eases with the morph, not linearly,
+fix(overview): the niri overview's window rects and fades take their tier whole,
+test(lint): the motion tier register is empty, and the header says why.)
 
 **`alwaysRunToEnd` is inert inside a `Behavior`, which is most of where this shell reaches for a
 tier's factory.** The guideline's carve-out — write the three properties out where the factory's
