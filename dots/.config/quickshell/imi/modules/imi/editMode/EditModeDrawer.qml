@@ -36,11 +36,13 @@ import qs.modules.common.plugins
  * ---- what a row is ----------------------------------------------------------
  *
  * `CatalogueRow` - the icon/name/description/affordance shape this file used to
- * spell out five times, shared with every settings row and the widget store.
- * The rows' INTERACTION is still each section's own, and deliberately: the
- * desktop section's rows are `MouseArea`s (see above), the other four are
- * `RippleButton`s, and the shared component is not interactive at all so it can
- * sit inside either.
+ * spell out once per row shape, shared with every settings row and the widget
+ * store. Counting them here is what went stale the first time a row was added,
+ * so the rule is stated instead: EVERY row body in this file is that component,
+ * and `test_edit_mode_contract.py` reads them one by one. The rows' INTERACTION
+ * is still each section's own, and deliberately: the desktop section's rows are
+ * `MouseArea`s (see above), every other row is a `RippleButton`, and the shared
+ * component is not interactive at all so it can sit inside either.
  *
  * ---- what this file writes --------------------------------------------------
  *
