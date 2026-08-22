@@ -972,6 +972,28 @@ ShellRoot {
                           && harness.hintDuringDrag === ""
                           && Math.round(harness.storedPosition("edit-move-probe").x)
                               > 36);
+            // ...and a widget the DESKTOP does not hold. A lock-only widget is
+            // on screen and draggable on the Lockscreen tab (and still a live
+            // MouseArea on the Desktop tab, at opacity 0), while the write
+            // declines an id that is not in `plugins.enabled`. With the hint
+            // asking a different question the drawer lit up, the release
+            // swallowed the commit on the strength of that, and the drop then
+            // did nothing at all: one gesture under a panel promising a
+            // removal, and no change anywhere.
+            GlobalStates.editDrawerOpen = true;
+            Config.options.plugins.enabled = ["edit-resize-probe"];
+            harness.placeWidgets();
+        },
+        () => {
+            harness.publishReveal();
+            harness.hintDuringDrag = "";
+        },
+        () => harness.dragOntoDrawer(movableWidget),
+        () => {
+            harness.check("a widget the desktop does not hold is not offered the removal",
+                          harness.hintDuringDrag === "");
+            harness.check("...so its drop commits the move instead of doing nothing",
+                          Math.round(harness.storedPosition("edit-move-probe").x) > 36);
             Config.options.plugins.enabled = [];
             GlobalStates.editMode = false;
             // The next section starts from the placed positions, and the drag

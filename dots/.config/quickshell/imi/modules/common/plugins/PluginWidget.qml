@@ -461,6 +461,16 @@ AbstractBackgroundWidget {
     function dropWouldRemoveAt(screenX, screenY) {
         if (!GlobalStates.editMode || !GlobalStates.editDrawerOpen || !manifest)
             return false;
+        // The hint and the write ask the ONE question, membership included.
+        // `EditModeDrawerDrop` declines an id the desktop does not hold, and a
+        // widget can be on screen and draggable without being in that list -
+        // `lockOnlyWidget` above is exactly one, drawn on the Lockscreen tab
+        // and still a live MouseArea at opacity 0 on the Desktop tab. Without
+        // this term the drawer lit up, the release swallowed the commit on the
+        // strength of it, and the drop was then declined: one gesture under a
+        // panel promising a removal, and nothing happening anywhere.
+        if (!Config.options.plugins.enabled.includes(manifest.id))
+            return false;
         return EditMode.pointInDrawerReveal(rootWidget.editDrawerReveal,
             screenX, screenY);
     }
