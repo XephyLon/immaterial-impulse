@@ -170,8 +170,13 @@ ShellRoot {
             console.log(`[Polkit] Cancel rest=${harness.restFill["Cancel"]} hover=${harness.frozen(cancel.buttonColor)} delta=${delta}`);
             harness.check("the dismissing action lights under the pointer",
                           cancel.hovered && delta >= 20);
-            harness.check("the confirming action stays dark while the pointer is on the other one",
-                          !harness.button("OK").hovered);
+            // The control, and it reads the FILL as well as the flag: the
+            // number above only says the pointer did it if the button the
+            // pointer is not on has not moved.
+            const ok = harness.button("OK");
+            harness.check("the confirming action is untouched while the pointer is on the other one",
+                          !ok.hovered
+                          && harness.channelDelta(harness.restFill["OK"], harness.frozen(ok.buttonColor)) === 0);
         },
         () => harness.hover(harness.button("OK")),
         () => {
