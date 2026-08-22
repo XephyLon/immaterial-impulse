@@ -12,6 +12,19 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **You can choose which widgets the lock screen shows.** "Show desktop widgets
+  while locked" was all or nothing: every widget on your desktop, or none of
+  them. Edit Mode's Lock section now lists your widgets under that switch, and
+  clicking one adds or removes it from the lock screen alone — including a
+  widget you want *only* while locked, which no arrangement of one setting
+  could express. It works the way the arrangement already does: the lock screen
+  follows your desktop's widgets until the first pick, and the drawer says
+  which of the two it is doing and offers "Click to show the desktop's widgets
+  again" to go back. Nothing changes until you pick something, and the switch
+  above still decides whether the lock screen shows desktop widgets at all.
+  Your presets carry the choice.
+
 ### Fixed
 - **Edit Mode's widget drawer no longer sits flush on the screen edge.** The
   panel's rounded right corner met the edge of the display with nothing between
