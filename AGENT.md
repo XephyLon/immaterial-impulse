@@ -4002,12 +4002,28 @@ because `OverviewWidget.qml` animates the same thumbnails for the same gesture o
 one of the two overview styles to fix a curve would have made them disagree. Nothing was retiered by
 rule: a colour or an opacity that was already on an effects tier stayed there, and the five span-morph
 ink colours stayed on `elementMove` because the colour is a term of the morph rather than an
-independent effect. Where `alwaysRunToEnd` would have changed behaviour the three properties are
-written out instead of taking a factory — `ConfigTextArea`'s focus transition is the case, because
-`numberAnimation` carries `alwaysRunToEnd` and `colorAnimation` does not, so its border width and its
-border colour would have resolved differently on an interrupted hover. Do not re-open the register to
-land a new one: an entry is a promise somebody comes back, that promise has been kept once, and a
-second register growing from zero is an allowlist.
+independent effect. The five span-morph colours are the only ones written out rather than
+taken from a factory, and for a plain reason: `elementMove` publishes a `numberAnimation` and no
+`colorAnimation`. Do not re-open the register to land a new one: an entry is a promise somebody comes
+back, that promise has been kept once, and a second register growing from zero is an allowlist.
+
+**`alwaysRunToEnd` is inert inside a `Behavior`, which is most of where this shell reaches for a
+tier's factory.** The guideline's carve-out — write the three properties out where the factory's
+`alwaysRunToEnd` would change the behaviour — reads as covering every reversible transition, and a
+reversible transition here is usually a `Behavior on color`/`opacity`/`x`. It does not:
+`QQuickBehavior::write` stops the animation *instance* when the target moves, and `alwaysRunToEnd` is
+only consulted on the declarative `running`/`stop()` path. Measured with a `qml6` probe, a 400ms
+linear Behavior reversed at t=200 reads **37.4 at t=320 and 0.0 at t=700 with and without the flag**,
+while the same pair as *started* animations `stop()`ed at t=200 diverge exactly as advertised — 80.0
+then 100.0 against 52.0 then 52.0. So the carve-out is about an animation something calls `start()`
+on, and a `Behavior` may take any tier's factory whatever the flag says. This branch's first cut wrote
+`ConfigTextArea`'s three focus Behaviors out on the belief that `numberAnimation` (which carries the
+flag) and `colorAnimation` (which does not) would resolve its border width and its border colour
+differently on an interrupted hover; they do not, and it takes both factories now. Note what this does
+*not* license: `elementMoveEnter`/`elementMoveExit` are still the wrong tiers for something the user
+reverses, because their curves are directional — that argument survives, the `alwaysRunToEnd` half of
+it does not.
+(fix(widgets): four shared widgets take their effects tier whole.)
 
 **Its one blind spot, measured while emptying it: `easing.type: Easing.BezierSpline` with no
 `bezierCurve` beside it satisfies the check and is Linear.** The lint asks whether an easing is
