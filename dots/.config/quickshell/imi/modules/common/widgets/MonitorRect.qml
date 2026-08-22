@@ -55,7 +55,7 @@ Rectangle {
 
     Behavior on x { enabled: !isDragging; NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration; easing.type: Easing.OutCubic } }
     Behavior on y { enabled: !isDragging; NumberAnimation { duration: Appearance.animation.elementMoveFaster.duration; easing.type: Easing.OutCubic } }
-    Behavior on color { ColorAnimation { duration: Appearance.animation.elementMoveFaster.duration } }
+    Behavior on color { animation: Appearance.animation.elementMoveFaster.colorAnimation.createObject(this) }
 
     Rectangle {
         visible: root.isDragging && !root.hasOverlap

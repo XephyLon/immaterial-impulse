@@ -89,13 +89,25 @@ RowLayout {
             border.color: textArea.activeFocus ? root.colBorderFocused : root.colBorder
 
             Behavior on color {
-                ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                ColorAnimation {
+                    duration: Appearance.animation.elementMoveFast.duration
+                    easing.type: Appearance.animation.elementMoveFast.type
+                    easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                }
             }
             Behavior on border.color {
-                ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                ColorAnimation {
+                    duration: Appearance.animation.elementMoveFast.duration
+                    easing.type: Appearance.animation.elementMoveFast.type
+                    easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                }
             }
             Behavior on border.width {
-                NumberAnimation { duration: Appearance.animation.elementMoveFast.duration }
+                NumberAnimation {
+                    duration: Appearance.animation.elementMoveFast.duration
+                    easing.type: Appearance.animation.elementMoveFast.type
+                    easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                }
             }
 
             HoverHandler {
