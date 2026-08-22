@@ -110,12 +110,29 @@ Item {
                 Layout.fillWidth: true
             }
             DialogButton {
+                id: cancelButton
                 buttonText: Translation.tr("Cancel")
                 onClicked: PolkitService.cancel();
             }
+            // FILLED, on the primary role, for the reason
+            // `EditModeChromeContent`'s `doneButton` records: rendered flat
+            // beside a second flat button there is nothing to say which of the
+            // two the dialog is asking for. Cancel stays flat - a dialog with
+            // two filled buttons has the same problem from the other side.
+            //
+            // No disabled branch on the container: `RippleButton.buttonColor`
+            // already transparentizes the fill while `enabled` is false, so
+            // while a submitted response is in flight the button drops back to
+            // a dimmed label rather than sitting there as a bright primary
+            // container that does nothing.
             DialogButton {
+                id: confirmButton
                 enabled: PolkitService.interactionAvailable
                 buttonText: Translation.tr("OK")
+                colBackground: Appearance.colors.colPrimary
+                colBackgroundHover: Appearance.colors.colPrimaryHover
+                colRipple: Appearance.colors.colPrimaryActive
+                colEnabled: Appearance.colors.colOnPrimary
                 onClicked: root.submit();
             }
         }
