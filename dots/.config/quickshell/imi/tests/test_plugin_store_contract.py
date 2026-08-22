@@ -145,6 +145,32 @@ def test_store_page_renders_registry_strings_as_plain_text():
     )
 
 
+def test_the_card_draws_its_identity_with_the_shared_catalogue_row():
+    """The registry's name and byline reach the screen through CatalogueRow.
+
+    The card's header used to be a hand-rolled icon / name / byline /
+    affordance row - the third copy of one Edit Mode's drawer wrote five times
+    and `ConfigSwitch` a sixth. It is the shared component now, which moves
+    two of this file's registry-fed strings out of its own `textFormat`
+    sweep above: `title` and `description` are annotated inside
+    `CatalogueRow.qml` instead. That is only safe while it stays annotated
+    there, and nothing else in this suite reads that file, so this does.
+    """
+    source = STORE_PAGE.read_text()
+    assert "CatalogueRow {" in source, (
+        "the store card no longer draws its identity with the shared row - a "
+        "fourth hand-rolled copy is how the three drifted apart in the first "
+        "place"
+    )
+    row = (ROOT / "modules" / "common" / "widgets" / "CatalogueRow.qml").read_text()
+    formats = re.findall(r"textFormat:\s*([A-Za-z.]+)", row)
+    assert len(formats) >= 2 and all(fmt == "Text.PlainText" for fmt in formats), (
+        f"CatalogueRow must pin PlainText on the strings it renders, found "
+        f"{formats} - the store's name and byline go through it, and "
+        f"Text.AutoText would render a registry-supplied <img src=...>"
+    )
+
+
 def test_shell_version_read_from_version_file():
     source = _source()
     assert 'Qt.resolvedUrl(Quickshell.shellPath("VERSION"))' in source, (

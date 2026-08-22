@@ -90,6 +90,7 @@ RULES = ROOT.parents[1] / "hypr/hyprland/rules.lua"
 BAR_CONTROLLER = ROOT / "modules/imi/bar/BarEditController.qml"
 LOCK_REORDER = ROOT / "modules/imi/lock/LockIslandReorder.qml"
 DRAG_APPS = ROOT / "modules/common/widgets/DragApps.qml"
+CATALOGUE_ROW = ROOT / "modules/common/widgets/CatalogueRow.qml"
 
 # Everything that takes part in the mode. Listed rather than globbed so a new
 # participant is a deliberate addition to this list, which is where someone
@@ -620,6 +621,41 @@ def test_every_pixel_that_is_not_chrome_falls_through_to_the_desktop():
         body = read(path)
         assert "MouseArea" not in body, \
             f"{path.name} adds a pointer area to a surface whose mask is three rects"
+
+
+def test_the_drawer_draws_its_rows_with_a_component_that_is_not_a_control():
+    """The shared row must stay a plain item, or the drag out of the drawer dies.
+
+    The drawer's five catalogues (desktop widgets, bar widgets, dock apps, the
+    lock islands, the lock layout) all draw `CatalogueRow` now, and the same
+    component draws every settings row and every widget-store card - so the
+    tempting next edit is to fold the hover, the cursor and the click into it
+    and let the call sites stop repeating themselves. That would take the
+    desktop section's rows with it.
+
+    Those rows are `MouseArea`s by construction (65602708e): a drag out of a
+    clipped panel needs the implicit grab of the press to keep delivering
+    events after the pointer has left the row, which is why they are the
+    deliberate exception to the no-MouseArea sweep above. A shared row that
+    is itself a control either eats the press before the MouseArea sees it or
+    forces the drawer off the shared component again. Neither failure is
+    loud: drag-to-place simply stops carrying anything out, on a gesture no
+    test in this suite drives.
+    """
+    row = code(CATALOGUE_ROW)
+    assert row.strip().startswith("import"), "CatalogueRow.qml is not QML"
+    for spelling in ("MouseArea", "TapHandler", "DragHandler", "RippleButton",
+                     "Button {", "signal clicked"):
+        assert spelling not in row, (
+            f"CatalogueRow grew a {spelling} - the drawer's drag-out needs the "
+            f"press to stay with the call site's own MouseArea")
+    # ...and the drawer still keeps the gesture, on the section that has one.
+    drawer = code(DRAWER)
+    assert "CatalogueRow {" in drawer, \
+        "the drawer no longer draws its rows with the shared component"
+    assert "delegate: MouseArea {" in drawer and "preventStealing: true" in drawer, \
+        ("the desktop section's rows stopped being pointer areas - a Button "
+         "does not keep delivering events once the pointer leaves the drawer")
 
 
 def test_the_chrome_surface_leaves_the_keyboard_to_the_desktop():
