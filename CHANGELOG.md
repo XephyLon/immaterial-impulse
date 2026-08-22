@@ -48,6 +48,13 @@ own repo; the installer pins which revision it builds.
   pushes aside carried on drifting and settling. One gesture, two halves, two
   different motions. The panel now rides the same curve the desktop does, all
   the way to the settle.
+- **Edit Mode's widget drawer fills instead of arriving fully furnished.** The
+  panel and everything in it slid in as one solid block, so a 500ms reveal had
+  nothing happening in it after the first fifth. The panel now arrives as a
+  surface and its contents follow it in — the heading, the section chips, the
+  hint and the list, each landing where it will sit rather than sliding there.
+  Closing is unchanged on purpose: the contents stay drawn and ride the panel
+  off in one piece.
 - **Edit Mode's widget drawer no longer sits flush on the screen edge.** The
   panel's rounded right corner met the edge of the display with nothing between
   them, while its other side had a full margin against the desktop. It now
