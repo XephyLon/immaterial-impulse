@@ -49,9 +49,12 @@ Item {
             show = true
         }
 
+        // 24, not 26: M3's dialog hero icon is 24dp, and
+        // docs/M3_GUIDELINES.md's dimension rule puts a size on the 4dp grid
+        // even where there is no token for it.
         MaterialSymbol {
             Layout.alignment: Qt.AlignHCenter
-            iconSize: 26
+            iconSize: 24
             text: "security"
             color: Appearance.colors.colSecondary
         }
@@ -63,9 +66,13 @@ Item {
             text: Translation.tr("Authentication")
         }
 
+        // Centred, because the dialog has a hero icon: M3 centres the headline
+        // and the supporting text together when one is present, and a centred
+        // icon over a centred headline over a left-ragged paragraph reads as a
+        // layout that changed its mind half way down.
         WindowDialogParagraph {
             Layout.fillWidth: true
-            horizontalAlignment: Text.AlignLeft
+            horizontalAlignment: Text.AlignHCenter
             text: PolkitService.cleanMessage
         }
 
@@ -105,7 +112,6 @@ Item {
         }
 
         WindowDialogButtonRow {
-            Layout.bottomMargin: Appearance.spacing.space150 // I honestly don't know why this is necessary
             Item {
                 Layout.fillWidth: true
             }
