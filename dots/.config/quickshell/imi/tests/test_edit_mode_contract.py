@@ -1268,6 +1268,39 @@ def test_island_visibility_is_presence_through_literal_paths():
         "a computed lock key routes around the allowlist"
 
 
+def test_the_lock_section_picks_which_widgets_the_lock_screen_shows():
+    # The other half of the fork spec §4.3 chose for the layout: presence
+    # inherits the desktop's enabled set until the first pick on this tab, and
+    # the drawer says which of the two states it is in. Three things about the
+    # arrangement are checked because each is silent when wrong.
+    drawer = code(DRAWER)
+    # The picker lives UNDER the master gate, in both senses: the rows are
+    # built only while `lock.showWidgets` is on, because with the lock showing
+    # no widgets at all they would be controls that change nothing.
+    rows = declaration(drawer, "lockWidgetRows")
+    assert rows and "Config.options.lock.showWidgets" in rows, \
+        ("the per-widget rows must be gated on the master switch, or the Lock "
+         "section offers a picker for a lock screen that shows no widgets")
+    assert "desktopManifests" in rows, \
+        ("the picker must offer the same catalogue the Widgets section does - "
+         "a second filter is a second answer to what a desktop widget is")
+    # One list, two kinds of row, and the delegate has to route the click by
+    # kind: an island writes a lock.show* boolean and a widget writes the
+    # choice, and the two go to different signals.
+    assert re.search(r"lockRow\.isWidget\s*\n?\s*\?\s*root\.lockWidgetToggleRequested",
+                     drawer), \
+        "a widget row's click must raise the per-widget signal, not the island one"
+    # And the master gate's own caption stops claiming "every" once it is not.
+    assert "Show the widgets picked below while locked" in drawer, \
+        ("the Desktop widgets row must say which state the choice is in, or "
+         "'every' goes on describing a set the picked rows have replaced")
+    surface = code(CHROME_SURFACE)
+    assert "onLockWidgetToggleRequested" in surface, \
+        "the surface does not answer the drawer's per-widget signal"
+    assert "onLockPresenceResetRequested" in surface, \
+        "the surface does not answer the drawer's re-link"
+
+
 def test_the_clock_previews_its_locked_look_through_one_derivation():
     # The clock is THE lock-screen widget - its locked style, its centring,
     # its "show only when locked" presence and its Locked caption are all
@@ -1426,10 +1459,12 @@ def test_every_committed_mutation_records_exactly_its_entries():
     expected = {
         PLUGIN_WIDGET: 2,      # a drag's release; a span commit (grip + Size row path)
         MENU_CONTENT: 2,       # the Size stepper; Remove
-        CHROME_SURFACE: 10,    # presence toggle, 3 bar-bucket adds, 3 lock keys,
-                               # add-at-pointer, dock pin toggle, and the lock
+        CHROME_SURFACE: 12,    # presence toggle, 3 bar-bucket adds, 3 lock keys,
+                               # add-at-pointer, dock pin toggle, the lock
                                # layout re-link (spec §4.3 as amended: one entry
-                               # that puts a forked screen back whole)
+                               # that puts a forked screen back whole), and the
+                               # widget-choice pair beside it - one pick, and
+                               # its own re-link
         BAR_CONTROLLER: 1,     # one snapshot helper serving reorder and remove
         LOCK_REORDER: 3,       # one literal path per island
         DRAG_APPS: 2,          # the dock's reorder commit; the badge unpin

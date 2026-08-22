@@ -235,6 +235,32 @@ PanelWindow {
         }
     }
 
+    // One widget's presence on the lock screen. The first pick forks the
+    // lock's whole widget choice from the desktop's, the same way the first
+    // move forks the layout - so the undo entry has to be able to restore
+    // "following" as well as a set, which is what a null record set is.
+    //
+    // Not a Config write at all: presence on the DESKTOP is `plugins.enabled`
+    // and stays there, and the lock's fork of it is layout state, so it lives
+    // where the lock's positions and spans already do.
+    function toggleLockWidget(pluginId) {
+        const before = PluginState.lockPresenceRecords();
+        GlobalStates.editUndoPush(() => PluginState.restoreLockPresence(before));
+        PluginState.setLockWidgetEnabled(pluginId,
+            !PluginState.lockWidgetEnabled(pluginId));
+    }
+
+    // Re-link the lock's widget choice to the desktop's. One committed
+    // mutation, one undo entry, and the closure carries the whole set rather
+    // than re-picking it - a re-fork from the desktop would be a different set
+    // the moment the enabled list has moved since.
+    function resetLockPresence() {
+        if (!PluginState.lockPresenceForked()) return;
+        const forked = PluginState.lockPresenceRecords();
+        GlobalStates.editUndoPush(() => PluginState.restoreLockPresence(forked));
+        PluginState.resetLockPresence();
+    }
+
     // Re-link this screen's lock layout to the desktop's. One committed
     // mutation, one undo entry: the closure puts the whole forked screen back
     // by writing each widget's lock position again on the LOCK surface, named
@@ -351,7 +377,9 @@ PanelWindow {
             TaskbarApps.togglePin(appId);
         }
         onLockIslandToggleRequested: (key) => root.toggleLockIsland(key)
+        onLockWidgetToggleRequested: (pluginId) => root.toggleLockWidget(pluginId)
         onLockLayoutResetRequested: root.resetLockLayout()
+        onLockPresenceResetRequested: root.resetLockPresence()
         screenName: root.screen?.name ?? ""
         // A preference, not a layout mutation: it is not one of §7.3's five
         // committed mutations and records no undo entry, same as the global
