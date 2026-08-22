@@ -1226,7 +1226,11 @@ def test_the_drawers_two_directions_ask_one_predicate_of_one_rectangle():
     # mapping them out again overshoots the pointer by that event's delta -
     # measured as a hint that never lit up. It reads the pointer position
     # AbstractWidget records before it moves anything.
-    hint = re.search(r"onPositionChanged: \{(.*?)\n    \}", widget, re.S)
+    # The parameter list is admitted by the pattern on purpose: a handler that
+    # takes `mouse` is exactly the mutation this is here to redden, and a
+    # pattern that could not match it would report "there is no hint" instead.
+    hint = re.search(r"onPositionChanged:(?: \([^)]*\) =>)? \{(.*?)\n    \}",
+                     widget, re.S)
     assert hint, "PluginWidget no longer publishes the drop hint"
     assert "dragPointerParentX" in hint.group(1) \
         and "mouse." not in hint.group(1), \
@@ -1293,15 +1297,21 @@ def test_a_drop_on_the_drawer_removes_and_commits_nothing():
 
     # ONE listener. plugins.enabled is a single global list drawn on every
     # monitor, so one per chrome surface would answer a drop once per screen
-    # and spend an undo entry on each.
-    instances = []
-    for path in ROOT.rglob("*.qml"):
-        if "/tests/" in str(path):
+    # and spend an undo entry on each. Counted as DECLARATIONS across the
+    # shipped tree rather than as files naming it: the first version of this
+    # check asked only whether EditModeChrome.qml declared one, which is true
+    # of a tree that declares a second somewhere else - planted, and it passed.
+    declarations = []
+    for path in sorted(ROOT.rglob("*.qml")):
+        rel = str(path.relative_to(ROOT))
+        # The harnesses build one on purpose - that is the whole reason the
+        # write lives in a QtObject - and they ship no surfaces.
+        if rel.startswith("tests/") or rel.endswith(("RuntimeTest.qml", "Probe.qml")):
             continue
-        if re.search(r"^\s*EditModeDrawerDrop \{", path.read_text(), re.M):
-            instances.append(path.name)
-    assert instances.count("EditModeChrome.qml") == 1, \
-        f"EditModeDrawerDrop is not declared exactly once beside the chrome: {instances}"
+        declarations += [rel] * len(
+            re.findall(r"^\s*EditModeDrawerDrop \{", code(path), re.M))
+    assert declarations == ["modules/imi/editMode/EditModeChrome.qml"], \
+        f"EditModeDrawerDrop is not declared exactly once beside the chrome: {declarations}"
 
 
 def test_the_sidebars_close_for_the_mode_and_stay_closed():
