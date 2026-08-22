@@ -283,6 +283,7 @@ ShellRoot {
                 sourceComponent: EditModeChromeContent {
                     card: harness.card
                     area: harness.area
+                    bandFraction: EditMode.chromeBandFraction(harness.viewport)
                 }
             }
         }

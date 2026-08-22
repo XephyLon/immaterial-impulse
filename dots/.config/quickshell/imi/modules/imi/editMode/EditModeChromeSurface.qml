@@ -313,6 +313,12 @@ PanelWindow {
         // rather than by a literal measured against one of them.
         area: EditMode.areaRect(root.viewport, GlobalStates.editProgress,
             root.width, root.height)
+        // The band's split, from the SAME geometry the band was reserved out
+        // of. Derived rather than restated out of the two Appearance tokens
+        // here: the reservation and the placement reading different numbers is
+        // exactly the "two fields that must agree" that puts the chrome in a
+        // band that is not its size.
+        bandFraction: EditMode.chromeBandFraction(root.viewport)
         // The second of the mode's two stand-down gates, the other being the
         // loader that creates this window at all. Either alone hides the
         // chrome, which is exactly why both are named in

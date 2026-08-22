@@ -315,6 +315,15 @@ if ! python3 "$SCRIPT_DIR/lint_blur_region_pairing.py"; then
     exit 1
 fi
 
+# Static lint: Edit Mode's chrome band is asymmetric, so a piece still centred
+# in it with `/ 2`, or a call site that forgets `bandFraction` and takes the
+# 0.5 default, renders off its gap without erroring.
+echo "Running edit mode band fraction lint..."
+if ! python3 "$SCRIPT_DIR/lint_edit_mode_band_fraction.py"; then
+    echo "Edit mode band fraction lint failed."
+    exit 1
+fi
+
 # Static lint: a window's clear colour must be a literal. One that reaches alpha
 # 255 makes Qt declare the Wayland surface opaque, and nothing ever retracts
 # that, so the window loses its compositor blur for the rest of the process.

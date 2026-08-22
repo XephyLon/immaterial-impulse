@@ -310,20 +310,50 @@ TestCase {
     }
 
     function test_the_desktop_leaves_the_chrome_a_band_of_its_own() {
-        // The band above and below the card is a margin, the toolbar, and
-        // another margin - so the toolbar centred in it has a whole margin at
-        // each end BY CONSTRUCTION rather than by whatever the ceiling left
-        // over. That is the correction: the old band was 100.8px at this screen
-        // size and the toolbar is 56 centred in it, which starts 22.4px into a
-        // screen whose bar occupies the first 68.
+        // The band above and below the card is an edge margin, the toolbar, and
+        // a full margin - so the toolbar has a known gap at each end BY
+        // CONSTRUCTION rather than by whatever the ceiling left over. The two
+        // ends are deliberately UNEQUAL: the outer one is the chrome's gap from
+        // the screen edge and the inner one is its gap from the desktop, and on
+        // this axis every pixel of the outer one comes off the desktop.
         const bandTop = framed.y - barInset;
         const bandBottom = (1440 - dockInset) - (framed.y + framed.height);
-        fuzzyCompare(bandTop, 24 + chrome + 24, 0.5);
-        fuzzyCompare(bandBottom, 24 + chrome + 24, 0.5);
+        fuzzyCompare(bandTop, 12 + chrome + 24, 0.5);
+        fuzzyCompare(bandBottom, 12 + chrome + 24, 0.5);
+        // The two bands stay the same height as each other, which is what makes
+        // the toolbar and the tab bar travel by the same amount.
+        fuzzyCompare(bandTop, bandBottom, 1e-6);
         // ...and the vertical constraint is what decides the scale here, which
-        // is what makes the two numbers above a promise rather than a
-        // coincidence of the ceiling.
+        // is what makes the numbers above a promise rather than a coincidence
+        // of the ceiling.
         verify(framed.scale < EditMode.MAX_SCALE);
+    }
+
+    function test_the_chrome_sits_at_a_fraction_of_its_band_not_a_pixel_offset() {
+        // The split the two chrome pieces are placed on. It has to be a
+        // fraction: the band has no height at all at progress 0 - it grows out
+        // of nothing as the desktop shrinks away from it - so a piece placed at
+        // a fixed `edgeMargin` from the area's edge would already be sitting on
+        // screen before the mode started.
+        const fraction = EditMode.chromeBandFraction(framed);
+        fuzzyCompare(fraction, 12 / (12 + 24), 1e-9);
+        // At rest the fraction has to land the piece exactly `edgeMargin` in,
+        // or the reservation and the placement are two fields that disagree.
+        const slack = (framed.y - barInset) - chrome;
+        fuzzyCompare(slack * fraction, 12, 0.5);
+        fuzzyCompare(slack * (1 - fraction), 24, 0.5);
+        // At progress 0 the band is gone and the piece is off the edge, which
+        // is what makes the entrance need no Behavior of its own.
+        verify(0 - chrome * fraction < 0);
+        // Equal margins are still dead centre, which is what an unconnected
+        // instance and every caller passing no `edgeMargin` gets.
+        fuzzyCompare(EditMode.chromeBandFraction({ margin: 24 }), 0.5, 1e-9);
+        fuzzyCompare(EditMode.chromeBandFraction({ margin: 24, edgeMargin: 24 }),
+            0.5, 1e-9);
+        // ...and so are the degenerate inputs, rather than a divide by zero.
+        fuzzyCompare(EditMode.chromeBandFraction(null), 0.5, 1e-9);
+        fuzzyCompare(EditMode.chromeBandFraction({ margin: 0, edgeMargin: 0 }),
+            0.5, 1e-9);
     }
 
     function test_the_desktop_rests_dead_centre_of_the_usable_area() {
