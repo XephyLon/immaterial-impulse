@@ -826,6 +826,13 @@ Singleton {
         // The gap outside the shrunk desktop on its three free sides, and
         // between it and the drawer's slot on the fourth.
         property real editModeMargin: root.spacing.space300
+        // The gap between Edit Mode's own chrome - the toolbar, the tab bar and
+        // the drawer - and the edge of the usable area. Half the desktop's,
+        // because it is a floating surface's gap from the screen edge rather
+        // than a gap between two pieces of content, and because on the vertical
+        // axis it is the term that binds: every pixel here is one the shrunk
+        // desktop does not get.
+        property real editModeEdgeMargin: root.spacing.space150
         // M3's toolbar height (m3.material.io/components/toolbars). It is a
         // token rather than a literal inside Toolbar.qml because Edit Mode's
         // viewport reserves a band for the toolbar on the BACKGROUND surface,
