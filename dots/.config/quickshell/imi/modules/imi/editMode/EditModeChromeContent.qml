@@ -109,19 +109,41 @@ Item {
         y: root.area.y + (root.card.y - root.area.y - height) * root.bandFraction
         spacing: Appearance.spacing.space150
 
-        MaterialSymbol {
+        // The toolbar's title, and every part of this is about it NOT reading
+        // as a control.
+        //
+        // It used to be a `MaterialSymbol { text: "edit" }` followed by a
+        // `StyledText`, which is not merely similar to a button - it is the
+        // exact construction of `IconAndTextToolbarButton`, an icon and a label
+        // in a row. Sat flat between two real buttons it was an unfilled
+        // icon-and-text button with nothing behind it, so the one question the
+        // toolbar has to answer, "which of these can I press", had a wrong
+        // answer sitting first in the row. `doneButton` below records the
+        // mirror of this failure: Done rendered flat read as a second label.
+        //
+        // So the icon goes (an icon beside a word is the button shape here),
+        // the type drops to the label tier in the variant role, and a rule
+        // stands between the title and the controls - which is the structural
+        // half, and the half a restyle cannot undo by accident.
+        StyledText {
             Layout.alignment: Qt.AlignVCenter
-            Layout.leftMargin: Appearance.spacing.space75
-            text: "edit"
-            iconSize: 22
+            Layout.leftMargin: Appearance.spacing.space100
+            text: Translation.tr("Edit layout")
+            font.pixelSize: Appearance.font.pixelSize.small
+            font.weight: Font.Medium
             color: Appearance.colors.colOnSurfaceVariant
         }
 
-        StyledText {
+        Rectangle {
             Layout.alignment: Qt.AlignVCenter
-            text: Translation.tr("Edit layout")
-            font.pixelSize: Appearance.font.pixelSize.normal
-            color: Appearance.colors.colOnSurface
+            Layout.leftMargin: Appearance.spacing.space50
+            Layout.rightMargin: Appearance.spacing.space50
+            implicitWidth: 1
+            // Short of the toolbar's own height on purpose: a rule that ran the
+            // full height would read as the toolbar being split into two
+            // containers rather than as one container with a title on it.
+            implicitHeight: Math.round(Appearance.sizes.toolbarHeight * 0.4)
+            color: Appearance.colors.colOutlineVariant
         }
 
         // The drawer's toggle, drawn as state rather than as a verb: the
