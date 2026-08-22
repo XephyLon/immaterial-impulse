@@ -62,7 +62,32 @@ StyledFlickable {
     implicitWidth: contentColumn.implicitWidth
     onContentYChanged: updateCurrentSection()
     onContentHeightChanged: Qt.callLater(updateCurrentSection)
-    Component.onCompleted: Qt.callLater(updateCurrentSection)
+    Component.onCompleted: {
+        Qt.callLater(updateCurrentSection);
+        sectionEntrance.run(root.visible);
+    }
+
+    // A page's sections arrive in sequence rather than in one frame. The
+    // container here is the page itself, which the settings window already
+    // cross-fades over `elementMoveFast` - the lead-in is three steps of the
+    // shell's own stagger, so the first section starts while that fade is most
+    // of the way through rather than racing it from frame one.
+    //
+    // Ranking by VISIBLE position is what keeps a page whose sections come and
+    // go honest: Services hides its wttr.in section, Bar hides half of its
+    // own on a vertical bar, and a hidden section spending a slot would leave a
+    // hole one step wide in the middle of the wave.
+    StaggerWave {
+        id: sectionEntrance
+        target: contentColumn
+        step: Appearance.animation.staggerStep
+        leadIn: Appearance.animation.staggerStep * 3
+    }
+
+    // `visible` is EFFECTIVE visibility, so this follows the settings window's
+    // own page switch (the page Loader binds `visible: isActive`) without this
+    // component having to know anything about it.
+    onVisibleChanged: sectionEntrance.run(root.visible)
 
     Timer {
         // Base Component.onCompleted may run before a derived settings page has
