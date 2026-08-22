@@ -906,7 +906,6 @@ ShellRoot {
         },
         () => {
             harness.publishReveal();
-            GlobalStates.editUndoStack = [];
         },
         () => {
             harness.check("the drawer's reveal reaches the widget on the other surface",
@@ -921,6 +920,10 @@ ShellRoot {
                           Config.options.plugins.enabled.length === 2
                           && Math.round(harness.storedPosition("edit-move-probe").x) === 132);
             harness.hintDuringDrag = "";
+            // Cleared HERE, after the control's own commit has pushed its
+            // entry: a removal that is one entry is only readable from a stack
+            // that was empty when the gesture began.
+            GlobalStates.editUndoStack = [];
             harness.dragOntoDrawer(movableWidget);
         },
         () => {
@@ -971,6 +974,9 @@ ShellRoot {
                               > 36);
             Config.options.plugins.enabled = [];
             GlobalStates.editMode = false;
+            // The next section starts from the placed positions, and the drag
+            // above deliberately left one of them at the screen's right edge.
+            harness.placeWidgets();
         },
 
         // ---- the lock layout forks on the first Lockscreen-tab move ---------
