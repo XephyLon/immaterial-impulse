@@ -15,6 +15,7 @@ STORE = ROOT / "modules/imi/settings/pages/PluginStorePage.qml"
 MANAGER = ROOT / "modules/common/plugins/PluginManager.qml"
 PAGE = ROOT / "modules/imi/settings/pages/PluginsPage.qml"
 SWITCH = ROOT / "modules/common/widgets/ConfigSwitch.qml"
+CATALOGUE_ROW = ROOT / "modules/common/widgets/CatalogueRow.qml"
 NAV = ROOT / "modules/imi/settings/SettingsContent.qml"
 
 
@@ -229,13 +230,25 @@ class SettingsLabelsArePlainText(unittest.TestCase):
         which has no textFormat and so inherits Text.AutoText - Qt auto-detects
         and renders rich text. Plugin manifests are attacker-controlled, so a
         manifest name of "<img src=...>" would render as markup.
+
+        Both StyledTexts moved into CatalogueRow when the catalogue row was
+        extracted, so this follows them: ConfigSwitch hands its two strings to
+        that component, and that component is where the annotation has to be.
+        Following the render site is the whole point - a check left pointed at
+        the file the text no longer passes through goes green over nothing.
         """
-        src = SWITCH.read_text(encoding="utf-8")
+        switch = SWITCH.read_text(encoding="utf-8")
+        for forwarded in ("title: root.text", "description: root.description"):
+            self.assertIn(forwarded, switch,
+                          "ConfigSwitch no longer feeds its strings to "
+                          "CatalogueRow - the render site moved and this "
+                          "check is looking at the wrong file")
+        src = CATALOGUE_ROW.read_text(encoding="utf-8")
         # Asserted per-block rather than as an exact count of 2: counting
         # fails when a *third* element in this file is legitimately hardened,
         # which would penalise the more secure change and pressure someone
         # into weakening the assertion.
-        for binding in ("text: root.text", "text: root.description"):
+        for binding in ("text: root.title", "text: root.description"):
             start = src.index(binding)
             end = src.find("StyledText {", start)
             block = src[start:end if end != -1 else len(src)]
@@ -261,7 +274,7 @@ class SettingsLabelsArePlainText(unittest.TestCase):
     def test_material_symbol_renders_icon_names_as_plain_text(self):
         """ConfigSwitch's own buttonIcon is an injection path.
 
-        buttonIcon -> OptionalMaterialSymbol -> MaterialSymbol, and
+        buttonIcon -> CatalogueRow.rowIcon -> MaterialSymbol, and
         MaterialSymbol is itself a StyledText. PluginOptions feeds it
         `optionData.icon` straight from the manifest, so an option icon of
         "<img src=...>" rendered as markup inside the very widget the
