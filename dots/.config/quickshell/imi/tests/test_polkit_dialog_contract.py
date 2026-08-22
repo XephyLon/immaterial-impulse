@@ -13,6 +13,16 @@ prompt floating in a notch cut through it. That shape appears nowhere else here.
 The check reads the LOCK screen's own field type rather than naming a type in a
 string, so the two cannot drift apart by a rename.
 
+They then drifted again in the half a type name does not carry: the lock screen
+masked with `PasswordChars` - a Material shape per character, each animating in
+as it is typed - and the dialog masked with `echoMode` alone, so one prompt drew
+glyphs and the other drew system bullets. The masking lives in `PasswordField`
+now, and the sweep below refuses a second copy of the overlay outside
+`modules/common/widgets/`: it is five things to get right at a call site (a
+transparent glyph colour, a transparent selection pair, the overlay's own
+margins, its `enabled: false`, and the config switch), which is how the dialog
+came to have none of them.
+
 **Exactly one filled button, and it is the confirming one.** Cancel and OK were
 both flat, so the one question a modal authentication prompt has to answer - which
 of these two is what you came here to do - had no answer in the picture at all.
@@ -177,6 +187,32 @@ def test_the_dialog_card_casts_a_shadow_under_itself():
     assert shadow.start() < card.start(), \
         ("the shadow is declared after the card, so it draws OVER it - siblings "
          "with no z stack in declaration order")
+
+
+def test_both_prompts_take_their_glyphs_from_the_one_control():
+    widgets = ROOT / "modules/common/widgets"
+    owners = sorted(
+        path.relative_to(ROOT).as_posix()
+        for path in ROOT.rglob("*.qml")
+        if "PasswordChars {" in code(path)
+    )
+    assert owners, \
+        ("no file instantiates PasswordChars - the masked-glyph overlay is gone "
+         "and this sweep is looking at nothing")
+    outside = [name for name in owners
+               if not name.startswith(widgets.relative_to(ROOT).as_posix() + "/")]
+    assert outside == [], \
+        (f"{outside} draw the password glyphs themselves - the overlay is five "
+         "things to get right at a call site, so it belongs to a shared control")
+
+    polkit = code(POLKIT)
+    lock = code(LOCK_SURFACE)
+    field = password_field_type(lock)
+    assert (ROOT / f"modules/common/widgets/{field}.qml").exists(), \
+        f"{field} is not a shared widget - both prompts must reach the same file"
+    assert "echoMode" not in polkit and "echoMode" not in lock, \
+        ("a prompt spelling its own echoMode is a prompt masking outside the "
+         "shared control, which is how the glyphs went missing from one of them")
 
 
 if __name__ == "__main__":

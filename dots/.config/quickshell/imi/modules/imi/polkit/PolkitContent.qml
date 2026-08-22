@@ -76,32 +76,28 @@ Item {
             text: PolkitService.cleanMessage
         }
 
-        // The shell's own field, not Material's outlined one. `MaterialTextField`
-        // hands the container to QtQuick Controls' Material style
-        // (`Material.containerStyle: Material.Outlined`), which draws a boxed
-        // outline with the prompt floating in a notch cut through it - a shape
-        // that appears nowhere else in this shell. Every field the user meets
-        // here is a filled pill: the lock screen's own password box is a
-        // `ToolbarTextField`, and so are the launcher, the wallpaper selector
-        // and the screen translator. The two password prompts in this shell
-        // should not be two different controls.
+        // The shell's own masked field, the one the lock screen's password box
+        // is. The two password prompts in this shell are one interaction and
+        // must be one control: this was a bare `ToolbarTextField` with an
+        // `echoMode`, so it drew flat system bullets where the lock screen
+        // draws a Material shape per character, each animating in as it is
+        // typed. `PasswordField` owns that masking, and both surfaces take it.
         //
         // The fill is `colLayer4` because the dialog's body is `WindowDialog`'s
         // `m3surfaceContainerHigh`, i.e. layer 3 - a field nested in it is the
         // tier above, and `colLayer4` is that tier already composited over
         // layer 3. `colLayer1`, the widget's own default, is a tier BELOW the
         // card it would be sitting on and reads as a hole in it.
-        ToolbarTextField {
+        PasswordField {
             id: inputField
             Layout.fillWidth: true
             Layout.fillHeight: false
-            clip: true
             focus: true
             enabled: PolkitService.interactionAvailable
             placeholderText: PolkitService.cleanPrompt
-            echoMode: root.usePasswordChars ? TextInput.Password : TextInput.Normal
+            masked: root.usePasswordChars
             colBackground: Appearance.colors.colLayer4
-            color: Appearance.colors.colOnLayer4
+            colText: Appearance.colors.colOnLayer4
             onAccepted: root.submit();
 
             Keys.onPressed: event => { // Esc to close
