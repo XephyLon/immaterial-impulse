@@ -165,6 +165,103 @@ TestCase {
         compare(state.pluginOptions.weather.blurEnabled, true);
     }
 
+    // ---- presence forks the same way -----------------------------------
+
+    readonly property var desktopEnabled: ["clock", "weather", "media"]
+
+    function test_presence_inherits_the_desktop_until_something_is_picked() {
+        verify(!Surfaces.isPresenceForked(desktopOnly));
+        verify(Surfaces.lockPresent(desktopOnly, desktopEnabled, "clock"));
+        verify(Surfaces.lockPresent(desktopOnly, desktopEnabled, "media"));
+        // A widget the desktop does not show is not on the lock either, while
+        // the two are linked.
+        verify(!Surfaces.lockPresent(desktopOnly, desktopEnabled, "notes"));
+    }
+
+    function test_the_first_pick_forks_and_keeps_everything_else() {
+        const next = Surfaces.withLockPresence(desktopOnly, desktopEnabled, "media", false);
+        verify(Surfaces.isPresenceForked(next));
+        // The picked widget is off the lock...
+        verify(!Surfaces.lockPresent(next, desktopEnabled, "media"));
+        // ...and every other widget came along at the desktop's answer, so the
+        // fork is a snapshot rather than an empty lock screen.
+        verify(Surfaces.lockPresent(next, desktopEnabled, "clock"));
+        verify(Surfaces.lockPresent(next, desktopEnabled, "weather"));
+    }
+
+    function test_after_the_fork_the_two_sets_are_independent_both_ways() {
+        let state = Surfaces.withLockPresence(desktopOnly, desktopEnabled, "media", false);
+        // A widget enabled on the desktop afterwards does not appear on the
+        // lock - the lock's set is its own now.
+        const grownDesktop = ["clock", "weather", "media", "notes"];
+        verify(!Surfaces.lockPresent(state, grownDesktop, "notes"));
+        // And the other direction, which one shared list cannot express: a
+        // widget the desktop does not show, picked for the lock alone.
+        state = Surfaces.withLockPresence(state, grownDesktop, "calendar", true);
+        verify(Surfaces.lockPresent(state, grownDesktop, "calendar"));
+        verify(!Surfaces.containsId(grownDesktop, "calendar"));
+    }
+
+    function test_an_empty_forked_map_is_a_lock_screen_with_no_widgets() {
+        // Not the same state as "following", which is what makes absence
+        // spelled null rather than {}.
+        let state = Surfaces.withLockPresence(desktopOnly, [], "clock", true);
+        state = Surfaces.withLockPresence(state, [], "clock", false);
+        verify(Surfaces.isPresenceForked(state));
+        verify(!Surfaces.lockPresent(state, desktopEnabled, "clock"));
+    }
+
+    function test_relinking_presence_reads_the_desktop_through_again() {
+        const state = Surfaces.withLockPresence(desktopOnly, desktopEnabled, "media", false);
+        const relinked = Surfaces.withoutLockPresence(state);
+        verify(!Surfaces.isPresenceForked(relinked));
+        verify(Surfaces.lockPresent(relinked, desktopEnabled, "media"));
+    }
+
+    function test_relinking_an_unpicked_store_is_a_no_op_by_identity() {
+        verify(Surfaces.withoutLockPresence(desktopOnly) === desktopOnly);
+    }
+
+    function test_presence_writes_never_mutate_the_state_they_were_given() {
+        const before = JSON.stringify(desktopOnly);
+        Surfaces.withLockPresence(desktopOnly, desktopEnabled, "media", false);
+        Surfaces.withoutLockPresence(desktopOnly);
+        compare(JSON.stringify(desktopOnly), before);
+    }
+
+    function test_presence_and_layout_fork_apart_from_each_other() {
+        // Two questions, two stores: picking a widget off the lock must not
+        // fork the layout, and moving one must not fork the choice.
+        const picked = Surfaces.withLockPresence(desktopOnly, desktopEnabled, "media", false);
+        verify(!Surfaces.isForked(picked, "DP-1"));
+        const moved = Surfaces.withPosition(desktopOnly, Surfaces.LOCK, "DP-1", "clock",
+            { x: 900, y: 900, placementStrategy: "free" });
+        verify(!Surfaces.isPresenceForked(moved));
+    }
+
+    function test_a_presence_map_is_told_apart_from_a_list() {
+        // A `list<string>` that crossed a QML boundary answers `typeof
+        // "object"` and fails `Array.isArray` (109e6d897), so the shape check
+        // is the length rather than the brand - a stored list must not read
+        // as a forked map.
+        verify(!Surfaces.isPresenceForked({ lockPresence: [] }));
+        verify(!Surfaces.isPresenceForked({ lockPresence: ["clock"] }));
+        verify(!Surfaces.isPresenceForked({ lockPresence: null }));
+        verify(!Surfaces.isPresenceForked({}));
+        verify(Surfaces.isPresenceForked({ lockPresence: {} }));
+    }
+
+    function test_membership_does_not_rely_on_array_methods() {
+        // The desktop's set arrives as a QML list; index and length are all
+        // this may assume of it.
+        const sequenceLike = { length: 2, 0: "clock", 1: "weather" };
+        verify(Surfaces.containsId(sequenceLike, "weather"));
+        verify(!Surfaces.containsId(sequenceLike, "media"));
+        verify(!Surfaces.containsId(undefined, "clock"));
+        verify(Surfaces.lockPresent({}, sequenceLike, "clock"));
+        verify(!Surfaces.lockPresent({}, sequenceLike, ""));
+    }
+
     function test_an_empty_state_and_missing_names_answer_undefined() {
         compare(Surfaces.rawPosition({}, Surfaces.LOCK, "DP-1", "clock"), undefined);
         compare(Surfaces.rawPosition(desktopOnly, Surfaces.LOCK, "", "clock"), undefined);
