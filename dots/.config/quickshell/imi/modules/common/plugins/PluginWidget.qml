@@ -8,6 +8,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.imi.background.widgets
 import "../functions/parallax.js" as ParallaxMath
+import "../functions/edit_mode.js" as EditMode
 import "gridSizes.js" as GridSizes
 import "resize-tension.js" as Tension
 import "gridResize.js" as GridResize
@@ -439,6 +440,40 @@ AbstractBackgroundWidget {
         GlobalStates.editWidgetMenuX = point.x;
         GlobalStates.editWidgetMenuY = point.y;
         GlobalStates.editWidgetMenuOpen = true;
+    }
+
+    // ---- dragging a widget back into the drawer (the inverse of §8.3) -----
+    //
+    // The drawer's rows drag OUT onto the desktop; a widget on the desktop
+    // dragged back over the drawer and let go there leaves the desktop. The
+    // rectangle is the chrome surface's own, published per screen because it
+    // lives in another window (GlobalStates.editDrawerReveals), and the
+    // pointer is mapped to the SCENE through Qt's transform chain for the same
+    // reason the right-click above is: the mode's scale and the drawer's shift
+    // are already in it, and multiplying a viewport scale in by hand is the
+    // compensation the contract forbids.
+    readonly property var editDrawerReveal:
+        GlobalStates.editDrawerReveals[rootWidget.screenName] ?? null
+
+    function dropWouldRemove(mouseX, mouseY) {
+        if (!GlobalStates.editMode || !GlobalStates.editDrawerOpen || !manifest)
+            return false;
+        const point = rootWidget.mapToItem(null, mouseX, mouseY);
+        return EditMode.pointInDrawerReveal(rootWidget.editDrawerReveal,
+            point.x, point.y);
+    }
+
+    // Runs BEFORE AbstractBackgroundWidget's commit, which is why the decision
+    // is a function that handler asks rather than a release handler of its own.
+    // Nothing about the position is written: the store still holds where the
+    // widget was, and that is exactly what makes undoing the removal put it
+    // back there rather than at the drawer or at a default - the same
+    // arrangement the menu's Remove already relies on.
+    function releaseRemovesWidget(mouseX, mouseY) {
+        if (!rootWidget.dropWouldRemove(mouseX, mouseY)) return false;
+        rootWidget.restoreXYBinding();
+        GlobalStates.editWidgetDroppedOnDrawer(manifest.id);
+        return true;
     }
 
     // A widget destroyed while its menu is open must not strand the menu - the
