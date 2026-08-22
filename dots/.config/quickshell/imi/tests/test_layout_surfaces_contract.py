@@ -232,11 +232,17 @@ def test_the_master_gate_stays_above_the_per_widget_choice():
     # superseded: it is a setting users already have set. With it off nothing
     # shows, as before; with it on and the choice following, all of them do.
     widget = code(WIDGET)
-    assert re.search(r"visibleWhenLocked:\s*pluginNode\.wantsVisibleWhenLocked\s*"
-                     r"\|\|\s*\(Config\.options\.lock\.showWidgets\s*"
-                     r"&&\s*PluginState\.lockWidgetEnabled\(", widget), \
-        ("a widget's lock visibility must be the master gate AND the per-widget "
-         "choice - either alone drops a setting the user has already made")
+    # A BRANCH, not a disjunction: with the gate off a widget's own opt-in is
+    # the whole answer (the clock, as before), and with it on the per-widget
+    # choice is - including when that choice says no, which an `||` with the
+    # opt-in could never express and which would leave the clock's row in the
+    # picker unable to do anything.
+    assert re.search(r"visibleWhenLocked:\s*Config\.options\.lock\.showWidgets\s*"
+                     r"\?\s*PluginState\.lockWidgetEnabled\([^)]*\)\s*"
+                     r":\s*pluginNode\.wantsVisibleWhenLocked", widget), \
+        ("a widget's lock visibility must branch on the master gate and then "
+         "read the per-widget choice - either term alone drops a decision the "
+         "user has already made")
     assert re.search(r"visibleOnDesktop:\s*!rootWidget\.lockOnlyWidget", widget), \
         ("the desktop needs a filter of its own, or a widget picked for the "
          "lock alone is drawn on the desktop too")

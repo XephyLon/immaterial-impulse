@@ -26,21 +26,26 @@ AbstractBackgroundWidget {
     // declares none of them behaves exactly as before.
     //
     // The clock is the only clock the lock screen has, so it must be able to
-    // stay visible while locked regardless of `lock.showWidgets` - which
-    // exists to hide the *other* desktop widgets - and to centre itself there,
-    // which is what `lock.centerClock` has always done.
+    // stay visible while locked when `lock.showWidgets` - which exists to hide
+    // the *other* desktop widgets - is off, and to centre itself there, which
+    // is what `lock.centerClock` has always done.
     //
-    // Which of those other widgets the lock shows is two decisions now, and
-    // the order of them is what keeps an upgrade silent: `lock.showWidgets` is
-    // the master gate over the feature ("does the lock show desktop widgets at
-    // all"), and the per-widget choice under it says which - inherited from
-    // the desktop's enabled set until the user picks something on the
-    // Lockscreen tab (layout_surfaces.js). With the gate off nothing shows, as
-    // before; with it on and the choice still following, all of them do, as
-    // before.
-    visibleWhenLocked: pluginNode.wantsVisibleWhenLocked
-        || (Config.options.lock.showWidgets
-            && PluginState.lockWidgetEnabled(rootWidget.manifest?.id ?? ""))
+    // Which widgets the lock shows is two decisions now, and this is a BRANCH
+    // rather than a disjunction because the second one has to be able to say
+    // no. `lock.showWidgets` is the master gate over the feature ("does the
+    // lock show desktop widgets at all"); with it off, a widget's own
+    // `visibleWhenLocked` opt-in is the whole answer, exactly as before. With
+    // it on, the per-widget choice is - inherited from the desktop's enabled
+    // set until the user picks something on the Lockscreen tab
+    // (layout_surfaces.js), so every widget shows, exactly as before, until
+    // then. An `||` here would leave the clock's row in that picker unable to
+    // do anything: the toggle would go off and the clock would stay on the
+    // lock screen, which is a control that lies rather than a widget that is
+    // protected. Nothing about the upgrade changes - the branch and the
+    // disjunction agree on every state reachable before the first pick.
+    visibleWhenLocked: Config.options.lock.showWidgets
+        ? PluginState.lockWidgetEnabled(rootWidget.manifest?.id ?? "")
+        : pluginNode.wantsVisibleWhenLocked
     // Am I on screen only because the LOCK asked for me? That is the one case
     // the desktop has to filter, and it is deliberately narrower than "not in
     // plugins.enabled": a widget being removed from BOTH is in neither list,
