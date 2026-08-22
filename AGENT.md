@@ -3069,6 +3069,18 @@ mode is built out of are worth not re-deriving:
     decision is therefore an overridable predicate the one release handler
     asks — `releaseRemovesWidget(mouseX, mouseY)`, false in the base — and the
     subclass overriding it is what the base's handler resolves.
+  - **...and the same ordering makes a subclass's `mouse.x/y` the WRONG
+    coordinates in `onPositionChanged`.** `AbstractWidget`'s handler maps the
+    event out into the parent frame and then moves the widget to follow the
+    pointer, so by the time a subclass's handler runs, the item those local
+    coordinates are relative to has travelled: mapping them out a second time
+    lands at `pointer + this event's delta`. On a drag that crosses the desktop
+    in one move that is most of a screen, and the failure is silent — the drop
+    hint simply never lit up while the release, whose handler moves nothing,
+    was exact. `AbstractWidget.dragPointerParentX/Y` is the pointer as the drag
+    itself read it, recorded before it moves anything; anything answering a
+    question about WHERE a drag is reads that, and only a release may map its
+    own event.
   - **The drop commits NO position, and that is what makes undo correct.** The
     store still holds where the widget was, so the undo entry — the whole
     `plugins.enabled` list from before, exactly the menu's Remove — brings it
@@ -3091,7 +3103,8 @@ mode is built out of are worth not re-deriving:
   (feat(editMode): one predicate for both directions of the drawer's drop;
   feat(editMode): publish the drawer's reveal to the surface that owns the desktop;
   feat(editMode): a widget dragged back into the drawer leaves the desktop;
-  feat(editMode): the drawer says a drop will remove, in its rows' own tint.)
+  feat(editMode): the drawer says a drop will remove, in its rows' own tint;
+  fix(widgetCanvas): the drop hint reads the pointer before the drag moves the widget.)
 - **The sidebars are closed on entry and refused for the length of the mode,
   and that is a decision about what the mode EDITS rather than about layers.**
   Both sidebars are `WlrLayer.Top` and the chrome is `Overlay`, so the widget
