@@ -3087,6 +3087,20 @@ mode is built out of are worth not re-deriving:
     back where it stood rather than under the panel it was dropped on. A commit
     on the way out would store the drawer's own coordinates as a placement the
     user never chose, which is 705e9006d's defect arriving through a new door.
+  - **The hint asks the WRITE's question, membership included.**
+    `EditModeDrawerDrop` declines an id that is not in `plugins.enabled`, and a
+    widget can be on screen, hit-testable and draggable without being in that
+    list: `PluginWidget.lockOnlyWidget` is exactly one — drawn on the Lockscreen
+    tab, and still a live `MouseArea` at `opacity: 0` on the Desktop tab. With
+    `dropWouldRemoveAt` asking only about the rectangle, the drawer lit up, the
+    release swallowed its own commit on the strength of that, and the removal
+    was then declined: one gesture, a panel promising a removal, and no change
+    anywhere — the quiet failure the "not gated on which section" decision above
+    exists to avoid, arriving through the other door. Both halves of it are
+    driven (`EditModeRuntimeTest`: the hint stays dark AND the drop commits the
+    move), because "nothing was removed" is also what a release that never fires
+    reports.
+    (fix(editMode): the drop hint asks the same question the write does.)
   - **The write is one `QtObject` beside the chrome, not a method on the
     surface.** `plugins.enabled` is one global list drawn on every monitor, so a
     listener per chrome surface answers one drop once per screen and spends an
