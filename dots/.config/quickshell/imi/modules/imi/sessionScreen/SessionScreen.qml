@@ -115,6 +115,24 @@ Scope {
                     // the bottom row, so "Reboot into..." sits beside Reboot
                     // instead of orphaned on its own row.
                     columns: 3
+
+                    // Nine buttons that used to appear in one frame. The
+                    // screen is opened deliberately and read before anything
+                    // is pressed, so a cascade costs nothing the user is
+                    // waiting on - and the button that already holds the
+                    // keyboard cursor is rank 0, so it is never the one kept
+                    // waiting. No lead-in: this window has no motion of its
+                    // own to give the members a head start on.
+                    //
+                    // Ranking by VISIBLE position is load-bearing here rather
+                    // than theoretical: "Reboot into..." is hidden unless the
+                    // machine offers more than one firmware entry.
+                    StaggerWave {
+                        id: sessionEntrance
+                        target: sessionGrid
+                        step: Appearance.animation.staggerStep
+                    }
+                    Component.onCompleted: sessionEntrance.enter()
                     columnSpacing: Appearance.spacing.space200
                     rowSpacing: Appearance.spacing.space200
 
