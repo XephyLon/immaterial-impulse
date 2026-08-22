@@ -62,10 +62,15 @@ STAGGER_ADOPTERS = {
 # container is a layer surface the compositor slides, so there is no progress
 # to gate on and the head start can only be a guessed `leadIn` - which put the
 # last member's landing 180ms past the end of `sidebarSlideEnter`. And the
-# wave's per-member animation objects are created and destroyed on the exact
-# frame the panel opens or closes, which is also the frame `mediaPlayerLoader`
-# - bound to the open state - instantiates its whole subtree on. Re-adopting is
-# a decision to be argued, not a line to be copied.
+# surface is DESTROYED by the gesture the wave rides: `PanelWindow.visible`
+# follows the open state, layer-shell forbids window reuse, so the wave's
+# frames land on a surface the compositor is still bringing up and its exit
+# animates a window that has already been asked to leave - measured at a median
+# of 30 rendered frames per open against 5 without it, and 13 per close against
+# zero. The frame drop the report names is that teardown-and-rebuild and NOT
+# the wave; see AGENT.md's design-language section, which carries the numbers
+# and the two suspects they eliminate. Re-adopting is a decision to be argued,
+# not a line to be copied.
 STAGGER_DECLINED = {
     "modules/imi/sidebarRight/SidebarRightContent.qml",
 }
