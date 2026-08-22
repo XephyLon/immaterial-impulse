@@ -311,6 +311,62 @@ class PresetTests(unittest.TestCase):
             self.assertEqual(after_old["lockPositions"]["DP-1"]["clock"]["x"], 900,
                              "a preset without lockPositions must not wipe the user's fork")
 
+    def test_the_lock_widget_choice_round_trips_and_an_old_preset_keeps_the_fork(self):
+        """The other half of the same fork: WHICH widgets the lock shows.
+
+        `lockPresence` is null while the lock follows the desktop's enabled
+        set and a map once the user has picked, so a preset has to carry both
+        states - and a preset from a shell that predates the key must leave a
+        user's picked set alone, the same `has()` rule the two layouts follow.
+        """
+        picked = {
+            "version": 2,
+            "desktopPositions": {},
+            "lockPositions": {},
+            "lockPresence": {"clock": True},
+            "pluginOptions": {},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            config_dir, state_file, presets, env = self._sandbox(Path(directory), picked)
+
+            subprocess.run(["bash", str(presets), "--save", "picked"], env=env, check=True)
+            preset = json.loads((config_dir / "presets/picked.json").read_text())
+            self.assertEqual(preset["_pluginState"]["lockPresence"], {"clock": True},
+                             "a saved preset must carry the lock's widget choice")
+
+            # A different pick on disk, then apply: the preset's choice wins.
+            state_file.write_text(json.dumps({
+                "version": 2,
+                "desktopPositions": {},
+                "lockPositions": {},
+                "lockPresence": {"weather": True},
+                "pluginOptions": {},
+            }))
+            subprocess.run(["bash", str(presets), "--apply", "picked"], env=env, check=True)
+            restored = json.loads(state_file.read_text())
+            self.assertEqual(restored["lockPresence"], {"clock": True})
+
+            # A preset saved while FOLLOWING carries a null, and applying it
+            # must re-link rather than read as "says nothing" - a preset is the
+            # layout, and following is one of its two states.
+            following = json.loads((config_dir / "presets/picked.json").read_text())
+            following["_pluginState"]["lockPresence"] = None
+            (config_dir / "presets/following.json").write_text(json.dumps(following))
+            subprocess.run(["bash", str(presets), "--apply", "following"], env=env, check=True)
+            self.assertIsNone(json.loads(state_file.read_text())["lockPresence"],
+                              "a preset saved while following must re-link the choice")
+
+            # An OLDER preset: the key is absent, not null, and the user's
+            # picked set survives.
+            old = json.loads((config_dir / "presets/picked.json").read_text())
+            del old["_pluginState"]["lockPresence"]
+            (config_dir / "presets/older_presence.json").write_text(json.dumps(old))
+            state_file.write_text(json.dumps(picked))
+            subprocess.run(["bash", str(presets), "--apply", "older_presence"], env=env, check=True)
+            self.assertEqual(json.loads(state_file.read_text())["lockPresence"],
+                             {"clock": True},
+                             "a preset without lockPresence must not wipe the user's choice")
+
     def test_saving_a_preset_does_not_publish_the_users_weather_key(self):
         """A preset is a document people share; config.json holds their key.
 

@@ -49,6 +49,7 @@ case "$action" in
                 version: (.version // 2),
                 desktopPositions: (.desktopPositions // {}),
                 lockPositions: (.lockPositions // {}),
+                lockPresence: (.lockPresence // null),
                 pluginOptions: (.pluginOptions // {})
             }' 2>/dev/null)" || plugin_state=""
         else
@@ -59,9 +60,10 @@ case "$action" in
             version: (.version // 2),
             desktopPositions: (.desktopPositions // {}),
             lockPositions: (.lockPositions // {}),
+            lockPresence: (.lockPresence // null),
             pluginOptions: (.pluginOptions // {})
         }' "$PLUGIN_STATE_FILE" 2>/dev/null \
-            || printf '{"version":2,"desktopPositions":{},"lockPositions":{},"pluginOptions":{}}')"
+            || printf '{"version":2,"desktopPositions":{},"lockPositions":{},"lockPresence":null,"pluginOptions":{}}')"
         fi
         # A preset is a document people SHARE, and `config.json` holds the
         # user's own OpenWeatherMap key. Saving one used to copy it verbatim,
@@ -102,10 +104,11 @@ case "$action" in
                 version: (.version // 2),
                 desktopPositions: (.desktopPositions // {}),
                 lockPositions: (.lockPositions // {}),
+                lockPresence: (.lockPresence // null),
                 pluginOptions: (.pluginOptions // {}),
                 presetPersist: (.presetPersist // {})
             }' "$PLUGIN_STATE_FILE" 2>/dev/null \
-                || printf '{"version":2,"desktopPositions":{},"lockPositions":{},"pluginOptions":{},"presetPersist":{}}')"
+                || printf '{"version":2,"desktopPositions":{},"lockPositions":{},"lockPresence":null,"pluginOptions":{},"presetPersist":{}}')"
             # Top-level merging keeps fields omitted by older position-only
             # presets, while a new preset's complete maps replace current state.
             jq -n --argjson current "$current_plugin_state" --argjson preset "$preset_plugin_state" \
@@ -118,6 +121,9 @@ case "$action" in
                     | .lockPositions = (if ($preset | has("lockPositions"))
                         then ($preset.lockPositions // {})
                         else ($current.lockPositions // {}) end)
+                    | .lockPresence = (if ($preset | has("lockPresence"))
+                        then $preset.lockPresence
+                        else $current.lockPresence end)
                     | .pluginOptions = (if ($preset | has("pluginOptions"))
                         then ($preset.pluginOptions // {})
                         else ($current.pluginOptions // {}) end)
