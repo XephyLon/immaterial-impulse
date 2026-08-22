@@ -439,6 +439,17 @@ Singleton {
         id: grimProbeProc
         // Constant command string - no values are spliced in.
         command: ["bash", "-c", "command -v grim"]
+        // Probed once at startup, not only when the ambient loop activates.
+        //
+        // `grimAvailable` defaults to false and the only other thing that ran
+        // this probe was `onAmbientActiveChanged`, so on a machine where the
+        // ambient loop had never been switched on the flag stayed false for the
+        // whole session - and Settings > Wallpaper & Colors reads it to caption
+        // "Only while fullscreen", which therefore told the user "The grim
+        // command was not found" while /usr/bin/grim was installed and working.
+        // A capability probe answers a question the UI asks before the feature
+        // is used, so it cannot be gated on the feature being used.
+        running: true
         onExited: (exitCode, exitStatus) => {
             root.grimAvailable = exitCode === 0; // Graceful no-op without grim
         }

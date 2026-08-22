@@ -355,6 +355,15 @@ if ! python3 "$SCRIPT_DIR/lint_edit_mode_band_fraction.py"; then
     exit 1
 fi
 
+# Static lint: a `command -v` capability probe that only runs from inside the
+# feature it gates leaves its flag at the default, and the UI reads that flag
+# before the feature is switched on.
+echo "Running capability probe gating lint..."
+if ! python3 "$SCRIPT_DIR/lint_capability_probe_gating.py"; then
+    echo "Capability probe gating lint failed."
+    exit 1
+fi
+
 # Static lint: a window's clear colour must be a literal. One that reaches alpha
 # 255 makes Qt declare the Wayland surface opaque, and nothing ever retracts
 # that, so the window loses its compositor blur for the rest of the process.

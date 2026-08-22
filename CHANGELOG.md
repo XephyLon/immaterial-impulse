@@ -79,6 +79,11 @@ own repo; the installer pins which revision it builds.
   arranged could not be seen at all. The chrome now drops to the desktop's own
   layer while a special workspace is up, so the compositor blurs and dims both
   halves of the mode together instead.
+- **Settings no longer claims grim is missing when it is installed.** The
+  "Only while fullscreen" row under Wallpaper & Colors read a capability flag
+  that was only ever probed when the ambient RGB loop was switched on — so with
+  that loop off, the row reported grim as not found on a machine where it was
+  installed and working.
 - **Edit Mode's widget drawer no longer sits flush on the screen edge.** The
   panel's rounded right corner met the edge of the display with nothing between
   them, while its other side had a full margin against the desktop. It now
