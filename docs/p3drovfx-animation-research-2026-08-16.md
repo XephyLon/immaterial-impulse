@@ -16,6 +16,9 @@
 > could not confirm something it says "not found", not "none" — and the one
 > instruction in the brief for this survey that turned out to be wrong ("we have
 > no snapping at all") is corrected in the open, in §4.1, rather than quietly.
+> Superseded on the motion question by [`p3drovfx-motion-measured-2026-08-22.md`](p3drovfx-motion-measured-2026-08-22.md),
+> which measures their entrance and exit off 60fps recordings rather than reading
+> the source, and finds the gap is adoption rather than vocabulary.
 
 ---
 
