@@ -129,13 +129,31 @@ AbstractWidget {
     function clampX(v) { return Math.max(0, Math.min(v, scaledScreenWidth - clampWidth)); }
     function clampY(v) { return Math.max(0, Math.min(v, scaledScreenHeight - clampHeight)); }
 
+    // A release a subclass answers ITSELF instead of committing a placement.
+    // The one caller is Edit Mode's drop back into the drawer, which takes the
+    // widget off the desktop rather than moving it - and a placement committed
+    // on the way out would store the drawer's own coordinates as where the
+    // user left the widget, so undoing the removal would bring it back under
+    // the panel it was dropped on.
+    //
+    // Declared here because this is the one release handler in the tree, and
+    // because a subclass cannot get in front of it: signal handlers declared at
+    // two levels of one component both run, base first, so a `onReleased` on
+    // PluginWidget would arrive after the commit it needs to prevent. Answered
+    // false by everything that is not a plugin widget, which commits exactly as
+    // before. The point is this item's own, and whoever answers maps it onward
+    // (the same contract `contextMenuRequested` carries).
+    function releaseRemovesWidget(mouseX, mouseY) { return false; }
+
     // A cancelled gesture swallows exactly its own release: see dragCancelled
     // in AbstractWidget for why the release still arrives at all.
-    onReleased: {
+    onReleased: (mouse) => {
         if (root.dragCancelled) {
             root.dragCancelled = false;
             return;
         }
+        if (root.releaseRemovesWidget(mouse.x, mouse.y))
+            return;
         root.commitPosition();
     }
 

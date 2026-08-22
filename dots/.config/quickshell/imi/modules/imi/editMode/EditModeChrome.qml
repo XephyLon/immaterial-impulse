@@ -86,4 +86,10 @@ Scope {
     // exists only while a menu is open, on the screen the widget was
     // right-clicked on, and its own loader is that gate.
     EditWidgetMenu {}
+
+    // The answer to a widget dragged back INTO the drawer - one, not one per
+    // screen, for the same reason: `plugins.enabled` is one global list, and a
+    // listener per chrome surface would remove the same widget once per
+    // monitor and spend an undo entry on each of them.
+    EditModeDrawerDrop {}
 }

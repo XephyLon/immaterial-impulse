@@ -171,12 +171,20 @@ class GroupDragIsRigid(unittest.TestCase):
         and PluginWidget overrides that one function.
         """
         base = uncommented(BASE)
-        release = re.search(r"(?m)^    onReleased: \{(.*?)^    \}", base, re.S)
+        # The handler takes the mouse event now: Edit Mode's drop back into the
+        # drawer is decided from the release POINT, and a subclass cannot get in
+        # front of this handler to read it - QML runs a base class's signal
+        # handlers first, so a second `onReleased` below would arrive after the
+        # commit it exists to prevent. The parameter list is admitted; not one
+        # of the body's rules is.
+        release = re.search(r"(?m)^    onReleased:(?: \(mouse\) =>)? \{(.*?)^    \}",
+                            base, re.S)
         assert release, "the base class no longer releases"
         body = release.group(1)
         self.assertIn("root.commitPosition();", body)
-        # The only thing the handler may do besides committing is decline to,
-        # for the release that follows a cancelled gesture. A write-back
+        # The only things the handler may do besides committing are decline to
+        # (the release that follows a cancelled gesture) and hand the release to
+        # a subclass that takes the widget off the desktop instead. A write-back
         # spelled out here would be the second copy this check exists to stop.
         for writeback in ("configEntry.x", "setPosition", "targetX ="):
             self.assertNotIn(writeback, body,
