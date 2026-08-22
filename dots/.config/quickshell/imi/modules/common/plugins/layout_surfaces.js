@@ -1,7 +1,9 @@
 .pragma library
 
 // Two widget layouts, one store: the desktop's and the lock screen's, and the
-// rule by which the second inherits the first until it is edited.
+// rule by which the second inherits the first until it is edited. Position,
+// span and PRESENCE all fork under that one rule - see the presence section
+// near the bottom for why the third joined them and why it is not per screen.
 //
 // Spec §4.3 chose ONE stored position per widget, shared by both surfaces, and
 // gave two reasons - a second position doubles the placement model, and
@@ -157,6 +159,111 @@ function withGridSize(state, surface, screenName, pluginId, value) {
     screen[pluginId] = record;
     store[screenName] = screen;
     next.lockPositions = store;
+    return next;
+}
+
+// ---- presence, forked the same way -----------------------------------------
+//
+// WHICH widgets the lock screen shows was one all-or-nothing boolean
+// (`lock.showWidgets`, "show every desktop widget while locked") while WHERE
+// they sit had already forked. So a widget could not be on the desktop and not
+// on the lock, and the model the maintainer chose for the layout was not the
+// model the presence beside it used.
+//
+// `lockPresence` is that fork, in the same shape and under the same rule:
+// ABSENT (null) means "the lock shows whatever the desktop shows", and the
+// first pick on the Lockscreen tab snapshots the desktop's enabled set into a
+// map of its own. From then on the two are independent in both directions - a
+// widget can be dropped from the lock while it stays on the desktop, and one
+// the desktop does not show can be picked for the lock alone.
+//
+// It is NOT per screen, while the layout is: `plugins.enabled` is one global
+// list rendered on every monitor (which is why Edit Mode's Remove row removes
+// everywhere), and a per-screen presence store would invent a capability the
+// desktop itself does not have. The desktop's own set lives in Config, which
+// this module cannot see, so it arrives as an argument - the caller passes
+// `Config.options.plugins.enabled`.
+//
+// `lock.showWidgets` stays above all of it as the master gate: this map says
+// which widgets the lock screen shows, that boolean says whether it shows any.
+// Which is what keeps an upgrade silent - a user who has it off sees nothing
+// on the lock today and nothing after, and a user who has it on is in the
+// following state and sees the same set they see now.
+
+// A stored map, not a list and not a sequence that crossed a QML boundary.
+// `Array.isArray` is false for the latter (109e6d897), so the length is what
+// distinguishes them - an empty map is a legitimate forked state ("the lock
+// shows nothing"), which is exactly why absence has to be spelled `null`.
+function isMap(value) {
+    return !!(value && typeof value === "object" && typeof value.length !== "number");
+}
+
+// Membership without `.includes`: `Config.options.plugins.enabled` is a QML
+// `list<string>`, which answers `length` and indices and is not obliged to
+// carry Array's methods once it has crossed into a .pragma library.
+function containsId(list, pluginId) {
+    if (!list || typeof list.length !== "number")
+        return false;
+    for (var i = 0; i < list.length; i++) {
+        if (list[i] === pluginId)
+            return true;
+    }
+    return false;
+}
+
+// Has the lock screen's widget CHOICE been picked apart from the desktop's?
+function isPresenceForked(state) {
+    return isMap(state && state.lockPresence);
+}
+
+// The snapshot a first pick forks from: the desktop's enabled set, as a map.
+// Shared by the writer below and by nothing else, for the reason
+// `forkedScreen` is shared - one answer to what a fork copies.
+function forkedPresence(desktopEnabled) {
+    var presence = {};
+    if (desktopEnabled && typeof desktopEnabled.length === "number") {
+        for (var i = 0; i < desktopEnabled.length; i++)
+            presence[desktopEnabled[i]] = true;
+    }
+    return presence;
+}
+
+// Does the lock screen show this widget? Before the fork this is the desktop's
+// own answer - the inheritance - and after it, only the lock's map.
+function lockPresent(state, desktopEnabled, pluginId) {
+    if (!pluginId)
+        return false;
+    if (isPresenceForked(state))
+        return state.lockPresence[pluginId] === true;
+    return containsId(desktopEnabled, pluginId);
+}
+
+// The next state after picking one widget onto or off the lock screen. A pick
+// on an unforked store forks it first, then the pick lands - so the very first
+// toggle leaves every OTHER widget exactly where the desktop had it, rather
+// than emptying the lock screen down to the one widget that was touched.
+function withLockPresence(state, desktopEnabled, pluginId, present) {
+    var next = Object.assign({}, state || {});
+    var presence = isPresenceForked(state)
+        ? Object.assign({}, state.lockPresence)
+        : forkedPresence(desktopEnabled);
+    if (present)
+        presence[pluginId] = true;
+    else
+        delete presence[pluginId];
+    next.lockPresence = presence;
+    return next;
+}
+
+// The next state after re-linking the lock's widget choice to the desktop's:
+// the map goes, and every widget reads through again. An unforked store is
+// returned unchanged (same object), so a caller can tell a no-op from a change
+// by identity - the same contract `withoutLockLayout` has.
+function withoutLockPresence(state) {
+    if (!isPresenceForked(state))
+        return state;
+    var next = Object.assign({}, state);
+    next.lockPresence = null;
     return next;
 }
 
