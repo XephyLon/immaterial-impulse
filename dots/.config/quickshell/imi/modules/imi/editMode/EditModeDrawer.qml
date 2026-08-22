@@ -95,6 +95,19 @@ Item {
     // is one list drawn on every monitor, so the lock's fork of it is too.
     readonly property bool lockPresenceForked: PluginState.lockPresenceForked()
 
+    // A desktop widget is being carried over this screen's drawer, so letting
+    // go will REMOVE it rather than move it. Written by the widget, because the
+    // pointer and the grab are on the background surface; drawn here, because
+    // the widget itself is under this panel by then and cannot show anything.
+    //
+    // Deliberately not gated on the SECTION showing. The reveal is one
+    // rectangle and the abandon check on the way out does not ask which section
+    // it is either: the section filters the CATALOGUE, it does not decide what
+    // the panel is. A gesture that silently did nothing on three sections out
+    // of four would be the quiet failure this repo keeps paying for.
+    readonly property bool dropWouldRemove: root.screenName !== ""
+        && GlobalStates.editDrawerDropScreen === root.screenName
+
     // Which section is showing, and which bucket a bar-widget click appends
     // to. Session state of the drawer itself; neither survives the mode.
     property string section: "widgets"
@@ -246,6 +259,23 @@ Item {
         // blurred and a translucent one is the thing that goes flat.
         color: Appearance.m3colors.m3surfaceContainer
         radius: Appearance.rounding.verylarge
+
+        // "Let go here and this widget leaves the desktop", in the drawer's
+        // OWN row vocabulary rather than a new one: a row that is being pressed
+        // paints `colLayer2Active` over this same body, and the pointer IS down
+        // for the whole of the gesture this answers, so the panel takes the
+        // pressed tone the way one of its rows would. Declared before the
+        // column so it tints the body and not the rows, and it takes the same
+        // tier whole - the one whose reference is the pointer.
+        Rectangle {
+            anchors.fill: parent
+            radius: panel.radius
+            color: root.dropWouldRemove
+                ? Appearance.colors.colLayer2Active : "transparent"
+            Behavior on color {
+                animation: Appearance.animation.elementMoveFaster.colorAnimation.createObject(this)
+            }
+        }
 
         ColumnLayout {
             id: drawerColumn
