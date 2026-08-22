@@ -15,6 +15,12 @@ ColumnLayout {
     // member, which Qt warns about on every instantiation.
     default property alias contentData: sectionContent.data
 
+    // The section's place in its page's staggered entrance (see ContentPage).
+    // Folded into `opacity` rather than written to it, because a wave that
+    // assigns `opacity` destroys whatever binding a member had.
+    property real appear: 1
+    opacity: appear
+
     Layout.fillWidth: true
     spacing: Appearance.spacing.space100
 
