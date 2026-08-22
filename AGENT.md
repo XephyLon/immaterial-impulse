@@ -2971,6 +2971,48 @@ mode is built out of are worth not re-deriving:
   state. (feat(editMode): the drawer's travel, rectangle and drop point as
   arithmetic; feat(editMode): the drawer, fed by the plugin catalogue, and
   add-at-pointer.)
+- **The drawer's reveal is the one place a clamp was a defect, and its
+  contents are the one place this tree had no cascade.** Two separate
+  findings, both measured through `EditModeMotionProbe.qml` (the mode has
+  no IPC handler, so nothing outside the shell can drive it).
+  `GlobalStates.editDrawerProgress` runs on `elementMove`, whose
+  `expressiveDefaultSpatial` curve leaves the unit box - it peaks at
+  1.0139 at 280ms and only comes back inside 1 at the end of its 500ms.
+  The desktop's own travel is that scalar times `drawerTravel`,
+  unclamped, so it overshoots and settles; `drawerRect` clamped the same
+  scalar with `Math.min(1, ...)`, so the panel arrived at 226ms and then
+  stood perfectly still for the remaining 271ms - 55% of one gesture with
+  its two halves running different motions, and nothing in the source
+  shows it. The floor stays, because the same curve run backwards
+  undershoots to -0.0139 and a negative width is a rect the input mask
+  cannot build. **A `Math.min` on a scalar animated by an overshooting
+  tier is a freeze, not a guard** - ask what the tier's curve does past 1
+  before clamping one.
+  The second finding is that the duration was never the complaint: the
+  reveal's travel is 96% done at 128ms and 100% at 226ms, so 500ms is a
+  226ms reveal plus a settle. What was missing is that everything inside
+  the panel arrived with it, which is
+  `docs/p3drovfx-motion-measured-2026-08-22.md` §4.2's finding about
+  adoption. The column's members now arrive individually through
+  `Appearance.animation.contentsArrived` and the stagger helpers, at
+  their final positions, on the three properties §3 measured - opacity, a
+  scale, and a small rise - all driven by one `appear` scalar so they
+  cannot land on different schedules. Three things about doing that are
+  not obvious. Ranking by VISIBLE position matters more here than
+  anywhere else in the tree, because four of the ten column members are
+  the sections that are not showing and an unranked wave spends four of
+  its five clamped slots on nothing. Arming and running are two events -
+  the first version reset the members at the gate, so they were drawn at
+  full strength through the whole 100ms run up to it and then blinked out
+  to cascade back in; the arm hangs off the intent flag and the wave off
+  the container's progress. And `lockLayoutRow` is deliberately left out,
+  because a `RippleButton` already writes both channels the entrance
+  wants (`interactionMotion.scale` and the disabled dim on `opacity`), so
+  a second writer of either is what `lint_interaction_motion_double.py`
+  and `lint_disabled_opacity.py` exist to fail on.
+  (fix(editMode): the drawer's reveal rides the curve the desktop rides;
+  feat(editMode): the drawer arrives as a surface and then fills;
+  test(editMode): a probe that samples the drawer's motion per frame.)
 - **What the mode may write is a failing check now**
   (`tests/lint_edit_mode_scope.py`): a write from any file under the edit-mode
   directories to a `Config.options.*` path outside spec §7.1's placement and
@@ -4068,6 +4110,93 @@ numbers were literals. Three rules live in the policy now:
 - **The step is a fraction of a catalogued duration, and it is published UNSCALED.** Whatever
   consumes it scales it once; scaling it in `Appearance` as well would apply the multiplier twice
   and a wave would run at the square of the setting.
+
+**...and a wave with no gate races the reveal it is supposed to land in.**
+`Appearance.animation.contentGate` / `contentsArrived(progress, opening)` is the
+fourth rule, and it is the one item in
+`docs/p3drovfx-motion-measured-2026-08-22.md` §4.1's cross-reference table this
+tree had nothing at all for. It is not an M3 rule: M3 says a group enters in
+sequence and says nothing about what the group's own container is doing while it
+happens, so a group here animated while its container was still growing.
+Measured off the sibling fork, their container is at 90% by 133ms and its first
+child does not reach 50% until 233ms — container, then fill.
+
+Three things about the predicate. **The two directions are deliberately
+different and the asymmetry IS the rule**: on the way in the contents wait for
+the gate; on the way out they do not leave at all, they stay drawn and ride the
+container off as one rigid transform, so the closing branch holds until the
+container has nothing left and the reset happens there, off screen. **`opening`
+is the caller's own intent flag**, never a direction inferred from the progress —
+an intent flips at the click and the progress follows, so the two branches are
+entered by different events and there is no ordering to get wrong. And **the
+gate is unitless and unscaled**, because it is a fraction of the container's own
+progress: the speed slider and the reduce-motion floor already reach it through
+whatever tier that scalar animates on, and a second gate would be the
+double-scaling the stagger step exists to avoid.
+`EditModeDrawer.qml` is the first adopter; `test_motion_policy_contract.py`
+holds it, `ExpandablePanel` and `Carousel` to one spelling.
+(feat(motion): a container-progress gate, so contents wait for their container,
+feat(editMode): the drawer arrives as a surface and then fills.)
+
+**A start value written through an animated property is not a start value — it
+is an animation the next write cancels.** The idiom reads as "put it where it
+comes from, then send it home":
+
+```qml
+function slideIn() {
+    content.y = -content.height;             // the start
+    Qt.callLater(() => { content.y = 0; });  // the end
+}
+```
+
+and it does nothing at all. `y` carries a `Behavior`, so the first write does not
+set a value — it STARTS an animation toward one. `Qt.callLater` runs in the same
+turn of the event loop, before a frame is drawn, so that animation has advanced
+~0ms when the second retargets it *from where the property already is*, and the
+result is an animation from A to A: no motion, no warning, and QML that reads
+exactly like an entrance. Measured on a 60fps capture of the wallpaper selector
+against a control pair of frames differing by 0.0000, the panel's drawn bottom
+edge went from off screen to 99.6% of its final position in ONE frame — 690px in
+17ms — for the whole life of the feature, while its exit (whose write has no
+deferred partner) animated correctly. The asymmetry read as a broken exit rather
+than as a missing entrance, and the first repair fixed the exit's curve.
+
+Declare the start state instead of writing it: `property real openProgress: 0`,
+or `scale: 0.85` as `DesktopMenu` and `EditWidgetMenu` already spell it. A
+declared initial value is not a write, so no Behavior swallows it.
+`tests/lint_animated_start_write.py` fails the suite on a body that writes an
+animated property and also defers a write to the same one; it is scoped to that
+combination because two writes alone are ordinarily an if/else.
+(fix(wallpapers): the selector arrives and dissolves instead of flying.)
+
+**And the tier a surface takes is a claim about what KIND of surface it is.**
+The wallpaper selector travelled its own full height on `sidebarSlideEnter` /
+`sidebarSlideExit`. Those exist for a sidebar — a panel fastened to a screen
+edge, whose travel IS its own extent, so a full-extent slide reads as the panel
+coming out of the edge it lives on. The selector is a floating sheet with a
+margin on all four sides, and moving it 690px in 250ms is the largest single
+motion in this shell on the surface with the most content in it. It arrives in
+place now (opacity and a scale from 0.85 on one scalar,
+`transformOrigin: Item.Top`), which is `docs/M3_GUIDELINES.md` §2's Component
+Entrance and Exit and what §2.1 of the survey measured: zero displacement on
+every frame of the entrance.
+
+Two decisions from that worth not re-deriving. **A surface's lifetime belongs to
+its exit animation, never to a Timer at the exit tier's duration** — a Behavior's
+animation starts a frame after the write that triggers it, and an accelerating
+curve carries most of its distance in its last frames, so the old Timer tore the
+window down with 14% of the exit still undrawn. That also forces the animations
+to be *started* rather than declarative, since a `Behavior` never raises
+`finished` at any duration. And **`elementMoveExit` is the wrong tier for a fade
+in place**: `emphasizedAccel` is shaped for something leaving the screen, and at
+its own 200ms it spends 46% of the transition in its last two frames — measured
+on an opacity, a panel that sits above 45% for two thirds of the exit and then
+blinks out (14, 23, 57, 100 percent gone across the last four frames).
+`elementMoveFast` at the same 200ms measured 100, 95, 76, 55, 34, 18, 9, 1.
+Where the exit is really an opacity with a scale nudge on it, the effects tier is
+the honest one — which is also what §"Expandable Content" of the guidelines
+already pairs with a spatial exit.
+(fix(wallpapers): the selector arrives and dissolves instead of flying.)
 
 A delegate cannot see its siblings, so `Carousel`'s rank stays the model index — the clamp and the
 scaled step still come from the policy, which was the half that was wrong. And a wave is a
