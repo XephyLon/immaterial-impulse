@@ -79,28 +79,54 @@ ShellRoot {
             return null;
         }
 
+        // Which column members the wave can reach, named by INDEX rather than by
+        // id: the probe reaches across a component boundary and an id list here
+        // would be a second copy of the drawer's internals. The type plus the
+        // fixed column order is enough to say which row a number belongs to,
+        // and printing the participation separately is what makes a member
+        // silently dropped from the wave distinguishable from one that simply
+        // has nothing to do.
+        function memberReport() {
+            const column = win.columnOf(chrome.drawerItem);
+            if (!column)
+                return "no column";
+            let out = "";
+            for (let i = 0; i < column.children.length; i++) {
+                const child = column.children[i];
+                const type = child.toString().split("_")[0].split("(")[0];
+                out += " " + i + ":" + type
+                    + (child.appear === undefined ? ":no-appear"
+                        : (child.visible ? ":in" : ":hidden"));
+            }
+            return out;
+        }
+
+        function sample() {
+            const ms = Date.now() - win.t0;
+            let appears = "";
+            const column = win.columnOf(chrome.drawerItem);
+            if (column) {
+                for (let i = 0; i < column.children.length; i++) {
+                    const child = column.children[i];
+                    if (child.appear === undefined || !child.visible)
+                        continue;
+                    appears += " " + i + "=" + child.appear.toFixed(3);
+                }
+            }
+            win.samples.push(ms + " " + chrome.drawerItem.x.toFixed(2)
+                + " " + chrome.drawerItem.width.toFixed(2)
+                + " " + win.editShift.toFixed(2)
+                + " " + GlobalStates.editDrawerProgress.toFixed(5)
+                + " |" + appears);
+        }
+
         FrameAnimation {
             running: win.sampling
-            onTriggered: {
-                const ms = Date.now() - win.t0;
-                let appears = "";
-                const column = win.columnOf(chrome.drawerItem);
-                if (column) {
-                    for (const child of column.children) {
-                        if (child.appear === undefined || !child.visible)
-                            continue;
-                        appears += " " + child.appear.toFixed(3);
-                    }
-                }
-                win.samples.push(ms + " " + chrome.drawerItem.x.toFixed(2)
-                    + " " + chrome.drawerItem.width.toFixed(2)
-                    + " " + win.editShift.toFixed(2)
-                    + " " + GlobalStates.editDrawerProgress.toFixed(5)
-                    + " |" + appears);
-            }
+            onTriggered: win.sample()
         }
 
         function dump(tag) {
+            console.log("[MOTION] " + tag + " members" + win.memberReport());
             console.log("[MOTION] " + tag + " begin");
             for (const line of win.samples)
                 console.log("[MOTION] " + tag + " " + line);
@@ -111,6 +137,13 @@ ShellRoot {
         SequentialAnimation {
             running: true
             PauseAnimation { duration: 3000 }
+            // The control: two frames with nothing running. Anything that
+            // differs between these two is the instrument, not the motion -
+            // a live-machine measurement without one measures something else.
+            ScriptAction { script: { win.t0 = Date.now(); win.sample(); } }
+            PauseAnimation { duration: 100 }
+            ScriptAction { script: { win.sample(); win.dump("CONTROL"); } }
+            PauseAnimation { duration: 200 }
             ScriptAction { script: { win.t0 = Date.now(); win.sampling = true;
                 GlobalStates.editDrawerOpen = true; } }
             PauseAnimation { duration: 900 }
@@ -119,7 +152,20 @@ ShellRoot {
             ScriptAction { script: { win.t0 = Date.now(); win.sampling = true;
                 GlobalStates.editDrawerOpen = false; } }
             PauseAnimation { duration: 900 }
-            ScriptAction { script: { win.sampling = false; win.dump("CLOSE");
+            ScriptAction { script: { win.sampling = false; win.dump("CLOSE"); } }
+            // ...and again over the Lock section, which is the one whose rows
+            // the catalogue-row and lock-presence work rewrote. The Widgets
+            // section above is four visible members; this one is four
+            // different ones, two of which are `RippleButton`s that ride the
+            // wave through the control's own `appear` rather than through the
+            // three channels the drawer dresses its other members with.
+            PauseAnimation { duration: 600 }
+            ScriptAction { script: { chrome.drawerItem.section = "lock"; } }
+            PauseAnimation { duration: 600 }
+            ScriptAction { script: { win.t0 = Date.now(); win.sampling = true;
+                GlobalStates.editDrawerOpen = true; } }
+            PauseAnimation { duration: 900 }
+            ScriptAction { script: { win.sampling = false; win.dump("LOCKOPEN");
                 console.log("[MOTION] done"); } }
         }
     }
