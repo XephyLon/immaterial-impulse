@@ -89,7 +89,6 @@ EASING = re.compile(r"\beasing\s*\.\s*\w+\s*:")
 # path (repo-relative, POSIX) -> number of partial takes it is allowed to keep.
 # May only go DOWN. See the header for why it exists at all.
 EXISTING = {
-    "modules/imi/overview/NiriOverview.qml": 10,
 }
 
 
