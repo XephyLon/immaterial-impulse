@@ -315,6 +315,16 @@ if ! python3 "$SCRIPT_DIR/lint_blur_region_pairing.py"; then
     exit 1
 fi
 
+# Static lint: a Behavior whose duration/easing branch on the same flag whose
+# change handler writes the animated property. The animation latches its tier
+# when it starts and nothing orders the binding update first, so a close can run
+# the entrance curve - visible only frame by frame.
+echo "Running behavior tier race lint..."
+if ! python3 "$SCRIPT_DIR/lint_behavior_tier_race.py"; then
+    echo "Behavior tier race lint failed."
+    exit 1
+fi
+
 # Static lint: a toolbar title written as an icon beside a label IS
 # IconAndTextToolbarButton's construction, so it renders as an unfilled button.
 # Nothing errors and no frame comparison can see it; it is only wrong to a

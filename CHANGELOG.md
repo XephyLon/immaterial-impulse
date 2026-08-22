@@ -37,6 +37,11 @@ own repo; the installer pins which revision it builds.
   whole thing is gone and everything is simply there.
 
 ### Fixed
+- **The wallpaper selector now leaves the way it should.** Closing it ran the
+  *entrance* curve: the panel lurched a third of the way off screen in a single
+  frame and then coasted, instead of easing away. Measured off a 60fps capture —
+  659px of travel whose first frame took 32% of it, matching the entrance curve's
+  predicted 32.6% against the exit curve's 1.3%.
 - **Edit Mode's widget drawer no longer sits flush on the screen edge.** The
   panel's rounded right corner met the edge of the display with nothing between
   them, while its other side had a full margin against the desktop. It now
