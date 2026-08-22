@@ -333,7 +333,13 @@ Item {
             color: root.sizeMode === "2x1"
                 ? Appearance.colors.colOnPrimary
                 : Appearance.colors.colOnPrimaryContainer
-            Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Appearance.animation.elementMove.duration
+                    easing.type: Appearance.animation.elementMove.type
+                    easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                }
+            }
             opacity: monthLabel.present ? 1 : 0
             Behavior on opacity { Expressive.SpanFade {} }
             visible: opacity > 0
@@ -492,7 +498,13 @@ Item {
                     color: dayCell.cell.isToday && dayCell.present && dayCell.slot.pill > 0
                         ? Appearance.colors.colOnPrimary
                         : Appearance.colors.colOnPrimaryContainer
-                    Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Appearance.animation.elementMove.duration
+                            easing.type: Appearance.animation.elementMove.type
+                            easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                        }
+                    }
                     opacity: dayCell.cell.currentMonth ? 1.0 : 0.3
                 }
             }

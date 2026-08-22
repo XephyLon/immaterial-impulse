@@ -342,7 +342,13 @@ Item {
                 Behavior on font.pixelSize { SpanTravel {} }
                 font.weight: Font.Bold
                 color: root.sizeMode === "1x1" ? Appearance.colors.colPrimary : Appearance.colors.colOnPrimaryContainer
-                Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Appearance.animation.elementMove.duration
+                        easing.type: Appearance.animation.elementMove.type
+                        easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                    }
+                }
             }
 
             // ---- the quote cells: 1-2 shared, 3-4 enter and exit ----------
@@ -413,7 +419,13 @@ Item {
                         Behavior on font.pixelSize { SpanTravel {} }
                         font.weight: quoteCell.lastSlot.stacked ? Font.Bold : Font.DemiBold
                         color: quoteCell.inkColor
-                        Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Appearance.animation.elementMove.duration
+                                easing.type: Appearance.animation.elementMove.type
+                                easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                            }
+                        }
                         opacity: quoteCell.lastSlot.stacked ? 1 : 0.6
                         Behavior on opacity { SpanFade {} }
                     }
@@ -440,7 +452,13 @@ Item {
                         font.pixelSize: Appearance.font.pixelSize.small
                         font.weight: Font.Bold
                         color: quoteCell.inkColor
-                        Behavior on color { ColorAnimation { duration: Appearance.animation.elementMove.duration } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Appearance.animation.elementMove.duration
+                                easing.type: Appearance.animation.elementMove.type
+                                easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                            }
+                        }
                     }
                 }
             }
