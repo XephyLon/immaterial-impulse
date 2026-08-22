@@ -532,6 +532,57 @@ TestCase {
             400 * 1.0139 * 0.5, 1e-9);
     }
 
+    function test_a_point_is_on_the_reveal_or_it_is_not() {
+        // The predicate both directions of the drawer's drag ask: a row let go
+        // back over the drawer is abandoned, a widget carried in off the
+        // desktop and let go there is removed. Driven against the real rect so
+        // the check cannot agree with an expression of its own.
+        const open = EditMode.drawerRect(narrow, 1, 1, 1600, 1000);
+        verify(EditMode.pointInDrawerReveal(open,
+            open.x + open.width / 2, open.y + open.height / 2));
+        // A point to the LEFT of the panel is the desktop, which is the whole
+        // of the distinction this exists to draw.
+        verify(!EditMode.pointInDrawerReveal(open, open.x - 1,
+            open.y + open.height / 2));
+        verify(!EditMode.pointInDrawerReveal(open, open.x + open.width + 1,
+            open.y + open.height / 2));
+        // The bands above and below the card: the chrome's own toolbar and tab
+        // bar live there, and the panel does not.
+        verify(!EditMode.pointInDrawerReveal(open,
+            open.x + open.width / 2, open.y - 1));
+        verify(!EditMode.pointInDrawerReveal(open,
+            open.x + open.width / 2, open.y + open.height + 1));
+        // The edges themselves are on it - the same closed interval the input
+        // mask's rect covers.
+        verify(EditMode.pointInDrawerReveal(open, open.x, open.y));
+        verify(EditMode.pointInDrawerReveal(open,
+            open.x + open.width, open.y + open.height));
+    }
+
+    function test_a_closed_drawer_is_not_a_drop_target_at_all() {
+        // "The drawer is open" is not a second term anywhere: a closed drawer
+        // is a zero-width rect, and a widget released on the seam it collapsed
+        // to must be MOVED there rather than removed. A test that read only
+        // x/y would answer true for every point on that seam.
+        const closed = EditMode.drawerRect(narrow, 1, 0, 1600, 1000);
+        compare(closed.width, 0);
+        verify(!EditMode.pointInDrawerReveal(closed, closed.x, closed.y));
+        verify(!EditMode.pointInDrawerReveal(closed, closed.x,
+            closed.y + closed.height / 2));
+        // Mid-slide it is a target for exactly the strip it has revealed, and
+        // for nothing to the left of it.
+        const half = EditMode.drawerRect(narrow, 1, 0.5, 1600, 1000);
+        verify(EditMode.pointInDrawerReveal(half, half.x + 1,
+            half.y + half.height / 2));
+        verify(!EditMode.pointInDrawerReveal(half, half.x - 1,
+            half.y + half.height / 2));
+        // And a missing rect is not a drop target: the desktop's surface reads
+        // the reveal the chrome PUBLISHES, and there is none while the mode is
+        // off or on a screen whose chrome has not come up yet.
+        verify(!EditMode.pointInDrawerReveal(null, 10, 10));
+        verify(!EditMode.pointInDrawerReveal(undefined, 10, 10));
+    }
+
     function test_a_screen_point_maps_back_into_the_canvas() {
         // The inverse of the one transform, for the drop: a drop lands in
         // SCREEN coordinates and the store speaks canvas ones. Round-tripped

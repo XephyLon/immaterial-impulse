@@ -442,6 +442,33 @@ function drawerRect(geometry, progress, drawerProgress, screenWidth, screenHeigh
     };
 }
 
+// Is a SCREEN point on the drawer's reveal?
+//
+// One spelling, because the same rectangle answers the two halves of one
+// gesture and they run in opposite directions. A row dragged OUT of the drawer
+// and let go back over it is the gesture being ABANDONED; a widget dragged in
+// off the desktop and let go over it is the widget being REMOVED. Two
+// hand-written bounds checks would be two answers to "is the pointer on the
+// drawer", and the second one is the one nobody looks at.
+//
+// "The drawer is open" needs no term of its own: a closed drawer is a
+// zero-width rect - `drawerRect` animates the WIDTH precisely so the surface's
+// input mask collapses with it - so the emptiness test below is the same
+// question asked of the same number.
+//
+// Written against the four fields rather than against a type, so a caller may
+// hand in this module's own answer or the QML `rect` a surface stored it in.
+function pointInDrawerReveal(reveal, x, y) {
+    if (!reveal)
+        return false;
+    const width = reveal.width || 0;
+    const height = reveal.height || 0;
+    if (!(width > 0) || !(height > 0))
+        return false;
+    return x >= reveal.x && x <= reveal.x + width
+        && y >= reveal.y && y <= reveal.y + height;
+}
+
 // The inverse of the one transform, for the drop: a release from the drawer
 // arrives in SCREEN coordinates and the store speaks canvas ones. Composed out
 // of `atProgress` rather than written as its own arithmetic so the two
