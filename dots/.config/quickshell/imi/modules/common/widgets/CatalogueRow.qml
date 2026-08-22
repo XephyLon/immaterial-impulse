@@ -56,8 +56,9 @@ ColumnLayout {
     // pushed to the far edge. The two are exclusive, so it is one flag.
     property bool titleElides: false
 
+    // Always one size down from the title - every one of the seven rows this
+    // replaced agreed on that, so it is not a knob.
     property string description: ""
-    property alias descriptionFont: descriptionLabel.font
     property color descriptionColor: Appearance.colors.colSubtext
     // Wrapping is right where the row grows to fit (a settings page, a store
     // card) and wrong in a fixed-height list, where the second line is simply
