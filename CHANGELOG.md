@@ -13,6 +13,19 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **Edit Mode's widget drawer no longer sits flush on the screen edge.** The
+  panel's rounded right corner met the edge of the display with nothing between
+  them, while its other side had a full margin against the desktop. It now
+  keeps a gap on the side it opens against.
+- **Edit Mode's desktop preview got bigger.** The toolbar and the tab bar each
+  reserved a full margin of air between themselves and the edge of the screen,
+  on the axis that decides how far the desktop shrinks — so both came straight
+  off the preview. The outer gap is now half the inner one, and on a 5120x1440
+  display the preview grows from 4380x1232 to 4466x1256.
+- **"Edit layout" no longer looks like a button you can press.** It was an icon
+  beside a label sitting flat in a row of controls, which is exactly how the
+  toolbar draws an unfilled button. It now reads as the title it is, with a
+  rule separating it from the buttons.
 - **Running the test suite no longer opens windows over what you are doing.**
   Five test harnesses started the shell on the session's own display, so a
   suite run flashed real windows across the screen — and a harness that draws a
