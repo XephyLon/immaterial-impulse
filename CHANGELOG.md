@@ -34,15 +34,17 @@ own repo; the installer pins which revision it builds.
   Your presets carry the choice.
 
 ### Changed
-- **The session screen, the settings pages and the right sidebar now arrive in
-  sequence instead of all at once.** The session screen's nine action buttons,
-  a settings page's sections and the sidebar's cards each fade in one after the
-  other, a few hundredths of a second apart, so a panel reads as content
-  arriving rather than as a picture switching on. The wave is bounded, so a
-  long list never cascades for seconds, and anything hidden in the group is
-  skipped rather than leaving a gap in the middle of it. Both the animation
-  speed slider and the reduce-motion switch reach it: with reduced motion the
-  whole thing is gone and everything is simply there.
+- **The session screen and the settings pages now arrive in sequence instead of
+  all at once.** The session screen's nine action buttons and a settings page's
+  sections each fade in one after the other, a few hundredths of a second
+  apart, so a panel reads as content arriving rather than as a picture
+  switching on. The wave is bounded, so a long list never cascades for seconds,
+  and anything hidden in the group is skipped rather than leaving a gap in the
+  middle of it. Both the animation speed slider and the reduce-motion switch
+  reach it: with reduced motion the whole thing is gone and everything is
+  simply there. The right sidebar was given the same treatment during this
+  cycle and has had it taken back off — it opens in one frame with its own
+  slide, the way it always did.
 
 ### Fixed
 - **The password box in the authentication prompt draws the same animated
