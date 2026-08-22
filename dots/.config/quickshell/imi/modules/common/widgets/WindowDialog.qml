@@ -42,6 +42,16 @@ Rectangle {
         onPressed: root.dismiss()
     }
 
+    // Every other floating body in this shell casts one - StyledPopup, the
+    // toolbars, the tray menu, the notification cards - and the dialog card was
+    // the one surface that sat on a scrim with nothing under it, so its edge
+    // was a tonal step against the scrim and nothing else. Declared BEFORE the
+    // card so it draws under it, and anchored to the card so it follows the
+    // open animation's height rather than needing a gate of its own.
+    StyledRectangularShadow {
+        target: dialogBackground
+    }
+
     Rectangle {
         id: dialogBackground
         anchors.horizontalCenter: parent.horizontalCenter
