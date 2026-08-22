@@ -4178,6 +4178,16 @@ Three things about it are not obvious.
   height, and it is exactly what a fixed-height list row hands it — the same defect
   `EditModeDrawerLayoutProbe` exists for, one component down.
 
+- **Every row body in the drawer is that component, checked per BODY rather than per file.** The
+  first version of the check asked only whether `CatalogueRow` appeared in `EditModeDrawer.qml` at
+  all, which is true of a drawer where five rows share it and a sixth is spelled out beside them —
+  and that is precisely the state two branches arrive in when one extracts the component while the
+  other grows a row. The Lock section's widget-choice re-link was written as a hand-rolled
+  icon/label/label/glyph `RowLayout` on a branch that never saw the extraction, and a textual merge
+  keeps it: one row in the drawer free to drift from the other six, in the file the extraction
+  exists to keep from drifting. A row body here is a `contentItem:`, so the rule is that every
+  `contentItem:` in that file names the shared row.
+
 Adopting it must not move a settings row: 159 call sites, and a page that reflows is the failure.
 Measured before and after against a real window under headless weston — `ConfigSwitch`'s
 implicitHeight 31 / 44 / 62 / 44 for a plain row, an icon+wrapping-description row, an
@@ -4186,7 +4196,8 @@ and the disabled row still dimmed exactly once at 0.400.
 ("feat(widgets): CatalogueRow, the entry shape four surfaces each spelled out",
 "refactor(widgets): ConfigSwitch draws its row through CatalogueRow",
 "refactor(editMode): the drawer's five row shapes become one",
-"refactor(store): a store card's identity is the shared catalogue row").
+"refactor(store): a store card's identity is the shared catalogue row",
+"test(editMode): hold every drawer row body to the shared catalogue row").
 
 **A marquee is the answer for an IDENTITY, and where it may run is as much of the design as how it
 moves.** `MarqueeText` exists because every long label in this shell elides, which is honest about

@@ -626,12 +626,12 @@ def test_every_pixel_that_is_not_chrome_falls_through_to_the_desktop():
 def test_the_drawer_draws_its_rows_with_a_component_that_is_not_a_control():
     """The shared row must stay a plain item, or the drag out of the drawer dies.
 
-    The drawer's five catalogues (desktop widgets, bar widgets, dock apps, the
-    lock islands, the lock layout) all draw `CatalogueRow` now, and the same
-    component draws every settings row and every widget-store card - so the
-    tempting next edit is to fold the hover, the cursor and the click into it
-    and let the call sites stop repeating themselves. That would take the
-    desktop section's rows with it.
+    The drawer's catalogues (desktop widgets, bar widgets, dock apps, the lock
+    islands and their per-widget picker, the two lock re-link rows) all draw
+    `CatalogueRow` now, and the same component draws every settings row and
+    every widget-store card - so the tempting next edit is to fold the hover,
+    the cursor and the click into it and let the call sites stop repeating
+    themselves. That would take the desktop section's rows with it.
 
     Those rows are `MouseArea`s by construction (65602708e): a drag out of a
     clipped panel needs the implicit grab of the press to keep delivering
@@ -656,6 +656,19 @@ def test_the_drawer_draws_its_rows_with_a_component_that_is_not_a_control():
     assert "delegate: MouseArea {" in drawer and "preventStealing: true" in drawer, \
         ("the desktop section's rows stopped being pointer areas - a Button "
          "does not keep delivering events once the pointer leaves the drawer")
+    # Every row body in the file is that component, not just one of them. The
+    # check above passes on a drawer where five rows share the component and a
+    # sixth is spelled out beside them, which is exactly the state a branch
+    # that grew a row while the extraction was landing arrives in: the lock
+    # section's widget-choice re-link was written as a hand-rolled
+    # icon/label/label/glyph RowLayout, and merging the two left it as the one
+    # row in the drawer that would drift on its own. A row body here is a
+    # `contentItem:`, and every one of them has to name the shared row.
+    bodies = re.findall(r"contentItem:\s*(\w+)", drawer)
+    assert bodies, "no row bodies found in the drawer - this check reads nothing"
+    assert set(bodies) == {"CatalogueRow"}, (
+        "a drawer row is spelled out by hand instead of drawing the shared "
+        f"catalogue row: {sorted(set(bodies) - {'CatalogueRow'})}")
 
 
 def test_the_chrome_surface_leaves_the_keyboard_to_the_desktop():
