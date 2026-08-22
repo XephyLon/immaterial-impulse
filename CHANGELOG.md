@@ -72,6 +72,12 @@ own repo; the installer pins which revision it builds.
 - **The niri-style overview scrolls smoothly to the workspace you switch to.**
   Its scroll had asked for one tier's timing and another's curve, which resolved
   to no curve at all.
+- **Edit Mode no longer draws on top of a scratchpad.** Summoning a special
+  workspace while editing left the toolbar, the tab bar and the widget drawer
+  painted over the window, with the desktop they belong to hidden underneath
+  it — so the mode was not merely untidy, it was unusable: the widgets being
+  arranged could not be seen at all. The chrome now stands down while a special
+  workspace is up on that monitor, and comes back when it goes.
 - **Edit Mode's widget drawer no longer sits flush on the screen edge.** The
   panel's rounded right corner met the edge of the display with nothing between
   them, while its other side had a full margin against the desktop. It now

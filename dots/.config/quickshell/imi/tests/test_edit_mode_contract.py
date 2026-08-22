@@ -189,7 +189,11 @@ def test_nothing_computes_the_mode_from_anything_but_the_one_flag():
                 # The chrome surface's own layer-shell namespace, which is a
                 # string and not a predicate at all.
                 or "WlrLayershell.namespace" in line
-                or line.lstrip().startswith("//")
+                # Comments, in either spelling. The sweep only admitted `//`,
+                # so a `/** */` line naming `quickshell:editMode` - which the
+                # chrome scope's own header does, to say which layer it is on -
+                # read as a second source for the mode.
+                or line.lstrip().startswith(("//", "*", "/*"))
             )
             assert allowed, f"{path.name}: a second source for the mode: {line.strip()}"
 
@@ -333,6 +337,40 @@ def test_the_chrome_stands_down_through_two_gates_and_not_one():
     assert "card: bgRoot.editCard" in body and "cardRadius: bgRoot.editCardRadius" in body
     assert "EditMode.cardRect(" in text, \
         "the card's rectangle must come from the same arithmetic as the transform"
+
+
+def test_the_chrome_yields_to_a_workspace_summoned_over_the_desktop():
+    # The mode's two halves are on opposite sides of the window stack: the
+    # desktop being edited is `quickshell:background` on WlrLayer.Bottom, this
+    # chrome is `quickshell:editMode` on WlrLayer.Overlay. Anything covering the
+    # screen lands between them - the desktop is hidden and the toolbar, tab bar
+    # and drawer are painted over the top of it, which is not untidy but
+    # unusable: the widgets being arranged cannot be seen.
+    #
+    # Static because no harness can see it. weston implements no
+    # wlr-layer-shell, so nothing in the suite maps either surface, let alone
+    # stacks a window between two of them.
+    text = read(CHROME_SCOPE)
+    assert "specialWorkspace" in text, \
+        "the chrome no longer yields to a scratchpad summoned over the desktop"
+    # Per MONITOR, because a scratchpad is per monitor. Read off this screen's
+    # own Hyprland record rather than off a global "is one open anywhere".
+    assert re.search(r"HyprlandData\.monitors\.find\(", text), \
+        "the special-workspace state must be read for THIS screen"
+    assert re.search(r"monitor\.name === surfaceLoader\.modelData\?\.name", text), \
+        "the monitor must be matched by name; screens and monitors are two " \
+        "lists that are not promised to share an order"
+    # ...and the gate has to reach the Loader's `active`. A property computed
+    # and never spent is the shape that passes a grep and changes nothing.
+    assert re.search(r"active:.*\n?.*specialShown", text), \
+        "the special-workspace gate is computed but not applied to the loader"
+    # A layer change is the wrong fix and must not be what someone reaches for:
+    # Overlay and Top are both above every window, and Bottom is where the
+    # desktop already is.
+    surface = read(CHROME_SURFACE)
+    assert "WlrLayer.Overlay" in surface, \
+        "the chrome left Overlay; if this was an attempt to get under a " \
+        "window, no layer does that except the one the desktop is already on"
 
 
 def test_the_lattice_declares_where_it_sits_rather_than_inheriting_it():
@@ -704,14 +742,22 @@ def test_the_chrome_surface_mints_a_namespace_and_declares_it_to_the_compositor(
         "the chrome must sit above the bar and the dock"
 
 
-def test_the_chrome_stands_down_through_two_gates_of_its_own():
-    # The same lesson as the desktop card's, on a surface this time: either gate
-    # alone hides the chrome, so a frame comparison passes on a tree with one of
-    # them deleted - and then the survivor gets deleted as redundant.
+def test_the_chrome_stands_down_through_three_gates_of_its_own():
+    # The same lesson as the desktop card's, on a surface this time: any gate
+    # alone hides the chrome, so a frame comparison passes on a tree with the
+    # others deleted - and then the survivors get deleted as redundant. Each is
+    # pinned by what it reads, not by the whole expression, so adding a fourth
+    # does not have to edit this test to keep the first three honest.
     scope = read(CHROME_SCOPE)
-    assert re.search(r"active:\s*GlobalStates\.editMode \|\| GlobalStates\.editProgress > 0",
-                     scope), \
+    active = re.search(r"active:(.*?)\n\n", scope, re.S)
+    assert active, "the chrome loader has no `active` binding"
+    body = active.group(1)
+    assert "GlobalStates.editMode" in body, \
         "the chrome surface must not exist while the mode is off"
+    assert "GlobalStates.editProgress > 0" in body, \
+        "the chrome must outlive the flag to travel back out with the desktop"
+    assert "specialShown" in body, \
+        "the chrome must stand down while a scratchpad is summoned over the desktop"
     assert re.search(r"opacity:\s*GlobalStates\.editProgress", read(CHROME_SURFACE)), \
         "the chrome must be transparent while the mode is off"
 
