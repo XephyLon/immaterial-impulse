@@ -7,6 +7,9 @@
 > repo-relative; ours are relative to `dots/.config/quickshell/imi/`.
 > Line counts are `wc -l` on the cloned tree.
 > Where a conclusion is reasoning rather than reading, it is marked **(inference)**.
+> Superseded on the motion question by [`p3drovfx-motion-measured-2026-08-22.md`](p3drovfx-motion-measured-2026-08-22.md),
+> which measures their entrance and exit off 60fps recordings rather than reading
+> the source, and finds the gap is adoption rather than vocabulary.
 
 ---
 
