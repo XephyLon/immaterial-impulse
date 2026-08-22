@@ -72,14 +72,26 @@ Item {
     // while locked. A signal like everything else here; the surface makes the
     // write at the boolean's own literal path.
     signal lockToggleRequested(string key)
+    // One widget's presence on the lock screen. The first one forks the lock's
+    // widget choice from the desktop's, the same way the first move forks the
+    // layout - the drawer never forks by itself, a pick does.
+    signal lockWidgetToggleRequested(string pluginId)
     // The lock layout's re-link: this screen's widgets go back to following
     // the desktop's arrangement. Only offered while the screen is forked.
     signal lockLayoutResetRequested()
+    // The same, for the widget choice. Two questions, two re-links: a user who
+    // arranged the lock screen apart from the desktop has not necessarily
+    // picked a different set of widgets for it, and re-linking one must not
+    // silently discard the other.
+    signal lockPresenceResetRequested()
 
     // Which screen this drawer is arranging - handed in by the surface, so
     // the fork question below is asked about the right monitor.
     property string screenName: ""
     readonly property bool lockLayoutForked: PluginState.lockLayoutForked(root.screenName)
+    // Presence is one global choice, not a per-screen one: `plugins.enabled`
+    // is one list drawn on every monitor, so the lock's fork of it is too.
+    readonly property bool lockPresenceForked: PluginState.lockPresenceForked()
 
     // Which section is showing, and which bucket a bar-widget click appends
     // to. Session state of the drawer itself; neither survives the mode.
@@ -117,16 +129,40 @@ Item {
     // scope lint's allowlist has carried since it was written. Translation.tr
     // in a binding, so a language change re-evaluates the rows.
     readonly property var lockIslandRows: [
-        { key: "showToolbars", name: Translation.tr("Toolbars"),
+        { kind: "island", key: "showToolbars", name: Translation.tr("Toolbars"),
             icon: "call_to_action",
             description: Translation.tr("The islands beside the password field") },
-        { key: "showMedia", name: Translation.tr("Media player"),
+        { kind: "island", key: "showMedia", name: Translation.tr("Media player"),
             icon: "music_note",
             description: Translation.tr("Playback info while music is playing") },
-        { key: "showWidgets", name: Translation.tr("Desktop widgets"),
+        { kind: "island", key: "showWidgets", name: Translation.tr("Desktop widgets"),
             icon: "widgets",
-            description: Translation.tr("Show every desktop widget while locked") }
+            // The master gate's own caption has to say which of the two states
+            // the choice below it is in, or "every" goes on claiming something
+            // the picked rows have stopped doing.
+            description: root.lockPresenceForked
+                ? Translation.tr("Show the widgets picked below while locked")
+                : Translation.tr("Show every desktop widget while locked") }
     ]
+
+    // The per-widget presence rows, under the master gate: with
+    // `lock.showWidgets` off the lock screen shows no desktop widget at all,
+    // so a picker there would be a row of controls that change nothing. The
+    // gate is the row directly above them.
+    readonly property var lockWidgetRows: Config.options.lock.showWidgets
+        ? root.desktopManifests.map(manifest => ({
+            kind: "widget",
+            id: manifest.id,
+            name: manifest.name,
+            icon: "widgets",
+            description: manifest.description ?? ""
+        }))
+        : []
+
+    // One list, two kinds of row: the islands, then the widgets they sit
+    // among. Two ListViews would each want the column's height and would put
+    // the picker's own scroll position somewhere the islands are not.
+    readonly property var lockRows: root.lockIslandRows.concat(root.lockWidgetRows)
 
     Rectangle {
         id: panel
@@ -497,11 +533,12 @@ Item {
                 Layout.fillHeight: true
                 clip: true
                 spacing: Appearance.spacing.space25
-                model: root.section === "lock" ? root.lockIslandRows : []
+                model: root.section === "lock" ? root.lockRows : []
 
                 delegate: RippleButton {
                     id: lockRow
                     required property var modelData
+                    readonly property bool isWidget: lockRow.modelData.kind === "widget"
                     // Read per key rather than bracket-indexed: the scope
                     // lint forbids a computed lock path even for a read's
                     // shape, and three keys do not need a lookup.
@@ -510,6 +547,13 @@ Item {
                         : lockRow.modelData.key === "showMedia"
                             ? Config.options.lock.showMedia
                             : Config.options.lock.showWidgets
+                    // A widget row's check follows the lock's own choice,
+                    // which reads through to the desktop's enabled set until
+                    // the first pick forks it - so the rows open showing
+                    // exactly what the lock screen shows today.
+                    readonly property bool rowOn: lockRow.isWidget
+                        ? PluginState.lockWidgetEnabled(lockRow.modelData.id)
+                        : lockRow.islandOn
 
                     width: lockList.width
                     implicitHeight: 60
@@ -517,12 +561,20 @@ Item {
                     colBackground: "transparent"
                     colBackgroundHover: Appearance.colors.colLayer2Hover
                     colRipple: Appearance.colors.colLayer2Active
-                    onClicked: root.lockToggleRequested(lockRow.modelData.key)
+                    onClicked: lockRow.isWidget
+                        ? root.lockWidgetToggleRequested(lockRow.modelData.id)
+                        : root.lockToggleRequested(lockRow.modelData.key)
 
                     contentItem: CatalogueRow {
                         anchors {
                             fill: parent
-                            leftMargin: Appearance.spacing.space100
+                            // The widget rows are the master gate's contents,
+                            // and the indent is what says so - they follow it
+                            // in one list and would otherwise read as three
+                            // more things the lock screen has.
+                            leftMargin: lockRow.isWidget
+                                ? Appearance.spacing.space300
+                                : Appearance.spacing.space100
                             rightMargin: Appearance.spacing.space100
                         }
                         rowSpacing: Appearance.spacing.space100
@@ -535,20 +587,81 @@ Item {
                         titleColor: Appearance.colors.colOnSurface
                         titleFillsWidth: true
                         titleElides: true
-                        description: lockRow.modelData.description
+                        // A widget row carries the manifest's own
+                        // description, which a manifest may omit - the shared
+                        // row draws the label only when it has one, so the
+                        // `?? ""` is about not assigning undefined to a
+                        // string, not about the empty row's height.
+                        description: lockRow.modelData.description ?? ""
                         descriptionColor: Appearance.colors.colOnSurfaceVariant
                         descriptionWraps: false
 
                         affordance: [
                             MaterialSymbol {
-                                text: lockRow.islandOn ? "check_circle" : "add"
+                                text: lockRow.rowOn ? "check_circle" : "add"
                                 iconSize: 20
-                                color: lockRow.islandOn
+                                color: lockRow.rowOn
                                     ? Appearance.colors.colPrimary
                                     : Appearance.colors.colOnSurfaceVariant
                             }
                         ]
                     }
+                }
+            }
+
+            // ---- lock screen widget choice: forked or following -----------
+            //
+            // The same row the layout gets below, for the other half of the
+            // fork: which widgets the lock screen shows inherits the desktop's
+            // set until the first pick above, and this says which state it is
+            // in and offers the way back. Only while the master gate is on -
+            // with the lock showing no widgets at all, "follows the desktop"
+            // is a claim about a set nobody can see.
+            RippleButton {
+                id: lockPresenceRow
+                visible: root.section === "lock" && Config.options.lock.showWidgets
+                enabled: root.lockPresenceForked
+                Layout.fillWidth: true
+                Layout.fillHeight: false
+                implicitHeight: 60
+                buttonRadius: Appearance.rounding.large
+                colBackground: "transparent"
+                colBackgroundHover: Appearance.colors.colLayer2Hover
+                colRipple: Appearance.colors.colLayer2Active
+                onClicked: root.lockPresenceResetRequested()
+
+                contentItem: CatalogueRow {
+                    anchors {
+                        fill: parent
+                        leftMargin: Appearance.spacing.space100
+                        rightMargin: Appearance.spacing.space100
+                    }
+                    rowSpacing: Appearance.spacing.space100
+
+                    rowIcon: root.lockPresenceForked ? "call_split" : "link"
+                    rowIconSize: 22
+                    rowIconColor: Appearance.colors.colOnSurfaceVariant
+                    title: root.lockPresenceForked
+                        ? Translation.tr("Widget choice is separate")
+                        : Translation.tr("Widget choice follows the desktop")
+                    titleFont.pixelSize: Appearance.font.pixelSize.normal
+                    titleColor: Appearance.colors.colOnSurface
+                    titleFillsWidth: true
+                    titleElides: true
+                    description: root.lockPresenceForked
+                        ? Translation.tr("Click to show the desktop's widgets again")
+                        : Translation.tr("Pick a widget above to choose the lock screen's own")
+                    descriptionColor: Appearance.colors.colOnSurfaceVariant
+                    descriptionWraps: false
+
+                    affordance: [
+                        MaterialSymbol {
+                            visible: root.lockPresenceForked
+                            text: "restart_alt"
+                            iconSize: 20
+                            color: Appearance.colors.colOnSurfaceVariant
+                        }
+                    ]
                 }
             }
 

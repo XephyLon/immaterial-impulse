@@ -72,7 +72,9 @@ Item {
     signal barWidgetAddRequested(string widgetId, string bucket)
     signal dockAppToggleRequested(string appId)
     signal lockIslandToggleRequested(string key)
+    signal lockWidgetToggleRequested(string pluginId)
     signal lockLayoutResetRequested()
+    signal lockPresenceResetRequested()
 
     // Where in its band each chrome piece sits, as a fraction of the band's
     // slack - `edit_mode.js`'s `chromeBandFraction`, which is 0.5 exactly when
@@ -269,7 +271,9 @@ Item {
         onBarAddRequested: (widgetId, bucket) => root.barWidgetAddRequested(widgetId, bucket)
         onDockToggleRequested: (appId) => root.dockAppToggleRequested(appId)
         onLockToggleRequested: (key) => root.lockIslandToggleRequested(key)
+        onLockWidgetToggleRequested: (pluginId) => root.lockWidgetToggleRequested(pluginId)
         onLockLayoutResetRequested: root.lockLayoutResetRequested()
+        onLockPresenceResetRequested: root.lockPresenceResetRequested()
         screenName: root.screenName
     }
 }
