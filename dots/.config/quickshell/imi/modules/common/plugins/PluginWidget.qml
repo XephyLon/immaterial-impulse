@@ -463,6 +463,15 @@ AbstractBackgroundWidget {
             point.x, point.y);
     }
 
+    // The drawer lights up while the release would remove rather than move -
+    // the widget itself cannot say so, because it is drawn on the surface
+    // BELOW the chrome and passes under the panel it is being carried into.
+    onPositionChanged: (mouse) => {
+        if (!rootWidget.dragging) return;
+        GlobalStates.editDrawerDropScreen = rootWidget.dropWouldRemove(mouse.x, mouse.y)
+            ? rootWidget.screenName : "";
+    }
+
     // Runs BEFORE AbstractBackgroundWidget's commit, which is why the decision
     // is a function that handler asks rather than a release handler of its own.
     // Nothing about the position is written: the store still holds where the
@@ -474,6 +483,19 @@ AbstractBackgroundWidget {
         rootWidget.restoreXYBinding();
         GlobalStates.editWidgetDroppedOnDrawer(manifest.id);
         return true;
+    }
+
+    // The hint is cleared by the END OF THE GESTURE rather than by a release
+    // handler of its own, which covers the release, the cancel and Edit Mode
+    // ending mid-drag in one place - and keeps this file free of the second
+    // `onReleased` test_widget_group_selection.py refuses, because a widget
+    // with two release paths is how the write-back came to have two copies.
+    // It runs BEFORE the base's commit branch (a base class's handlers run
+    // first), and the removal re-asks the pointer rather than reading this, so
+    // the order costs nothing.
+    onDraggingChanged: {
+        if (!rootWidget.dragging)
+            GlobalStates.editDrawerDropScreen = "";
     }
 
     // A widget destroyed while its menu is open must not strand the menu - the
