@@ -2455,8 +2455,13 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   place of the native glyphs; without `enabled: false` on that overlay's `Loader`, clicking the
   field just fed the click to the Flickable instead, so the field never focused and typing appeared
   to do nothing. This only surfaces where focus is obtained by clicking - `LockSurface.qml`'s
-  password box uses the identical overlay structure but never hit this, since it
+  password box used the identical overlay structure and never hit this, since it
   `forceActiveFocus()`s itself programmatically instead of depending on a click.
+  That asymmetry is why the overlay is not a call site's business any more:
+  `modules/common/widgets/PasswordField.qml` owns it, carries the `enabled: false`, and is what
+  both of the shell's password prompts are - see the entry on it under
+  [Design language](#design-language). `ConfigTextArea` keeps its own copy, because a `TextArea`
+  has no `echoMode` and masks by a different mechanism entirely.
 - **`Item.visible` reads back EFFECTIVE visibility, so a container that hides
   itself from its child's `visible` latches.** The sibling of the `enabled`
   trap below, and it bites the other way round: `visible` is the item's own flag
@@ -4488,6 +4493,9 @@ lift and the bounce are magnitudes travelling along `dock_geometry.js`'s inward 
 negative y),
 `ToolbarTextField` (the shell's text field: a filled pill, from the launcher's search box to the
 lock screen's password box - see the note above on why `MaterialTextField` is not this),
+`PasswordField` (that field masked: the shell's ONE password prompt, drawing a Material shape per
+character through `PasswordChars` - reach for this rather than an `echoMode`, and read the entry
+above before adding a third call site),
 `SchemePaletteCircle` (an Android 12-style palette circle for a colour scheme, fed from
 `services/SchemePreview`, with the scheme's glyph as the fallback while the colour venv has not
 answered),
@@ -4633,6 +4641,27 @@ rather than sanctioned; `modules/imi/sidebarRight/wifiNetworks/WifiNetworkItem.q
 of them that is a password prompt.
 f957d9e59 ("fix(polkit): give the auth prompt the field the rest of the shell uses").
 
+**...and the same two prompts then drifted again in the half a type name does not carry, which is
+why the masking is a control now.** Both were `ToolbarTextField`s, so the check above was green,
+and only one of them drew the shell's masked characters: the lock screen paints a `PasswordChars`
+overlay - one `MaterialShape` per character, each animating in as it is typed - while the polkit
+dialog set `echoMode: TextInput.Password` and got the system's flat bullets. Masking is not one
+property, which is the whole reason a second call site gets it wrong: it is a transparent glyph
+colour, a transparent selection PAIR, an overlay `Loader` anchored inside the field's own padding,
+that overlay's `enabled: false`, and `Config.options.lock.materialShapeChars` gating all of it.
+`modules/common/widgets/PasswordField.qml` is the one control that owns those five, and both
+prompts are one. Two things about adopting it. The unmasked glyph colour has to stay a property
+(`colText`) rather than being folded in - the lock screen's field sits on layer 1 and the dialog's
+on layer 4, and it is still what the field falls back to when the switch is off. And `masked` is a
+property rather than a constant, because a polkit flow may ask for a VISIBLE response
+(`flow.responseVisible`), where a row of shapes standing in for characters the user is supposed to
+read is worse than no masking at all. `tests/test_polkit_dialog_contract.py` derives the control
+from the lock screen's own field (anchored on `root.passwordField = `, not on a masking property -
+every one of those now names the shared file rather than the call site) and refuses a
+`PasswordChars` instantiated anywhere outside `modules/common/widgets/`.
+("feat(widgets): PasswordField, the masked field both password prompts share"),
+("fix(polkit): the auth prompt draws the animated glyphs the lock screen has").
+
 **A confirming action in a dialog carries a FILLED container; the dismissing one stays flat.**
 `DialogButton` defaults to a fully transparent background (`transparentize(colLayer3)` with the
 default 100%), which is right for Cancel and wrong for the button the dialog exists to offer - two
@@ -4659,6 +4688,37 @@ here is built by a `Loader` whose gate is the thing that supplies the content
 does. Anything that wants a dialog to *grow* - a message that changes mid-flow, a field that appears
 on a second step - has to repair the binding rather than assume it resizes.
 15541101a ("fix(polkit): the dialog's own numbers come off the grid the rest of it uses").
+
+**A dialog's action row is the one child of its content column that used to leave it, and where the
+bleed shows depends entirely on what is above it.** `WindowDialogButtonRow` carried
+`Layout.margins: -Appearance.spacing.space100` with a comment calling the alternative "a terrible
+waste of space" - 8px pulled off three sides of the row, so the actions sat 8px outside the box
+every other row in the dialog lines up with. Nine dialogs draw that row and eight of them put text
+or a list above it, where a button container hanging 8px wider reads as nothing at all; the polkit
+prompt is the one with a FULL-WIDTH field directly over the actions, and there it is a visible
+misalignment. Measured on the real prompt in `PolkitDialogRuntimeTest.qml`: the card's four
+paddings read 23/23/23/**15**, and the confirming button's right edge sat 8px past the password
+field's. The margins are gone; the row is a plain `RowLayout` with the shared button spacing, and
+the harness scores the four paddings against each other and the row's edges against the field's
+rather than against numbers someone typed. Note which half of the geometry the source shows: that
+the row is a `Layout` child of the content column is visible, that it leaves the column is not.
+("fix(widgets): a dialog's actions sit in the dialog's own content box").
+
+**The polkit prompt's LAYER surface is out of reach from any harness, and it is worth knowing
+before writing one.** `FullscreenPolkitWindow`'s gate is `PolkitService.active`, a read-only alias
+onto Quickshell's `PolkitAgent`, and the only thing that raises it is a real authentication
+request - which needs the agent registered, and `polkit_agent_listener_register` refuses a second
+agent for a session that already has one ("An authentication agent already exists for the given
+subject", measured against the running shell). So a harness can build the dialog's CONTENT tree in
+a window of its own - which is what `PolkitDialogRuntimeTest.qml` does, and it reaches the layout,
+the hover feedback and the masked glyphs - and can say nothing about the surface's input region,
+its layer or its keyboard focus. A nested Hyprland does not help: driving it with
+`hyprctl dispatch movecursor` delivered no pointer to the client at all, its own in-surface control
+`MouseArea` reporting `containsMouse=false` throughout - the family of process-targeting and
+input-synthesising traps under [Hyprland integration](#hyprland-integration), arriving in a new
+place. That run says nothing about the surface either way, and a harness with no positive control
+in it would have reported the silence as a finding.
+("test(polkit): build the real prompt and read its layout, hover and glyphs back").
 
 `ConfigTextArea` is the text-entry counterpart to `ConfigSwitch` (icon + label/description on the
 left, a bordered `TextArea` field on the right) and is the standard single-line settings field -
