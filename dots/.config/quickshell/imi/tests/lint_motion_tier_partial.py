@@ -18,8 +18,8 @@
 #   - 2044e1b3b ("fix(bar): give the util button's expand the curve it names")
 #     repaired the two size Behaviors in `modules/imi/bar/UtilButton.qml` and
 #     left THREE more partial takes in the same file, on the colour and opacity
-#     Behaviors a few lines below. They are still there; they are in this
-#     check's register.
+#     Behaviors a few lines below. They stayed in this check's register until
+#     the register was emptied.
 #   - 8d81d7471 ("fix(editMode): take the motion tiers whole instead of half of
 #     one each") found the resize grip's `Behavior on opacity` doing it, and
 #     recorded that every grip in the shell had faded linearly since the file
@@ -30,17 +30,17 @@
 # been written down and broken twice is a rule that wants a failing check, not
 # a third paragraph.
 #
-# THE REGISTER, and why it is a ratchet rather than a bulk fix.
+# THE REGISTER, and why it is EMPTY.
 #
-# The tree carries 40 of these across 17 files. They are not fixed here, for
-# the reason `docs/M3_GUIDELINES.md` §3 already gives for the whole class:
-# "the easing *curve shape* in particular was deliberately left untouched
-# during the token migration, since swapping curve shape (unlike reusing a
-# matching duration number) is visually perceptible and wasn't verified against
-# a running compositor". Forty unverified visual changes in one branch is worse
-# than forty known ones in a register.
-#
-# So EXISTING holds a count per file, and the check fails three ways:
+# It was not empty when this check landed: the tree carried 40 partial takes
+# across 17 files, deliberately left alone for the reason
+# `docs/M3_GUIDELINES.md` §3 gives for the whole class - "the easing *curve
+# shape* in particular was deliberately left untouched during the token
+# migration, since swapping curve shape (unlike reusing a matching duration
+# number) is visually perceptible and wasn't verified against a running
+# compositor". Forty unverified visual changes in one branch was worse than
+# forty known ones in a register, so the register held a count per file and the
+# check failed three ways:
 #
 #   - a file outside the register has any partial take (new code cannot add
 #     one);
@@ -50,12 +50,29 @@
 #     move the number down, so the register cannot rot into a permanent
 #     allowlist that nobody rechecks).
 #
+# That third rule is what emptied it. All 40 were taken whole one coherent
+# group at a time, each group deciding its own tier against what the same
+# gesture already does elsewhere in the shell rather than against a pattern -
+# see the commits removing each entry. With EXISTING empty, only the first rule
+# can fire, which is the strongest form this check has: no animation anywhere
+# in the tree names a tier's duration and leaves its curve.
+#
+# Do not re-open it to land a partial take. An entry here is a promise that
+# somebody will come back, and the promise was kept once; a second register
+# growing from zero is just an allowlist.
+#
 # What it does NOT fail on, deliberately:
 #
 #   - An easing that is present but generic (`easing.type: Easing.OutQuad`).
 #     That is the separate, already-registered nonconformance in
 #     `docs/M3_GUIDELINES.md` §3, and it is a different failure: the author
-#     chose a curve, where this check is about a curve nobody chose.
+#     chose a curve, where this check is about a curve nobody chose. Note the
+#     blind spot this leaves, found while emptying the register:
+#     `easing.type: Easing.BezierSpline` with no `bezierCurve` beside it reads
+#     as a chosen curve and is measurably Easing.Linear (probed with `qml6`:
+#     identical samples against a declared Linear, and nothing logged). This
+#     check cannot see that one - `NiriOverview`'s scroll animation was the
+#     case - so presence is not resolvability.
 #   - A duration from one tier beside a curve spelled straight out of
 #     `Appearance.animationCurves` (SpanTravel, DockIconMotion and about thirty
 #     others). Those pair the tier with its OWN curve today, so they are a
@@ -87,9 +104,9 @@ TIER_DURATION = re.compile(
 EASING = re.compile(r"\beasing\s*\.\s*\w+\s*:")
 
 # path (repo-relative, POSIX) -> number of partial takes it is allowed to keep.
-# May only go DOWN. See the header for why it exists at all.
-EXISTING = {
-}
+# May only go DOWN, and it has reached the bottom. See the header before adding
+# anything back.
+EXISTING = {}
 
 
 def block_at(text: str, brace_index: int) -> str:
