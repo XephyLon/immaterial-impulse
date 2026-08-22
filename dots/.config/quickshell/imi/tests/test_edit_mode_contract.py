@@ -1204,14 +1204,35 @@ def test_the_drawers_two_directions_ask_one_predicate_of_one_rectangle():
     assert "GlobalStates.editDrawerReveals[" in widget, \
         "the widget works the drawer's rectangle out again instead of reading it"
 
-    # The point is mapped through Qt's own transform chain - the same contract
-    # the right-click carries. A hand-multiplied viewport scale is right at
-    # scale 1 and wrong at every scale the mode actually draws.
-    decide = re.search(r"function dropWouldRemove\([^)]*\)\s*\{(.*?)\n    \}",
+    # The predicate takes SCREEN coordinates, because its two callers reach
+    # them differently and only one of them may map through the widget.
+    decide = re.search(r"function dropWouldRemoveAt\([^)]*\)\s*\{(.*?)\n    \}",
                        widget, re.S)
     assert decide, "PluginWidget no longer decides the drop"
-    assert "mapToItem(null" in decide.group(1), \
-        "the drop point is not mapped to the scene through the transform chain"
+    assert "mapToItem" not in decide.group(1), \
+        "the predicate maps a point itself, so its two callers cannot differ"
+
+    # The release maps through Qt's own transform chain - the same contract the
+    # right-click carries, and correct there because nothing moves the widget
+    # on a release. A hand-multiplied viewport scale is right at scale 1 and
+    # wrong at every scale the mode actually draws.
+    answer = re.search(r"function releaseRemovesWidget\([^)]*\)\s*\{(.*?)\n    \}",
+                       widget, re.S)
+    assert answer and "rootWidget.mapToItem(null" in answer.group(1), \
+        "the release's drop point is not mapped through the transform chain"
+
+    # The DRAG's hint may not: a base class's handlers run first, so
+    # AbstractWidget has already moved the item `mouse.x/y` are relative to and
+    # mapping them out again overshoots the pointer by that event's delta -
+    # measured as a hint that never lit up. It reads the pointer position
+    # AbstractWidget records before it moves anything.
+    hint = re.search(r"onPositionChanged: \{(.*?)\n    \}", widget, re.S)
+    assert hint, "PluginWidget no longer publishes the drop hint"
+    assert "dragPointerParentX" in hint.group(1) \
+        and "mouse." not in hint.group(1), \
+        "the drop hint maps this event's own coordinates through a moved item"
+    assert re.search(r"root\.dragPointerParentX = p\.x", code(WIDGET)), \
+        "AbstractWidget stopped recording where the pointer was before it moved"
 
 
 def test_a_drop_on_the_drawer_removes_and_commits_nothing():

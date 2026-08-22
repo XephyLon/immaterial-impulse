@@ -146,9 +146,22 @@ MouseArea {
                 && Math.abs(deltaX) < drag.threshold && Math.abs(deltaY) < drag.threshold)
             return
         root.dragActive = true
+        root.dragPointerParentX = p.x
+        root.dragPointerParentY = p.y
         dragProxy.x = root.dragStartX + deltaX
         dragProxy.y = root.dragStartY + deltaY
     }
+    // Where the pointer is, in the parent's frame, recorded before the two
+    // lines above move the widget under it.
+    //
+    // A subclass reading `mouse.x`/`mouse.y` from its own `onPositionChanged`
+    // is one handler too late: a base class's handlers run first, so by then
+    // this one has already moved the item those coordinates are relative to,
+    // and mapping them back out overshoots the pointer by exactly that event's
+    // delta. Measured through Edit Mode's drop-on-the-drawer hint - it never
+    // lit up, while the RELEASE, whose handler moves nothing, was exact.
+    property real dragPointerParentX: 0
+    property real dragPointerParentY: 0
     // dragActive drops BEFORE the canvas is told: widgetDragEnded resets the
     // group clamp bounds, and doing that under a still-active drag Binding
     // re-evaluates it without the clamp - the leader jumps past the edge for
