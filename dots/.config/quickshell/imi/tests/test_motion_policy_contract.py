@@ -32,6 +32,30 @@ EXPANDABLE_PANEL = ROOT / "modules/common/widgets/ExpandablePanel.qml"
 CAROUSEL = ROOT / "modules/common/plugins/designsystem/widgets/Carousel.qml"
 STAGGER_WAVE = ROOT / "modules/common/widgets/StaggerWave.qml"
 
+# Every container that staggers a group, as a RATCHET rather than a list: a new
+# adopter is a line here, and an adopter that quietly stops staggering fails the
+# suite instead of going quiet. The measured survey
+# (docs/p3drovfx-motion-measured-2026-08-22.md §4.2) found the policy correct,
+# the guideline written, and the wiring at three files against the sibling
+# fork's twenty - so the thing that decays here is adoption, not the arithmetic,
+# and adoption is what this pins.
+STAGGER_ADOPTERS = {
+    "modules/common/widgets/ExpandablePanel.qml",
+    "modules/common/widgets/ContentPage.qml",
+    "modules/imi/sessionScreen/SessionScreen.qml",
+    "modules/imi/sidebarRight/SidebarRightContent.qml",
+}
+
+# A cascade whose rank is bounded by the shape of its own model rather than by
+# a clamp, and whose step is deliberately tighter than a group entrance's. The
+# lyric strip is a fixed five-slot window that ripples outward from the active
+# line, so `Math.abs(distanceFromActive)` can only ever be 0, 1 or 2 - there is
+# no long-list case to terminate, and folding it into the group-entrance policy
+# would widen a deliberate 25ms ripple to a 40ms wave for no defect fixed.
+STAGGER_EXEMPT = {
+    "modules/common/plugins/designsystem/widgets/DesktopMediaWidget.qml",
+}
+
 # `Appearance.animation`'s body, between its opening brace and `sizes:`.
 TIER_DURATION = re.compile(r"^\s*property int duration:\s*(.+)$", re.MULTILINE)
 TIER_VELOCITY = re.compile(r"^\s*property int velocity:\s*(.+)$", re.MULTILINE)
@@ -172,8 +196,11 @@ def test_the_group_cascades_share_one_runner():
             f"StaggerWave no longer reaches {call}. It is the one runner every "
             f"container in this shell asks for a group entrance, so a clamp, a "
             f"rank or a scaling missing here is missing everywhere at once.")
-    enter = wave[wave.index("function enter("):wave.index("function leave(")]
-    assert ".visible" in enter, (
+    # The RANK LIST, not the whole of enter(): the deferral guard beside it
+    # also reads `visible`, so a check scoped to the function passes on a
+    # runner that has stopped ranking - planted and confirmed.
+    ranking = wave[wave.index("const included = []"):wave.index("const ranks =")]
+    assert ".visible" in ranking, (
         "StaggerWave's rank list no longer consults `visible`, so the ranks it "
         "hands the policy are positions in `children` again - and a member "
         "that is not on screen leaves a hole one step wide in the wave.")
@@ -200,6 +227,57 @@ def test_nothing_else_ranks_its_own_wave():
         f"call enter()/leave() instead of spelling a second copy, which is how "
         f"ExpandablePanel and Carousel came to disagree about both the clamp "
         f"and the step.")
+
+
+def test_the_stagger_is_adopted_where_a_group_arrives():
+    """A ratchet on adoption, because adoption is the thing that decayed."""
+    declared = {relative for relative, path in qml_files()
+                if "StaggerWave {" in path.read_text(encoding="utf-8", errors="ignore")}
+    missing = STAGGER_ADOPTERS - declared
+    assert not missing, (
+        f"{sorted(missing)} no longer declare a StaggerWave. Each of these is a "
+        f"surface whose members arrive as a GROUP; without one they arrive in a "
+        f"single frame again, which is invisible in the source and reads on "
+        f"screen as the shell being flat rather than as a bug.")
+
+
+def test_nothing_else_computes_a_ranked_wait():
+    offenders = []
+    for relative, path in qml_files():
+        if relative in STAGGER_EXEMPT:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        waits = []
+        for match in PAUSE_BLOCK.finditer(text):
+            brace = text.index("{", match.start())
+            depth = 0
+            for index in range(brace, len(text)):
+                if text[index] == "{":
+                    depth += 1
+                elif text[index] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+            waits.append((match.start(), text[brace:index + 1]))
+        for match in DELAY_BINDING.finditer(text):
+            waits.append((match.start(), match.group(0)))
+
+        for position, wait in waits:
+            if not RANKED.search(wait):
+                continue
+            if "Appearance.animation.staggerDelay(" in wait:
+                continue
+            line = text.count("\n", 0, position) + 1
+            offenders.append(f"{relative}:{line}: {' '.join(wait.split())}")
+    assert not offenders, (
+        "a cascade computes its own delay instead of asking the policy:\n  "
+        + "\n  ".join(offenders)
+        + "\nUse Appearance.animation.staggerDelay(rank, step, leadIn) - it "
+          "clamps the rank, which `index * step` does not, and it collapses "
+          "at the reduce-motion floor without a second gate.")
 
 
 def test_the_policy_has_one_door():
