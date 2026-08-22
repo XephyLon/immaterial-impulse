@@ -462,7 +462,10 @@ modules/common/             Shared, feature-agnostic building blocks
                               ConfigSelectionArray (settings-page form controls), DockIconMotion
                               (M3E feedback-motion wrapper for dock icons), SchemePaletteCircle
                               (a colour scheme drawn as its own palette), MarqueeText
-                              (a label that scrolls only while it overflows), etc.
+                              (a label that scrolls only while it overflows),
+                              CatalogueRow (one entry of a catalogue drawn: icon,
+                              name, description, affordance - not interactive, so
+                              the call site keeps the gesture), etc.
   functions/, models/, utils/, panels/   Supporting JS logic, list models, window-panel base classes
 
 modules/imi/                 The "imi" (Immaterial Impulse) panel family - one directory per feature:
@@ -4105,8 +4108,55 @@ negative y),
 `services/SchemePreview`, with the scheme's glyph as the fallback while the colour venv has not
 answered),
 `MarqueeText` (a single-line label that scrolls only while it overflows its box, over the overflow
-and back, at a distance-proportional speed with a floor — see the entry below before adopting one).
+and back, at a distance-proportional speed with a floor — see the entry below before adopting one),
+`CatalogueRow` (one entry of a catalogue, drawn — see the entry below before building a list row).
 All in `modules/common/widgets/`.
+
+**A catalogue's rows are one component, and it is deliberately not a control.** Edit Mode's drawer,
+every settings row and the widget store's cards all draw the same thing — a leading icon, a name, a
+description under it, and an affordance saying what acting on the entry does — and each had spelled
+it out for itself: the drawer five times over (desktop widgets, bar widgets, dock apps, the lock
+islands, the lock layout row), `ConfigSwitch` a sixth and the store card a seventh. They had drifted
+in ways nobody chose: the same plugin's description wraps in one, elides in another and is absent
+from the third, and the byline sits beside the title in the settings card and under it in the store's.
+`modules/common/widgets/CatalogueRow.qml` is the one shape now, with the differences as properties
+(`titleElides`, `descriptionWraps`, the colours, `rowSpacing`), four content slots (`titleContent`
+on the title's own line, `trailingContent` before the affordance, `affordance` for the terminal
+control, `detailContent` full-width beneath) and an `iconComponent` escape hatch for a leading visual
+that is not a Material Symbol — a dock app's own icon — so the shared row never learns what a dock
+app is.
+
+Three things about it are not obvious.
+
+- **It has no `MouseArea`, no `Button` root and no hover state, and it must not grow one.** Edit
+  Mode's drawer rows are pointer areas BY CONSTRUCTION (65602708e): a drag out of the clipped drawer
+  needs the implicit grab of the press to keep delivering events after the pointer leaves the row,
+  and `test_edit_mode_contract.py` names the drawer as the deliberate exception to its no-`MouseArea`
+  sweep for that reason. Every other call site is a `RippleButton`. So the interactive surface stays
+  with the call site and this draws inside it — which is also why the affordance is a slot rather
+  than a built-in control, and why `trailingContent` and `affordance` are two slots: `ConfigSwitch`
+  owns the second (its switch) while still offering the first to its own 159 callers. The rule is a
+  failing check, because the failure is silent — drag-to-place simply stops carrying anything out,
+  on a gesture nothing in the suite drives.
+- **The row's height is decided by its labels and its affordance, never by its leading glyph.** The
+  icon sits in a wrapper reporting width only — `OptionalMaterialSymbol`'s own shape, kept rather
+  than repaired, because every settings row in the shell was already sized that way and a
+  decorative 23px store glyph would otherwise stretch a list whose text is 15px.
+- **Both of its rows state `Layout.fillHeight`.** A Layout nested in a Layout defaults to `true`, so
+  the main row and the (usually empty) detail row would SPLIT whatever height the row is given beyond
+  its implicit one. That is invisible in a settings page, where the control's height IS its implicit
+  height, and it is exactly what a fixed-height list row hands it — the same defect
+  `EditModeDrawerLayoutProbe` exists for, one component down.
+
+Adopting it must not move a settings row: 159 call sites, and a page that reflows is the failure.
+Measured before and after against a real window under headless weston — `ConfigSwitch`'s
+implicitHeight 31 / 44 / 62 / 44 for a plain row, an icon+wrapping-description row, an
+info+trailing+byline+badge row and a disabled one, `contentItem.implicitHeight` 23 / 36 / 54 / 36,
+and the disabled row still dimmed exactly once at 0.400.
+("feat(widgets): CatalogueRow, the entry shape four surfaces each spelled out",
+"refactor(widgets): ConfigSwitch draws its row through CatalogueRow",
+"refactor(editMode): the drawer's five row shapes become one",
+"refactor(store): a store card's identity is the shared catalogue row").
 
 **A marquee is the answer for an IDENTITY, and where it may run is as much of the design as how it
 moves.** `MarqueeText` exists because every long label in this shell elides, which is honest about
