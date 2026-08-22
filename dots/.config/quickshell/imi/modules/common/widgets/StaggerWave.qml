@@ -95,6 +95,12 @@ QtObject {
     // entrance at all.
     function park() {
         root.stop();
+        // A deferral that was waiting on `visible` is cancelled by a new
+        // gesture: the caller below re-arms it in the same breath, while a
+        // caller parking for its own reason has just said the wave starts from
+        // here, and leaving a stale pending flag lets a later `visibleChanged`
+        // start the wave in front of whatever gate that caller is using.
+        root.pendingEnter = false;
         const kids = root.members();
         for (let i = 0; i < kids.length; i++)
             if (kids[i].appear !== undefined)
