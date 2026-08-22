@@ -42,6 +42,12 @@ own repo; the installer pins which revision it builds.
   frame and then coasted, instead of easing away. Measured off a 60fps capture —
   659px of travel whose first frame took 32% of it, matching the entrance curve's
   predicted 32.6% against the exit curve's 1.3%.
+- **...and it now arrives instead of appearing.** It had no entrance animation at
+  all — measured, 99.6% of its 690px of travel landed in a single frame, so the
+  panel popped in and slid out. It also vanished with a seventh of its exit still
+  undrawn. It now grows and fades into place under the bar and dissolves the same
+  way, which is what the rest of the shell's menus already do; nothing travels the
+  height of the screen any more.
 - **Edit Mode's widget drawer stops freezing half way through its own
   animation.** The panel reached its full width 226ms into a 500ms transition
   and then stood perfectly still for the remaining 271ms, while the desktop it
