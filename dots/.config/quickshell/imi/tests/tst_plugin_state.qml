@@ -7,13 +7,19 @@ TestCase {
     name: "PluginStateTest"
 
     property bool savedTransparency: false
+    property var savedEnabled: []
 
     function init() {
         savedTransparency = Config.options.appearance.transparency.enable;
+        savedEnabled = [...Config.options.plugins.enabled];
     }
 
     function cleanup() {
         Config.options.appearance.transparency.enable = savedTransparency;
+        // The lock's widget choice is one global map, so a test that forks it
+        // leaves every later test reading a fork it did not make.
+        Config.options.plugins.enabled = savedEnabled;
+        PluginState.resetLockPresence();
     }
 
     function test_positionDefaultsWhenUnset() {
@@ -181,6 +187,78 @@ TestCase {
         compare(Array.isArray(stored), true);
         compare(stored.join(","),
             "Europe/Berlin,Asia/Kolkata,America/Denver,Pacific/Auckland");
+    }
+
+    // --- the lock's widget choice, through the live singleton ---------------
+    //
+    // The arithmetic is tst_layout_surfaces; what only the singleton can show
+    // is that the desktop's set really is read out of Config, and that the
+    // store round-trips the fork through a real file write and load.
+
+    function test_lockPresenceFollowsTheEnabledListUntilSomethingIsPicked() {
+        Config.options.plugins.enabled = ["clock", "media"];
+        verify(!PluginState.lockPresenceForked());
+        verify(PluginState.lockWidgetEnabled("clock"));
+        verify(PluginState.lockWidgetEnabled("media"));
+        verify(!PluginState.lockWidgetEnabled("notes"));
+        // Following means following: a widget enabled now shows on the lock
+        // with no lock-side write at all.
+        Config.options.plugins.enabled = ["clock", "media", "notes"];
+        verify(PluginState.lockWidgetEnabled("notes"));
+    }
+
+    function test_pickingOneWidgetForksTheChoiceAndKeepsTheRest() {
+        Config.options.plugins.enabled = ["clock", "media", "notes"];
+        PluginState.setLockWidgetEnabled("media", false);
+        verify(PluginState.lockPresenceForked());
+        verify(!PluginState.lockWidgetEnabled("media"));
+        verify(PluginState.lockWidgetEnabled("clock"));
+        verify(PluginState.lockWidgetEnabled("notes"));
+        // Independent from here: the desktop's list moves and the lock's does
+        // not follow it any more.
+        Config.options.plugins.enabled = ["clock"];
+        verify(PluginState.lockWidgetEnabled("notes"));
+    }
+
+    function test_aWidgetTheDesktopDoesNotShowCanBePickedForTheLock() {
+        Config.options.plugins.enabled = ["clock"];
+        PluginState.setLockWidgetEnabled("weather", true);
+        verify(PluginState.lockWidgetEnabled("weather"));
+        // ...and the desktop's own list is untouched by the pick.
+        compare(Config.options.plugins.enabled.length, 1);
+        compare(Config.options.plugins.enabled[0], "clock");
+    }
+
+    function test_theChoiceRestoresToFollowingAndBackAgain() {
+        Config.options.plugins.enabled = ["clock", "media"];
+        PluginState.setLockWidgetEnabled("media", false);
+        const forked = PluginState.lockPresenceRecords();
+        PluginState.resetLockPresence();
+        verify(!PluginState.lockPresenceForked());
+        verify(PluginState.lockWidgetEnabled("media"));
+        // Undo's return path: a record set of null puts "following" back, and
+        // a map puts the fork back exactly as it was.
+        PluginState.restoreLockPresence(forked);
+        verify(PluginState.lockPresenceForked());
+        verify(!PluginState.lockWidgetEnabled("media"));
+        PluginState.restoreLockPresence(null);
+        verify(!PluginState.lockPresenceForked());
+    }
+
+    function test_theChoiceSurvivesTheFileRoundTrip() {
+        Config.options.plugins.enabled = ["clock", "media"];
+        PluginState.setLockWidgetEnabled("media", false);
+        PluginState.loadText(PluginState.snapshot());
+        verify(PluginState.lockPresenceForked());
+        verify(!PluginState.lockWidgetEnabled("media"));
+        verify(PluginState.lockWidgetEnabled("clock"));
+    }
+
+    function test_aStoredChoiceThatIsNotAMapReadsAsFollowing() {
+        Config.options.plugins.enabled = ["clock"];
+        PluginState.loadText('{"lockPresence": ["clock"], "desktopPositions": {}}');
+        verify(!PluginState.lockPresenceForked());
+        verify(PluginState.lockWidgetEnabled("clock"));
     }
 
     function test_loadTextIgnoresMalformedState() {
