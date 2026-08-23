@@ -47,6 +47,13 @@ own repo; the installer pins which revision it builds.
   slide, the way it always did.
 
 ### Fixed
+- **The overview opens and closes with an animation instead of snapping.** It
+  appeared and vanished on a single frame at both ends. Now the search bar and
+  the workspace grid grow out of the top of the screen together and settle with
+  a small bounce, and on the way out they shrink and fade — the window stays on
+  screen for as long as that takes rather than being torn down the instant you
+  press the key, which is what left nothing to animate before. The frosted
+  backdrop behind the cards no longer appears before them or lingers after them.
 - **The password box in the authentication prompt draws the same animated
   characters as the lock screen.** Both are the shell asking for your password,
   and only one of them showed the shell's own masked characters — a Material
