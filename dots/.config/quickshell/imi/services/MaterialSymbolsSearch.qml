@@ -12,10 +12,19 @@ Singleton {
     // Raw list loaded from JSON: [{name, tags, categories}]
     property var allSymbols: []
 
-    // ── Load JSON ─────────────────────────────────────────────────────────
+    // ── Load JSON, on demand ──────────────────────────────────────────────
+    // The tag database is 1.7MB of JSON, and LauncherSearch instantiates
+    // this singleton at boot (allSymbols is in its resultInputs list) - so
+    // an unconditional path here read and parsed all of it before the first
+    // frame, for a search prefix most sessions never type. The path is now
+    // withheld until the first symbols query. That first query answers from
+    // an empty list, and answers itself: allSymbols changing when the parse
+    // lands is exactly the resultInputs entry LauncherSearch rebuilds on.
+    property bool loadRequested: false
+
     FileView {
         id: symbolsFile
-        path: `${Directories.assetsPath}/material_symbols_rounded.json`
+        path: root.loadRequested ? `${Directories.assetsPath}/material_symbols_rounded.json` : ""
         watchChanges: false
         onLoaded: {
             try {
@@ -31,6 +40,8 @@ Singleton {
     // Returns a list of plain strings formatted as:
     //   "<name>  <tag1>, <tag2>, ..."
     function fuzzyQuery(query) {
+        if (!root.loadRequested)
+            root.loadRequested = true;
         if (!query || query.length === 0)
             return root.allSymbols.slice(0, 30).map(sym => _format(sym));
 
