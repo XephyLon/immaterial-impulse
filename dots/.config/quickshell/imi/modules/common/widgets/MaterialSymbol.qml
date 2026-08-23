@@ -23,7 +23,13 @@ StyledText {
         weight: resolvedFill > 0.5 ? Font.DemiBold : Font.Normal
         variableAxes: {
             "FILL": resolvedFill,
-            "opsz": iconSize,
+            // Quantized to the axis' own integer range (Material Symbols
+            // defines opsz 20-48). Every distinct axis value mints a separate
+            // font engine, and icons sized by layout arithmetic produce
+            // near-duplicate fractional sizes - 62 engines were live for this
+            // one family. Clamping to whole numbers caps the set at 29, and
+            // an optical-size step of under 1pt is not a visible difference.
+            "opsz": Math.max(20, Math.min(48, Math.round(iconSize))),
         }
     }
 }
