@@ -403,6 +403,16 @@ if ! python3 "$SCRIPT_DIR/test_marquee_text_contract.py"; then
     exit 1
 fi
 
+# A sidebar's surface stays mapped and the panel slides; a window that followed
+# the open flag was rebuilt per gesture and blocked the shell's one GUI thread
+# for 61ms each time. The rule that matters most here is the silent one: a
+# mapped surface with an ungated mask eats every click on a screen edge.
+echo "Running persistent sidebar contract tests..."
+if ! python3 "$SCRIPT_DIR/test_persistent_sidebar_contract.py"; then
+    echo "Persistent sidebar contract tests failed."
+    exit 1
+fi
+
 # A surface that animates on its way out is owned by that animation, not by the
 # flag the user's gesture sets: layer-shell forbids window reuse, so a window
 # whose `visible` follows the flag is destroyed on the frame the exit starts.
