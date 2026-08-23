@@ -34,6 +34,21 @@ own repo; the installer pins which revision it builds.
   Your presets carry the choice.
 
 ### Changed
+- **The shell idles lighter and boots smoother.** A round of performance
+  fixes, none of which changes how anything looks:
+  - The overview's window now stays alive like the sidebars' do, so
+    Super+Tab no longer pays a rebuild stall on every press.
+  - Boot builds its 28 panels between frames instead of all at once before
+    the first one, and the icon-search database (1.7MB) loads the first
+    time you search symbols instead of at startup.
+  - Caps/Num Lock state comes from the keyboard's own LEDs through one
+    tiny watcher instead of asking Hyprland 3 times a second.
+  - Network events feed the shell through a single monitor that cleans up
+    after itself - crashed shells used to leave silent nmcli processes
+    behind (30 were found on the dev machine).
+  - The dock's window previews stop being captured the moment the popup
+    hides, decorative cookie spins tick at 30Hz instead of every frame,
+    and icons share font engines instead of minting near-duplicates.
 - **The clock widget's settings show only the options for the clock style you
   picked.** Digital, Cookie and Pixel each have their own options, and all
   three sets used to be listed together — eleven Cookie rows under a Digital
