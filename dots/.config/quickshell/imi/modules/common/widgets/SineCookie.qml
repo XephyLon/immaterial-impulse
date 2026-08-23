@@ -19,13 +19,23 @@ Item {
 
     property real shapeRotation: 0
 
+    // A 30Hz clock, not a FrameAnimation, and gated on visibility. The old
+    // FrameAnimation stepped 0.05°/frame, which redrew this decorative spin
+    // at the display's full refresh (240 damage events a second here) and
+    // made the speed itself a function of the refresh rate - 12°/s on a
+    // 240Hz panel, 3°/s on a 60Hz one. Time-based stepping at the cookie
+    // clock's own motionTickHz keeps the 240Hz look's speed everywhere at an
+    // eighth of the redraws, and an invisible cookie doesn't tick at all.
     Loader {
-        active: constantlyRotate
-        sourceComponent: FrameAnimation {
+        active: root.constantlyRotate && root.visible
+        sourceComponent: Timer {
+            readonly property int tickHz: 30
+            readonly property real degreesPerSecond: 12
             running: true
-            onTriggered: {
-                shapeRotation += 0.05
-            }
+            repeat: true
+            interval: Math.round(1000 / tickHz)
+            onTriggered: root.shapeRotation =
+                (root.shapeRotation + degreesPerSecond / tickHz) % 360
         }
     }
 
