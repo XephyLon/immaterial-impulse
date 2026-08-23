@@ -53,6 +53,14 @@ own repo; the installer pins which revision it builds.
   slide, the way it always did.
 
 ### Fixed
+- **The clock settings filter actually filters now.** The per-style option
+  rows were annotated in the last cycle but Settings > Widgets kept showing
+  all of them regardless of the selected style: the rules survive as data,
+  but on their way to the settings page they cross a Qt type boundary that
+  turns JSON lists into list-like objects a strict `Array.isArray` check no
+  longer recognises, so every rule fell back to "just show the row". The
+  evaluator now accepts those objects, and switching Digital / Cookie / Pixel
+  swaps the visible rows immediately.
 - **Opening a sidebar no longer freezes the shell for a moment.** Every open
   rebuilt the sidebar's window from scratch, and while that happened every
   other thing the shell draws — the bar, the dock, the desktop — stopped for
