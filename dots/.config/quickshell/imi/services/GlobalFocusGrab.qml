@@ -54,14 +54,6 @@ Singleton {
         }
     }
 
-    function hasActive(element) {
-        return element?.activeFocus || Array.from(
-            element?.children ?? []
-        ).some(
-            (child) => hasActive(child)
-        );
-    }
-
     // Debounce transient clears. When a sidebar opens, Hyprland sends a
     // ToplevelHandle activation update ~20ms later for the previously-focused
     // window; HyprlandFocusGrab reads that as "a non-panel toplevel became
@@ -80,7 +72,27 @@ Singleton {
 
     HyprlandFocusGrab {
         id: grab
-        windows: root.dismissable.every(w => !w?.focusable) || root.dismissable.some(w => root.hasActive(w?.contentItem)) ? [...root.dismissable, ...root.persistent] : [...root.dismissable]
+        // Persistent windows first, dismissables LAST - the order is load-
+        // bearing. When the grab activates, Hyprland moves keyboard focus to
+        // a whitelisted surface, and it picks from the END of this list.
+        // Measured on the persistent sidebars (which never re-map, so the
+        // grab is the only thing that can hand them the keyboard): with the
+        // dismissable first and the bar/OSK after it, opening the left
+        // sidebar never activated its window - keys went to a persistent
+        // surface and every keypress was lost until the pointer happened to
+        // enter the panel. Same build, same open, with the dismissable moved
+        // to the end: Window.active flipped true immediately and typing
+        // landed in the AI chat's field with the cursor half a screen away.
+        //
+        // The old conditional (`every(!focusable) || some(hasActive(...))`)
+        // tried to solve the same problem by dropping the persistent windows
+        // from the list entirely in some states - which worked only by
+        // leaving nothing else for Hyprland to pick, and cost the protection
+        // those windows are listed for (a bar click would clear the grab and
+        // dismiss the panel). Ordering keeps both: the panel gets the
+        // keyboard, and clicking the bar or typing on the OSK stays inside
+        // the grab.
+        windows: [...root.persistent, ...root.dismissable]
         active: root.dismissable.length > 0
         onCleared: () => {
             dismissDebounce.restart();

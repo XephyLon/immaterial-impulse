@@ -184,5 +184,21 @@ def test_the_compositor_no_longer_animates_the_map():
             f"{namespace} still carries a compositor slide rule: {[l.strip() for l in lines]}"
 
 
+def test_the_grab_lists_dismissables_last():
+    # When the grab activates, Hyprland hands keyboard focus to a whitelisted
+    # surface picked from the END of the list. A persistent surface never
+    # re-maps, so this is the ONLY way an opening panel ever gets the
+    # keyboard: dismissables anywhere but last leave keys on the bar/OSK and
+    # every keypress is silently dropped (measured on the left sidebar -
+    # Window.active never flipped true until the pointer entered the panel).
+    grab = code(ROOT / "services/GlobalFocusGrab.qml")
+    windows = [l for l in grab.splitlines() if re.match(r"\s*windows\s*:", l)]
+    assert len(windows) == 1, f"GlobalFocusGrab declares {len(windows)} `windows:` lists"
+    assert re.search(r"windows\s*:\s*\[\s*\.\.\.root\.persistent\s*,\s*\.\.\.root\.dismissable\s*\]", windows[0]), \
+        (f"GlobalFocusGrab's whitelist reads `{windows[0].strip()}` - it must be exactly "
+         "`[...root.persistent, ...root.dismissable]`: dismissables LAST is what routes the "
+         "grab's keyboard focus to the panel that just opened")
+
+
 if __name__ == "__main__":
     raise SystemExit(run(globals()))
