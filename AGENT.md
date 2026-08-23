@@ -4549,6 +4549,51 @@ the user is actually looking at — is inferred from the client's stall rather t
 7a7c1b794 ("revert(sidebar): the right sidebar's sections stop cascading"),
 1b8d4ac52 ("test(motion): the stagger ratchet runs in both directions").
 
+**...and that stall was then fixed, by the thing the measurement above pointed at and not by the
+three things that were bisected first.** After the wave was gone the user reported *"a momentary
+freeze right before they open"* and attributed it to the wave. Four trees were bisected on the live
+session — before the wave, the wave, the revert, main — and every one stalled; the recorder was
+turned off and it stalled; the machine was rebooted and it stalled. None of that was wasted, but all
+of it was the wrong instrument: `QSG_RENDER_TIMING` on the real session said it in one line,
+`blockedForSync=61 ms, polish=0` on the frame the sidebar's window was created. The shell has ONE
+GUI thread for every window it owns, and that thread waits while a new window gets its render
+thread, its GL context, its scene graph built from nothing and every glyph uploaded again — so the
+bar, the dock and the desktop all freeze for fifteen frames at 240Hz, right before the panel
+appears. The compositor's own main loop never stalled (probed at 2ms through its socket: max reply
+gap 1.3ms), which is why it read as the shell's freeze and not the screen's.
+
+The fix is the one the `visible: false` note under [Layer-shell gotchas](#layer-shell-wlr-layer-shell-gotchas)
+already prescribes for the background: **keep the surface mapped and move the panel.**
+`modules/common/widgets/EdgeSlide.qml` is the runner; both sidebars declare one; the compositor's
+`animation = slide` rules became `no_anim`; and the `sidebarSlideEnter`/`Exit` tiers were re-pinned
+to what those rules had been drawing (400ms on `pc_decel`/`pc_accel`, the first kept as
+`panelSlideDecel`) so the motion did not change, only who draws it. Measured live with the same
+instrument: 18ms on the first open after a restart (textures), 1–4ms after. Captured at 60fps with
+the user's permission and read per frame, the panel enters with its content already laid out and the
+frost under it, nothing ahead of it.
+
+Three things a persistent surface costs that an unmapped one never did, and the test that holds them
+(`tests/test_persistent_sidebar_contract.py`, read at the `PanelWindow` that carries the namespace):
+
+- **An ungated `mask` on a mapped surface eats every click on the screen edge it occupies**, and
+  the left sidebar had shipped with exactly that mask for as long as it existed — harmless only
+  because the window was unmapped when closed. Both masks read the open flag now.
+- **An unconditional `keyboardFocus: OnDemand` on a mapped surface holds the keyboard while
+  showing nothing.** Same file, same history, same gate.
+- **Content hides on the runner's `shown`, never on the open flag** — the flag drops on frame one
+  of a 400ms exit. And the slide is an `x`, not a transform: the blur region and the shadow both
+  follow the item's geometry, and a transform moves neither.
+
+Two generalisations. A Top-layer surface is buried under a fullscreen window by Hyprland itself
+(the bar relies on it), so a persistent Top-layer panel needs no stand-down and does not hold the
+fullscreen fast path the way an Overlay one does — check `solitaryBlockedBy` rather than assuming
+either way. And the overview (`Overview.qml`) and `SessionScreen` still map per open and pay this
+same 61ms; the overview's exit-owned lifetime fixed what happens *after* the flag drops, not what
+happens when it rises.
+(feat(widgets): EdgeSlide, the runner for a panel whose surface stays mapped;
+fix(sidebar): the right sidebar's surface outlives the gesture;
+fix(sidebar): the left sidebar's surface outlives the gesture.)
+
 **`Behavior on <non-animatable>` with a trailing bare `PropertyAction {}` defers a write instead of
 animating it.** A `Loader.source` is a `url`, which QML cannot interpolate, so the `Behavior` cannot
 animate it — and the *bare* `PropertyAction` (no `target`, no `property`, no `value`) means "apply
