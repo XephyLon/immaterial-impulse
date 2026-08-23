@@ -49,12 +49,19 @@ ROOT = Path(__file__).resolve().parent.parent
 OVERVIEW = ROOT / "modules/imi/overview/Overview.qml"
 SELECTOR = ROOT / "modules/imi/wallpaperSelector/WallpaperSelector.qml"
 
-# The surface and the property whose value maps it. The overview's window is
-# built unconditionally and toggles `visible`; the selector's is built by a
-# Loader and toggles `active`. Both are "the compositor has this surface", and
-# both must read the lifetime flag rather than the gesture's own.
+# The declaration that maps the surface, and the property on it that decides
+# whether the compositor has one. The overview's window is built unconditionally
+# and toggles its own `visible`; the selector's is built by a Loader and toggles
+# that Loader's `active`. Both mean "the surface exists", and both must read the
+# lifetime flag rather than the flag the gesture sets.
+#
+# The gate is read at the mapping declaration's OWN top level rather than
+# anywhere in the file. A sweep for "some `visible:` line mentions the lifetime
+# flag" passes on a tree where the window has been put back on the gesture's
+# flag and only the card inside it still reads the right one - which is the
+# exact regression this file exists to catch, and it survived the first draft.
 LIFETIME_FLAG = "reallyOpen"
-SURFACES = {OVERVIEW: "visible", SELECTOR: "active"}
+SURFACES = {OVERVIEW: ("PanelWindow", "visible"), SELECTOR: ("Loader", "active")}
 
 
 def read(path: Path) -> str:
@@ -112,8 +119,37 @@ def blocks(text: str, type_name: str):
     return found
 
 
+def mapping_block(text: str, type_name: str, name: str) -> str:
+    """The one declaration in the file that maps a layer surface.
+
+    Anchored on `WlrLayershell.namespace` rather than on being the first block
+    of its type: a file may declare several Loaders, and only one of them has a
+    window under it.
+    """
+    owning = [block for block in blocks(text, type_name)
+              if "WlrLayershell.namespace" in block]
+    assert len(owning) == 1, \
+        (f"{name} has {len(owning)} {type_name} declarations carrying a layer "
+         "surface - this rule is about the one that maps it")
+    return owning[0]
+
+
+def declared_at_top_level(block: str, prop: str):
+    """Values of `prop:` declared directly on `block`, not on anything nested
+    inside it."""
+    values = []
+    depth = 0
+    for line in logical_lines(block):
+        if depth == 1:
+            match = re.match(rf"\s*{prop}\s*:(.*)", line)
+            if match:
+                values.append(match.group(1).strip())
+        depth += line.count("{") - line.count("}")
+    return values
+
+
 def test_the_surface_outlives_the_gesture_by_one_exit_animation():
-    for path, gate in SURFACES.items():
+    for path, (declaration, gate) in SURFACES.items():
         text = code(path)
         name = path.relative_to(ROOT).as_posix()
 
@@ -122,12 +158,15 @@ def test_the_surface_outlives_the_gesture_by_one_exit_animation():
              "and dying with the flag the user's gesture sets, and its exit "
              "animation is drawing into a window that is already gone")
 
-        gates = [line.strip() for line in logical_lines(text)
-                 if re.match(rf"\s*{gate}\s*:", line)]
-        assert gates, f"{name} declares no `{gate}:` - nothing maps this surface"
-        assert any(LIFETIME_FLAG in line for line in gates), \
-            (f"{name}'s `{gate}:` reads {gates} - the surface must follow "
-             f"`{LIFETIME_FLAG}`, not the gesture's own flag")
+        gates = declared_at_top_level(
+            mapping_block(text, declaration, name), gate)
+        assert gates, \
+            (f"{name}'s {declaration} declares no `{gate}:` of its own - "
+             "nothing here says when the surface exists")
+        assert all(LIFETIME_FLAG in value for value in gates), \
+            (f"{name}'s {declaration} maps on `{gate}: {gates}` - the surface "
+             f"must follow `{LIFETIME_FLAG}`, not the gesture's own flag, or it "
+             "is destroyed on the frame the exit animation starts")
 
         clears = [line.strip() for line in logical_lines(text)
                   if re.search(rf"{LIFETIME_FLAG}\s*=\s*false", line)]
