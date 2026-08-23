@@ -67,6 +67,11 @@ own repo; the installer pins which revision it builds.
   slide, the way it always did.
 
 ### Fixed
+- **Wallpaper depth is reachable for Wallpaper Engine wallpapers.** The
+  depth service could already cut a subject from a live scene's still, but
+  the button that opens the picker only existed on the Local tab - from the
+  Wallpaper Engine grid the feature was unreachable. The same button now
+  sits in that tab's toolbar too.
 - **The overview's frost covers the whole card again.** Keeping the
   overview's window alive left its blur region stuck where the half-built
   grid had been on the very first open - a sharp unblurred band down the
