@@ -97,12 +97,44 @@ Scope { // Scope
                 direction: -1
             }
 
+            // The grab is taken after the surface has RENDERED two frames with the
+            // panel open, not in the tick the flag flips. On a surface that is
+            // mapped all the time there is no map to carry the new
+            // `keyboardFocus` to the compositor - it goes out with the next commit,
+            // and a grab that reaches Hyprland before that commit is a grab on a
+            // surface it still knows as keyboard-interactivity None: Hyprland
+            // clears it within milliseconds, and `onDismissed` reads the clear as
+            // a click outside and closes the panel it just opened. A 1ms Timer
+            // lost that race on the left sidebar (grab at +10ms, cleared at +14ms)
+            // and won it on the right (+32ms) - so the wait is for frames, which
+            // is the thing the commit actually rides on.
+            FrameAnimation {
+                id: focusGrabAfterCommit
+                property int framesLeft: 0
+                running: framesLeft > 0
+                onTriggered: {
+                    if (--framesLeft > 0)
+                        return;
+                    if (GlobalStates.sidebarLeftOpen)
+                        GlobalFocusGrab.addDismissable(panelWindow);
+                }
+            }
             Connections {
                 target: GlobalStates
                 function onSidebarLeftOpenChanged() {
                     if (GlobalStates.sidebarLeftOpen) {
-                        GlobalFocusGrab.addDismissable(panelWindow);
+                        focusGrabAfterCommit.framesLeft = 2;
+                        // The window used to be rebuilt per open, and the tabs'
+                        // own creation-time focus grabs picked the focus item.
+                        // A persistent window is created once, at boot, without
+                        // keyboard focus - so an open has to say where keys go
+                        // or the window activates with NO focus item and every
+                        // key is dropped at the content item. (The right
+                        // sidebar's loader does this with a `focus:` binding on
+                        // the open flag.)
+                        root.sidebarContent?.focusActiveItem();
                     } else {
+                        focusGrabAfterCommit.framesLeft = 0;
                         GlobalFocusGrab.removeDismissable(panelWindow);
                     }
                 }
