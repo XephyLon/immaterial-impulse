@@ -403,6 +403,16 @@ if ! python3 "$SCRIPT_DIR/test_marquee_text_contract.py"; then
     exit 1
 fi
 
+# The cookie clock's spin and sweep are sampled at 30Hz, not animated per vsync:
+# on the background surface every commit is a whole-screen re-render and a
+# re-blur of every surface over it, and the animated version was 38% of the GPU
+# at idle against 20% sampled and 10-12% off.
+echo "Running clock motion contract tests..."
+if ! python3 "$SCRIPT_DIR/test_clock_motion_contract.py"; then
+    echo "Clock motion contract tests failed."
+    exit 1
+fi
+
 # The clock's options page shows only the chosen style's rows. The predicate is
 # pinned by tst_option_visibility.qml; this is the adoption, which is what
 # decays - a 29th option added without a rule renders on every style again.
