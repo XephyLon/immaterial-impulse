@@ -75,6 +75,41 @@ TestCase {
         verify(OptionVisibility.visible({ key: "x", visibleWhen: null }, reader({})));
     }
 
+    // The bug this pins: the manifest crosses a QVariant boundary on its way
+    // to the evaluator (var properties, Repeater modelData), and a JSON list
+    // read back from QVariantList has `length` and indexed access but fails
+    // Array.isArray and carries no Array prototype. On the live shell that
+    // sent every clock rule down the fail-open branch - 22 annotated rows all
+    // visible for every style. The stand-in here is a prototype-less object
+    // with the same surface: length, indices, and nothing else.
+    function wrapList(items) {
+        const wrapper = Object.create(null);
+        wrapper.length = items.length;
+        for (let i = 0; i < items.length; ++i)
+            wrapper[i] = items[i];
+        return wrapper;
+    }
+
+    function test_a_qvariant_wrapped_rule_still_filters() {
+        const option = { key: "digitalVertical", visibleWhen: {
+            anyOf: wrapList([
+                { key: "style", in: wrapList(["digital"]) },
+                { key: "styleLocked", in: wrapList(["digital"]) }
+            ])
+        } };
+        verify(!OptionVisibility.visible(option, reader({ style: "cookie", styleLocked: "cookie" })));
+        verify(OptionVisibility.visible(option, reader({ style: "digital", styleLocked: "cookie" })));
+        verify(OptionVisibility.visible(option, reader({ style: "cookie", styleLocked: "digital" })));
+    }
+
+    function test_a_qvariant_wrapped_all_of_still_filters() {
+        const option = { key: "x", visibleWhen: {
+            allOf: wrapList([{ key: "a", equals: true }, { key: "b", in: wrapList(["k"]) }])
+        } };
+        verify(OptionVisibility.visible(option, reader({ a: true, b: "k" })));
+        verify(!OptionVisibility.visible(option, reader({ a: true, b: "z" })));
+    }
+
     function test_the_reader_is_asked_for_the_value_not_guessed() {
         // A rule against a default the user never changed must read the
         // widget's value - which is the reader's job, not this file's.
