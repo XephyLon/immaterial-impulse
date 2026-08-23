@@ -19,7 +19,14 @@ import qs.modules.common.widgets
  */
 RowLayout {
     id: root
-    spacing: Appearance.spacing.space50
+    // M3 puts 8dp between a dialog's actions and this row had 4. It read fine
+    // while the dismissing action was a bare label: measured on the polkit
+    // prompt, the drawn gap between the filled OK's container and the nearest
+    // painted pixel of Cancel was its LABEL's edge, 20px away. Giving Cancel an
+    // outline moves that edge out by the button's own 16px padding, so the
+    // separation the eye reads collapses to the row's spacing alone - 4px, half
+    // of what M3 asks for, between two containers that now both have edges.
+    spacing: Appearance.spacing.space100
 
     // Whether one of these actions carries a container, which is what makes the
     // others outlined - see `DialogButton.outlined` for the rule and why it
