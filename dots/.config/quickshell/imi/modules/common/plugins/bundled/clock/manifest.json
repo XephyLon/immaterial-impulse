@@ -16,58 +16,58 @@
     ]},
     { "key": "showOnlyWhenLocked", "type": "boolean", "label": "Show only when locked", "icon": "lock_clock", "default": false },
 
-    { "key": "digitalVertical", "type": "boolean", "label": "Digital: vertical", "icon": "vertical_distribute", "default": false },
-    { "key": "digitalShowDate", "type": "boolean", "label": "Digital: show date", "icon": "date_range", "default": true },
-    { "key": "digitalAnimateChange", "type": "boolean", "label": "Digital: animate time change", "icon": "animation", "default": true },
-    { "key": "digitalAdaptiveAlignment", "type": "boolean", "label": "Digital: adaptive alignment", "icon": "activity_zone", "default": true },
-    { "key": "color", "type": "color", "label": "Digital: color", "icon": "palette", "default": "", "choices": [
+    { "key": "digitalVertical", "type": "boolean", "label": "Digital: vertical", "icon": "vertical_distribute", "default": false, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["digital"] }, { "key": "styleLocked", "in": ["digital"] } ] } },
+    { "key": "digitalShowDate", "type": "boolean", "label": "Digital: show date", "icon": "date_range", "default": true, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["digital"] }, { "key": "styleLocked", "in": ["digital"] } ] } },
+    { "key": "digitalAnimateChange", "type": "boolean", "label": "Digital: animate time change", "icon": "animation", "default": true, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["digital"] }, { "key": "styleLocked", "in": ["digital"] } ] } },
+    { "key": "digitalAdaptiveAlignment", "type": "boolean", "label": "Digital: adaptive alignment", "icon": "activity_zone", "default": true, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["digital"] }, { "key": "styleLocked", "in": ["digital"] } ] } },
+    { "key": "color", "type": "color", "label": "Digital: color", "icon": "palette", "default": "", "visibleWhen": { "anyOf": [ { "key": "style", "in": ["digital"] }, { "key": "styleLocked", "in": ["digital"] } ] }, "choices": [
       "", "primary", "secondary", "tertiary", "primaryContainer", "secondaryContainer", "tertiaryContainer", "layer1", "layer0"
     ]},
-    { "key": "digitalFontFamily", "type": "text", "label": "Digital: font family", "icon": "font_download", "default": "Google Sans Flex", "placeholder": "Google Sans Flex", "maxLength": 64 },
-    { "key": "digitalFontWeight", "type": "number", "label": "Digital: font weight", "icon": "format_bold", "default": 350, "from": 1, "to": 1000 },
-    { "key": "digitalFontSize", "type": "number", "label": "Digital: font size", "icon": "format_size", "default": 90, "from": 50, "to": 700 },
-    { "key": "digitalFontWidth", "type": "number", "label": "Digital: font width", "icon": "fit_width", "default": 100, "from": 25, "to": 125 },
-    { "key": "digitalFontRoundness", "type": "number", "label": "Digital: font roundness", "icon": "line_curve", "default": 0, "from": 0, "to": 100 },
+    { "key": "digitalFontFamily", "type": "text", "label": "Digital: font family", "icon": "font_download", "default": "Google Sans Flex", "placeholder": "Google Sans Flex", "maxLength": 64, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["digital"] }, { "key": "styleLocked", "in": ["digital"] } ] } },
+    { "key": "digitalFontWeight", "type": "number", "label": "Digital: font weight", "icon": "format_bold", "default": 350, "from": 1, "to": 1000, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["digital"] }, { "key": "styleLocked", "in": ["digital"] } ] } },
+    { "key": "digitalFontSize", "type": "number", "label": "Digital: font size", "icon": "format_size", "default": 90, "from": 50, "to": 700, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["digital"] }, { "key": "styleLocked", "in": ["digital"] } ] } },
+    { "key": "digitalFontWidth", "type": "number", "label": "Digital: font width", "icon": "fit_width", "default": 100, "from": 25, "to": 125, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["digital"] }, { "key": "styleLocked", "in": ["digital"] } ] } },
+    { "key": "digitalFontRoundness", "type": "number", "label": "Digital: font roundness", "icon": "line_curve", "default": 0, "from": 0, "to": 100, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["digital"] }, { "key": "styleLocked", "in": ["digital"] } ] } },
 
-    { "key": "cookieUseSineCookie", "type": "boolean", "label": "Cookie: old sine wave shape", "icon": "airwave", "default": false },
-    { "key": "cookieAiStyling", "type": "boolean", "label": "Cookie: auto styling with Gemini", "icon": "wand_stars", "default": false },
-    { "key": "cookieSides", "type": "number", "label": "Cookie: sides", "icon": "add_triangle", "default": 14, "from": 0, "to": 40 },
-    { "key": "cookieConstantlyRotate", "type": "boolean", "label": "Cookie: constantly rotate", "icon": "autoplay", "default": false },
-    { "key": "cookieHourMarks", "type": "boolean", "label": "Cookie: hour marks", "icon": "brightness_7", "default": false },
-    { "key": "cookieTimeIndicators", "type": "boolean", "label": "Cookie: digits in the middle", "icon": "timer_10", "default": true },
-    { "key": "cookieDialNumberStyle", "type": "choice", "label": "Cookie: dial style", "icon": "graph_6", "default": "full", "choices": [
+    { "key": "cookieUseSineCookie", "type": "boolean", "label": "Cookie: old sine wave shape", "icon": "airwave", "default": false, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["cookie"] }, { "key": "styleLocked", "in": ["cookie"] } ] } },
+    { "key": "cookieAiStyling", "type": "boolean", "label": "Cookie: auto styling with Gemini", "icon": "wand_stars", "default": false, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["cookie"] }, { "key": "styleLocked", "in": ["cookie"] } ] } },
+    { "key": "cookieSides", "type": "number", "label": "Cookie: sides", "icon": "add_triangle", "default": 14, "from": 0, "to": 40, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["cookie"] }, { "key": "styleLocked", "in": ["cookie"] } ] } },
+    { "key": "cookieConstantlyRotate", "type": "boolean", "label": "Cookie: constantly rotate", "icon": "autoplay", "default": false, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["cookie"] }, { "key": "styleLocked", "in": ["cookie"] } ] } },
+    { "key": "cookieHourMarks", "type": "boolean", "label": "Cookie: hour marks", "icon": "brightness_7", "default": false, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["cookie"] }, { "key": "styleLocked", "in": ["cookie"] } ] } },
+    { "key": "cookieTimeIndicators", "type": "boolean", "label": "Cookie: digits in the middle", "icon": "timer_10", "default": true, "visibleWhen": { "anyOf": [ { "key": "style", "in": ["cookie"] }, { "key": "styleLocked", "in": ["cookie"] } ] } },
+    { "key": "cookieDialNumberStyle", "type": "choice", "label": "Cookie: dial style", "icon": "graph_6", "default": "full", "visibleWhen": { "anyOf": [ { "key": "style", "in": ["cookie"] }, { "key": "styleLocked", "in": ["cookie"] } ] }, "choices": [
       { "displayName": "None", "icon": "block", "value": "none" },
       { "displayName": "Dots", "icon": "graph_6", "value": "dots" },
       { "displayName": "Full", "icon": "history_toggle_off", "value": "full" },
       { "displayName": "Numbers", "icon": "counter_1", "value": "numbers" }
     ]},
-    { "key": "cookieHourHandStyle", "type": "choice", "label": "Cookie: hour hand", "icon": "highlighter_size_2", "default": "fill", "choices": [
+    { "key": "cookieHourHandStyle", "type": "choice", "label": "Cookie: hour hand", "icon": "highlighter_size_2", "default": "fill", "visibleWhen": { "anyOf": [ { "key": "style", "in": ["cookie"] }, { "key": "styleLocked", "in": ["cookie"] } ] }, "choices": [
       { "displayName": "Hide", "icon": "block", "value": "hide" },
       { "displayName": "Classic", "icon": "radio", "value": "classic" },
       { "displayName": "Hollow", "icon": "circle", "value": "hollow" },
       { "displayName": "Fill", "icon": "eraser_size_5", "value": "fill" }
     ]},
-    { "key": "cookieMinuteHandStyle", "type": "choice", "label": "Cookie: minute hand", "icon": "eraser_size_1", "default": "medium", "choices": [
+    { "key": "cookieMinuteHandStyle", "type": "choice", "label": "Cookie: minute hand", "icon": "eraser_size_1", "default": "medium", "visibleWhen": { "anyOf": [ { "key": "style", "in": ["cookie"] }, { "key": "styleLocked", "in": ["cookie"] } ] }, "choices": [
       { "displayName": "Hide", "icon": "block", "value": "hide" },
       { "displayName": "Classic", "icon": "radio", "value": "classic" },
       { "displayName": "Thin", "icon": "line_end", "value": "thin" },
       { "displayName": "Medium", "icon": "eraser_size_2", "value": "medium" },
       { "displayName": "Bold", "icon": "eraser_size_4", "value": "bold" }
     ]},
-    { "key": "cookieSecondHandStyle", "type": "choice", "label": "Cookie: second hand", "icon": "pen_size_1", "default": "dot", "choices": [
+    { "key": "cookieSecondHandStyle", "type": "choice", "label": "Cookie: second hand", "icon": "pen_size_1", "default": "dot", "visibleWhen": { "anyOf": [ { "key": "style", "in": ["cookie"] }, { "key": "styleLocked", "in": ["cookie"] } ] }, "choices": [
       { "displayName": "Hide", "icon": "block", "value": "hide" },
       { "displayName": "Classic", "icon": "radio", "value": "classic" },
       { "displayName": "Line", "icon": "line_end", "value": "line" },
       { "displayName": "Dot", "icon": "adjust", "value": "dot" }
     ]},
-    { "key": "cookieDateStyle", "type": "choice", "label": "Cookie: date style", "icon": "date_range", "default": "bubble", "choices": [
+    { "key": "cookieDateStyle", "type": "choice", "label": "Cookie: date style", "icon": "date_range", "default": "bubble", "visibleWhen": { "anyOf": [ { "key": "style", "in": ["cookie"] }, { "key": "styleLocked", "in": ["cookie"] } ] }, "choices": [
       { "displayName": "Hide", "icon": "block", "value": "hide" },
       { "displayName": "Bubble", "icon": "bubble_chart", "value": "bubble" },
       { "displayName": "Border", "icon": "rotate_right", "value": "border" },
       { "displayName": "Rect", "icon": "rectangle", "value": "rect" }
     ]},
 
-    { "key": "pixelOrientation", "type": "choice", "label": "Pixel: orientation", "icon": "screen_rotation", "default": "vertical", "choices": [
+    { "key": "pixelOrientation", "type": "choice", "label": "Pixel: orientation", "icon": "screen_rotation", "default": "vertical", "visibleWhen": { "anyOf": [ { "key": "style", "in": ["pixel"] }, { "key": "styleLocked", "in": ["pixel"] } ] }, "choices": [
       { "displayName": "Horizontal", "icon": "swap_horiz", "value": "horizontal" },
       { "displayName": "Vertical", "icon": "swap_vert", "value": "vertical" }
     ]},

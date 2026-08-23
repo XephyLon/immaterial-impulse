@@ -403,6 +403,15 @@ if ! python3 "$SCRIPT_DIR/test_marquee_text_contract.py"; then
     exit 1
 fi
 
+# The clock's options page shows only the chosen style's rows. The predicate is
+# pinned by tst_option_visibility.qml; this is the adoption, which is what
+# decays - a 29th option added without a rule renders on every style again.
+echo "Running clock options contract tests..."
+if ! python3 "$SCRIPT_DIR/test_clock_options_contract.py"; then
+    echo "Clock options contract tests failed."
+    exit 1
+fi
+
 # A sidebar's surface stays mapped and the panel slides; a window that followed
 # the open flag was rebuilt per gesture and blocked the shell's one GUI thread
 # for 61ms each time. The rule that matters most here is the silent one: a
