@@ -22,6 +22,23 @@
 // VISIBLE. Hiding is the silent failure here: a row that is wrongly hidden is
 // a setting the user cannot reach and nothing logs, while a row that is
 // wrongly shown is a row.
+//
+// The lists are duck-typed, NOT Array.isArray. The manifest is parsed as
+// plain JSON, but on the way to this evaluator it crosses a QVariant
+// boundary (it is carried through var properties and handed to the option
+// row as a Repeater's modelData), and a JS tree converted to
+// QVariantMap/QVariantList reads back as wrapper objects with `length` and
+// indexed access that fail Array.isArray. Measured live on the clock's
+// rules in Settings > Widgets: `Array.isArray(visibleWhen.anyOf)` was false
+// with `anyOf.length === 2`, so every rule fell through to the fail-open
+// answer and all 22 annotated rows stayed visible for every style. The
+// wrappers are also not guaranteed the Array prototype, so the walks below
+// use index loops rather than some/every/indexOf.
+
+function isList(value) {
+    return Array.isArray(value)
+        || (!!value && typeof value === "object" && typeof value.length === "number");
+}
 
 function visible(option, read) {
     if (typeof option.enabledWhen === "string" && !read(option.enabledWhen))
@@ -32,15 +49,27 @@ function visible(option, read) {
 function rule(r, read) {
     if (r === undefined || r === null)
         return true;
-    if (Array.isArray(r.anyOf))
-        return r.anyOf.some(inner => rule(inner, read));
-    if (Array.isArray(r.allOf))
-        return r.allOf.every(inner => rule(inner, read));
+    if (isList(r.anyOf)) {
+        for (let i = 0; i < r.anyOf.length; ++i)
+            if (rule(r.anyOf[i], read))
+                return true;
+        return false;
+    }
+    if (isList(r.allOf)) {
+        for (let i = 0; i < r.allOf.length; ++i)
+            if (!rule(r.allOf[i], read))
+                return false;
+        return true;
+    }
     if (typeof r.key !== "string")
         return true;
     const value = read(r.key);
-    if (Array.isArray(r.in))
-        return r.in.indexOf(value) !== -1;
+    if (isList(r.in)) {
+        for (let i = 0; i < r.in.length; ++i)
+            if (r.in[i] === value)
+                return true;
+        return false;
+    }
     if (r.equals !== undefined)
         return value === r.equals;
     return !!value;
