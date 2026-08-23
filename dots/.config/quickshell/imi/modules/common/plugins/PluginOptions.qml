@@ -6,6 +6,7 @@ import QtQuick.Layouts
 import qs.modules.common
 import qs.modules.common.widgets
 import "gridSizes.js" as GridSizes
+import "option_visibility.js" as OptionVisibility
 
 ColumnLayout {
     id: root
@@ -19,6 +20,20 @@ ColumnLayout {
     // settings, pushing them below the fold and reading as if the plugin had
     // declared them. They live in their own section below instead.
     readonly property var widgetOptions: manifest.options || []
+
+    // A visibility rule reads another option by key, and it has to read the
+    // value the WIDGET is using - which, for a key the user has never touched,
+    // is the manifest's default and not `undefined`. So the defaults are
+    // indexed once and every rule reads through them.
+    readonly property var optionDefaults: {
+        const defaults = {};
+        for (const option of root.widgetOptions)
+            defaults[option.key] = option.default;
+        return defaults;
+    }
+    function readOption(key) {
+        return PluginState.option(root.manifest.id, key, root.optionDefaults[key]);
+    }
 
     // Host blur is a desktop-widget mechanism (PluginWidget frost); bar/
     // overlay-only plugins were getting a dead "Blur background" toggle.
@@ -230,8 +245,9 @@ ColumnLayout {
             required property var modelData
             Layout.fillWidth: true
             property var optionData: modelData
-            visible: !optionData.enabledWhen
-                || PluginState.option(root.manifest.id, optionData.enabledWhen, false)
+            // `enabledWhen` and `visibleWhen`, one evaluator - see
+            // option_visibility.js for what each spells.
+            visible: OptionVisibility.visible(optionData, key => root.readOption(key))
             enabled: visible
             Layout.preferredHeight: visible ? implicitHeight : 0
 
