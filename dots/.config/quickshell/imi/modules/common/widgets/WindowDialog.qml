@@ -23,7 +23,12 @@ Rectangle {
     // because anyone chose 23 as a spacing value: restyling the corner
     // restyled the padding, and changing either spelling alone left the card a
     // different height from its content.
-    property real contentPadding: Appearance.rounding.large
+    //
+    // M3's basic dialog pads its content 24dp. This is one step ABOVE that, on
+    // purpose and at the maintainer's request - 24 is a single pixel off the
+    // 23 it replaces and would not read as anything at all. Do not "correct"
+    // it back to `space300`.
+    property real contentPadding: Appearance.spacing.space400
     
     signal dismiss()
     Keys.onPressed: (event) => {
