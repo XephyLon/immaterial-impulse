@@ -203,8 +203,12 @@ hl.layer_rule({ match = { namespace = "quickshell:screenshot" }, no_anim = true}
 hl.layer_rule({ match = { namespace = "quickshell:session" }, blur = true})
 hl.layer_rule({ match = { namespace = "quickshell:session" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:session" }, ignore_alpha = 0})
-hl.layer_rule({ match = { namespace = "quickshell:sidebarRight" }, animation = "slide right"})
-hl.layer_rule({ match = { namespace = "quickshell:sidebarLeft" }, animation = "slide left"})
+-- The sidebars' surfaces stay mapped and the panels slide in QML (EdgeSlide,
+-- on tiers pinned to the layersIn/layersOut this used to draw), so there is
+-- no map to animate. The slide rules these replaced fired only on map, which
+-- on a persistent surface is once, at startup, on an empty window.
+hl.layer_rule({ match = { namespace = "quickshell:sidebarRight" }, no_anim = true})
+hl.layer_rule({ match = { namespace = "quickshell:sidebarLeft" }, no_anim = true})
 -- The sidebars draw a translucent drop shadow (StyledRectangularShadow) in
 -- their surface's elevation margin. The catch-all whole-surface blur above
 -- frosts that shadow into an ugly band along the panel's edge (#82). Turn the
