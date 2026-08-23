@@ -4737,6 +4737,67 @@ false. The reasoning is `EditModeChromeContent.qml`'s `doneButton` verbatim, arr
 other end.
 e8cd6bd04 ("fix(polkit): the confirming action carries a filled primary container").
 
+**...and the other end of that pair is a rule the row derives, not something each Cancel
+declares.** Filling the confirm answered "which of these two is what you came here to do" from one
+side and left the other open: a bare label beside a filled container reads as a link rather than as
+the second half of a choice, which is 283ada440 ("fix(editmode): the toolbar's title stops reading
+as a button") arriving from the opposite direction - there the thing that was *not* pressable
+looked like it was. **In a dialog whose confirming action is filled, the dismissing action is
+outlined; a dialog whose actions are all flat stays flat.** `WindowDialogButtonRow` publishes
+`hasFilledAction` (it is the smallest thing that can see both actions) and `DialogButton.outlined`
+is derived from it, so the ten dialogs whose actions are all flat are untouched and the next dialog
+that grows a filled confirm gets the edge without anyone remembering to. Four things about it:
+
+- **"Filled" is read off `colBackground`, not declared.** The one thing a call site does to make a
+  button the dialog's confirming action stays "give it a container". `colBackground` and never
+  `buttonColor`, because the latter is transparentized while the button is disabled - a filled
+  action would stop counting as one exactly while it waits for the response it submitted.
+- **The edge is `colOutline`, not the `colOutlineVariant` `RippleButton` defaults to.** Measured
+  against the card's own `m3surfaceContainerHigh` fill, the variant stands off it by **32/255** and
+  `colOutline` by **106** - and `docs/M3_GUIDELINES.md` §1 documents the variant as a *subtle*
+  boundary, which is the thing that failed here. It is also the tone `WindowDialogSeparator` already
+  draws in, so the card carries one outline colour rather than two. A source check for that role
+  cannot be a substring test: `colOutlineVariant` **contains** `colOutline`, so the first draft of
+  the check passed on the exact token it exists to refuse.
+- **The gap between the actions is measured between DRAWN edges.** The row was `space50` (4), M3
+  asks for 8, and 4 read fine while the dismissing action was a bare label: the filled OK's
+  container sat 4px from Cancel's invisible box and **20px** from the nearest pixel Cancel painted,
+  its label. An outline moves that edge out by the button's own 16px padding, so the separation
+  collapses to the row's spacing alone. `space100` now, re-measured at 8/24.
+- **A call site may not spell the rule for itself.** `tests/test_polkit_dialog_contract.py` refuses
+  an `outlined:` outside `modules/common/widgets/` - a rule re-stated per Cancel is a rule the
+  fourteenth Cancel gets wrong - and asserts it found DialogButton call sites first.
+
+04f66b498 ("feat(widgets): a dialog's dismissing action carries an outline"),
+9803a7734 ("fix(widgets): a dialog's two actions sit 8dp apart"),
+3ce984a99 ("test(polkit): the outline-role check stops passing on the role it refuses").
+
+**A dialog's content padding is a spacing decision now, and it used to be its corner radius.**
+`WindowDialog` spelled the padding twice and both times as `dialogBackground.radius`: the content
+column took `margins: dialogBackground.radius`, and the card derived `implicitHeight:
+contentColumn.implicitHeight + dialogBackground.radius * 2`. So the padding was 23px because
+`Appearance.rounding.large` is 23 - restyling the corner restyled the padding, and changing one of
+the two spellings without the other leaves the card a different height from what is in it (planted:
+the harness's four-paddings check reads 32/32/32/**14**). There is one `WindowDialog.contentPadding`
+now and both come off it. Three things:
+
+- **Everything that BLEEDS had the same coupling from the other side.** `WindowDialogSeparator` and
+  eight call sites across the Wi-Fi, Bluetooth, Tailscale, Phone Connect and Volume dialogs cancel
+  that padding with `Layout.leftMargin: -Appearance.rounding.large` so a rule or a list reaches the
+  card's edge - which is only true for as long as the radius and the padding happen to be equal.
+  The content column publishes `contentPadding` for its direct children; `VolumeDialogContent` is a
+  grandchild and takes it as a **required** property, so a missing wiring there is loud rather than
+  a list that quietly stops bleeding.
+- **The value is `Appearance.spacing.space400` (32), one step ABOVE M3's 24dp basic-dialog padding,
+  deliberately.** The maintainer asked for more room; `space300` is a *one pixel* change from the 23
+  it replaces and would not read as anything. Do not "correct" it back to M3's number - the property
+  says so in place.
+- **The check is the drawn inset against the token**, not against itself. The four-paddings check
+  beside it is satisfied by any number applied consistently, the old radius included.
+
+4fb2a7f02 ("refactor(widgets): a dialog's content padding gets a name of its own"),
+1cb34eaa8 ("fix(widgets): a dialog's card pads its content on the 8dp grid").
+
 **`WindowDialog` freezes its card's height at the moment `show` flips, and that is load-bearing for
 how a dialog is built.** `onShowChanged` *assigns* `dialogBackground.implicitHeight`, which destroys
 the binding to `contentColumn.implicitHeight` - so the card is whatever the content measured at that

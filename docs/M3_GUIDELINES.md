@@ -45,6 +45,30 @@ Visible borders are not required for every surface. Many components rely entirel
 - Let `GroupedList` provide the common content inset. Child controls must not add another horizontal
   inset that makes icons, labels, or fields drift out of alignment with adjacent rows.
 
+### Dialogs
+
+`WindowDialog` is the only dialog card in this shell and its numbers are rules, not defaults.
+
+- **Content padding is `WindowDialog.contentPadding`, and it is `Appearance.spacing.space400` (32).**
+  It is one property because two things derive from it - the content column's `margins` and the
+  card's `implicitHeight` - and they used to be two separate spellings of the card's corner radius,
+  which made the padding 23px for a reason that was not a spacing reason at all. Anything that
+  bleeds out to the card's edge (a `WindowDialogSeparator`, a full-width list, a progress bar)
+  cancels *that* property, never `Appearance.rounding.large`.
+- **32 is deliberately one step above M3's 24dp basic-dialog padding.** It is a maintainer decision,
+  taken because `space300` is a single pixel away from the value it replaces. Do not restore 24.
+- **The confirming action carries a filled container; the dismissing action is then outlined.**
+  A dialog whose actions are all flat stays flat - the pairing is between a filled button and its
+  partner, not a decoration every Cancel gets. The rule is derived by `WindowDialogButtonRow` from
+  whether one of its children is filled, and applied by `DialogButton.outlined`; a call site must
+  not spell it for itself. The outline is `colOutline` at `borderWidth.standard`, never
+  `colOutlineVariant` - a dialog action's edge is what makes it read as pressable, and the variant
+  is this document's *subtle* boundary tone.
+- **Actions sit `Appearance.spacing.space100` (8) apart**, which is M3's dialog-action gap. Judge
+  that gap between the buttons' *drawn* edges: a flat button's painted extent is its label, an
+  outlined or filled one's is its container, so the same `spacing` reads very differently either
+  side of adding an outline.
+
 ### Corner Rounding (Radii)
 Always use predefined rounding values from `Appearance.rounding`. Never use hardcoded pixel values (e.g., `radius: 12`) or arbitrary maximum values (e.g., `radius: 9999`).
 
