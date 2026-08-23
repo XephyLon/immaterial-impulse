@@ -28,7 +28,12 @@ RippleButton {
     // `colBackground`, never `buttonColor` - the latter is transparentized
     // while the button is disabled, which would make a filled action stop
     // counting as one exactly while it waits for the response it submitted.
-    readonly property bool filled: root.colBackground.a > 0
+    //
+    // Named for the question rather than for the property, because the row
+    // below asks every child duck-typed and `ConfigSwitch`'s field control
+    // already declares a `filled` of its own - a `ConfigTextArea` dropped into
+    // an action row would otherwise outline every button in it.
+    readonly property bool dialogActionFilled: root.colBackground.a > 0
 
     // THE PAIRING RULE: in a dialog whose confirming action is filled, the
     // dismissing action is outlined; a dialog whose actions are all flat stays
@@ -44,7 +49,7 @@ RippleButton {
     // that grows a filled confirm gets its dismissing action's edge without
     // anyone remembering to. A DialogButton outside a WindowDialogButtonRow -
     // the Wi-Fi dialog's rescan glyph - reads `undefined` and stays flat.
-    property bool outlined: !root.filled && (parent?.hasFilledAction ?? false)
+    property bool outlined: !root.dialogActionFilled && (parent?.hasFilledAction ?? false)
     border: root.outlined
     // `colOutline`, not `RippleButton`'s `colOutlineVariant` default: the
     // variant is documented as a SUBTLE boundary (docs/M3_GUIDELINES.md §1),

@@ -174,8 +174,8 @@ ShellRoot {
             const cancel = harness.button("Cancel");
             const ok = harness.button("OK");
             console.log(`[Polkit] cancel outlined=${cancel.outlined} border=${cancel.border}`
-                        + ` filled=${cancel.filled} | ok outlined=${ok.outlined} border=${ok.border}`
-                        + ` filled=${ok.filled}`);
+                        + ` filled=${cancel.dialogActionFilled} | ok outlined=${ok.outlined} border=${ok.border}`
+                        + ` filled=${ok.dialogActionFilled}`);
             harness.check("the dismissing action is outlined and the confirming one is not",
                           cancel.outlined && cancel.border && !ok.outlined && !ok.border);
         },
