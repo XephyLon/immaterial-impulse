@@ -4752,6 +4752,13 @@ that grows a filled confirm gets the edge without anyone remembering to. Four th
   button the dialog's confirming action stays "give it a container". `colBackground` and never
   `buttonColor`, because the latter is transparentized while the button is disabled - a filled
   action would stop counting as one exactly while it waits for the response it submitted.
+- **The predicate is `dialogActionFilled`, and the name is the load-bearing part.** The row asks
+  every child duck-typed - it has to, since an action row holds spacers, captions and switches as
+  well as buttons - so a name another widget answers to is a false positive with a border on it.
+  `ConfigTextArea` declares `property bool filled: true` as its own filled-vs-outlined switch, and
+  the first spelling of this collided with it: planted, a `ConfigTextArea` in an all-flat action row
+  outlined **both** of that row's buttons. Anything else asking a heterogeneous row a duck-typed
+  question has the same name to choose.
 - **The edge is `colOutline`, not the `colOutlineVariant` `RippleButton` defaults to.** Measured
   against the card's own `m3surfaceContainerHigh` fill, the variant stands off it by **32/255** and
   `colOutline` by **106** - and `docs/M3_GUIDELINES.md` §1 documents the variant as a *subtle*
@@ -4770,7 +4777,8 @@ that grows a filled confirm gets the edge without anyone remembering to. Four th
 
 04f66b498 ("feat(widgets): a dialog's dismissing action carries an outline"),
 9803a7734 ("fix(widgets): a dialog's two actions sit 8dp apart"),
-3ce984a99 ("test(polkit): the outline-role check stops passing on the role it refuses").
+3ce984a99 ("test(polkit): the outline-role check stops passing on the role it refuses"),
+70a6beec5 ("fix(widgets): the filled-action predicate gets a name no other widget answers to").
 
 **A dialog's content padding is a spacing decision now, and it used to be its corner radius.**
 `WindowDialog` spelled the padding twice and both times as `dialogBackground.radius`: the content
