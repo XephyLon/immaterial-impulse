@@ -403,6 +403,17 @@ if ! python3 "$SCRIPT_DIR/test_marquee_text_contract.py"; then
     exit 1
 fi
 
+# A surface that animates on its way out is owned by that animation, not by the
+# flag the user's gesture sets: layer-shell forbids window reuse, so a window
+# whose `visible` follows the flag is destroyed on the frame the exit starts.
+# The shape is written twice now - the wallpaper selector and the overview - and
+# it is the adoption that decays.
+echo "Running exit-owned surface contract tests..."
+if ! python3 "$SCRIPT_DIR/test_exit_owned_surface_contract.py"; then
+    echo "Exit-owned surface contract tests failed."
+    exit 1
+fi
+
 # The shell has two password prompts - the lock screen and the polkit dialog -
 # and they were two different text fields, one of them Material's outlined
 # container with the prompt floating in a notch. The check derives the control
