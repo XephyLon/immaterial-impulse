@@ -29,10 +29,10 @@ RippleButton {
     // while the button is disabled, which would make a filled action stop
     // counting as one exactly while it waits for the response it submitted.
     //
-    // Named for the question rather than for the property, because the row
-    // below asks every child duck-typed and `ConfigSwitch`'s field control
-    // already declares a `filled` of its own - a `ConfigTextArea` dropped into
-    // an action row would otherwise outline every button in it.
+    // Named for the question rather than for the appearance, because the row
+    // asks every child duck-typed and `ConfigTextArea` already declares a
+    // `filled` of its own - one dropped into an action row reported itself as
+    // the dialog's confirming action and outlined every button beside it.
     readonly property bool dialogActionFilled: root.colBackground.a > 0
 
     // THE PAIRING RULE: in a dialog whose confirming action is filled, the
