@@ -158,6 +158,55 @@ ShellRoot {
                           row.b <= cardBox.b && row.t >= cardBox.t);
         },
 
+        // ---- the padding is a spacing decision, not the corner's radius ----
+        () => {
+            const cardBox = harness.box(harness.card());
+            const column = harness.box(harness.first("QQuickColumnLayout"));
+            const drawn = column.l - cardBox.l;
+            const card = harness.card();
+            console.log(`[Polkit] padding drawn=${drawn} space400=${Appearance.spacing.space400} radius=${card.radius}`);
+            harness.check("the card pads its content on the spacing grid, not on its corner",
+                          drawn === Appearance.spacing.space400);
+        },
+
+        // ---- the dismissing action reads as a button --------------------
+        () => {
+            const cancel = harness.button("Cancel");
+            const ok = harness.button("OK");
+            console.log(`[Polkit] cancel outlined=${cancel.outlined} border=${cancel.border}`
+                        + ` filled=${cancel.filled} | ok outlined=${ok.outlined} border=${ok.border}`
+                        + ` filled=${ok.filled}`);
+            harness.check("the dismissing action is outlined and the confirming one is not",
+                          cancel.outlined && cancel.border && !ok.outlined && !ok.border);
+        },
+        () => {
+            // The edge has to be visible ON the card it is drawn on. Scored in
+            // channel levels against the card's own fill, because "it names an
+            // outline role" is not "the outline can be seen" - the variant role
+            // this button's base class defaults to is a third of the contrast.
+            const cancel = harness.button("Cancel");
+            const cardFill = harness.frozen(harness.card().color);
+            const edge = harness.channelDelta(cardFill, harness.frozen(cancel.colBorder));
+            const variant = harness.channelDelta(cardFill, harness.frozen(Appearance.colors.colOutlineVariant));
+            console.log(`[Polkit] card=${cardFill} outline=${harness.frozen(cancel.colBorder)}`
+                        + ` delta=${edge} (outlineVariant would be ${variant})`);
+            harness.check("the outline stands off the card it is drawn on", edge >= 40);
+        },
+        () => {
+            // The gap the eye reads is between DRAWN edges, and giving Cancel a
+            // container moves that edge outward by the button's own padding -
+            // so a spacing that was fine beside a bare label is not the same
+            // spacing beside a second container.
+            const cancel = harness.button("Cancel");
+            const cancelBox = harness.box(cancel);
+            const labelBox = harness.box(cancel.contentItem);
+            const okBox = harness.box(harness.button("OK"));
+            console.log(`[Polkit] gap container-to-container=${okBox.l - cancelBox.r}`
+                        + ` label-to-container=${okBox.l - labelBox.r}`);
+            harness.check("the two actions sit 8dp apart",
+                          okBox.l - cancelBox.r === Appearance.spacing.space100);
+        },
+
         // ---- the two buttons answer the pointer ----------------------------
         () => {
             for (const b of harness.findAll(loader.item, "DialogButton", []))
