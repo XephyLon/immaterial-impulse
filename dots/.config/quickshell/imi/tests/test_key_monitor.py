@@ -204,11 +204,22 @@ class TheLatchedKeys(unittest.TestCase):
         """It was gated on the OSD's own switch, which was right while the OSD
         was its only consumer. With the switch off, the keyboard's Caps and Num
         would sit frozen at whatever they read when polling stopped - stale,
-        and with nothing saying so."""
+        and with nothing saying so.
+
+        The condition lives in one `watching` property now (the LED watcher
+        and the hyprctl fallback both gate on it), so the pin is in two
+        halves: the property carries both consumers, and every `running:` in
+        the file reads it."""
         text = LOCKS.read_text(encoding="utf-8")
         self.assertRegex(
             text,
-            r"running:\s*\(Config\.options\.osd\.lockKeys \?\? true\)\s*\|\|\s*GlobalStates\.oskOpen")
+            r"property bool watching:\s*\(Config\.options\.osd\.lockKeys \?\? true\)\s*\|\|\s*GlobalStates\.oskOpen")
+        running_lines = re.findall(r"running:\s*(.+)", text)
+        self.assertTrue(running_lines, "no watcher gates found in KeyboardLocks")
+        for condition in running_lines:
+            self.assertIn("root.watching", condition,
+                          f"a lock watcher runs on `{condition.strip()}` without root.watching - "
+                          "it will poll (or stay dead) regardless of who is listening")
 
     def test_scroll_lock_is_left_momentary_on_purpose(self):
         """`hyprctl devices` reports caps and num and nothing else, so a lock
