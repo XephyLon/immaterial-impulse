@@ -10,6 +10,10 @@ import Quickshell.Services.Pipewire
 ColumnLayout {
     id: root
     required property bool isSink
+    // The lists below run to the card's edge, and this block is a grandchild
+    // of the dialog's content column rather than a child of it - so the
+    // padding they cancel is handed in rather than read off a parent.
+    required property real contentPadding
     readonly property list<var> appPwNodes: isSink ? Audio.outputAppNodes : Audio.inputAppNodes
     readonly property list<var> devices: isSink ? Audio.outputDevices : Audio.inputDevices
     readonly property bool hasApps: appPwNodes.length > 0
@@ -66,8 +70,8 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.topMargin: -Appearance.spacing.space300
         Layout.bottomMargin: -Appearance.spacing.space200
-        Layout.leftMargin: -Appearance.rounding.large
-        Layout.rightMargin: -Appearance.rounding.large
+        Layout.leftMargin: -root.contentPadding
+        Layout.rightMargin: -root.contentPadding
         topMargin: Appearance.spacing.space150
         bottomMargin: Appearance.spacing.space150
         leftMargin: Appearance.spacing.space250

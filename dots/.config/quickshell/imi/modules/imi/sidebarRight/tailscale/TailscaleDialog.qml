@@ -44,8 +44,8 @@ WindowDialog {
         Layout.fillWidth: true
         Layout.topMargin: -Appearance.spacing.space200
         Layout.bottomMargin: -Appearance.spacing.space200
-        Layout.leftMargin: -Appearance.rounding.large
-        Layout.rightMargin: -Appearance.rounding.large
+        Layout.leftMargin: -root.contentPadding
+        Layout.rightMargin: -root.contentPadding
 
         clip: true
         spacing: 0
