@@ -69,8 +69,20 @@ Scope {
         // be while the switch happens. This is a choice about where to put an
         // unavoidable step, not a measurement.
         readonly property bool bodyFrosted: columnLayout.openProgress >= 0.5
+        onBodyFrostedChanged: blurRegion.publishNow()
 
+        // The composed region's INNER items swap identity at runtime - the
+        // grid is rebuilt by its loader every open, and bodyFrosted flips
+        // both items in and out - and BackgroundEffect's live geometry
+        // tracking follows a given item, not a binding that replaces it.
+        // On the persistent surface nothing else republishes any more (the
+        // window never resizes and never remaps), so the first open showed
+        // the frost where the HALF-BUILT grid had been when the region was
+        // first pushed: a sharp unblurred band down the card's left edge,
+        // user-reported. Each identity flip republishes now; the settle
+        // timer inside publishNow covers the layout that follows it.
         WindowBlurRegion {
+            id: blurRegion
             targetWindow: panelWindow
             region: Region {
                 Region {
@@ -258,6 +270,7 @@ Scope {
             Loader {
                 id: overviewLoader
                 active: overviewScope.reallyOpen && (Config?.options.overview.enable ?? true)
+                onItemChanged: blurRegion.publishNow()
                 sourceComponent: (Config?.options.overview.style ?? "default") === "niri" ? niriComponent : defaultComponent
 
                 Component {
