@@ -4376,6 +4376,50 @@ the honest one — which is also what §"Expandable Content" of the guidelines
 already pairs with a spatial exit.
 (fix(wallpapers): the selector arrives and dissolves instead of flying.)
 
+**Two decisions that are each correct can add up to a surface that cannot animate at all, and neither
+one is where you would look.** The overview appeared and vanished on a single frame at both ends.
+`rules.lua` turns the compositor's own map animation off for `quickshell:overview` - which is right,
+because a map animation on a screen-sized surface animates the *surface*, and that reads as the
+desktop lurching rather than as a card opening - and the window's `visible` followed
+`GlobalStates.overviewOpen`, which is how nearly every panel here is written. Layer-shell forbids
+window reuse, so between the two the window was created on the frame the flag rose and destroyed on
+the frame it fell, and there was nothing left that *could* animate either end. The repair is the
+wallpaper selector's `reallyOpen` shape above; it is now written twice, so it is pinned rather than
+described - `tests/test_exit_owned_surface_contract.py` holds both sites to it.
+
+Four things from it worth not re-deriving:
+
+- **Everything else gated on the open flag has to move onto the lifetime flag too, or the exit is
+  half a panel leaving.** The overview grid's `Loader.active` read `GlobalStates.overviewOpen`, so
+  the grid was destroyed on frame one of the exit and the search bar dissolved on its own. Gating on
+  the gesture's flag inside the surface is invisible until the surface outlives the gesture.
+- **A blur region is not part of the card it sits behind.** The compositor frosts that rectangle
+  whether or not anything is drawn over it, so a region gated on the open flag arrives a whole
+  entrance before the card and stays a whole exit after it - a frosted ghost of a card that is not
+  there. A region is on or off and cannot be faded, so the step goes where the card is the least
+  transparent thing it can be while it happens: the half way point of the card's own opacity.
+- **The card does not travel, and that is geometry rather than taste.** The sibling fork drops this
+  card in from above the screen edge and pays for the room with a negative margin on all four sides
+  of its surface; ours is anchored to the top of a surface that stops at the bar's exclusive zone, so
+  a rise is drawn outside the window and clipped - the same constraint the selector's entry states
+  from the other end. `transformOrigin: Item.Top` says which edge the card comes out of without
+  needing the room. The entrance takes `elementMoveSmall` for its CURVE as well as its duration:
+  `expressiveFastSpatial` overshoots by construction (its second control point is 1.67), so the
+  bounce is the scale settling past 1 - and the overshoot is clamped off the opacity, where a card
+  fading past opaque and back is a flicker.
+- **The lifetime is measurable without looking at a single pixel, and it needs a control in the same
+  run.** `hyprctl layers` polled straight after a close: `quickshell:overview` survives **196-202ms**
+  across three runs, against `elementMoveFast`'s own 200ms, while `quickshell:sidebarRight` - whose
+  surface still follows its flag - is gone in **4-5ms**, which is the instrument's floor. On its own
+  200ms is a number that could be sampling lag; with the second one it is the exit animation.
+
+And the check's own first draft walked past the plant it exists for, which is the reusable half:
+it swept the whole file for a `visible:` line mentioning `reallyOpen`, and putting the *window* back
+on the gesture flag leaves the card inside it still matching. A gate is read at the declaration that
+maps the surface - located by the `WlrLayershell.namespace` under it - never anywhere in the file.
+c837f589e ("feat(overview): the overview arrives and dissolves instead of snapping"),
+3e2143eae ("fix(test): read the surface gate at the declaration that maps it").
+
 A delegate cannot see its siblings, so `Carousel`'s rank stays the model index — the clamp and the
 scaled step still come from the policy, which was the half that was wrong. And a wave is a
 **cancellable** list rather than loose animations: `expanded` flipping twice inside the first wave's
