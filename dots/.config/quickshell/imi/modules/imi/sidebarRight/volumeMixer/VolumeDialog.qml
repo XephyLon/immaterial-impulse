@@ -25,6 +25,7 @@ WindowDialog {
 
     VolumeDialogContent {
         isSink: root.isSink
+        contentPadding: root.contentPadding
     }
 
     WindowDialogButtonRow {
