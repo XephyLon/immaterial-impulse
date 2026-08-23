@@ -199,7 +199,10 @@ def test_the_dismissing_action_takes_its_outline_from_the_row():
          "either it is hardcoded, or the rule has moved to the call sites")
     assert re.search(r"(?<![\w.])border: root\.outlined", button), \
         "DialogButton declares an `outlined` that draws no border"
-    assert "colBorder: Appearance.colors.colOutline" in button, \
+    # Anchored at the end of the name: `colOutlineVariant` CONTAINS
+    # `colOutline`, so a substring test passes on the exact token this rule
+    # exists to refuse - planted, and it did.
+    assert re.search(r"colBorder: Appearance\.colors\.colOutline(?![\w])", button), \
         ("the outline is not on colOutline - colOutlineVariant is documented as "
          "a SUBTLE boundary, which is the thing that failed here")
 
