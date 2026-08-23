@@ -398,6 +398,12 @@ Singleton {
         readonly property list<real> standard: [0.2, 0, 0, 1, 1, 1]
         readonly property list<real> standardAccel: [0.3, 0, 1, 1, 1, 1]
         readonly property list<real> standardDecel: [0, 0, 0, 1, 1, 1]
+        // What the compositor slid the sidebars on before the shell drew that
+        // slide itself (`pc_decel` in shellOverrides/animations.lua): a decel
+        // that settles through a 5% overshoot. Kept as its own curve rather
+        // than rounded to a Material one so the panels move exactly as they
+        // did when Hyprland moved them.
+        readonly property list<real> panelSlideDecel: [0.05, 0.9, 0.1, 1.05, 1, 1]
         readonly property real expressiveFastSpatialDuration: 350
         readonly property real expressiveDefaultSpatialDuration: 500
         readonly property real expressiveSlowSpatialDuration: 650
@@ -666,10 +672,15 @@ Singleton {
             property int type: Easing.OutExpo
         }
 
+        // The two sidebar tiers are pinned to the compositor's `layersIn` /
+        // `layersOut` (speed 4 = 400ms, on pc_decel / pc_accel), because that
+        // is the motion the sidebars have always had and EdgeSlide now draws
+        // it in QML instead. They were 300/250ms on the standard pair and
+        // nothing took them, so nothing else moved.
         property QtObject sidebarSlideEnter: QtObject {
-            property int duration: motion.scale(300)
+            property int duration: motion.scale(400)
             property int type: Easing.BezierSpline
-            property list<real> bezierCurve: animationCurves.standardDecel
+            property list<real> bezierCurve: animationCurves.panelSlideDecel
             property int velocity: motion.scaleVelocity(650)
             property Component numberAnimation: Component {
                 NumberAnimation {
@@ -682,9 +693,9 @@ Singleton {
         }
 
         property QtObject sidebarSlideExit: QtObject {
-            property int duration: motion.scale(250)
+            property int duration: motion.scale(400)
             property int type: Easing.BezierSpline
-            property list<real> bezierCurve: animationCurves.standardAccel
+            property list<real> bezierCurve: animationCurves.emphasizedAccel
             property int velocity: motion.scaleVelocity(650)
             property Component numberAnimation: Component {
                 NumberAnimation {
