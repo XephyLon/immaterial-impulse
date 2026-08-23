@@ -183,6 +183,19 @@ enum names (`Cookie4Sided`, `Heart`, …); an unrecognised name falls back to `C
 whenever the value *is* a shape — a 31-entry name-chip row is unreadable, and `ConfigSelectionArray`'s
 chip `Flow` only wraps when the row has no label, so such a row cannot be labelled either.
 
+An option can be shown only while another option has a given value. `"visibleWhen"` takes a
+rule — `{ "key": "style", "in": ["cookie"] }`, `{ "key": "quoteEnable", "equals": true }`, a bare
+`{ "key": "flag" }` for truthiness, or `{ "anyOf": [...] }` / `{ "allOf": [...] }` over those —
+read against the plugin's current values with the manifest's own defaults filled in, so a rule
+against a default the user never changed still reads what the widget is using. A rule the evaluator
+cannot read (no `key`) shows the row: a wrongly hidden row is a setting the user cannot reach and
+nothing logs. The older `"enabledWhen": "<booleanKey>"` is the same thing for one boolean and, despite
+its name, hides rather than greys — both fields go through `option_visibility.js`, and when both are
+present both must pass. The clock is the worked example: every `digital*` / `cookie*` / `pixel*` row
+is gated on its style being chosen for the desktop **or** the lock screen, since the two can differ
+(`tests/test_clock_options_contract.py` holds that; `tests/tst_option_visibility.qml` holds the
+evaluator).
+
 `color` renders a row of palette swatches (`ColorSelectionArray`) instead of chips. Its `choices` are
 `Appearance.colors` role names without the `col` prefix (`primary`, `secondaryContainer`, `layer0`, …).
 The empty string is a legal choice and draws an "automatic" slot rather than a swatch — use it when
