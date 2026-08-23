@@ -15,12 +15,28 @@ Scope {
     id: overviewScope
     property bool dontAutoCancelSearch: false
 
+    // The surface outlives the flag by exactly one exit animation, and it is
+    // the ANIMATION that says when - the same rule, and for the same reason, as
+    // `modules/imi/wallpaperSelector/WallpaperSelector.qml`'s `reallyOpen`
+    // records: a Behavior's animation starts a frame after the write that
+    // triggers it, and an accelerating exit carries most of its distance in its
+    // last frames, so a Timer at the exit tier's own duration tears the window
+    // down with the transition still on screen.
+    //
+    // Before this the window's `visible` followed `GlobalStates.overviewOpen`
+    // directly, and `rules.lua` turns the compositor's own map animation off for
+    // this namespace (`no_anim`, because a map animation on a screen-sized
+    // surface reads as the desktop lurching). Between the two there was nothing
+    // left to animate the overview at either end: it appeared and vanished on
+    // one frame.
+    property bool reallyOpen: false
+
     PanelWindow {
         id: panelWindow
         property string searchingText: ""
         readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
         property bool monitorIsFocused: (Hyprland.focusedMonitor?.id == monitor?.id)
-        visible: GlobalStates.overviewOpen
+        visible: overviewScope.reallyOpen
 
         WlrLayershell.namespace: "quickshell:overview"
         WlrLayershell.layer: WlrLayer.Top
@@ -37,15 +53,28 @@ Scope {
         // catch-all whole-surface blur frosted (#89, the deferred half of #82).
         // Pairs with rules.lua turning the layerrule blur off for this
         // namespace. The niri style contributes nothing (see NiriOverview.qml).
+        //
+        // The gate is the CARD's own progress rather than the open flag, and
+        // that only started mattering when the card got a transition. A blur
+        // region is a rectangle the compositor frosts whether or not anything is
+        // drawn over it: gated on the flag it arrives a full entrance before the
+        // card does and stays a full exit after it has gone, which is a frosted
+        // ghost of the card with no card in it. It cannot be faded - the region
+        // is on or off - so it switches at the half way point of the card's own
+        // opacity, where the card itself is the least transparent thing it can
+        // be while the switch happens. This is a choice about where to put an
+        // unavoidable step, not a measurement.
+        readonly property bool bodyFrosted: columnLayout.openProgress >= 0.5
+
         WindowBlurRegion {
             targetWindow: panelWindow
             region: Region {
                 Region {
-                    item: GlobalStates.overviewOpen ? searchWidget.backgroundItem : null
+                    item: panelWindow.bodyFrosted ? searchWidget.backgroundItem : null
                     radius: searchWidget.backgroundRadius
                 }
                 Region {
-                    item: (overviewLoader.item?.backgroundPainted ?? false) ? overviewLoader.item.backgroundItem : null
+                    item: (panelWindow.bodyFrosted && (overviewLoader.item?.backgroundPainted ?? false)) ? overviewLoader.item.backgroundItem : null
                     radius: overviewLoader.item?.backgroundRadius ?? 0
                 }
             }
@@ -65,11 +94,17 @@ Scope {
                     searchWidget.disableExpandAnimation();
                     overviewScope.dontAutoCancelSearch = false;
                     GlobalFocusGrab.dismiss();
+                    columnLayout.leave();
                 } else {
+                    // The surface is asked for before the card is asked to
+                    // arrive, in this order: an entrance started against an
+                    // unmapped window is an entrance nothing advances.
+                    overviewScope.reallyOpen = true;
                     if (!overviewScope.dontAutoCancelSearch) {
                         searchWidget.cancelSearch();
                     }
                     GlobalFocusGrab.addDismissable(panelWindow);
+                    columnLayout.arrive();
                 }
             }
         }
@@ -90,12 +125,86 @@ Scope {
 
         Column {
             id: columnLayout
-            visible: GlobalStates.overviewOpen
+            visible: overviewScope.reallyOpen
             anchors {
                 horizontalCenter: parent.horizontalCenter
                 top: parent.top
             }
             spacing: -Appearance.spacing.space100
+
+            // ONE scalar drives both channels, because docs/M3_GUIDELINES.md §2
+            // requires the opacity to finish on the same schedule as the scale -
+            // two Behaviors at two tiers is what makes a component reach full
+            // opacity while it is still growing, which reads as a hiccup.
+            //
+            // No translate, and that is a constraint rather than a preference.
+            // The sibling fork drops this card in from above the screen edge and
+            // pays for the room with a negative margin on all four sides of the
+            // surface; here the column is anchored to the top of a surface that
+            // stops at the bar's exclusive zone, so a rise would be drawn
+            // outside the window and clipped. `transformOrigin: Item.Top`
+            // already says which edge the card comes out of: it unfurls
+            // downwards from its own top edge, which is where it hangs from.
+            //
+            // The entrance takes `elementMoveSmall` for its CURVE, not only its
+            // duration. `expressiveFastSpatial` overshoots by construction (its
+            // second control point is 1.67), so the card settles with a bounce
+            // rather than easing flat into place - which is the half of the
+            // fork's "bounce" style that survives having no room to travel.
+            // The overshoot is left on the scale and clamped off the opacity: a
+            // card that fades past opaque and back is a flicker, a card that
+            // grows 2% past its size and settles is the bounce.
+            property real openProgress: 0
+            readonly property real entranceScaleFrom: 0.9
+
+            opacity: Math.min(1, columnLayout.openProgress)
+            scale: columnLayout.entranceScaleFrom
+                + (1 - columnLayout.entranceScaleFrom) * columnLayout.openProgress
+            transformOrigin: Item.Top
+
+            function arrive() {
+                exitAnim.stop();
+                enterAnim.start();
+            }
+            function leave() {
+                enterAnim.stop();
+                exitAnim.start();
+            }
+
+            // Started animations rather than a `Behavior`: a Behavior never
+            // raises `finished` at any duration (motion_policy.js records the
+            // probe), and this exit's `finished` is what owns the window.
+            // `openProgress` starts at 0 as its DECLARED value and is only ever
+            // written by these two - a start value written through the animated
+            // property is what lint_animated_start_write.py exists for.
+            NumberAnimation {
+                id: enterAnim
+                target: columnLayout
+                property: "openProgress"
+                to: 1
+                duration: Appearance.animation.elementMoveSmall.duration
+                easing.type: Appearance.animation.elementMoveSmall.type
+                easing.bezierCurve: Appearance.animation.elementMoveSmall.bezierCurve
+            }
+
+            NumberAnimation {
+                id: exitAnim
+                target: columnLayout
+                property: "openProgress"
+                to: 0
+                // The effects tier rather than `elementMoveExit`, for the
+                // reasoning WallpaperSelector.qml's exit animation writes out:
+                // this is an opacity transition with a scale nudge on it rather
+                // than a departure across the screen, and `emphasizedAccel` at
+                // its own 200ms spends 46% of the transition in its last two
+                // frames - on an opacity that is a card which sits there and
+                // then blinks out.
+                duration: Appearance.animation.elementMoveFast.duration
+                easing.type: Appearance.animation.elementMoveFast.type
+                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                // The window's lifetime IS this animation's.
+                onFinished: overviewScope.reallyOpen = false
+            }
 
             Keys.onPressed: event => {
                 if (event.key === Qt.Key_Escape) {
@@ -119,7 +228,7 @@ Scope {
 
             Loader {
                 id: overviewLoader
-                active: GlobalStates.overviewOpen && (Config?.options.overview.enable ?? true)
+                active: overviewScope.reallyOpen && (Config?.options.overview.enable ?? true)
                 sourceComponent: (Config?.options.overview.style ?? "default") === "niri" ? niriComponent : defaultComponent
 
                 Component {
