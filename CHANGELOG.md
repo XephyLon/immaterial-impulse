@@ -34,6 +34,12 @@ own repo; the installer pins which revision it builds.
   Your presets carry the choice.
 
 ### Changed
+- **The clock widget's settings show only the options for the clock style you
+  picked.** Digital, Cookie and Pixel each have their own options, and all
+  three sets used to be listed together — eleven Cookie rows under a Digital
+  clock. Now a style's rows appear only while that style is selected for the
+  desktop or for the lock screen (the two can differ). Plugin authors get the
+  same: an option can declare `visibleWhen` against another option's value.
 - **The session screen and the settings pages now arrive in sequence instead of
   all at once.** The session screen's nine action buttons and a settings page's
   sections each fade in one after the other, a few hundredths of a second
