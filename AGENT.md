@@ -4587,12 +4587,21 @@ Three things a persistent surface costs that an unmapped one never did, and the 
 Two generalisations. A Top-layer surface is buried under a fullscreen window by Hyprland itself
 (the bar relies on it), so a persistent Top-layer panel needs no stand-down and does not hold the
 fullscreen fast path the way an Overlay one does — check `solitaryBlockedBy` rather than assuming
-either way. And the overview (`Overview.qml`) and `SessionScreen` still map per open and pay this
-same 61ms; the overview's exit-owned lifetime fixed what happens *after* the flag drops, not what
-happens when it rises.
+either way. The overview went persistent too — its window declares no `visible:` at all and
+`reallyOpen` gates the card instead (`tests/test_exit_owned_surface_contract.py` carries the
+per-surface mode). Persistence brought the two focus obligations with it, both taken from the
+sidebars: the grab is deferred two rendered frames past the flag flip, and the open names a focus
+target (`searchWidget.focusSearchInput()`), because a window created once at boot never gets a
+map-time keyboard grant. A third obligation lives in `services/GlobalFocusGrab.qml` and is global:
+the grab's whitelist must end with the dismissables — Hyprland hands the grab's keyboard focus to
+a surface picked from the END of the list, and with the bar/OSK after the panel, an opening panel
+never activates and every keypress is silently dropped (the persistent-sidebar contract pins the
+order; fix(sidebars): route the focus grab's keyboard to the opening panel). `SessionScreen` still
+maps per open and pays this same 61ms.
 (feat(widgets): EdgeSlide, the runner for a panel whose surface stays mapped;
 fix(sidebar): the right sidebar's surface outlives the gesture;
-fix(sidebar): the left sidebar's surface outlives the gesture.)
+fix(sidebar): the left sidebar's surface outlives the gesture;
+perf(overview): keep the surface mapped; only the card opens and closes.)
 
 **`Behavior on <non-animatable>` with a trailing bare `PropertyAction {}` defers a write instead of
 animating it.** A `Loader.source` is a `url`, which QML cannot interpolate, so the `Behavior` cannot
