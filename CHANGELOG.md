@@ -47,6 +47,12 @@ own repo; the installer pins which revision it builds.
   slide, the way it always did.
 
 ### Fixed
+- **Opening a sidebar no longer freezes the shell for a moment.** Every open
+  rebuilt the sidebar's window from scratch, and while that happened every
+  other thing the shell draws — the bar, the dock, the desktop — stopped for
+  about fifteen frames. The windows now stay alive and only the panel slides,
+  on the same motion as before, so the open is immediate. The left sidebar
+  also stops being able to hold the keyboard while it is closed.
 - **The overview opens and closes with an animation instead of snapping.** It
   appeared and vanished on a single frame at both ends. Now the search bar and
   the workspace grid grow out of the top of the screen together and settle with
