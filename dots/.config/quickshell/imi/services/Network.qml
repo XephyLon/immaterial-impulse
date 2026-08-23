@@ -175,12 +175,32 @@ Singleton {
         updatePublicIp.running = true;
     }
 
+    // One NetworkManager event feed for the whole shell. Vpn refreshes off
+    // this signal instead of running a second `nmcli monitor` of its own -
+    // measured before the change: two monitors per shell instance, and every
+    // dead instance left both behind (30 orphans reaped from 15 restarts,
+    // all reparented to init and sleeping until the next network event).
+    signal monitorEvent()
+
     Process {
         id: subscriber
         running: true
-        command: ["nmcli", "monitor"]
+        // `nmcli monitor` under a watchdog rather than bare. `nmcli monitor`
+        // only writes on network events, so when the shell dies without
+        // tearing its children down (SIGKILL, a crash) the orphan never hits
+        // SIGPIPE and sleeps forever. The loop costs one wakeup every 5s and
+        // ends when either side dies: quickshell gone -> the trap kills
+        // nmcli; nmcli gone -> the loop falls through and the Process exits.
+        // nmcli's stdout is inherited, not piped through bash, so the
+        // SplitParser reads it exactly as before.
+        command: ["bash", "-c",
+            "nmcli monitor & M=$!; trap 'kill $M 2>/dev/null' EXIT; " +
+            "while kill -0 $PPID 2>/dev/null && kill -0 $M 2>/dev/null; do sleep 5; done"]
         stdout: SplitParser {
-            onRead: root.update()
+            onRead: {
+                root.update();
+                root.monitorEvent();
+            }
         }
     }
 

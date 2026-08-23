@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 import qs.modules.common
+import qs.services
 
 /**
  * VPN service backed by NetworkManager (nmcli).
@@ -73,13 +74,15 @@ Singleton {
         onTriggered: root.refresh()
     }
 
-    // Refresh immediately on any NetworkManager event, with the timer as a fallback.
-    Process {
-        id: monitor
-        running: root.enableService
-        command: ["nmcli", "monitor"]
-        stdout: SplitParser {
-            onRead: root.refresh()
+    // Refresh immediately on any NetworkManager event, with the timer as a
+    // fallback. The events come from Network's single watchdogged
+    // `nmcli monitor` - this service used to run a second one, which doubled
+    // the per-instance monitor count and the orphans each dead instance left.
+    Connections {
+        target: Network
+        enabled: root.enableService
+        function onMonitorEvent() {
+            root.refresh();
         }
     }
 
