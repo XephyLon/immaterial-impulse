@@ -20,4 +20,15 @@ import qs.modules.common.widgets
 RowLayout {
     id: root
     spacing: Appearance.spacing.space50
+
+    // Whether one of these actions carries a container, which is what makes the
+    // others outlined - see `DialogButton.outlined` for the rule and why it
+    // lives on the row rather than at each Cancel in the tree. The row is the
+    // smallest thing that can see both actions at once.
+    readonly property bool hasFilledAction: {
+        for (const child of root.children)
+            if (child.filled === true)
+                return true;
+        return false;
+    }
 }
