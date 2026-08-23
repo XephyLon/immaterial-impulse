@@ -681,6 +681,25 @@ MouseArea {
                                     onActiveFocusChanged: root.filterFieldFocused = activeFocus
                                 }
                                 IconToolbarButton {
+                                    implicitWidth: height
+                                    // The same way in as the local toolbar's -
+                                    // and the only one this tab had none of.
+                                    // The depth service has asked about live
+                                    // projects since spec §8 landed (it asks
+                                    // about the wallpaper ON SCREEN, which is
+                                    // the project's still whenever a project
+                                    // is live), but the picker's button only
+                                    // existed on the Local tab, so a user
+                                    // whose wallpaper came from THIS grid had
+                                    // no path into segmentation at all.
+                                    onClicked: root.depthPickerOpen = !root.depthPickerOpen
+                                    toggled: root.depthPickerOpen
+                                    text: "layers"
+                                    StyledToolTip {
+                                        text: Translation.tr("Put the widgets behind this wallpaper's subject")
+                                    }
+                                }
+                                IconToolbarButton {
                                     text: "refresh"
                                     enabled: !WallpaperEngine.loading
                                     onClicked: WallpaperEngine.refresh()
