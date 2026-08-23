@@ -58,6 +58,18 @@ own repo; the installer pins which revision it builds.
   also left less space under the buttons than above the title. It shows most in
   the authentication prompt, where the OK button hung past the right edge of
   the password box directly above it.
+- **Every dialog gives its content more room.** A dialog card held its content
+  23 pixels in from its edge, and 23 was not a spacing choice — it is the size
+  of the card's rounded corner, which the padding had been quietly spelled as.
+  It is 32 now, on the same 8-pixel rhythm everything else in the shell lays out
+  on. All ten dialogs still fit what is in them, and lists and rules that run to
+  the card's edge still reach it.
+- **Cancel now looks like a button.** In the authentication prompt, OK carries a
+  filled accent container and Cancel was a bare word beside it, which reads as a
+  link rather than as the other half of a choice. It has an outline now, and the
+  two sit a little further apart so both edges are legible. The rule is general:
+  wherever a dialog's confirming action is filled, its dismissing action is
+  outlined — a dialog whose buttons are all flat is unchanged.
 - **Edit Mode's widget drawer stops drawing over an open sidebar.** The drawer
   shares the right sidebar's edge and sits on a layer above it, so a sidebar
   left open was painted through by the panel. Entering Edit Mode now closes both
