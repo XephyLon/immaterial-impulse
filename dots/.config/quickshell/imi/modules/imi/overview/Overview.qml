@@ -15,20 +15,25 @@ Scope {
     id: overviewScope
     property bool dontAutoCancelSearch: false
 
-    // The surface outlives the flag by exactly one exit animation, and it is
+    // The CONTENT outlives the flag by exactly one exit animation, and it is
     // the ANIMATION that says when - the same rule, and for the same reason, as
     // `modules/imi/wallpaperSelector/WallpaperSelector.qml`'s `reallyOpen`
     // records: a Behavior's animation starts a frame after the write that
     // triggers it, and an accelerating exit carries most of its distance in its
-    // last frames, so a Timer at the exit tier's own duration tears the window
+    // last frames, so a Timer at the exit tier's own duration tears the card
     // down with the transition still on screen.
     //
-    // Before this the window's `visible` followed `GlobalStates.overviewOpen`
-    // directly, and `rules.lua` turns the compositor's own map animation off for
-    // this namespace (`no_anim`, because a map animation on a screen-sized
-    // surface reads as the desktop lurching). Between the two there was nothing
-    // left to animate the overview at either end: it appeared and vanished on
-    // one frame.
+    // This used to be the WINDOW's lifetime, and that was the overview's last
+    // per-open stall: a destroyed-and-rebuilt window blocks the shell's one
+    // GUI thread the way the sidebars' did before EdgeSlide.qml (61ms
+    // measured there, and this is the largest surface in the shell). The
+    // surface now stays mapped for the life of the shell - `rules.lua`
+    // already turns the compositor's map animation off for this namespace,
+    // and there is no map left to animate - while `reallyOpen` gates what it
+    // shows: the column's visibility, the grid loader, and (through
+    // `openProgress`) the blur regions. A closed overview is a full-screen
+    // surface with a null input mask, keyboardFocus None and nothing drawn,
+    // which is exactly what the bar's surface is under a fullscreen window.
     property bool reallyOpen: false
 
     PanelWindow {
@@ -36,7 +41,6 @@ Scope {
         property string searchingText: ""
         readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
         property bool monitorIsFocused: (Hyprland.focusedMonitor?.id == monitor?.id)
-        visible: overviewScope.reallyOpen
 
         WlrLayershell.namespace: "quickshell:overview"
         WlrLayershell.layer: WlrLayer.Top
@@ -87,23 +91,48 @@ Scope {
             right: true
         }
 
+        // The grab is taken after the surface has RENDERED two frames with the
+        // card open, not in the tick the flag flips - the sidebars' rule (see
+        // SidebarRight.qml): on a surface that is mapped all the time the new
+        // `keyboardFocus` value rides the next commit, and a grab that reaches
+        // Hyprland first lands on a surface it still knows as interactivity
+        // None, is cleared within milliseconds, and the clear is read as a
+        // click-outside that closes the overview it just opened.
+        FrameAnimation {
+            id: focusGrabAfterCommit
+            property int framesLeft: 0
+            running: framesLeft > 0
+            onTriggered: {
+                if (--framesLeft > 0)
+                    return;
+                if (GlobalStates.overviewOpen)
+                    GlobalFocusGrab.addDismissable(panelWindow);
+            }
+        }
+
         Connections {
             target: GlobalStates
             function onOverviewOpenChanged() {
                 if (!GlobalStates.overviewOpen) {
                     searchWidget.disableExpandAnimation();
                     overviewScope.dontAutoCancelSearch = false;
+                    focusGrabAfterCommit.framesLeft = 0;
                     GlobalFocusGrab.dismiss();
                     columnLayout.leave();
                 } else {
-                    // The surface is asked for before the card is asked to
+                    // The content is asked for before the card is asked to
                     // arrive, in this order: an entrance started against an
-                    // unmapped window is an entrance nothing advances.
+                    // unbuilt card is an entrance nothing advances.
                     overviewScope.reallyOpen = true;
                     if (!overviewScope.dontAutoCancelSearch) {
                         searchWidget.cancelSearch();
                     }
-                    GlobalFocusGrab.addDismissable(panelWindow);
+                    focusGrabAfterCommit.framesLeft = 2;
+                    // A persistent window is created once, at boot, without
+                    // keyboard focus - so an open has to say where keys go
+                    // (the sidebars' lesson, SidebarLeft.qml) or the window
+                    // activates with no focus item and every key is dropped.
+                    searchWidget.focusSearchInput();
                     columnLayout.arrive();
                 }
             }
