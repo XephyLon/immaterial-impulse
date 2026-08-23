@@ -177,6 +177,13 @@ hl.layer_rule({ match = { namespace = "quickshell:lockWindowPusher" }, no_anim =
 hl.layer_rule({ match = { namespace = "quickshell:notificationPopup" }, animation = "fade"})
 hl.layer_rule({ match = { namespace = "quickshell:overlay" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:overlay" }, ignore_alpha = 1})
+-- The overview owns its own entrance and exit in QML (Overview.qml: the
+-- card unfurls from its top edge on one scalar, and the window outlives
+-- the open flag by exactly that exit animation). A compositor map
+-- animation on top of it would animate the whole screen-sized surface
+-- underneath the card that is already animating, so the layerrule stays
+-- off. Removing this line does not give the overview an animation - it
+-- gives it two, one of them the desktop lurching.
 hl.layer_rule({ match = { namespace = "quickshell:overview" }, no_anim = true})
 hl.layer_rule({ match = { namespace = "quickshell:osk" }, animation = "slide bottom"})
 hl.layer_rule({ match = { namespace = "quickshell:polkit" }, no_anim = true})
