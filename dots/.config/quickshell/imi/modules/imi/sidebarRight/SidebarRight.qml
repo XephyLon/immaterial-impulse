@@ -16,27 +16,37 @@ Scope {
     PanelWindow {
         id: panelWindow
 
-        property bool reallyVisible: false
-        visible: reallyVisible
+        // The surface stays mapped for the life of the shell; the PANEL is
+        // what opens and closes, and EdgeSlide draws that. `visible` used to
+        // follow the open flag, which destroyed and rebuilt this window on
+        // every gesture - see EdgeSlide.qml for what that cost, measured.
+        // (No `visible:` here at all: the default is true, and a persistent
+        // Top-layer surface is buried under a fullscreen window by Hyprland
+        // the same way the bar's is.)
+        readonly property EdgeSlide slide: EdgeSlide {
+            open: GlobalStates.sidebarRightOpen
+            travel: entranceWrapper.width
+            direction: 1
+        }
 
-        Component.onCompleted: reallyVisible = GlobalStates.sidebarRightOpen
-
-        Connections {
-            target: GlobalStates
-            function onSidebarRightOpenChanged() {
-                panelWindow.reallyVisible = GlobalStates.sidebarRightOpen;
-            }
+        // A mapped surface with no mask takes every click on its rectangle,
+        // and this one is a strip down the whole right edge of the screen.
+        mask: Region {
+            item: GlobalStates.sidebarRightOpen ? entranceWrapper : null
         }
 
         function hide() {
             GlobalStates.sidebarRightOpen = false;
         }
 
-        onVisibleChanged: {
-            if (visible) {
-                GlobalFocusGrab.addDismissable(panelWindow);
-            } else {
-                GlobalFocusGrab.removeDismissable(panelWindow);
+        Connections {
+            target: GlobalStates
+            function onSidebarRightOpenChanged() {
+                if (GlobalStates.sidebarRightOpen) {
+                    GlobalFocusGrab.addDismissable(panelWindow);
+                } else {
+                    GlobalFocusGrab.removeDismissable(panelWindow);
+                }
             }
         }
 
@@ -63,9 +73,14 @@ Scope {
         // shadow in the elevation margin stays outside the region, so the
         // compositor's blur can't frost it (#82). Pairs with rules.lua turning
         // the whole-surface layerrule blur off for this namespace.
+        //
+        // The region follows the body as it slides (a Region tracks its item's
+        // geometry, and the slide is an `x`, not a transform, for exactly that
+        // reason), and is withdrawn once the panel is off screen - a frosted
+        // rectangle with no panel over it is the overview's ghost, again.
         WindowBlurRegion {
             targetWindow: panelWindow
-            regionItem: sidebarContentLoader.item?.backgroundItem ?? null
+            regionItem: panelWindow.slide.shown ? (sidebarContentLoader.item?.backgroundItem ?? null) : null
             regionRadius: sidebarContentLoader.item?.backgroundItem?.radius ?? 0
         }
 
@@ -91,10 +106,13 @@ Scope {
                 anchors.bottom: parent.bottom
                 width: sidebarWidth
                 clip: true
+                // On `shown`, not on the open flag: the flag drops on frame
+                // one of the exit, and the exit is 400ms of this item moving.
+                visible: panelWindow.slide.shown
 
                 property real cachedParentWidth: sidebarWidth
                 readonly property real restX: cachedParentWidth - width
-                x: restX
+                x: restX + panelWindow.slide.offset
 
                 Connections {
                     target: entranceWrapper.parent
@@ -112,7 +130,7 @@ Scope {
 
                 Loader {
                     id: sidebarContentLoader
-                    active: panelWindow.reallyVisible || Config?.options.sidebar.keepRightSidebarLoaded
+                    active: panelWindow.slide.shown || Config?.options.sidebar.keepRightSidebarLoaded
                     anchors {
                         fill: parent
                         margins: Appearance.sizes.hyprlandGapsOut
