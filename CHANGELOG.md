@@ -53,6 +53,15 @@ own repo; the installer pins which revision it builds.
   slide, the way it always did.
 
 ### Fixed
+- **Typing works again the moment a sidebar opens.** Keeping the sidebar
+  windows alive (the stutter fix below) quietly broke their keyboard: a
+  window that is never re-created never gets the keyboard grant that used to
+  arrive with its creation, so keys only reached a sidebar after the mouse
+  happened to touch it — the left sidebar's AI chat felt dead, and Escape
+  wouldn't close it. The focus system now hands the keyboard to whichever
+  panel just opened. Confirmed for both sidebars: typing lands immediately,
+  Escape closes, clicking outside closes, and clicking the bar while a
+  sidebar is open still leaves it open.
 - **The clock settings filter actually filters now.** The per-style option
   rows were annotated in the last cycle but Settings > Widgets kept showing
   all of them regardless of the selected style: the rules survive as data,
