@@ -34,7 +34,7 @@ RowLayout {
     // smallest thing that can see both actions at once.
     readonly property bool hasFilledAction: {
         for (const child of root.children)
-            if (child.filled === true)
+            if (child.dialogActionFilled === true)
                 return true;
         return false;
     }
