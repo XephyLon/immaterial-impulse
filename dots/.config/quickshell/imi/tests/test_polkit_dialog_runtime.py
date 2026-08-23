@@ -5,11 +5,24 @@
 `WindowDialog`, `WindowDialogButtonRow`, `DialogButton` and `PasswordField` -
 and asks it three things no source sweep can answer:
 
-  * **Where the actions land.** Whether the action row sits in the dialog's
-    content box is a `Layout` decision three components down. It did not: the
-    row carried a negative `Layout.margins`, so the card's four paddings read
-    23/23/23/15 and the confirming button's right edge sat 8px past the
-    password field directly above it.
+  * **Where the actions land, and how much room the card gives them.** Whether
+    the action row sits in the dialog's content box is a `Layout` decision three
+    components down. It did not: the row carried a negative `Layout.margins`, so
+    the card's four paddings read 23/23/23/15 and the confirming button's right
+    edge sat 8px past the password field directly above it. The padding itself
+    was 23 because the card's corner is 23px round - two spellings of
+    `dialogBackground.radius`, one for the margin and one for the height - so
+    the drawn inset is scored against the spacing token rather than against
+    itself.
+  * **Whether the dismissing action reads as a button.** Cancel was a bare
+    label beside a filled OK. It carries an outline now, and the check scores
+    that outline's contrast against the card's own fill in channel levels:
+    naming an outline role is not the same as being visible on the surface it
+    is drawn on (`colOutlineVariant`, the base class's default, measures 32
+    against `colOutline`'s 106). The gap between the two actions is scored off
+    the drawn boxes for the same reason - giving Cancel a container moves its
+    painted edge out by the button's own padding, so the separation the eye
+    reads collapsed from 20px to the row's own spacing.
   * **Whether the buttons answer the pointer.** The fill a button shows is
     computed at runtime out of `Appearance`, so "it names a hover colour" is
     not "it changes colour". Both buttons are hovered with real mouse events
@@ -42,7 +55,7 @@ SOCKET = "wayland-imi-polkit"
 
 # A literal, never read back out of the harness's own output: a step list that
 # shrinks must redden here instead of reporting `failures: 0` for a shorter run.
-EXPECTED_CHECKS = 9
+EXPECTED_CHECKS = 13
 
 
 def _stop(proc):

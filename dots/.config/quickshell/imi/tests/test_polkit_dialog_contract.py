@@ -31,6 +31,17 @@ failure from the other end and the same fix: a filled container on the primary
 role. Two filled buttons reintroduce the problem from the other side, so the
 count is pinned as well as the placement.
 
+**And the other half of that pair is stated once.** Filling the confirm answered
+the question from one side and left the other one open: a bare label beside a
+filled container reads as a link rather than as the second half of a choice,
+which is 283ada440 ("fix(editmode): the toolbar's title stops reading as a
+button") arriving from the opposite direction. The rule - a dialog whose
+confirming action is filled gives its dismissing action an outline, a dialog
+whose actions are all flat stays flat - is derived by `WindowDialogButtonRow`
+and applied by `DialogButton`, so the next dialog that grows a filled confirm
+gets it without anyone remembering to. A call site spelling `outlined:` for
+itself is the fourteenth Cancel getting it wrong, so no call site may.
+
 Every sweep asserts it FOUND what it swept for. A regex over QML that matches
 nothing reads exactly like a regex over QML that found nothing wrong, and this
 file's whole job is to hold a shape that a rewrite would spell differently.
@@ -174,6 +185,38 @@ def test_exactly_one_dialog_button_is_filled_and_it_confirms():
     cancel = [b for b in buttons if b is not confirm][0]
     assert "PolkitService.cancel()" in cancel, \
         "the flat button is not the one that cancels"
+
+
+def test_the_dismissing_action_takes_its_outline_from_the_row():
+    button = code(ROOT / "modules/common/widgets/DialogButton.qml")
+    row = code(ROOT / "modules/common/widgets/WindowDialogButtonRow.qml")
+
+    assert "hasFilledAction" in row, \
+        ("WindowDialogButtonRow no longer derives whether one of its actions is "
+         "filled - the pairing rule has nowhere left to live")
+    assert re.search(r"property bool outlined:.*hasFilledAction", button), \
+        ("DialogButton's outline is no longer derived from the row it is in - "
+         "either it is hardcoded, or the rule has moved to the call sites")
+    assert re.search(r"(?<![\w.])border: root\.outlined", button), \
+        "DialogButton declares an `outlined` that draws no border"
+    assert "colBorder: Appearance.colors.colOutline" in button, \
+        ("the outline is not on colOutline - colOutlineVariant is documented as "
+         "a SUBTLE boundary, which is the thing that failed here")
+
+    call_sites = sorted(
+        path.relative_to(ROOT).as_posix()
+        for path in ROOT.rglob("*.qml")
+        if re.search(r"(?<![\w.])DialogButton\s*\{", code(path))
+        and path.parent != ROOT / "modules/common/widgets"
+    )
+    assert call_sites, \
+        ("no file outside modules/common/widgets declares a DialogButton - this "
+         "sweep is looking at nothing")
+    hardcoded = [name for name in call_sites
+                 if re.search(r"(?<![\w.])outlined\s*:", code(ROOT / name))]
+    assert hardcoded == [], \
+        (f"{hardcoded} set a dialog button's outline themselves - the pairing "
+         "rule is derived from the action row so that every dialog gets it")
 
 
 def test_the_dialog_card_casts_a_shadow_under_itself():
