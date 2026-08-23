@@ -71,6 +71,11 @@ StyledOverlayWidget {
 
         VolumeDialogContent {
             id: volDialogContent
+            // The lists cancel the padding that actually wraps them, which
+            // here is this Item's own. It used to cancel the dialog card's
+            // corner radius in both places, so in this one it overshot its
+            // container by 11px.
+            contentPadding: paddedVolumeDialogContent.padding
             anchors {
                 fill: parent
                 margins: paddedVolumeDialogContent.padding
