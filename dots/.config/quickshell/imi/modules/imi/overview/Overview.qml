@@ -47,8 +47,20 @@ Scope {
         WlrLayershell.keyboardFocus: GlobalStates.overviewOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         color: "transparent"
 
+        // The proxy, not the column: the card scales during its entrance and
+        // a Region maps the item through its render transform, while
+        // Hyprland snapshots the input region when the focus grab lands -
+        // two frames into that entrance. The selector shipped the full
+        // failure (see WallpaperSelector.qml's mask note for the click-map);
+        // this one had the same scaled item under its mask and the same
+        // grab timing. Anchors track layout geometry and ignore render
+        // transforms, so the proxy is the settled rect at every instant.
+        Item {
+            id: inputRegionProxy
+            anchors.fill: columnLayout
+        }
         mask: Region {
-            item: GlobalStates.overviewOpen ? columnLayout : null
+            item: GlobalStates.overviewOpen ? inputRegionProxy : null
         }
 
         // Blur only the painted body cards. This one surface carries two of
