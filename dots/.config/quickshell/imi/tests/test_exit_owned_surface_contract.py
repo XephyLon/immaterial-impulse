@@ -56,19 +56,25 @@ ROOT = Path(__file__).resolve().parent.parent
 OVERVIEW = ROOT / "modules/imi/overview/Overview.qml"
 SELECTOR = ROOT / "modules/imi/wallpaperSelector/WallpaperSelector.qml"
 
-# The declaration that maps the surface, and the property on it that decides
-# whether the compositor has one. The overview's window is built unconditionally
-# and toggles its own `visible`; the selector's is built by a Loader and toggles
-# that Loader's `active`. Both mean "the surface exists", and both must read the
-# lifetime flag rather than the flag the gesture sets.
+# What the lifetime flag owns differs between the two surfaces now, and the
+# mode records it. The selector's SURFACE is exit-owned: its window is built
+# by a Loader whose `active` reads the flag, torn down when the exit finishes.
+# The overview's surface went persistent (perf(overview): keep the surface
+# mapped) - it pays no per-open rebuild, so there the flag owns the CONTENT:
+# the window must declare no `visible:` of its own at all (a `visible:` that
+# reappears puts the 61ms rebuild back on every Super+Tab), and the card
+# inside it hides on the flag instead.
 #
-# The gate is read at the mapping declaration's OWN top level rather than
+# The gate is read at the owning declaration's OWN top level rather than
 # anywhere in the file. A sweep for "some `visible:` line mentions the lifetime
 # flag" passes on a tree where the window has been put back on the gesture's
 # flag and only the card inside it still reads the right one - which is the
 # exact regression this file exists to catch, and it survived the first draft.
 LIFETIME_FLAG = "reallyOpen"
-SURFACES = {OVERVIEW: ("PanelWindow", "visible"), SELECTOR: ("Loader", "active")}
+SURFACES = {
+    OVERVIEW: ("PanelWindow", "visible", "persistent-surface"),
+    SELECTOR: ("Loader", "active", "exit-owned-surface"),
+}
 
 
 def read(path: Path) -> str:
@@ -156,36 +162,52 @@ def declared_at_top_level(block: str, prop: str):
 
 
 def test_the_surface_outlives_the_gesture_by_one_exit_animation():
-    for path, (declaration, gate) in SURFACES.items():
+    for path, (declaration, gate, mode) in SURFACES.items():
         text = code(path)
         name = path.relative_to(ROOT).as_posix()
 
         assert re.search(rf"property\s+bool\s+{LIFETIME_FLAG}\b", text), \
-            (f"{name} has no `{LIFETIME_FLAG}` - its surface is back to living "
+            (f"{name} has no `{LIFETIME_FLAG}` - what it owns is back to living "
              "and dying with the flag the user's gesture sets, and its exit "
-             "animation is drawing into a window that is already gone")
+             "animation is drawing into something that is already gone")
 
         gates = declared_at_top_level(
             mapping_block(text, declaration, name), gate)
-        assert gates, \
-            (f"{name}'s {declaration} declares no `{gate}:` of its own - "
-             "nothing here says when the surface exists")
-        assert all(LIFETIME_FLAG in value for value in gates), \
-            (f"{name}'s {declaration} maps on `{gate}: {gates}` - the surface "
-             f"must follow `{LIFETIME_FLAG}`, not the gesture's own flag, or it "
-             "is destroyed on the frame the exit animation starts")
+        if mode == "persistent-surface":
+            # The overview's window stays mapped for the life of the shell -
+            # a `visible:` reappearing on it is the 61ms per-gesture rebuild
+            # coming back. The flag owns the CARD instead.
+            assert gates in ([], ["true"]), \
+                (f"{name}'s {declaration} declares `{gate}: {gates}` - this "
+                 "surface is persistent, and a gated `visible` puts the "
+                 "per-open window rebuild back on every gesture")
+            card_gates = [line.strip() for line in logical_lines(text)
+                          if re.match(r"\s*visible\s*:", line)
+                          and LIFETIME_FLAG in line]
+            assert card_gates, \
+                (f"{name} hides nothing on `{LIFETIME_FLAG}` - with the window "
+                 "persistent, the card must be what the exit animation owns, "
+                 "or a closed overview keeps drawing")
+        else:
+            assert gates, \
+                (f"{name}'s {declaration} declares no `{gate}:` of its own - "
+                 "nothing here says when the surface exists")
+            assert all(LIFETIME_FLAG in value for value in gates), \
+                (f"{name}'s {declaration} maps on `{gate}: {gates}` - the surface "
+                 f"must follow `{LIFETIME_FLAG}`, not the gesture's own flag, or it "
+                 "is destroyed on the frame the exit animation starts")
 
         clears = [line.strip() for line in logical_lines(text)
                   if re.search(rf"{LIFETIME_FLAG}\s*=\s*false", line)]
         assert clears, \
-            (f"{name} never clears `{LIFETIME_FLAG}` - the surface is now "
-             "mapped for the rest of the session")
+            (f"{name} never clears `{LIFETIME_FLAG}` - what it gates is now "
+             "on for the rest of the session")
         for line in clears:
             assert "onFinished" in line, \
-                (f"{name} clears `{LIFETIME_FLAG}` at `{line}` - the window's "
-                 "lifetime belongs to the exit animation's own `onFinished`. A "
-                 "Timer at the exit tier's duration tore the wallpaper selector "
-                 "down with 25% of its travel still to draw.")
+                (f"{name} clears `{LIFETIME_FLAG}` at `{line}` - the lifetime "
+                 "belongs to the exit animation's own `onFinished`. A Timer at "
+                 "the exit tier's duration tore the wallpaper selector down "
+                 "with 25% of its travel still to draw.")
 
 
 def test_one_scalar_and_one_tier_per_animation():
