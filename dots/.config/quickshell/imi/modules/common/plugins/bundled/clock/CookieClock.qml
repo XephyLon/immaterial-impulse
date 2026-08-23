@@ -55,6 +55,24 @@ Item {
     readonly property int clockMinute: DateTime.clock.minutes
     readonly property int clockSecond: DateTime.clock.seconds
 
+    // Continuous motion - the body's spin and the second hand's sweep - is
+    // sampled from the wall clock at this rate rather than animated per
+    // vsync. See the body's `rotation` for the measurement behind the number.
+    readonly property int motionTickHz: 30
+    readonly property int spinPeriodMs: 30000
+    property real motionClockMs: 0
+
+    // Where the second hand is within the current second, shaped the way its
+    // old per-second Behavior shaped it (InOutQuad): it leaves one mark, eases
+    // across, and settles on the next. Zero when not sweeping, so the hand
+    // sits on the mark.
+    readonly property real secondSweep: {
+        if (!root.constantlyRotate)
+            return 0;
+        const f = (root.motionClockMs % 1000) / 1000;
+        return f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+    }
+
     implicitWidth: implicitSize
     implicitHeight: implicitSize
 
@@ -117,28 +135,31 @@ Item {
         anchors.fill: parent
         dragging: root.dragging
 
-        // Gated on the item being ON SCREEN, not just on the setting. An
-        // infinite animation dirties the scene every frame for as long as it
-        // runs, and a dirty scene makes the shell commit a frame, and a commit
-        // makes the compositor repaint the whole output - so this one kept a
-        // 5120x1440 240Hz screen redrawing continuously while the desktop was
-        // completely hidden behind a fullscreen game. Measured against FFXIV's
-        // own counter on a static scene: 52 fps with it spinning, 94 with this
-        // gate, 108 with the shell not running at all.
-        //
-        // `visible` is EFFECTIVE visibility in QML - it is false while any
-        // ancestor is hidden - so this covers the fullscreen suppression the
-        // canvas already does, a widget scrolled out of a hidden surface, and
-        // any future reason the desktop is not on screen, without any of them
-        // having to know this animation exists.
-        RotationAnimation on rotation {
+        Timer {
             running: root.constantlyRotate && cookieBody.visible
-            duration: 30000
-            easing.type: Easing.Linear
-            loops: Animation.Infinite
-            from: 360
-            to: 0
+            interval: Math.round(1000 / root.motionTickHz)
+            repeat: true
+            triggeredOnStart: true
+            onTriggered: root.motionClockMs = Date.now()
         }
+
+        // The spin is a function of the wall clock, advanced by the tick below
+        // - not a RotationAnimation. An animation advances every vsync, and on
+        // this surface every advance is a commit with whole-surface damage
+        // (Qt's GL path reports no less), which is the compositor re-rendering
+        // all 5120x1440 and re-blurring every surface over it, 240 times a
+        // second, for a rotation that takes 30 seconds. Measured at idle on
+        // the user's machine, GPU utilisation: 38% spinning at vsync, 28% at
+        // a 60Hz tick, 20% at 30Hz, 10-12% with the spin off. At 30Hz the rim
+        // of a 230px cookie moves 0.8px per tick, which is under where a step
+        // reads, so that is the rate.
+        //
+        // Still gated on the item being ON SCREEN, for the reason the old
+        // animation was: `visible` is EFFECTIVE visibility, false while any
+        // ancestor is hidden, so a desktop behind a fullscreen game spends
+        // nothing here. Measured against FFXIV's own counter: 52 fps with the
+        // spin ungated, 94 gated, 108 with the shell not running at all.
+        rotation: 360 - (root.motionClockMs % root.spinPeriodMs) / root.spinPeriodMs * 360
 
         Loader {
             id: sineCookieLoader
@@ -233,7 +254,9 @@ Item {
             id: secondHand
             clockSecond: root.clockSecond
             style: root.secondHandStyle
-            animateRotation: root.constantlyRotate
+            // Sampled, not animated: see `motionTickHz`.
+            animateRotation: false
+            sweep: root.secondSweep
             color: root.colSecondHand
         }
     }

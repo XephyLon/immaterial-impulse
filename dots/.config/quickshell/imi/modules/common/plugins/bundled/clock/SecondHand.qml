@@ -16,7 +16,11 @@ Item {
     property bool animateRotation: false
     property color color: Appearance.colors.colSecondary
     
-    rotation: (360 / 60 * clockSecond) + 90
+    // The fraction of the current second the hand has swept, for a host that
+    // samples time itself rather than animating each second (CookieClock). A
+    // host that does not drive it leaves it at 0 and the hand sits on the mark.
+    property real sweep: 0
+    rotation: (360 / 60 * (clockSecond + sweep)) + 90
 
     Behavior on rotation {
         enabled: root.animateRotation // Animating every second is expensive...
