@@ -674,7 +674,13 @@ Item {
                                         id: screencopyView
                                         anchors.centerIn: parent
                                         captureSource: windowButton.modelData
-                                        live: true
+                                        // Only while the popup is on screen. `appTopLevel`
+                                        // keeps the last hovered app after the popup hides,
+                                        // so these delegates outlive it - an unconditional
+                                        // `live: true` kept the compositor copying every one
+                                        // of that app's windows at their own frame rate,
+                                        // forever, into previews nobody could see.
+                                        live: previewPopup.visible
                                         paintCursor: true
                                         constraintSize: Qt.size(
                                             root.maxWindowPreviewWidth,
