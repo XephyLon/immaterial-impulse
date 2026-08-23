@@ -29,6 +29,13 @@ two tiers is what makes a component reach full opacity while it is still
 growing. The check reads the tier names out of each animation and refuses a
 duration taken from one tier with a curve taken from another - a mismatch that
 reads perfectly in review, since both halves name a real catalogued tier.
+(`lint_motion_tier_partial.py` is the tree-wide rule next door and catches the
+other half of this: a duration with no easing at all. The mismatch rule is NOT
+tree-wide, deliberately - four animations in the tree take their duration from
+the enter tier and their curve from the exit tier by design, branching on
+direction inside one declaration, and a tree-wide rule would need a register of
+them to say nothing new. These two surfaces animate in one direction per
+animation, so here the mismatch has no innocent reading.)
 
 **And a blur region is not part of the card it sits behind.** The compositor
 frosts the rectangle whether or not anything is drawn over it, so a region
