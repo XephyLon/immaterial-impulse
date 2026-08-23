@@ -38,9 +38,8 @@ own repo; the installer pins which revision it builds.
   fixes, none of which changes how anything looks:
   - The overview's window now stays alive like the sidebars' do, so
     Super+Tab no longer pays a rebuild stall on every press.
-  - Boot builds its 28 panels between frames instead of all at once before
-    the first one, and the icon-search database (1.7MB) loads the first
-    time you search symbols instead of at startup.
+  - The icon-search database (1.7MB) loads the first time you search
+    symbols instead of at startup.
   - Caps/Num Lock state comes from the keyboard's own LEDs through one
     tiny watcher instead of asking Hyprland 3 times a second.
   - Network events feed the shell through a single monitor that cleans up
