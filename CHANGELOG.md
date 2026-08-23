@@ -68,6 +68,10 @@ own repo; the installer pins which revision it builds.
   slide, the way it always did.
 
 ### Fixed
+- **The overview's frost covers the whole card again.** Keeping the
+  overview's window alive left its blur region stuck where the half-built
+  grid had been on the very first open - a sharp unblurred band down the
+  card's left edge. The region now follows the card through every rebuild.
 - **Typing works again the moment a sidebar opens.** Keeping the sidebar
   windows alive (the stutter fix below) quietly broke their keyboard: a
   window that is never re-created never gets the keyboard grant that used to
