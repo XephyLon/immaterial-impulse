@@ -277,7 +277,7 @@
         "color": "",
         "cookie": {
           "aiStyling": false,
-          "constantlyRotate": true,
+          "constantlyRotate": false,
           "dateInClock": true,
           "dateStyle": "bubble",
           "dialNumberStyle": "full",
