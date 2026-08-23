@@ -54,8 +54,26 @@ Scope {
                 top: Config?.options.bar.vertical ? Appearance.sizes.hyprlandGapsOut : Appearance.sizes.barHeight + Appearance.sizes.hyprlandGapsOut
             }
 
+            // The mask reads a proxy pinned to the card's LAYOUT rect, never
+            // the card itself: the card scales during its entrance
+            // (transformOrigin Top, 0.85 -> 1), a Region maps the item
+            // through its render transform, and Hyprland snapshots the input
+            // region when the focus grab is installed - which is
+            // mid-entrance. The snapshot kept the scaled rect forever: a
+            // ~60px band inside each side edge of the surface where hover
+            // and clicks still reached the card (the live input region had
+            // settled to full size) but the grab's stale copy said
+            // "outside", so any click there cleared the grab and dismissed
+            // the selector. Click-mapped live: x <= 2021 and >= 3099 closed
+            // on a 1960..3160 surface, which is the 0.9-scale rect exactly.
+            // Anchors track layout geometry and ignore render transforms, so
+            // the proxy is the full rect at every instant.
+            Item {
+                id: inputRegionProxy
+                anchors.fill: content
+            }
             mask: Region {
-                item: content
+                item: inputRegionProxy
             }
 
             implicitHeight: Appearance.sizes.wallpaperSelectorHeight
