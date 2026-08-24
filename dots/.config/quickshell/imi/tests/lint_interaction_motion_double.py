@@ -200,15 +200,32 @@ def declaration_value(lines, index, first_fragment):
     return value
 
 
+# The group entrance's shared dressing writes the scale (and opacity) channel
+# onto every `appear`-declaring member of its target, so a `StaggerEntrance`
+# declared inside a control that applies the model is the same doubling with
+# the writer one component away: the entrance scale composites with the
+# control's `interactionMotion.scale` down the scene graph, and the opacity it
+# installs multiplies with the dim the control's root already carries. (The
+# component itself SKIPS a direct child owning an `interactionMotion`, but a
+# dresser aimed at a container INSIDE the control reaches members that guard
+# cannot see - the members are plain items, the control is their ancestor.)
+DRESSER_TYPES = ("StaggerEntrance",)
+DRESSER = re.compile(r"^\s*(" + "|".join(DRESSER_TYPES) + r")\s*\{")
+
+
 class Channel:
     """One visual channel the model drives, and how to recognise both sides."""
 
-    def __init__(self, name, offending, applier, applies, doubling):
+    def __init__(self, name, offending, applier, applies, doubling,
+                 dressers=False):
         self.name = name
         self.offending = prop_matcher(offending)
         self.applier = prop_matcher(applier)
         self.applies = applies
         self.doubling = doubling
+        # Whether the shared entrance dressing writes this channel too. Scale
+        # only: the dresser installs no radius.
+        self.dressers = dressers
 
 
 CHANNELS = [
@@ -217,6 +234,7 @@ CHANNELS = [
         "a transform composites down the scene graph, so a hover/press scale "
         "written inside a control that already applies `interactionMotion.scale` "
         "MULTIPLIES with the model instead of replacing it",
+        dressers=True,
     ),
     Channel(
         "radius", RADIUS_NAMES, RADIUS_APPLIER_NAMES, APPLIES_RADIUS,
@@ -259,6 +277,13 @@ def scan(sources, channel, controls):
             inside = enclosing & controls
             if inside:
                 hosts.add(path)
+            if channel.dressers and inside:
+                dresser = DRESSER.match(line)
+                if dresser:
+                    violations.append((path, number, sorted(inside)[0],
+                                       f"{dresser.group(1)} dresses members "
+                                       f"with a scale of its own here"))
+                    continue
             match = channel.offending.match(line)
             if not match or not inside:
                 continue
@@ -304,9 +329,15 @@ Item {
         Icon {
             scale: root.motion.scale
         }
+        StaggerEntrance {
+            target: glyphColumn
+        }
     }
     Loose {
         scale: hoverArea.containsMouse ? 1.1 : 1
+    }
+    StaggerEntrance {
+        target: looseColumn
     }
 }
 """,
@@ -358,7 +389,9 @@ def self_check():
     sources = {Path(name): text.splitlines()
                for name, text in SELF_CHECK.items()}
     expected = {
-        "scale": ({"Control"}, {("CallSite.qml", 5), ("CallSite.qml", 8)},
+        "scale": ({"Control"},
+                  {("CallSite.qml", 5), ("CallSite.qml", 8),
+                   ("CallSite.qml", 17)},
                   "CallSite.qml", None),
         "radius": ({"Tightening"},
                    {("TighteningCallSite.qml", 3), ("TighteningCallSite.qml", 5), ("TighteningCallSite.qml", 8)},
