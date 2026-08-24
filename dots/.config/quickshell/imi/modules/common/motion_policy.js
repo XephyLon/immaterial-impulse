@@ -117,6 +117,40 @@ function staggerDelay(rank, step, leadIn) {
 }
 
 // ---------------------------------------------------------------------------
+// The three-channel member entrance
+// ---------------------------------------------------------------------------
+//
+// A wave member arrives on three properties moving together - opacity, a scale
+// and a small rise - driven by one `appear` scalar so they cannot land on
+// different schedules (docs/M3_GUIDELINES.md §2, "Component Entrance and
+// Exit"; measured off the sibling fork in
+// docs/p3drovfx-motion-measured-2026-08-22.md §3 as opacity 0->1, scale from
+// 0.85 and +25px->0). The rendering is `StaggerEntrance.qml`; the one decision
+// in it is here, because it is the one a test can hold still: where the scale
+// STARTS.
+//
+// The scale is derived from the rise and the width it plays on, never picked.
+// The survey's 0.85 is a popup's compact cards; on a full-width row the same
+// factor is a horizontal swing wider than the rise it accompanies - a zoom,
+// not a settle. Matching the scale's excursion to the rise keeps the two
+// terms one motion at any width, and the measured 0.85 stays as the floor so
+// a narrow member cannot invert the proportion. (Promoted verbatim from Edit
+// Mode's drawer, which derived exactly this locally; the derivation moving
+// here must not move a pixel of that panel.)
+var ENTRANCE_SCALE_FLOOR = 0.85;
+
+function entranceScaleFrom(rise, reference) {
+    var span = Math.max(1, Number(reference) || 0);
+    var derived = 1 - Number(rise) / span;
+    // Comparisons, not Math.max: `Math.max(floor, NaN)` is NaN, which is a
+    // legal double no render boundary rejects - the Appearance-token lesson.
+    if (!(derived > ENTRANCE_SCALE_FLOOR)) return ENTRANCE_SCALE_FLOOR;
+    // A rise of zero (or nonsense) is no scale excursion at all - a member
+    // must never arrive LARGER than it rests.
+    return Math.min(1, derived);
+}
+
+// ---------------------------------------------------------------------------
 // The container-progress gate
 // ---------------------------------------------------------------------------
 //
