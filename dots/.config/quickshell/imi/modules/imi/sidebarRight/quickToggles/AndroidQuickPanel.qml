@@ -119,8 +119,15 @@ AbstractQuickPanel {
             StaggerWave {
                 id: tileWave
                 target: usedGrid
-                // The fork's tile cadence (80 + 25ms per tile); our default
-                // 40ms step reads sluggish across a 15-tile grid.
+                // The fork's tile cadence: an 80ms head start before ANY
+                // tile, then 25ms per tile. The head start is load-bearing:
+                // without it ranks 0-2 begin fading the instant the panel
+                // edge appears and are well-lit before anything else has
+                // started - three tiles reading as "always there, then the
+                // animation begins", which is exactly the pause the
+                // maintainer kept seeing. With it the whole grid rises as
+                // one shimmering field behind the slide's curtain.
+                leadIn: 80
                 step: 25
             }
             StaggerEntrance {
