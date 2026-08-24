@@ -14,6 +14,10 @@ Singleton {
 
     property bool available: false
     property bool active: false
+    // How long a spawned daemon gets to appear (or a killed one to exit)
+    // before the optimistic flip below is checked against reality. A test
+    // shortens it; nothing else should.
+    property int verifyInterval: 1500
 
     function fetchAvailability() {
         fetchAvailabilityProc.running = true
@@ -23,14 +27,27 @@ Singleton {
         fetchActiveStateProc.running = true
     }
 
+    // enable()/disable() flip `active` optimistically so the toggle answers
+    // the click, then verify against the real process list once the launch or
+    // kill has had time to happen - without that, a failed launch (easyeffects
+    // uninstalled between checks, or crashing at startup) left the toggle
+    // saying on for the rest of the session.
     function disable() {
         root.active = false
         Quickshell.execDetached(["bash", "-c", "pkill easyeffects || flatpak pkill com.github.wwmm.easyeffects"])
+        verifyTimer.restart()
     }
 
     function enable() {
         root.active = true
         Quickshell.execDetached(["bash", "-c", "easyeffects --hide-window --service-mode || flatpak run com.github.wwmm.easyeffects --hide-window --service-mode"])
+        verifyTimer.restart()
+    }
+
+    Timer {
+        id: verifyTimer
+        interval: root.verifyInterval
+        onTriggered: root.fetchActiveState()
     }
 
     function toggle() {
