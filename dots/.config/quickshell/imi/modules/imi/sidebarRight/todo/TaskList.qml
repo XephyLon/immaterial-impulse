@@ -20,7 +20,12 @@ Item {
         id: listView
         anchors.fill: parent
         spacing: root.todoListItemSpacing
-        animateAppearance: false
+        // animateAppearance stays at the view's default (on): a task marked done
+        // slides out and the rows below close the gap, instead of the list
+        // hard-cutting to its new shape. That only works because taskList holds
+        // the same objects Todo.list does - ScriptModel diffs by identity, so a
+        // per-update wrapper would read as remove-all + add-all and fly the
+        // whole list in on every change.
         model: ScriptModel {
             values: root.taskList
         }
@@ -77,10 +82,14 @@ Item {
                         TodoItemActionButton {
                             Layout.fillWidth: false
                             onClicked: {
+                                // Resolved at click time: modelData IS the item in
+                                // Todo.list (identity preserved for the model diff),
+                                // and a stored index goes stale across deletes.
+                                const index = Todo.list.indexOf(todoItem.modelData);
                                 if (!todoItem.modelData.done)
-                                    Todo.markDone(todoItem.modelData.originalIndex);
+                                    Todo.markDone(index);
                                 else
-                                    Todo.markUnfinished(todoItem.modelData.originalIndex);
+                                    Todo.markUnfinished(index);
                             }
                             contentItem: MaterialSymbol {
                                 anchors.centerIn: parent
@@ -93,7 +102,7 @@ Item {
                         TodoItemActionButton {
                             Layout.fillWidth: false
                             onClicked: {
-                                Todo.deleteItem(todoItem.modelData.originalIndex);
+                                Todo.deleteItem(Todo.list.indexOf(todoItem.modelData));
                             }
                             contentItem: MaterialSymbol {
                                 anchors.centerIn: parent
