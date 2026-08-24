@@ -68,12 +68,15 @@ QtObject {
     // a fully-lit panel - which is exactly what the right sidebar showed
     // (full-res frames: a black void where the toggle grid's later rows
     // were still parked, for ~300ms, reading as an ugly pause). Piecewise
-    // rather than a bezier so the endpoints are exact: 30% alpha up to 40%
-    // travel, then a linear ramp home.
+    // rather than a bezier so the endpoints are exact: a dim plateau up to
+    // 40% travel, then a linear ramp home. The plateau is 15%, measured
+    // against the fork's stall curve (alpha still near 0.1 at 40% travel) -
+    // a brighter early curtain let the first-ranked tiles read as
+    // already-lit before the panel had arrived.
     readonly property real reveal: root.progress >= 1 ? 1
         : root.progress <= 0 ? 0
-        : root.progress < 0.4 ? 0.3 * (root.progress / 0.4)
-        : 0.3 + 0.7 * ((root.progress - 0.4) / 0.6)
+        : root.progress < 0.4 ? 0.15 * (root.progress / 0.4)
+        : 0.15 + 0.85 * ((root.progress - 0.4) / 0.6)
 
     // Whether the panel has anything on screen. True through the whole exit,
     // so content gated on it is not hidden under an animation still drawing
