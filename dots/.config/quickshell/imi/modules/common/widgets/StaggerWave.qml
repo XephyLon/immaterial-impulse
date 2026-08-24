@@ -68,7 +68,17 @@ QtObject {
         }
     }
 
+    // The members, when they are not one container's children. `GroupedList`
+    // reparents each declared row into its own plate, so a wave over its rows
+    // has no Item whose `children` are the group - the rows' shared origin is
+    // the declared list, and the caller hands it in. The list REPLACES the
+    // children walk; `target` stays what it is either way, the thing whose
+    // being on screen the deferral below waits for.
+    property list<Item> items
+
     function members(): var {
+        if (root.items.length > 0)
+            return root.items;
         return root.target ? root.target.children : [];
     }
 
