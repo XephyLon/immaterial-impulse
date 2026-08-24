@@ -83,6 +83,11 @@ ShellRoot {
                 Quickshell.shellPath("modules/imi/editMode/EditModeChromeContent.qml"),
                 Quickshell.shellPath("modules/imi/editMode/EditWidgetMenu.qml"),
                 Quickshell.shellPath("modules/imi/editMode/EditWidgetMenuContent.qml"),
+                // The desktop menu builds its window behind a Loader gated on
+                // the right-click, so a shell that is merely running has never
+                // compiled it - and it now carries the rows' group entrance,
+                // which nothing else in the suite reaches.
+                Quickshell.shellPath("modules/imi/desktopMenu/DesktopMenu.qml"),
                 // Stage 9's Lockscreen tab: the preview context compiles for
                 // the first time when somebody opens that tab, and the lock
                 // surface itself only when the screen actually locks - so a
