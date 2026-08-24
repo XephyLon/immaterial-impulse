@@ -106,6 +106,54 @@ ShellRoot {
         interval: 900
         onTriggered: {
             harness.check("a killed daemon stays off", EasyEffects.active === false);
+            Quickshell.execDetached(["touch", `${harness.stateDir}/slow`]);
+            raceSetup.start();
+        }
+    }
+
+    // The stale-probe race, driven deterministically: with `slow` set, a probe
+    // reads its answer at spawn and reports it 300ms later. enable() at T0,
+    // verify starts a probe at T400 (reads: running), disable() at T550 (kills
+    // the daemon, restarts the timer to fire at T950) - so the probe's stale
+    // "running" lands at ~T700 while the newer toggle's verify is pending, and
+    // the guard must discard it or the toggle shows ON after an OFF click.
+    Timer {
+        id: raceSetup
+        interval: 300
+        onTriggered: {
+            EasyEffects.verifyInterval = 400;
+            EasyEffects.enable();
+            harness.check("race: enable is optimistic", EasyEffects.active === true);
+            raceClick.start();
+        }
+    }
+
+    Timer {
+        id: raceClick
+        interval: 550
+        onTriggered: {
+            EasyEffects.disable();
+            raceStaleLanding.start();
+        }
+    }
+
+    Timer {
+        // T780: after the stale probe's answer landed (~T700), before the
+        // fresh verify fires (T950).
+        id: raceStaleLanding
+        interval: 230
+        onTriggered: {
+            harness.check("race: a stale probe does not overrule a fresh click",
+                          EasyEffects.active === false);
+            raceSettled.start();
+        }
+    }
+
+    Timer {
+        id: raceSettled
+        interval: 900
+        onTriggered: {
+            harness.check("race: the click's own verify agrees", EasyEffects.active === false);
             harness.finish();
         }
     }

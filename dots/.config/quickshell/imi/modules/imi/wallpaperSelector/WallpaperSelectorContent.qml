@@ -248,8 +248,18 @@ MouseArea {
                 // cannot un-share a decode (the trap 33139b688 records for the
                 // desktop frost, which is why Background's own request is not
                 // touched from here).
-                sourceSize.width: width
-                sourceSize.height: height
+                //
+                // The bound is the selector's size CONSTANTS, never the item's
+                // own live width/height: anchors resolve after the load starts,
+                // so a bound-to-geometry sourceSize begins at 0 (= unbounded,
+                // the decode this exists to remove) and then reloads once per
+                // axis as the geometry lands - measured as three decodes of the
+                // same file per open. The constants are known at creation and
+                // stable for the window's life; they run slightly larger than
+                // the item (which sits inside the card's margins), which
+                // PreserveAspectCrop absorbs.
+                sourceSize.width: Appearance.sizes.wallpaperSelectorWidth
+                sourceSize.height: Appearance.sizes.wallpaperSelectorHeight
                 layer.enabled: true
                 layer.effect: OpacityMask {
                     maskSource: Rectangle {

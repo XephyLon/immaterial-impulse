@@ -24,6 +24,10 @@ Singleton {
     }
 
     function fetchActiveState() {
+        // Restart, never join: a probe already in flight was asked before the
+        // state it would report on, and `running = true` on a live Process is
+        // a no-op - the stale run would be the one whose answer lands.
+        fetchActiveStateProc.running = false
         fetchActiveStateProc.running = true
     }
 
@@ -72,6 +76,13 @@ Singleton {
         running: true
         command: ["bash", "-c", "pidof easyeffects || flatpak ps | grep com.github.wwmm.easyeffects > /dev/null 2>&1"]
         onExited: (exitCode, exitStatus) => {
+            // A pending verify means a toggle happened after this probe was
+            // asked: it read the world before that click's launch or kill
+            // landed, so its answer would overrule the fresher intent - the
+            // toggle showing ON for a grace period after an OFF click. The
+            // click's own verify is the one that gets to write.
+            if (verifyTimer.running)
+                return
             root.active = exitCode === 0
         }
     }
