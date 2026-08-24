@@ -4478,6 +4478,43 @@ arrived.
 ("feat(widgets): StaggerWave, the one runner for a group's arrival";
 "feat(editMode): the drawer arrives as a surface and then fills").
 
+**What a member's ARRIVAL looks like is one spelling too — `StaggerEntrance`, beside the wave.**
+The three-channel entrance (opacity, a scale from a derived near-1 start, and a small rise, all on
+the one `appear` scalar the wave animates) lived only as Edit Mode's drawer's local dressing,
+spelled out per member nine times — the template the next adopter would copy, and a hand-copied
+dressing is how a member arrives on two channels out of three. `modules/common/widgets/
+StaggerEntrance.qml` is the promotion: declared beside the `StaggerWave`, aimed at the same
+container, it installs the three channels once on every child declaring `appear` — a member's whole
+opt-in is the property the runner already requires. The scale's START is derived, not picked:
+`motion_policy.js`'s `entranceScaleFrom(rise, reference)` matches the scale's excursion to the rise
+(the survey's raw 0.85 is a popup number that reads as a zoom on a full-width row) with the
+measured 0.85 as the floor, and `Appearance.animation.entranceRise` is the rise
+(`spacing.space250` — a distance on the shell's rhythm, not a duration). Two refusals are
+load-bearing: a child without `appear` is not a member, and a child owning an `interactionMotion`
+is skipped whole — a `RippleButton` already folds `appear` into the opacity binding that carries
+its disabled dim and owns `scale` through the model, so a writer here would REPLACE those bindings
+rather than compose with them. The runtime skip cannot see an ANCESTOR, so both composition lints
+learned the spelling: `lint_interaction_motion_double.py` fails a `StaggerEntrance` inside a
+scale-channel control and `lint_disabled_opacity.py` fails one anywhere in a file whose root dims —
+at ANY indent, because the realistic placement is a direct child at one level, which the ≥5-space
+nested-dim convention never sees (the plant proving the rule landed exactly there and the first
+version stayed green over it). A wave whose members are not one container's children — GroupedList
+reparents each row into its own plate — hands the runner the declared list via `StaggerWave.items`,
+which REPLACES the children walk. The desktop menu's rows adopted the entrance on the drawer's
+argument (its card's opacity IS a QML-readable container progress, so the wave gates with no
+`leadIn`; enter-only, since the close destroys the window); dialog content was assessed beside it
+and REFUSED — a dialog's content is the question the user was interrupted to read, and the polkit
+prompt focuses a password field the cascade would leave parked invisible under real keystrokes —
+with the full argument in `STAGGER_DECLINED`'s entry.
+("feat(motion): a wave member's entrance scale is derived, in the policy",
+"feat(widgets): StaggerEntrance, one spelling of a wave member's arrival",
+"refactor(editMode): the drawer's entrance dressing becomes the shared spelling",
+"test(lint): the two composition lints see the shared entrance dressing",
+"fix(lint): a dresser one indent deep is inside the control too",
+"feat(widgets): a StaggerWave can take its members as a list",
+"feat(desktopMenu): the menu's rows arrive in sequence, gated on the card",
+"test(motion): dialogs decline the group entrance, in the register".)
+
 **A wave asked for while its container is off screen writes nothing, and leaves the surface blank
 for ever.** Ranking asks each member whether it is on screen, and `visible` is EFFECTIVE visibility
 (see the `GroupedList` entry under
