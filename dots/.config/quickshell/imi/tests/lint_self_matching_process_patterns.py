@@ -32,7 +32,11 @@ ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[3]
 
 SUFFIXES = {".sh", ".bash", ".py", ".qml", ".lua", ".md"}
-SKIP_DIRS = {".git", "node_modules", "__pycache__", ".cache"}
+# `.claude` holds agent-tooling state, including worktree snapshots of the
+# whole repo at older commits - stale copies of files since fixed, which this
+# sweep would otherwise report as live regressions and fail the suite on a
+# machine whose checkout is clean.
+SKIP_DIRS = {".git", "node_modules", "__pycache__", ".cache", ".claude"}
 # Frozen historical records. Two of the plan documents warn about this exact
 # trap and quote the bad pattern to do so, which is not a defect to fix - it is
 # the evidence that a note was not enough.
