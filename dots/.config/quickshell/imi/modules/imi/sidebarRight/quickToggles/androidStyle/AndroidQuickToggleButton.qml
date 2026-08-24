@@ -49,10 +49,16 @@ GroupButton {
     // StaggerEntrance owns opacity/scale/translate through this): a tile
     // added mid-session simply appears in place, which is what the old
     // opacity: 0 + onCompleted self-fade approximated one tile at a time.
+    // No Behavior on opacity: the wave animates `appear` and opacity is a
+    // binding on it, so a Behavior here is a second animation on the same
+    // channel. The one left behind by the self-fade's retirement turned
+    // park()'s snap-to-invisible into a 200ms on-stage fade-out (measured:
+    // appear=0 with drawn opacity still 1.000 at the open, dimmest at
+    // ~140ms, and pinned at 0.15 by per-frame retargets while `appear`
+    // animated - b710ef731's frozen-Behavior shape - so the tile landed
+    // ~200ms after its own wave slot). That was the "toggles visible, then
+    // the animation begins" pause.
     property real appear: 1
-    Behavior on opacity {
-        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-    }
 
     // The grid is one flat container and a tile places itself in it, so a
     // reorder is a delegate travelling to another slot rather than a row of
