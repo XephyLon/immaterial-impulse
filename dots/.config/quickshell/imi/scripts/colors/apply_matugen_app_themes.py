@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -100,10 +101,16 @@ def reload_kitty() -> None:
 
 
 def main() -> None:
-    apply_cava()
-    apply_btop()
-    apply_tmux()
-    reload_kitty()
+    # Each app fails alone. A single unwritable config - measured: a dangling
+    # ~/.config/btop symlink left behind by a previous dotfiles suite - used to
+    # abort the whole run here, so every app after it in this list silently
+    # never got its theme, and switchwall.sh does not stop on a failing step.
+    for apply in (apply_cava, apply_btop, apply_tmux, reload_kitty):
+        try:
+            apply()
+        except OSError as error:
+            print(f"[apply_matugen_app_themes] {apply.__name__} skipped: {error}",
+                  file=sys.stderr)
 
 
 if __name__ == "__main__":

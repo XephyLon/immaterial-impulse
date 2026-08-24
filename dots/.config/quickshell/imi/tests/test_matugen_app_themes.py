@@ -112,6 +112,39 @@ class MatugenApplicationThemeTests(unittest.TestCase):
             self.assertTrue((app.CONFIG / "btop/themes/matugen.theme").is_file())
             self.assertTrue((app.CONFIG / "tmux/matugen.conf").is_file())
 
+    def test_one_broken_app_does_not_take_down_the_rest(self):
+        # The bug as found on a real machine: ~/.config/btop was a dangling
+        # symlink left behind by a previous dotfiles suite, apply_btop()'s
+        # mkdir raised on it, and the uncaught traceback killed the script
+        # before apply_tmux() ran - so tmux stayed unthemed forever, silently,
+        # because switchwall.sh does not stop on a failing step. Each app's
+        # applier must fail alone.
+        app = load_applicator()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            app.CONFIG = root / "config"
+            app.STATE = root / "state"
+            app.GENERATED = app.STATE / "quickshell/user/generated/apps"
+            app.GENERATED.mkdir(parents=True)
+            (app.GENERATED / "btop.theme").write_text("theme[main_fg]=\"#abcdef\"\n")
+            (app.GENERATED / "tmux.conf").write_text("set -g status on\n")
+            tmux = app.CONFIG / "tmux/tmux.conf"
+            tmux.parent.mkdir(parents=True)
+            tmux.write_text("set -g mouse on\n")
+            (app.CONFIG / "btop").symlink_to(root / "gone-dotfiles-suite/btop")
+
+            import io
+            stderr = io.StringIO()
+            import contextlib
+            with mock.patch.object(app.subprocess, "run"), \
+                    contextlib.redirect_stderr(stderr):
+                app.main()
+
+            self.assertTrue((app.CONFIG / "tmux/matugen.conf").is_file(),
+                            "tmux theming died with btop's broken config dir")
+            self.assertIn("apply_btop", stderr.getvalue(),
+                          "the skipped app is not named anywhere")
+
     def test_apply_tmux_respects_existing_tilde_source_line(self):
         # The shipped dots/.config/tmux/tmux.conf sources the theme by its ~
         # path; appending the absolute variant on top would stack one duplicate

@@ -357,6 +357,22 @@ from a successful parse, so a scan that fails outright still clears the queue.
 cbd8e707e ("feat(sounds): scan the sound-theme roots into one catalogue"),
 a3a8f65cf ("fix(sounds): play one resolved file instead of two guessed ones").
 
+**A pipeline of per-app steps run by a caller that does not stop on failure
+starves every step after the first broken one, silently.**
+`scripts/colors/apply_matugen_app_themes.py` themes cava, btop, tmux and kitty
+in one run, and `switchwall.sh` deliberately continues past a failing step - so
+when `~/.config/btop` turned out to be a dangling symlink left behind by a
+previous dotfiles suite, `apply_btop()`'s `mkdir` raised, the traceback ended
+the script, and tmux (after btop in the list) never received its theme on any
+palette switch, with exit 0 and nothing anywhere naming the cause. The
+installer's tmux checkbox looked simply broken. Each applier now fails alone,
+naming itself on stderr; `test_one_broken_app_does_not_take_down_the_rest`
+plants exactly that symlink. When adding an applier, remember the environment
+half: a config path under `~/.config` can be a file, a foreign symlink or
+read-only, and "the run printed nothing" is what a swallowed traceback also
+looks like. (fix(colors): one app's broken config no longer starves the rest
+of their themes.)
+
 ## The suite checkout, and why the updater cannot just reset it
 
 `get.sh` keeps the whole suite in `~/.local/share/immaterial-impulse/src` (`Directories.suiteSrc`),
