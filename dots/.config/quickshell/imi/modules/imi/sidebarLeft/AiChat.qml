@@ -273,25 +273,18 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
         color: Appearance.colors.colOutlineVariant
     }
 
-    // The pane's own members cascade once the sidebar's gate opens - the
-    // fork's left-pane grammar (tab strip, content, hint, suggestions,
-    // composer, each individually). `sidebarLeftPaneIn` resolves through the
-    // creation context to SidebarLeftContent's gate (this pane is created
-    // from an inline Component there); the typeof guard keeps a pane built
-    // anywhere else - a test - drawn rather than throwing per evaluation.
-    // Same dynamic-scope pattern as dockRow.padding, with AGENT.md's warning
-    // attached: restructure above this and nothing warns.
-    readonly property bool paneGateOpen:
-        (typeof sidebarLeftPaneIn !== "undefined") ? sidebarLeftPaneIn : true
-    onPaneGateOpenChanged: {
-        if (root.paneGateOpen && GlobalStates.sidebarLeftOpen)
-            paneEntrance.enter();
-    }
+    // The pane's members run their entrance UNDER the slide, ungated (see
+    // the right sidebar's comment for the twice-learned reason): content,
+    // hint, suggestions, composer, each individually, with the composer -
+    // last rank - as the visible tail after the panel lands, which is the
+    // fork's own left-pane look.
     Connections {
         target: GlobalStates
         function onSidebarLeftOpenChanged() {
-            if (GlobalStates.sidebarLeftOpen && !root.paneGateOpen)
+            if (GlobalStates.sidebarLeftOpen) {
                 paneEntrance.park();
+                paneEntrance.enter();
+            }
         }
     }
 

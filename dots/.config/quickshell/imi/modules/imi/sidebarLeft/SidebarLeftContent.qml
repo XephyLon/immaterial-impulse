@@ -43,35 +43,19 @@ Item {
         }
     }
 
-    // The container's slide progress, assigned by SidebarLeft.qml AFTER the
-    // content is created - this tree is built detached and reparented between
-    // the attached panel and the detached window, so the binding arrives from
-    // outside rather than from an id this file could see. Defaults to 1: a
-    // detached window (or a test) has no slide to wait on.
-    property real containerProgress: 1
-
-    // Container-then-fill, the right sidebar's shape. The gate is keyed to
-    // the OPEN flag, which a detach does not flip - so undocking the chat to
-    // keep reading never re-runs the entrance (the hazard that first kept
-    // this surface in STAGGER_DECLINED).
-    // Resolved by the tab panes through dynamic scope (see AiChat.qml).
-    readonly property bool sidebarLeftPaneIn: root.contentsIn
-
-    readonly property bool contentsIn: Appearance.animation.contentsArrived(
-        root.containerProgress, GlobalStates.sidebarLeftOpen)
-    onContentsInChanged: {
-        if (root.contentsIn && GlobalStates.sidebarLeftOpen)
-            leftEntrance.enter();
-    }
-    Component.onCompleted: {
-        if (!root.contentsIn)
-            leftEntrance.park();
-    }
+    // The entrance runs UNDER the slide, ungated - the fork's grammar, read
+    // off its re-recorded sidebars: the surface carries the panel already
+    // composed and only the last-ranked members visibly land after (see the
+    // right sidebar's fuller comment). Keyed to the OPEN flag, which a
+    // detach does not flip, so undocking the chat to keep reading never
+    // re-runs the entrance.
     Connections {
         target: GlobalStates
         function onSidebarLeftOpenChanged() {
-            if (GlobalStates.sidebarLeftOpen && !root.contentsIn)
+            if (GlobalStates.sidebarLeftOpen) {
                 leftEntrance.park();
+                leftEntrance.enter();
+            }
         }
     }
 

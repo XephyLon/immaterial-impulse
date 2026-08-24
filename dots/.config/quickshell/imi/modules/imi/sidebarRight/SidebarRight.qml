@@ -169,12 +169,7 @@ Scope {
                         }
                     }
 
-                    sourceComponent: SidebarRightContent {
-                        // The slide's own scalar, so the section cascade
-                        // gates on the real container progress instead of a
-                        // guessed lead-in.
-                        containerProgress: panelWindow.slide.progress
-                    }
+                    sourceComponent: SidebarRightContent {}
                 }
             }
         }
