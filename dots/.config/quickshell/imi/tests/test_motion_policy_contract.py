@@ -94,6 +94,42 @@ STAGGER_ADOPTERS = {
 # not a line to be copied.
 STAGGER_DECLINED = {
     "modules/imi/sidebarRight/SidebarRightContent.qml",
+    # Dialog content. Assessed for the group entrance when the desktop menu
+    # adopted it and refused on the surface's own facts, all of them readable
+    # in the tree rather than guessed:
+    #
+    #  - A dialog's content is the question being asked. Every WindowDialog
+    #    here is an interruption offering a decision (the polkit auth prompt,
+    #    the uninstall confirm, the Wi-Fi/Bluetooth/Tailscale/volume/phone
+    #    dialogs), and a clamped five-rank wave puts the last member's landing
+    #    ~400ms after the gate - latency on exactly the thing the user was
+    #    interrupted to read. This is the launcher refusal's argument on a
+    #    modal surface: a wave is wrong where the content IS what is being
+    #    waited for.
+    #  - The polkit prompt `forceActiveFocus()`es its field the moment it
+    #    opens (PolkitContent.qml) and users answer immediately; a cascade
+    #    puts keystrokes into a password field still parked at `appear: 0`,
+    #    invisible, on an authentication surface.
+    #  - The card already has an entrance of its own that members would fight:
+    #    `onShowChanged` freezes the card's height at the show flip (the
+    #    binding-destroying assignment AGENT.md documents as load-bearing) and
+    #    the card unfolds 0 -> that height while the content column fades AS
+    #    ONE - a per-member cascade inside an unfolding card is two entrances
+    #    stacked on one surface.
+    #  - Six of the dialog content files bleed children to the card's edge
+    #    with negative `contentPadding` margins (separators, lists); a
+    #    scale-and-rise dressing on those members swings edge-to-edge chrome
+    #    onto the scrim mid-entrance, and separators would spend wave slots.
+    #  - The dialog surfaces are created by the gesture that opens them (the
+    #    sidebar's `toggleDialogLoader.active` flips on `shown`;
+    #    FullscreenPolkitWindow is gated on `PolkitService.active`), which is
+    #    the measured half of the sidebar refusal above: wave frames landing
+    #    on a surface the compositor is still bringing up.
+    #
+    # A dialog that someday earns a group entrance argues these down first -
+    # in particular the first two, which are properties of what a dialog IS
+    # rather than of how this one is built.
+    "modules/common/widgets/WindowDialog.qml",
 }
 
 # A cascade whose rank is bounded by the shape of its own model rather than by
