@@ -221,6 +221,9 @@ Scope { // Scope
                 // An `x`, not a transform: the blur region and the shadow both
                 // follow the item's geometry, and a transform moves neither.
                 x: Appearance.sizes.hyprlandGapsOut + panelWindow.slide.offset
+                // The slide's curtain (see EdgeSlide.reveal): entrances run
+                // under it, so a member still parked is dimness, not a hole.
+                opacity: panelWindow.slide.reveal
 
                 Behavior on width {
                     animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
