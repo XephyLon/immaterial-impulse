@@ -125,6 +125,50 @@ Scope {
                 return popup;
             }
 
+            // ---- the content wave's gate --------------------------------
+            //
+            // The popup's below-the-fold sections hold their entrance until
+            // the card itself has arrived, then cascade
+            // (docs/p3drovfx-motion-measured-2026-08-22.md §2.1: container,
+            // then fill). The card's driver IS a container progress, so like
+            // Edit Mode's drawer this adopter asks the real question through
+            // Appearance.animation.contentsArrived and carries no leadIn - a
+            // lead-in as well would be two waits in front of one wave, only
+            // one of them answerable.
+            //
+            // `opening` is the overlay's own intent - the slot is claimed and
+            // the card is not leaving - never a direction inferred from the
+            // progress: the intent flips at the claim and the progress
+            // follows, so the gate's two branches are entered by different
+            // events and there is no ordering to get wrong.
+            readonly property bool opening: overlayWindow.current !== null
+                && !overlayWindow.exiting
+            readonly property bool contentsIn: Appearance.animation.contentsArrived(
+                card.openProgress, overlayWindow.opening)
+            // Armed by a FRESH open only, in takeOver's from-idle branch. A
+            // cross-fade takeover finds the card already there, so there is
+            // no container to wait for and the arriving sections stay at full
+            // strength; a re-hover that reverses an exit must not blink out
+            // sections the user is looking at. Both are exactly the states
+            // this flag is false in - which is what spares this surface the
+            // drawer's park-on-every-intent blink without a second notion of
+            // "current".
+            property bool wavePending: false
+
+            onContentsInChanged: {
+                // `opening` is a conjunct deliberately: a hover-out BEFORE
+                // the gate answered flips contentsIn true through the exit
+                // branch (any progress > 0 rides out), and a cascade started
+                // into a collapsing card is the race the gate exists to
+                // close. The armed flag survives that flip, so an exit
+                // reversed by a re-hover still gets the cascade it never had.
+                if (overlayWindow.contentsIn && overlayWindow.wavePending
+                        && overlayWindow.opening) {
+                    overlayWindow.wavePending = false;
+                    sectionWave.enter();
+                }
+            }
+
             onRequestedChanged: {
                 if (requested) takeOver(requested);
                 else beginExit();
@@ -158,6 +202,13 @@ Scope {
 
                 const previous = overlayWindow.current;
                 if (previous) previous.popupHovered = false;
+                // The wave follows whichever popup holds the card, so settle
+                // it against the outgoing tree BEFORE the slot changes hands:
+                // stopping alone would strand a mid-cascade section at
+                // partial `appear`, and a popup returning later by cross-fade
+                // - where nothing parks or re-enters - would keep it dimmed
+                // for the rest of the session.
+                if (previous && previous !== popup) sectionWave.settle();
                 overlayWindow.current = popup;
 
                 if (previous && previous !== popup && previous.contentItem) {
@@ -185,7 +236,18 @@ Scope {
 
                 // Coming from idle there is no geometry to morph from, so put
                 // the card at the widget it belongs to before anything animates.
-                if (card.width <= 0 || card.openHeight <= 0) overlayWindow.park();
+                if (card.width <= 0 || card.openHeight <= 0) {
+                    overlayWindow.park();
+                    // A fresh open arms the wave: the sections below the fold
+                    // are put away before the card is on screen, and the gate
+                    // releases them. Arming and running are two events -
+                    // parking inside enter() would draw the sections at full
+                    // strength for the whole run up to the gate and then
+                    // blink them out to cascade back in, which is the drawer's
+                    // measured mistake restated.
+                    sectionWave.park();
+                    overlayWindow.wavePending = true;
+                }
                 retargetTimer.restart();
             }
 
@@ -288,6 +350,16 @@ Scope {
                 exitTimer.stop();
                 contentEnter.stop();
                 contentExit.stop();
+                // The reset the next entrance starts from, made off screen -
+                // the card collapses in this same call. The exit itself never
+                // touches the sections: they ride the container out at full
+                // strength as one rigid piece (measured doc §2.2), so
+                // settle() here is assignment to values they already hold
+                // unless a cascade was interrupted mid-flight, which is
+                // exactly the state it exists to repair. While the leaving
+                // popup still holds the slot, the wave's target is its tree.
+                sectionWave.settle();
+                overlayWindow.wavePending = false;
 
                 const leaving = overlayWindow.current;
                 overlayWindow.release(overlayWindow.outgoing);
@@ -336,6 +408,31 @@ Scope {
                 id: retargetTimer
                 interval: 0
                 onTriggered: overlayWindow.retarget()
+            }
+
+            // One wave for whichever popup holds the card, never one per
+            // popup - a per-popup runner is ten copies of the drive, one door
+            // over from the per-popup watcher trap (#140). Members are the
+            // content root's children: a popup opts a section in by declaring
+            // `property real appear: 1` and folding it into its own opacity,
+            // scale and rise (bar_popup_unroll.js's entrance helpers). The
+            // HERO section - the first drawn one, whose height the card opens
+            // at - deliberately declares none: the unroll exists so that
+            // section is legible on frame one, and only the sections below
+            // the fold cascade. A popup declaring no `appear` at all (the
+            // tray grid, the privacy card's one-tree morph) yields an empty
+            // wave and keeps today's behaviour.
+            //
+            // The handover trap is answered by WHEN enter() runs: the gate
+            // holds it until the driver crosses contentGate, several frames
+            // after the zero-interval retarget, so the wave never ranks the
+            // reparented tree during the one frame its implicit size is
+            // stale - and StaggerWave itself defers an enter() until its
+            // target is effectively visible, which covers the window's own
+            // map on a fresh open.
+            StaggerWave {
+                id: sectionWave
+                target: overlayWindow.current?.contentItem ?? null
             }
 
             // One timer where there were two chained ones. The shrink and the

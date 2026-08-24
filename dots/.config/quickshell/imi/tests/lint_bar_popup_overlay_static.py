@@ -249,6 +249,71 @@ if not re.search(r"interval:\s*0\b[\s\S]{0,120}?onTriggered:[^\n]*retarget\(\)",
         "implicit size - and its first section's height - are stale until the turn after "
         "the takeover")
 
+# --- the content wave, and the gate it waits behind ---------------------------
+#
+# The popup contents arrive container-then-fill (the measured survey's §2.1):
+# the sections below the fold hold their entrance until the card's own driver
+# answers `Appearance.animation.contentsArrived`, then cascade as a StaggerWave.
+# This surface is the one bar adopter whose container HAS a progress scalar, so
+# the checks here are the drawer's rules restated for the overlay - and each one
+# guards a silent regression, because a wave that starts early, or from the
+# wrong event, still renders and reads as mushy rather than as broken.
+
+if "StaggerWave {" not in code:
+    failures.append(
+        "declares no StaggerWave; the popup sections' cascade must come from the one shared "
+        "runner, or the ranking, the clamp and the cancellation drift from every other "
+        "surface's")
+
+if re.search(r"^\s*leadIn\s*:", code, re.MULTILINE):
+    failures.append(
+        "gives the wave a leadIn as well as the gate; two waits in front of one wave, and "
+        "only the container's own progress is answerable")
+
+contents_in = declaration(code, "readonly property bool contentsIn")
+if "Appearance.animation.contentsArrived(" not in contents_in \
+        or f"card.{DRIVER}" not in contents_in:
+    failures.append(
+        f"contentsIn is not Appearance.animation.contentsArrived(card.{DRIVER}, ...); the "
+        "gate must read the card's own driver, which is the container progress the whole "
+        "design exists to gate on")
+
+opening = declaration(code, "readonly property bool opening")
+if not opening:
+    failures.append(
+        "declares no `readonly property bool opening`; the gate's second argument is the "
+        "overlay's own intent flag")
+elif DRIVER in opening:
+    failures.append(
+        f"derives `opening` from {DRIVER}; the intent flips at the claim and the progress "
+        "follows, so a direction inferred from the progress is entered by the wrong event")
+
+enter_calls = re.findall(r"\bsectionWave\.enter\(\)", code)
+if len(enter_calls) != 1:
+    failures.append(
+        f"calls sectionWave.enter() {len(enter_calls)} times; the wave starts from exactly "
+        "one place, the gate's own handler, or it races the reveal it is meant to land in")
+elif "sectionWave.enter()" not in declaration(code, "onContentsInChanged"):
+    failures.append(
+        "starts the wave outside the onContentsInChanged handler; an enter anywhere else "
+        "runs before the container has arrived, which is the race the gate exists to close")
+
+if re.search(r"\bsectionWave\.leave\(\)", code):
+    failures.append(
+        "calls sectionWave.leave(); the exit is one rigid transform - contents ride the "
+        "container out at full strength (measured doc §2.2), and the reset is settle(), "
+        "off screen")
+
+if "sectionWave.park()" not in code:
+    failures.append(
+        "never parks the wave; without an arm on the fresh open the sections are drawn at "
+        "full strength for the whole run up to the gate and then blink out to cascade in")
+
+if "sectionWave.settle()" not in code:
+    failures.append(
+        "never settles the wave; the released tree must get its `appear` back off screen, "
+        "or a popup whose cascade was interrupted returns with sections stuck part-dimmed")
+
 if failures:
     for failure in failures:
         print(f"modules/imi/bar/BarPopupOverlay.qml: {failure}", file=sys.stderr)
