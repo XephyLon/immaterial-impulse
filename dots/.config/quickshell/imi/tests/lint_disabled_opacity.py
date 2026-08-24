@@ -52,7 +52,11 @@ NESTED_TYPE = re.compile(r"^ {5,}([A-Z]\w*)\s*\{")
 # but the members inside a dimming control are ordinarily plain rows - the
 # control is their ancestor, which is exactly what that guard cannot see.)
 DRESSER_TYPES = ("StaggerEntrance",)
-NESTED_DRESSER = re.compile(r"^ {5,}(" + "|".join(DRESSER_TYPES) + r")\s*\{")
+# Any indent at all, not the >=5 the nested-dim rule uses: a dresser declared
+# as a DIRECT child of the dimming root sits at one level - the realistic
+# placement, and the one the first version of this rule missed when the plant
+# proving it was put exactly there.
+NESTED_DRESSER = re.compile(r"^ +(" + "|".join(DRESSER_TYPES) + r")\s*\{")
 
 
 def qml_files():
@@ -118,6 +122,16 @@ Dimmer {
     }
 }
 """,
+    # The realistic placement: the dresser as a DIRECT child of the dimming
+    # root, at one indent level - which the >=5-space nested-dim convention
+    # never sees, and where the first plant proving this rule landed.
+    "DimmedDirect.qml": """
+Dimmer {
+    StaggerEntrance {
+        target: contentRow
+    }
+}
+""",
     "FreeHost.qml": """
 Item {
     Column {
@@ -136,10 +150,10 @@ def self_check():
     if self_dimming != {"Dimmer"}:
         return f"the fixture's dimming root resolved to {self_dimming or 'nothing'}"
     found = {(path.name, number) for path, number, _ in scan(sources, self_dimming)}
-    if found != {("DimmedHost.qml", 4)}:
+    if found != {("DimmedHost.qml", 4), ("DimmedDirect.qml", 3)}:
         return (f"the dresser scan resolved {sorted(found) or 'nothing'} on a "
-                "fixture holding one nested StaggerEntrance inside a dimming "
-                "root and one under a plain one")
+                "fixture holding a nested and a direct-child StaggerEntrance "
+                "inside dimming roots and one under a plain one")
     return None
 
 
