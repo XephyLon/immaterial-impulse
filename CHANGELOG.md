@@ -12,6 +12,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.30.0] — 2026-08-24
+
+The panels stop rebuilding themselves: the sidebars and the overview keep one
+window for the life of the shell and only their panels move, which removes the
+last per-gesture stalls — and this release pays everything that owed, from the
+keyboard grab to the input regions to the blur. Alongside it, a performance
+round across the services, the clock settings finally filtering by style, and
+wallpaper depth reachable for Wallpaper Engine scenes.
+
 ### Added
 - **You can put a widget away by dragging it back into Edit Mode's drawer.**
   Dragging a widget out of the drawer has always placed it on the desktop; the
