@@ -86,6 +86,20 @@ esac
 exit 0
 """
 
+# The not-installed flavour used to fake absence by simply not creating a fake
+# `clight` - which held only while the machine itself had none. PATH-prepending
+# cannot fake nonexistence (`command -v` walks past the fake dir to
+# /usr/bin/clight), so on a machine with clight genuinely installed the case
+# read installed=true and failed. Detection runs through `sh -c "command -v
+# clight"` (Clight.qml's whichProc), so a fake `sh` answers exactly that probe
+# with "not found" when asked to, and hands everything else to the real shell.
+SH_SHIM = """#!/usr/bin/env bash
+if [ "$CLIGHT_HIDE_REAL" = "1" ] && [ "$1" = "-c" ] && [ "$2" = "command -v clight" ]; then
+    exit 1
+fi
+exec /bin/sh "$@"
+"""
+
 
 # How many checks the harness runs, per shape it is launched in. Literals
 # rather than anything read back from the harness's own output: a harness
@@ -163,6 +177,10 @@ class ClightIntegrationRuntimeTest(unittest.TestCase):
         self.fake("pidof", "exit 1")
         if clight_installed:
             self.fake("clight")
+        else:
+            shim = self.bin / "sh"
+            shim.write_text(SH_SHIM)
+            shim.chmod(0o755)
 
     def seed(self):
         shell_config = self.config_home / "immaterial-impulse"
@@ -191,6 +209,7 @@ class ClightIntegrationRuntimeTest(unittest.TestCase):
         env["CLIGHT_EXEC_LOG"] = str(self.exec_log)
         env["CLIGHT_STATE_DIR"] = str(self.clight_state)
         env["CLIGHT_DBUS_UP"] = "1" if available else "0"
+        env["CLIGHT_HIDE_REAL"] = "0" if installed else "1"
         env["CLIGHT_EXPECT_INSTALLED"] = "true" if installed else "false"
         env["CLIGHT_EXPECT_AVAILABLE"] = "true" if available else "false"
         if temp_switch_after is not None:
