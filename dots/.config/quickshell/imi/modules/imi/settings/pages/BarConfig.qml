@@ -62,11 +62,25 @@ ContentPage {
         spacing: Appearance.spacing.space250
 
         ContentSection {
+            id: screensSection
             icon: "monitor"
             shape: MaterialShape.Shape.ClamShell
-            visible: Hyprland.monitors.values.length > 1
             title: Translation.tr("Screens")
+            // The section used to hide itself on a single-monitor machine
+            // (`visible: length > 1`), which broke it two ways. "Screens" is in
+            // this page's static `sections:` list, so settings search offered a
+            // section that did not exist - the Clight section's bug, one page
+            // over. And a laptop undocked with a stored screen filter hid the
+            // only control that can clear that filter, while the filter kept
+            // deciding where the bar shows. So the section stays; the chooser
+            // shows whenever it can mean something (several monitors, or a
+            // filter already stored); one screen with no filter gets a line
+            // saying why there is nothing to choose.
+            readonly property bool chooserMeaningful: Hyprland.monitors.values.length > 1
+                || Config.options.bar.screenList.length > 0
+
             ContentSubsection {
+                visible: screensSection.chooserMeaningful
                 title: Translation.tr("Show bar on")
 
                 ColumnLayout {
@@ -144,6 +158,13 @@ ContentPage {
                         }
                     }
                 }
+            }
+            StyledText {
+                visible: !screensSection.chooserMeaningful
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                color: Appearance.colors.colSubtext
+                text: Translation.tr("Only one screen is connected. With more than one, you can choose which of them show the bar.")
             }
         }
 
