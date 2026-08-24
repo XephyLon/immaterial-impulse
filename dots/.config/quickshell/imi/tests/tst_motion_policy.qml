@@ -164,4 +164,42 @@ TestCase {
         compare(Motion.staggerDelay(3, step, 0), 0,
                 "reduce motion needs no second gate on the stagger");
     }
+
+    // A wave member's entrance scale is DERIVED from the rise and the width it
+    // plays on, not picked: the survey measured 0.85 on a popup's compact
+    // cards, and on a full-width row the same factor is a horizontal swing
+    // wider than the rise it accompanies - a zoom, not a settle. Matching the
+    // scale's excursion to the rise keeps the two terms one motion at any
+    // width, with the measured 0.85 as the floor so a narrow member cannot
+    // invert the proportion.
+    function test_the_entrance_scale_matches_its_excursion_to_the_rise() {
+        // The drawer's own numbers: a 20px rise on a 380px panel. This exact
+        // value is what the drawer rendered before the derivation moved here,
+        // so a change to it is a visible change to a shipped surface.
+        fuzzyCompare(Motion.entranceScaleFrom(20, 380), 1 - 20 / 380, 1e-9);
+        // Wide member, nearer 1 - the scale excursion stays the rise's size.
+        fuzzyCompare(Motion.entranceScaleFrom(20, 4000), 0.995, 1e-9);
+    }
+
+    function test_the_entrance_scale_floors_at_the_measured_constant() {
+        compare(Motion.ENTRANCE_SCALE_FLOOR, 0.85,
+                "the floor is the survey's measured popup scale");
+        compare(Motion.entranceScaleFrom(20, 100), Motion.ENTRANCE_SCALE_FLOOR,
+                "a narrow member takes the floor, not a deeper zoom");
+        compare(Motion.entranceScaleFrom(20, 0), Motion.ENTRANCE_SCALE_FLOOR,
+                "an unmeasured width answers the floor, not 1 - rise/0");
+    }
+
+    // The absent-input rule this module already lives by: `Number(null)` is 0
+    // and NaN compares false, so a guard has to be a comparison rather than a
+    // Math.max, which returns the NaN it was supposed to remove.
+    function test_a_nonsense_entrance_input_cannot_reach_the_render() {
+        compare(Motion.entranceScaleFrom(NaN, 380), Motion.ENTRANCE_SCALE_FLOOR);
+        compare(Motion.entranceScaleFrom(undefined, 380), Motion.ENTRANCE_SCALE_FLOOR);
+        compare(Motion.entranceScaleFrom(20, NaN), Motion.ENTRANCE_SCALE_FLOOR);
+        // A rise of zero (or a nonsense negative one) is no scale excursion at
+        // all - never a member that arrives LARGER than it rests.
+        compare(Motion.entranceScaleFrom(0, 380), 1);
+        compare(Motion.entranceScaleFrom(-5, 380), 1);
+    }
 }

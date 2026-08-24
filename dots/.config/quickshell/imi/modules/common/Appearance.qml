@@ -538,6 +538,17 @@ Singleton {
         function staggerDelay(rank: int, step: int, leadIn: int): int {
             return MotionPolicy.staggerDelay(rank, step, leadIn);
         }
+        // The three-channel member entrance's two terms, read by
+        // StaggerEntrance (the one spelling of how a wave member arrives:
+        // opacity, a scale and a small rise, all on one `appear` scalar).
+        // The rise is a spacing token because it is a distance on the shell's
+        // rhythm, not a duration; the scale START is derived from it by the
+        // policy, floored at the survey's measured 0.85, so the scale's
+        // excursion stays the rise's size at any member width.
+        readonly property real entranceRise: root.spacing.space250
+        function entranceScaleFrom(reference: real): real {
+            return MotionPolicy.entranceScaleFrom(motion.entranceRise, reference);
+        }
 
         property QtObject elementMove: QtObject {
             property int duration: motion.scale(animationCurves.expressiveDefaultSpatialDuration)
