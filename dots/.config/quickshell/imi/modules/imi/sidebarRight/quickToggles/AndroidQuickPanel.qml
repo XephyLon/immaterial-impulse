@@ -47,14 +47,7 @@ AbstractQuickPanel {
     readonly property string unusedSignature: QuickToggleLayout.signatureOf(root.unusedToggles, root.columns)
     onUsedSignatureChanged: root.requestSync()
     onUnusedSignatureChanged: root.requestSync()
-    Component.onCompleted: {
-        root.requestSync();
-        // Park the tile wave when the tree is built before its section has
-        // arrived, so the first open reveals the tiles instead of finding
-        // them already drawn.
-        if (!root.tilesIn)
-            tileWave.park();
-    }
+    Component.onCompleted: root.requestSync()
 
     // ...and the sync itself waits for the turn to finish, because a live
     // `list<var>` notifies per ELEMENT written. Measured: one
@@ -77,23 +70,18 @@ AbstractQuickPanel {
         });
     }
 
-    // The section's own `appear`, handed in by the sidebar's loader: the
-    // tiles run a second, nested container-then-fill on it - the section
-    // arrives on the panel wave, and once it has essentially landed
-    // (contentsArrived on ITS appear, the same gate arithmetic one level
-    // down), the tiles converge into the grid from their own sides.
-    property real sectionAppear: 1
-    readonly property bool tilesIn: Appearance.animation.contentsArrived(
-        root.sectionAppear, GlobalStates.sidebarRightOpen)
-    onTilesInChanged: {
-        if (root.tilesIn && GlobalStates.sidebarRightOpen)
-            tileWave.enter();
-    }
+    // The tiles' wave starts WITH the open, ungated: it runs under the
+    // panel's slide, so the grid is composed as the edge reveals it and only
+    // the last-ranked tiles visibly land after - the fork's grammar, read
+    // off its re-recorded sidebars (the gated version put the whole build on
+    // stage and was judged ruined twice).
     Connections {
         target: GlobalStates
         function onSidebarRightOpenChanged() {
-            if (GlobalStates.sidebarRightOpen && !root.tilesIn)
+            if (GlobalStates.sidebarRightOpen) {
                 tileWave.park();
+                tileWave.enter();
+            }
         }
     }
 

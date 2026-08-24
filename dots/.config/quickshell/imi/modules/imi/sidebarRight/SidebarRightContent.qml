@@ -48,45 +48,25 @@ Item {
     readonly property MprisPlayer activePlayer: MprisController.activePlayer
     readonly property var meaningfulPlayers: MprisController.meaningfulPlayers
 
-    // The container's slide progress, handed in by SidebarRight.qml (the
-    // EdgeSlide's own scalar). Defaults to 1 so a tree built outside the
-    // panel - a test harness - has no gate it can never cross.
-    property real containerProgress: 1
-
-    // Container-then-fill, the popup card's grammar. This surface's first
-    // cascade was removed on the maintainer's on-screen verdict (00efe588
-    // ("revert(sidebar): the right sidebar's sections stop cascading")), and
-    // both facts behind that verdict are gone: the frame drop was the
-    // per-open surface teardown, which the persistent EdgeSlide surface
-    // removed - and the guessed three-step leadIn that landed the last member
-    // ~200ms after the slide is replaced by a gate on the slide's own
-    // progress, the exact scalar whose absence forced the guess. Re-adopted
-    // at the maintainer's request with both repairs in place.
-    readonly property bool contentsIn: Appearance.animation.contentsArrived(
-        root.containerProgress, GlobalStates.sidebarRightOpen)
-    onContentsInChanged: {
-        if (root.contentsIn && GlobalStates.sidebarRightOpen)
-            sectionEntrance.enter();
-    }
-
-    Component.onCompleted: {
-        // Park before the entrance starts - the arming-vs-running lesson the
-        // drawer paid for. A tree built mid-open past the gate (or outside
-        // the panel) parks nothing and stays drawn.
-        if (!root.contentsIn)
-            sectionEntrance.park();
-    }
-
+    // The entrance runs UNDER the slide, not after it. This surface's wave
+    // shipped twice wrong before landing here, and both wrong versions are
+    // worth naming. The original (00efe588's revert) guessed a leadIn and
+    // landed content ~200ms after the slide. The second gated on the slide's
+    // progress like the popup card - correct-sounding, and measured as
+    // ruined: the panel arrived EMPTY and then visibly built itself, because
+    // parked-at-zero content plus a 60% gate puts the whole construction ON
+    // STAGE. The fork's sidebars, re-recorded and read object by object, do
+    // the opposite: the surface's own fade carries the panel already
+    // composed - the per-element entrances run underneath it, and only the
+    // last-ranked one or two elements visibly pop after the panel lands.
+    // So: park and enter on the open's rising edge, with no gate - the slide
+    // masks the wave's early frames, and the tail is the grammar.
     Connections {
         target: GlobalStates
         function onSidebarRightOpenChanged() {
             if (GlobalStates.sidebarRightOpen) {
-                // A kept-loaded tree re-parks on the open's rising edge so the
-                // wave has something to reveal; a reopen caught past the gate
-                // (an exit reversed by a quick re-toggle) skips the park so
-                // drawn sections never blink out.
-                if (!root.contentsIn)
-                    sectionEntrance.park();
+                sectionEntrance.park();
+                sectionEntrance.enter();
                 return;
             }
             if (!GlobalStates.sidebarRightOpen) {
@@ -517,13 +497,6 @@ Item {
         id: quickPanelImplLoader
         property real appear: 1
         required property string styleName
-        // Hand the section's appear down so a panel that nests its own tile
-        // wave can gate it on this section's arrival. Duck-typed: the classic
-        // panel declares no sectionAppear and takes no wave.
-        onLoaded: {
-            if (item && item.sectionAppear !== undefined)
-                item.sectionAppear = Qt.binding(() => quickPanelImplLoader.appear);
-        }
         Layout.alignment: item?.Layout.alignment ?? Qt.AlignHCenter
         Layout.fillWidth: item?.Layout.fillWidth ?? false
         visible: active
