@@ -45,6 +45,15 @@ STAGGER_ADOPTERS = {
     "modules/common/widgets/ContentPage.qml",
     "modules/imi/sessionScreen/SessionScreen.qml",
     "modules/imi/editMode/EditModeDrawer.qml",
+    # The bar popups' shared card: the second adopter whose container has a
+    # real progress to gate on (card.openProgress through
+    # Appearance.animation.contentsArrived), so like the drawer it carries no
+    # leadIn. One wave on the overlay, never one per popup - the per-popup
+    # content files only opt their below-the-fold sections in with `appear`;
+    # the hero section deliberately declares none, because the card opens at
+    # the hero's own height precisely so it is legible on frame one.
+    # tests/lint_bar_popup_overlay_static.py holds the gate's shape.
+    "modules/imi/bar/BarPopupOverlay.qml",
 }
 
 # The other half of that ratchet: a surface that adopted a wave, was judged on
