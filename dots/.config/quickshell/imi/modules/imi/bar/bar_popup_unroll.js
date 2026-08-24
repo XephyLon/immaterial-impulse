@@ -74,3 +74,29 @@ function cardHeight(openHeight, heroHeight, parkedSize, exiting, progress) {
     const travelled = progress > 0 ? progress : 0;
     return rest + (openHeight - rest) * travelled;
 }
+
+// The three-channel section entrance, shared by every popup whose
+// below-the-fold sections cascade in once the card has arrived
+// (docs/p3drovfx-motion-measured-2026-08-22.md §3: opacity, a scale from
+// ~0.85, and a small rise - not a fade). One `appear` scalar drives all three
+// so they cannot land on different schedules; opacity IS that scalar and needs
+// no helper, these two are the other channels.
+//
+// The scale's excursion is DERIVED from the rise over the section's own width
+// rather than fixed - EditModeDrawer.qml derives its rows' the same way and
+// says why: the measured 0.85 is a compact popup card's, and the same factor
+// on a wide row is a horizontal swing that reads as a zoom, not a settle. The
+// measured 0.85 stays as the floor so a narrow section cannot invert the
+// derivation, and a section asked before its first layout pass (width 0, or
+// no width at all) takes the floor rather than dividing into nothing.
+var ENTRANCE_SCALE_FLOOR = 0.85;
+
+function entranceScale(appear, rise, width) {
+    const span = width > 0 ? width : 1;
+    const from = Math.max(ENTRANCE_SCALE_FLOOR, 1 - rise / span);
+    return from + (1 - from) * appear;
+}
+
+function entranceOffset(appear, rise) {
+    return (1 - appear) * rise;
+}
