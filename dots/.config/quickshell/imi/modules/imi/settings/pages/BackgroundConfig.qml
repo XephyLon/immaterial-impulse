@@ -332,7 +332,7 @@ ContentPage {
                         }
                     }
                     ColorSelectionArray {
-                        visible: Config.options.background.centeredWallpaper
+                        property bool rowVisible: Config.options.background.centeredWallpaper
                         icon: "palette"
                         text: Translation.tr("Background Color")
                         currentValue: Config.options.background.centeredWallpaperColor
@@ -341,7 +341,7 @@ ContentPage {
                         }
                     }
                     ConfigSlider {
-                        visible: Config.options.background.centeredWallpaper
+                        property bool rowVisible: Config.options.background.centeredWallpaper
                         text: Translation.tr("Size")
                         value: Config.options.background.centeredWallpaperSize
                         usePercentTooltip: false

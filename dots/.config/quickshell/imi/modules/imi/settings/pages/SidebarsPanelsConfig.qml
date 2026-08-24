@@ -434,7 +434,7 @@ ContentPage {
                     visible: Config.options.overview.style !== "niri"
                     ConfigRow {
                         uniform: true
-                        visible: Config.options.overview.style !== "niri"
+                        property bool rowVisible: Config.options.overview.style !== "niri"
                         ConfigSpinBox {
                             icon: "splitscreen_bottom"
                             text: Translation.tr("Rows")
@@ -461,7 +461,7 @@ ContentPage {
 
                     ConfigRow {
                         uniform: true
-                        visible: Config.options.overview.style !== "niri"
+                        property bool rowVisible: Config.options.overview.style !== "niri"
                         Layout.alignment: Qt.AlignHCenter
                         Layout.leftMargin: Appearance.spacing.space300
                         ConfigSelectionArray {

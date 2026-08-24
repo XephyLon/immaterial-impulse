@@ -193,7 +193,7 @@ StyledPopup {
 
             StyledPopupValueRow {
                 Layout.fillWidth: true
-                visible: Network.networkInterface !== ""
+                property bool rowVisible: Network.networkInterface !== ""
                 icon: "settings_ethernet"
                 label: Translation.tr("Interface")
                 value: Network.networkInterface
@@ -201,7 +201,7 @@ StyledPopup {
 
             StyledPopupValueRow {
                 Layout.fillWidth: true
-                visible: Network.ipAddress !== ""
+                property bool rowVisible: Network.ipAddress !== ""
                 icon: "lan"
                 label: Translation.tr("Local IP")
                 value: Network.ipAddress
@@ -209,7 +209,7 @@ StyledPopup {
 
             StyledPopupValueRow {
                 Layout.fillWidth: true
-                visible: Network.publicIpAddress !== ""
+                property bool rowVisible: Network.publicIpAddress !== ""
                 icon: "public"
                 label: Translation.tr("Public IP")
                 value: Network.publicIpAddress
@@ -217,7 +217,7 @@ StyledPopup {
 
             StyledPopupValueRow {
                 Layout.fillWidth: true
-                visible: Network.gateway !== ""
+                property bool rowVisible: Network.gateway !== ""
                 icon: "router"
                 label: Translation.tr("Gateway")
                 value: Network.gateway
@@ -225,7 +225,7 @@ StyledPopup {
 
             StyledPopupValueRow {
                 Layout.fillWidth: true
-                visible: Network.macAddress !== ""
+                property bool rowVisible: Network.macAddress !== ""
                 icon: "fingerprint"
                 label: Translation.tr("MAC address")
                 value: Network.macAddress

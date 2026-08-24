@@ -457,7 +457,7 @@ ContentPage {
                     // that can use it and nowhere else.
                     ConfigRow {
                         uniform: true
-                        visible: PrismLauncher.available
+                        property bool rowVisible: PrismLauncher.available
                         ConfigTextArea {
                             Layout.fillWidth: true
                             buttonIcon: "stadia_controller"
@@ -575,14 +575,16 @@ ContentPage {
                     onToggleRequested: Config.options.light.clight.enable = !Config.options.light.clight.enable
                 }
                 ConfigSwitch {
-                    visible: Clight.available
+                    // `rowVisible`, never `visible`: a GroupedList row hidden
+                    // with `visible` keeps an empty plate (GroupedList.qml).
+                    property bool rowVisible: Clight.available
                     buttonIcon: "brightness_auto"
                     text: Translation.tr("Automatic brightness calibration")
                     checked: Clight.autoCalibration
                     onToggleRequested: Clight.setAutoCalibration(!Clight.autoCalibration)
                 }
                 ConfigSpinBox {
-                    visible: Clight.available
+                    property bool rowVisible: Clight.available
                     icon: "light_mode"
                     text: Translation.tr("Day temperature (K)")
                     value: Clight.dayTemperature
@@ -594,7 +596,7 @@ ContentPage {
                     }
                 }
                 ConfigSpinBox {
-                    visible: Clight.available
+                    property bool rowVisible: Clight.available
                     icon: "bedtime"
                     text: Translation.tr("Night temperature (K)")
                     value: Clight.nightTemperature
