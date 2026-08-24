@@ -202,4 +202,35 @@ TestCase {
         compare(Motion.entranceScaleFrom(0, 380), 1);
         compare(Motion.entranceScaleFrom(-5, 380), 1);
     }
+
+    function test_convergence_comes_from_the_members_own_side() {
+        // The thirds rule: leftmost members from further left, rightmost from
+        // further right, the middle third straight - and rows alternate.
+        compare(Motion.convergeFrom(-0.8, 0).dx, -1);
+        compare(Motion.convergeFrom(0.8, 0).dx, 1);
+        compare(Motion.convergeFrom(0, 0).dx, 0);
+        // Full-width sections sit dead centre, so a section column
+        // degenerates to pure vertical alternation.
+        compare(Motion.convergeFrom(0, 0).dy, -1);
+        compare(Motion.convergeFrom(0, 1).dy, 1);
+        compare(Motion.convergeFrom(0, 2).dy, -1);
+        // The boundary itself is the middle third, so a member exactly on it
+        // cannot flip direction on a one-pixel reflow.
+        compare(Motion.convergeFrom(-1 / 3, 0).dx, 0);
+        compare(Motion.convergeFrom(1 / 3, 0).dx, 0);
+    }
+
+    function test_the_settle_overshoots_and_lands() {
+        // Endpoints are exact, so a settled member sits precisely in place
+        // and a parked one precisely at its reach.
+        compare(Motion.convergeSettle(0), 0);
+        compare(Motion.convergeSettle(1), 1);
+        // Late in the arrival the shape crosses 1 - the overshoot that makes
+        // an arrival a landing - and returns.
+        verify(Motion.convergeSettle(0.9) > 1);
+        verify(Motion.convergeSettle(0.25) < 1);
+        // Nonsense stays parked rather than becoming NaN geometry.
+        compare(Motion.convergeSettle(NaN), 0);
+        compare(Motion.convergeSettle(undefined), 0);
+    }
 }

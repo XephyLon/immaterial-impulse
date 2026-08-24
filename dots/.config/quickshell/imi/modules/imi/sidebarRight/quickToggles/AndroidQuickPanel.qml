@@ -1,3 +1,4 @@
+import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -46,7 +47,14 @@ AbstractQuickPanel {
     readonly property string unusedSignature: QuickToggleLayout.signatureOf(root.unusedToggles, root.columns)
     onUsedSignatureChanged: root.requestSync()
     onUnusedSignatureChanged: root.requestSync()
-    Component.onCompleted: root.requestSync()
+    Component.onCompleted: {
+        root.requestSync();
+        // Park the tile wave when the tree is built before its section has
+        // arrived, so the first open reveals the tiles instead of finding
+        // them already drawn.
+        if (!root.tilesIn)
+            tileWave.park();
+    }
 
     // ...and the sync itself waits for the turn to finish, because a live
     // `list<var>` notifies per ELEMENT written. Measured: one
@@ -67,6 +75,26 @@ AbstractQuickPanel {
             usedModel.sync(root.toggles, root.columns);
             unusedModel.sync(root.unusedToggles, root.columns);
         });
+    }
+
+    // The section's own `appear`, handed in by the sidebar's loader: the
+    // tiles run a second, nested container-then-fill on it - the section
+    // arrives on the panel wave, and once it has essentially landed
+    // (contentsArrived on ITS appear, the same gate arithmetic one level
+    // down), the tiles converge into the grid from their own sides.
+    property real sectionAppear: 1
+    readonly property bool tilesIn: Appearance.animation.contentsArrived(
+        root.sectionAppear, GlobalStates.sidebarRightOpen)
+    onTilesInChanged: {
+        if (root.tilesIn && GlobalStates.sidebarRightOpen)
+            tileWave.enter();
+    }
+    Connections {
+        target: GlobalStates
+        function onSidebarRightOpenChanged() {
+            if (GlobalStates.sidebarRightOpen && !root.tilesIn)
+                tileWave.park();
+        }
     }
 
     StableQuickToggleModel { id: usedModel }
@@ -93,6 +121,21 @@ AbstractQuickPanel {
             id: usedGrid
             width: contentItem.width
             implicitHeight: root.gridHeight(usedModel)
+
+            // The tiles' own wave: convergent, so each tile arrives from its
+            // side of the grid - the leftmost third from the left, the
+            // rightmost from the right, alternating from above and below -
+            // with the overshoot settle. Delegates rooted on
+            // AndroidQuickToggleButton declare `appear`; the few widget-type
+            // toggles that do not are simply not members and arrive drawn.
+            StaggerWave {
+                id: tileWave
+                target: usedGrid
+            }
+            StaggerEntrance {
+                target: usedGrid
+                convergent: true
+            }
 
             Repeater {
                 model: usedModel
