@@ -12,6 +12,32 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.30.1] — 2026-08-24
+
+Three fixes, all in the "silently wrong" family: terminal theming that died on
+a leftover symlink, a settings section that search offered but could not show,
+and settings rows that hid by leaving an empty plate behind.
+
+### Fixed
+- **Selecting the tmux config in the installer now actually themes tmux.** The
+  palette switch themes cava, btop, tmux and kitty in one run, and a single
+  unwritable config — measured: a dangling `~/.config/btop` symlink left behind
+  by a previous dotfiles suite — aborted the run before tmux's theme was ever
+  written, silently, on every wallpaper change. Each app now themes
+  independently, and a broken one is named in the log instead of taking the
+  rest down.
+- **The Clight settings section is findable again on machines without clight.**
+  Settings search offered "Clight" (it is in the Services page's section list)
+  while the section itself was hidden whenever the daemon was not installed, so
+  searching for it landed on an unrelated scroll position. The section now
+  stays on the page: without clight it is a single line saying what the
+  integration does; the controls still appear only when the daemon is there.
+- **Hidden settings rows no longer leave empty plates behind.** A GroupedList
+  row hidden with `visible:` kept its full-height background plate — a blank
+  band in the group. Thirteen rows across the Services, Wallpaper and Sidebars
+  pages and the bar's network popup carried the wrong spelling; all now use the
+  `rowVisible` contract, and a new lint keeps the next one out.
+
 ## [0.30.0] — 2026-08-24
 
 The panels stop rebuilding themselves: the sidebars and the overview keep one
