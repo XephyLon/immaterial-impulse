@@ -1827,14 +1827,10 @@ def test_every_staggered_drawer_member_arrives_on_all_three_channels():
             f"{name} redeclares `appear`. It is a RippleButton, which already "
             f"has one and already folds it into the opacity that carries its "
             f"disabled dim - a second declaration here shadows the control's "
-            f"own and draws the row as enabled while it is not.")
-        for channel in (f"opacity: {name}.appear",
-                        f"scale: root.entranceScale({name}.appear)"):
-            assert channel not in text, (
-                f"{name} writes `{channel.split(':')[0]}` itself. On a control "
-                f"that already writes it, that replaces the binding rather "
-                f"than composing with it - lint_interaction_motion_double.py "
-                f"and lint_disabled_opacity.py exist for the same doubling.")
+            f"own and draws the row as enabled while it is not. (A channel "
+            f"written out by hand beside it is caught by the local-spelling "
+            f"ban above, and a StaggerEntrance re-aimed at a control by "
+            f"lint_interaction_motion_double.py / lint_disabled_opacity.py.)")
 
 
 def test_the_drawer_arms_its_entrance_before_the_reveal_draws():
