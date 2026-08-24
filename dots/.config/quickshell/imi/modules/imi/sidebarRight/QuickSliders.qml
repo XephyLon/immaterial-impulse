@@ -126,8 +126,9 @@ Rectangle {
         }
         Timer {
             id: sweepTimer
-            // The fork's cadence: 180ms head start, 70ms per slider.
-            interval: Appearance.animation.scale(180 + quickSlider.sliderIndex * 70)
+            // Tightened from the fork's 180+70ms on the maintainer's call -
+            // the sweep starts almost with the slide and the stagger stays.
+            interval: Appearance.animation.scale(80 + quickSlider.sliderIndex * 50)
             onTriggered: {
                 // The named glide velocity turns the release into the fork's
                 // ~650ms sweep; restored (as a binding) once the sweep lands.
