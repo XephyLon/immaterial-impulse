@@ -45,6 +45,13 @@ Item {
     // compositor blur region to it (see WindowBlurRegion in SidebarRight.qml).
     readonly property Item backgroundItem: sidebarRightBackground
 
+    // One counter drives every bespoke widget entrance, the fork's own
+    // architecture: sliders sweep their fill, the calendar ripples
+    // diagonally, the notification bar's halves converge - each widget owns
+    // its choreography and this only says "an open happened". The generic
+    // wave stays for the sections with no character of their own.
+    property int entranceTrigger: -1
+
     readonly property MprisPlayer activePlayer: MprisController.activePlayer
     readonly property var meaningfulPlayers: MprisController.meaningfulPlayers
 
@@ -67,6 +74,7 @@ Item {
             if (GlobalStates.sidebarRightOpen) {
                 sectionEntrance.park();
                 sectionEntrance.enter();
+                root.entranceTrigger++;
                 return;
             }
             if (!GlobalStates.sidebarRightOpen) {
@@ -346,7 +354,9 @@ Item {
 
             Loader {
                 id: slidersLoader
-                property real appear: 1
+                // Not a wave member: the sliders own their entrance (the
+                // fill sweep) - a fading section over sweeping sliders is
+                // the compound the toggle grid already paid for.
                 Layout.fillWidth: true
                 visible: active
                 active: {
@@ -355,7 +365,7 @@ Item {
                     if (!configQuickSliders.showMic && !configQuickSliders.showVolume && !configQuickSliders.showBrightness) return false;
                     return true;
                 }
-                sourceComponent: QuickSliders {}
+                sourceComponent: QuickSliders { entranceTrigger: root.entranceTrigger }
             }
 
             Loader {
@@ -386,7 +396,7 @@ Item {
             }
 
             CenterWidgetGroup {
-                property real appear: 1
+                entranceTrigger: root.entranceTrigger
                 Layout.alignment: Qt.AlignHCenter
                 Layout.fillHeight: true
                 Layout.fillWidth: true
@@ -394,7 +404,7 @@ Item {
 
             BottomWidgetGroup {
                 id: bottomWidgetGroup
-                property real appear: 1
+                entranceTrigger: root.entranceTrigger
                 Layout.alignment: Qt.AlignHCenter
                 Layout.fillHeight: false
                 Layout.fillWidth: true

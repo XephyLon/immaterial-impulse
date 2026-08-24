@@ -10,6 +10,7 @@ import QtQuick.Layouts
 
 Rectangle {
     id: root
+    property int entranceTrigger: -1
     radius: Appearance.rounding.normal
     color: Appearance.colors.colLayer1
     clip: true
@@ -202,6 +203,15 @@ Rectangle {
                 id: tabStack
                 anchors.fill: parent
                 anchors.bottomMargin: -anchors.topMargin
+
+                // Duck-typed hand-down of the sidebar's entrance counter: a
+                // tab widget that owns a bespoke entrance (the calendar's
+                // diagonal ripple) declares `entranceTrigger`; the others are
+                // left alone.
+                onLoaded: {
+                    if (item && item.entranceTrigger !== undefined)
+                        item.entranceTrigger = Qt.binding(() => root.entranceTrigger);
+                }
 
                 Component.onCompleted: {
                     tabStack.source = root.tabs[root.selectedTab].widget;
