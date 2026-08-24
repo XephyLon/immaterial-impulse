@@ -108,6 +108,16 @@ if ! python3 "$SCRIPT_DIR/lint_disabled_opacity.py"; then
     exit 1
 fi
 
+# Static lint: a GroupedList row that comes and goes declares `rowVisible`,
+# never `visible` - a `visible:`-gated row keeps an empty plate. The rule was
+# prose twice (GroupedList.qml, AGENT.md) and its first sweep still found
+# thirteen offenders, three of them the Clight settings section.
+echo "Running GroupedList row-visibility lint..."
+if ! python3 "$SCRIPT_DIR/lint_grouped_list_row_visible.py"; then
+    echo "GroupedList row-visibility lint failed."
+    exit 1
+fi
+
 # Static lint: the same rule for the interaction model's transform. A scale
 # composites exactly the way an opacity does, and the lint above recognises a
 # doubled dim by its opacity EXPRESSION - so the doubled scale discordVoice

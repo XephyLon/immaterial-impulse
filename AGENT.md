@@ -2484,6 +2484,14 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   all of it, and the case that earns its place is "a hidden row that comes back
   is drawn again" — the one the plausible alternative fix fails.
   b949bf24a ("fix(widgets): a GroupedList row that is not drawn takes no room").
+  The rule is a failing check now: stated twice in prose (here and in
+  GroupedList.qml's header), its first sweep still found thirteen
+  `visible:`-gated rows across five files — three of them the Clight settings
+  section, drawn as empty plates whenever the daemon is down.
+  `tests/lint_grouped_list_row_visible.py` fails the suite on a direct
+  GroupedList row binding `visible:`.
+  (fix(settings,bar): a GroupedList row that comes and goes declares rowVisible,
+  test(lint): fail on a GroupedList row gated with visible.)
 - **`enabled: false` on a `MouseArea` disables that area and nothing under it.**
   `QQuickMouseArea` declares its own `enabled` property, which shadows `Item.enabled` — so the
   usual "`enabled` cascades to the whole subtree" intuition, which is true of a plain `Item`, is
