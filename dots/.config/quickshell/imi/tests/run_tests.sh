@@ -1509,6 +1509,17 @@ if ! python3 "$SCRIPT_DIR/test_media_layouts_contract.py"; then
     exit 1
 fi
 
+# The AI provider/model catalog (services/ai_catalog.js) and Ai.qml's built-in
+# model literals are two copies of one truth until the proposal's stage 2 wires
+# Ai.qml to the catalog; this pins them equal field by field so neither can
+# drift in the meantime, and pins the catalog's dialect vocabulary to the
+# strategy files that implement it. See docs/proposals/ai-assistant-upgrade.md.
+echo "Running AI catalog contract tests..."
+if ! python3 "$SCRIPT_DIR/test_ai_catalog_contract.py"; then
+    echo "AI catalog contract tests failed."
+    exit 1
+fi
+
 # Contract: what turns an on-screen keyboard key's span into pixels. The
 # layouts themselves are data and are checked by tst_osk_layouts.qml; this is
 # the conversion, which the data cannot see - a second shape table, a key gap
