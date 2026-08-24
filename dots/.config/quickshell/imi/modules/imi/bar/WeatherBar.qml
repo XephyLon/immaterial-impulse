@@ -55,6 +55,7 @@ MouseArea {
                 visible: !root.isMaterial
                 font.pixelSize: Appearance.font.pixelSize.small
                 color: Appearance.colors.colOnLayer1
+                animateChange: true
                 text: Weather.data?.temp ?? "--°"
                 Layout.alignment: Qt.AlignVCenter
             }
@@ -63,6 +64,7 @@ MouseArea {
                 visible: root.isMaterial
                 font.pixelSize: Appearance.font.pixelSize.small
                 color: Appearance.colors.colPrimary
+                animateChange: true
                 text: Weather.data?.temp ?? "--°"
                 Layout.alignment: Qt.AlignVCenter
                 leftPadding: Appearance.spacing.space100
@@ -104,6 +106,7 @@ MouseArea {
                 visible: !root.isMaterial
                 font.pixelSize: Appearance.font.pixelSize.small
                 color: Appearance.colors.colOnLayer1
+                animateChange: true
                 text: (Weather.data?.temp ?? "--°").replace(/[CF]$/, "")
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -112,6 +115,7 @@ MouseArea {
                 visible: root.isMaterial
                 font.pixelSize: Appearance.font.pixelSize.small
                 color: Appearance.colors.colPrimary
+                animateChange: true
                 text: (Weather.data?.temp ?? "--°").replace(/[CF]$/, "")
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: Appearance.spacing.space50

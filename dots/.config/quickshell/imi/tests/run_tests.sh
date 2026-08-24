@@ -423,6 +423,16 @@ if ! python3 "$SCRIPT_DIR/test_clock_motion_contract.py"; then
     exit 1
 fi
 
+# Bar texts whose change is an event (a track change, a weather refresh) take
+# StyledText's animateChange swap; the clock's tick is pinned as a refusal - a
+# configurable time format makes it up to once per second, on a bar that stays
+# `visible` under a fullscreen window.
+echo "Running bar text change motion tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_text_change_motion.py"; then
+    echo "Bar text change motion tests failed."
+    exit 1
+fi
+
 # The clock's options page shows only the chosen style's rows. The predicate is
 # pinned by tst_option_visibility.qml; this is the adoption, which is what
 # decays - a 29th option added without a rule renders on every style again.
