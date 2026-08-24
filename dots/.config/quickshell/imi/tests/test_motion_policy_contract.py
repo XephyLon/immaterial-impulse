@@ -54,6 +54,18 @@ STAGGER_ADOPTERS = {
     # the hero's own height precisely so it is legible on frame one.
     # tests/lint_bar_popup_overlay_static.py holds the gate's shape.
     "modules/imi/bar/BarPopupOverlay.qml",
+    # The desktop menu's rows. Adopted on the drawer's argument, not the
+    # sidebar's counter-argument: the card's own entrance is a QML-readable
+    # scalar (its opacity Behavior), so the wave gates on the real container
+    # progress with no guessed leadIn - the exact property whose absence
+    # refused the right sidebar. Its rows are RippleButtons, so they ride the
+    # wave through the `appear` the control already folds; the card enters via
+    # scale/opacity itself, so only the rows cascade. Enter-only by
+    # construction: the window is destroyed with the close, so there is no
+    # exit for a wave to waste frames on (the sidebar's measured 13-frames-
+    # per-close cost cannot arise), and the per-open surface build is a cost
+    # the menu already paid before the wave.
+    "modules/imi/desktopMenu/DesktopMenu.qml",
 }
 
 # The other half of that ratchet: a surface that adopted a wave, was judged on
