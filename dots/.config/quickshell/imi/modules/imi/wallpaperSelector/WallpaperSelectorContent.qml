@@ -241,6 +241,15 @@ MouseArea {
                 fillMode: Image.PreserveAspectCrop
                 source: Config.options.background.wallpaperPath
                 cache: false
+                // Bound the decode to what is drawn: without a sourceSize this
+                // decoded the wallpaper at file resolution on every selector
+                // open, only to be blurred at radius 48. `cache: false` above
+                // means no other Image shares this request, so bounding it
+                // cannot un-share a decode (the trap 33139b688 records for the
+                // desktop frost, which is why Background's own request is not
+                // touched from here).
+                sourceSize.width: width
+                sourceSize.height: height
                 layer.enabled: true
                 layer.effect: OpacityMask {
                     maskSource: Rectangle {
