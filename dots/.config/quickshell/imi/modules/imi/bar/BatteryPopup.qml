@@ -3,6 +3,7 @@ import qs.modules.common.widgets
 import qs.services
 import QtQuick
 import QtQuick.Layouts
+import "bar_popup_unroll.js" as BarPopupUnroll
 
 StyledPopup {
     id: root
@@ -21,7 +22,12 @@ StyledPopup {
     ColumnLayout {
         spacing: Appearance.spacing.space150
 
+        // The header row is this popup's HERO - the first drawn section,
+        // whose height the card opens at - so it never declares `appear`.
+        // The cards below the fold cascade in on BarPopupOverlay's gated
+        // wave.
         RowLayout {
+            id: batteryHeaderRow
             Layout.fillWidth: true
             Layout.leftMargin: Appearance.spacing.space50
             spacing: Appearance.spacing.space100
@@ -74,6 +80,11 @@ StyledPopup {
         }
 
         RowLayout {
+            id: batteryCards
+            property real appear: 1
+            opacity: batteryCards.appear
+            scale: BarPopupUnroll.entranceScale(batteryCards.appear, root.entranceRise, batteryCards.width)
+            transform: Translate { y: BarPopupUnroll.entranceOffset(batteryCards.appear, root.entranceRise) }
             Layout.fillWidth: true
             spacing: Appearance.spacing.space100
 

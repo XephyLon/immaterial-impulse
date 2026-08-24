@@ -13,6 +13,16 @@ QtObject {
     // Inset between the card's body and this popup's content. Denser popups keep
     // the default; content-heavy ones raise it.
     property real contentPadding: Appearance.spacing.space100
+    // The section entrance's rise, one token for every popup. A below-the-fold
+    // section opts into the overlay's gated cascade by declaring
+    // `property real appear: 1` and folding it into its opacity, a scale
+    // (bar_popup_unroll.js entranceScale, which derives its excursion from
+    // this rise over the section's own width) and a Translate of
+    // entranceOffset(appear, root.entranceRise). The HERO section never opts
+    // in - the card opens at its height so it is legible on frame one. See
+    // BarPopupOverlay's wave for the gate, and
+    // tests/test_bar_popup_section_entrance.py for the register.
+    readonly property real entranceRise: Appearance.spacing.space250
     // Interactive popups can remain open after the pointer leaves the bar.
     // Passive users retain the original hover-only behavior.
     property bool pinnedOpen: false

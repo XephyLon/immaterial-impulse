@@ -2,6 +2,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.services
 import QtQuick
+import "bar_popup_unroll.js" as BarPopupUnroll
 
 StyledPopup {
     id: root
@@ -18,6 +19,12 @@ StyledPopup {
         // downwards from the top, so nothing here feeds back into this height.
         implicitHeight: pendingLabel.y + pendingLabel.height
 
+        // The month is this popup's HERO - the first drawn child, so the card
+        // opens at exactly its height - and the year rides in its band
+        // (baseline-anchored to it), so neither declares `appear`: parking
+        // the hero would have the card open at the height of a section that
+        // is not drawn. Everything below the two cascades in once the card
+        // has arrived, on BarPopupOverlay's gated wave.
         StyledText {
             id: monthLabel
             anchors {
@@ -31,6 +38,7 @@ StyledPopup {
         }
 
         StyledText {
+            id: yearLabel
             anchors {
                 left: monthLabel.right
                 leftMargin: Appearance.spacing.space100
@@ -43,6 +51,10 @@ StyledPopup {
 
         Row {
             id: weekRow
+            property real appear: 1
+            opacity: weekRow.appear
+            scale: BarPopupUnroll.entranceScale(weekRow.appear, root.entranceRise, weekRow.width)
+            transform: Translate { y: BarPopupUnroll.entranceOffset(weekRow.appear, root.entranceRise) }
             anchors {
                 left: parent.left
                 right: parent.right
@@ -104,6 +116,10 @@ StyledPopup {
 
         Item {
             id: taskSection
+            property real appear: 1
+            opacity: taskSection.appear
+            scale: BarPopupUnroll.entranceScale(taskSection.appear, root.entranceRise, taskSection.width)
+            transform: Translate { y: BarPopupUnroll.entranceOffset(taskSection.appear, root.entranceRise) }
             anchors {
                 left: parent.left
                 right: parent.right
@@ -201,6 +217,10 @@ StyledPopup {
 
         StyledText {
             id: pendingLabel
+            property real appear: 1
+            opacity: pendingLabel.appear
+            scale: BarPopupUnroll.entranceScale(pendingLabel.appear, root.entranceRise, pendingLabel.width)
+            transform: Translate { y: BarPopupUnroll.entranceOffset(pendingLabel.appear, root.entranceRise) }
             anchors {
                 left: parent.left
                 top: taskSection.bottom
@@ -212,6 +232,11 @@ StyledPopup {
         }
 
         StyledText {
+            id: uptimeLabel
+            property real appear: 1
+            opacity: uptimeLabel.appear
+            scale: BarPopupUnroll.entranceScale(uptimeLabel.appear, root.entranceRise, uptimeLabel.width)
+            transform: Translate { y: BarPopupUnroll.entranceOffset(uptimeLabel.appear, root.entranceRise) }
             anchors {
                 right: parent.right
                 baseline: pendingLabel.baseline

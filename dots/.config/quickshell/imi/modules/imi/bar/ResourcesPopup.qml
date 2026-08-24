@@ -3,6 +3,7 @@ import qs.modules.common.widgets
 import qs.services
 import QtQuick
 import Quickshell.Io
+import "bar_popup_unroll.js" as BarPopupUnroll
 
 StyledPopup {
     id: root
@@ -14,7 +15,14 @@ StyledPopup {
     Row {
         spacing: Appearance.spacing.space100
 
+        // The first column is this popup's HERO: the card opens at its
+        // height, so RAM and CPU are legible on frame one and it never
+        // declares `appear`. The other two columns are the below-the-fold
+        // sections that cascade in on BarPopupOverlay's gated wave -
+        // rightward here rather than downward, because this popup's sections
+        // run across the card.
         Column {
+            id: ramCpuColumn
             spacing: Appearance.spacing.space100
 
             ResourceCard {
@@ -38,6 +46,11 @@ StyledPopup {
         }
 
         Column {
+            id: swapDiskColumn
+            property real appear: 1
+            opacity: swapDiskColumn.appear
+            scale: BarPopupUnroll.entranceScale(swapDiskColumn.appear, root.entranceRise, swapDiskColumn.width)
+            transform: Translate { y: BarPopupUnroll.entranceOffset(swapDiskColumn.appear, root.entranceRise) }
             spacing: Appearance.spacing.space100
 
             ResourceCard {
@@ -58,6 +71,11 @@ StyledPopup {
         }
 
         Column {
+            id: gpuColumn
+            property real appear: 1
+            opacity: gpuColumn.appear
+            scale: BarPopupUnroll.entranceScale(gpuColumn.appear, root.entranceRise, gpuColumn.width)
+            transform: Translate { y: BarPopupUnroll.entranceOffset(gpuColumn.appear, root.entranceRise) }
             spacing: Appearance.spacing.space100
 
             ResourceCard {
