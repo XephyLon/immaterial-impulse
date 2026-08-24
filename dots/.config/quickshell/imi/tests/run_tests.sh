@@ -1268,6 +1268,14 @@ if ! python3 "$SCRIPT_DIR/test_clight_integration_runtime.py"; then
     exit 1
 fi
 
+# Brings its own headless weston and fake easyeffects/flatpak/pidof/pkill:
+# the toggle answers optimistically and the verify pass corrects a lie.
+echo "Running EasyEffects state runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_easyeffects_state_runtime.py"; then
+    echo "EasyEffects state runtime tests failed."
+    exit 1
+fi
+
 echo "Running shared widget contract tests..."
 if ! python3 "$SCRIPT_DIR/test_shared_widget_contracts.py"; then
     echo "Shared widget contract tests failed."
