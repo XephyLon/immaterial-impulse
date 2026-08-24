@@ -69,8 +69,22 @@ STAGGER_ADOPTERS = {
     # The right sidebar, re-adopted - the register's one round trip so far;
     # the STAGGER_DECLINED preamble below carries the full history and the
     # two repairs that made re-adoption arguable. Gate on the EdgeSlide's
-    # progress via containerProgress, no leadIn, enter-only.
+    # progress via containerProgress, no leadIn, enter-only. Its sections are
+    # deliberately UNIFORM while the toggle grid's tiles converge: section
+    # translate stacked on tile convergence was tried and judged ruined on
+    # screen - the fork's sections hold still and their PIECES move.
     "modules/imi/sidebarRight/SidebarRightContent.qml",
+    # The android toggle grid's nested tile wave (convergent - tiles from
+    # their own third of the grid), gated on the section's own appear.
+    "modules/imi/sidebarRight/quickToggles/AndroidQuickPanel.qml",
+    # The left sidebar, adopted after its refusal's hazard was answered
+    # rather than waved off: the gate keys on the OPEN flag, which a detach
+    # does not flip, so undocking the chat to keep reading cannot re-run the
+    # entrance. The slide progress reaches the reparented tree by assignment
+    # (SidebarLeft.qml), and the AI pane's members cascade through the
+    # dynamic-scope gate documented in AiChat.qml.
+    "modules/imi/sidebarLeft/SidebarLeftContent.qml",
+    "modules/imi/sidebarLeft/AiChat.qml",
 }
 
 # The other half of that ratchet: a surface that adopted a wave, was judged on
@@ -98,14 +112,9 @@ STAGGER_ADOPTERS = {
 # It is in STAGGER_ADOPTERS above; this note stays because the register's
 # job is exactly this round trip.
 STAGGER_DECLINED = {
-    # The LEFT sidebar. Its content is a live conversation (the AI chat) the
-    # user is mid-exchange with - the launcher refusal's argument - and the
-    # tree REPARENTS between the attached panel and the detached window
-    # (`contentParent.children = [sidebarContent]`), so an entrance keyed to
-    # the panel's lifecycle would re-run on a detach the user performs
-    # precisely to keep reading. Adopting there means solving the handover
-    # first.
-    "modules/imi/sidebarLeft/SidebarLeft.qml",
+    # (The LEFT sidebar sat here briefly for its detach-reparenting hazard;
+    # it moved to STAGGER_ADOPTERS once the gate was keyed to the open flag,
+    # which a detach does not flip - the hazard answered, not waved off.)
     # Dialog content. Assessed for the group entrance when the desktop menu
     # adopted it and refused on the surface's own facts, all of them readable
     # in the tree rather than guessed:

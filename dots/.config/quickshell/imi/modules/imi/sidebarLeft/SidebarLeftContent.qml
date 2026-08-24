@@ -1,3 +1,4 @@
+import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -42,15 +43,58 @@ Item {
         }
     }
 
+    // The container's slide progress, assigned by SidebarLeft.qml AFTER the
+    // content is created - this tree is built detached and reparented between
+    // the attached panel and the detached window, so the binding arrives from
+    // outside rather than from an id this file could see. Defaults to 1: a
+    // detached window (or a test) has no slide to wait on.
+    property real containerProgress: 1
+
+    // Container-then-fill, the right sidebar's shape. The gate is keyed to
+    // the OPEN flag, which a detach does not flip - so undocking the chat to
+    // keep reading never re-runs the entrance (the hazard that first kept
+    // this surface in STAGGER_DECLINED).
+    // Resolved by the tab panes through dynamic scope (see AiChat.qml).
+    readonly property bool sidebarLeftPaneIn: root.contentsIn
+
+    readonly property bool contentsIn: Appearance.animation.contentsArrived(
+        root.containerProgress, GlobalStates.sidebarLeftOpen)
+    onContentsInChanged: {
+        if (root.contentsIn && GlobalStates.sidebarLeftOpen)
+            leftEntrance.enter();
+    }
+    Component.onCompleted: {
+        if (!root.contentsIn)
+            leftEntrance.park();
+    }
+    Connections {
+        target: GlobalStates
+        function onSidebarLeftOpenChanged() {
+            if (GlobalStates.sidebarLeftOpen && !root.contentsIn)
+                leftEntrance.park();
+        }
+    }
+
     ColumnLayout {
+        id: leftColumn
         anchors {
             fill: parent
             margins: sidebarPadding
         }
         spacing: verticalTabBar.expanded ? -Appearance.spacing.space25 : 0
 
+        StaggerWave {
+            id: leftEntrance
+            target: leftColumn
+        }
+        StaggerEntrance {
+            target: leftColumn
+            reference: root.width
+        }
+
         VerticalTabBar {
             id: verticalTabBar
+            property real appear: 1
             visible: tabButtonList.length > 0
             Layout.fillWidth: true
             tabButtonList: root.tabButtonList
@@ -59,6 +103,7 @@ Item {
         }
 
         Rectangle {
+            property real appear: 1
             Layout.fillWidth: true
             Layout.fillHeight: true
             implicitWidth: swipeView.implicitWidth
