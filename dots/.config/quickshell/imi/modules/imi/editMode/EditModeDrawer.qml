@@ -208,26 +208,14 @@ Item {
         GlobalStates.editDrawerProgress, root.opening)
 
     // A member arrives with three properties moving together, not as a fade:
-    // opacity, a scale, and a small rise. One `appear` scalar drives all three
-    // so they cannot finish on different schedules, which is what
-    // docs/M3_GUIDELINES.md §2 ("Component Entrance and Exit") requires and what
-    // reads as a hiccup when it is missed.
-    //
-    // The rise is a spacing token. The scale is DERIVED from it rather than
-    // picked: the survey measured 0.85, but that is a popup's compact cards, and
-    // on this panel's full-width rows the same factor is a 52px horizontal swing
-    // inside a 380px drawer - a zoom, not a settle. Matching the scale's own
-    // excursion to the rise keeps the two terms one motion at any drawer width,
-    // with the measured 0.85 as the floor so a narrow panel cannot invert it.
-    readonly property real entranceRise: Appearance.spacing.space250
-    readonly property real entranceScaleFrom: Math.max(0.85,
-        1 - root.entranceRise / Math.max(1, root.panelWidth))
-    function entranceScale(appear) {
-        return root.entranceScaleFrom + (1 - root.entranceScaleFrom) * appear;
-    }
-    function entranceOffset(appear) {
-        return (1 - appear) * root.entranceRise;
-    }
+    // opacity, a scale, and a small rise, all on one `appear` scalar so they
+    // cannot finish on different schedules (docs/M3_GUIDELINES.md §2,
+    // "Component Entrance and Exit"). That dressing used to be spelled out
+    // here once per member; it is the shared `StaggerEntrance` beside the wave
+    // now, and the derivation this file carried - the scale's excursion
+    // matched to the rise, floored at the survey's 0.85 - lives in
+    // motion_policy.js where a test can hold it still. A member's whole opt-in
+    // is `property real appear: 1`.
 
     // Arming and running are two events, not one, and measuring showed why.
     // Setting the members to zero inside the wave meant they were drawn at full
@@ -302,12 +290,23 @@ Item {
                 target: drawerColumn
             }
 
+            // ...and what arriving looks like: the shared three-channel
+            // dressing, walking the same column. The reference is the PANEL's
+            // width, not the column's - the column is inset by its margins and
+            // the derivation's input has been the panel since the drawer first
+            // dressed its members. The lock section's two re-link rows are
+            // `RippleButton`s and are skipped by the dresser itself: a control
+            // owns `scale` through the interaction model and folds `appear`
+            // into the opacity binding that carries its disabled dim, so it
+            // rides the wave through the property the runner writes.
+            StaggerEntrance {
+                target: drawerColumn
+                reference: root.panelWidth
+            }
+
             RowLayout {
                 id: addHeaderRow
                 property real appear: 1
-                opacity: addHeaderRow.appear
-                scale: root.entranceScale(addHeaderRow.appear)
-                transform: Translate { y: root.entranceOffset(addHeaderRow.appear) }
                 Layout.fillWidth: true
                 // A Layout nested in a Layout defaults to fillHeight TRUE, and
                 // a row of chrome that fills is a row that competes with the
@@ -335,9 +334,6 @@ Item {
             RowLayout {
                 id: sectionChipRow
                 property real appear: 1
-                opacity: sectionChipRow.appear
-                scale: root.entranceScale(sectionChipRow.appear)
-                transform: Translate { y: root.entranceOffset(sectionChipRow.appear) }
                 Layout.fillWidth: true
                 Layout.fillHeight: false
                 Layout.leftMargin: Appearance.spacing.space75
@@ -370,9 +366,6 @@ Item {
             StyledText {
                 id: sectionHint
                 property real appear: 1
-                opacity: sectionHint.appear
-                scale: root.entranceScale(sectionHint.appear)
-                transform: Translate { y: root.entranceOffset(sectionHint.appear) }
                 Layout.fillWidth: true
                 Layout.fillHeight: false
                 Layout.leftMargin: Appearance.spacing.space75
@@ -393,9 +386,6 @@ Item {
             ListView {
                 id: list
                 property real appear: 1
-                opacity: list.appear
-                scale: root.entranceScale(list.appear)
-                transform: Translate { y: root.entranceOffset(list.appear) }
                 visible: root.section === "widgets"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -514,9 +504,6 @@ Item {
             RowLayout {
                 id: barBucketRow
                 property real appear: 1
-                opacity: barBucketRow.appear
-                scale: root.entranceScale(barBucketRow.appear)
-                transform: Translate { y: root.entranceOffset(barBucketRow.appear) }
                 visible: root.section === "bar"
                 Layout.fillWidth: true
                 Layout.fillHeight: false
@@ -545,9 +532,6 @@ Item {
             ListView {
                 id: barList
                 property real appear: 1
-                opacity: barList.appear
-                scale: root.entranceScale(barList.appear)
-                transform: Translate { y: root.entranceOffset(barList.appear) }
                 visible: root.section === "bar"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -597,9 +581,6 @@ Item {
             MaterialTextField {
                 id: appSearchField
                 property real appear: 1
-                opacity: appSearchField.appear
-                scale: root.entranceScale(appSearchField.appear)
-                transform: Translate { y: root.entranceOffset(appSearchField.appear) }
                 visible: root.section === "dock"
                 Layout.fillWidth: true
                 placeholderText: Translation.tr("Search apps")
@@ -608,9 +589,6 @@ Item {
             ListView {
                 id: appList
                 property real appear: 1
-                opacity: appList.appear
-                scale: root.entranceScale(appList.appear)
-                transform: Translate { y: root.entranceOffset(appList.appear) }
                 visible: root.section === "dock"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -686,9 +664,6 @@ Item {
             ListView {
                 id: lockList
                 property real appear: 1
-                opacity: lockList.appear
-                scale: root.entranceScale(lockList.appear)
-                transform: Translate { y: root.entranceOffset(lockList.appear) }
                 visible: root.section === "lock"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -779,17 +754,18 @@ Item {
             // with the lock showing no widgets at all, "follows the desktop"
             // is a claim about a set nobody can see.
             //
-            // Neither this row nor the layout re-link below it is DRESSED with
-            // the three channels above, and both still arrive with the wave.
-            // A `RippleButton` declares `appear` itself and folds it into its
-            // own opacity and a 6px rise, so the runner reaches it like any
-            // other member - measured, these two land one and two steps behind
-            // the list. What it must not be handed is a second writer of
-            // either channel: `scale` is `interactionMotion`'s (a scale here
-            // replaces the control's rather than composing with it -
-            // lint_interaction_motion_double.py) and that same opacity binding
-            // carries the disabled dim (a second one draws this row as enabled
-            // while it is not - lint_disabled_opacity.py, and the bug
+            // Neither this row nor the layout re-link below it is dressed by
+            // the StaggerEntrance above - the dresser itself skips a member
+            // that owns an `interactionMotion` - and both still arrive with
+            // the wave. A `RippleButton` declares `appear` itself and folds it
+            // into its own opacity and a 6px rise, so the runner reaches it
+            // like any other member - measured, these two land one and two
+            // steps behind the list. What it must not be handed is a second
+            // writer of either channel: `scale` is `interactionMotion`'s (a
+            // scale here replaces the control's rather than composing with it
+            // - lint_interaction_motion_double.py) and that same opacity
+            // binding carries the disabled dim (a second one draws this row as
+            // enabled while it is not - lint_disabled_opacity.py, and the bug
             // ExpandablePanel's `appear` indirection exists for).
             RippleButton {
                 id: lockPresenceRow
@@ -847,9 +823,9 @@ Item {
             // in, and while forked offers the way back - the drawer never
             // forks by itself; a drag does that.
             //
-            // Undressed, for the reason stated on the widget-choice row above:
-            // this is a `RippleButton` and it rides the wave through its own
-            // `appear`.
+            // Undressed (the StaggerEntrance skips it), for the reason stated
+            // on the widget-choice row above: this is a `RippleButton` and it
+            // rides the wave through its own `appear`.
             RippleButton {
                 id: lockLayoutRow
                 visible: root.section === "lock"
