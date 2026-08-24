@@ -273,6 +273,28 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
         color: Appearance.colors.colOutlineVariant
     }
 
+    // The pane's own members cascade once the sidebar's gate opens - the
+    // fork's left-pane grammar (tab strip, content, hint, suggestions,
+    // composer, each individually). `sidebarLeftPaneIn` resolves through the
+    // creation context to SidebarLeftContent's gate (this pane is created
+    // from an inline Component there); the typeof guard keeps a pane built
+    // anywhere else - a test - drawn rather than throwing per evaluation.
+    // Same dynamic-scope pattern as dockRow.padding, with AGENT.md's warning
+    // attached: restructure above this and nothing warns.
+    readonly property bool paneGateOpen:
+        (typeof sidebarLeftPaneIn !== "undefined") ? sidebarLeftPaneIn : true
+    onPaneGateOpenChanged: {
+        if (root.paneGateOpen && GlobalStates.sidebarLeftOpen)
+            paneEntrance.enter();
+    }
+    Connections {
+        target: GlobalStates
+        function onSidebarLeftOpenChanged() {
+            if (GlobalStates.sidebarLeftOpen && !root.paneGateOpen)
+                paneEntrance.park();
+        }
+    }
+
     ColumnLayout {
         id: columnLayout
         anchors {
@@ -281,7 +303,17 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
         }
         spacing: root.padding
 
+        StaggerWave {
+            id: paneEntrance
+            target: columnLayout
+        }
+        StaggerEntrance {
+            target: columnLayout
+            reference: root.width
+        }
+
         Item {
+            property real appear: 1
             // Messages
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -409,11 +441,13 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
         }
 
         DescriptionBox {
+            property real appear: 1
             text: root.suggestionList[suggestions.selectedIndex]?.description ?? ""
             showArrows: root.suggestionList.length > 1
         }
 
         FlowButtonGroup { // Suggestions
+            property real appear: 1
             id: suggestions
             visible: root.suggestionList.length > 0 && messageInputField.text.length > 0
             property int selectedIndex: 0
@@ -470,6 +504,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
         }
 
         Rectangle { // Input area
+            property real appear: 1
             id: inputWrapper
             property real spacing: Appearance.spacing.space100
             Layout.fillWidth: true

@@ -154,11 +154,14 @@ Item {
             StaggerEntrance {
                 target: sidebarColumn
                 reference: root.sidebarWidth
-                // Sections are full-width, so convergence degenerates to the
-                // vertical alternation - consecutive sections arrive from
-                // above and below their places rather than as one rising
-                // sheet - with the overshoot settle on top.
-                convergent: true
+                // Deliberately UNIFORM at the section level. The convergent
+                // mode was tried here and read as ruined on screen: a section
+                // translating in from above or below WHILE its own interior
+                // converges (the toggle grid's tiles) is two directional
+                // motions stacked, and the fork this grammar was measured off
+                // never does that - its sections hold still and their PIECES
+                // converge. Sections keep the calm fade-scale-rise; the
+                // directional language lives one level down.
             }
 
             // Banner

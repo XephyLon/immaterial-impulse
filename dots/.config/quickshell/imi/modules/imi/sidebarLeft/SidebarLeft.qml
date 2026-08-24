@@ -64,6 +64,12 @@ Scope { // Scope
             "scopeRoot": root,
         });
         sidebarLoader.item.contentParent.children = [root.sidebarContent];
+        // The content is created detached and reparented on dock/undock, so
+        // the slide's progress reaches it by assignment rather than by an id
+        // it could see. Null-safe: while the attached window is unloaded
+        // (detached mode) there is no slide, and 1 means "no gate to wait on".
+        root.sidebarContent.containerProgress = Qt.binding(() =>
+            sidebarLoader.item ? sidebarLoader.item.slide.progress : 1);
     }
 
     onDetachChanged: {
