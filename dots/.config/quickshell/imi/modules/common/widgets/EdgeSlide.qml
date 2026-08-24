@@ -59,6 +59,22 @@ QtObject {
     // The displacement to apply to the panel, in px along the slide axis.
     readonly property real offset: (1 - root.progress) * root.travel * root.direction
 
+    // The curtain: an opacity for the panel's content that holds low early
+    // in the slide and ramps to full late - the sibling fork's `stall`
+    // fade-layer curve, derived from the same progress so it cannot drift.
+    // This is what makes a composed-under-construction panel possible: the
+    // per-widget entrances run while the content is still translucent, so a
+    // member not yet arrived is a dim nothing rather than an opaque HOLE in
+    // a fully-lit panel - which is exactly what the right sidebar showed
+    // (full-res frames: a black void where the toggle grid's later rows
+    // were still parked, for ~300ms, reading as an ugly pause). Piecewise
+    // rather than a bezier so the endpoints are exact: 30% alpha up to 40%
+    // travel, then a linear ramp home.
+    readonly property real reveal: root.progress >= 1 ? 1
+        : root.progress <= 0 ? 0
+        : root.progress < 0.4 ? 0.3 * (root.progress / 0.4)
+        : 0.3 + 0.7 * ((root.progress - 0.4) / 0.6)
+
     // Whether the panel has anything on screen. True through the whole exit,
     // so content gated on it is not hidden under an animation still drawing
     // it; false once the exit has finished, so a Loader gated on it may stand

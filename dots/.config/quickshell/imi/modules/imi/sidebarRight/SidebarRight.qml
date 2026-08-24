@@ -136,6 +136,9 @@ Scope {
                 property real cachedParentWidth: sidebarWidth
                 readonly property real restX: cachedParentWidth - width
                 x: restX + panelWindow.slide.offset
+                // The slide's curtain (see EdgeSlide.reveal): entrances run
+                // under it, so a member still parked is dimness, not a hole.
+                opacity: panelWindow.slide.reveal
 
                 Connections {
                     target: entranceWrapper.parent
