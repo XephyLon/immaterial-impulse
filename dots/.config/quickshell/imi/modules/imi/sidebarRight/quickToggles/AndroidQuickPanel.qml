@@ -119,6 +119,9 @@ AbstractQuickPanel {
             StaggerWave {
                 id: tileWave
                 target: usedGrid
+                // The fork's tile cadence (80 + 25ms per tile); our default
+                // 40ms step reads sluggish across a 15-tile grid.
+                step: 25
             }
             StaggerEntrance {
                 target: usedGrid
