@@ -167,7 +167,30 @@ Scope {
                 opacity: 0
                 transformOrigin: Item.Center
 
+                // Container, then fill: the card's own entrance is the scale
+                // and opacity above, and its ROWS arrive as a group once the
+                // card has mostly landed. This is the drawer's adoption shape,
+                // not the sidebar's refused one: the card's opacity IS a
+                // QML-readable progress for its entrance (the Behavior
+                // animates the property itself), so the wave gates on the
+                // real container rather than on a guessed leadIn - the exact
+                // scalar whose absence is half of why the right sidebar's
+                // wave came back off. Enter-only, because the close destroys
+                // this window on the frame the flag drops: there is no exit
+                // for a wave to animate, so nothing here calls leave().
+                readonly property bool contentsIn:
+                    Appearance.animation.contentsArrived(menuCard.opacity, true)
+                onContentsInChanged: {
+                    if (menuCard.contentsIn)
+                        rowsEntrance.enter()
+                }
+
                 Component.onCompleted: {
+                    // Park before the entrance starts, or the rows are drawn
+                    // at full strength for the run up to the gate and then
+                    // blink out to cascade back in - the arming-vs-running
+                    // lesson the drawer already paid for.
+                    rowsEntrance.park()
                     scale = 1.0
                     opacity = 1.0
                 }
@@ -177,6 +200,20 @@ Scope {
                 }
                 Behavior on opacity {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+
+                // The rows are RippleButtons, so each already declares
+                // `appear` and folds it into its own opacity and 6px rise -
+                // the wave reaches them through the property the runner
+                // writes, and no dressing is declared here (a StaggerEntrance
+                // aimed at controls would be the doubling the composition
+                // lints fail on). `items`, not a container walk: GroupedList
+                // reparents each row into its own plate, so the declared list
+                // is the rows' only shared origin.
+                StaggerWave {
+                    id: rowsEntrance
+                    target: menuGroup
+                    items: menuGroup.items
                 }
 
                 MouseArea {
@@ -223,6 +260,7 @@ Scope {
                     }
 
                     GroupedList {
+                        id: menuGroup
                         Layout.fillWidth: true
                         itemVerticalPadding: Appearance.spacing.space200
                         bgcolor: Appearance.colors.colLayer0
