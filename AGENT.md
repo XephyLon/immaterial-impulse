@@ -4551,7 +4551,15 @@ REFUSED — and a register that only grows is a target.** 9e10b8a9c ("feat(sideb
 sidebar's sections arrive in sequence") gave the right sidebar a wave; the user's verdict was *"I
 don't like the cascading animation effect in the sidebar… This one feels slow. There's a frame drop
 the moment it opens and the moment it closes."* It is off that surface again, and
-`STAGGER_DECLINED` in `tests/test_motion_policy_contract.py` reddens if it comes back. Take the
+`STAGGER_DECLINED` in `tests/test_motion_policy_contract.py` reddens if it comes back.
+**It since came back, the register's way — argued, at the maintainer's request, after both
+refusal facts had been repaired by unrelated work**: the persistent EdgeSlide surface removed the
+per-gesture teardown that was the measured frame drop, and the slide's in-client `progress`
+scalar is exactly the container progress whose absence forced the guessed leadIn. The re-adopted
+wave gates on it through `contentsArrived`, carries no leadIn, and is enter-only (sections ride
+the slide out rigid). The register entry moved from `STAGGER_DECLINED` to `STAGGER_ADOPTERS` with
+the history kept in place — the round trip is the register doing its job, not the refusal being
+overridden. (feat(sidebar): the sections cascade again, gated on the slide the surface now owns.) Take the
 reasoning rather than the removal, because both halves of the complaint were right and only one of
 them was the wave's:
 

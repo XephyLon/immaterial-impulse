@@ -48,9 +48,47 @@ Item {
     readonly property MprisPlayer activePlayer: MprisController.activePlayer
     readonly property var meaningfulPlayers: MprisController.meaningfulPlayers
 
+    // The container's slide progress, handed in by SidebarRight.qml (the
+    // EdgeSlide's own scalar). Defaults to 1 so a tree built outside the
+    // panel - a test harness - has no gate it can never cross.
+    property real containerProgress: 1
+
+    // Container-then-fill, the popup card's grammar. This surface's first
+    // cascade was removed on the maintainer's on-screen verdict (00efe588
+    // ("revert(sidebar): the right sidebar's sections stop cascading")), and
+    // both facts behind that verdict are gone: the frame drop was the
+    // per-open surface teardown, which the persistent EdgeSlide surface
+    // removed - and the guessed three-step leadIn that landed the last member
+    // ~200ms after the slide is replaced by a gate on the slide's own
+    // progress, the exact scalar whose absence forced the guess. Re-adopted
+    // at the maintainer's request with both repairs in place.
+    readonly property bool contentsIn: Appearance.animation.contentsArrived(
+        root.containerProgress, GlobalStates.sidebarRightOpen)
+    onContentsInChanged: {
+        if (root.contentsIn && GlobalStates.sidebarRightOpen)
+            sectionEntrance.enter();
+    }
+
+    Component.onCompleted: {
+        // Park before the entrance starts - the arming-vs-running lesson the
+        // drawer paid for. A tree built mid-open past the gate (or outside
+        // the panel) parks nothing and stays drawn.
+        if (!root.contentsIn)
+            sectionEntrance.park();
+    }
+
     Connections {
         target: GlobalStates
         function onSidebarRightOpenChanged() {
+            if (GlobalStates.sidebarRightOpen) {
+                // A kept-loaded tree re-parks on the open's rising edge so the
+                // wave has something to reveal; a reopen caught past the gate
+                // (an exit reversed by a quick re-toggle) skips the park so
+                // drawn sections never blink out.
+                if (!root.contentsIn)
+                    sectionEntrance.park();
+                return;
+            }
             if (!GlobalStates.sidebarRightOpen) {
                 root.showWifiDialog = false;
                 root.showTailscaleDialog = false;
@@ -98,12 +136,29 @@ Item {
         radius: Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut + 5
 
         ColumnLayout {
+            id: sidebarColumn
             anchors.fill: parent
             anchors.margins: sidebarPadding
             spacing: sidebarPadding
 
+            // The sections arrive in sequence once the slide has essentially
+            // landed. Ranking by VISIBLE position earns its place here: only
+            // one quick-panel style is ever active and the media player is
+            // absent with nothing playing, so unranked slots would leave
+            // holes mid-wave. No exit wave - the sections ride the slide out
+            // rigid, the same asymmetry the popup card keeps.
+            StaggerWave {
+                id: sectionEntrance
+                target: sidebarColumn
+            }
+            StaggerEntrance {
+                target: sidebarColumn
+                reference: root.sidebarWidth
+            }
+
             // Banner
             Loader {
+                property real appear: 1
                 Layout.fillWidth: true
                 Layout.fillHeight: false
                 sourceComponent: Config.options.sidebar.banner ? bannerComponent : normalComponent
@@ -303,6 +358,7 @@ Item {
 
             Loader {
                 id: slidersLoader
+                property real appear: 1
                 Layout.fillWidth: true
                 visible: active
                 active: {
@@ -316,6 +372,7 @@ Item {
 
             Loader {
                 id: mediaPlayerLoader
+                property real appear: 1
                 active: root.activePlayer !== null && GlobalStates.sidebarRightOpen && Config.options.sidebar.mediaPlayer
                 visible: active
                 Layout.fillWidth: true
@@ -341,6 +398,7 @@ Item {
             }
 
             CenterWidgetGroup {
+                property real appear: 1
                 Layout.alignment: Qt.AlignHCenter
                 Layout.fillHeight: true
                 Layout.fillWidth: true
@@ -348,6 +406,7 @@ Item {
 
             BottomWidgetGroup {
                 id: bottomWidgetGroup
+                property real appear: 1
                 Layout.alignment: Qt.AlignHCenter
                 Layout.fillHeight: false
                 Layout.fillWidth: true
@@ -448,6 +507,7 @@ Item {
 
     component LoaderedQuickPanelImplementation: Loader {
         id: quickPanelImplLoader
+        property real appear: 1
         required property string styleName
         Layout.alignment: item?.Layout.alignment ?? Qt.AlignHCenter
         Layout.fillWidth: item?.Layout.fillWidth ?? false

@@ -66,6 +66,11 @@ STAGGER_ADOPTERS = {
     # per-close cost cannot arise), and the per-open surface build is a cost
     # the menu already paid before the wave.
     "modules/imi/desktopMenu/DesktopMenu.qml",
+    # The right sidebar, re-adopted - the register's one round trip so far;
+    # the STAGGER_DECLINED preamble below carries the full history and the
+    # two repairs that made re-adoption arguable. Gate on the EdgeSlide's
+    # progress via containerProgress, no leadIn, enter-only.
+    "modules/imi/sidebarRight/SidebarRightContent.qml",
 }
 
 # The other half of that ratchet: a surface that adopted a wave, was judged on
@@ -75,25 +80,32 @@ STAGGER_ADOPTERS = {
 # tried and refused. A refusal is invisible in the source, exactly like the
 # adoption it mirrors.
 #
-# The right sidebar is the entry. 9e10b8a9c ("feat(sidebar): the right
-# sidebar's sections arrive in sequence") gave it one and the user rejected it:
-# "I don't like the cascading animation effect in the sidebar... This one feels
-# slow. There's a frame drop the moment it opens and the moment it closes."
-# Two properties of THIS surface are why, and neither is a tuning. Its
-# container is a layer surface the compositor slides, so there is no progress
-# to gate on and the head start can only be a guessed `leadIn` - which put the
-# last member's landing 180ms past the end of `sidebarSlideEnter`. And the
-# surface is DESTROYED by the gesture the wave rides: `PanelWindow.visible`
-# follows the open state, layer-shell forbids window reuse, so the wave's
-# frames land on a surface the compositor is still bringing up and its exit
-# animates a window that has already been asked to leave - measured at a median
-# of 30 rendered frames per open against 5 without it, and 13 per close against
-# zero. The frame drop the report names is that teardown-and-rebuild and NOT
-# the wave; see AGENT.md's design-language section, which carries the numbers
-# and the two suspects they eliminate. Re-adopting is a decision to be argued,
-# not a line to be copied.
+# The right sidebar is the worked example of the register running in BOTH
+# directions, and its history is the argument for keeping refusals written
+# down. 9e10b8a9c ("feat(sidebar): the right sidebar's sections arrive in
+# sequence") gave it a wave; the maintainer rejected it on screen ("feels
+# slow", a frame drop at both ends) and 00efe588 took it off, with two
+# measured facts recorded here: the container was a compositor-slid surface
+# with no progress to gate on (so the head start was a guessed leadIn landing
+# the last member ~200ms after the slide), and the surface was destroyed per
+# gesture, which was the frame drop. BOTH facts were later repaired for
+# unrelated reasons - the sidebar became a persistent surface whose EdgeSlide
+# owns the slide in-client - so when the maintainer asked for the cascade
+# again (2026-08-24), re-adoption was argued on the repairs, not copied:
+# the wave now gates on `containerProgress` (the EdgeSlide's own scalar,
+# handed in by SidebarRight.qml) through `contentsArrived`, carries NO
+# leadIn, and runs enter-only - the sections ride the slide out rigid.
+# It is in STAGGER_ADOPTERS above; this note stays because the register's
+# job is exactly this round trip.
 STAGGER_DECLINED = {
-    "modules/imi/sidebarRight/SidebarRightContent.qml",
+    # The LEFT sidebar. Its content is a live conversation (the AI chat) the
+    # user is mid-exchange with - the launcher refusal's argument - and the
+    # tree REPARENTS between the attached panel and the detached window
+    # (`contentParent.children = [sidebarContent]`), so an entrance keyed to
+    # the panel's lifecycle would re-run on a detach the user performs
+    # precisely to keep reading. Adopting there means solving the handover
+    # first.
+    "modules/imi/sidebarLeft/SidebarLeft.qml",
     # Dialog content. Assessed for the group entrance when the desktop menu
     # adopted it and refused on the surface's own facts, all of them readable
     # in the tree rather than guessed:
