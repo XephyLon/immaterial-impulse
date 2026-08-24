@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.services
+import "bar_popup_unroll.js" as BarPopupUnroll
 
 StyledPopup {
     id: root
@@ -123,7 +124,12 @@ StyledPopup {
         implicitWidth: 300
         spacing: Appearance.spacing.space75
 
+        // The connection row is this popup's HERO - the first drawn section,
+        // whose height the card opens at, legible on frame one - so it never
+        // declares `appear`. The speed cards and the details list below the
+        // fold cascade in on BarPopupOverlay's gated wave.
         RowLayout {
+            id: connectionRow
             Layout.fillWidth: true
             Layout.leftMargin: Appearance.spacing.space50
             Layout.rightMargin: Appearance.spacing.space50
@@ -161,6 +167,11 @@ StyledPopup {
         }
 
         RowLayout {
+            id: speedRow
+            property real appear: 1
+            opacity: speedRow.appear
+            scale: BarPopupUnroll.entranceScale(speedRow.appear, root.entranceRise, speedRow.width)
+            transform: Translate { y: BarPopupUnroll.entranceOffset(speedRow.appear, root.entranceRise) }
             Layout.fillWidth: true
             spacing: Appearance.spacing.space75
 
@@ -182,6 +193,11 @@ StyledPopup {
         }
 
         GroupedList {
+            id: detailsList
+            property real appear: 1
+            opacity: detailsList.appear
+            scale: BarPopupUnroll.entranceScale(detailsList.appear, root.entranceRise, detailsList.width)
+            transform: Translate { y: BarPopupUnroll.entranceOffset(detailsList.appear, root.entranceRise) }
             visible: Network.networkInterface !== ""
                 || Network.ipAddress !== ""
                 || Network.publicIpAddress !== ""

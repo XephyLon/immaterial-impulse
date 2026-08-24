@@ -4,6 +4,7 @@ import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Layouts
 import qs.modules.imi.bar
+import "bar_popup_unroll.js" as BarPopupUnroll
 
 StyledPopup {
     id: root
@@ -138,7 +139,19 @@ StyledPopup {
         // comes and goes would keep changing what the popup opens at - and a
         // 99px strip is not the section this card should be legible at on
         // frame one. The hero stays first, at 141 of the card's 431.
+        //
+        // The hero is also why IT carries no `appear` while the two sections
+        // below it do: the card opens at the hero's own height so the hero is
+        // readable from the first frame, and the below-the-fold sections
+        // cascade in once the card has arrived (BarPopupOverlay's gated
+        // wave). One scalar drives all three entrance channels so opacity,
+        // scale and rise cannot land on different schedules.
         WeatherHourlyChart {
+            id: hourlyChart
+            property real appear: 1
+            opacity: hourlyChart.appear
+            scale: BarPopupUnroll.entranceScale(hourlyChart.appear, root.entranceRise, hourlyChart.width)
+            transform: Translate { y: BarPopupUnroll.entranceOffset(hourlyChart.appear, root.entranceRise) }
             charted: root.popupVisible
             Layout.leftMargin: Appearance.spacing.space25
             Layout.rightMargin: Appearance.spacing.space25
@@ -146,6 +159,10 @@ StyledPopup {
 
         GridLayout {
             id: gridLayout
+            property real appear: 1
+            opacity: gridLayout.appear
+            scale: BarPopupUnroll.entranceScale(gridLayout.appear, root.entranceRise, gridLayout.width)
+            transform: Translate { y: BarPopupUnroll.entranceOffset(gridLayout.appear, root.entranceRise) }
             columns: 2
             rowSpacing: Appearance.spacing.space50
             columnSpacing: Appearance.spacing.space50
