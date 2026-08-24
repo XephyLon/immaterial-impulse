@@ -61,21 +61,23 @@ Item {
             currentIndex: tabBar.currentIndex
 
             // To Do tab
+            // The filters pass Todo.list's own objects through untouched:
+            // TaskList's ScriptModel diffs by identity, so wrapping each item in
+            // a fresh object per update (the old Object.assign originalIndex
+            // annotation) made every change read as remove-all + add-all and no
+            // list transition could ever fire. Indices are resolved at click
+            // time in TaskList instead.
             TaskList {
                 listBottomPadding: root.fabSize + root.fabMargins * 2
                 emptyPlaceholderIcon: "check_circle"
                 emptyPlaceholderText: Translation.tr("Nothing here!")
-                taskList: Todo.list
-                    .map(function(item, i) { return Object.assign({}, item, {originalIndex: i}); })
-                    .filter(function(item) { return !item.done; })
+                taskList: Todo.list.filter(function(item) { return !item.done; })
             }
             TaskList {
                 listBottomPadding: root.fabSize + root.fabMargins * 2
                 emptyPlaceholderIcon: "checklist"
                 emptyPlaceholderText: Translation.tr("Finished tasks will go here")
-                taskList: Todo.list
-                    .map(function(item, i) { return Object.assign({}, item, {originalIndex: i}); })
-                    .filter(function(item) { return item.done; })
+                taskList: Todo.list.filter(function(item) { return item.done; })
             }
 
         }

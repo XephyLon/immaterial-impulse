@@ -433,6 +433,16 @@ if ! python3 "$SCRIPT_DIR/test_bar_text_change_motion.py"; then
     exit 1
 fi
 
+# The todo lists ride StyledListView's own add/remove transitions, which only
+# works while the model's values keep their identity across updates: ScriptModel
+# diffs by strict equality, so a per-update wrapper reads as remove-all+add-all
+# and flies the whole list in on every change.
+echo "Running todo list transition tests..."
+if ! python3 "$SCRIPT_DIR/test_todo_list_transitions.py"; then
+    echo "Todo list transition tests failed."
+    exit 1
+fi
+
 # The clock's options page shows only the chosen style's rows. The predicate is
 # pinned by tst_option_visibility.qml; this is the adoption, which is what
 # decays - a 29th option added without a rule renders on every style again.
