@@ -8,6 +8,12 @@ import QtQuick.Layouts
 Item {
     id: root
     property int monthShift: 0
+    // The sidebar's open counter; the ripple also re-runs on month
+    // navigation, which is the fork's own behavior.
+    property int entranceTrigger: -1
+    property int _entranceKey: 0
+    onEntranceTriggerChanged: _entranceKey++
+    onMonthShiftChanged: _entranceKey++
     // One grid column, on the 4dp grid. Seven rows of this plus the 32px header,
     // the gaps and the padding have to fit BottomWidgetGroup's fixed height, or
     // the group grows and takes it straight out of the notification list below.
@@ -139,6 +145,9 @@ Item {
                     delegate: CalendarDayButton {
                         implicitWidth: root.dayCellSize
                         implicitHeight: root.dayCellSize
+                        gridRow: modelData
+                        gridCol: index
+                        entranceKey: root._entranceKey
                         day: calendarLayout[modelData][index].day
                         isToday: calendarLayout[modelData][index].today
                         // Only in-viewing-month cells (today !== -1) map cleanly

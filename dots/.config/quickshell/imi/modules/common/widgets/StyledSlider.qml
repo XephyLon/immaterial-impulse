@@ -64,9 +64,13 @@ Slider {
     from: 0
     to: 1
 
+    // Named so a call site can slow one slider's glide (the sidebar's
+    // entrance sweeps the fill from zero) without spelling a second Behavior
+    // on a property this one already owns.
+    property real valueVelocity: Appearance.animation.elementMoveFast.velocity
     Behavior on value { // This makes the adjusted value (like volume) shift smoothly
         SmoothedAnimation {
-            velocity: Appearance.animation.elementMoveFast.velocity
+            velocity: root.valueVelocity
         }
     }
 

@@ -9,11 +9,13 @@ import QtQuick.Layouts
 
 Rectangle {
     id: root
+    property int entranceTrigger: -1
     radius: Appearance.rounding.normal
     color: Appearance.colors.colLayer1
 
     NotificationList {
         anchors.fill: parent
         anchors.margins: Appearance.spacing.space100
+        entranceTrigger: root.entranceTrigger
     }
 }
