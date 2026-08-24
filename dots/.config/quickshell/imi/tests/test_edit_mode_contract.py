@@ -1754,30 +1754,58 @@ def test_every_committed_mutation_records_exactly_its_entries():
 
 
 def test_every_staggered_drawer_member_arrives_on_all_three_channels():
-    """The drawer's entrance is one scalar driving three properties.
+    """The drawer's entrance dressing is the shared spelling, declared once.
 
     A member arriving on opacity alone is a fade, which is what
     `docs/M3_GUIDELINES.md` §2 ("Component Entrance and Exit") says a component
-    entrance is not - and a member that folds `appear` into two of the three
+    entrance is not - and a member dressed by copying half of a neighbour
     finishes its scale on a different schedule from its opacity, which reads as
-    a hiccup rather than as one motion. The realistic regression is a fifth
-    section added to the column and dressed by copying half of a neighbour, so
-    the sweep finds the members rather than naming them.
+    a hiccup rather than as one motion. This file used to spell the three
+    channels out once per member, nine times, and this test used to sweep all
+    twenty-seven bindings; the dressing is `StaggerEntrance` now, so what is
+    held instead is that the ONE dresser exists, walks the same column the
+    wave walks, and that no member spells a channel locally beside it - a
+    local copy would silently override or double what the dresser installs,
+    which is exactly the drift the promotion exists to end.
     """
     text = code(DRAWER)
+    assert text.count("StaggerEntrance {") == 1, (
+        "the drawer declares no (or more than one) StaggerEntrance - the "
+        "members' three-channel dressing comes from that one component, so "
+        "without it the wave animates an `appear` nothing renders")
+    dresser = text[text.index("StaggerEntrance {"):]
+    dresser = dresser[:dresser.index("}")]
+    assert "target: drawerColumn" in dresser, (
+        "the dresser is not aimed at drawerColumn - the wave and the dressing "
+        "must walk the same container or a member can be waved and undressed")
+    assert "reference: root.panelWidth" in dresser, (
+        "the dresser's scale reference is not the panel's width. The column "
+        "is inset by its margins, and the derivation's input has been the "
+        "panel since the drawer first dressed its members - changing the "
+        "reference changes the drawn scale of every row")
+
     ids = re.findall(r"id: (\w+)\n\s*property real appear: 1", text)
     assert len(ids) >= 9, (
         f"only {len(ids)} drawer members declare an `appear` - the column has "
         f"nine that should, so either a member lost its entrance or this sweep "
         f"stopped finding them")
-    for name in ids:
-        for channel in (f"opacity: {name}.appear",
-                        f"scale: root.entranceScale({name}.appear)",
-                        f"transform: Translate {{ y: root.entranceOffset({name}.appear) }}"):
-            assert channel in text, (
-                f"{name} does not fold `appear` into `{channel.split(':')[0]}`. "
-                f"All three channels ride one scalar so they cannot land on "
-                f"different schedules.")
+
+    # The old local spelling may not grow back beside the shared one. Any of
+    # these three is a second writer of a channel the dresser installs.
+    for banned, why in (
+            (r"\.appear\b(?!\s*[!=]== undefined)", None),
+            (r"entranceScale", "the drawer re-derives the scale locally"),
+            (r"entranceOffset", "the drawer re-derives the rise locally"),
+            (r"transform: Translate", "a member carries a hand-spelled rise")):
+        if banned == r"\.appear\b(?!\s*[!=]== undefined)":
+            hits = [m for m in re.finditer(r"(opacity|scale):[^\n]*\.appear\b", text)]
+            assert not hits, (
+                f"a drawer member folds `appear` into a channel by hand again "
+                f"({hits[0].group(0)!r}) - the dressing is StaggerEntrance's, "
+                f"and a local binding beside it doubles or replaces what the "
+                f"dresser installed")
+            continue
+        assert not re.search(banned, text), why
 
     # ...and the members that must NOT be dressed this way are the column's own
     # RippleButtons - the lock section's two re-link rows. A `RippleButton`
