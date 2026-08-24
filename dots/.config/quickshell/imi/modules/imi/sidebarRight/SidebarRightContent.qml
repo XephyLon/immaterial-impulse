@@ -495,7 +495,12 @@ Item {
 
     component LoaderedQuickPanelImplementation: Loader {
         id: quickPanelImplLoader
-        property real appear: 1
+        // Deliberately NOT a wave member (no `appear`): the android panel's
+        // tiles run their own entrance, and a fading section times a fading
+        // tile is two opacities MULTIPLIED - measured at full resolution as
+        // a ~250ms mushy tail of half-visible tiles, which is what read as
+        // broken. One fade per pixel: the section stands still, the pieces
+        // move - the fork's own rule, finally applied where it bites.
         required property string styleName
         Layout.alignment: item?.Layout.alignment ?? Qt.AlignHCenter
         Layout.fillWidth: item?.Layout.fillWidth ?? false
