@@ -128,6 +128,17 @@ if ! python3 "$SCRIPT_DIR/lint_interaction_motion_double.py"; then
     exit 1
 fi
 
+# Static lint: the third member of the doubled-channel family. A wave member's
+# opacity rides `appear`, so a root-level `Behavior on opacity` in the same
+# file turns StaggerWave.park()'s snap into an on-stage fade-out and freezes
+# the entrance while `appear` animates - the android quick toggles' "visible,
+# then the animation begins" pause.
+echo "Running wave-member opacity-Behavior lint..."
+if ! python3 "$SCRIPT_DIR/lint_wave_member_opacity_behavior.py"; then
+    echo "Wave-member opacity-Behavior lint failed."
+    exit 1
+fi
+
 # Static lint: an animation that names a motion tier's duration must take that
 # tier's easing with it. Leaving the curve behind hands the animation Qt's
 # default, Easing.Linear - the generic curve M3_GUIDELINES §2 forbids - and
