@@ -154,6 +154,11 @@ Item {
             StaggerEntrance {
                 target: sidebarColumn
                 reference: root.sidebarWidth
+                // Sections are full-width, so convergence degenerates to the
+                // vertical alternation - consecutive sections arrive from
+                // above and below their places rather than as one rising
+                // sheet - with the overshoot settle on top.
+                convergent: true
             }
 
             // Banner
@@ -509,6 +514,13 @@ Item {
         id: quickPanelImplLoader
         property real appear: 1
         required property string styleName
+        // Hand the section's appear down so a panel that nests its own tile
+        // wave can gate it on this section's arrival. Duck-typed: the classic
+        // panel declares no sectionAppear and takes no wave.
+        onLoaded: {
+            if (item && item.sectionAppear !== undefined)
+                item.sectionAppear = Qt.binding(() => quickPanelImplLoader.appear);
+        }
         Layout.alignment: item?.Layout.alignment ?? Qt.AlignHCenter
         Layout.fillWidth: item?.Layout.fillWidth ?? false
         visible: active

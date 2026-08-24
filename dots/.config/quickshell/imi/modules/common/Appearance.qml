@@ -550,6 +550,22 @@ Singleton {
             return MotionPolicy.entranceScaleFrom(motion.entranceRise, reference);
         }
 
+        // Convergent arrival: an object starts a short reach away from its
+        // place on its own side of the container and settles with a slight
+        // overshoot (motion_policy.js's converge block carries the measured
+        // provenance). The reaches are DISTANCES, so they come off the
+        // spacing ladder, not the duration policy; the settle shape is
+        // unitless and rides whatever tier animates `appear`.
+        readonly property real convergeReachX: root.spacing.space250
+        readonly property real convergeReachY: root.spacing.space150
+        readonly property real convergeScaleFrom: 0.92
+        function convergeFrom(normX: real, rankParity: int): var {
+            return MotionPolicy.convergeFrom(normX, rankParity);
+        }
+        function convergeSettle(appear: real): real {
+            return MotionPolicy.convergeSettle(appear);
+        }
+
         property QtObject elementMove: QtObject {
             property int duration: motion.scale(animationCurves.expressiveDefaultSpatialDuration)
             property int type: Easing.BezierSpline

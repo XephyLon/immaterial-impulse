@@ -45,8 +45,11 @@ GroupButton {
     Behavior on baseHeight {
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
     }
-    opacity: 0
-    Component.onCompleted: { opacity = 1 }
+    // The tile's arrival is the panel's convergent wave now (the panel's
+    // StaggerEntrance owns opacity/scale/translate through this): a tile
+    // added mid-session simply appears in place, which is what the old
+    // opacity: 0 + onCompleted self-fade approximated one tile at a time.
+    property real appear: 1
     Behavior on opacity {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
