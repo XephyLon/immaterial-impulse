@@ -4531,6 +4531,25 @@ A surface whose trigger is already the container's own `visible` (`ContentPage`,
 settings window's page switch) never showed it.
 ("fix(widgets): a wave waits for its container to be on screen").
 
+**A wave member must not carry a `Behavior on opacity`, because the member's opacity IS the wave's
+channel.** The wave assigns `appear = 0` to park a member — a snap, deliberately — and animates
+`appear` to bring it in, with opacity riding that scalar through a binding. A root-level
+`Behavior on opacity` in the member's file intercepts every write that binding makes: the park
+becomes a 200ms **on-stage fade-out** (measured live: `appear=0` with drawn opacity still 1.000 at
+the open), and the wave's own per-frame animation retargets the Behavior every frame — b710ef731's
+frozen-Behavior shape — pinning drawn opacity at 0.147 while `appear` was already at 0.955, so the
+member lands a whole fade-length after its slot. The android quick toggles shipped exactly that:
+their old `opacity: 0` + `onCompleted` self-fade was retired in favour of the wave and the Behavior
+that had animated it was left behind, which on every right-sidebar open drew the first-ranked tiles
+fully lit as the panel edge appeared, dimmed them on stage, held a blank beat as the slide landed,
+and then ran the cascade — read by the maintainer as "three quick toggles visible at all times,
+then the animation begins", through several attempted fixes aimed elsewhere.
+`tests/lint_wave_member_opacity_behavior.py` fails the suite on a root-level `appear`/`Behavior on
+opacity` pair; nested Behaviors (a ripple overlay, a scroll shadow) animate a child's own opacity
+and stay free.
+15688f7c ("fix(quickToggles): drop the tile's leftover opacity Behavior that swallowed the wave"),
+a5ef0c29 ("test(lint): fail on a wave member carrying a Behavior on opacity").
+
 **The adoption is the thing that decays, so the adoption is what is pinned.**
 `docs/p3drovfx-motion-measured-2026-08-22.md` §4.2 measured the sibling fork's motion off screen and
 found our arithmetic correct, our guideline written, and the wiring at **three** files against their
