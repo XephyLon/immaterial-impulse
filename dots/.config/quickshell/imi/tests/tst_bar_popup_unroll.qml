@@ -109,4 +109,52 @@ TestCase {
         // expressiveness, and it is what the height Behavior this replaced did.
         verify(BarPopupUnroll.cardHeight(400, 141, parkedSize, false, 1.21) > 400);
     }
+
+    // ---- the section entrance's three channels ------------------------------
+    //
+    // A below-the-fold section arrives on one `appear` scalar driving opacity,
+    // a slight scale and a small rise together (the measured survey's §3
+    // three-property entrance). The scale's excursion is DERIVED from the rise
+    // over the section's own width, floored at the survey's measured 0.85 -
+    // EditModeDrawer.qml derives it the same way and says why: a fixed factor
+    // is a settle on a compact card and a zoom on a wide row.
+
+    readonly property real rise: 20
+
+    function test_a_settled_member_is_not_dressed_at_all() {
+        compare(BarPopupUnroll.entranceScale(1, rise, 300), 1);
+        compare(BarPopupUnroll.entranceOffset(1, rise), 0);
+    }
+
+    function test_the_entrance_starts_scaled_down_by_the_rise_over_the_width() {
+        compare(BarPopupUnroll.entranceScale(0, rise, 400), 1 - rise / 400);
+    }
+
+    function test_the_scale_floor_is_the_surveys_measured_085() {
+        // A narrow section would otherwise invert the derivation into a zoom:
+        // 20 of rise over 100 of width is a 0.8 start, below what was measured
+        // on the sibling fork's own compact popup cards.
+        compare(BarPopupUnroll.entranceScale(0, rise, 100), 0.85);
+    }
+
+    function test_a_section_with_no_width_yet_takes_the_floor_not_NaN() {
+        // Sections are measured before their first layout pass; a width of 0
+        // divided into the rise is -Infinity waiting to happen, and NaN
+        // geometry is a relayout that never converges.
+        compare(BarPopupUnroll.entranceScale(0, rise, 0), 0.85);
+        compare(BarPopupUnroll.entranceScale(0, rise, undefined), 0.85);
+    }
+
+    function test_the_rise_is_spent_linearly_with_appear() {
+        compare(BarPopupUnroll.entranceOffset(0, rise), rise);
+        compare(BarPopupUnroll.entranceOffset(0.5, rise), rise / 2);
+    }
+
+    function test_scale_and_rise_land_together_because_both_are_linear_in_appear() {
+        // Half the appear is half the excursion on BOTH channels - the whole
+        // point of one scalar is that the three cannot finish on different
+        // schedules.
+        const from = BarPopupUnroll.entranceScale(0, rise, 400);
+        compare(BarPopupUnroll.entranceScale(0.5, rise, 400), from + (1 - from) / 2);
+    }
 }
