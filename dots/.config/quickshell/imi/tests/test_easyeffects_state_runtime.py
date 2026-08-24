@@ -34,7 +34,7 @@ SOCKET = "wayland-imi-easyeffects-state"
 
 # The harness's check count, as a literal: a harness whose step list shrinks
 # must redden here instead of reporting `failures: 0` for a shorter run.
-EXPECTED_CHECKS = 8
+EXPECTED_CHECKS = 11
 
 RECORD = """#!/usr/bin/env bash
 printf '%s\\n' "$(basename "$0") $*" >> "$EE_EXEC_LOG"
@@ -66,9 +66,13 @@ esac
 exit 1
 """
 
+# Slow mode drives the stale-probe race: the answer is read BEFORE the sleep,
+# so a probe that started before a toggle reports the pre-toggle world after
+# the toggle has landed - exactly the answer the guard must discard.
 PIDOF_BODY = """\
-[ -f "$EE_STATE_DIR/running" ] && exit 0
-exit 1
+if [ -f "$EE_STATE_DIR/running" ]; then answer=0; else answer=1; fi
+[ -f "$EE_STATE_DIR/slow" ] && sleep 0.3
+exit "$answer"
 """
 
 PKILL_BODY = """\
