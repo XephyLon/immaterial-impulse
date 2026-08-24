@@ -284,7 +284,31 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
             if (GlobalStates.sidebarLeftOpen) {
                 paneEntrance.park();
                 paneEntrance.enter();
+                if (emptyStatePlaceholder.shown) {
+                    glyphGrow.stop();
+                    emptyStatePlaceholder.scale = 0.85;
+                    glyphGrow.start();
+                }
             }
+        }
+    }
+
+    // The empty state's glyph GROWS into place while the pane's members
+    // fade - the fork's left-pane look, where the brain mark visibly
+    // arrives rather than being faded in as furniture. Scale only, on its
+    // own item: the fade is the wave member's (the messages area above it)
+    // and the placeholder's own opacity Behavior belongs to its shown
+    // fade - three channels, three owners, no doubling.
+    SequentialAnimation {
+        id: glyphGrow
+        PauseAnimation { duration: Appearance.animation.scale(120) }
+        NumberAnimation {
+            target: emptyStatePlaceholder
+            property: "scale"
+            to: 1
+            duration: Appearance.animation.scale(380)
+            easing.type: Easing.OutBack
+            easing.overshoot: 1.2
         }
     }
 
@@ -299,6 +323,13 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
         StaggerWave {
             id: paneEntrance
             target: columnLayout
+            // The right sidebar's twice-learned cadence: a modest head start
+            // so no member is mid-fade while the panel edge is arriving,
+            // then the fork's tight per-member step. The composer is the
+            // last rank - the visible tail after the landing, which is the
+            // fork's own left-pane signature.
+            leadIn: 80
+            step: 25
         }
         StaggerEntrance {
             target: columnLayout
@@ -419,6 +450,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
             }
 
             PagePlaceholder {
+                id: emptyStatePlaceholder
                 z: 2
                 shown: Ai.messageIDs.length === 0
                 icon: "neurology"

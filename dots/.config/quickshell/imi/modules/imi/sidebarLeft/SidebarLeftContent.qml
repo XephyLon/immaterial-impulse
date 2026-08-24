@@ -87,7 +87,9 @@ Item {
         }
 
         Rectangle {
-            property real appear: 1
+            // Not a wave member: the AI pane's members animate inside this
+            // card, and a fading card over fading members is the compound
+            // the right sidebar's toggle section already paid for.
             Layout.fillWidth: true
             Layout.fillHeight: true
             implicitWidth: swipeView.implicitWidth
