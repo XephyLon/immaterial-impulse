@@ -74,11 +74,21 @@ def test_the_model_is_fed_identity_stable_values():
 
 
 def test_the_delegate_resolves_indices_at_click_time():
+    # One resolver, called by both handlers at click time. Identity first
+    # (modelData IS the list's object on the current quickshell pin), and a
+    # content+done fallback for pins where ScriptModel stored copies and
+    # indexOf answered -1 - the Gentoo ebuild's pinned commit predates
+    # quickshell a611932's QJSValueList members, and every click there was
+    # a silent no-op.
     text = code(TASK_LIST)
-    calls = re.findall(r"Todo\.list\.indexOf\(", text)
+    assert "Todo.list.indexOf(" in text, \
+        "the resolver no longer tries identity first"
+    assert "findIndex" in text, \
+        "the resolver lost its content fallback for copy-valued ScriptModels"
+    calls = re.findall(r"todoItem\.resolveIndex\(\)", text)
     assert len(calls) == 2, \
         (f"expected the done-toggle and the delete to resolve their index "
-         f"with Todo.list.indexOf at click time, found {len(calls)}")
+         f"through resolveIndex() at click time, found {len(calls)}")
 
 
 if __name__ == "__main__":
