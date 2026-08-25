@@ -68,7 +68,12 @@ Slider {
     // entrance sweeps the fill from zero) without spelling a second Behavior
     // on a property this one already owns.
     property real valueVelocity: Appearance.animation.elementMoveFast.velocity
+    // Off only for a write that must land in the same frame - the sidebar's
+    // entrance parks the fill at zero before its sweep, and a park that rides
+    // the glide is a visible dip whenever the panel reopens mid-sweep.
+    property bool valueGlide: true
     Behavior on value { // This makes the adjusted value (like volume) shift smoothly
+        enabled: root.valueGlide
         SmoothedAnimation {
             velocity: root.valueVelocity
         }
