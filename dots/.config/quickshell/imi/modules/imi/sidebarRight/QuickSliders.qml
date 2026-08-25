@@ -121,8 +121,29 @@ Rectangle {
         property bool entranceParked: false
         value: entranceParked ? 0 : shownValue
         onEntranceTriggerChanged: {
+            // The park must LAND, not glide: a reopen inside the previous
+            // sweep's window otherwise rides the slow sweep velocity down -
+            // a visible dip the second sweep then has to reverse.
+            quickSlider.endSweep();
+            quickSlider.valueGlide = false;
             quickSlider.entranceParked = true;
+            quickSlider.valueGlide = true;
             sweepTimer.restart();
+        }
+        // Puts the glide back to the house velocity, whichever way the
+        // sweep ends - by landing, or by the reading changing under it.
+        function endSweep() {
+            sweepRestore.stop();
+            quickSlider.valueVelocity =
+                Qt.binding(() => Appearance.animation.elementMoveFast.velocity);
+        }
+        // A reading that changes while the sweep owns the velocity is the
+        // user (or another client) acting - choreography yields. Without
+        // this, a volume key pressed inside the ~730ms window moved the
+        // fill at the sweep's crawl and then snapped on the restore.
+        onShownValueChanged: {
+            if (sweepRestore.running)
+                quickSlider.endSweep();
         }
         Timer {
             id: sweepTimer
@@ -132,17 +153,21 @@ Rectangle {
             onTriggered: {
                 // The named glide velocity turns the release into the fork's
                 // ~650ms sweep; restored (as a binding) once the sweep lands.
+                // A near-zero reading gets no override: there is nothing to
+                // sweep, and the floor this used to install (0.05 u/s) left
+                // the fill nearly frozen against any input in the window.
                 const sweepMs = Appearance.animation.scale(650);
-                quickSlider.valueVelocity = Math.max(0.05, quickSlider.shownValue / (sweepMs / 1000));
+                if (quickSlider.shownValue > 0.01) {
+                    quickSlider.valueVelocity = quickSlider.shownValue / (sweepMs / 1000);
+                    sweepRestore.interval = sweepMs + 80;
+                    sweepRestore.restart();
+                }
                 quickSlider.entranceParked = false;
-                sweepRestore.interval = sweepMs + 80;
-                sweepRestore.restart();
             }
         }
         Timer {
             id: sweepRestore
-            onTriggered: quickSlider.valueVelocity =
-                Qt.binding(() => Appearance.animation.elementMoveFast.velocity)
+            onTriggered: quickSlider.endSweep()
         }
         configuration: StyledSlider.Configuration.M
         stopIndicatorValues: []
