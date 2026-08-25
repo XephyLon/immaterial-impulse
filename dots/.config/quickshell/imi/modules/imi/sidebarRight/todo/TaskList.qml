@@ -36,6 +36,26 @@ Item {
             property bool pendingDelete: false
             property bool enableHeightAnimation: false
 
+            // Resolved at click time - a stored index goes stale across
+            // deletes. Identity first: on current quickshell, ScriptModel
+            // hands the delegate the very object Todo.list holds. But that
+            // is a property of the PIN, not of QML - before quickshell
+            // a611932 ("core/scriptmodel: represent members as a
+            // QJSValueList") the model stored QVariants and every delegate
+            // saw a fresh copy, so indexOf answered -1 and each done/delete
+            // click was a silent no-op (the Gentoo ebuild pins exactly such
+            // a commit). The content fallback covers those installs; equal
+            // payloads are interchangeable, so a duplicate task resolving to
+            // its twin commits the same edit.
+            function resolveIndex(): int {
+                const md = todoItem.modelData;
+                const idx = Todo.list.indexOf(md);
+                if (idx !== -1)
+                    return idx;
+                return Todo.list.findIndex(task =>
+                    task.content === md.content && task.done === md.done);
+            }
+
             implicitHeight: todoItemRectangle.implicitHeight
             width: ListView.view.width
             clip: true
@@ -82,10 +102,9 @@ Item {
                         TodoItemActionButton {
                             Layout.fillWidth: false
                             onClicked: {
-                                // Resolved at click time: modelData IS the item in
-                                // Todo.list (identity preserved for the model diff),
-                                // and a stored index goes stale across deletes.
-                                const index = Todo.list.indexOf(todoItem.modelData);
+                                const index = todoItem.resolveIndex();
+                                if (index === -1)
+                                    return;
                                 if (!todoItem.modelData.done)
                                     Todo.markDone(index);
                                 else
@@ -102,7 +121,9 @@ Item {
                         TodoItemActionButton {
                             Layout.fillWidth: false
                             onClicked: {
-                                Todo.deleteItem(Todo.list.indexOf(todoItem.modelData));
+                                const index = todoItem.resolveIndex();
+                                if (index !== -1)
+                                    Todo.deleteItem(index);
                             }
                             contentItem: MaterialSymbol {
                                 anchors.centerIn: parent
