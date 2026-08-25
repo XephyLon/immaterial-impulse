@@ -12,6 +12,31 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.30.2] — 2026-08-26
+
+Two more "silently wrong" settings fixes and one decode the selector never
+needed to pay.
+
+### Fixed
+- **The EasyEffects quick toggle tells the truth about a failed launch.** The
+  toggle flipped to "on" the moment it was clicked and nothing ever checked
+  whether the daemon actually came up, so a failed launch left it saying on
+  for the rest of the session. It still answers the click immediately, and
+  now verifies against the real process list a grace period later — a launch
+  that died is reflected instead of trusted.
+- **The Screens settings section is findable again on one monitor.** Like the
+  Clight section in 0.30.1, Settings search offered "Screens" while the
+  section hid itself whenever only one monitor was connected — with a sharper
+  edge: a laptop undocked with a stored screen filter hid the only control
+  that can clear that filter. The section now stays on the page; the chooser
+  appears when there is something to choose, and a single screen with no
+  stored filter gets a caption instead.
+
+### Changed
+- **The wallpaper selector opens lighter.** Its blurred backdrop decoded the
+  current wallpaper at full file resolution on every open; the decode is now
+  bounded to the size of the backdrop it is drawn into.
+
 ## [0.30.1] — 2026-08-24
 
 Three fixes, all in the "silently wrong" family: terminal theming that died on
