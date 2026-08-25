@@ -68,13 +68,33 @@ Item {
     // last-ranked one or two elements visibly pop after the panel lands.
     // So: park and enter on the open's rising edge, with no gate - the slide
     // masks the wave's early frames, and the tail is the grammar.
+    // With keepRightSidebarLoaded off, this whole tree is created INSIDE the
+    // sidebarRightOpenChanged emission (the loader's `active` follows
+    // `slide.shown` synchronously) - and a connection made during an
+    // emission does not receive that emission. The Connections below then
+    // misses every open, because the tree is torn down on close: no wave, no
+    // trigger, ever. So a tree born with the panel already open runs the
+    // entrance itself, one turn later - after the children (and the
+    // calendar's own creation-edge arming) have finished coming up.
+    Component.onCompleted: {
+        if (GlobalStates.sidebarRightOpen)
+            Qt.callLater(() => {
+                if (GlobalStates.sidebarRightOpen)
+                    root.runEntrance();
+            });
+    }
+
+    function runEntrance() {
+        sectionEntrance.park();
+        sectionEntrance.enter();
+        root.entranceTrigger++;
+    }
+
     Connections {
         target: GlobalStates
         function onSidebarRightOpenChanged() {
             if (GlobalStates.sidebarRightOpen) {
-                sectionEntrance.park();
-                sectionEntrance.enter();
-                root.entranceTrigger++;
+                root.runEntrance();
                 return;
             }
             if (!GlobalStates.sidebarRightOpen) {

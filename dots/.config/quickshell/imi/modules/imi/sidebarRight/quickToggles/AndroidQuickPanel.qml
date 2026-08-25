@@ -47,7 +47,21 @@ AbstractQuickPanel {
     readonly property string unusedSignature: QuickToggleLayout.signatureOf(root.unusedToggles, root.columns)
     onUsedSignatureChanged: root.requestSync()
     onUnusedSignatureChanged: root.requestSync()
-    Component.onCompleted: root.requestSync()
+    // The second arm mirrors SidebarRightContent's: with the keep-loaded
+    // toggle off this panel is created inside the open's own emission, and a
+    // connection made mid-emission never hears it - so a panel born open
+    // runs its wave itself, one turn later, after the sync scheduled above
+    // has built the tiles the wave walks.
+    Component.onCompleted: {
+        root.requestSync();
+        if (GlobalStates.sidebarRightOpen)
+            Qt.callLater(() => {
+                if (GlobalStates.sidebarRightOpen) {
+                    tileWave.park();
+                    tileWave.enter();
+                }
+            });
+    }
 
     // ...and the sync itself waits for the turn to finish, because a live
     // `list<var>` notifies per ELEMENT written. Measured: one
