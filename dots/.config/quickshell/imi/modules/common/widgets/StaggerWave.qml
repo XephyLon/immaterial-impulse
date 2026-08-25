@@ -159,8 +159,20 @@ QtObject {
         const leadIn = Appearance.animation.scale(root.leadIn);
 
         for (let i = 0; i < kids.length; i++) {
-            if (ranks[i] < 0)
+            if (ranks[i] < 0) {
+                // A member that is not on screen takes no slot - but it must
+                // not be LEFT at the 0 the park wrote, either. It is invisible
+                // right now, so nothing shows; when whatever hides it lets it
+                // back on screen it arrives at rest, which is what it did
+                // before the wave existed. Leaving it parked is a member that
+                // never comes back: the AI pane's suggestion row is hidden at
+                // every open (the composer starts empty) and becomes visible
+                // when the user types "/" - at the opacity the last park
+                // wrote, for the rest of the open.
+                if (kids[i].appear !== undefined)
+                    kids[i].appear = 1;
                 continue;
+            }
             kids[i].appear = 0;
             wave.push(root.fade.createObject(root, {
                 item: kids[i],

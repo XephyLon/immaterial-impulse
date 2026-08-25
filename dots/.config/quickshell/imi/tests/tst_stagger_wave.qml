@@ -11,8 +11,10 @@ import qs.modules.common.widgets
 //
 // What is pinned: the list REPLACES the children walk (a member the target
 // does not contain is still parked and still enters), rank comes from the
-// list's order with a hidden member spending no slot, and park/enter still
-// meet in the middle - a parked member ends at 1 after an entrance.
+// list's order with a hidden member spending no slot but SETTLED rather than
+// left parked (a member hidden at the open that becomes visible later must
+// arrive at rest, not at the 0 the park wrote), and park/enter still meet in
+// the middle - a parked member ends at 1 after an entrance.
 TestCase {
     name: "StaggerWaveItemsTest"
     when: windowShown
@@ -85,8 +87,9 @@ TestCase {
         tryCompare(resident, "appear", 1);
         tryCompare(reparented, "appear", 1);
         compare(unlisted.appear, 1);
-        compare(hiddenMember.appear, 0,
-                "a hidden member spends no slot and stays parked");
+        compare(hiddenMember.appear, 1,
+                "a hidden member spends no slot and is settled, so it "
+                + "arrives at rest if something shows it mid-open");
         wave.settle();
     }
 }
