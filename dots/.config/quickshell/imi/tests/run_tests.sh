@@ -959,6 +959,26 @@ if ! python3 "$SCRIPT_DIR/test_parallax_migration_runtime.py"; then
     exit 1
 fi
 
+# A register that exists but is not named in this file protects nothing;
+# checked before anything else so the report is not buried under a long run.
+echo "Running suite registration lint..."
+if ! python3 "$SCRIPT_DIR/lint_suite_registration.py"; then
+    echo "Suite registration lint failed."
+    exit 1
+fi
+
+# The bar popup's section wave: armed on a takeover from idle, released by
+# the gate, and never fired against a tree that was not parked. This register
+# existed for a while without being wired in here - the mutations it plants
+# were only ever caught by hand runs, which is the one failure mode a suite
+# cannot see about itself. The meta-check at the end of this file exists so
+# the next unwired register goes red instead.
+echo "Running bar popup section entrance tests..."
+if ! python3 "$SCRIPT_DIR/test_bar_popup_section_entrance.py"; then
+    echo "Bar popup section entrance tests failed."
+    exit 1
+fi
+
 # One motion policy: that every tier still routes through it, and that the
 # reduce-motion floor stays a named state rather than the far end of a slider.
 echo "Running motion policy contract tests..."
