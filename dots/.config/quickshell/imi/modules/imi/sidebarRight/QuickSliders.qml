@@ -160,15 +160,12 @@ Rectangle {
             color: nearFull ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
             text: quickSlider.materialSymbol
             // The fork's slider icon spins with the fill - one turn across
-            // the whole range, settling with the same slight overshoot.
+            // the whole range. No Behavior here: `value` already glides
+            // through the slider's own animation, so the binding is smooth
+            // by construction, and a Behavior stacked on an animated source
+            // is retargeted every frame of the sweep - the icon sat still
+            // for the whole fill and then whipped the turn in one beat.
             rotation: quickSlider.value * 360
-            Behavior on rotation {
-                NumberAnimation {
-                    duration: Appearance.animation.scale(350)
-                    easing.type: Easing.OutBack
-                    easing.overshoot: 1.5
-                }
-            }
 
             Behavior on color {
                 animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
