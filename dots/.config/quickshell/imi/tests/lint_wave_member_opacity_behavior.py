@@ -21,7 +21,10 @@
 #
 # That is exactly what the android quick toggles shipped: the tiles' old
 # `opacity: 0` + `onCompleted` self-fade was retired in favour of the wave
-# (8a0120c2) and the Behavior that had animated it was left behind - so on
+# (8a0120c2, "feat(motion): objects converge into place from their own
+# side, with a landing" - subject kept beside the sha so the pointer
+# survives a rebase renumbering it) and the Behavior that had animated it
+# was left behind - so on
 # every sidebar open the first-ranked tiles read as "visible at all times,
 # then the animation begins", measured on the live shell as appear=0 with
 # drawn opacity still 1.000 at the open and 0.147 while appear was at 0.955.
