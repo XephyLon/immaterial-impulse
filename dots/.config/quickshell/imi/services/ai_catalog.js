@@ -170,7 +170,10 @@ function buildModel(providerDef, entry) {
     }
     return {
         "id": providerDef.id + ":" + value,
-        "legacyId": entry.legacyId !== undefined ? entry.legacyId : "",
+        // Normalized to a string here so resolve() may ask .length without
+        // ceremony: stage 2's extraModels feed is user-authored JSON, where
+        // a null legacyId is one typo away.
+        "legacyId": typeof entry.legacyId === "string" ? entry.legacyId : "",
         "providerId": providerDef.id,
         "value": value,
         "name": entry.name !== undefined ? entry.name : value,
@@ -272,7 +275,8 @@ function resolve(id) {
             return models[i];
     }
     for (var j = 0; j < models.length; j++) {
-        if (models[j].legacyId.length > 0 && models[j].legacyId === wanted)
+        if (typeof models[j].legacyId === "string" && models[j].legacyId.length > 0
+                && models[j].legacyId === wanted)
             return models[j];
     }
     return null;
