@@ -68,8 +68,10 @@ STAGGER_ADOPTERS = {
     "modules/imi/desktopMenu/DesktopMenu.qml",
     # The right sidebar, re-adopted - the register's one round trip so far;
     # the STAGGER_DECLINED preamble below carries the full history and the
-    # two repairs that made re-adoption arguable. Gate on the EdgeSlide's
-    # progress via containerProgress, no leadIn, enter-only. Its sections are
+    # two repairs that made re-adoption arguable. UNGATED: park-and-enter on
+    # the open's rising edge, running under the slide, whose `reveal` curtain
+    # masks the early frames (the gated version put the whole construction on
+    # stage and was measured as ruined - 1f254a158b). Its sections are
     # deliberately UNIFORM while the toggle grid's tiles converge: section
     # translate stacked on tile convergence was tried and judged ruined on
     # screen - the fork's sections hold still and their PIECES move.
@@ -106,9 +108,10 @@ STAGGER_ADOPTERS = {
 # unrelated reasons - the sidebar became a persistent surface whose EdgeSlide
 # owns the slide in-client - so when the maintainer asked for the cascade
 # again (2026-08-24), re-adoption was argued on the repairs, not copied:
-# the wave now gates on `containerProgress` (the EdgeSlide's own scalar,
-# handed in by SidebarRight.qml) through `contentsArrived`, carries NO
-# leadIn, and runs enter-only - the sections ride the slide out rigid.
+# the wave first gated on the EdgeSlide's scalar - and that version was
+# measured as ruined (the panel arrived empty and built itself on stage).
+# The design that stuck runs UNGATED under the slide, park-and-enter on the
+# open's rising edge, behind EdgeSlide's `reveal` curtain (1f254a158b).
 # It is in STAGGER_ADOPTERS above; this note stays because the register's
 # job is exactly this round trip.
 STAGGER_DECLINED = {
