@@ -208,7 +208,17 @@ Scope {
                 // partial `appear`, and a popup returning later by cross-fade
                 // - where nothing parks or re-enters - would keep it dimmed
                 // for the rest of the session.
-                if (previous && previous !== popup) sectionWave.settle();
+                if (previous && previous !== popup) {
+                    sectionWave.settle();
+                    // A flag armed for the PREVIOUS tree must not survive the
+                    // slot changing hands: hover A from idle, slide to B
+                    // before the gate answers, and the gate would fire
+                    // against B's never-parked sections - snapping them to
+                    // zero to cascade content that was already at full
+                    // strength, which is the opposite of what a cross-fade
+                    // promises. A takeover from idle re-arms below.
+                    overlayWindow.wavePending = false;
+                }
                 overlayWindow.current = popup;
 
                 if (previous && previous !== popup && previous.contentItem) {
