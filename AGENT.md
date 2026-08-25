@@ -4574,11 +4574,19 @@ the moment it opens and the moment it closes."* It is off that surface again, an
 **It since came back, the register's way — argued, at the maintainer's request, after both
 refusal facts had been repaired by unrelated work**: the persistent EdgeSlide surface removed the
 per-gesture teardown that was the measured frame drop, and the slide's in-client `progress`
-scalar is exactly the container progress whose absence forced the guessed leadIn. The re-adopted
-wave gates on it through `contentsArrived`, carries no leadIn, and is enter-only (sections ride
-the slide out rigid). The register entry moved from `STAGGER_DECLINED` to `STAGGER_ADOPTERS` with
+scalar gave the wave something real to coordinate with. The first re-adoption gated on that
+scalar through `contentsArrived` — correct-sounding, and measured on screen as ruined: parked
+content plus a gate puts the whole construction ON STAGE, the panel arriving empty and visibly
+building itself. The design that stuck is the opposite, read object-by-object off the fork's
+re-recorded sidebars: the wave runs UNGATED, park-and-enter on the open's rising edge, UNDER the
+slide — whose `reveal` curtain (EdgeSlide's 15%-plateau opacity ramp) masks the early frames, so
+the panel materializes already composed and only the last-ranked members visibly land after it —
+and the tile wave carries a small leadIn so no member is mid-fade as the panel edge arrives
+(1f254a158b ("fix(motion): the entrance runs under the slide - the panel materializes
+composed"); a0035941 ("fix(motion): the first tiles wait their turn - lead-in restored, curtain
+dimmed")). The register entry moved from `STAGGER_DECLINED` to `STAGGER_ADOPTERS` with
 the history kept in place — the round trip is the register doing its job, not the refusal being
-overridden. (feat(sidebar): the sections cascade again, gated on the slide the surface now owns.) Take the
+overridden. Take the
 reasoning rather than the removal, because both halves of the complaint were right and only one of
 them was the wave's:
 
