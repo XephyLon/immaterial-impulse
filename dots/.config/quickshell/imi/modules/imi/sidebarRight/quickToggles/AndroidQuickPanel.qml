@@ -123,6 +123,11 @@ AbstractQuickPanel {
             id: usedGrid
             width: contentItem.width
             implicitHeight: root.gridHeight(usedModel)
+            // Read by a tile deciding whether its arrival is its own to
+            // animate: while this wave is running (or armed), the wave owns
+            // every arrival, and a tile fading itself under it would be a
+            // second writer on `appear`.
+            property StaggerWave entranceWave: tileWave
 
             // The tiles' own wave: convergent, so each tile arrives from its
             // side of the grid - the leftmost third from the left, the
