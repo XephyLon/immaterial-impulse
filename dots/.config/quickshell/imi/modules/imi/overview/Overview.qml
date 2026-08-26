@@ -54,16 +54,30 @@ Scope {
         overviewScope.targetScreen = WM.focusedMonitor?.name ?? "";
     }
 
-    // The window an open (or a search-prefix toggle about to open) should
-    // address. Already open: the one that is showing, wherever focus has
-    // moved since. Closed: the focused monitor's, latched now.
-    function targetWindow() {
-        if (GlobalStates.overviewOpen && overviewScope.activeWindow)
-            return overviewScope.activeWindow;
+    // The focused monitor's window, latched now. Called at EVERY open edge:
+    // the first version of this asked "already open?" first and handed back
+    // the window that was showing - but at the open edge the flag has just
+    // flipped, so that question was always yes once any open had happened,
+    // and every open after the first reused the first screen's window. On
+    // one monitor that is invisible; on two it is #297 reopened ("still on
+    // the primary"). Reproduced on a nested two-output Hyprland, where the
+    // shell's WM.focusedMonitor followed every focusedmon event and the
+    // latch still returned the stale window.
+    function windowForFocusedMonitor() {
         overviewScope.latchTarget();
         const windows = overviewWindows.instances;
         return windows.find(w => w.modelData.name === overviewScope.targetScreen)
             ?? windows[0] ?? null;
+    }
+
+    // The window a search-prefix toggle should address. Already open: the
+    // one that is showing, wherever focus has moved since (the text goes
+    // where the user is looking). Closed: the focused monitor's, latched now;
+    // the open edge that follows latches again and lands on the same answer.
+    function targetWindow() {
+        if (GlobalStates.overviewOpen && overviewScope.activeWindow)
+            return overviewScope.activeWindow;
+        return overviewScope.windowForFocusedMonitor();
     }
 
     // One dispatcher for the whole family, at the scope: per-window handlers
@@ -74,7 +88,7 @@ Scope {
         target: GlobalStates
         function onOverviewOpenChanged() {
             if (GlobalStates.overviewOpen) {
-                overviewScope.activeWindow = overviewScope.targetWindow();
+                overviewScope.activeWindow = overviewScope.windowForFocusedMonitor();
                 overviewScope.activeWindow?.open();
             } else {
                 overviewScope.dontAutoCancelSearch = false;
@@ -409,6 +423,12 @@ Scope {
         }
         function clipboardToggle() {
             overviewScope.toggleClipboard();
+        }
+        // Which screen's window the last open landed on - what
+        // tests/run_overview_focus_probe.sh reads after moving focus between
+        // two outputs. Empty until the first open.
+        function activeScreen(): string {
+            return overviewScope.activeWindow?.modelData.name ?? "";
         }
     }
 
