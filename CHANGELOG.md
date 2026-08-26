@@ -12,6 +12,21 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **No more empty pill in the bar.** With the timer or the submap indicator
+  at the end of a bar section, an empty rounded stub sat beside the last
+  widget whenever the pill had nothing to show — the group around the pill
+  kept its padding after the pill itself had collapsed. A group whose
+  content is gone now goes with it, and the widget next to it gets the
+  rounded end it is entitled to. Edit mode still shows every slot so an idle
+  pill can be dragged.
+- **The notifications section no longer bleeds over its neighbours.** When
+  the media player and an expanded timer/calendar left the right sidebar no
+  room for notifications, the empty-state bell, "Nothing" and the
+  "0 notifications" pill still painted, over the media player and the tab
+  row. The section now paints nothing when it has no room and hides its
+  list until there is space for the status row and a line above it.
+
 ## [0.31.0] — 2026-08-26
 
 The motion language's second half: the panels arrive composed, with their
