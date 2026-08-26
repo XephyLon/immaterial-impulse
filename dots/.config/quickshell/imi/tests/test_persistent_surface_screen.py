@@ -23,8 +23,10 @@ carries the namespace, three things:
   open flag - N surfaces turning OnDemand on one open would leave the
   compositor to pick which gets the keyboard, and N masks would let every
   screen's edge eat clicks;
-- the open edge latches the target (`latchTarget()`) and reads focus through
-  `WM.focusedMonitor`, the shell's one window-manager facade.
+- the open edge resolves the focused monitor's window AFRESH
+  (`windowForFocusedMonitor()`, which latches through `WM.focusedMonitor`,
+  the shell's one window-manager facade) - never through the prefix
+  toggles' already-open shortcut, which at the open edge is always taken.
 
 Every sweep asserts it FOUND what it swept for.
 """
@@ -153,8 +155,14 @@ def test_the_open_edge_latches_the_focused_monitor():
         assert "WM.focusedMonitor" in latch.group(1), \
             (f"{name}'s latch reads focus from somewhere other than "
              "WM.focusedMonitor - the shell's one window-manager facade")
-        assert "targetWindow()" in handlers[0] or "latchTarget()" in handlers[0], \
-            f"{name}'s `{handler}` opens without latching the target first"
+        assert "windowForFocusedMonitor()" in handlers[0], \
+            (f"{name}'s `{handler}` does not resolve the focused monitor's window "
+             "afresh - the first version reused the window already showing, and "
+             "at the open edge the flag has just flipped, so every open after the "
+             "first landed on the first screen (#297 reopened)")
+        assert "targetWindow()" not in handlers[0], \
+            (f"{name}'s `{handler}` goes through targetWindow(), whose already-open "
+             "shortcut is for the prefix toggles, not the open edge")
 
 
 if __name__ == "__main__":
