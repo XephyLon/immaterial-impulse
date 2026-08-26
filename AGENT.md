@@ -4694,6 +4694,21 @@ a surface picked from the END of the list, and with the bar/OSK after the panel,
 never activates and every keypress is silently dropped (the persistent-sidebar contract pins the
 order; fix(sidebars): route the focus grab's keyboard to the opening panel). `SessionScreen` still
 maps per open and pays this same 61ms.
+
+A fourth cost, found by the first multi-monitor user to update (#297): **a persistent surface has
+to say which screen it lives on.** A `PanelWindow` with no `screen:` asks the compositor to choose
+— Quickshell passes a null output — and Hyprland answers with the monitor focused *at creation*. A
+window rebuilt on every open therefore followed focus, silently, and nobody had ever written that
+down; a window created once at boot lands on whichever monitor had focus at boot and never moves.
+The overview is one window per screen now (`Variants` over `Quickshell.screens`, `screen:
+modelData`), and the scope latches the focused monitor's name at the open edge and opens only that
+screen's window — latched, not live, so focus moving mid-open does not teleport the card. Two
+gates follow from having siblings: `keyboardFocus` and the `mask` read the target predicate as
+well as the flag, or every screen's surface turns OnDemand on one open and the compositor picks
+which gets the keyboard. `tests/test_persistent_surface_screen.py` pins the shape. The sidebars
+carry the same latent bug and are not converted yet: the left one reparents a single content tree
+between two windows, so per-screen there is more than a wrap. (fix(overview): one surface per
+screen, and the open picks the focused monitor's.)
 (feat(widgets): EdgeSlide, the runner for a panel whose surface stays mapped;
 fix(sidebar): the right sidebar's surface outlives the gesture;
 fix(sidebar): the left sidebar's surface outlives the gesture;
