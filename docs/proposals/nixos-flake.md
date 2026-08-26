@@ -133,9 +133,20 @@ which has no system nix:
   probe config that manages `xdg.configFile."gtk-3.0/gtk.css"` — a matugen
   output — makes the module emit exactly the tier-3 warning.
 
-Not yet validated: actually *running* the shell from the store path
-(needs a NixOS machine or VM with a Wayland session), and
-`tests/run_tests.sh` under `nix develop`.
+- A NixOS VM test (`testers.runNixOSTest`, qemu/KVM): a full NixOS guest
+  with the module enabled boots, activation succeeds, and in-guest
+  assertions hold — both tier-1 symlinks resolve into a read-only store,
+  `config.json` seeds byte-equal to the package's defaults as a real
+  file, a user overwrite of it **survives a service restart** (seed-once
+  proven live, not just read from the script), no matugen output is
+  store-managed, and `qs --version` runs from the user profile. The test
+  flake needs a home-manager input the root flake deliberately lacks, so
+  it lives outside the tree for now; folding it into CI is part of the
+  CI TODO above.
+
+Not yet validated: running the shell's Wayland session from the store
+path (needs a compositor in the guest), and `tests/run_tests.sh` under
+`nix develop`.
 
 ## Declarative vs mutable — settled
 
