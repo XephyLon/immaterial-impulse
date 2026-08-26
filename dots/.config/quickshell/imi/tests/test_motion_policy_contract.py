@@ -71,7 +71,7 @@ STAGGER_ADOPTERS = {
     # two repairs that made re-adoption arguable. UNGATED: park-and-enter on
     # the open's rising edge, running under the slide, whose `reveal` curtain
     # masks the early frames (the gated version put the whole construction on
-    # stage and was measured as ruined - 1f254a158b). Its sections are
+    # stage and was measured as ruined - d59440244 ("fix(motion): the entrance runs under the slide - the panel materializes composed")). Its sections are
     # deliberately UNIFORM while the toggle grid's tiles converge: section
     # translate stacked on tile convergence was tried and judged ruined on
     # screen - the fork's sections hold still and their PIECES move.
@@ -111,7 +111,7 @@ STAGGER_ADOPTERS = {
 # the wave first gated on the EdgeSlide's scalar - and that version was
 # measured as ruined (the panel arrived empty and built itself on stage).
 # The design that stuck runs UNGATED under the slide, park-and-enter on the
-# open's rising edge, behind EdgeSlide's `reveal` curtain (1f254a158b).
+# open's rising edge, behind EdgeSlide's `reveal` curtain (d59440244, "fix(motion): the entrance runs under the slide - the panel materializes composed").
 # It is in STAGGER_ADOPTERS above; this note stays because the register's
 # job is exactly this round trip.
 STAGGER_DECLINED = {
