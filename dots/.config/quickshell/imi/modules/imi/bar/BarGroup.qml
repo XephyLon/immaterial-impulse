@@ -55,21 +55,51 @@ Item {
 
     readonly property real fullRadius: height / 2
     readonly property real midRadius: Config.options.bar.cornerStyle === 2 ? Appearance.rounding.unsharpenmore + 2 : Appearance.rounding.unsharpenmore
-    property real startRadius: {
-        if (totalCount <= 1) return fullRadius;
-        if (currentIndex === 0) return fullRadius;
-        return midRadius;
+    // The ends of a row are decided by which neighbours are SHOWING, not by
+    // index: a group beside a collapsed one is the end of the row for as
+    // long as that neighbour is gone, and gets the full radius the index
+    // arithmetic would only give it if the neighbour were not in the layout
+    // at all. Walks the parent's children, which is the Repeater's row order;
+    // non-groups (the Repeater itself) carry no widgetId and are skipped. A
+    // group with no row around it (a harness, a preview) has no neighbours
+    // either way, which is the old `totalCount <= 1` answer.
+    function neighbourShowing(step) {
+        const siblings = root.parent?.children ?? [];
+        let here = -1;
+        for (let k = 0; k < siblings.length; k++) {
+            if (siblings[k] === root) { here = k; break; }
+        }
+        if (here < 0) return false;
+        for (let k = here + step; k >= 0 && k < siblings.length; k += step) {
+            const sibling = siblings[k];
+            if (sibling.widgetId === undefined) continue;
+            if (!sibling.collapsed) return true;
+        }
+        return false;
     }
-    property real endRadius: {
-        if (totalCount <= 1) return fullRadius;
-        if (currentIndex === totalCount - 1) return fullRadius;
-        return midRadius;
-    }
+    readonly property bool showingBefore: neighbourShowing(-1)
+    readonly property bool showingAfter: neighbourShowing(1)
+    property real startRadius: showingBefore ? midRadius : fullRadius
+    property real endRadius: showingAfter ? midRadius : fullRadius
 
     implicitWidth: vertical && root.isMaterial ? Appearance.sizes.baseVerticalBarWidth - 6 : (gridLayout.implicitWidth + padding * 2)
     implicitHeight: vertical ? (gridLayout.implicitHeight + padding * 2) : Appearance.sizes.baseBarHeight
 
     default property alias items: gridLayout.children
+
+    // A group whose content has collapsed to nothing paints nothing. The
+    // standalone pills (timer, submap, privacy) animate their implicitWidth
+    // to 0 when idle and hide themselves - and this group's padding was
+    // left standing around that 0 as a small empty pill beside the
+    // neighbour, all day, for every layout that ends in one of them. Read
+    // from the grid, which is what those pills drive, on the axis the bar
+    // lays out along. Edit mode keeps every group on the bar: an idle pill
+    // still has to be there to drag.
+    readonly property bool contentEmpty: root.vertical
+        ? gridLayout.implicitHeight <= 0
+        : gridLayout.implicitWidth <= 0
+    readonly property bool collapsed: contentEmpty && !editLoader.active
+    visible: !collapsed
 
     Rectangle {
         id: background
