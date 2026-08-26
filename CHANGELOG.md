@@ -13,6 +13,11 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **The overview opens on the focused monitor every time, not just the first
+  time.** 0.31.0's fix picked the right monitor for the first open and then
+  kept reusing that monitor's window for every open after it — on one
+  monitor invisible, on two the same bug as before (#297, reopened). Each
+  open now asks which monitor has focus.
 - **No more empty pill in the bar.** With the timer or the submap indicator
   at the end of a bar section, an empty rounded stub sat beside the last
   widget whenever the pill had nothing to show — the group around the pill

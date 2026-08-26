@@ -4718,7 +4718,17 @@ modelData`), and the scope latches the focused monitor's name at the open edge a
 screen's window — latched, not live, so focus moving mid-open does not teleport the card. Two
 gates follow from having siblings: `keyboardFocus` and the `mask` read the target predicate as
 well as the flag, or every screen's surface turns OnDemand on one open and the compositor picks
-which gets the keyboard. `tests/test_persistent_surface_screen.py` pins the shape. The sidebars
+which gets the keyboard. `tests/test_persistent_surface_screen.py` pins the shape. **The latch is
+taken at every open edge, by a function that does nothing else.** The first version resolved the
+target through the prefix toggles' helper, whose "already open? then the window that is showing"
+shortcut is right for a toggle pressed while the overview is up — and always taken at the open
+edge, where the flag has just flipped, so every open after the first reused the first screen's
+window. One monitor cannot show that; #297 reopened on two. The shell's `WM.focusedMonitor` was
+following every `focusedmon` event the whole time (verified against Hyprland's event socket on a
+nested two-output session). `tests/run_overview_focus_probe.sh` is that session, run by hand:
+two wayland outputs, focus moved between them, `search activeScreen` compared with
+`hyprctl monitors` `focused` on each open. (fix(overview): every open latches the focused
+monitor afresh; the toggles alone keep the already-open shortcut.) The sidebars
 carry the same latent bug and are not converted yet: the left one reparents a single content tree
 between two windows, so per-screen there is more than a wrap. (fix(overview): one surface per
 screen, and the open picks the focused monitor's.)
