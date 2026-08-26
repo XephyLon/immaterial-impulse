@@ -484,6 +484,15 @@ if ! python3 "$SCRIPT_DIR/test_exit_owned_surface_contract.py"; then
     exit 1
 fi
 
+# A persistent surface is one window per screen, pinned to its output, with
+# the open edge latching which of them shows - a window with no screen of its
+# own is created once, on the monitor focused at boot, and never moves (#297).
+echo "Running persistent surface screen contract tests..."
+if ! python3 "$SCRIPT_DIR/test_persistent_surface_screen.py"; then
+    echo "Persistent surface screen contract tests failed."
+    exit 1
+fi
+
 # The shell has two password prompts - the lock screen and the polkit dialog -
 # and they were two different text fields, one of them Material's outlined
 # container with the prompt floating in a notch. The check derives the control
