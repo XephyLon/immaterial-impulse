@@ -1,6 +1,11 @@
 # Proposal: NixOS flake
 
-> Draft / tracking proposal. Not scheduled.
+> In progress. The first pass is implemented on `feat/nixos-flake`: a root
+> `flake.nix` with `packages.<system>.immaterial-impulse`,
+> `homeManagerModules.default` and `devShells.default`, the three-tier
+> declarative/mutable split as designed below, and the nested
+> `sdata/dist-nix` flake marked superseded. See "Sketch" for the per-item
+> status and "Open questions" for what the implementation resolved.
 
 ## Goal
 
@@ -71,27 +76,46 @@ side of it rather than being an alternative to it.
 
 ## Sketch
 
-Rough shape, not a design:
+Status per item, now that the first pass exists:
 
-1. **Root `flake.nix`** with, at minimum:
-   - `packages.<system>.immaterial-impulse` — the shell tree as a derivation
-     (the `dots/.config/quickshell/imi` contents plus scripts), so it can be
-     referenced by store path rather than copied.
-   - `homeManagerModules.default` — options for enabling the shell, choosing a
-     panel family, and seeding `~/.config/immaterial-impulse/config.json`.
-   - `nixosModules.default` — the system-level pieces the installer currently does
-     in `install-setups`: services, polkit rules, greeter/SDDM theme, plymouth.
-   - `devShells.default` — quickshell + Qt + the Python test deps, so
-     `tests/run_tests.sh` runs under `nix develop`.
-2. **What is declarative vs mutable — settled, see the section below.** The
+1. **Root `flake.nix`** — done, with one deliberate omission:
+   - `packages.<system>.immaterial-impulse` — **done** (`nix/package.nix`):
+     the `dots/.config/quickshell/imi` tree, whole, as a store path.
+     `packages.<system>.quickshell-wrapped` sits beside it, importing the
+     nested flake's `quickshell.nix` (Qt bundling reused, not rewritten).
+   - `homeManagerModules.default` — **done** (`nix/hm-module.nix`): enable
+     option, package overrides, and the three-tier split below implemented
+     exactly — tier 1 symlinked from the store, tier 2 seeded by an
+     activation script only when absent (`seedConfig` gates the
+     `config.json` half), tier 3 refused, with warnings when the
+     surrounding home-manager configuration manages a matugen output.
+     No panel-family option: the shell has exactly one family today.
+   - `nixosModules.default` — **omitted, deliberately**, rather than
+     stubbed. The home-manager module covers the shell itself; the
+     system-level pieces (SDDM theme, plymouth, polkit rules, services)
+     have no flake story yet and stay under "Open questions".
+   - `devShells.default` — **done** (`nix/dev-shell.nix`): qmltestrunner
+     via `qt6.qtdeclarative`, python3 with PIL/numpy, weston, dbus and the
+     wrapped quickshell, so `tests/run_tests.sh` can run under
+     `nix develop`. Unvalidated so far — written on a machine with no
+     `nix` binary (see TODO below).
+2. **What is declarative vs mutable — settled and implemented.** The
    split is three-way, not two-way, and the third tier is the one that decides
    whether a `home-manager switch` quietly destroys the user's colours.
-3. **Reconcile with the existing `sdata/dist-nix` tree** — either promote it to
-   the root and delete the nested flake, or keep `--via-nix` as a legacy path and
-   mark it superseded. Do not ship two flakes.
-4. **Unpin quickshell** from the hardcoded commit, or at least move the pin
-   somewhere it is obviously a pin.
-5. **CI**: `nix flake check` on push is the only thing that keeps a flake honest.
+3. **Reconcile with the existing `sdata/dist-nix` tree** — done, by marking
+   `--via-nix` superseded (`sdata/dist-nix/README.md`) rather than deleting
+   the nested flake: that flake plus `install-deps.sh` is the whole working
+   path for non-NixOS distros via standalone home-manager, and nothing in
+   the root flake replaces it yet. The one file they would duplicate,
+   `quickshell.nix`, is shared — the root flake imports it in place.
+4. **Unpin quickshell** — done: the root flake's input has no commit in
+   its URL; the pin belongs to `flake.lock`. **TODO: no `flake.lock` is
+   committed yet** — the implementing machine had no `nix` binary, and an
+   invented lock is worse than an absent one. Generating and committing it
+   (and running `nix flake check` / `nix build .#immaterial-impulse` for
+   the first time) is the first task for a machine with nix.
+5. **CI**: `nix flake check` on push is the only thing that keeps a flake
+   honest. **TODO — not in this pass**; it needs the lock file first.
 
 ## Declarative vs mutable — settled
 
@@ -157,6 +181,14 @@ Arch container. A Nix user gets the shell with static wallpapers, and
 `wallpaperSelector.wallpaperEngine` stays inert. Packaging that dependency tree
 is its own proposal.
 
+Also out of the first pass, still TODO here:
+
+- a replacement for Settings → Update Dots (`exp-update`) under a flake —
+  see "Open questions";
+- the CI `nix flake check` workflow (Sketch item 5);
+- `flake.lock` generation and the first real `nix flake check` /
+  `nix build .#immaterial-impulse` run (Sketch item 4).
+
 ## Open questions
 
 - Does the plugin system work under Nix? Partly answered: **bundled** plugins are
@@ -173,8 +205,12 @@ is its own proposal.
   `hyprctl`, `ffmpeg`, ImageMagick, `cava`, `ydotool`…). Each is a `makeWrapper`
   `PATH` entry that has to be enumerated — the per-distro dep lists are the
   starting point, but they are package names, not binary names.
-- Single-user vs system-wide, and whether the NixOS module is genuinely needed
-  or whether home-manager alone covers it.
+- Single-user vs system-wide — **resolved for the first pass**: home-manager
+  alone covers the shell, so the flake ships `homeManagerModules.default` and
+  no `nixosModules.default` at all (omitted, not stubbed). What stays open is
+  the system half the installer does today — SDDM theme, plymouth, polkit
+  rules, services — which is where a NixOS module would earn its existence
+  if it ever does.
 
 ## Prior art
 
