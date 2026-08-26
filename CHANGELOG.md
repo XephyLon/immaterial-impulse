@@ -12,6 +12,32 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- **The panels arrive composed instead of snapping into place.** The bar's
+  popups open at their full height first and then let the sections below the
+  first fold cascade in — the top section is there on frame one, so a popup is
+  readable the instant it opens, and switching popups by hovering along the
+  bar never blinks content. The desktop menu's rows arrive in sequence the
+  same way. The sidebars got the fuller treatment: sections cascade behind the
+  panel's own slide, the quick-toggle tiles converge from their side of the
+  grid, the slider fills sweep up from zero with their icons turning with the
+  fill, the calendar ripples in diagonally, and the notification status row
+  converges into place. The left sidebar and the AI pane materialize the same
+  way. Exits stay rigid — everything rides out with the panel, nothing
+  cascades on the way out. Dialogs deliberately do not do any of this: a
+  cascade on a question you were interrupted to answer is latency.
+- **Text that changes now moves.** The bar's media label and the weather
+  temperature slide to their new value instead of swapping, and adding or
+  finishing a task in the to-do list animates the row in or out.
+
+### Fixed
+- **The to-do list's buttons no longer aim at the wrong row after a delete.**
+  Each row resolved its task by an index taken when the row was built, so
+  deleting a task left every row below it one off. Rows now find their task
+  at click time — by identity, and by content on older Quickshell builds where
+  the model hands each row a copy (the Gentoo package pins one), where every
+  done/delete click had been a silent no-op.
+
 ## [0.30.2] — 2026-08-26
 
 Two more "silently wrong" settings fixes and one decode the selector never
