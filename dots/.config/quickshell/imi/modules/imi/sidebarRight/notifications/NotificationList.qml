@@ -9,6 +9,13 @@ import QtQuick.Layouts
 Item {
     id: root
 
+    // The least height at which this list is worth drawing: its status row,
+    // the gap above it, and one line of the empty state (or the top of a
+    // card). Below this the owner hides it rather than let the unclipped
+    // pieces paint outside a rectangle with no area.
+    readonly property real minimumUsefulHeight: statusRow.implicitHeight
+        + Appearance.spacing.space100 + Appearance.font.pixelSize.large * 2
+
     NotificationListView { // Scrollable window
         id: listview
         anchors.left: parent.left
