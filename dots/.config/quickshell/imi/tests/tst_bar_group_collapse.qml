@@ -1,9 +1,7 @@
 import QtQuick
-import QtQuick.Layouts
 import QtTest
 import qs
 import qs.modules.common
-import qs.modules.imi.bar
 
 // A BarGroup whose content has collapsed paints nothing, and the ends of a
 // row follow which neighbours are showing.
@@ -20,49 +18,31 @@ TestCase {
     when: windowShown
 
     property bool savedEditMode: false
-    function initTestCase() { savedEditMode = GlobalStates.editMode; }
     function cleanupTestCase() { GlobalStates.editMode = savedEditMode; }
 
-    // Enough of the edit controller for BarWidgetEditItem to bind against
-    // when edit mode instantiates it; no test here drags anything.
-    QtObject {
-        id: fakeController
-        property var bucketNames: ["left"]
-        function dropBuckets() { return []; }
-        function beginDrag() {}
-        function dragMoved() {}
-        function commitReorder() {}
-        function endDrag() {}
-        function removeAt() {}
-    }
-
-    Component {
-        id: rowComponent
-        RowLayout {
-            spacing: 4
-            property alias first: first
-            property alias second: second
-            property alias secondContent: secondContent
-            BarGroup {
-                id: first
-                currentIndex: 0
-                totalCount: 2
-                widgetId: "activeWindow"
-                Item { implicitWidth: 40; implicitHeight: 10 }
-            }
-            BarGroup {
-                id: second
-                currentIndex: 1
-                totalCount: 2
-                widgetId: "timerPill"
-                editController: fakeController
-                // The pills' own shape: 0 wide when idle, and hidden with it.
-                Item { id: secondContent; implicitWidth: 0; implicitHeight: 10; visible: implicitWidth > 0 }
-            }
+    // Built from a URL rather than declared inline, for the reason
+    // tst_grouped_list.qml records: BarGroup draws per-corner radii that Qt
+    // below 6.7 does not have, and declared inline the whole file fails to
+    // compile there. Through createComponent the version dependency is a
+    // STATUS this test can read and skip on.
+    property Component rowComponent: null
+    function initTestCase() {
+        savedEditMode = GlobalStates.editMode;
+        rowComponent = Qt.createComponent("fixtures/BarGroupRow.qml");
+        if (rowComponent.status === Component.Error) {
+            const reason = rowComponent.errorString();
+            verify(/(top|bottom)(Left|Right)Radius/.test(reason),
+                   "BarGroupRow failed to build for a reason that is not Qt's version: " + reason);
         }
+    }
+    function ensureComponent() {
+        if (rowComponent.status === Component.Error)
+            skip("Qt is older than 6.7, so the per-corner radii BarGroup draws its pill with do not exist here");
+        compare(rowComponent.status, Component.Ready, rowComponent.errorString());
     }
 
     function test_a_group_with_nothing_in_it_is_collapsed_and_invisible() {
+        ensureComponent();
         GlobalStates.editMode = false;
         const row = createTemporaryObject(rowComponent, this);
         verify(row.second.contentEmpty, "a zero-width child is not read as empty");
@@ -75,6 +55,7 @@ TestCase {
     }
 
     function test_the_group_comes_back_when_its_content_does() {
+        ensureComponent();
         GlobalStates.editMode = false;
         const row = createTemporaryObject(rowComponent, this);
         verify(row.second.collapsed);
@@ -88,6 +69,7 @@ TestCase {
     }
 
     function test_edit_mode_keeps_an_empty_group_on_the_bar() {
+        ensureComponent();
         GlobalStates.editMode = true;
         const row = createTemporaryObject(rowComponent, this);
         verify(row.second.contentEmpty, "still empty");
@@ -100,6 +82,7 @@ TestCase {
     }
 
     function test_the_row_end_follows_the_showing_neighbour_not_the_index() {
+        ensureComponent();
         GlobalStates.editMode = false;
         const row = createTemporaryObject(rowComponent, this);
         // Index says first is not last; its only neighbour is collapsed, so it is.
