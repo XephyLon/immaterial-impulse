@@ -44,6 +44,16 @@
           default = immaterial-impulse;
         });
 
+      homeManagerModules = rec {
+        immaterial-impulse = import ./nix/hm-module.nix { inherit self; };
+        default = immaterial-impulse;
+      };
+
+      # No nixosModules yet, deliberately: the home-manager module covers the
+      # shell itself, and the system-level pieces the installer does (SDDM
+      # theme, plymouth, polkit rules, services) are future work - see
+      # docs/proposals/nixos-flake.md, "Open questions".
+
       devShells = forAllSystems (system:
         let
           pkgs = import nixpkgs { inherit system; };
