@@ -12,6 +12,13 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.31.0] — 2026-08-26
+
+The motion language's second half: the panels arrive composed, with their
+pieces cascading and converging into place, instead of snapping on. Plus the
+overview back on the monitor you are actually using, and the to-do list's
+buttons aimed at the right row.
+
 ### Changed
 - **The panels arrive composed instead of snapping into place.** The bar's
   popups open at their full height first and then let the sections below the
@@ -2597,7 +2604,7 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.0...HEAD
 [0.24.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.23.1...v0.24.0
 [0.14.9]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.8...v0.14.9
 [0.14.8]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.7...v0.14.8
