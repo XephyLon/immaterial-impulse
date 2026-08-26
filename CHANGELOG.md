@@ -12,6 +12,13 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.31.1] — 2026-08-26
+
+Three fixes: the overview really does follow the focused monitor now (the
+0.31.0 fix only got the first open right), no more empty pill at the end of a
+bar section, and the notifications section stops painting over its neighbours
+when the sidebar has no room for it.
+
 ### Fixed
 - **The overview opens on the focused monitor every time, not just the first
   time.** 0.31.0's fix picked the right monitor for the first open and then
@@ -2624,7 +2631,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.0...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.1...HEAD
+[0.31.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.0...v0.31.1
 [0.31.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.30.2...v0.31.0
 [0.30.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.30.1...v0.30.2
 [0.30.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.30.0...v0.30.1
