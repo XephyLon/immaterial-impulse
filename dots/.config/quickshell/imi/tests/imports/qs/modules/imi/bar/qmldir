@@ -1,0 +1,4 @@
+module qs.modules.imi.bar
+BarGroup 1.0 BarGroup.qml
+BarFlipRegistry 1.0 BarFlipRegistry.qml
+BarWidgetEditItem 1.0 BarWidgetEditItem.qml
