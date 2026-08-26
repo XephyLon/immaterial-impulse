@@ -10,7 +10,8 @@ which capitalises a widget name into a file name, and produced
 `Plugin:docker_plugin.qml`. Measured with a `qml6` probe: `Loader.status` 3
 (`Loader.Error`), `item` null, and one `No such file or directory` line per
 widget - not a `WARN scene:` and not an `ERROR:`, so the configuration still
-loaded and the bar simply drew the empty BarGroup stub around nothing.
+loaded and the bar simply drew the empty BarGroup stub around nothing
+(an empty group collapses entirely now, so not even that shows).
 
 The defect class is not the missing branch, it is that a capability could be
 added to one bar and not the other at all. So the resolution is one module,

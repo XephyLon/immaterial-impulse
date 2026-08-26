@@ -2437,6 +2437,17 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   transform, press scale included, cancels out — and set the target to pressStart + delta, as
   `widgetCanvas/AbstractWidget.qml` now does. d2ebb5aeb ("fix(widgetCanvas): compute the drag by
   hand - MouseArea.drag cannot track it").
+- **A `BarGroup` whose content has collapsed paints nothing, and the row's ends follow what is
+  showing.** The standalone pills (`TimerPill`, `SubmapIndicator`, `PrivacyIndicator`) animate
+  their `implicitWidth` to 0 when idle and hide themselves — and the group around one kept its
+  padding, so any layout ending in a pill carried a small empty stub beside its last widget all
+  day (user-reported, 2026-08-26). `BarGroup.collapsed` reads the grid's implicit size on the axis
+  the bar runs along, and `visible` follows it, except in edit mode, where every slot has to stay
+  on the bar to be dragged. The end radii used to come from `currentIndex`/`totalCount`, which
+  still count a collapsed neighbour; they now walk the parent's children for the nearest group
+  that is showing (`showingBefore`/`showingAfter`), so the widget beside a collapsed pill gets the
+  full end radius. `tests/tst_bar_group_collapse.qml` pins both.
+  (fix(bar): a group whose content collapsed paints nothing, and the row's ends follow.)
 - **The two bars load the same widget files out of `modules/imi/bar/`, and each used to decide
   which file for itself.** `Config.options.bar.layouts.*` is shared and Settings > Bar offers a
   plugin's bar widget whatever the orientation, but only `BarContent.qml` ever learned the
@@ -2445,7 +2456,9 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   `plugin:docker_plugin` resolved to `Plugin:docker_plugin.qml` - measured with a `qml6` probe, the
   `Loader` reaches `Loader.Error` with a null `item`, and the only evidence is one
   `No such file or directory` line per widget. That is neither a `WARN scene:` nor an `ERROR:`, so
-  the configuration still loads and the bar simply draws the empty `BarGroup` stub around nothing.
+  the configuration still loads and the bar simply drew the empty `BarGroup` stub around nothing
+  (an empty group collapses now - see the bar-group point below - so that evidence is gone too;
+  the parity test is what catches it).
   `modules/imi/bar/bar_widget_source.js` is the one mapping now; it answers with a **file name**
   and the caller prepends its own directory, because the two bars reach that directory by different
   relative paths and a `.pragma library` has no engine context to assume for `Qt.resolvedUrl`.
