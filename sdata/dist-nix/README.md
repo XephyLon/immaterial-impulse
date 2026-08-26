@@ -1,4 +1,18 @@
 # Install scripts using Nix to achieve cross-distros
+
+> **Superseded.** The repository now carries a flake at its root
+> (`/flake.nix`) exposing `packages.<system>.immaterial-impulse`,
+> `homeManagerModules.default` and `devShells.default`, addressable as
+> `github:XephyLon/immaterial-impulse` — see
+> `docs/proposals/nixos-flake.md`. That is the supported Nix path. The
+> nested flake in `home-manager/` and the installer's `--via-nix` path
+> that drives it are kept working but superseded: `--via-nix` writes a
+> `username.nix`, installs Nix and home-manager imperatively, and switches
+> a whole home configuration, where the root flake's module composes into
+> a configuration the user already owns. `home-manager/quickshell.nix` is
+> the one file both flakes share — the root flake imports it rather than
+> carrying a copy, so changes to it serve both paths.
+
 - This directory is currently WIP.
 - See also [Install scripts | illogical-impulse](https://ii.clsty.link/en/dev/inst-script/)
 - See also [#1061](https://github.com/end-4/dots-hyprland/issues/1061)
