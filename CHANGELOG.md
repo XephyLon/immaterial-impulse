@@ -31,6 +31,13 @@ own repo; the installer pins which revision it builds.
   finishing a task in the to-do list animates the row in or out.
 
 ### Fixed
+- **The overview opens on the monitor you are using again.** Since 0.30.0 it
+  opened on whichever monitor had focus when the shell started — usually the
+  primary — no matter where the cursor was, because the overview's window is
+  created once at startup now and the compositor places a window without a
+  screen of its own on the monitor focused at that moment. There is one
+  overview window per monitor now, and each open picks the focused one.
+  (#297)
 - **The to-do list's buttons no longer aim at the wrong row after a delete.**
   Each row resolved its task by an index taken when the row was built, so
   deleting a task left every row below it one off. Rows now find their task
