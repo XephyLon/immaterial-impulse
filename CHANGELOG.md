@@ -2605,7 +2605,36 @@ illogical-impulse), collecting the work done to date:
 - This changelog and versioning.
 
 [Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.0...HEAD
+[0.31.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.30.2...v0.31.0
+[0.30.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.30.1...v0.30.2
+[0.30.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.30.0...v0.30.1
+[0.30.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.29.0...v0.30.0
+[0.29.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.28.0...v0.29.0
+[0.28.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.27.0...v0.28.0
+[0.27.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.26.0...v0.27.0
+[0.26.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.25.0...v0.26.0
+[0.25.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.23.1...v0.24.0
+[0.23.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.23.0...v0.23.1
+[0.23.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.22.0...v0.23.0
+[0.22.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.21.0...v0.22.0
+[0.21.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.20.1...v0.21.0
+[0.20.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.20.0...v0.20.1
+[0.20.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.19.0...v0.20.0
+[0.19.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.18.2...v0.19.0
+[0.18.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.18.1...v0.18.2
+[0.18.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.18.0...v0.18.1
+[0.18.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.17.6...v0.18.0
+[0.17.6]: https://github.com/XephyLon/immaterial-impulse/compare/v0.17.5...v0.17.6
+[0.17.5]: https://github.com/XephyLon/immaterial-impulse/compare/v0.17.4...v0.17.5
+[0.17.4]: https://github.com/XephyLon/immaterial-impulse/compare/v0.17.3...v0.17.4
+[0.17.3]: https://github.com/XephyLon/immaterial-impulse/compare/v0.17.2...v0.17.3
+[0.17.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.17.1...v0.17.2
+[0.17.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.17.0...v0.17.1
+[0.17.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.16.1...v0.17.0
+[0.16.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.16.0...v0.16.1
+[0.16.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.15.0...v0.16.0
+[0.15.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.9...v0.15.0
 [0.14.9]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.8...v0.14.9
 [0.14.8]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.7...v0.14.8
 [0.14.7]: https://github.com/XephyLon/immaterial-impulse/compare/v0.14.6...v0.14.7
