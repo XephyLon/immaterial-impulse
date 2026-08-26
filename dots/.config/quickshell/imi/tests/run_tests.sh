@@ -493,6 +493,15 @@ if ! python3 "$SCRIPT_DIR/test_persistent_surface_screen.py"; then
     exit 1
 fi
 
+# The right sidebar's fill-height section clips and hides its list when the
+# column has no room for it - the notification list's unclipped pieces used to
+# paint over the media player and the bottom group.
+echo "Running sidebar center group contract tests..."
+if ! python3 "$SCRIPT_DIR/test_sidebar_center_group_contract.py"; then
+    echo "Sidebar center group contract tests failed."
+    exit 1
+fi
+
 # The shell has two password prompts - the lock screen and the polkit dialog -
 # and they were two different text fields, one of them Material's outlined
 # container with the prompt floating in a notch. The check derives the control
