@@ -17,6 +17,12 @@ stdenvNoCC.mkDerivation {
   dontConfigure = true;
   dontBuild = true;
 
+  # The tree ships verbatim. Scripts resolve interpreters through the user's
+  # environment at runtime like on every other distro, and the fixup patcher
+  # cannot parse generate_colors_material.py's `env -S ... source $VENV`
+  # shebang anyway - it aborts the build on it.
+  dontPatchShebangs = true;
+
   installPhase = ''
     runHook preInstall
     mkdir -p "$out"
