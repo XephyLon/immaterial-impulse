@@ -1,9 +1,14 @@
-{ pkgs, quickshell, 
+{ pkgs, quickshell ? null,
+# The root flake passes the already-resolved per-system quickshell package
+# here; the nested home-manager flake keeps passing the whole `quickshell`
+# flake input and the default below resolves it the way this file always
+# did. Both callers share this one wrapper - do not fork it.
+qsPackage ? quickshell.packages.x86_64-linux.default,
 #nixGLWrap,
 ... }:
 let
   #qs = nixGLWrap quickshell.packages.x86_64-linux.default;
-  qs = quickshell.packages.x86_64-linux.default;
+  qs = qsPackage;
 in pkgs.stdenv.mkDerivation {
   name = "immaterial-impulse-quickshell-wrapper";
   meta = with pkgs.lib; {
