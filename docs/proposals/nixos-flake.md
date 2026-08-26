@@ -97,8 +97,8 @@ Status per item, now that the first pass exists:
    - `devShells.default` — **done** (`nix/dev-shell.nix`): qmltestrunner
      via `qt6.qtdeclarative`, python3 with PIL/numpy, weston, dbus and the
      wrapped quickshell, so `tests/run_tests.sh` can run under
-     `nix develop`. Unvalidated so far — written on a machine with no
-     `nix` binary (see TODO below).
+     `nix develop`. The dev shell itself evaluates (`nix flake check`
+     covers it); `run_tests.sh` under `nix develop` has not been run yet.
 2. **What is declarative vs mutable — settled and implemented.** The
    split is three-way, not two-way, and the third tier is the one that decides
    whether a `home-manager switch` quietly destroys the user's colours.
@@ -109,13 +109,33 @@ Status per item, now that the first pass exists:
    the root flake replaces it yet. The one file they would duplicate,
    `quickshell.nix`, is shared — the root flake imports it in place.
 4. **Unpin quickshell** — done: the root flake's input has no commit in
-   its URL; the pin belongs to `flake.lock`. **TODO: no `flake.lock` is
-   committed yet** — the implementing machine had no `nix` binary, and an
-   invented lock is worse than an absent one. Generating and committing it
-   (and running `nix flake check` / `nix build .#immaterial-impulse` for
-   the first time) is the first task for a machine with nix.
+   its URL; the pin lives in the committed `flake.lock` (nixpkgs at
+   nixos-25.11, quickshell following the mirror's default branch).
 5. **CI**: `nix flake check` on push is the only thing that keeps a flake
-   honest. **TODO — not in this pass**; it needs the lock file first.
+   honest. **TODO — not in this pass.** It has been run by hand, and
+   passes; see "Validated so far" below.
+
+## Validated so far
+
+Run via rootless `nix-portable` (nix 2.20.6) on the authoring machine,
+which has no system nix:
+
+- `nix flake check` — green. First run caught a real bug: fixupPhase's
+  shebang patcher aborts on `generate_colors_material.py`'s `env -S`
+  venv-activating interpreter directive; the package now sets
+  `dontPatchShebangs` and ships the tree byte-identical.
+- `nix build .#immaterial-impulse` — green; output tree verified verbatim
+  (VERSION, exotic shebang intact, `defaults/config.json` and bundled
+  plugins present).
+- A consumer-side home-manager eval (home-manager `release-25.11`):
+  `homeManagerConfiguration` with the module enabled **builds a full
+  generation**, its activation script contains the seed-once logic, and a
+  probe config that manages `xdg.configFile."gtk-3.0/gtk.css"` — a matugen
+  output — makes the module emit exactly the tier-3 warning.
+
+Not yet validated: actually *running* the shell from the store path
+(needs a NixOS machine or VM with a Wayland session), and
+`tests/run_tests.sh` under `nix develop`.
 
 ## Declarative vs mutable — settled
 
