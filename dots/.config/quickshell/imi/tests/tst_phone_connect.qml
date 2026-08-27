@@ -628,6 +628,49 @@ TestCase {
         compare(PhoneConnect.recentDeviceIdsAfterSelect(["a", "b"], "c", 2).join(","), "c,a")
     }
 
+    // ---- low-battery hooks (slice 6) ----
+    //
+    // The thresholds are the proposal's, literally: low once below 20 and
+    // not charging, recovered at 25 or above, or on charging.
+
+    function test_battery_notice_fires_once_below_twenty_while_not_charging() {
+        const low = PhoneConnect.batteryNoticeTransition(false, 19, false)
+        compare(low.notice, "low")
+        compare(low.notified, true)
+        // Twenty is not below twenty.
+        compare(PhoneConnect.batteryNoticeTransition(false, 20, false).notice, "")
+        compare(PhoneConnect.batteryNoticeTransition(false, 20, false).notified, false)
+        // Charging at 19 is not a low battery.
+        compare(PhoneConnect.batteryNoticeTransition(false, 19, true).notice, "")
+        // Once: already notified, still low, nothing more.
+        compare(PhoneConnect.batteryNoticeTransition(true, 19, false).notice, "")
+        compare(PhoneConnect.batteryNoticeTransition(true, 19, false).notified, true)
+        compare(PhoneConnect.batteryNoticeTransition(false, 0, false).notice, "low")
+    }
+
+    function test_battery_notice_recovers_at_twenty_five_or_on_charging() {
+        // 24 is inside the hysteresis band: still notified, no notice.
+        const band = PhoneConnect.batteryNoticeTransition(true, 24, false)
+        compare(band.notice, "")
+        compare(band.notified, true)
+        const recovered = PhoneConnect.batteryNoticeTransition(true, 25, false)
+        compare(recovered.notice, "recovered")
+        compare(recovered.notified, false)
+        // Plugging it in recovers at any charge.
+        const charging = PhoneConnect.batteryNoticeTransition(true, 10, true)
+        compare(charging.notice, "recovered")
+        compare(charging.notified, false)
+        // Nothing to recover from: no notice.
+        compare(PhoneConnect.batteryNoticeTransition(false, 25, false).notice, "")
+        compare(PhoneConnect.batteryNoticeTransition(false, 10, true).notice, "")
+    }
+
+    function test_battery_notice_ignores_an_unknown_charge() {
+        compare(PhoneConnect.batteryNoticeTransition(false, -1, false).notice, "")
+        compare(PhoneConnect.batteryNoticeTransition(true, -1, false).notice, "")
+        compare(PhoneConnect.batteryNoticeTransition(true, -1, false).notified, true)
+    }
+
     // ---- device id guard ----
 
     function test_valid_device_id_accepts_kdeconnect_and_valent_ids() {
