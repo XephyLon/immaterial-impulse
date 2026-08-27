@@ -5,10 +5,14 @@ import QtQuick
 import QtQuick.Layouts
 
 /**
- * The device the phone panel is about, as a chip: its kind as a glyph, its
+ * The device a phone surface is about, as a chip: its kind as a glyph, its
  * name, and an arrow that opens the roster of every device the daemon
- * knows. With no device at all it still draws, so the panel has somewhere
+ * knows. With no device at all it still draws, so the surface has somewhere
  * to say so.
+ *
+ * Shared rather than owned by one panel: it lives here because the Phone
+ * tab's header and anything else that names the active device draw the
+ * same chip, and two copies of it drifted the moment there were two.
  */
 RippleButton {
     id: root

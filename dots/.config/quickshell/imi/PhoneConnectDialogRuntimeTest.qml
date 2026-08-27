@@ -5,6 +5,7 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.imi.phone
 import qs.modules.imi.sidebarRight.phoneConnect
 
 /**
@@ -145,7 +146,7 @@ ShellRoot {
 
         // ---- the chip and its pills read the active phone ---------------
         () => {
-            const chip = harness.first("PhoneConnectDeviceChip");
+            const chip = harness.first("PhoneDeviceChip");
             harness.check(`the chip names the paired phone, got ${chip?.device?.name}`,
                           chip !== null && chip.device?.id === harness.phoneId);
             const address = harness.badge(harness.expectAddress);
@@ -161,7 +162,7 @@ ShellRoot {
 
         // ---- one row of the three model actions, live for a paired phone --
         () => {
-            const buttons = harness.all("PhoneConnectActionButton");
+            const buttons = harness.all("PhoneActionButton");
             harness.check(`one action row of three buttons, got ${buttons.length}`, buttons.length === 3);
             harness.check("every action answers for a paired, reachable phone",
                           buttons.length === 3 && buttons.every(b => b.enabled && b.visible));
@@ -172,8 +173,8 @@ ShellRoot {
         // ---- the notification area owns the leftover height --------------
         () => {
             const area = harness.first("PhoneConnectNotificationArea");
-            const chip = harness.first("PhoneConnectDeviceChip");
-            const action = harness.first("PhoneConnectActionButton");
+            const chip = harness.first("PhoneDeviceChip");
+            const action = harness.first("PhoneActionButton");
             console.log(`[PhoneConnectDialog] area=${area?.height} chip=${chip?.height} action=${action?.height}`);
             harness.check("the notification area stands taller than the fixed rows around it",
                           area !== null && area.height > chip.height && area.height > action.height);
@@ -184,7 +185,7 @@ ShellRoot {
 
         // ---- the pairing card, for the device that asked ------------------
         () => {
-            const cards = harness.all("PhoneConnectPairingCard");
+            const cards = harness.all("PhonePairingCard");
             harness.check(`one pairing card, for the laptop, got ${cards.length}`,
                           cards.length === 1 && cards[0].device?.id === harness.laptopId);
             const accept = harness.dialogButton("Accept");
@@ -200,20 +201,20 @@ ShellRoot {
         // ---- the roster, behind the chip's arrow --------------------------
         () => {
             harness.check("the roster is folded until the chip is opened",
-                          harness.all("PhoneConnectDeviceItem").filter(i => i.visible).length === 0);
-            harness.click(harness.first("PhoneConnectDeviceChip"));
+                          harness.all("PhoneDeviceItem").filter(i => i.visible).length === 0);
+            harness.click(harness.first("PhoneDeviceChip"));
         },
         () => {
-            const rows = harness.all("PhoneConnectDeviceItem").filter(i => i.visible);
+            const rows = harness.all("PhoneDeviceItem").filter(i => i.visible);
             harness.check(`opening the chip lists both devices, got ${rows.length}`, rows.length === 2);
             const laptop = rows.find(r => r.device?.id === harness.laptopId) ?? null;
             if (laptop) harness.click(laptop);
         },
         () => {
-            const chip = harness.first("PhoneConnectDeviceChip");
+            const chip = harness.first("PhoneDeviceChip");
             harness.check(`picking a row shows that device on the chip, got ${chip?.device?.name}`,
                           chip?.device?.id === harness.laptopId);
-            const buttons = harness.all("PhoneConnectActionButton");
+            const buttons = harness.all("PhoneActionButton");
             harness.check("the actions stand down for a device that is not paired",
                           buttons.length === 3 && buttons.every(b => !b.enabled));
             harness.check("the connection pill follows the shown device",
@@ -229,7 +230,7 @@ ShellRoot {
         // cannot put the card back between the two reads. -----------------
         () => {
             const area = harness.first("PhoneConnectNotificationArea");
-            const card = harness.first("PhoneConnectPairingCard");
+            const card = harness.first("PhonePairingCard");
             harness.areaWithCard = area.height;
             harness.cardHeight = card.height;
             harness.columnSpacing = harness.contentColumn().spacing;
@@ -237,7 +238,7 @@ ShellRoot {
         },
         () => {
             const area = harness.first("PhoneConnectNotificationArea");
-            const cards = harness.all("PhoneConnectPairingCard");
+            const cards = harness.all("PhonePairingCard");
             const grewBy = area.height - harness.areaWithCard;
             console.log(`[PhoneConnectDialog] cards=${cards.length} area ${harness.areaWithCard} -> ${area.height}`
                         + ` (+${grewBy}; card was ${harness.cardHeight}, spacing ${harness.columnSpacing})`);

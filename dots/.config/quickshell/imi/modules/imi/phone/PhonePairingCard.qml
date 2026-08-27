@@ -5,7 +5,7 @@ import QtQuick
 import QtQuick.Layouts
 
 /**
- * A peer's pairing request, as a card in the phone panel's bottom stack,
+ * A peer's pairing request, as a card in a phone surface's bottom stack,
  * with the two answers the daemon takes. The buttons sit in a
  * WindowDialogButtonRow so the filled-confirm / outlined-dismiss rule is
  * the row's to derive, not this card's to spell.

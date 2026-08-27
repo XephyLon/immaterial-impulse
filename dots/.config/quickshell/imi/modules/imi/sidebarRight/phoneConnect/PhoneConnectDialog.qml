@@ -2,6 +2,7 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.imi.phone
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -71,7 +72,7 @@ WindowDialog {
         Layout.fillWidth: true
         spacing: Appearance.spacing.space100
 
-        PhoneConnectDeviceChip {
+        PhoneDeviceChip {
             id: deviceChip
             device: root.shownDevice
             open: root.rosterOpen
@@ -113,7 +114,7 @@ WindowDialog {
             model: ScriptModel {
                 values: PhoneConnect.devices
             }
-            delegate: PhoneConnectDeviceItem {
+            delegate: PhoneDeviceItem {
                 required property var modelData
                 device: modelData
                 Layout.fillWidth: true
@@ -132,14 +133,14 @@ WindowDialog {
         Layout.alignment: Qt.AlignHCenter
         spacing: Appearance.spacing.space150
 
-        PhoneConnectActionButton {
+        PhoneActionButton {
             id: ringButton
             glyph: "ring_volume"
             label: Translation.tr("Ring")
             enabled: root.shownOnline
             onClicked: PhoneConnect.ring(root.shownDevice)
         }
-        PhoneConnectActionButton {
+        PhoneActionButton {
             id: pingButton
             glyph: "send"
             label: Translation.tr("Ping")
@@ -147,7 +148,7 @@ WindowDialog {
             enabled: root.shownOnline
             onClicked: PhoneConnect.ping(root.shownDevice)
         }
-        PhoneConnectActionButton {
+        PhoneActionButton {
             id: clipboardButton
             glyph: "content_paste"
             label: Translation.tr("Send clipboard")
@@ -168,7 +169,7 @@ WindowDialog {
         model: ScriptModel {
             values: PhoneConnect.pairingRequests
         }
-        delegate: PhoneConnectPairingCard {
+        delegate: PhonePairingCard {
             required property var modelData
             device: modelData
             Layout.fillWidth: true
