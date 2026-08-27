@@ -79,6 +79,11 @@ Singleton {
         root.actionFeedback(message, false);
     }
 
+    // One coalesced "something on the daemon changed" per signal burst, raised
+    // as the settle fires. PhoneNotifications refetches on it; nothing else
+    // needs to hear it, since the model is what everything else reads.
+    signal deviceChangeSettled()
+
     // BEGIN phone-connect parser logic (synced with tests/imports/testservices/PhoneConnect.qml)
     // Parses one `busctl --json=short` reply. Returns the payload ("data")
     // array, or null when the text is not a busctl JSON document (empty
@@ -259,7 +264,11 @@ Singleton {
             "org.kde.kdeconnect.device": ["reachableChanged", "pairStateChanged", "nameChanged",
                 "typeChanged", "pluginsChanged"],
             "org.kde.kdeconnect.device.battery": ["refreshed"],
-            "org.kde.kdeconnect.device.connectivity_report": ["refreshed"]
+            "org.kde.kdeconnect.device.connectivity_report": ["refreshed"],
+            // The notification set is PhoneNotifications' to read; it fetches
+            // on deviceChangeSettled rather than running a monitor of its own.
+            "org.kde.kdeconnect.device.notifications": ["notificationPosted", "notificationUpdated",
+                "notificationRemoved", "allNotificationsRemoved"]
         }[signal.iface];
         return Array.isArray(members) && members.includes(signal.member);
     }
@@ -520,6 +529,7 @@ Singleton {
                 return;
             }
             root.refresh();
+            root.deviceChangeSettled();
         }
     }
 

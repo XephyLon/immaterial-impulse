@@ -206,7 +206,11 @@ Singleton {
             "org.kde.kdeconnect.device": ["reachableChanged", "pairStateChanged", "nameChanged",
                 "typeChanged", "pluginsChanged"],
             "org.kde.kdeconnect.device.battery": ["refreshed"],
-            "org.kde.kdeconnect.device.connectivity_report": ["refreshed"]
+            "org.kde.kdeconnect.device.connectivity_report": ["refreshed"],
+            // The notification set is PhoneNotifications' to read; it fetches
+            // on deviceChangeSettled rather than running a monitor of its own.
+            "org.kde.kdeconnect.device.notifications": ["notificationPosted", "notificationUpdated",
+                "notificationRemoved", "allNotificationsRemoved"]
         }[signal.iface];
         return Array.isArray(members) && members.includes(signal.member);
     }
