@@ -9,8 +9,17 @@ Rectangle {
     property alias text: noticeText.text
     default property alias data: buttonRow.data
 
+    // The container role the notice is drawn in. It is a PAIR rather than one
+    // colour: a caller that only re-tints the surface leaves the glyph and the
+    // text in the previous role's on-colour, which is a contrast decision made
+    // by accident. Primary is what every existing notice draws in; a notice
+    // whose state is the reason the surface around it is empty says so in the
+    // error roles instead.
+    property color colBackground: Appearance.colors.colPrimaryContainer
+    property color colOnBackground: Appearance.colors.colOnPrimaryContainer
+
     radius: Appearance.rounding.normal
-    color: Appearance.colors.colPrimaryContainer
+    color: root.colBackground
     implicitWidth: mainRowLayout.implicitWidth + mainRowLayout.anchors.margins * 2
     implicitHeight: mainRowLayout.implicitHeight + mainRowLayout.anchors.margins * 2
 
@@ -26,7 +35,7 @@ Rectangle {
             Layout.alignment: Qt.AlignTop
             text: "info"
             iconSize: Appearance.font.pixelSize.huge
-            color: Appearance.colors.colOnPrimaryContainer
+            color: root.colOnBackground
         }
 
         ColumnLayout {
@@ -37,7 +46,7 @@ Rectangle {
                 id: noticeText
                 Layout.fillWidth: true
                 text: "Notice message"
-                color: Appearance.colors.colOnPrimaryContainer
+                color: root.colOnBackground
                 wrapMode: Text.WordWrap
             }
 
