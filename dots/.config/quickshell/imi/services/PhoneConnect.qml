@@ -305,6 +305,18 @@ Singleton {
         if (/^[\w.-]+\.\w{2,}(\/|$)/.test(value)) return { kind: "url", value: `https://${value}` };
         return { kind: "text", value: value };
     }
+
+    // A file picker's stdout - one absolute path per line - as the file://
+    // URLs the share plugin takes. Percent-encoded per segment, since the
+    // daemon hands each to a QUrl and a raw "#" or "?" in a name would be
+    // read as a fragment or a query. A cancelled picker prints nothing.
+    function pickedFileUrls(text: var): var {
+        return (typeof text === "string" ? text : "")
+            .split("\n")
+            .map(line => line.trim())
+            .filter(line => line.startsWith("/"))
+            .map(path => "file://" + path.split("/").map(encodeURIComponent).join("/"));
+    }
     // END phone-connect parser logic
 
     function applyBackend(newBackend: string): void {
@@ -581,6 +593,40 @@ Singleton {
                 root.shareText(d, target.value);
                 root.actionFeedback(Translation.tr("Text shared"), true);
             }
+        }
+    }
+
+    // The house file picker (kdialog, as SidebarRightContent's wallpaper
+    // picker uses it), one file:// share per line it prints. One picker at
+    // a time: a click while it is open is dropped rather than opening a
+    // second dialog over the first.
+    property var filePickerDevice: null
+
+    function pickAndSendFiles(device: var): void {
+        const d = device ?? root.activeDevice;
+        if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
+        if (filePickerProc.running) return;
+        root.lastActionError = "";
+        root.filePickerDevice = d;
+        filePickerProc.running = true;
+    }
+
+    Process {
+        id: filePickerProc
+        command: ["kdialog", "--getopenfilename", Quickshell.env("HOME") ?? "", "--multiple"]
+        stdout: StdioCollector {
+            id: filePickerOut
+        }
+        stderr: StdioCollector {}
+        onExited: (exitCode, exitStatus) => {
+            const urls = root.pickedFileUrls(filePickerOut.text);
+            const d = root.filePickerDevice;
+            root.filePickerDevice = null;
+            if (urls.length === 0) return; // cancelled
+            root.shareUrls(d, urls);
+            root.actionFeedback(urls.length === 1
+                ? Translation.tr("Sending file…")
+                : Translation.tr("Sending %1 files…").arg(String(urls.length)), true);
         }
     }
 
