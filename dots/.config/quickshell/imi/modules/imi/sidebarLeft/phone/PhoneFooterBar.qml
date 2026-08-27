@@ -28,11 +28,12 @@ import QtQuick.Layouts
  * with the label empty its `Layout.fillWidth` slot still took the row's
  * leftover width - so each button came out 44x35, near enough square to read
  * as a circle under `rounding.full`, with the glyph drawn 1.5px left of the
- * button's own centre (its SLOT was 2.5px off; the glyph sits 1px into it,
- * and what a reader can check against the harness is the drawn number).
- * An icon-only button is a `RippleButton` whose
+ * button's own centre (its SLOT was 2.5px off; the glyph sits a pixel into
+ * that slot, and the drawn number is the one a reader can check against
+ * PhoneTabRuntimeTest). An icon-only button is a `RippleButton` whose
  * contentItem is a `MaterialSymbol` declaring both alignments, which is what
- * centres a Control's content item (an anchor on it is decoration).
+ * centres a Control's content item - an anchor on it is decoration, because a
+ * Control sizes and positions its content item itself.
  */
 Item {
     id: root
