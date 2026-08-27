@@ -4847,7 +4847,8 @@ header button and the rail button must stay the same height, or that shared cent
 Shared building blocks to reach for before writing something from scratch: `StyledText`,
 `StyledComboBox`/`StyledComboBoxSearch`, `StyledSlider`, `StyledToolTip`/`StyledToolTipContent`,
 `RippleButton`, `MaterialSymbol`, `ResourceCard`, `GroupedList` + `ConfigSwitch`/`ConfigSpinBox`/
-`ConfigSelectionArray`/`ConfigComboBox`/`ConfigTextArea` (settings rows), `StyledPopup` (a bar
+`ConfigSelectionArray`/`ConfigComboBox`/`ConfigTextArea` (settings rows - see the row-grammar entry
+below for the opt-in shapes they carry), `StyledPopup` (a bar
 widget's hover popup: a declaration plus a hover state machine, *not* a window - its content is
 hosted on `modules/imi/bar/BarPopupOverlay.qml`'s shared card, b22a923a5 ("refactor(bar): delete
 the per-popup layer surface")), `StyledRectangularShadow`, `DockIconMotion` (wraps a dock icon's visuals with hover-lift /
@@ -4925,6 +4926,54 @@ and the disabled row still dimmed exactly once at 0.400.
 "refactor(editMode): the drawer's five row shapes become one",
 "refactor(store): a store card's identity is the shared catalogue row",
 "test(editMode): hold every drawer row body to the shared catalogue row").
+
+**The settings rows have a GRAMMAR, and Settings > Capture is its reference page.** The maintainer
+rated the sibling fork's settings rows on a one-day trial (2026-08-27: "UI components are much
+cleaner overall - very subtle details"; the notes are in `docs/p3drovfx-feature-delta-2026-08-24.md`'s
+family), and what transfers is the grammar, not their numbers - theirs are hand-typed, ours come from
+`Appearance.spacing.*`, `Appearance.rounding.*`, `Appearance.font.pixelSize.*` and the motion tiers,
+and the lints refuse a literal. Seven pieces, each an OPT-IN on a widget that already drew rows rather
+than a new widget: (a) a subsection header with a leading icon (`ContentSubsection.icon`); (b) a
+segmented single-choice row whose every option carries an icon and a label (`ConfigSelectionArray`
+options' `icon`); (c) a computed live hint under such a row (`ConfigSelectionArray.detailContent`, a
+full-width slot whose gap follows what is DRAWN in it, so a hint that hides itself takes its gap with
+it); (d) a toggle row with a leading icon chip (`ConfigSwitch.iconChip`, drawn by
+`CatalogueRow.iconChip`); (e) a dropdown with a leading icon and a "(Recommended)" suffix on its
+default choice (a `recommended: true` entry in `ConfigComboBox`'s model - the widget suffixes it
+through `Translation.tr`, so no call site spells the word); (f) a text field with a floating label
+(`ConfigTextArea.floatingLabel` - the label rests where the value goes, floats to the top edge on
+focus or content, and the field takes the row the label column used to hold); (g) an (i) affordance
+on any row that has a rationale (`infoText`, on every settings-row control now - a paragraph under a
+label is a rationale, and a rationale is the (i)'s). Three things about it are not obvious.
+
+- **The chip must not size the row.** `CatalogueRow`'s glyph wrapper reports width only (the entry
+  above), so the chip is drawn around the glyph and the wrapper stays width-only - a chip that
+  reported its height would stretch the 159 rows that share the component. That is also why every
+  piece defaults off and is adopted page by page: the grammar arriving on one page must not move a
+  row on any other.
+- **The hint is computed from real values or not drawn.** `modules/common/functions/record_bitrate.js`
+  turns the screen the settings window is on - `HyprlandData.monitors` matched by
+  `QsWindow.window.screen.name`, so width, height and refresh rate are hyprctl's - and the quality
+  tier into an estimate anchored on a measured recording (a 1554x892 region at 60 fps, `very_high`,
+  8.59 Mbps), with the frame rate capped at the screen's refresh because a capture cannot outrun it.
+  gpu-screen-recorder's default mode is constant quality, so it IS an estimate and the (i) says so.
+  A machine hyprctl has not answered for hides the hint; an earlier draft fell back to 1920x1080@60,
+  which is a confident number for a screen that does not exist, and
+  `tests/test_settings_row_grammar.py` refuses that literal.
+- **The adoption is the thing that decays, so the adoption is what is pinned.** The same test holds
+  the six widgets to tokens and whole tiers for every radius, font size, colour, duration and curve,
+  and holds the reference page to every piece - a chip dropped from one toggle row or an option
+  added without its icon errors nowhere, the shape just stops being the grammar. A page adopting it
+  later is a line there. `tst_record_bitrate.qml` drives the arithmetic.
+
+("feat(widgets): a subsection header leads with an icon",
+"feat(widgets): CatalogueRow draws its glyph on an opt-in chip",
+"feat(widgets): ConfigSelectionArray grows a hint slot and an info affordance",
+"feat(widgets): ConfigComboBox says which choice is recommended",
+"feat(widgets): ConfigTextArea floats its label into the field",
+"feat(capture): record_bitrate.js, what a quality tier costs on this screen",
+"feat(settings): the Capture page adopts the row grammar",
+"test(settings): pin the row grammar's widgets and its reference page").
 
 **A marquee is the answer for an IDENTITY, and where it may run is as much of the design as how it
 moves.** `MarqueeText` exists because every long label in this shell elides, which is honest about
