@@ -12,6 +12,14 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- **The right sidebar's quick sliders arrive one card at a time.** Each slider
+  card now fades in, zooms up from slightly smaller and rises into place —
+  the bottom row first, brightness last — while its fill still sweeps up from
+  zero with the icon turning, as before. It is the sibling fork's slider
+  entrance on the shell's own motion tiers, so the animation speed slider and
+  reduce motion reach it.
+
 ### Fixed
 - **Leaving a Discord voice channel no longer kills the voice bridge.** Discord
   reports the empty selection as a null payload, which the bridge treated as a

@@ -4607,6 +4607,29 @@ and stay free.
 15688f7c ("fix(quickToggles): drop the tile's leftover opacity Behavior that swallowed the wave"),
 a5ef0c29 ("test(lint): fail on a wave member carrying a Behavior on opacity").
 
+**A quick slider is two entrances on one trigger, and the card's is the shared wave.** The fill
+sweep's reading of the fork — 4a8ddce51 ("feat(sidebar): every widget owns its entrance - the
+fork's real motion language"), "sliders never fade" — is true of the FILL and not of the card
+around it: the fork's `AndroidSliderWidgetBase` fades, zooms (0.85 → 1) and rises (20px) every
+slider card after a per-index delay, with the sweep running inside it. `QuickSliders.qml` gives
+its three cards exactly that through `StaggerWave` + `StaggerEntrance` rather than a fourth
+hand-copied dressing — each `Loader` declares `appear`, and that is its whole opt-in. Three things
+about the wiring are worth not re-deriving. **The members are handed in as a list**
+(`StaggerWave.items`): the bottom row packs volume and mic side by side, so a wave walking
+`children` would find the row and the row is not a member — and the list is the only place the
+bottom-up order is written. **The dressing is per container** (one `StaggerEntrance` in the column
+and one in the row), because it installs itself on a container's children and a list is not a
+container. **The card wave runs on the sidebar's `entranceTrigger`**, park-and-enter, ungated,
+beside the fill sweep that already runs on it, so the two channels cannot start on different
+gestures; it carries the toggle grid's 80ms lead-in for that grid's reason. The sliders' section in
+`SidebarRightContent` stays out of the section wave — a fading section over fading cards is the
+compound the toggle grid paid for. `tests/test_quick_sliders_entrance_contract.py` walks the file
+per MEMBER: `appear` at its own top level, a dressed container, the list in order, no `Behavior on
+opacity`/`scale` anywhere (the tree-wide lint above sees only root-level members, and these are
+nested Loaders), and the sweep still there.
+d1dc6671d ("feat(sidebar): the quick sliders' cards fade, zoom and rise into place, bottom-up"),
+4f6a95dff ("test(sidebar): pin the quick sliders' cards to the wave, and register the adopter").
+
 **The adoption is the thing that decays, so the adoption is what is pinned.**
 `docs/p3drovfx-motion-measured-2026-08-22.md` §4.2 measured the sibling fork's motion off screen and
 found our arithmetic correct, our guideline written, and the wiring at **three** files against their
