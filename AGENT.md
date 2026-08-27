@@ -713,8 +713,9 @@ scripts/                   Standalone helper scripts (Python/bash) invoked via P
                               and unload the DroidCam-Mic null sink; install_droidcam.sh
                               is the per-distro installer the guide offers. Every process
                               match is `pgrep -x` on the binary's name with the signature
-                              checked on the cmdline - the fork's `pgrep -f` adopted its
-                              own launcher, and this repo's lint refuses the bare form
+                              checked on the cmdline - the fork matched the full command
+                              line and adopted its own launcher; this repo's lint refuses
+                              that form (the map is a fenced block, so it counts as code)
 translations/              i18n string tables (Translation.tr(...) singleton)
 assets/                    Static images/fonts bundled with the shell
 ```
