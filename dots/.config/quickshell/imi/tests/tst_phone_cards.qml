@@ -83,10 +83,44 @@ TestCase {
         };
         compare(PhoneCards.mirrorState(away), "offline");
         compare(PhoneCards.mirrorSubtitleKey(away), "noDevice");
-        // And it says which link is missing rather than which failed: the
-        // error the failed launch left behind is the consequence.
-        compare(PhoneCards.mirrorSubtitleKey(Object.assign({}, away,
-            { error: "ERROR: Could not find any ADB device" })), "noDevice");
+    }
+
+    function test_a_launch_that_failed_outranks_the_precondition_it_failed_on() {
+        // This assertion used to run the other way, on the reasoning that
+        // "the phone is not on ADB" is what to DO about scrcpy's exit. The
+        // reasoning held while `error` was PhoneScrcpy.lastError - any
+        // session's failure, possibly an hour old - and it is wrong now that
+        // the flag carries the mirror's OWN error, cleared by every
+        // launchMirror(): a non-empty one means the click the user just made
+        // failed, and "No device over ADB" is the line the card was already
+        // showing before that click. Preferring it made a failed launch and
+        // no launch at all the same two words, which is the silent snap back
+        // the recording caught.
+        const away = {
+            available: true, reachable: true, running: false, launching: false,
+            adbDevice: false, error: "ERROR: Could not find any ADB device"
+        };
+        compare(PhoneCards.mirrorState(away), "offline");
+        compare(PhoneCards.mirrorSubtitleKey(away), "error");
+        // A launching card still outranks both: the failure being carried
+        // belongs to the launch before this one.
+        compare(PhoneCards.mirrorSubtitleKey(Object.assign({}, away, { launching: true })), "launching");
+        compare(PhoneCards.mirrorState(Object.assign({}, away, { launching: true })), "connecting");
+    }
+
+    function test_the_window_between_the_click_and_the_answer_is_never_running() {
+        // The recorded defect: the supervisor's `started` means it SPAWNED
+        // scrcpy, so the card read "scrcpy Mirror / Mirror is running - click
+        // to focus its window" with a filled check on a machine adb had never
+        // seen a phone on. Whatever else is true, a launching mirror draws as
+        // connecting - no check mark, no detail line, no focus invitation.
+        const launching = {
+            available: true, reachable: true, running: false, launching: true,
+            adbDevice: false, error: ""
+        };
+        compare(PhoneCards.mirrorState(launching), "connecting");
+        compare(PhoneCards.mirrorTitleKey(launching), "connecting");
+        compare(PhoneCards.mirrorSubtitleKey(launching), "launching");
     }
 
     function test_a_probe_that_has_not_answered_yet_is_not_a_refusal() {

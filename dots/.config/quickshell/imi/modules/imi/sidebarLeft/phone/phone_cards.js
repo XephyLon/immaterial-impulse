@@ -34,6 +34,13 @@ function cardState(available, reachable, connecting, active) {
 // fork's choice): the card is not running, and the subtitle carries the
 // error's first line, so a second state would say the same thing twice.
 //
+// `launching` is the whole window between the click and the supervisor
+// answering, and it is a rung of its own so that it cannot be mistaken for
+// `running`: PhoneScrcpy holds it from launchMirror() until either the
+// session has survived its settle or the supervisor reports an exit. The
+// service used to leave it the moment the supervisor said it had SPAWNED
+// scrcpy, which is not the same event.
+//
 // The same is true of a phone that is reachable over KDE Connect but that
 // `adb devices` does not list: scrcpy has nothing to attach to, so the card
 // cannot start - and that is knowable BEFORE the click, the way missing
@@ -92,16 +99,22 @@ function mirrorSubtitleKey(flags) {
     if (!f.available) return "install";
     if (!f.reachable) return "offline";
     // Running and launching are asked BEFORE the error, and the order is the
-    // load-bearing part: PhoneScrcpy.lastError is written by any session's
-    // failure and cleared only by the next launchMirror(), so an app that
-    // failed an hour ago is still sitting there while the mirror runs. Asking
-    // the error first put a live mirror's card on a stale line.
+    // load-bearing part: a failure the card is still carrying belongs to a
+    // launch that is over, so a live or in-flight session outranks it.
     if (f.running) return "running";
     if (f.launching) return "launching";
-    // Asked before the error, because "the phone is not on ADB" is what to do
-    // about the error scrcpy's exit produced.
-    if (f.adbDevice === false) return "noDevice";
+    // ...and the error outranks the ADB precondition, which is the opposite
+    // of how this shipped. `error` is PhoneScrcpy.mirrorError now - the
+    // MIRROR's own last failure, cleared by the next launchMirror() - so a
+    // non-empty one means the click the user just made did not take. The
+    // "no device over ADB" line is what the card was already saying BEFORE
+    // that click, so preferring it makes a failed launch byte-identical to no
+    // launch at all: the card flashes and comes back to where it started,
+    // which is what "clicking it does nothing" looked like. It was the right
+    // order while `error` was the service-wide lastError, which any session's
+    // failure could have written an hour earlier.
     if (errorHeadline(f.error).length > 0) return "error";
+    if (f.adbDevice === false) return "noDevice";
     return "ready";
 }
 
