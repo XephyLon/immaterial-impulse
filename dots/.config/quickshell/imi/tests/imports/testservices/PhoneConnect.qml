@@ -266,6 +266,22 @@ Singleton {
             .filter(line => line.startsWith("/"))
             .map(path => "file://" + path.split("/").map(encodeURIComponent).join("/"));
     }
+
+    // Where the phone's user storage sits under an SFTP mount. The mount
+    // root is not the user's storage (the fork's 3a7f653b4 records it):
+    // storage/emulated/0 is, when the phone exposes it.
+    function sftpStoragePath(mount: var): string {
+        const root_ = (typeof mount === "string" ? mount : "").replace(/\/+$/, "");
+        return root_.length === 0 ? "" : `${root_}/storage/emulated/0`;
+    }
+
+    // The directory to open for a browse: the storage when it exists, the
+    // mount root otherwise.
+    function sftpBrowseTarget(mount: var, hasStorage: bool): string {
+        const root_ = (typeof mount === "string" ? mount : "").replace(/\/+$/, "");
+        if (root_.length === 0) return "";
+        return hasStorage ? root.sftpStoragePath(root_) : root_;
+    }
     // END phone-connect parser logic
 
     function applyBackend(newBackend: string): void {
