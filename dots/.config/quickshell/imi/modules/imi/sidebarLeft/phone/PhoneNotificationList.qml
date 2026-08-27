@@ -89,6 +89,16 @@ Item {
             // Newest first, the way the shell's own group draws them.
             readonly property var notifications: (card.group?.notifications ?? []).slice().reverse()
             readonly property int notificationCount: card.notifications.length
+            // KDE Connect saves the posting app's icon to a file and hands
+            // the absolute PATH over as `iconPath` (the group carries the
+            // first one, the same derivation services/Notifications.qml uses
+            // for a desktop group). NotificationAppIcon takes a URL, so it is
+            // spelled the way every other file source in this tree is; a
+            // notification that arrived without one leaves it empty and the
+            // widget draws its glyph instead.
+            readonly property string appIconPath: FileUtils.trimFileProtocol(card.group?.appIcon ?? "")
+            readonly property string appIconUrl: card.appIconPath.length === 0 ? ""
+                : "file://" + card.appIconPath.split("/").map(encodeURIComponent).join("/")
 
             readonly property real dragConfirmThreshold: 70
             readonly property real dismissOvershoot: 20
@@ -191,6 +201,20 @@ Item {
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: Appearance.spacing.space100
+
+                        // The shell's own notification icon, on this model's
+                        // fields: `image` is the picture slot - a URL to a
+                        // file - and the glyph guessed from the title is what
+                        // it falls back to when the phone sent no icon. No
+                        // second resolution scheme, and no `appIcon`: that
+                        // slot goes through the icon THEME, which knows
+                        // nothing about a path kdeconnectd wrote.
+                        NotificationAppIcon {
+                            Layout.alignment: Qt.AlignVCenter
+                            implicitSize: Appearance.font.pixelSize.huge + Appearance.spacing.space100
+                            image: card.appIconUrl
+                            summary: card.notifications[0]?.title ?? card.appName
+                        }
 
                         StyledText {
                             Layout.fillWidth: true
