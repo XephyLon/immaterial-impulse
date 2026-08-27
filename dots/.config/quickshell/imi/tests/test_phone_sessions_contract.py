@@ -317,9 +317,22 @@ def test_the_config_and_persistent_blocks_carry_every_key_the_services_read():
         assert re.search(rf"property \S+ {key}:", phone), f"Config.options.phone lacks {key}"
     assert config.rstrip().endswith("}\n        }\n    }\n}") or config.rstrip().endswith("}"), "Config.qml shape"
     sidebar = re.search(r"property JsonObject sidebar: JsonObject \{(.*?)\n            \}", config, re.S)
-    assert sidebar and re.search(r"property JsonObject phone: JsonObject \{\s*property bool enable: true", sidebar.group(1)), (
-        "sidebar.phone.enable is not declared beside sidebar.media"
-    )
+    assert sidebar, "Config.options.sidebar not found"
+    tab_key = re.search(r"property JsonObject phone: JsonObject \{(.*?)\n                \}", sidebar.group(1), re.S)
+    assert tab_key, "sidebar.phone.enable is not declared beside sidebar.media"
+    enabled = re.search(r"property bool enable: (true|false)", tab_key.group(1))
+    assert enabled, "sidebar.phone lacks an enable property"
+    # The key gates more than a tab: PhoneNotifications reads it as
+    # mirrorActive, and that is what drops kdeconnectd's desktop copy of a
+    # phone notification. True before a list exists to read them in and the
+    # phone's notifications stop arriving anywhere at all - so the default
+    # follows the tab into the tree, and this releases itself when W5 lands.
+    tab_exists = (ROOT / "modules/imi/sidebarLeft/phone").is_dir()
+    if not tab_exists:
+        assert enabled.group(1) == "false", (
+            "sidebar.phone.enable is true but modules/imi/sidebarLeft/phone does not exist: "
+            "the notification dedupe would drop the phone's notifications with nothing drawing them"
+        )
     states = persistent[persistent.index("property JsonObject phone: JsonObject {"):]
     for key in ("activeDeviceId", "recentDeviceIds", "cachedNotificationsJson", "recentPackages",
                 "originalDefaultSink", "lastBackend", "lastMode", "lastIp", "lastPort"):

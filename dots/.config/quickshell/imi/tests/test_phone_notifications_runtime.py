@@ -160,8 +160,12 @@ class PhoneNotificationsRuntimeTest(unittest.TestCase):
         # the device model (the timer fires on start) and nothing re-sweeps
         # on a schedule, so the second notification can only arrive through
         # the signal.
+        # sidebar.phone.enable ships false until the tab exists (it gates the
+        # dedupe, not just the tab), and the mirror reads it as mirrorActive -
+        # so the harness turns it on explicitly rather than riding the default.
         (shell_config / "config.json").write_text(json.dumps({
             "networking": {"phoneConnect": {"enable": True, "pollInterval": 600000}},
+            "sidebar": {"phone": {"enable": True}},
         }, indent=2))
 
     def invocations(self):
