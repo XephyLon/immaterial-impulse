@@ -241,6 +241,19 @@ Singleton {
             .map(entry => typeof entry === "string" ? entry.trim() : "")
             .filter(entry => /^(file|https?):\/\//i.test(entry));
     }
+
+    // What to do with the desktop clipboard: a link goes as a URL, prose as
+    // text, nothing is refused. The URL heuristic is the fork's - a scheme,
+    // or a host-shaped token that is the whole string or the start of a
+    // path. A bare host leaves with https:// on it: the daemon hands the
+    // string to a QUrl, and a schemeless one is relative to nothing.
+    function clipboardShareTarget(text: var): var {
+        const value = (typeof text === "string" ? text : "").trim();
+        if (value.length === 0) return { kind: "empty", value: "" };
+        if (/^https?:\/\//i.test(value)) return { kind: "url", value: value };
+        if (/^[\w.-]+\.\w{2,}(\/|$)/.test(value)) return { kind: "url", value: `https://${value}` };
+        return { kind: "text", value: value };
+    }
     // END phone-connect parser logic
 
     function applyBackend(newBackend: string): void {
