@@ -58,8 +58,14 @@ PhoneSubPage {
         Layout.fillHeight: true
         spacing: Appearance.spacing.space100
 
+        // The search row is content-height, stated rather than left to the
+        // default: `ToolbarTextField` declares `Layout.fillHeight: true` of
+        // its own, which makes this row's maximum height unbounded, and a
+        // nested layout defaults to filling - so the row would take the
+        // column's whole leftover and leave the list eight pixels.
         RowLayout {
             Layout.fillWidth: true
+            Layout.fillHeight: false
             spacing: Appearance.spacing.space100
 
             MaterialSymbol {
