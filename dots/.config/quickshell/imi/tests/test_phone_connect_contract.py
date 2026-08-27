@@ -358,6 +358,28 @@ def test_actions_queue_behind_one_another_instead_of_killing_the_one_in_flight()
     assert "root.pumpActions()" in block, "the action process's exit does not pump the queue"
 
 
+def test_feedback_is_one_signal_and_one_error_string_and_a_failed_action_reaches_both():
+    """The tab's toast is fed by `actionFeedback(message, ok)` and its inline
+    error by `lastActionError`; every failure the service can see reports
+    through both, and a busctl action exiting non-zero is the one every
+    action shares."""
+    source = SERVICE.read_text()
+    assert re.search(r"^    signal actionFeedback\(string message, bool ok\)$", source, re.M), (
+        "actionFeedback(message, ok) is not declared with that exact signature"
+    )
+    assert re.search(r"^    property string lastActionError: \"\"$", source, re.M), (
+        "lastActionError is not a string property defaulting to empty"
+    )
+    helper = re.search(r"function reportFailure\(message: string\): void \{\n(.*?)\n    \}", source, re.S)
+    assert helper, "reportFailure(message) missing - the one spelling of a failure"
+    assert "root.lastActionError = message" in helper.group(1), "reportFailure does not set lastActionError"
+    assert "root.actionFeedback(message, false)" in helper.group(1), (
+        "reportFailure does not raise actionFeedback(message, false)"
+    )
+    block = _process_block(source, "actionProc")
+    assert "root.reportFailure(" in block, "a failed busctl action does not report through reportFailure"
+
+
 # ---- the sidebar surface ----------------------------------------------------
 
 
