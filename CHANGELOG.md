@@ -40,6 +40,17 @@ own repo; the installer pins which revision it builds.
   phone's dialer or SMS composer for a number over adb, saying why when it
   cannot. This is the model behind the Phone tab's Contacts card; the tab
   itself follows.
+- **The phone's screen, camera and microphone reach the desktop.** Groundwork
+  for the Phone tab: scrcpy mirrors the phone in a window and opens one
+  Android app on a virtual display of its own (scrcpy 4+, "App Mode"), the
+  phone's camera becomes a `/dev/videoN` webcam through DroidCam, and its
+  microphone becomes a `DroidCam-Mic` input that any app can record from -
+  through scrcpy with no app on the phone, or through DroidCam. Every one of
+  these is optional: nothing is added to the installer, each tool is probed
+  when the shell starts, and what is missing is answered with the install
+  command for Arch, Fedora and Debian. The settings live under
+  `phone.*` in config.json (mirror flags, app-mode display, webcam and
+  microphone connection); the tab that shows them follows.
 - **Phone Connect shows your phone's wireless address and cellular network,
   and answers pairing requests.** The panel reads the address KDE Connect
   reaches the phone on and its cellular network type (LTE, 5G, …) alongside

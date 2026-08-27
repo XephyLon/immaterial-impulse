@@ -619,6 +619,36 @@ services/                  Singletons wrapping external state/processes - one pe
                               (tests/test_phone_contacts_contract.py enforces it). The
                               dialer and SMS actions are `adb shell am start` intents,
                               refused with `lastError` when adb cannot reach the phone
+  PhoneDeps.qml                What the Phone tab's OPTIONAL tooling looks like on this
+                              machine: scrcpy, adb, droidcam-cli, v4l2-ctl, pactl, the
+                              preview players, the v4l2loopback module (loaded/installed),
+                              scrcpy's major version and the distro - every one a constant
+                              `command -v`/argv probe started at construction, never from a
+                              feature's own activation (lint_capability_probe_gating.py).
+                              missingFor(feature) is the install guide's rows with the
+                              sibling fork's per-distro commands verbatim; nothing here is
+                              an installer dependency (sdata/deps-info.md "Phone (optional)")
+  PhoneScrcpy.qml              The screen mirror and app mode. QML holds no scrcpy handle:
+                              scripts/phone/scrcpy_session_manager.py is ONE supervisor
+                              speaking NDJSON on stdin/stdout that owns every scrcpy child
+                              and its imi-phone-<type>-<id> window title; this sends
+                              launch/stop/focus/list_apps and applies started/exited/
+                              apps_list. Started by the first command, stopped by a 10 s
+                              idle timer once nothing is live, restarted on the DiscordVoice
+                              ladder only while commands are queued. mirrorArgs()/
+                              appModeArgs() are the pure flag tables (tst_phone_scrcpy.qml)
+  PhoneCamera.qml              The phone as a webcam through droidcam-cli into v4l2loopback,
+                              launched DETACHED by scripts/phone/droidcam_session.sh (the
+                              pidfile is the binary's own) so it outlives a shell restart
+                              and is re-adopted at boot from the session's state file.
+                              USB first: adb get-state, then KDE Connect's address
+  PhoneMic.qml                 The phone as a microphone: the stream lands on a null sink
+                              (DroidCam-Mic) whose .monitor is what applications record.
+                              scrcpy's SDL audio ignores PULSE_SINK on PipeWire, so the
+                              DEFAULT sink is swapped for exactly as long as the stream
+                              takes to appear, the original persisted in Persistent so a
+                              restart mid-swap still undoes it - see the entry under
+                              "External binaries the shell drives"
   SchemePreview.qml            Per-scheme swatches for the scheme pickers: one venv run of
                               scripts/colors/scheme_preview.py quantizes the wallpaper once and
                               builds every Material variant from it. Cached against the wallpaper
@@ -672,6 +702,19 @@ scripts/                   Standalone helper scripts (Python/bash) invoked via P
                               vCard 2.1 note under "busctl monitor" below before touching the
                               parser; tests/test_phone_contacts_monitor.py drives it against
                               a fixture tree and never the machine's own cards
+  phone/                      The Phone tab's process owners. scrcpy_session_manager.py is
+                              the NDJSON supervisor PhoneScrcpy speaks to (protocol in its
+                              docstring; tests/test_phone_scrcpy_manager.py drives it with
+                              fake scrcpy/adb/hyprctl on PATH). droidcam_session.sh
+                              launches droidcam-cli / the scrcpy mic stream detached under
+                              ${XDG_STATE_HOME:-~/.local/state}/quickshell/imi/phone/ and
+                              answers status/stop by pidfile; droidcam_status.sh is the
+                              read-only JSON probe; setup_/teardown_droidcam_input.sh load
+                              and unload the DroidCam-Mic null sink; install_droidcam.sh
+                              is the per-distro installer the guide offers. Every process
+                              match is `pgrep -x` on the binary's name with the signature
+                              checked on the cmdline - the fork's `pgrep -f` adopted its
+                              own launcher, and this repo's lint refuses the bare form
 translations/              i18n string tables (Translation.tr(...) singleton)
 assets/                    Static images/fonts bundled with the shell
 ```
@@ -4120,6 +4163,44 @@ because a refused intent has to say so. The tests never read the machine's own c
 `tests/test_phone_contacts_monitor.py` builds a fixture tree shaped after the real files.
 209852182 ("feat(phone): contacts_monitor.py reads the vCards KDE Connect writes"),
 b7b8ffcda ("feat(phone): PhoneContacts.qml, the contacts model over a supervised monitor").
+**scrcpy's microphone stream cannot be aimed at a sink, so the DEFAULT sink is swapped under it,
+and the swap is undone by evidence rather than by a timer.** `scrcpy --audio-source=mic` plays
+through SDL, whose PulseAudio backend opens its stream on the default sink and ignores
+`PULSE_SINK` on PipeWire (the sibling fork measured this; `droidcam-cli -a` does honour it).
+`services/PhoneMic.qml` therefore reads `pactl get-default-sink`, records it in
+`Persistent.states.phone.mic.originalDefaultSink`, sets `DroidCam-Mic` as the default, launches
+scrcpy detached, and restores the original the moment `pactl list sink-inputs` names scrcpy -
+polled every 250 ms with a 3 s ceiling, because every millisecond past the stream's creation is
+silence on the user's speakers, and a blind wait muted the desktop on every launch. Three exit
+paths also restore it (`becomeActive`, `fail`, `stop`) and the boot reconciliation undoes a swap a
+dead shell left behind (`restorePlan`: default is `DroidCam-Mic`, no live mic session, so back to
+the saved sink or `@DEFAULT_SINK@`). The persisted field is the whole reason a restart mid-swap
+does not strand the user on a null sink. `tests/test_phone_sessions_contract.py` holds all four
+restores and the persistence.
+("feat(phone): PhoneMic - the phone as a microphone, routed through a null sink").
+
+**A `Process` whose binary is not on PATH never emits `exited`; `running` still drops.** Measured
+with a `qs -p` probe under headless weston: `["definitely-not-a-binary"]` produced one
+`runningChanged(false)` and no `exited` at all, while `["true"]` produced both. So a probe
+counter that waits for `exited` to come back to zero waits for ever on the one machine the probe
+exists for - the one missing the tool. `services/PhoneDeps.qml` hangs its pending count off
+`onRunningChanged` and writes the flag from `onExited`, and its `ready` is what a card reads to
+show "checking" rather than "install" while the sweep runs.
+("feat(phone): PhoneDeps - one probe singleton for the tab's optional tooling").
+
+**The four session services and their doubles are one more synced-region pair, and the pattern
+now has a generator's worth of shape.** `PhoneDeps`, `PhoneScrcpy`, `PhoneCamera` and `PhoneMic`
+each keep everything decidable between `BEGIN/END <name> logic` markers - flag tables, argv
+builders, state ladders, the event handler - and `tests/imports/testservices/<Name>.qml` carries
+the region byte-for-byte with the process I/O replaced: `send()` records what the supervisor
+would have been written, `run(argv, cb)` answers synchronously from a test-provided `responder`
+and records every argv, timers become counters. That is what lets `tests/tst_phone_scrcpy.qml`
+drive a whole launch (probe adb, launch detached, swap the sink, verify the stream) as a list of
+argv strings compared literally, and it is why the synced region may reference sibling
+singletons (`PhoneConnect.activeDevice`, `PhoneScrcpy.targetArgs`) - the doubles module carries
+them too. The one-shot serialized queue (`run`/`pump`/one `Process` with `exec`) is
+`PhoneConnect`'s busctl queue, reused rather than one Process per command.
+("test(phone): pin the four session services' process I/O to their doubles").
 
 **A player on the MPRIS bus may be a proxy for another player, and every field you would match on
 is the borrowed one.** `playerctld` is `playerctl`'s daemon, not a player: it re-publishes whichever

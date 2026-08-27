@@ -196,6 +196,23 @@ Tips:
   - Note that `qalc` is the needed executable. In Arch Linux [libqalculate](https://archlinux.org/packages/extra/x86_64/libqalculate) provides it, but in Fedora [qalculate](https://packages.fedoraproject.org/pkgs/libqalculate/qalculate/fedora-43.html#files) does and [libqalculate](https://packages.fedoraproject.org/pkgs/libqalculate/libqalculate/fedora-43.html#files) does not.
 
 
+## Phone (optional)
+None of these is in any `PKGBUILD` or install list, on purpose: the Phone tab probes each one
+at shell start (`quickshell/imi/services/PhoneDeps.qml`, a constant `command -v` per tool) and
+shows the install command for Arch, Fedora and Debian when one is missing. Install what you use.
+- `scrcpy` — the screen mirror and App Mode (`--start-app`, needs scrcpy 4+); also the
+  preferred microphone backend (`--audio-source=mic`). Arch: `scrcpy`.
+- `android-tools` — `adb`, which scrcpy and the USB connection paths need.
+- `droidcam` (AUR, bundles `droidcam-cli` and the `v4l2loopback-dc` module) or `droidcam-cli` with
+  `v4l2loopback-dkms` — the webcam, and the fallback microphone backend.
+  `quickshell/imi/scripts/phone/install_droidcam.sh` is the per-distro installer the guide offers.
+- `v4l-utils` — `v4l2-ctl`, recommended: finds the webcam's `/dev/videoN` and flips it live.
+- `pulseaudio-utils` (or `pipewire-pulse`) — `pactl`, required for the microphone: loads the
+  `DroidCam-Mic` null sink whose monitor is the recordable source.
+- `mpv` (recommended), else `ffplay` (`ffmpeg`) or `vlc` — the webcam preview window.
+- `kdialog` (already in `immaterial-impulse-quickshell-git`) and `wl-clipboard` (already in
+  `immaterial-impulse-hyprland`) — the Send file picker and the clipboard share.
+
 # Actual packages
 ## immaterial-impulse-quickshell-git
 - Pinned commit.
