@@ -37,6 +37,25 @@ import qs.modules.imi.sidebarLeft.phone
  * decisions themselves live in phone_cards.js and are driven by
  * tests/tst_phone_cards.qml.
  *
+ * Three things here are WATCHED rather than read once, because each of them
+ * is a defect that only exists between two settled states:
+ *
+ *  - the mirror launch. `Directories.scriptPath` resolves to this checkout,
+ *    so the click really starts scripts/phone/scrcpy_session_manager.py,
+ *    which really spawns the fake scrcpy, which exits 1 the way the real one
+ *    does with no phone on adb. `launchWatch` samples every 25ms and the step
+ *    after it asserts that the card was NEVER read as running or active -
+ *    the supervisor's `started` means "spawned" - that the badge's glyph
+ *    never blanked, and that what the card settles on is the error rather
+ *    than the line it was already showing before the click;
+ *  - the sub-page cross-fade. `fadeWatch` samples the outgoing column's
+ *    opacity and scale, and the check that matters is that a MID-flight
+ *    reading exists: every "was it ever out of range" assertion passes
+ *    identically on a transition that never ran;
+ *  - the toast's width, against a control. A short message must produce a
+ *    toast narrower than the cap before a long one is allowed to prove the
+ *    cap holds.
+ *
  *   PATH=<dir with fake busctl>:$PATH qs -p PhoneTabRuntimeTest.qml
  */
 ShellRoot {
@@ -133,6 +152,19 @@ ShellRoot {
     function footerRow() {
         const footer = harness.first("PhoneFooterBar");
         return footer ? (footer.children[0] ?? null) : null;
+    }
+
+    // The badge a feature card leads with: the MaterialShape and the
+    // MaterialSymbol inside it are two objects with two `text` values (the
+    // shape aliases the symbol's), and the defect this reads for is the
+    // symbol drawn at zero opacity inside a shape that is not.
+    function cardBadge(card) {
+        return harness.findAll(card, "MaterialShapeWrappedMaterialSymbol", [])[0] ?? null;
+    }
+
+    function cardGlyph(card) {
+        const badge = harness.cardBadge(card);
+        return badge ? (harness.findAll(badge, "MaterialSymbol", [])[0] ?? null) : null;
     }
 
     FloatingWindow {
@@ -431,19 +463,66 @@ ShellRoot {
         () => {
             // Does the primary click fire at all, or is it swallowed by the
             // settings chip or by the status mark beside it? Clicked at the
-            // card's own centre, and scored on the service.
+            // card's own centre, and scored on the service - and then WATCHED
+            // for a second, because what this branch exists to fix is what
+            // the card said in between.
+            //
+            // The supervisor is the real one (Directories.scriptPath resolves
+            // to this checkout's scripts/), so the click really does spawn
+            // the fake scrcpy on PATH, which exits 1 with "Could not find any
+            // ADB device" the way the real one does with no phone attached.
             const mirror = harness.cardTitled("scrcpy Mirror");
+            const glyph = harness.cardGlyph(mirror);
             harness.check("the mirror is not already launching", !PhoneScrcpy.mirrorLaunching);
+            harness.check(`the badge draws its offline glyph before the click, got "${glyph?.text}"`,
+                          glyph !== null && glyph.text === "cast"
+                          && harness.cardBadge(mirror).text === glyph.text);
+            harness.launchSaw = { running: false, active: false, blankGlyph: "",
+                                  minGlyphOpacity: 1, samples: 0 };
             harness.click(mirror);
+            launchWatch.running = true;
         },
+        () => {},
+        () => {},
         () => {
+            launchWatch.running = false;
+            const saw = harness.launchSaw;
+            const mirror = harness.cardTitled("scrcpy Mirror") ?? harness.cardTitled("Connecting");
+            const glyph = harness.cardGlyph(mirror);
+            console.log(`[PhoneTab] launch watch: samples=${saw.samples} sawRunning=${saw.running}`
+                + ` sawActive=${saw.active} minGlyphOpacity=${saw.minGlyphOpacity.toFixed(2)}`
+                + ` blank="${saw.blankGlyph}" state=${mirror?.cardState} "${mirror?.subtitle}"`);
+
+            // A watch that never ran reports "nothing bad happened" just as
+            // loudly as a correct one, so the sample count is asserted first.
+            harness.check(`the launch was watched frame by frame, got ${saw.samples} samples`,
+                          saw.samples > 20);
             harness.check("a click on the card's body reaches launchMirror()",
-                          PhoneScrcpy.mirrorLaunching || PhoneScrcpy.mirrorRunning
-                          || PhoneScrcpy.lastError.length > 0);
-            // Disarmed through the model rather than by stopping the mirror:
-            // this harness has no phone and the supervisor's own exit is not
-            // what is being scored here.
-            PhoneScrcpy.mirrorLaunching = false;
+                          PhoneScrcpy.mirrorError.length > 0);
+
+            // Defect 1: the supervisor answers `started` when it has SPAWNED
+            // scrcpy. Reading that as a live mirror put "scrcpy Mirror /
+            // Mirror is running - click to focus its window", a filled check
+            // and "Active for 0s" on a card whose phone adb has never seen.
+            harness.check("a launch with no ADB device is never read as a running mirror",
+                          !saw.running);
+            harness.check("...so the card never draws its active rung either", !saw.active);
+
+            // Defect 2: the badge's glyph used to cross-fade to zero inside a
+            // shape that does not fade with it, on a ladder that moves twice
+            // inside one tier - so the icon simply went missing.
+            harness.check(`the badge's glyph never blanks, min opacity ${saw.minGlyphOpacity.toFixed(2)}`,
+                          saw.minGlyphOpacity > 0.99);
+            harness.check(`the glyph and its shape never disagree or empty, got "${saw.blankGlyph}"`,
+                          saw.blankGlyph === "");
+
+            // And the failure is REPORTED rather than snapped back to the
+            // line the card was already showing before the click.
+            harness.check(`a failed launch leaves the card on the error, got "${mirror?.subtitle}"`,
+                          mirror !== null && mirror.cardState === "offline"
+                          && mirror.subtitle.indexOf("Could not find any ADB device") >= 0);
+            harness.check(`...and the glyph is back to the offline one, got "${glyph?.text}"`,
+                          glyph !== null && glyph.text === "cast");
         },
         () => {
             // The settings chip is a SECOND affordance on the same card, and
@@ -495,6 +574,106 @@ ShellRoot {
                           toast !== null && toast.message === "scrcpy: no device found" && !toast.ok);
         },
 
+        // ---- the toast stays inside the tab, however long the message ----
+        () => {
+            // The control, taken first: a short message must produce a toast
+            // NARROWER than the cap, or the long-message check below passes
+            // on a toast that was always full width.
+            const toast = harness.toastCard();
+            loader.item.showToast("Ringing", true);
+            harness.shortToastWidth = 0;
+            harness.toastCap = toast.maxWidth;
+        },
+        () => {
+            const toast = harness.toastCard();
+            harness.shortToastWidth = toast.width;
+            console.log(`[PhoneTab] short toast ${toast.width} of cap ${harness.toastCap}`
+                + ` in tab ${loader.item.width}`);
+            harness.check(`a short message does not fill the tab, got ${toast.width} of ${harness.toastCap}`,
+                          toast.width > 0 && toast.width < harness.toastCap);
+            // The real string, from the screenshot the maintainer sent.
+            loader.item.showToast("DroidCam did not start - is the DroidCam app open on the phone?", false);
+        },
+        () => {
+            const toast = harness.toastCard();
+            const label = harness.findAll(toast, "StyledText", [])[0] ?? null;
+            const left = toast.mapToItem(loader.item, 0, 0).x;
+            const right = left + toast.width;
+            console.log(`[PhoneTab] long toast ${toast.width} at ${left}..${right}`
+                + ` in tab ${loader.item.width}; label ${label?.width}`
+                + ` lines=${label?.lineCount} truncated=${label?.truncated}`);
+
+            harness.check(`the long message widened the toast, got ${toast.width}`
+                          + ` against ${harness.shortToastWidth}`,
+                          toast.width > harness.shortToastWidth);
+            harness.check(`the toast stays inside the tab (${left}..${right} of ${loader.item.width})`,
+                          left >= 0 && right <= loader.item.width);
+            harness.check(`...and inside the cap the panel's own margins set, got ${toast.width}`,
+                          toast.width <= harness.toastCap);
+            harness.check(`the label is bounded and wraps rather than running off, got ${label?.width}`,
+                          label !== null && label.width <= toast.width
+                          && label.wrapMode !== Text.NoWrap && label.lineCount > 1);
+            const labelRight = label.mapToItem(toast, label.width, 0).x;
+            harness.check(`the label's own right edge is inside the toast, got ${labelRight}`,
+                          labelRight <= toast.width);
+        },
+
+        // ---- the tab recedes as a sub-page slides in ---------------------
+        () => {
+            const column = harness.contentColumn();
+            harness.check(`the tab rests at full strength, got ${column?.opacity} / ${column?.scale}`,
+                          column !== null && column.opacity === 1 && column.scale === 1);
+            harness.fadeSaw = { samples: 0, minOpacity: 2, maxOpacity: -1,
+                                minScale: 2, maxScale: -1, mid: 0 };
+            loader.item.openSubPage("contacts");
+            fadeWatch.running = true;
+        },
+        () => {},
+        () => {
+            fadeWatch.running = false;
+            const saw = harness.fadeSaw;
+            const column = harness.contentColumn();
+            console.log(`[PhoneTab] fade watch: samples=${saw.samples}`
+                + ` opacity ${saw.minOpacity.toFixed(3)}..${saw.maxOpacity.toFixed(3)}`
+                + ` scale ${saw.minScale.toFixed(4)}..${saw.maxScale.toFixed(4)}`
+                + ` midFrames=${saw.mid} settled=${column?.opacity}/${column?.scale}`);
+
+            harness.check(`the transition was watched frame by frame, got ${saw.samples} samples`,
+                          saw.samples > 10);
+            // A transition that never ran reports the same "nothing was ever
+            // out of range" as one that ran correctly, so what is asserted is
+            // that a MID-flight reading exists - the shape b2b5de2a1 records
+            // for a step that measures the state it was supposed to change.
+            harness.check(`the outgoing tab was caught mid-fade, ${saw.mid} frames strictly between`,
+                          saw.mid > 0);
+            harness.check(`...and it recedes rather than only fading, scale down to ${saw.minScale.toFixed(4)}`,
+                          saw.minScale < 1);
+            // The recede is DERIVED, not picked, and this is the check that
+            // says so: the excursion may not exceed twice the derived one.
+            // It is a band rather than the number itself because
+            // `elementMove`'s expressiveDefaultSpatial curve leaves the unit
+            // box - it peaks at 1.0139 - so the scale legitimately travels a
+            // hair past its destination on the way there.
+            const excursion = column !== null ? 1 - column.recedeTo : 0;
+            harness.check(`the recede stays the derived size, ${saw.minScale.toFixed(4)}`
+                          + ` against ${column?.recedeTo?.toFixed(4)}`,
+                          column !== null && saw.minScale >= column.recedeTo - excursion);
+            harness.check(`the tab ends the transition gone, got ${column?.opacity} / ${column?.scale}`,
+                          column !== null && column.opacity < 0.001
+                          && Math.abs(column.scale - column.recedeTo) < 0.001);
+            loader.item.popSubPage();
+        },
+        () => {},
+        () => {
+            // Both channels come back, which is the half a one-way check
+            // cannot see: a recede that never returned would leave the tab
+            // permanently a hair small and permanently transparent.
+            const column = harness.contentColumn();
+            harness.check(`popping the page brings the tab back, got ${column?.opacity} / ${column?.scale}`,
+                          column !== null && Math.abs(column.opacity - 1) < 0.001
+                          && Math.abs(column.scale - 1) < 0.001);
+        },
+
         () => harness.finish()
     ]
 
@@ -505,6 +684,61 @@ ShellRoot {
     property real listWithCard: 0
     property real cardHeight: 0
     property real columnSpacing: 0
+
+    // What the launch watch saw. Written by the timer below, read by the
+    // step after it - never re-read out of the harness's own log line.
+    property var launchSaw: ({ running: false, active: false, blankGlyph: "",
+                               minGlyphOpacity: 1, samples: 0 })
+
+    Timer {
+        id: launchWatch
+        interval: 25
+        repeat: true
+        onTriggered: {
+            const card = harness.cardTitled("scrcpy Mirror")
+                ?? harness.cardTitled("Connecting") ?? harness.cardTitled("Mirror");
+            if (!card) return;
+            const badge = harness.cardBadge(card);
+            const glyph = harness.cardGlyph(card);
+            const saw = harness.launchSaw;
+            saw.samples++;
+            if (PhoneScrcpy.mirrorRunning) saw.running = true;
+            if (card.cardState === "active") saw.active = true;
+            if (glyph) {
+                if (glyph.opacity < saw.minGlyphOpacity) saw.minGlyphOpacity = glyph.opacity;
+                // Empty on either object, or the two disagreeing, is a badge
+                // with nothing in it - recorded as the offending pair rather
+                // than as a bool, so a failure names what was on screen.
+                if (`${glyph.text}`.length === 0 || `${badge?.text}` !== `${glyph.text}`)
+                    saw.blankGlyph = `${badge?.text}|${glyph.text}`;
+            }
+            harness.launchSaw = saw;
+        }
+    }
+
+    property real shortToastWidth: 0
+    property real toastCap: 0
+
+    property var fadeSaw: ({ samples: 0, minOpacity: 2, maxOpacity: -1,
+                             minScale: 2, maxScale: -1, mid: 0 })
+
+    Timer {
+        id: fadeWatch
+        interval: 25
+        repeat: true
+        onTriggered: {
+            const column = harness.contentColumn();
+            if (!column) return;
+            const saw = harness.fadeSaw;
+            saw.samples++;
+            saw.minOpacity = Math.min(saw.minOpacity, column.opacity);
+            saw.maxOpacity = Math.max(saw.maxOpacity, column.opacity);
+            saw.minScale = Math.min(saw.minScale, column.scale);
+            saw.maxScale = Math.max(saw.maxScale, column.scale);
+            if (column.opacity > 0.001 && column.opacity < 0.999) saw.mid++;
+            harness.fadeSaw = saw;
+        }
+    }
 
     property int stepIndex: 0
     Timer {
