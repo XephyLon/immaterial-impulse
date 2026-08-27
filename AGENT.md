@@ -895,6 +895,21 @@ was unpinned, so adding a tab broke no test at all.
 31b58f7f9 ("test(sidebar): pin the left sidebar's tab set, which nothing pinned"),
 ba63a5eea ("feat(sidebar): the Phone tab joins the left sidebar, and the gate opens").
 
+**And the tab bar beside those lists asks for an index rather than owning one.** The `SwipeView`
+carried `currentIndex: tabBar.currentIndex`, naming an id declared inside
+`modules/common/widgets/VerticalTabBar.qml` - a different component, so the id is not in scope and
+the binding threw a `ReferenceError` on every evaluation while the view was really driven by the
+tab bar's own `onCurrentIndexChanged` write-back. Deleting the dead binding is only half of it: that
+write-back went through a `property alias currentIndex: tabBar.currentIndex`, so the first tab click
+destroyed the call site's `currentIndex: swipeView.currentIndex` binding and the bar stopped
+following the view - a swipe, or a deep link through `GlobalStates.sidebarLeftTab`, moved the page
+and left the bar showing the old tab. That is #158's defect in a second widget, and it takes #158's
+answer: the bar's `currentIndex` is a plain property it never writes, a click raises
+`currentIndexRequested(index)`, and the call site moves the `SwipeView`, which is the one source of
+truth. The vestigial QQC2 `TabBar` the alias pointed at (`z: -1`, `background: null`, empty
+`TabButton`s behind the drawn cards) went with it.
+(fix(sidebar): the left sidebar's tab bar asks for an index instead of naming one it cannot see.)
+
 ## Hyprland integration
 
 **Hyprland only.** `README.md`'s "Compositor support" section is policy, not aspiration: there are no
@@ -5112,13 +5127,43 @@ shortcut is right for a toggle pressed while the overview is up — and always t
 edge, where the flag has just flipped, so every open after the first reused the first screen's
 window. One monitor cannot show that; #297 reopened on two. The shell's `WM.focusedMonitor` was
 following every `focusedmon` event the whole time (verified against Hyprland's event socket on a
-nested two-output session). `tests/run_overview_focus_probe.sh` is that session, run by hand:
-two wayland outputs, focus moved between them, `search activeScreen` compared with
-`hyprctl monitors` `focused` on each open. (fix(overview): every open latches the focused
-monitor afresh; the toggles alone keep the already-open shortcut.) The sidebars
-carry the same latent bug and are not converted yet: the left one reparents a single content tree
-between two windows, so per-screen there is more than a wrap. (fix(overview): one surface per
+nested two-output session). `tests/run_persistent_surface_focus_probe.sh` is that session, run by
+hand: two wayland outputs, focus moved between them, and each surface's own `activeScreen` compared
+with `hyprctl monitors` `focused` on each open. (fix(overview): every open latches the focused
+monitor afresh; the toggles alone keep the already-open shortcut.) (fix(overview): one surface per
 screen, and the open picks the focused monitor's.)
+
+**Both sidebars are that family now too**, and converting them is where the shape stopped being the
+overview's alone. Four things they added to it. The left sidebar's content is ONE tree that MOVES
+rather than one per screen: it is the AI chat, the translator, the media pane and the Phone tab, all
+of which hold something the user is in the middle of, so N copies would mean the panel forgetting
+what it was showing whenever it opened on another monitor - and the reparent already existed,
+because detaching into a floating window has always moved that same tree. The gesture is a
+per-window `panelOpen` written only by the scope's dispatcher, never an `EdgeSlide` bound straight
+to the global flag: a binding on that flag re-evaluates on the frame it flips, *before* the latch
+has moved, so the PREVIOUS target starts an entrance the latch then cancels. An `exclusiveZone`
+needs the target predicate as much as the mask does - the left sidebar's pin would otherwise reserve
+its width on every monitor at once. And the IPC handlers and global shortcuts moved out of the right
+sidebar's window to its `Scope`: an `IpcHandler` registers by `target` and a `GlobalShortcut` by
+`name`, both process-wide, so a second instance inside a `Variants` delegate is a startup failure
+rather than a duplicate. Each of the four is a check.
+(fix(sidebar): both sidebars become one surface per screen, opening on the focused monitor.)
+
+**And the rule is swept rather than listed.** Every `.qml` under `modules/imi/` that declares a
+`PanelWindow` has to name its screen one of four ways: the per-screen family above, a `screen:` on
+the window itself, a type whose every call site passes one (`ClockDepthSelectSurface`,
+`EditModeChromeSurface`, `BarExclusiveZoneReserver`, `RegionSelection`, `ScreenTranslatorPanel` and
+`ScreenCorners`' inline `CornerPanelWindow` are all pinned that way, and the sweep follows the call
+sites rather than trusting the file), or a reasoned entry in `EXEMPT`. Almost every exemption is the
+same sentence - the window is built by a `Loader`/`LazyLoader` gated on the gesture that asks for
+it, so "the monitor focused at creation" IS "the monitor focused when the user asked"; the bug is a
+surface that OUTLIVES the gesture, and those do not. `modules/imi/overlay/Overlay.qml` is the
+exception and the one residual instance of #297 in the tree: its loader is `overlayOpen ||
+OverlayContext.hasPinnedWidgets`, so pinning a widget makes the surface persistent, and
+`OverlayContext` holds ONE list of widget `Item`s that exactly one window can host - per-screen
+needs that store split first, which is a change to the context rather than a wrap around the
+window. The register runs both ways, so an exemption whose file has since been pinned fails too.
+(test(surfaces): sweep every persistent surface for the screen it names.)
 (feat(widgets): EdgeSlide, the runner for a panel whose surface stays mapped;
 fix(sidebar): the right sidebar's surface outlives the gesture;
 fix(sidebar): the left sidebar's surface outlives the gesture;
