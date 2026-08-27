@@ -79,6 +79,12 @@ STAGGER_ADOPTERS = {
     # The android toggle grid's nested tile wave (convergent - tiles from
     # their own third of the grid), gated on the section's own appear.
     "modules/imi/sidebarRight/quickToggles/AndroidQuickPanel.qml",
+    # The quick sliders' nested card wave (uniform - fade, scale and rise on
+    # the three cards, bottom-up, members handed in as a list because the
+    # bottom row packs two of them), park-and-enter on the sidebar's
+    # trigger beside the fill sweep each slider already runs on it.
+    # tests/test_quick_sliders_entrance_contract.py holds the shape.
+    "modules/imi/sidebarRight/QuickSliders.qml",
     # The left sidebar, adopted after its refusal's hazard was answered
     # rather than waved off: the gate keys on the OPEN flag, which a detach
     # does not flip, so undocking the chat to keep reading cannot re-run the
