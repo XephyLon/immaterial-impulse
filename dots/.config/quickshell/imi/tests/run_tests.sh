@@ -1848,6 +1848,18 @@ if ! python3 "$SCRIPT_DIR/test_phone_tab_layout_runtime.py"; then
     exit 1
 fi
 
+# How wide the Webcam and Microphone sub-pages ASK to be, and where their
+# rows are drawn, at the panel's own width. Both are a `ContentPage`, whose
+# content column is `Math.max(baseWidth, implicitWidth)` and centred, and
+# that baseWidth default is the settings window's 600 - so in a 440px page
+# the column hung 80px off each side and every label was clipped at the
+# panel's left edge, with nothing in any log and a green suite.
+echo "Running Phone sub-page width runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_subpage_width_runtime.py"; then
+    echo "Phone sub-page width runtime tests failed."
+    exit 1
+fi
+
 # The phone's notification mirror: the parser region synced with its double,
 # argv only, dismiss on the LEAF, the declared reply refetch delay, one
 # stream, the desktop dedupe gate at ingestion, and the cache key declared.
