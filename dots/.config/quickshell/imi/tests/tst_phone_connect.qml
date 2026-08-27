@@ -426,6 +426,20 @@ TestCase {
         verify(PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device.connectivity_report", member: "refreshed", args: ["LTE", 4] }))
     }
 
+    function test_signal_changes_devices_hears_the_notification_signals() {
+        // Introspected off the live daemon's <device>/notifications object:
+        // three carry the public id (s), allNotificationsRemoved carries
+        // nothing. PhoneNotifications refetches on the coalesced change these
+        // cause rather than on a monitor of its own.
+        for (const member of ["notificationPosted", "notificationUpdated", "notificationRemoved"])
+            verify(PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device.notifications", member: member, args: ["70"] }),
+                   `notifications.${member} should re-read`)
+        verify(PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device.notifications", member: "allNotificationsRemoved", args: [] }))
+        // The leaf's own `ready` is not in the set: it fires per notification
+        // object as it is built, before the daemon has posted it.
+        verify(!PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device.notifications.notification", member: "ready", args: [] }))
+    }
+
     function test_signal_changes_devices_reads_the_interface_out_of_properties_changed() {
         verify(PhoneConnect.signalChangesDevices({
             iface: "org.freedesktop.DBus.Properties", member: "PropertiesChanged",
