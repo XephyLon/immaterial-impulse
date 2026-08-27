@@ -16,6 +16,167 @@ cd "$PROJECT_ROOT" || exit 1
 # explicit value still wins, for anyone who needs a real platform plugin.
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}"
 
+# ---------------------------------------------------------------------------
+# Serializing concurrent suite runs
+#
+# Several agents work this repo in parallel git worktrees and every worktree
+# runs this same script. Forty of the checks below are runtime harnesses -
+# test_edit_mode_runtime.py, test_widget_interaction_runtime.py,
+# test_phone_tab_runtime.py, test_settings_page_incubation_runtime.py, the
+# phone-connect pair, and the rest - and each one starts a nested weston and a
+# `dbus-run-session`. Two suites overlapping there costs the loser its
+# compositor mid-run, and what it reports is `The Wayland connection broke. Did
+# the Wayland compositor die?`, which is indistinguishable from a real
+# regression: five times in one day, three full re-runs, and one agent
+# "fixing" code that was never broken. Waiting used to be the caller's job -
+# `ps` for a running suite before starting one - and a rule every caller has to
+# remember is a rule that gets forgotten, including by the maintainer twice.
+#
+# So the waiting is the script's job now. `acquire_suite_lock` blocks until it
+# can have the machine to itself, says whose run it is waiting for, and never
+# fails: an agent handed a hard error retries in a loop, which is worse than
+# the collision.
+#
+# WHERE the lock is taken, and why it is not the whole run:
+#
+#   - Everything above the acquire is pure. Source-text lints, contract checks
+#     that parse QML and Python, unit tests: none of them start a process that
+#     competes for anything, so two suites are free to overlap there.
+#   - The harnesses are interleaved with more static checks all the way to the
+#     end of the file rather than grouped, so the honest contiguous critical
+#     section is "the first harness to the end of the run".
+#   - A lock taken and released around each harness would overlap more, and it
+#     is forty acquire/release pairs plus a rule every future harness has to
+#     remember. The failure mode is one unwrapped harness and a collision that
+#     looks exactly like the one this exists to remove. One acquire point
+#     cannot be forgotten, and `lint_suite_lock_scope.py` fails the suite if a
+#     harness is ever wired in above it.
+#   - The tail past the last harness is held too: a handful of contract checks,
+#     the DesignSystemCompile probe (which starts a real `qs` on the session's
+#     OWN display) and qmltestrunner. Releasing early would reclaim under a
+#     minute and add a second boundary that a harness appended below it would
+#     silently escape.
+#
+# WHICH lock: one fixed name per user, never a hash of the checkout. What is
+# being serialized is this machine's ability to run a nested compositor, not a
+# repository - so every worktree and every clone has to contend for the same
+# one, which is exactly what "keyed to the repo, not the worktree" needs. On CI
+# it is uncontended by construction (one job, a fresh runner, nothing else
+# holding it), so `flock -n` succeeds on its first try and the whole mechanism
+# costs an open() and one ioctl. It can never turn a CI failure into a hang.
+#
+# HOW it is released: the lock lives on a file descriptor this shell holds
+# open, so the kernel drops it when the process ends for any reason - a failing
+# check's `exit 1`, a Ctrl-C, a SIGKILL. There is no lockfile to clean up and
+# no stale marker that can wedge the next run.
+#
+# The one residual is a DESCENDANT that inherits the descriptor and outlives
+# the suite - bash sets no close-on-exec on a `{fd}<>` redirection, so every
+# child has a copy. Measured while building this: a backgrounded holder
+# SIGKILLed while its child was still alive left the lock held with no suite
+# running. So the wait has a second strike - two consecutive minutes with the
+# record naming a pid that is gone and not moving - after which it says so and
+# runs unserialized rather than waiting on nothing for ever.
+if [[ "${XDG_RUNTIME_DIR:-}" ]]; then
+    SUITE_LOCK_FILE="$XDG_RUNTIME_DIR/immaterial-impulse-test-suite.lock"
+else
+    # /tmp is shared between users; another account's file would be
+    # unopenable, which would read as "no lock available" rather than as a
+    # permission problem.
+    SUITE_LOCK_FILE="/tmp/immaterial-impulse-test-suite.$(id -u).lock"
+fi
+
+# Named in the record so a waiting run can say which checkout is ahead of it.
+SUITE_LOCK_WORKTREE="$(git -C "$PROJECT_ROOT" rev-parse --show-toplevel 2>/dev/null)"
+[[ -n "$SUITE_LOCK_WORKTREE" ]] || SUITE_LOCK_WORKTREE="$PROJECT_ROOT"
+
+if ! command -v flock >/dev/null 2>&1; then
+    echo "Warning: flock not found (it ships in util-linux)." >&2
+    echo "  Running without suite serialization: a suite started in another" >&2
+    echo "  worktree while this one is in its runtime harnesses can break both" >&2
+    echo "  with 'The Wayland connection broke'. Check by hand instead." >&2
+fi
+
+# The holder's own record, read by a waiter. It is written into the lock file
+# itself rather than a sidecar, which is why the descriptor below is opened
+# read-write (`<>`) and not `>`: a waiter opening with `>` would truncate the
+# record it is about to read.
+suite_lock_record() {
+    local record
+    record="$(head -n 1 "$SUITE_LOCK_FILE" 2>/dev/null)"
+    if [[ -z "$record" ]]; then
+        record="an unidentified run (it left no record)"
+    fi
+    printf '%s' "$record"
+}
+
+acquire_suite_lock() {
+    if ! command -v flock >/dev/null 2>&1; then
+        return 0
+    fi
+    # Re-entry: a run_tests.sh invoked from inside another one is a descendant
+    # of the holder, so blocking here would be blocking on ourselves. The outer
+    # run already owns the machine on this one's behalf.
+    if [[ -n "${IMI_SUITE_LOCK_HELD:-}" ]]; then
+        echo "[suite-lock] already held by this run's parent (pid ${IMI_SUITE_LOCK_HELD}); not re-taking it"
+        return 0
+    fi
+
+    if ! exec {SUITE_LOCK_FD}<>"$SUITE_LOCK_FILE"; then
+        echo "Warning: cannot open $SUITE_LOCK_FILE; running without suite serialization." >&2
+        return 0
+    fi
+
+    local start=$SECONDS
+    if ! flock -n "$SUITE_LOCK_FD"; then
+        echo "[suite-lock] another suite is running in $(suite_lock_record)"
+        echo "[suite-lock] waiting for it to finish - the runtime harnesses below each start a nested weston and cannot share this machine."
+        # -w rather than a bare blocking wait so the wait is not silent: a run
+        # queued behind a wedged one should say so every minute instead of
+        # looking hung itself. It still never gives up on a live holder,
+        # because a hard failure here is a retry loop in whatever started it.
+        local record="" previous="" abandoned=0
+        until flock -w 60 "$SUITE_LOCK_FD"; do
+            local note pid
+            previous="$record"
+            record="$(suite_lock_record)"
+            note=""
+            pid="$(printf '%s' "$record" | sed -n 's/.*pid \([0-9][0-9]*\).*/\1/p')"
+            # A descendant that inherits this descriptor keeps the lock after
+            # the run that took it has gone - measured: a backgrounded holder
+            # SIGKILLed while its `sleep` child was still alive left the lock
+            # held with nothing running the suite. That is the one way this can
+            # wedge, so it is the one case that gives up on the lock rather
+            # than on the run. Two strikes a minute apart, and only while the
+            # record has not moved: a real handoff writes a new record within
+            # milliseconds of taking the lock, so an unchanged record naming a
+            # dead pid sixty seconds later is a leak and not a race with
+            # somebody else's acquire.
+            if [[ -n "$pid" ]] && ! kill -0 "$pid" 2>/dev/null; then
+                if [[ "$record" == "$previous" ]]; then
+                    abandoned=1
+                    break
+                fi
+                note=" - that pid has exited; if the lock is still held a minute from now, something it spawned is holding this descriptor open"
+            fi
+            echo "[suite-lock] still waiting after $((SECONDS - start))s for $record$note"
+        done
+        if (( abandoned )); then
+            echo "[suite-lock] giving up on the lock after $((SECONDS - start))s: it is held by something that outlived $record." >&2
+            echo "[suite-lock] no suite is running under that pid, so this run continues unserialized. Check for a stray weston or qs if the harnesses below misbehave." >&2
+            # Deliberately no record and no IMI_SUITE_LOCK_HELD: this run does
+            # not hold the lock, and saying it does would tell the next waiter
+            # to wait for a run that is not the one blocking it.
+            return 0
+        fi
+        echo "[suite-lock] acquired after $((SECONDS - start))s"
+    fi
+
+    printf '%s (pid %s, started %s)\n' \
+        "$SUITE_LOCK_WORKTREE" "$$" "$(date -Is)" > "$SUITE_LOCK_FILE"
+    export IMI_SUITE_LOCK_HELD=$$
+}
+
 # Find Qt6 qmltestrunner
 QMLTESTRUNNER=""
 POSSIBLE_PATHS=(
@@ -525,6 +686,11 @@ if ! python3 "$SCRIPT_DIR/test_polkit_dialog_contract.py"; then
     echo "Polkit dialog contract tests failed."
     exit 1
 fi
+
+# Everything from here down may start a nested compositor, so this is where the
+# run stops sharing the machine. See "Serializing concurrent suite runs" at the
+# top of this file for why the boundary is here and not around each harness.
+acquire_suite_lock
 
 # ...and the half the source cannot state: where the action row lands in the
 # card, whether the two buttons answer a real pointer, and whether the field
