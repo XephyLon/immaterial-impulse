@@ -1,5 +1,6 @@
 import qs
 import qs.services
+import qs.modules.imi.sidebarLeft.phone
 import qs.modules.common
 import qs.modules.common.widgets
 import QtQuick
@@ -18,13 +19,54 @@ Item {
     property bool animeEnabled: Config.options.policies.weeb !== 0
     property bool animeCloset: Config.options.policies.weeb === 2
     property bool mediaEnabled: Config.options.sidebar.media.enable
+    property bool phoneEnabled: Config.options.sidebar.phone.enable
     property var tabButtonList: [
         ...(root.aiChatEnabled ? [{"icon": "neurology", "name": Translation.tr("Intelligence")}] : []),
         ...(root.translatorEnabled ? [{"icon": "translate", "name": Translation.tr("Translator")}] : []),
         ...(root.mediaEnabled ? [{"icon": "music_note", "name": Translation.tr("Media")}] : []),
+        ...(root.phoneEnabled ? [{"icon": "smartphone", "name": Translation.tr("Phone")}] : []),
         ...((root.animeEnabled && !root.animeCloset) ? [{"icon": "bookmark_heart", "name": Translation.tr("Anime")}] : [])
     ]
     property int tabCount: swipeView.count
+
+    // The tab bar's entries by untranslated id, index-aligned with
+    // tabButtonList and so with the SwipeView's pages - the ONE thing that
+    // makes GlobalStates.sidebarLeftTab resolvable. It cannot be derived
+    // from tabButtonList, because every `name` in there is a
+    // Translation.tr(...) call and resolving a deep link against a label
+    // breaks the moment the user changes language (1c674c8f5's defect, in
+    // a second place). Keep the two lists edited together, and watch the
+    // asymmetry below them: the placeholder page sits BETWEEN Media/Phone
+    // and Anime with no tab-bar entry of its own, and closet mode puts an
+    // Anime page in the SwipeView with no entry either - so a page list
+    // and a tab list of different lengths is the normal state here, and
+    // only the entries before the placeholder are index-aligned.
+    // tests/test_sidebar_left_tabs.py pins the pair.
+    property var tabIdList: [
+        ...(root.aiChatEnabled ? ["intelligence"] : []),
+        ...(root.translatorEnabled ? ["translator"] : []),
+        ...(root.mediaEnabled ? ["media"] : []),
+        ...(root.phoneEnabled ? ["phone"] : []),
+        ...((root.animeEnabled && !root.animeCloset) ? ["anime"] : [])
+    ]
+
+    // A deep link is consumed, not merely read: the right sidebar's phone
+    // toggle writes the id and opens the panel, and leaving it set would
+    // send the sidebar back to that tab on every later open. Same shape as
+    // GlobalStates.settingsPage.
+    function showTab(id) {
+        const index = root.tabIdList.indexOf(id);
+        if (index < 0) return;
+        // The tab bar follows: its currentIndex is bound to the view's, and
+        // its own change handler writes the same value straight back.
+        swipeView.currentIndex = index;
+    }
+
+    function consumeTabRequest() {
+        if (GlobalStates.sidebarLeftTab === "") return;
+        root.showTab(GlobalStates.sidebarLeftTab);
+        GlobalStates.sidebarLeftTab = "";
+    }
 
     function focusActiveItem() {
         swipeView.currentItem.forceActiveFocus()
@@ -53,9 +95,17 @@ Item {
         target: GlobalStates
         function onSidebarLeftOpenChanged() {
             if (GlobalStates.sidebarLeftOpen) {
+                root.consumeTabRequest();
                 leftEntrance.park();
                 leftEntrance.enter();
             }
+        }
+        // A toggle pressed while the panel is already open writes the id
+        // with no open edge behind it, so the request is honoured on the
+        // write as well.
+        function onSidebarLeftTabChanged() {
+            if (GlobalStates.sidebarLeftOpen)
+                root.consumeTabRequest();
         }
     }
 
@@ -120,6 +170,7 @@ Item {
                     ...(root.aiChatEnabled ? [aiChat.createObject()] : []),
                     ...(root.translatorEnabled ? [translator.createObject()] : []),
                     ...(root.mediaEnabled ? [media.createObject()] : []),
+                    ...(root.phoneEnabled ? [phone.createObject()] : []),
                     ...((root.tabButtonList.length === 0 || (!root.aiChatEnabled && !root.translatorEnabled && root.animeCloset)) ? [placeholder.createObject()] : []),
                     ...(root.animeEnabled ? [anime.createObject()] : []),
                 ]
@@ -137,6 +188,10 @@ Item {
         Component {
             id: media
             SidebarPlayerControl {}
+        }
+        Component {
+            id: phone
+            Phone {}
         }
         Component {
             id: anime
