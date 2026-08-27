@@ -246,11 +246,17 @@ TestCase {
     // PhoneScrcpy - the event ladder
     // ================================================================
 
-    function test_scrcpy_started_and_exited_move_the_mirror_and_the_session_list() {
+    function test_scrcpy_a_spawned_mirror_is_still_launching_until_it_settles() {
+        // `started` is the supervisor answering that it SPAWNED scrcpy. It
+        // emits that the instant Popen returns and cannot know whether a
+        // window appeared, so the spawn alone must never read as a running
+        // mirror - that is what put "Mirror is running" and a filled check on
+        // a card whose phone adb has never seen.
         PhoneScrcpy.mirrorLaunching = true
         PhoneScrcpy.handleLine('{"event":"started","id":"mirror","pid":4242,"title":"imi-phone-mirror-mirror"}')
-        verify(PhoneScrcpy.mirrorRunning)
-        verify(!PhoneScrcpy.mirrorLaunching)
+        verify(!PhoneScrcpy.mirrorRunning)
+        verify(PhoneScrcpy.mirrorLaunching)
+        compare(PhoneScrcpy.mirrorSettleArmed, 1)
         compare(PhoneScrcpy.sessionCount, 1)
         compare(PhoneScrcpy.sessions.get(0).title, "imi-phone-mirror-mirror")
         compare(PhoneScrcpy.sessions.get(0).pid, 4242)
@@ -259,18 +265,69 @@ TestCase {
         compare(PhoneScrcpy.sessionCount, 2)
         compare(PhoneScrcpy.sessions.get(1).package, "org.mozilla.firefox")
         verify(PhoneScrcpy.isAppRunning("org.mozilla.firefox"))
-        // A repeat `started` (alreadyRunning) updates the row in place.
+        // An app session's spawn is not the mirror's and arms nothing.
+        compare(PhoneScrcpy.mirrorSettleArmed, 1)
+        // Surviving the settle is the evidence there is that it opened.
+        PhoneScrcpy.fireMirrorSettle()
+        verify(PhoneScrcpy.mirrorRunning)
+        verify(!PhoneScrcpy.mirrorLaunching)
+        // A repeat `started` (alreadyRunning) updates the row in place and
+        // needs no settle: the supervisor is answering about a child it has
+        // been watching.
         PhoneScrcpy.handleLine('{"event":"started","id":"mirror","pid":4242,"title":"imi-phone-mirror-mirror","alreadyRunning":true}')
         compare(PhoneScrcpy.sessionCount, 2)
+        verify(PhoneScrcpy.mirrorRunning)
+        compare(PhoneScrcpy.mirrorSettleArmed, 1)
         PhoneScrcpy.handleLine('{"event":"exited","id":"mirror","code":0,"error":""}')
         verify(!PhoneScrcpy.mirrorRunning)
         compare(PhoneScrcpy.sessionCount, 1)
         compare(PhoneScrcpy.lastError, "")
+        // A mirror that was RUNNING and closed cleanly is not a failure.
+        compare(PhoneScrcpy.mirrorError, "")
         PhoneScrcpy.handleLine('{"event":"exited","id":"app:org.mozilla.firefox","code":1,"error":"ERROR: Could not find ADB device"}')
         compare(PhoneScrcpy.sessionCount, 0)
         compare(PhoneScrcpy.lastError, "ERROR: Could not find ADB device")
+        // ...and an APP's failure is not the mirror's, which is the whole
+        // reason mirrorError is a second string.
+        compare(PhoneScrcpy.mirrorError, "")
         compare(PhoneScrcpy.feedbackLog.length, 1)
         compare(PhoneScrcpy.feedbackLog[0].ok, false)
+    }
+
+    function test_scrcpy_a_launch_that_exits_before_it_settles_is_a_failure() {
+        // The recorded defect end to end: the supervisor spawns scrcpy, adb
+        // has no device, scrcpy exits about a second later. The card must
+        // never have read `running`, and what it says afterwards is the
+        // error rather than the line it had before the click.
+        PhoneScrcpy.available = true
+        PhoneScrcpy.launchMirror()
+        verify(PhoneScrcpy.mirrorLaunching)
+        compare(PhoneScrcpy.mirrorError, "")
+        PhoneScrcpy.handleLine('{"event":"started","id":"mirror","pid":4242,"title":"imi-phone-mirror-mirror"}')
+        verify(!PhoneScrcpy.mirrorRunning)
+        verify(PhoneScrcpy.mirrorSettlePending)
+        PhoneScrcpy.handleLine('{"event":"exited","id":"mirror","code":1,"error":"ERROR: Could not find any ADB device"}')
+        verify(!PhoneScrcpy.mirrorRunning)
+        verify(!PhoneScrcpy.mirrorLaunching)
+        verify(!PhoneScrcpy.mirrorSettlePending)
+        compare(PhoneScrcpy.mirrorError, "ERROR: Could not find any ADB device")
+        compare(PhoneScrcpy.sessionCount, 0)
+        // And the settle firing late must not resurrect it: the row is gone,
+        // which is the one thing mirrorSettled() asks about.
+        PhoneScrcpy.mirrorSettled()
+        verify(!PhoneScrcpy.mirrorRunning)
+    }
+
+    function test_scrcpy_an_exit_with_no_stderr_line_still_reports_the_failure() {
+        // scrcpy can die without printing anything the supervisor kept. A
+        // launch that never settled still produced nothing, so the card gets
+        // a sentence rather than an empty string it would draw as silence.
+        PhoneScrcpy.available = true
+        PhoneScrcpy.launchMirror()
+        PhoneScrcpy.handleLine('{"event":"started","id":"mirror","pid":4242,"title":"imi-phone-mirror-mirror"}')
+        PhoneScrcpy.handleLine('{"event":"exited","id":"mirror","code":1,"error":""}')
+        compare(PhoneScrcpy.mirrorError, "scrcpy exited before the mirror window opened")
+        compare(PhoneScrcpy.lastError, "")
     }
 
     function test_scrcpy_an_error_event_ends_the_launch_and_names_the_cause() {
@@ -279,6 +336,15 @@ TestCase {
         verify(!PhoneScrcpy.mirrorLaunching)
         verify(!PhoneScrcpy.mirrorRunning)
         compare(PhoneScrcpy.lastError, "Failed to launch scrcpy: [Errno 2]")
+        compare(PhoneScrcpy.mirrorError, "Failed to launch scrcpy: [Errno 2]")
+    }
+
+    function test_scrcpy_a_new_launch_clears_the_mirrors_own_error() {
+        PhoneScrcpy.available = true
+        PhoneScrcpy.mirrorError = "ERROR: Could not find any ADB device"
+        PhoneScrcpy.launchMirror()
+        compare(PhoneScrcpy.mirrorError, "")
+        verify(PhoneScrcpy.mirrorLaunching)
     }
 
     function test_scrcpy_a_cached_app_list_shows_but_keeps_loading_until_the_live_one() {
@@ -328,7 +394,14 @@ TestCase {
     }
 
     function test_scrcpy_launch_mirror_while_running_focuses_instead() {
+        // Running, not merely spawned: the settle is what turns the one into
+        // the other, and a click before it lands is answered by the launch
+        // that is already in flight rather than by a second one.
         PhoneScrcpy.handleLine('{"event":"started","id":"mirror","pid":1,"title":"t"}')
+        PhoneScrcpy.launchMirror()
+        compare(PhoneScrcpy.sentMessages, [])
+        PhoneScrcpy.fireMirrorSettle()
+        verify(PhoneScrcpy.mirrorRunning)
         PhoneScrcpy.launchMirror()
         compare(PhoneScrcpy.sentMessages, [{ cmd: "focus", id: "mirror" }])
         PhoneScrcpy.stopMirror()

@@ -21,6 +21,7 @@ Singleton {
     property bool mirrorRunning: false
     property bool mirrorLaunching: false
     property string lastError: ""
+    property string mirrorError: ""
 
     property var apps: []
     property bool appsLoading: false
@@ -172,6 +173,17 @@ Singleton {
     }
 
     // One supervisor event onto the model.
+    //
+    // `started` is the supervisor saying it SPAWNED scrcpy, not that a mirror
+    // is on screen - it emits the event the instant Popen returns and has no
+    // way to know a window appeared. On a phone adb cannot see, scrcpy prints
+    // "Could not find any ADB device" and exits about a second later, so
+    // reading the spawn as `mirrorRunning` put the card on "scrcpy Mirror /
+    // Mirror is running - click to focus its window", a filled check mark and
+    // "Active for 0s" where no mirror could possibly exist, and then dropped
+    // it back to the line it had before the click. A spawn therefore keeps
+    // the mirror LAUNCHING and arms the settle; the settle, or the exit, is
+    // what decides which it was.
     function applyEvent(msg: var): void {
         if (!msg) return;
         const id = String(msg.id ?? "");
@@ -191,22 +203,47 @@ Singleton {
                 sessionsModel.append(row);
             }
             if (id === "mirror") {
-                root.mirrorRunning = true;
-                root.mirrorLaunching = false;
+                // `alreadyRunning` is the supervisor answering about a child
+                // it has been watching since some earlier launch, which IS
+                // evidence of a live session - there is nothing to settle.
+                if (msg.alreadyRunning === true) {
+                    root.cancelMirrorSettle();
+                    root.mirrorRunning = true;
+                    root.mirrorLaunching = false;
+                } else {
+                    root.mirrorRunning = false;
+                    root.mirrorLaunching = true;
+                    root.armMirrorSettle();
+                }
             }
         } else if (msg.event === "exited") {
             const index = root.sessionIndex(id);
             if (index >= 0) sessionsModel.remove(index);
+            const failure = Number(msg.code ?? 0) !== 0 ? String(msg.error ?? "") : "";
             if (id === "mirror") {
+                const wasLaunching = root.mirrorLaunching;
+                root.cancelMirrorSettle();
                 root.mirrorRunning = false;
                 root.mirrorLaunching = false;
+                // A mirror that exits before it has settled never opened, so
+                // the click produced nothing at all - and the only other line
+                // the card has is the precondition the user already read
+                // before clicking, which is why a silent snap back to it
+                // reads as the card having ignored them.
+                root.mirrorError = failure.length > 0 ? failure
+                    : (wasLaunching ? "scrcpy exited before the mirror window opened" : "");
             }
-            if (Number(msg.code ?? 0) !== 0 && String(msg.error ?? "").length > 0) {
-                root.lastError = String(msg.error);
+            if (failure.length > 0) {
+                root.lastError = failure;
                 root.feedback(root.lastError, false);
             }
         } else if (msg.event === "error") {
-            if (id === "mirror") root.mirrorLaunching = false;
+            if (id === "mirror") {
+                root.cancelMirrorSettle();
+                root.mirrorLaunching = false;
+                root.mirrorRunning = false;
+                root.mirrorError = String(msg.message ?? "scrcpy error");
+            }
             root.lastError = String(msg.message ?? "scrcpy error");
             root.feedback(root.lastError, false);
         } else if (msg.event === "apps_list") {
@@ -221,6 +258,16 @@ Singleton {
             root.appsLoading = false;
             root.appsError = String(msg.message ?? "Failed to list apps");
         }
+    }
+
+    // The settle's own answer: a spawned scrcpy still in the session list
+    // after the settle has outlived every way a launch fails, so it is a
+    // mirror rather than an attempt. A row that has gone means `exited`
+    // already answered and this must not put the card back on `running`.
+    function mirrorSettled(): void {
+        if (root.sessionIndex("mirror") < 0) return;
+        root.mirrorLaunching = false;
+        root.mirrorRunning = true;
     }
 
     function handleLine(line: string): void {
@@ -244,8 +291,16 @@ Singleton {
             root.focusMirror();
             return;
         }
+        // A launch already in flight answers itself, through the settle or
+        // through the supervisor's exit. Without this, a second click inside
+        // the settle window gets `alreadyRunning` back - which is the
+        // supervisor saying only that the child it spawned a moment ago has
+        // not exited yet, i.e. exactly the weak evidence the settle exists to
+        // stop reading as a mirror.
+        if (root.mirrorLaunching) return;
         root.mirrorLaunching = true;
         root.lastError = "";
+        root.mirrorError = "";
         root.send({
             cmd: "launch", id: "mirror", type: "mirror",
             target_args: root.scrcpyTarget(),
@@ -308,6 +363,29 @@ Singleton {
             root.toggleInList(Config.options.phone.scrcpy.appMode.favoritePackages, packageName);
     }
     // END phone-scrcpy logic
+
+    // The settle is a Timer in the real service; here it is a flag the test
+    // advances with fireMirrorSettle(), the way every other timer in this
+    // module is a counter - the region above calls the two hooks and cannot
+    // see which of the two it got.
+    property int mirrorSettleArmed: 0
+    property bool mirrorSettlePending: false
+
+    function armMirrorSettle(): void {
+        root.mirrorSettleArmed++;
+        root.mirrorSettlePending = true;
+    }
+
+    function cancelMirrorSettle(): void {
+        root.mirrorSettlePending = false;
+    }
+
+    function fireMirrorSettle(): void {
+        if (!root.mirrorSettlePending) return;
+        root.mirrorSettlePending = false;
+        root.mirrorSettled();
+    }
+
     property var sentMessages: []
     property var feedbackLog: []
     onFeedback: (message, ok) => { root.feedbackLog = root.feedbackLog.concat([{ message: message, ok: ok }]); }
@@ -321,6 +399,9 @@ Singleton {
         root.mirrorRunning = false;
         root.mirrorLaunching = false;
         root.lastError = "";
+        root.mirrorError = "";
+        root.mirrorSettleArmed = 0;
+        root.mirrorSettlePending = false;
         root.apps = [];
         root.appsLoading = false;
         root.appsError = "";

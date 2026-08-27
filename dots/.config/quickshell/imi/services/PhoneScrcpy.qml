@@ -43,6 +43,14 @@ Singleton {
     property bool mirrorRunning: false
     property bool mirrorLaunching: false
     property string lastError: ""
+    // The MIRROR's own last failure, cleared by the next launchMirror().
+    // `lastError` is written by any session's failure and by the supervisor's
+    // own ladder, so a failed app launch an hour ago is still sitting in it
+    // while the mirror card reads it - which is why the card's subtitle used
+    // to have to ask the ADB precondition first to avoid quoting somebody
+    // else's error. Scoped here, a non-empty string means "the launch you
+    // just asked for did not take".
+    property string mirrorError: ""
 
     // [{ name, package, system }]
     property var apps: []
@@ -197,6 +205,17 @@ Singleton {
     }
 
     // One supervisor event onto the model.
+    //
+    // `started` is the supervisor saying it SPAWNED scrcpy, not that a mirror
+    // is on screen - it emits the event the instant Popen returns and has no
+    // way to know a window appeared. On a phone adb cannot see, scrcpy prints
+    // "Could not find any ADB device" and exits about a second later, so
+    // reading the spawn as `mirrorRunning` put the card on "scrcpy Mirror /
+    // Mirror is running - click to focus its window", a filled check mark and
+    // "Active for 0s" where no mirror could possibly exist, and then dropped
+    // it back to the line it had before the click. A spawn therefore keeps
+    // the mirror LAUNCHING and arms the settle; the settle, or the exit, is
+    // what decides which it was.
     function applyEvent(msg: var): void {
         if (!msg) return;
         const id = String(msg.id ?? "");
@@ -216,22 +235,47 @@ Singleton {
                 sessionsModel.append(row);
             }
             if (id === "mirror") {
-                root.mirrorRunning = true;
-                root.mirrorLaunching = false;
+                // `alreadyRunning` is the supervisor answering about a child
+                // it has been watching since some earlier launch, which IS
+                // evidence of a live session - there is nothing to settle.
+                if (msg.alreadyRunning === true) {
+                    root.cancelMirrorSettle();
+                    root.mirrorRunning = true;
+                    root.mirrorLaunching = false;
+                } else {
+                    root.mirrorRunning = false;
+                    root.mirrorLaunching = true;
+                    root.armMirrorSettle();
+                }
             }
         } else if (msg.event === "exited") {
             const index = root.sessionIndex(id);
             if (index >= 0) sessionsModel.remove(index);
+            const failure = Number(msg.code ?? 0) !== 0 ? String(msg.error ?? "") : "";
             if (id === "mirror") {
+                const wasLaunching = root.mirrorLaunching;
+                root.cancelMirrorSettle();
                 root.mirrorRunning = false;
                 root.mirrorLaunching = false;
+                // A mirror that exits before it has settled never opened, so
+                // the click produced nothing at all - and the only other line
+                // the card has is the precondition the user already read
+                // before clicking, which is why a silent snap back to it
+                // reads as the card having ignored them.
+                root.mirrorError = failure.length > 0 ? failure
+                    : (wasLaunching ? "scrcpy exited before the mirror window opened" : "");
             }
-            if (Number(msg.code ?? 0) !== 0 && String(msg.error ?? "").length > 0) {
-                root.lastError = String(msg.error);
+            if (failure.length > 0) {
+                root.lastError = failure;
                 root.feedback(root.lastError, false);
             }
         } else if (msg.event === "error") {
-            if (id === "mirror") root.mirrorLaunching = false;
+            if (id === "mirror") {
+                root.cancelMirrorSettle();
+                root.mirrorLaunching = false;
+                root.mirrorRunning = false;
+                root.mirrorError = String(msg.message ?? "scrcpy error");
+            }
             root.lastError = String(msg.message ?? "scrcpy error");
             root.feedback(root.lastError, false);
         } else if (msg.event === "apps_list") {
@@ -246,6 +290,16 @@ Singleton {
             root.appsLoading = false;
             root.appsError = String(msg.message ?? "Failed to list apps");
         }
+    }
+
+    // The settle's own answer: a spawned scrcpy still in the session list
+    // after the settle has outlived every way a launch fails, so it is a
+    // mirror rather than an attempt. A row that has gone means `exited`
+    // already answered and this must not put the card back on `running`.
+    function mirrorSettled(): void {
+        if (root.sessionIndex("mirror") < 0) return;
+        root.mirrorLaunching = false;
+        root.mirrorRunning = true;
     }
 
     function handleLine(line: string): void {
@@ -269,8 +323,16 @@ Singleton {
             root.focusMirror();
             return;
         }
+        // A launch already in flight answers itself, through the settle or
+        // through the supervisor's exit. Without this, a second click inside
+        // the settle window gets `alreadyRunning` back - which is the
+        // supervisor saying only that the child it spawned a moment ago has
+        // not exited yet, i.e. exactly the weak evidence the settle exists to
+        // stop reading as a mirror.
+        if (root.mirrorLaunching) return;
         root.mirrorLaunching = true;
         root.lastError = "";
+        root.mirrorError = "";
         root.send({
             cmd: "launch", id: "mirror", type: "mirror",
             target_args: root.scrcpyTarget(),
@@ -334,6 +396,34 @@ Singleton {
     }
     // END phone-scrcpy logic
 
+    // ---- the mirror's settle ----
+
+    // How long a spawned scrcpy has to stay alive before the mirror counts as
+    // running, rather than as still launching. The supervisor cannot answer
+    // "is a window up" - see applyEvent - so surviving the window in which a
+    // launch fails is the evidence there is. Measured against scrcpy 3.1 with
+    // no device attached: it prints "Could not find any ADB device" and exits
+    // well inside a second. Erring long is the conservative direction here:
+    // the card says "Connecting scrcpy…" for a beat longer than it strictly
+    // needs to, where erring short is the lie this replaced.
+    readonly property int mirrorSettleMs: 1500
+
+    // Named hooks rather than the timer itself, because applyEvent is inside
+    // the synced region and the logic-only double has no Timer to reach.
+    function armMirrorSettle(): void {
+        mirrorSettleTimer.restart();
+    }
+
+    function cancelMirrorSettle(): void {
+        mirrorSettleTimer.stop();
+    }
+
+    Timer {
+        id: mirrorSettleTimer
+        interval: root.mirrorSettleMs
+        onTriggered: root.mirrorSettled()
+    }
+
     // ---- the supervisor's lifetime ----
 
     function send(message: var): void {
@@ -370,6 +460,7 @@ Singleton {
     }
 
     function clearLive(): void {
+        root.cancelMirrorSettle();
         sessionsModel.clear();
         root.mirrorRunning = false;
         root.mirrorLaunching = false;
@@ -419,6 +510,11 @@ Singleton {
                 root.managerState = "stopped";
                 root.pendingMessages = [];
                 root.lastError = "scrcpy session manager stopped after repeated failures";
+                // The mirror card is where a click that asked for this
+                // supervisor is waiting for an answer; clearLive() has just
+                // taken it off `launching`, so with nothing here it would go
+                // back to its pre-click line and say nothing happened.
+                root.mirrorError = root.lastError;
                 root.feedback(root.lastError, false);
                 return;
             }
