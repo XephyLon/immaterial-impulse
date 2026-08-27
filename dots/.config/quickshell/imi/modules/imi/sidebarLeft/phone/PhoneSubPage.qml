@@ -67,10 +67,19 @@ Item {
             }
         }
 
-        Item {
+        // The content slot is a LAYOUT, because every page states its size
+        // with Layout.* - its own header says so - and those attached
+        // properties are inert in anything that is not one. As a plain Item
+        // this slot left each page's root column at its IMPLICIT height:
+        // measured on the Contacts page at 73px inside an 836px slot, so the
+        // region under the search row was handed 0 and the list drew nothing
+        // while reporting 2 rows and 110px of content.
+        ColumnLayout {
             id: contentHolder
             Layout.fillWidth: true
             Layout.fillHeight: true
+            // The page owns the rhythm between its own rows; this adds none.
+            spacing: 0
         }
     }
 }
