@@ -672,6 +672,17 @@ if ! python3 "$SCRIPT_DIR/test_settings_page_ids.py"; then
     exit 1
 fi
 
+# The settings row grammar: the six widgets that carry it read tokens and
+# whole motion tiers for every visual value, and the one reference page
+# (Settings > Capture) uses every piece - a chip dropped from one toggle row
+# or an option added without its icon errors nowhere, the shape just stops
+# being the grammar. Other pages adopt it in later PRs and are pinned here.
+echo "Running settings row grammar tests..."
+if ! python3 "$SCRIPT_DIR/test_settings_row_grammar.py"; then
+    echo "Settings row grammar tests failed."
+    exit 1
+fi
+
 # Stage 8 of Edit Mode: the bar and the dock edited in place. What it pins is
 # silent on screen - a suspension that touches `visible` destroys a layer
 # surface, and an affordance wired into one bar orientation and not the other
