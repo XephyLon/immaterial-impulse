@@ -218,7 +218,7 @@ Item {
     // page the user just clicked behind fourteen they did not.
     //
     // Deliberately not what it replaced, which was fifteen SYNCHRONOUS builds
-    // inside one turn of the event loop - 622ms of frozen GUI thread paid by
+    // inside one turn of the event loop - 618ms of frozen GUI thread paid by
     // the whole shell at startup.
     //
     // The gate is `Config.ready` and NOT `GlobalStates.settingsOpen`, which

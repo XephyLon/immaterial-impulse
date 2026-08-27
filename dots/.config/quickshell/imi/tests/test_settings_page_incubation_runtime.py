@@ -8,14 +8,22 @@ back WHEN each page is built.
 The defect it exists to refuse: the host assigned `active = true` to all fifteen
 page loaders inside one `Qt.callLater` at `Config.ready`, which destroyed the
 `active:` binding declared beside them and built ~24500 items in one turn of the
-event loop. Measured on the harness's own 1ms heartbeat, interleaved A/B with
-the first run of each arm discarded, three runs kept per arm:
+event loop. Measured on the harness's own 1ms heartbeat, interleaved A/B and
+pooled over two sessions - six runs an arm, the first run of each arm discarded,
+168 switches an arm:
 
-    worst GUI-thread block, building the host   622ms  ->   66ms
-    items live once the host is built            24561  ->  2676
-    switch, synchronous part                     3.0ms  ->  3.0ms
-    page ready after a switch (median / max)   1 / 5ms  -> 1 / 5ms
-    worst block within 300ms of a click (max)    108ms  ->   35ms
+    worst GUI-thread block, building the host   618ms  ->   63.5ms
+                                          raw  599-631     59-69
+    switch, synchronous part                  3ms med    -> 3ms med
+    page ready after a switch (median / max)  1 / 5ms    -> 1 / 5ms
+    block <=300ms of a click                  33 med, 34 p95, 2/168 over 40ms
+                                           -> 33 med, 34 p95, 1/168 over 40ms
+    block over a whole 900ms step             33 med, 2/168 over 40ms, max 108
+                                           -> 33 med, 8/168 over 40ms, max 158
+
+The block is the reproducible result. The click window separates nothing: what
+the warm-up costs is eight blocks in 168 landing BETWEEN clicks rather than in
+them, which is what the navigation hold exists for.
 
 A `sync` timing around the write cannot see any of that: the old loop's cost
 lands in the turn AFTER the write. Hence the heartbeat - the longest gap between
