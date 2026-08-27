@@ -31,7 +31,7 @@ class SettingsNavigationTests(unittest.TestCase):
             [name for name, _ in page_entries],
             ["Quick", "Appearance", "Cursor", "Wallpaper & Desktop", "Bar & Dock",
              "Sidebars & Panels", "Notifications", "Lock & Idle", "Capture", "General",
-             "Services", "Widgets", "Hyprland", "About"],
+             "Devices & Phone", "Services", "Widgets", "Hyprland", "About"],
         )
         self.assertTrue(all(sections.strip() for name, sections in page_entries if name != "About"))
 
@@ -39,7 +39,8 @@ class SettingsNavigationTests(unittest.TestCase):
         self.assertIn('typeof loader.item.goTo === "function"', self.source)
         for page in ("QuickConfig", "AppearanceConfig", "CursorConfig", "BackgroundConfig",
                      "BarConfig", "SidebarsPanelsConfig", "NotificationsConfig", "LockIdleConfig",
-                     "CaptureConfig", "GeneralConfig", "ServicesConfig", "HyprlandConfig"):
+                     "CaptureConfig", "GeneralConfig", "PhoneConfig", "ServicesConfig",
+                     "HyprlandConfig"):
             source = (ROOT / f"modules/imi/settings/pages/{page}.qml").read_text(encoding="utf-8")
             self.assertIn("function goTo(term)", source, page)
 
