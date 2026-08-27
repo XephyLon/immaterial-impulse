@@ -1598,6 +1598,25 @@ if ! python3 "$SCRIPT_DIR/test_phone_connect_dialog_runtime.py"; then
     exit 1
 fi
 
+# The phone's notification mirror: the parser region synced with its double,
+# argv only, dismiss on the LEAF, the declared reply refetch delay, one
+# stream, the desktop dedupe gate at ingestion, and the cache key declared.
+echo "Running Phone Notifications contract tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_notifications_contract.py"; then
+    echo "Phone Notifications contract tests failed."
+    exit 1
+fi
+
+# The mirror against the real services and a fake daemon: the sweep's model,
+# the second notification arriving from a SIGNAL (the trigger chain's
+# oracle), the cache in Persistent, and dismiss/reply/sendAction read back
+# off the fake's log - on the leaf path, never as a cancel action.
+echo "Running Phone Notifications runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_notifications_runtime.py"; then
+    echo "Phone Notifications runtime tests failed."
+    exit 1
+fi
+
 echo "Running registry entry validator tests..."
 if ! python3 "$SCRIPT_DIR/test_registry_validate.py"; then
     echo "Registry entry validator tests failed."
