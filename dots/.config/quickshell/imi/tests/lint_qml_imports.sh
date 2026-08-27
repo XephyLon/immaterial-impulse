@@ -24,6 +24,17 @@
 # well as modules/: the original knew only about Appearance and looked only under
 # modules/, so it missed EfiBoot.qml on both counts.
 #
+#   Translation - the phone panel's roster row was rewritten without
+#                `import qs.services` and kept every `Translation.tr(...)`. Every
+#                static check passed; the runtime harness that builds the real
+#                dialog logged `ReferenceError: Translation is not defined` per
+#                binding. The chip beside it had the same hole behind a ternary
+#                no device-full run evaluates, and this line found it.
+#
+# A file that lives IN the declaring module needs no import - a sibling type is
+# in scope on its own - so a check skips the module's own directory. Without
+# that, `Translation` flags every services/*.qml that translates a string.
+#
 # Adding a singleton to CHECKS costs one line and buys a whole class of silent
 # failure. Exits non-zero and lists offenders.
 
@@ -38,6 +49,7 @@ CHECKS=(
     "Session:qs.modules.common.functions"
     "ColorUtils:qs.modules.common.functions"
     "StringUtils:qs.modules.common.functions"
+    "Translation:qs.services"
 )
 
 # services/ is included deliberately: EfiBoot.qml lives there, not under modules/.
@@ -52,10 +64,19 @@ for check in "${CHECKS[@]}"; do
     # requirement for `qs.modules.common.functions`. Trailing comment allowed;
     # an aliased `... as X` is not.
     module_escaped="${module//./\\.}"
+    # `qs.modules.common.functions` is the directory modules/common/functions;
+    # a file in it sees its siblings without importing them. The module's
+    # dots are turned into slashes BEFORE the root is prefixed - the checkout
+    # can sit under a dotted directory (`dots/.config/`), and turning that dot
+    # into a slash makes the skip match nothing.
+    module_rel="${module#qs.}"
+    module_dir="$PROJECT_ROOT/${module_rel//.//}"
 
     while IFS= read -r -d '' f; do
         # A singleton's own declaration file refers to itself; skip it.
         [[ "$(basename "$f")" == "$singleton.qml" ]] && continue
+        # ...and so does any file declared in the same module.
+        [[ "$(dirname "$f")" == "$module_dir" ]] && continue
         # Match against CODE only. Prose naming a singleton is not a use of it,
         # and a lint that cannot tell the difference gets switched off the first
         # time it fires on a comment explaining why the singleton is not used
