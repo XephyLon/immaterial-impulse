@@ -1013,6 +1013,16 @@ if ! python3 "$SCRIPT_DIR/test_motion_policy_contract.py"; then
     exit 1
 fi
 
+# The quick sliders' cards ride the shared wave, bottom-up, beside their fill
+# sweep: each card declares `appear`, sits in a dressed container, and is in
+# the wave's list in order. None of it builds under qmltestrunner and all of
+# it fails silently on screen, so the shape is pinned in the source.
+echo "Running quick sliders entrance contract tests..."
+if ! python3 "$SCRIPT_DIR/test_quick_sliders_entrance_contract.py"; then
+    echo "Quick sliders entrance contract tests failed."
+    exit 1
+fi
+
 # ...and the same thing read back off a real shell against a seeded config,
 # because the QML default and the adapter's merged answer are different
 # numbers and only the second one runs.
