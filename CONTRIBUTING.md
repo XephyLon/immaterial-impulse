@@ -260,6 +260,14 @@ bug in anything that qualifies:
   is easy to over-read: it proves a file *compiles*, and a missing `.js` import resolves at binding
   time rather than compile time, so it passes one. ("fix(verticalBar): render plugin bar widgets
   instead of an empty stub").
+  The overview's window and `modules/common/widgets/VerticalTabBar.qml` are on that list for the
+  same reason both bars are: a window built on every startup is found by a live load and by nothing
+  else, and an agent working in a worktree has not got one. The two sidebars' own windows are
+  deliberately NOT on it - a by-URL compile in a `qs -p` process resolves neither
+  `SidebarLeftContent` nor `SidebarRightContent`, so adding them reports a failure belonging to the
+  probe rather than to the file, and `tests/run_persistent_surface_focus_probe.sh` (a nested
+  two-output Hyprland, run by hand) is what loads them for real.
+  ("test(surfaces): the compile sweep reaches the overview's window and the tab bar").
   **It sweeps a bundled package through its `Widget.qml` only**, on the reasoning that a sibling
   file is a type resolved through the package's `qmldir` and so is reached from the entry point
   anyway. A file the entry point loads *by URL* is not that - it is a standalone component that
