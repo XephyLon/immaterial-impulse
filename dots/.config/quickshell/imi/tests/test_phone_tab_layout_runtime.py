@@ -53,7 +53,7 @@ PHONE_ADDRESS = "192.168.100.179"
 # A literal, never read back out of the harness's own output: a step list
 # that shrinks must redden here instead of reporting `failures: 0` for a
 # shorter run.
-EXPECTED_CHECKS = 20
+EXPECTED_CHECKS = 21
 
 RECORD = """#!/usr/bin/env bash
 printf '%s %s\\n' "$(date +%s.%N)" "$*" >> "$PHONE_EXEC_LOG"
