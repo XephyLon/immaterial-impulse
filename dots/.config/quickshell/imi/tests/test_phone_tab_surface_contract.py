@@ -222,24 +222,30 @@ class SubPageContractTests(unittest.TestCase):
     """The seam with W5a: the pages are written against a host this checkout
     does not have, so what they assume about it is written down."""
 
-    def test_the_stub_exists_and_is_not_a_second_copy_under_modules(self):
-        self.assertTrue(SUBPAGE_STUB.is_file(), "the PhoneSubPage stub is gone")
-        self.assertFalse((SURFACE / "PhoneSubPage.qml").exists(),
-                         "PhoneSubPage.qml has appeared under modules/ from this "
-                         "workstream. W5a owns it; a second copy is the dead-copy "
-                         "hazard, one branch behind the other.")
+    def test_the_shim_is_the_real_host_and_not_a_copy_of_it(self):
+        """While the two halves were separate branches this was a hand-written
+        stub; now that the host exists the shim must be a SYMLINK to it, the
+        way tests/imports/qs/modules/imi/bar/ resolves its widgets. A second
+        file of that name is the dead-copy hazard: the pages would be tested
+        against one shape and drawn against another."""
+        host = SURFACE / "PhoneSubPage.qml"
+        self.assertTrue(host.is_file(), "W5a's PhoneSubPage.qml is missing")
+        self.assertTrue(SUBPAGE_STUB.is_symlink(),
+                        "the shim is a copy, not a symlink to the real host")
+        self.assertEqual(SUBPAGE_STUB.resolve(), host.resolve(),
+                         "the shim points somewhere other than the real host")
 
-    def test_the_stub_declares_the_interface_the_pages_use(self):
+    def test_the_host_declares_the_interface_the_pages_use(self):
         # Comment-stripped: the stub's own header names every one of these,
         # and a check that reads the prose passes on a stub whose code has
         # lost them - planted, `signal back` renamed to `signal notBack` was
         # green until this line.
-        stub = strip_comments(SUBPAGE_STUB.read_text(encoding="utf-8"))
-        self.assertRegex(stub, r"property string title", "no `title` on the stub")
-        self.assertRegex(stub, r"signal back\b", "no `back()` on the stub")
-        self.assertRegex(stub, r"default property alias contentData:",
-                         "the stub has no default content slot")
-        self.assertRegex(stub, r"ColumnLayout \{",
+        host = strip_comments((SURFACE / "PhoneSubPage.qml").read_text(encoding="utf-8"))
+        self.assertRegex(host, r"property string title", "no `title` on the host")
+        self.assertRegex(host, r"signal back\b", "no `back()` on the host")
+        self.assertRegex(host, r"default property alias \w+:",
+                         "the host has no default content slot")
+        self.assertRegex(host, r"ColumnLayout \{",
                          "the content slot must be a ColumnLayout - the pages state "
                          "their size with Layout.* and would warn about anchors "
                          "inside anything else")
