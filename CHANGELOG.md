@@ -128,6 +128,14 @@ own repo; the installer pins which revision it builds.
   sit dead centre instead of a pixel and a half to the left.
 
 ### Fixed
+- **Contacts with an Arabic name fit inside their row.** In the Phone tab's
+  Contacts list, a contact whose name is written in Arabic had its number and
+  its avatar drawn below the bottom of its own card - a row taller than the
+  card holding it - and with Latin names the avatar sat against the card's
+  bottom edge with almost no room around it. The row was a fixed height, and
+  Arabic sets taller than Latin at the same text size. Every row now takes the
+  height its own contents need, in any script, with the same breathing room
+  above and below.
 - **The Phone tab's Contacts and Android Apps pages draw their contents
   again.** Contacts showed its count — "147 of 150 contacts" — and then an
   empty page, and Android Apps drew its big empty-state icon on top of its
