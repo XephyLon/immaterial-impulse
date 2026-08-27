@@ -243,6 +243,15 @@ bug in anything that qualifies:
 - **Run `./tests/run_tests.sh` before committing** and confirm it's green. A change that breaks an
   existing test is a regression, full stop - fix the change, don't loosen or delete the test to
   make it pass, unless the test itself was wrong (and if so, say so explicitly in the commit).
+  **Start it whenever you are ready: do not check `ps` for a suite already running and do not
+  stagger runs by hand.** The script takes an exclusive `flock` before its first runtime harness,
+  says which checkout is ahead of it, and waits - the static half of the run overlaps freely and
+  only the compositor harnesses queue. That used to be the caller's rule and callers forgot it;
+  what it costs is `The Wayland connection broke. Did the Wayland compositor die?` in the losing
+  run, which is what a real regression looks like too. See
+  [AGENT.md → Running the suite while another agent is running one](AGENT.md#running-the-suite-while-another-agent-is-running-one)
+  for the boundary, the release, and why `run_*_probe.sh` is not covered.
+  8b5f04d6e ("test(suite): serialize a run's compositor harnesses behind one flock").
 - **A green suite does not mean the shell loads.** The QML tests only instantiate pure-logic
   singletons, so any widget that fails to *compile* (a `FINAL` property override, a bad type name, a
   missing `import qs.modules.common`) passes every test while taking down every panel that reaches
@@ -419,6 +428,14 @@ once:
 - **Small, single-purpose commits (see below) are what make parallel branches mergeable at all.** A
   worktree whose entire session is one giant commit is much more likely to conflict messily on merge
   than one with granular commits a reviewer (human or agent) can cherry-pick or rebase around.
+- **Two worktrees may run `./tests/run_tests.sh` at the same time; the script queues them.** It
+  holds one `flock` shared by every worktree and clone on the machine, across the section where
+  its harnesses each bring up a nested weston. Before 8b5f04d6e ("test(suite): serialize a run's
+  compositor harnesses behind one flock") the losing run reported a broken Wayland connection,
+  which reads as a regression in whatever it was testing rather than as contention - and the rule
+  that was supposed to prevent it ("check for a running suite first") was forgotten by every kind
+  of caller including the maintainer. Do not add a hand check back; if a run is waiting it says
+  which checkout it is waiting for.
 - **Re-run the live-verification loop against the primary checkout after merging**, even if each
   worktree "passed" its own review - the merge itself, and the fact that the changes were never
   actually hot-reloaded together until now, are both new sources of breakage.

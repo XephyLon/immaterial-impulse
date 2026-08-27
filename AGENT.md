@@ -429,6 +429,53 @@ finding). A check that reads the `.in` is checking the wrong file and stays gree
 for the whole life of the bug; `tests/test_clock_depth_cache.py` reads both now.
 (fix(install): put onnxruntime in the lock the installer actually installs.)
 
+## Running the suite while another agent is running one
+
+**`tests/run_tests.sh` serializes itself — do not check `ps` for a running suite
+before starting one, and do not stagger runs by hand.** Everything up to the
+first runtime harness is pure (source-text lints, contract checks that parse QML
+and Python) and overlaps freely; from the first harness to the end of the run
+the script holds one exclusive `flock` on
+`${XDG_RUNTIME_DIR}/immaterial-impulse-test-suite.lock` — one fixed name per
+user, so every worktree and every clone on this machine contends for the same
+one. A second suite reaching that point prints which checkout is ahead of it and
+waits.
+
+That waiting used to be the caller's rule, and callers forgot it, the maintainer
+twice. What it costs is not a red test: forty of the checks start a nested
+weston and a `dbus-run-session`, and two of those up at once takes the loser's
+compositor away, so what it prints is `The Wayland connection broke. Did the
+Wayland compositor die?` — indistinguishable from a real regression in whatever
+it was testing. Five times in one day, three full re-runs, and one agent
+"fixing" code that was never broken.
+
+Four properties to know before changing any of it.
+
+- **The lock lives on a file descriptor the shell holds open**, so the kernel
+  drops it however the run ends — a failing check's `exit 1`, a Ctrl-C, a
+  SIGKILL. There is no lockfile to clean up and no stale marker to clear.
+- **What the kernel cannot drop is a descendant that inherited the
+  descriptor**: bash sets no close-on-exec on a `{fd}<>` redirection. Measured —
+  a backgrounded holder SIGKILLed while its child was alive left the lock held
+  with no suite running. So the wait gives up on the lock (not on the run) after
+  two consecutive minutes with the record naming a pid that is gone and not
+  moving, and says so.
+- **There is exactly ONE acquire point**, which is what makes the boundary cheap
+  and is also the thing that can silently break: a harness wired in above it
+  would run unserialized. `tests/lint_suite_lock_scope.py` fails the suite on
+  that, classifying "a harness that nests a compositor" with
+  `lint_display_isolation`'s own rule rather than a list of its own.
+- **CI never contends** — one job, a fresh runner, nothing else holding it — so
+  `flock -n` succeeds on its first try and the whole mechanism costs an `open()`
+  and one ioctl. It cannot turn a CI failure into a hang.
+
+The `run_*_probe.sh` scripts are **not** covered. They are run by hand, each
+nests its own weston, and two of those still collide with each other and with a
+suite's harnesses; `docs/handoff-2026-08-17-edit-mode.md`'s "re-run in
+isolation" is still the rule there.
+8b5f04d6e ("test(suite): serialize a run's compositor harnesses behind one flock"),
+d8ba5738b ("test(lint): fail on a compositor harness wired in above the suite lock").
+
 ## Directory map
 
 ```
