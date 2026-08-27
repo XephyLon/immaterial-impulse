@@ -7,6 +7,7 @@ singleton PhoneCamera PhoneCamera.qml
 singleton PhoneConnect PhoneConnect.qml
 singleton PhoneNotifications PhoneNotifications.qml
 singleton PhoneDeps PhoneDeps.qml
+singleton PhoneMic PhoneMic.qml
 singleton PhoneScrcpy PhoneScrcpy.qml
 singleton PluginStore PluginStore.qml
 singleton Tailscale Tailscale.qml
