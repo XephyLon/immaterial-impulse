@@ -1617,6 +1617,16 @@ if ! python3 "$SCRIPT_DIR/test_phone_notifications_runtime.py"; then
     exit 1
 fi
 
+# The contacts reader: the kpeoplevcard directory KDE Connect writes, parsed
+# against a fixture shaped after the real vCard 2.1 cards (soft-wrapped
+# QUOTED-PRINTABLE names, folded base64 photos, a card that is only a
+# number), the publish-only-on-change rule, and both watch modes.
+echo "Running Phone contacts monitor tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_contacts_monitor.py"; then
+    echo "Phone contacts monitor tests failed."
+    exit 1
+fi
+
 echo "Running registry entry validator tests..."
 if ! python3 "$SCRIPT_DIR/test_registry_validate.py"; then
     echo "Registry entry validator tests failed."
