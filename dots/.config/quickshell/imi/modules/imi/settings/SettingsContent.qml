@@ -696,7 +696,18 @@ Item {
                             required property var index
                             source: modelData.component
 
-                            active: Config.ready && (root.currentPage === index || item !== null)
+                            // `built`, never `item !== null`: `item` is what
+                            // `active` PRODUCES, so a keep-alive term reading it
+                            // closes a circle through this very binding. It
+                            // never fired while the eager loop was assigning
+                            // `active` and destroying the binding; with the
+                            // binding live it logs `Binding loop detected for
+                            // property "active"` and Qt drops the
+                            // re-evaluation, so a page that should have been
+                            // kept silently is not. `built` is written from
+                            // `onLoaded` and read by nothing that makes it.
+                            property bool built: false
+                            active: Config.ready && (root.currentPage === index || built)
 
                             anchors.fill: parent
 
@@ -707,6 +718,7 @@ Item {
                             anchors.topMargin: isActive ? 0 : Appearance.spacing.space150
 
                             onLoaded: {
+                                pageLoader.built = true;
                                 if (root.currentPage === index) {
                                     GlobalStates.currentPageInstance = item;
                                 }
@@ -754,8 +766,10 @@ Item {
                     Loader {
                         id: profileLoader
                         // The loop above assigned this too, so it also had no
-                        // binding to be built by.
-                        active: root.showingProfile || item !== null
+                        // binding to be built by. See the page loader's `built`
+                        // above for why this is not `item !== null`.
+                        property bool built: false
+                        active: root.showingProfile || built
                         anchors.fill: parent
                         source: Qt.resolvedUrl("pages/Profile.qml")
 
@@ -764,6 +778,12 @@ Item {
                         enabled: isActive
                         visible: isActive
                         anchors.topMargin: isActive ? 0 : Appearance.spacing.space150
+
+                        onLoaded: {
+                            profileLoader.built = true;
+                            if (profileLoader.isActive)
+                                GlobalStates.currentPageInstance = item;
+                        }
 
                         onIsActiveChanged: {
                             if (isActive && item) {
