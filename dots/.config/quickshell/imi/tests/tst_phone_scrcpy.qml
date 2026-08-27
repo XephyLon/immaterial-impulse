@@ -45,6 +45,9 @@ TestCase {
         PhoneDeps.v4l2loopbackLoaded = false
         PhoneDeps.v4l2loopbackInstalled = false
         PhoneDeps.scrcpyMajor = 0
+        PhoneDeps.adbDevice = false
+        PhoneDeps.adbDeviceSerial = ""
+        PhoneDeps.adbDeviceRefreshes = 0
         PhoneScrcpy.reset()
         PhoneScrcpy.available = true
         PhoneScrcpy.appModeSupported = true
@@ -106,6 +109,44 @@ TestCase {
         compare(PhoneDeps.parseLsmod("v4l2loopback           53248  0\n"), true)
         compare(PhoneDeps.parseLsmod("snd_aloop              45056  1\nvideodev              421888  1\n"), false)
         compare(PhoneDeps.parseLsmod(""), false)
+    }
+
+    function test_deps_reads_adb_devices_and_counts_only_a_device_in_the_device_state() {
+        const usb = PhoneDeps.parseAdbDevices("List of devices attached\nR5CT30ABCDE\tdevice\n\n")
+        compare(usb.present, true)
+        compare(usb.serial, "R5CT30ABCDE")
+        // An empty list is the machine this was found on: the phone is paired
+        // over KDE Connect and adb has never seen it.
+        compare(PhoneDeps.parseAdbDevices("List of devices attached\n\n").present, false)
+        compare(PhoneDeps.parseAdbDevices("").present, false)
+        compare(PhoneDeps.parseAdbDevices("").serial, "")
+        // A phone that has not answered the RSA prompt, and a transport that
+        // has dropped, are both listed - and both are a launch that fails a
+        // second later, so neither counts.
+        compare(PhoneDeps.parseAdbDevices("List of devices attached\nR5CT30ABCDE\tunauthorized\n").present, false)
+        compare(PhoneDeps.parseAdbDevices("List of devices attached\n192.168.1.50:5555\toffline\n").present, false)
+    }
+
+    function test_deps_names_the_serial_a_launch_would_actually_resolve_to() {
+        // The supervisor prefers a USB serial over an ip:port, so a card
+        // naming the wireless one would name a transport nothing uses.
+        const both = PhoneDeps.parseAdbDevices(
+            "List of devices attached\n192.168.1.50:5555\tdevice\nR5CT30ABCDE\tdevice\n")
+        compare(both.present, true)
+        compare(both.serial, "R5CT30ABCDE")
+        compare(PhoneDeps.parseAdbDevices("List of devices attached\n192.168.1.50:5555\tdevice\n").serial,
+                "192.168.1.50:5555")
+    }
+
+    function test_deps_refuses_to_re_ask_adb_while_adb_is_not_installed() {
+        // A Process whose binary is not on PATH never emits `exited`, so a
+        // refresh there would move the pending count and leave the flag alone.
+        PhoneDeps.adb = false
+        PhoneDeps.refreshAdbDevices()
+        compare(PhoneDeps.adbDeviceRefreshes, 0)
+        PhoneDeps.adb = true
+        PhoneDeps.refreshAdbDevices()
+        compare(PhoneDeps.adbDeviceRefreshes, 1)
     }
 
     function test_deps_dependency_table_carries_the_forks_commands() {

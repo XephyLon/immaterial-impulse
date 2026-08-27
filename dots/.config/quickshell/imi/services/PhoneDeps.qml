@@ -43,6 +43,17 @@ Singleton {
     property int scrcpyMinor: 0
     property string distro: "unknown" // arch | fedora | debian | unknown
 
+    // Whether `adb devices` currently lists a phone in the `device` state,
+    // and the serial a launch would resolve to. The one thing here that is
+    // LIVE rather than a fact about what is installed: a phone is plugged in
+    // and unplugged while the shell runs, so `refreshAdbDevices()` exists and
+    // the card stack calls it while it is on screen and has seen nothing. It
+    // lives beside the tooling because the question a card asks before its
+    // click is the same shape - "can this feature start at all" - and
+    // `unavailable` already answers the other half of it.
+    property bool adbDevice: false
+    property string adbDeviceSerial: ""
+
     readonly property bool appModeSupported: root.scrcpy && root.scrcpyMajor >= 4
 
     // Probes still in flight. `ready` is false until the first sweep has
@@ -80,6 +91,29 @@ Singleton {
     // the module is `v4l2loopback_dc`, which counts.
     function parseLsmod(text: string): bool {
         return (text ?? "").split("\n").some(line => /^v4l2loopback(\b|_)/.test(line.trim()));
+    }
+
+    // `adb devices` prints a header line and then one `<serial>\t<state>` row
+    // per transport. Only a row in the `device` state is a phone the tools can
+    // drive: `unauthorized` is a phone that has not answered the RSA prompt
+    // and `offline` a transport that has dropped, and either is a launch that
+    // fails a second later with nothing on screen having said so. The
+    // supervisor prefers a USB serial over an ip:port, so the USB ones come
+    // first here too and the serial reported is the one a launch would use.
+    function parseAdbDevices(text: string): var {
+        const usb = [];
+        const wireless = [];
+        for (const raw of (text ?? "").split("\n")) {
+            const line = raw.trim();
+            if (line.length === 0) continue;
+            if (line.indexOf("List of devices") === 0) continue;
+            const parts = line.split(/\s+/);
+            if (parts.length < 2 || parts[1] !== "device") continue;
+            if (parts[0].indexOf(":") >= 0) wireless.push(parts[0]);
+            else usb.push(parts[0]);
+        }
+        const serials = usb.concat(wireless);
+        return { present: serials.length > 0, serial: serials.length > 0 ? serials[0] : "" };
     }
 
     // The install guide's rows: the sibling fork's table, verbatim.
@@ -217,6 +251,15 @@ Singleton {
             root.startProbe(probe);
     }
 
+    // Live state, so it is re-asked rather than answered once. Refused while
+    // adb is not installed: a Process whose binary is not on PATH never emits
+    // `exited`, so the flag would keep whatever it had while the probe count
+    // still moved.
+    function refreshAdbDevices(): void {
+        if (!root.adb) return;
+        root.startProbe(adbDevicesProbe);
+    }
+
     function probeAnswered(): void {
         root.probesPending = Math.max(0, root.probesPending - 1);
     }
@@ -261,7 +304,31 @@ Singleton {
         command: ["sh", "-c", "command -v adb"]
         Component.onCompleted: root.startProbe(this)
         onRunningChanged: if (!running) root.probeAnswered()
-        onExited: (exitCode, exitStatus) => { root.adb = exitCode === 0; }
+        onExited: (exitCode, exitStatus) => {
+            root.adb = exitCode === 0;
+            if (root.adb) {
+                root.startProbe(adbDevicesProbe);
+            } else {
+                root.adbDevice = false;
+                root.adbDeviceSerial = "";
+            }
+        }
+    }
+
+    // Not started from Component.onCompleted and not in recheck()'s list: it
+    // is started by the presence probe above, which recheck() does restart, so
+    // a machine without adb never spawns it at all.
+    Process {
+        id: adbDevicesProbe
+        command: ["adb", "devices"]
+        stdout: StdioCollector { id: adbDevicesOut }
+        stderr: StdioCollector {}
+        onRunningChanged: if (!running) root.probeAnswered()
+        onExited: (exitCode, exitStatus) => {
+            const found = root.parseAdbDevices(exitCode === 0 ? adbDevicesOut.text : "");
+            root.adbDevice = found.present;
+            root.adbDeviceSerial = found.serial;
+        }
     }
 
     Process {

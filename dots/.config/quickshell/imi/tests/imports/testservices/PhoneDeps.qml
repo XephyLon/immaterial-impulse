@@ -28,6 +28,8 @@ Singleton {
     property int scrcpyMajor: 0
     property int scrcpyMinor: 0
     property string distro: "unknown"
+    property bool adbDevice: false
+    property string adbDeviceSerial: ""
 
     readonly property bool appModeSupported: root.scrcpy && root.scrcpyMajor >= 4
 
@@ -64,6 +66,29 @@ Singleton {
     // the module is `v4l2loopback_dc`, which counts.
     function parseLsmod(text: string): bool {
         return (text ?? "").split("\n").some(line => /^v4l2loopback(\b|_)/.test(line.trim()));
+    }
+
+    // `adb devices` prints a header line and then one `<serial>\t<state>` row
+    // per transport. Only a row in the `device` state is a phone the tools can
+    // drive: `unauthorized` is a phone that has not answered the RSA prompt
+    // and `offline` a transport that has dropped, and either is a launch that
+    // fails a second later with nothing on screen having said so. The
+    // supervisor prefers a USB serial over an ip:port, so the USB ones come
+    // first here too and the serial reported is the one a launch would use.
+    function parseAdbDevices(text: string): var {
+        const usb = [];
+        const wireless = [];
+        for (const raw of (text ?? "").split("\n")) {
+            const line = raw.trim();
+            if (line.length === 0) continue;
+            if (line.indexOf("List of devices") === 0) continue;
+            const parts = line.split(/\s+/);
+            if (parts.length < 2 || parts[1] !== "device") continue;
+            if (parts[0].indexOf(":") >= 0) wireless.push(parts[0]);
+            else usb.push(parts[0]);
+        }
+        const serials = usb.concat(wireless);
+        return { present: serials.length > 0, serial: serials.length > 0 ? serials[0] : "" };
     }
 
     // The install guide's rows: the sibling fork's table, verbatim.
@@ -186,5 +211,12 @@ Singleton {
 
     function recheck(): void {
         root.rechecks++;
+    }
+
+    property int adbDeviceRefreshes: 0
+
+    function refreshAdbDevices(): void {
+        if (!root.adb) return;
+        root.adbDeviceRefreshes++;
     }
 }
