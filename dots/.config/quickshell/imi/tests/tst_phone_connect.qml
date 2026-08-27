@@ -505,6 +505,26 @@ TestCase {
         compare(PhoneConnect.monitorExitPlan(3, 90000, false, 30000, 5).attempts, 0)
     }
 
+    // ---- share (slice 4) ----
+
+    function test_shareable_urls_keeps_only_file_and_http_entries() {
+        const kept = PhoneConnect.shareableUrls([
+            "file:///home/me/photo.jpg",
+            "https://example.org/a?b=c",
+            "HTTP://EXAMPLE.ORG",
+            "  file:///with/spaces in it.txt  ",
+            "/home/me/not-a-url",
+            "ftp://example.org/x",
+            "",
+            "   ",
+            null,
+            42
+        ])
+        compare(kept.join("|"), "file:///home/me/photo.jpg|https://example.org/a?b=c|HTTP://EXAMPLE.ORG|file:///with/spaces in it.txt")
+        compare(PhoneConnect.shareableUrls(null).length, 0)
+        compare(PhoneConnect.shareableUrls("https://example.org").length, 0)
+    }
+
     // ---- device id guard ----
 
     function test_valid_device_id_accepts_kdeconnect_and_valent_ids() {
