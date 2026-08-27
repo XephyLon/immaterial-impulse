@@ -1646,6 +1646,17 @@ if ! python3 "$SCRIPT_DIR/test_phone_scrcpy_manager.py"; then
     exit 1
 fi
 
+# The four session services' process I/O, which their doubles omit: the
+# synced regions byte-identical, argv only (the constant probes are the one
+# shell), no running binding anywhere, the supervisor's marker, ladder and
+# idle timer, detached DroidCam launches, and the mic's swap undone on
+# every exit path.
+echo "Running Phone sessions contract tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_sessions_contract.py"; then
+    echo "Phone sessions contract tests failed."
+    exit 1
+fi
+
 echo "Running registry entry validator tests..."
 if ! python3 "$SCRIPT_DIR/test_registry_validate.py"; then
     echo "Registry entry validator tests failed."
