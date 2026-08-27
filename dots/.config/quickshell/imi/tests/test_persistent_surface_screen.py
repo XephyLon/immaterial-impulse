@@ -345,7 +345,9 @@ def test_every_layer_surface_names_the_screen_it_lives_on():
             if top_level_value(block, "screen"):
                 continue
             type_name = declared_type_name(text, path, start)
-            if type_name is None:
+            if not type_name:
+                # Nested inside something else in the file, so no call site can
+                # reach it and nothing outside can be passing it a screen.
                 unpinned.append(name)
                 continue
             sites = instantiations(type_name)
