@@ -57,6 +57,17 @@ export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}"
 #     minute and add a second boundary that a harness appended below it would
 #     silently escape.
 #
+# Measured on this machine (2026-08-28, one full green run, every block timed
+# from the run's own output), because "how much could narrowing possibly buy"
+# is the load-bearing number and it is not what it looks like: of 16m40s of
+# work, the compositor harnesses are 15m19s, the free head above the acquire is
+# 23s, and everything else inside the lock is 1m21s. The run is harness-bound,
+# so even a per-harness lock could overlap only about a hundred seconds of a
+# seventeen-minute run. That is what settles the trade above, rather than the
+# argument about forty call sites on its own - and it is why the boundary is
+# not worth moving on the assumption that most of a run is static. On this tree
+# it is not.
+#
 # WHICH lock: one fixed name per user, never a hash of the checkout. What is
 # being serialized is this machine's ability to run a nested compositor, not a
 # repository - so every worktree and every clone has to contend for the same
