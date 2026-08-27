@@ -1836,7 +1836,10 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   while the GUI thread is about to be gone for two thirds of a second. A `Timer { interval: 1 }`
   whose longest gap between ticks is recorded measures what a hitch actually is — the GUI thread
   being unavailable — and it needs no `QSG_RENDER_TIMING` parsing to do it. Measured under headless
-  weston: **622ms**, against 66ms once the binding is left alone.
+  weston, pooled over twelve runs: **618ms** (599-631), against **63.5ms** (59-69) once the binding
+  is left alone. Every switching metric is unchanged between the two arms - 3ms of synchronous work,
+  1ms median to the page being on screen, 33ms median block - which is the point: the fix is not
+  visible from the switch, in either direction.
   **It also means the reported symptom was not the defect.** Switching pages was *cheap* — 2-6ms of
   synchronous work and one extra frame on a page's first draw — precisely because nothing was ever
   left to build. Anything measuring the switch would have found nothing wrong with it. Follow the
@@ -1866,8 +1869,14 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   `pages/CursorConfig.qml` push their whole config block into
   `hypr/hyprland/shellOverrides/main.lua` from their own `Component.onCompleted`, so *when a
   settings page is built* is load-bearing outside this window, and the eager loop is why nobody had
-  noticed. Measured interleaved A/B, first run of each arm discarded: the worst block within 300ms
-  of a click went from 108ms to 35ms while page-ready latency stayed at 1ms median.
+  noticed. What that warm-up costs is the one thing the numbers DO separate besides the block: pooled
+  over two interleaved A/B sessions (six runs an arm, the first of each discarded, 168 switches an
+  arm), the block measured over a whole 900ms step is over 40ms on 8 switches of 168 and peaks at
+  158ms, against 2 of 168 and 108ms without the warm-up. Inside the 300ms a click is blamed for, the
+  two arms are the same distribution — 33ms median, 34ms p95, one or two outliers each — so the
+  warm-up's completions land between clicks and not in them. An earlier single session read that as
+  108ms → 35ms *in favour of* the warm-up; it did not reproduce, and one session of a two-per-168
+  event is not a measurement.
   `tests/test_settings_page_incubation_runtime.py` drives all of it and `PageIncubationContractTests`
   in `tests/test_settings_navigation.py` is the half that runs without a compositor. The runtime
   check reads the un-warmed state ONE TURN after the host is built and counts LOADERS ASKED rather

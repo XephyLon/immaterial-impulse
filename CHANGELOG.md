@@ -133,10 +133,10 @@ own repo; the installer pins which revision it builds.
   as the Phone quick toggle — moved the page without moving the tab bar.
 - **The shell no longer freezes for two thirds of a second while it starts.**
   Settings built all fifteen of its pages — about 24500 items — in one go the
-  moment the configuration loaded: measured at 622ms with nothing on screen able
+  moment the configuration loaded: measured at 618ms with nothing on screen able
   to move, bar and dock included, and paid on every launch whether or not the
   window was ever opened. The pages are built one at a time in the background
-  now, and the same measurement reads 66ms. Switching pages stays as immediate
+  now, and the same measurement reads 64ms. Switching pages stays as immediate
   as it was; a page reached before the background pass gets to it says
   "Building this page…" for the moment it takes, instead of showing an empty
   pane.
