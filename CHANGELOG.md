@@ -136,6 +136,14 @@ own repo; the installer pins which revision it builds.
   Arabic sets taller than Latin at the same text size. Every row now takes the
   height its own contents need, in any script, with the same breathing room
   above and below.
+- **The Phone tab's Phone Webcam and Phone Microphone pages fit the panel
+  again.** Both pages were drawn wider than the sidebar and shifted left, so
+  every label was cut off at the panel's left edge — the error banner read
+  "m did not start - is the DroidCam app open on the phone?", the section
+  headers read "ra" and "ra settings", and the resolution row ran off the
+  right edge. Both pages now take the width the panel gives them, and a long
+  message from the camera or the microphone wraps inside its banner instead
+  of stretching the page around it.
 - **The Phone tab's Contacts and Android Apps pages draw their contents
   again.** Contacts showed its count — "147 of 150 contacts" — and then an
   empty page, and Android Apps drew its big empty-state icon on top of its
