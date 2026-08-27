@@ -12,9 +12,66 @@ Scope { // Scope
     id: root
     property bool detach: false
     property bool pin: false
+    // Shell-wide, not per window: with one surface per screen a state kept on
+    // the window would be a preference the user set on one monitor and lost by
+    // opening the panel on another.
+    property bool extend: false
     property Component contentComponent: SidebarLeftContent {}
     property Item sidebarContent
     readonly property bool centerOnly: Config.options.bar.layouts.leftLayout.length === 0 && Config.options.bar.layouts.rightLayout.length === 0 && !Config.options.bar.vertical
+
+    // One surface PER SCREEN, and the open picks which one shows - the
+    // overview's shape (Overview.qml), for the bug it was fixed for.
+    //
+    // A persistent surface has to say which screen it lives on: a PanelWindow
+    // with no `screen:` asks the compositor to choose (Quickshell passes a
+    // null output), and Hyprland answers with the monitor that has focus AT
+    // CREATION. While the window was rebuilt per open that was "the focused
+    // monitor, every time". Kept mapped for the life of the shell
+    // (EdgeSlide.qml, and the 61ms per-open stall it removed), it became
+    // "whichever monitor had focus at boot, forever" - #297.
+    //
+    // `targetScreen` is the focused monitor's name, read once at the open edge
+    // and held for the open. Latched, not live: focus moving mid-open must not
+    // teleport the panel.
+    property string targetScreen: ""
+    property PanelWindow activeWindow: null
+
+    function latchTarget() {
+        root.targetScreen = WM.focusedMonitor?.name ?? "";
+    }
+
+    // The focused monitor's window, latched now. Called at EVERY open edge:
+    // asking "already open?" first and handing back the window that is showing
+    // is right for a toggle pressed while the panel is up, and wrong here - at
+    // the open edge the flag has just flipped, so that question is always yes
+    // once any open has happened, and every open after the first reuses the
+    // first screen's window (#297 reopened).
+    function windowForFocusedMonitor() {
+        root.latchTarget();
+        const windows = sidebarWindows.instances;
+        return windows.find(w => w.modelData.name === root.targetScreen) ?? windows[0] ?? null;
+    }
+
+    // The content is ONE tree that MOVES, where the overview builds one grid
+    // per screen. Two reasons it is not the overview's shape here. This panel
+    // is the AI chat, the translator, the media pane and the Phone tab, and
+    // every one of them holds state the user is in the middle of - a draft
+    // message, a scroll position, a conversation - so N copies would mean the
+    // panel forgetting what it was showing whenever it opened on another
+    // monitor; and the reparent already exists, because detaching the sidebar
+    // into a floating window has always moved this same tree.
+    //
+    // It is a plain reparent rather than an assignment to `children`: the old
+    // spelling replaced the whole list, which took the background's own
+    // click-eating MouseArea out of the scene along with it.
+    function hostContent(host) {
+        if (!root.sidebarContent || !host)
+            return;
+        if (root.sidebarContent.parent === host)
+            return;
+        root.sidebarContent.parent = host;
+    }
 
     function toggleDetach() {
         root.detach = !root.detach;
@@ -59,40 +116,80 @@ Scope { // Scope
         else root.pin = !root.pin;
     }
 
+    // The content is built into the boot-focused monitor's window rather than
+    // left parentless: an unparented tree has no scene graph, so the first open
+    // would pay the build EdgeSlide's persistent surface exists to avoid. Every
+    // later open re-latches and moves it only if the target changed.
     Component.onCompleted: {
         root.sidebarContent = contentComponent.createObject(null, {
             "scopeRoot": root,
         });
-        sidebarLoader.item.contentParent.children = [root.sidebarContent];
+        root.activeWindow = root.windowForFocusedMonitor();
+        root.hostContent(root.activeWindow?.contentParent ?? null);
     }
 
     onDetachChanged: {
         if (root.detach) {
-            GlobalFocusGrab.removeDismissable(sidebarLoader.item) // Remove sidebar from the focus grab system
-            sidebarContent.parent = null; // Detach content from sidebar
-            sidebarLoader.active = false; // Unload sidebar
+            root.activeWindow?.close(); // Slide the panel out and drop its grab
             detachedSidebarLoader.active = true; // Load detached window
-            detachedSidebarLoader.item.contentParent.children = [sidebarContent];
+            root.hostContent(detachedSidebarLoader.item.contentParent);
         } else {
-            sidebarContent.parent = null; // Detach content from window
             detachedSidebarLoader.active = false; // Unload detached window
-            sidebarLoader.active = true; // Load sidebar
-            sidebarLoader.item.contentParent.children = [sidebarContent];
+            root.activeWindow = root.windowForFocusedMonitor();
+            root.hostContent(root.activeWindow?.contentParent ?? null);
+            if (GlobalStates.sidebarLeftOpen)
+                root.activeWindow?.open();
         }
     }
 
-    Loader {
-        id: sidebarLoader
-        active: true
-        
-        sourceComponent: PanelWindow { // Window
+    // One dispatcher for the whole family, at the scope: per-window handlers
+    // would each read the latch, and nothing orders a Connections in one window
+    // against the latch being written in another. Here the latch is written,
+    // the content is moved to the window that is about to show it, and THEN
+    // that one window opens.
+    Connections {
+        target: GlobalStates
+        function onSidebarLeftOpenChanged() {
+            if (root.detach)
+                return; // The floating window follows the flag on its own
+            if (GlobalStates.sidebarLeftOpen) {
+                root.activeWindow = root.windowForFocusedMonitor();
+                root.hostContent(root.activeWindow?.contentParent ?? null);
+                root.activeWindow?.open();
+            } else {
+                root.activeWindow?.close();
+            }
+        }
+    }
+
+    Connections {
+        target: GlobalFocusGrab
+        function onDismissed() {
+            GlobalStates.sidebarLeftOpen = false;
+        }
+    }
+
+    Variants {
+        id: sidebarWindows
+        model: Quickshell.screens
+
+        PanelWindow { // Window
             id: panelWindow
+            required property ShellScreen modelData
+            screen: modelData
+            readonly property bool isTarget: root.activeWindow === panelWindow
+
+            // The gesture, per window. Written only by open()/close(), which
+            // only the scope's dispatcher calls - so exactly one window ever
+            // slides, and no sibling can start an entrance on the frame the
+            // flag flips while the latch has not moved yet.
+            property bool panelOpen: false
 
             // The surface stays mapped; the panel is what slides. See
             // SidebarRight.qml and EdgeSlide.qml - the window following the
             // open flag was a 61ms stall of the whole shell per open.
             readonly property EdgeSlide slide: EdgeSlide {
-                open: GlobalStates.sidebarLeftOpen
+                open: panelWindow.panelOpen
                 travel: panelWindow.implicitWidth
                 direction: -1
             }
@@ -115,33 +212,31 @@ Scope { // Scope
                 onTriggered: {
                     if (--framesLeft > 0)
                         return;
-                    if (GlobalStates.sidebarLeftOpen)
+                    if (panelWindow.panelOpen)
                         GlobalFocusGrab.addDismissable(panelWindow);
                 }
             }
-            Connections {
-                target: GlobalStates
-                function onSidebarLeftOpenChanged() {
-                    if (GlobalStates.sidebarLeftOpen) {
-                        focusGrabAfterCommit.framesLeft = 2;
-                        // The window used to be rebuilt per open, and the tabs'
-                        // own creation-time focus grabs picked the focus item.
-                        // A persistent window is created once, at boot, without
-                        // keyboard focus - so an open has to say where keys go
-                        // or the window activates with NO focus item and every
-                        // key is dropped at the content item. (The right
-                        // sidebar's loader does this with a `focus:` binding on
-                        // the open flag.)
-                        root.sidebarContent?.focusActiveItem();
-                    } else {
-                        focusGrabAfterCommit.framesLeft = 0;
-                        GlobalFocusGrab.removeDismissable(panelWindow);
-                    }
-                }
+
+            function open() {
+                panelWindow.panelOpen = true;
+                focusGrabAfterCommit.framesLeft = 2;
+                // The window used to be rebuilt per open, and the tabs' own
+                // creation-time focus grabs picked the focus item. A
+                // persistent window is created once, at boot, without
+                // keyboard focus - so an open has to say where keys go or
+                // the window activates with NO focus item and every key is
+                // dropped at the content item. (The right sidebar's loader
+                // does this with a `focus:` binding on the open flag.)
+                root.sidebarContent?.focusActiveItem();
             }
 
-            property bool extend: false
-            property real sidebarWidth: panelWindow.extend ? Appearance.sizes.sidebarWidthExtended : Appearance.sizes.sidebarWidth
+            function close() {
+                panelWindow.panelOpen = false;
+                focusGrabAfterCommit.framesLeft = 0;
+                GlobalFocusGrab.removeDismissable(panelWindow);
+            }
+
+            property real sidebarWidth: root.extend ? Appearance.sizes.sidebarWidthExtended : Appearance.sizes.sidebarWidth
             property var contentParent: sidebarLeftBackground
 
             function hide() {
@@ -149,13 +244,19 @@ Scope { // Scope
             }
 
             exclusionMode: ExclusionMode.Normal
-            exclusiveZone: root.pin ? sidebarWidth : 0
+            // The target predicate is what keeps a pinned sidebar from
+            // reserving its width on every monitor at once: an exclusive zone
+            // is a protocol value on each surface, and there are N of them now.
+            exclusiveZone: (root.pin && panelWindow.isTarget) ? panelWindow.sidebarWidth : 0
             implicitWidth: Appearance.sizes.sidebarWidthExtended + Appearance.sizes.elevationMargin
             WlrLayershell.namespace: "quickshell:sidebarLeft"
             // Hyprland 0.49: OnDemand is Exclusive, Exclusive just breaks click-outside-to-close
             // ...and on a surface that is mapped all the time, an unconditional
             // OnDemand is a panel that holds the keyboard while showing nothing.
-            WlrLayershell.keyboardFocus: GlobalStates.sidebarLeftOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+            // The target predicate for the same reason the mask carries it: N
+            // surfaces turning OnDemand on one open leaves the compositor to
+            // pick which of them gets the keyboard.
+            WlrLayershell.keyboardFocus: (GlobalStates.sidebarLeftOpen && panelWindow.isTarget) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
             color: "transparent"
 
             anchors {
@@ -166,7 +267,7 @@ Scope { // Scope
 
             margins {
                 top: {
-                    if (!centerOnly) return 0;
+                    if (!root.centerOnly) return 0;
                     switch (Config.options.bar.cornerStyle) {
                         case 0: return -Appearance.sizes.barHeight;
                         case 1: return -Appearance.sizes.barHeight + Appearance.sizes.hyprlandGapsOut;
@@ -179,8 +280,9 @@ Scope { // Scope
 
             // Gated on the flag: a mapped surface with an unconditional mask
             // takes every click on the left edge of the screen, panel or not.
+            // And on the target, or every screen's edge takes them at once.
             mask: Region {
-                item: GlobalStates.sidebarLeftOpen ? sidebarLeftBackground : null
+                item: (GlobalStates.sidebarLeftOpen && panelWindow.isTarget) ? sidebarLeftBackground : null
             }
 
             // Blur only the panel body. The drop shadow is drawn in the
@@ -192,12 +294,6 @@ Scope { // Scope
                 targetWindow: panelWindow
                 regionItem: panelWindow.slide.shown ? sidebarLeftBackground : null
                 regionRadius: sidebarLeftBackground.radius
-            }
-            Connections {
-                target: GlobalFocusGrab
-                function onDismissed() {
-                    panelWindow.hide();
-                }
             }
 
             // Content
@@ -232,6 +328,7 @@ Scope { // Scope
                 MouseArea {
                     anchors.fill: parent
                     onClicked: (mouse) => { mouse.accepted = true }
+                    z: -1
                 }
 
                 Keys.onPressed: (event) => {
@@ -240,7 +337,7 @@ Scope { // Scope
                     }
                     if (event.modifiers === Qt.ControlModifier) {
                         if (event.key === Qt.Key_O) {
-                            panelWindow.extend = !panelWindow.extend;
+                            root.extend = !root.extend;
                         } else if (event.key === Qt.Key_D) {
                             root.toggleDetach();
                         } else if (event.key === Qt.Key_P) {
@@ -266,7 +363,7 @@ Scope { // Scope
             onVisibleChanged: {
                 if (!visible) GlobalStates.sidebarLeftOpen = false;
             }
-            
+
             Rectangle {
                 id: detachedSidebarBackground
                 anchors.fill: parent
@@ -284,6 +381,9 @@ Scope { // Scope
         }
     }
 
+    // At the scope, never inside the family: an IpcHandler is registered by
+    // its `target` and a GlobalShortcut by its `name`, both process-wide, so
+    // a second instance is a startup failure rather than a duplicate.
     IpcHandler {
         target: "sidebarLeft"
 
@@ -297,6 +397,13 @@ Scope { // Scope
 
         function open(): void {
             GlobalStates.sidebarLeftOpen = true
+        }
+
+        // Which screen's window the last open landed on - what
+        // tests/run_persistent_surface_focus_probe.sh reads after moving focus between
+        // two outputs. Empty until the first open.
+        function activeScreen(): string {
+            return root.activeWindow?.modelData.name ?? "";
         }
     }
 
