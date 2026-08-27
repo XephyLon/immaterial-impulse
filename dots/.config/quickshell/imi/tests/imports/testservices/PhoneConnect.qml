@@ -306,6 +306,18 @@ Singleton {
         }
         return out.slice(0, Math.max(0, max));
     }
+
+    // The low-battery latch, as one decision. Thresholds are the
+    // proposal's, literally: "low" once when the charge is below 20 and
+    // the phone is not charging; "recovered" at 25 or above, or the moment
+    // it charges, while the latch is set. An unknown charge (-1) moves
+    // nothing.
+    function batteryNoticeTransition(notified: bool, charge: int, charging: bool): var {
+        if (charge < 0) return { notice: "", notified: notified };
+        if (!notified && charge < 20 && !charging) return { notice: "low", notified: true };
+        if (notified && (charge >= 25 || charging)) return { notice: "recovered", notified: false };
+        return { notice: "", notified: notified };
+    }
     // END phone-connect parser logic
 
     function applyBackend(newBackend: string): void {
