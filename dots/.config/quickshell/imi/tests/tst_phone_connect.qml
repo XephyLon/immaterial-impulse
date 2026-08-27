@@ -83,7 +83,19 @@ TestCase {
             "type": { "type": "s", "data": "phone" },
             "isPaired": { "type": "b", "data": true },
             "isReachable": { "type": "b", "data": true },
-            "isPairRequestedByPeer": { "type": "b", "data": false }
+            "isPairRequestedByPeer": { "type": "b", "data": false },
+            "pairState": { "type": "i", "data": 3 },
+            "reachableAddresses": { "type": "as", "data": ["192.168.100.179"] }
+        }
+    }
+
+    // Captured shape: GetAll on org.kde.kdeconnect.device.connectivity_report
+    // at the device's /connectivity_report leaf.
+    function lteReport() {
+        return {
+            "cellularNetworkStrength": { "type": "i", "data": 4 },
+            "cellularNetworkType": { "type": "s", "data": "LTE" },
+            "iconName": { "type": "s", "data": "network-mobile-100-lte" }
         }
     }
 
@@ -124,6 +136,47 @@ TestCase {
         compare(device.type, "")
         compare(device.paired, false)
         compare(device.reachable, false)
+    }
+
+    // ---- connectivity_report and reachableAddresses (slice 2) ----
+
+    function test_normalize_kdeconnect_reads_reachable_addresses_and_the_cellular_report() {
+        const device = PhoneConnect.normalizeKdeconnectDevice("6131a746", pairedPhoneProps(), {
+            "charge": { "type": "i", "data": 85 },
+            "isCharging": { "type": "b", "data": false }
+        }, lteReport())
+        compare(device.reachableAddresses.length, 1)
+        compare(device.reachableAddresses[0], "192.168.100.179")
+        compare(device.cellularNetworkType, "LTE")
+        compare(device.cellularNetworkStrength, 4)
+    }
+
+    function test_normalize_kdeconnect_missing_connectivity_report_degrades_cleanly() {
+        // The leaf does not exist for an unpaired device, or where the plugin
+        // is off - its GetAll fails, parses to null, and the model says
+        // "unknown" rather than inventing a signal.
+        const device = PhoneConnect.normalizeKdeconnectDevice("x", {}, null, null)
+        compare(device.reachableAddresses.length, 0)
+        compare(device.cellularNetworkType, "")
+        compare(device.cellularNetworkStrength, -1)
+        // A report with the wrong shapes in it is the same as none.
+        const odd = PhoneConnect.normalizeKdeconnectDevice("x", {}, null, {
+            "cellularNetworkStrength": { "type": "s", "data": "four" },
+            "cellularNetworkType": { "type": "i", "data": 4 }
+        })
+        compare(odd.cellularNetworkType, "")
+        compare(odd.cellularNetworkStrength, -1)
+    }
+
+    function test_normalize_kdeconnect_keeps_only_string_addresses() {
+        const device = PhoneConnect.normalizeKdeconnectDevice("x", {
+            "reachableAddresses": { "type": "as", "data": ["10.0.0.5", 7, null, "fe80::1"] }
+        }, null, null)
+        compare(device.reachableAddresses.join(","), "10.0.0.5,fe80::1")
+        const scalar = PhoneConnect.normalizeKdeconnectDevice("x", {
+            "reachableAddresses": { "type": "s", "data": "not-a-list" }
+        }, null, null)
+        compare(scalar.reachableAddresses.length, 0)
     }
 
     // ---- Valent ----
@@ -167,6 +220,16 @@ TestCase {
         compare(tablet.paired, true)
     }
 
+    function test_normalize_valent_objects_carry_the_kdeconnect_only_fields_empty() {
+        // Valent's connectivity surface was not verifiable against a live
+        // daemon; the model still has the fields so the UI reads one shape,
+        // at the values that mean "unknown".
+        const phone = PhoneConnect.normalizeValentObjects(valentManagedObjects()).find(d => d.id === "abc123")
+        compare(phone.reachableAddresses.length, 0)
+        compare(phone.cellularNetworkType, "")
+        compare(phone.cellularNetworkStrength, -1)
+    }
+
     function test_normalize_valent_objects_ignores_non_device_paths() {
         const devices = PhoneConnect.normalizeValentObjects([{
             "/ca/andyholmes/Valent": { "org.freedesktop.DBus.ObjectManager": {} }
@@ -204,6 +267,8 @@ TestCase {
     function device(id, overrides) {
         return Object.assign({
             id: id, name: id, type: "phone", reachable: false, paired: false,
+            reachableAddresses: [],
+            cellularNetworkType: "", cellularNetworkStrength: -1,
             batteryAvailable: false, batteryCharge: -1, batteryCharging: false
         }, overrides ?? {})
     }
@@ -317,6 +382,8 @@ TestCase {
             verify(PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device", member: member, args: [] }),
                    `device.${member} should re-read`)
         verify(PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device.battery", member: "refreshed", args: [true, 87] }))
+        // connectivity_report.refreshed(si) - the cellular type and strength.
+        verify(PhoneConnect.signalChangesDevices({ iface: "org.kde.kdeconnect.device.connectivity_report", member: "refreshed", args: ["LTE", 4] }))
     }
 
     function test_signal_changes_devices_reads_the_interface_out_of_properties_changed() {

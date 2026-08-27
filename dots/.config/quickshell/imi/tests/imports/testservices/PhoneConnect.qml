@@ -14,7 +14,9 @@ Singleton {
     property bool installed: false // busctl found on PATH
     property string backend: "none" // "kdeconnect" | "valent" | "none"
     readonly property bool available: root.backend !== "none"
-    // [{ id, name, type, reachable, paired, batteryAvailable, batteryCharge, batteryCharging }]
+    // [{ id, name, type, reachable, paired, reachableAddresses,
+    //    cellularNetworkType, cellularNetworkStrength,
+    //    batteryAvailable, batteryCharge, batteryCharging }]
     property var devices: []
 
     readonly property var activeDevice: root.devices.find(d => d.paired && d.reachable && d.type === "phone")
@@ -61,18 +63,26 @@ Singleton {
     }
 
     // Normalizes one org.kde.kdeconnect.device GetAll reply (plus its
-    // battery GetAll, or null when the battery object does not exist - it is
-    // absent for unpaired devices) onto the shared device model.
-    function normalizeKdeconnectDevice(id: string, rawProps: var, rawBatteryProps: var): var {
+    // battery GetAll and its connectivity_report GetAll, either null when
+    // that leaf object does not exist - both are absent for unpaired
+    // devices) onto the shared device model.
+    function normalizeKdeconnectDevice(id: string, rawProps: var, rawBatteryProps: var, rawConnectivityProps: var): var {
         const props = root.unwrapVariants(rawProps);
         const battery = rawBatteryProps === null || rawBatteryProps === undefined
             ? null : root.unwrapVariants(rawBatteryProps);
+        const report = rawConnectivityProps === null || rawConnectivityProps === undefined
+            ? null : root.unwrapVariants(rawConnectivityProps);
+        const addresses = Array.isArray(props.reachableAddresses)
+            ? props.reachableAddresses.filter(address => typeof address === "string") : [];
         return {
             id: id,
             name: props.name ?? "",
             type: props.type ?? "",
             reachable: props.isReachable === true,
             paired: props.isPaired === true,
+            reachableAddresses: addresses,
+            cellularNetworkType: typeof report?.cellularNetworkType === "string" ? report.cellularNetworkType : "",
+            cellularNetworkStrength: typeof report?.cellularNetworkStrength === "number" ? report.cellularNetworkStrength : -1,
             batteryAvailable: battery !== null && typeof battery.charge === "number",
             batteryCharge: (battery !== null && typeof battery.charge === "number") ? battery.charge : -1,
             batteryCharging: battery !== null && battery.isCharging === true
@@ -95,6 +105,9 @@ Singleton {
                 type: props.Type ?? "",
                 reachable: (state & 1) !== 0,
                 paired: (state & 2) !== 0,
+                reachableAddresses: [],
+                cellularNetworkType: "",
+                cellularNetworkStrength: -1,
                 objectPath: path,
                 batteryAvailable: false,
                 batteryCharge: -1,
@@ -184,7 +197,8 @@ Singleton {
                 "deviceVisibilityChanged", "pairingRequestsChanged"],
             "org.kde.kdeconnect.device": ["reachableChanged", "pairStateChanged", "nameChanged",
                 "typeChanged", "pluginsChanged"],
-            "org.kde.kdeconnect.device.battery": ["refreshed"]
+            "org.kde.kdeconnect.device.battery": ["refreshed"],
+            "org.kde.kdeconnect.device.connectivity_report": ["refreshed"]
         }[signal.iface];
         return Array.isArray(members) && members.includes(signal.member);
     }

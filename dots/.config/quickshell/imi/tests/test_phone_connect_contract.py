@@ -51,6 +51,22 @@ def test_parser_region_is_byte_identical_between_service_and_double():
     )
 
 
+def test_the_kdeconnect_sweep_reads_the_connectivity_report_at_its_own_leaf():
+    """The report is a child object (`<device>/connectivity_report`), and the
+    path matters more than it reads: measured against the live daemon, a
+    GetAll that names the report's interface on the DEVICE path does not fail
+    - Qt's adaptor answers it with every property of the device - which
+    parses as a report carrying no cellular fields and reads as "unknown" for
+    ever, with nothing in any log."""
+    source = SERVICE.read_text()
+    calls = [line for line in source.splitlines()
+             if "org.kde.kdeconnect.device.connectivity_report" in line and "GetAll" in line]
+    assert len(calls) == 1, f"expected one connectivity_report GetAll, got {calls}"
+    assert 'devicePath + "/connectivity_report"' in calls[0], (
+        f"the report must be read at its own leaf path: {calls[0].strip()}"
+    )
+
+
 def test_state_application_helpers_match_the_double():
     # applyBackend/applyDevices sit outside the marked region (the double's
     # versions are what the QML suite drives), but their semantics are part
