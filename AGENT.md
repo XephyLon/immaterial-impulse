@@ -706,7 +706,13 @@ services/                  Singletons wrapping external state/processes - one pe
                               feature's own activation (lint_capability_probe_gating.py).
                               missingFor(feature) is the install guide's rows with the
                               sibling fork's per-distro commands verbatim; nothing here is
-                              an installer dependency (sdata/deps-info.md "Phone (optional)")
+                              an installer dependency (sdata/deps-info.md "Phone (optional)").
+                              `adbDevice` is the one LIVE fact in the file - whether
+                              `adb devices` lists a phone in the `device` state, started by
+                              the adb presence probe's own exit and re-asked through
+                              refreshAdbDevices(), so a card can say "no device over ADB"
+                              before it is clicked
+                              b591575c4 ("fix(phone): a card that cannot start over ADB says so before the click")
   PhoneScrcpy.qml              The screen mirror and app mode. QML holds no scrcpy handle:
                               scripts/phone/scrcpy_session_manager.py is ONE supervisor
                               speaking NDJSON on stdin/stdout that owns every scrcpy child
@@ -1673,6 +1679,19 @@ of the range, and on `visualizerPoints` coming back.
 ce41c4f9c ("feat(cava): give CavaService the producer it always implied"),
 bcf5f9ca1 ("refactor(cava): move every band consumer onto the one service"),
 004a17745 ("test(cava): pin the producer, the gate and the band contract").
+
+**A signal nothing connects to is that same hole from the other side, and only a surface can
+find it.** `PhoneScrcpy.feedback(message, ok)`, `PhoneCamera.errorOccurred(message)` and
+`PhoneMic.errorOccurred(message)` have been raised on every failure since those services landed,
+and the Phone tab's toast was connected to `PhoneConnect.actionFeedback` and to nothing else — so
+a scrcpy that could not attach, a webcam that never connected and a microphone whose routing
+failed all reported themselves into a channel with no other end. Nothing errors: a signal with no
+connections is a perfectly legal signal, and there is no log line, no warning and no failing test.
+What it looks like on screen is the feature ignoring the click, which is how it was reported.
+Note which direction the existing check runs: `tests/test_phone_tab_surface_contract.py` derives
+its allowlist from what the services declare, so it answers "does this call reach a service" —
+the half that needed a harness is "does this signal reach a surface".
+85df64825 ("fix(phone): the tab hears the three session services' failures").
 
 **Resampling a spectrum by picking one index per bar drops most of it.**
 `Math.floor(i * source.length / barCount)` reads like the obvious way to fit 50 bands into 20 dots
@@ -2869,6 +2888,29 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   and `tests/lint_icon_glyph_alignment.py` fails any `contentItem: MaterialSymbol` block without
   both. (fix(widgets): every contentItem glyph is centred by alignment, not by an anchor the
   Control ignores.)
+- **An icon-only button written as a labelled one sizes itself from the label it has not
+  got.** `RippleButtonWithIcon`'s contentItem is a glyph slot beside a `Layout.fillWidth: true`
+  slot for the label, so `mainText: ""` does not make it an icon button — it makes it a button
+  whose empty label absorbs whatever width its ROW has left, from inside. The Phone tab's footer
+  is where that bites, because its two actions flank a `Layout.fillWidth` count pill: measured
+  at the sidebar's 460px they came out 44x35, near enough square to read as a circle under
+  `rounding.full`, with the drawn glyph **1.5px left of the button's own centre** — so widening
+  them would have moved the glyph further off rather than centring it. An icon-only button is a
+  `RippleButton` whose `contentItem` is a `MaterialSymbol` declaring both alignments (the entry
+  above), with both dimensions stated, since nothing about its content can decide them. None of
+  this is visible from the source and none of it is reachable from `qmltestrunner`, which builds
+  neither a laid-out box nor a `RippleButton`; `PhoneTabRuntimeTest.qml` measures the drawn
+  glyph's centre through `mapToItem`. It was the only `mainText: ""` call site in the tree, so
+  this is a note rather than a check.
+  bd35286c3 ("fix(phone): the footer's two actions become soft rectangles, glyphs centred").
+- **A `Text` positioned with `anchors.centerIn` has no box, so `elide` cannot fire and the
+  label paints over its neighbours instead.** Eliding needs a width, and `centerIn` gives a Text
+  its implicit one — which is however wide the string happens to be, drawn straight out past its
+  parent's edges. The Phone tab's count pill was written that way: it is the only
+  `Layout.fillWidth` item in its row, so it could never push the two buttons off, and a longer
+  string (a translation, a count in the hundreds) would simply have been drawn on top of them.
+  `anchors.fill` plus `horizontalAlignment` is the spelling that both centres and bounds.
+  8f8f14c8c ("fix(phone): the footer's count pill spells \"notifications\" out").
 - **The two bars load the same widget files out of `modules/imi/bar/`, and each used to decide
   which file for itself.** `Config.options.bar.layouts.*` is shared and Settings > Bar offers a
   plugin's bar widget whatever the orientation, but only `BarContent.qml` ever learned the
@@ -4542,6 +4584,42 @@ singletons (`PhoneConnect.activeDevice`, `PhoneScrcpy.targetArgs`) - the doubles
 them too. The one-shot serialized queue (`run`/`pump`/one `Process` with `exec`) is
 `PhoneConnect`'s busctl queue, reused rather than one Process per command.
 ("test(phone): pin the four session services' process I/O to their doubles").
+
+**A feature card reported its TOOLING and nothing else, so "the phone is reachable" was
+answering the wrong question.** The Phone tab's three cards gate on
+`PhoneConnect.activeDevice.reachable` — KDE Connect's link — while the mirror, and the
+microphone's preferred backend, drive the phone over **ADB**, which is a different link
+entirely. On a phone paired over LAN with USB debugging never set up, `adb devices` lists
+nothing and both cards read `ready`: "Opens a floating window for the active phone", "Tap to
+start". `PhoneDeps.adbDevice` answers that now, beside the `command -v` sweep. Three rules from
+wiring it up:
+
+- **it is drawn as `offline`, never as a sixth rung.** The card is not running and cannot be
+  started, which is what offline already means, and the SUBTITLE is what says which of the two
+  links is missing — a rung is a thing the card draws differently, and there is nothing
+  different to draw.
+- **the flag is TRI-STATE.** `undefined` means the probe has not answered yet and must not read
+  as a refusal: every `PhoneDeps` flag starts `false`, so a plain falsy test puts both cards on
+  "no device" for the first frames of every session, and refuses for ever at any call site that
+  forgets to pass it — `undefined` is a value (see the `Appearance` and `Config` entries under
+  [Dynamic/data-driven QML gotchas](#dynamicdata-driven-qml-gotchas)).
+- **the webcam does not ask for it, and that asymmetry is the point.** `droidcam-cli` reaches
+  the phone over Wi-Fi when adb has nothing, so `needsAdbDevice` is a term the caller supplies
+  rather than an assumption; claiming a refusal a service can still work around is the "do not
+  fake a state a service cannot report" rule in reverse.
+
+**And the other half of the same complaint: a failed launch's reason was written where nothing
+drew it.** `PhoneCamera` and `PhoneMic` end a failure by setting `lastError` and dropping back to
+`ready`, and `PhoneFeatureCard` draws `lastError` only inside its `active` rung — so nine seconds
+after a click the card was back on "Tap to start · settings to configure" with the reason sitting
+in a property no binding read. The mirror's own ladder already had that arm (`mirrorSubtitleKey`
+returns `"error"`); the two siblings did not, and the card's own header comment claimed they did.
+Every one of these decisions is a pure function in
+`modules/imi/sidebarLeft/phone/phone_cards.js` precisely so `tests/tst_phone_cards.qml` can drive
+it; what needed the runtime harness is whether the click reaches the service at all, and whether
+the card or its settings chip is what a click at the card's centre lands on.
+b591575c4 ("fix(phone): a card that cannot start over ADB says so before the click"),
+cf945864c ("fix(phone): a failed webcam or microphone launch reaches its card's subtitle").
 
 **And the surfaces that DRIVE those services get their allowlist derived rather than written
 down.** "A button whose call no service answers is a fake action" is stated for the right

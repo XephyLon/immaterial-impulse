@@ -118,6 +118,14 @@ own repo; the installer pins which revision it builds.
   among them — stack as cards at the bottom. It landed as a dialog in the
   right sidebar and ships as the Phone tab in the left one, which is where
   the rest of this release's phone work is reached.
+- **The Phone tab's footer toolbar.** The count under your phone's
+  notifications reads "7 notifications" rather than "7 notif.", and "1
+  notification" for one; it says "Device offline" instead of counting when the
+  device on the chip is not there; and a longer count elides inside its pill
+  rather than being drawn over the buttons beside it. Those two buttons — sync
+  and clear — are a little wider than they are tall now, so the row reads as
+  three soft rectangles rather than two circles around a pill, and their icons
+  sit dead centre instead of a pixel and a half to the left.
 
 ### Fixed
 - **The Phone tab's Contacts and Android Apps pages draw their contents
@@ -141,6 +149,17 @@ own repo; the installer pins which revision it builds.
   panel, rewrote the whole of `config.json` and read it straight back, once
   per value instead of once per burst. Settings still writes immediately while
   its window is open, and only while its window is open.
+- **The Phone tab's Mirror, Webcam and Microphone cards say what is wrong
+  instead of nothing.** Three separate silences, all of which read as the card
+  ignoring the click. A card whose feature drives the phone over ADB — the
+  scrcpy mirror, and the microphone wherever scrcpy is installed — now says "No
+  device over ADB" *before* you click it, if `adb devices` lists nothing,
+  instead of offering to open a window it cannot open; plugging the phone in
+  while the tab is open clears it. A launch that fails puts its reason on the
+  card, where before the webcam and the microphone dropped straight back to
+  "Tap to start" with the reason recorded nowhere you could see. And the three
+  services' own error reports now reach the tab's toast, which had only ever
+  been connected to the phone link's.
 - **Both sidebars open on the monitor you are using again.** On a multi-monitor
   setup the left and right sidebars had started opening on whichever screen was
   focused when the shell started, wherever you actually were — the same thing
