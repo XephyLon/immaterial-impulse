@@ -66,6 +66,7 @@ Singleton {
     // a live daemon, so only the verified surface is offered there.
     readonly property bool canPing: root.backend === "kdeconnect"
     readonly property bool canSendClipboard: root.backend === "kdeconnect"
+    readonly property bool canShare: root.backend === "kdeconnect"
 
     // What the last action had to say: the toast reads the signal, an
     // inline line reads the string. Cleared by the next action that starts.
@@ -279,6 +280,17 @@ Singleton {
         if (!wanted || settled >= ceiling)
             return { attempts: settled, retry: false, delay: 0 };
         return { attempts: settled + 1, retry: true, delay: root.monitorBackoffDelay(settled + 1) };
+    }
+
+    // What the share plugin may be handed as a URL: a file:// or http(s)://
+    // string, trimmed. Everything else - a bare path, an empty picker line,
+    // a non-string - is dropped rather than sent as a URL the daemon
+    // cannot open.
+    function shareableUrls(entries: var): var {
+        if (!Array.isArray(entries)) return [];
+        return entries
+            .map(entry => typeof entry === "string" ? entry.trim() : "")
+            .filter(entry => /^(file|https?):\/\//i.test(entry));
     }
     // END phone-connect parser logic
 
@@ -502,6 +514,21 @@ Singleton {
         const d = device ?? root.activeDevice;
         if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
         root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/clipboard`, "org.kde.kdeconnect.device.clipboard", "sendClipboard", []));
+    }
+
+    // One share.shareUrl per entry, each its own queued action, so a
+    // multi-file send arrives as N calls rather than the last one.
+    function shareUrls(device: var, urls: var): void {
+        const d = device ?? root.activeDevice;
+        if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
+        for (const url of root.shareableUrls(urls))
+            root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/share`, "org.kde.kdeconnect.device.share", "shareUrl", ["s", url]));
+    }
+
+    function shareText(device: var, text: string): void {
+        const d = device ?? root.activeDevice;
+        if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id) || !text) return;
+        root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/share`, "org.kde.kdeconnect.device.share", "shareText", ["s", text]));
     }
 
     // Both answer a request the PEER made, so neither falls back to the

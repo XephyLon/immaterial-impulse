@@ -230,6 +230,17 @@ Singleton {
             return { attempts: settled, retry: false, delay: 0 };
         return { attempts: settled + 1, retry: true, delay: root.monitorBackoffDelay(settled + 1) };
     }
+
+    // What the share plugin may be handed as a URL: a file:// or http(s)://
+    // string, trimmed. Everything else - a bare path, an empty picker line,
+    // a non-string - is dropped rather than sent as a URL the daemon
+    // cannot open.
+    function shareableUrls(entries: var): var {
+        if (!Array.isArray(entries)) return [];
+        return entries
+            .map(entry => typeof entry === "string" ? entry.trim() : "")
+            .filter(entry => /^(file|https?):\/\//i.test(entry));
+    }
     // END phone-connect parser logic
 
     function applyBackend(newBackend: string): void {
