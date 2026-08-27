@@ -1935,6 +1935,49 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   way from the pixel it protects.
   b0e8f8af6 ("test(phone): the host check reads the slot's own type, not any ColumnLayout"),
   1a2e39ee4 ("test(phone): measure what the tab's sub-pages actually draw").
+- **A row sized from a constant fits ONE script, and an aligned layout child
+  answers a cell that is too small by OVERFLOWING it rather than by
+  shrinking.** Third in the same family, on the same page, reported from a
+  screenshot of a real contact list. `PhoneContactsPage`'s row header stated
+  `Layout.preferredHeight: Appearance.font.pixelSize.huge * 2` (44) and a
+  `Control` sizes its content item to the PADDED rect, so the row's contents
+  had 36px. What a row holds is not a constant: measured in a real window with
+  both scripts on screen at once, the name-and-number column is **34px** tall
+  for "Alice Rivers" and **47** for an Arabic name at the same `pixelSize`,
+  because `Google Sans Flex` carries no Arabic and the fallback face sets 32px
+  against the Latin face's 19. Before: the Latin card is 52 tall with its 38px
+  avatar drawn at 8-46 - six pixels short of the card's own edge, under the
+  8px base unit, which is the "flush against the bottom border" in the
+  photograph - and the Arabic card is the same 52, with the avatar at 13-51
+  and the NUMBER at 8-55, three pixels **below** the card. Nothing errors and
+  nothing is logged, because `Layout.alignment` means the layout hands the
+  child its preferred size and aligns it, and a cell smaller than that is
+  simply overflowed. After: 58 and 67, each avatar 10 and 14 pixels clear.
+  The header states no height at all now and says its vertical padding out
+  loud in `Appearance.spacing.*` rather than inheriting whatever the Basic
+  style's `padding` happens to be, and the card's own padding is one
+  `rowPadding` rather than `space50` on the content column's anchors plus
+  `space100` added to the height - two spellings that agree only while one is
+  twice the other, which is 4fb2a7f02 ("refactor(widgets): a dialog's content
+  padding gets a name of its own")'s coupling one widget down.
+  Two things about measuring it generalise past this row. **A harness that
+  redirects `XDG_CONFIG_HOME` redirects the developer's own
+  `~/.config/fontconfig` with it**, and that file is what puts an Arabic face
+  in front of the fallback here - measured, without a replacement the same
+  string sorts to DejaVu Sans and sets at the Latin height, so both cards come
+  out equal, every check passes, and the harness reports a defect it never
+  measured. `tests/test_phone_tab_layout_runtime.py` writes a `fonts.conf` of
+  its own and skips with a reason when the face is absent, rather than
+  reddening over a machine's font list. And the check a per-row assertion
+  cannot make is that the two cards **differ**: two rows that both fit because
+  both were made generously tall are still a constant, and the constant is the
+  defect. The sibling pages own the same idiom -
+  `PhoneMicPage`/`PhoneWebcamPage` state `huge * 2 + space150` on a header of
+  their own - so the shape is worth looking for rather than assuming it was
+  one row's.
+  2b921d8da ("refactor(phone): a contact card's padding gets a name of its own"),
+  d9a9162ec ("test(phone): drive a contact card's box against what it holds, in two scripts"),
+  07b819f07 ("fix(phone): a contact card is sized by what it holds, not by a constant").
 - **A keyboard is a LATTICE, not a stack of rows, and a `GridLayout` does not
   hand out equal columns on its own.** The numpad's `+` and its Enter are one
   key two rows tall, which a `RowLayout` cannot say — so each of them shipped
