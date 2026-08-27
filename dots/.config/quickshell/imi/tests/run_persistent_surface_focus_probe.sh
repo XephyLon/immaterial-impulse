@@ -71,10 +71,17 @@ sleep 12
 fail=0; checks=0; SEEN=""
 for M in $MONS $MONS $MONS; do
   CENTRE=$(hyprctl monitors -j | python3 -c "import json,sys; m=[m for m in json.load(sys.stdin) if m['name']=='$M'][0]; print(m['x']+m['width']//2, m['y']+m['height']//2)")
-  hyprctl dispatch "hl.dsp.cursor.move({x=${CENTRE% *},y=${CENTRE#* }})" >/dev/null; sleep 0.6
-  FOCUSED=$(hyprctl monitors -j | python3 -c 'import json,sys; print(",".join(m["name"] for m in json.load(sys.stdin) if m["focused"]))')
-  SEEN="$SEEN $FOCUSED"
   for T in $SURFACES; do
+    # The pointer is placed again before EVERY open, and the focused monitor
+    # re-read there rather than once per round. Closing one of these panels
+    # hands the keyboard back, and the compositor's focused monitor goes with
+    # it: measured, one cursor move followed by three opens had the first land
+    # on the monitor the pointer was on and the other two on the monitor the
+    # first one's close had returned to - which reads exactly like two of the
+    # three surfaces being broken.
+    hyprctl dispatch "hl.dsp.cursor.move({x=${CENTRE% *},y=${CENTRE#* }})" >/dev/null; sleep 0.6
+    FOCUSED=$(hyprctl monitors -j | python3 -c 'import json,sys; print(",".join(m["name"] for m in json.load(sys.stdin) if m["focused"]))')
+    SEEN="$SEEN $FOCUSED"
     qs -c imi ipc call $T open >/dev/null 2>&1; sleep 1.0
     LANDED=$(qs -c imi ipc call $T activeScreen 2>/dev/null | tr -d '\n')
     qs -c imi ipc call $T close >/dev/null 2>&1; sleep 0.8
