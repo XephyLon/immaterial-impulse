@@ -510,8 +510,19 @@ Singleton {
         root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}`, "org.kde.kdeconnect.device", "cancelPairing", []));
     }
 
+    // Queued, never exec'd straight onto the Process: exec on a running
+    // Process terminates it first (measured - the first of two commands
+    // exited 15/crashed with no output), and a multi-file share is a burst.
+    property var actionQueue: []
+
     function runAction(argv: var): void {
-        actionProc.exec(argv);
+        root.actionQueue.push(argv);
+        root.pumpActions();
+    }
+
+    function pumpActions(): void {
+        if (actionProc.running || root.actionQueue.length === 0) return;
+        actionProc.exec(root.actionQueue.shift());
     }
 
     Process {
@@ -531,6 +542,7 @@ Singleton {
                     "-a", "Shell"
                 ]);
             }
+            root.pumpActions();
         }
     }
 
