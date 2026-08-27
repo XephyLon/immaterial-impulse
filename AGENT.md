@@ -499,6 +499,12 @@ modules/imi/                 The "imi" (Immaterial Impulse) panel family - one d
                               phone dialog, whose quick toggle now writes
                               GlobalStates.sidebarLeftTab and opens this panel
                               f7a6ef75a ("refactor(sidebar): the phone quick toggle opens the tab, and the dialog goes")
+                              The tab's bottom card stack (PhoneFeatureCard/PhoneFeatureCards
+                              over PhoneScrcpy/PhoneCamera/PhoneMic, with InstallGuidePopup
+                              for a feature whose tooling is missing) and its four sub-pages
+                              live beside it; phone_cards.js is everything those decide,
+                              because nothing drawn there is reachable from qmltestrunner
+                              3af38971c ("feat(phone): phone_cards.js, the feature cards' decisions as arithmetic")
   phone/                      The pieces every phone surface draws, shared out of that dialog
                               rather than owned by one panel: the device chip, the round action
                               button, the roster row and the pairing card
@@ -2217,6 +2223,24 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   below. Any source-text check over a QML property has the same question to answer: is the value a
   line or a block?
   test(widgets): sweep for the settled-span rule instead of naming three files.
+- **Three more traps in that family, all found by planting against the check that was supposed to
+  catch them.** A source-text check is code with no tests of its own, so it fails the way this
+  repo's silent bugs do: green over the thing it exists to refuse.
+  **`^(\s*)` written to capture indentation matches a NEWLINE**, because `\s` does - so with
+  `re.M` the group swallows the blank lines above its match and the LEAST-indented block in a file
+  measures as the deepest. `Config.qml` has two `phone` JsonObjects (`sidebar.phone`, and the
+  top-level one), and a check picking the shallower of them by that group picked the wrong one and
+  reported every key on the Phone tab's pages as undeclared. `[ \t]*`.
+  **Pairing quotes with `"([^"]+)"` across a `String(x || "")` guard turns the code between them
+  into a match** - the "keys" a sweep of two decision functions came back with were `' : '` and
+  `').length > 0 ? '`. Match the shape of the thing being extracted (`"([a-z][a-zA-Z_]*)"` for a
+  key) rather than "whatever is between quotes".
+  **And a check that reads a file whose own header comment explains the interface reads the
+  prose.** The Phone sub-pages' stub documents `signal back()` in its header; renaming the actual
+  declaration to `signal notBack` left the check green, because the sentence describing it still
+  matched. Strip comments first - which every other check in that file already did.
+  c8810d5ef ("fix(test): the sub-page stub check reads its code, not its own header"),
+  ffac945aa ("test(phone): hold the tab's surfaces to what the services actually answer").
 - **A widget the host does not size gets neither of the host's two resize services, and the
   absence of both is silent.** `PluginWidget`'s `Behavior on width`/`height` is
   `enabled: gridResizeAnimated`, which is `gridSized && PluginState.ready`, and `boxInMotion`
@@ -4233,6 +4257,26 @@ them too. The one-shot serialized queue (`run`/`pump`/one `Process` with `exec`)
 `PhoneConnect`'s busctl queue, reused rather than one Process per command.
 ("test(phone): pin the four session services' process I/O to their doubles").
 
+**And the surfaces that DRIVE those services get their allowlist derived rather than written
+down.** "A button whose call no service answers is a fake action" is stated for the right
+sidebar's phone dialog as a hand-typed `MODEL_ACTIONS` set. The Phone tab's pages reach five
+services and a whole `Config.options.phone` subtree, which is more than a hand-typed set survives:
+`tests/test_phone_tab_surface_contract.py` parses each `services/PhoneX.qml` for the properties,
+functions and signals it declares and resolves every `PhoneX.member` in
+`modules/imi/sidebarLeft/phone/` and the settings page against it, and does the same for every
+config path against `Config.qml`'s own block. The sibling fork is what makes it worth the parsing
+rather than a rule: its cards offer a phone screenshot, a phone power toggle and a "hear yourself"
+loopback that nothing here answers (`PhoneMic` only ever *unloads* a `module-loopback` - it clears
+one a previous session left behind - and never loads one), and its webcam and microphone pages
+carry six config keys this schema does not declare. Every one of them is one copied block away,
+and each fails quietly: a `ReferenceError` per binding into `log.log`, or `undefined` taking its
+fallback for ever until the `JsonAdapter` destroys the key. A card that draws the state machine
+must therefore reach NO service at all - `PhoneFeatureCard` announces `clicked`/`settingsClicked`/
+`stopClicked` and `PhoneFeatureCards` is the one place they become calls, which is what keeps the
+derivation worth having.
+ffac945aa ("test(phone): hold the tab's surfaces to what the services actually answer"),
+5f32c13e8 ("feat(phone): PhoneFeatureCards, the three cards wired to the services that answer them").
+
 **A player on the MPRIS bus may be a proxy for another player, and every field you would match on
 is the borrowed one.** `playerctld` is `playerctl`'s daemon, not a player: it re-publishes whichever
 player it considers *current* — and current means last **interacted with**, not playing — so it sits
@@ -5229,6 +5273,17 @@ label is a rationale, and a rationale is the (i)'s). Three things about it are n
   and holds the reference page to every piece - a chip dropped from one toggle row or an option
   added without its icon errors nowhere, the shape just stops being the grammar. A page adopting it
   later is a line there. `tst_record_bitrate.qml` drives the arithmetic.
+- **...and that line is a RATCHET running both ways, because the first later adopter arrived.**
+  Settings > Devices & Phone is it. `ADOPTERS` in the same file names each page and where its own
+  adoption is checked - the reference page in full there, a later page's page-shaped checks
+  wherever that page's other contracts already live, so the file does not grow one class per page
+  while the reference stays the thing that defines the grammar. It fails in both directions: a page
+  carrying the opt-ins without an entry (the grammar adopted and nothing holding it there) and an
+  entry whose page has dropped them (a register nobody rechecks). The marker is `iconChip: true`,
+  which is the one opt-in no page carries by accident - it defaults off precisely because 159
+  `ConfigSwitch` call sites draw that row.
+  4c7fe3e1f ("test(settings): the row grammar gets an adopter register, running both ways"),
+  1d2823bf4 ("feat(settings): a Devices & Phone page, on the row grammar").
 
 ("feat(widgets): a subsection header leads with an icon",
 "feat(widgets): CatalogueRow draws its glyph on an opt-in chip",
