@@ -49,10 +49,13 @@ Singleton {
     property bool installed: false // busctl found on PATH
     property string backend: "none" // "kdeconnect" | "valent" | "none"
     readonly property bool available: root.backend !== "none"
-    // [{ id, name, type, reachable, paired, reachableAddresses,
+    // [{ id, name, type, reachable, paired, hasPairingRequest, reachableAddresses,
     //    cellularNetworkType, cellularNetworkStrength,
     //    batteryAvailable, batteryCharge, batteryCharging }]
     property var devices: []
+    // The devices whose peer has asked to pair - what the dialog's pairing
+    // cards are drawn from.
+    readonly property var pairingRequests: root.devices.filter(d => d.hasPairingRequest === true)
 
     readonly property var activeDevice: root.devices.find(d => d.paired && d.reachable && d.type === "phone")
         ?? root.devices.find(d => d.paired && d.reachable)
@@ -106,6 +109,10 @@ Singleton {
     // battery GetAll and its connectivity_report GetAll, either null when
     // that leaf object does not exist - both are absent for unpaired
     // devices) onto the shared device model.
+    //
+    // A pairing request is Device::PairState 2 (RequestedByPeer; 1 is a
+    // request WE made, 3 is Paired) or the older isPairRequestedByPeer bool
+    // - both were read off the live daemon, and either spelling counts.
     function normalizeKdeconnectDevice(id: string, rawProps: var, rawBatteryProps: var, rawConnectivityProps: var): var {
         const props = root.unwrapVariants(rawProps);
         const battery = rawBatteryProps === null || rawBatteryProps === undefined
@@ -120,6 +127,7 @@ Singleton {
             type: props.type ?? "",
             reachable: props.isReachable === true,
             paired: props.isPaired === true,
+            hasPairingRequest: props.isPairRequestedByPeer === true || props.pairState === 2,
             reachableAddresses: addresses,
             cellularNetworkType: typeof report?.cellularNetworkType === "string" ? report.cellularNetworkType : "",
             cellularNetworkStrength: typeof report?.cellularNetworkStrength === "number" ? report.cellularNetworkStrength : -1,
@@ -145,6 +153,7 @@ Singleton {
                 type: props.Type ?? "",
                 reachable: (state & 1) !== 0,
                 paired: (state & 2) !== 0,
+                hasPairingRequest: false,
                 reachableAddresses: [],
                 cellularNetworkType: "",
                 cellularNetworkStrength: -1,
@@ -483,6 +492,22 @@ Singleton {
         const d = device ?? root.activeDevice;
         if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
         root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/clipboard`, "org.kde.kdeconnect.device.clipboard", "sendClipboard", []));
+    }
+
+    // Both answer a request the PEER made, so neither falls back to the
+    // active device the way the actions above do: that device is the paired
+    // phone, which never asked, and cancelPairing aimed at it is at best a
+    // no-op the daemon logs. A device without a request is refused.
+    function acceptPairing(device: var): void {
+        const d = device ?? null;
+        if (!d || !d.hasPairingRequest || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
+        root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}`, "org.kde.kdeconnect.device", "acceptPairing", []));
+    }
+
+    function cancelPairing(device: var): void {
+        const d = device ?? null;
+        if (!d || !d.hasPairingRequest || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
+        root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}`, "org.kde.kdeconnect.device", "cancelPairing", []));
     }
 
     function runAction(argv: var): void {

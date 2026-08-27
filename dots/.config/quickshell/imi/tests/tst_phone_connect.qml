@@ -179,6 +179,44 @@ TestCase {
         compare(scalar.reachableAddresses.length, 0)
     }
 
+    // ---- pairing requests (slice 3) ----
+
+    function test_pairing_request_is_pair_state_requested_by_peer() {
+        // Device::PairState: 0 NotPaired, 1 Requested (by us), 2
+        // RequestedByPeer, 3 Paired. Only 2 is something to accept.
+        const asked = PhoneConnect.normalizeKdeconnectDevice("x", {
+            "pairState": { "type": "i", "data": 2 }
+        }, null, null)
+        compare(asked.hasPairingRequest, true)
+        compare(PhoneConnect.normalizeKdeconnectDevice("x", pairedPhoneProps(), null, null).hasPairingRequest, false)
+        compare(PhoneConnect.normalizeKdeconnectDevice("x", {
+            "pairState": { "type": "i", "data": 1 }
+        }, null, null).hasPairingRequest, false)
+        compare(PhoneConnect.normalizeKdeconnectDevice("x", {}, null, null).hasPairingRequest, false)
+    }
+
+    function test_pairing_request_reads_the_bool_a_daemon_without_pair_state_exposes() {
+        // isPairRequestedByPeer predates the pairState property; either
+        // spelling of "the peer asked" counts.
+        const asked = PhoneConnect.normalizeKdeconnectDevice("x", {
+            "isPairRequestedByPeer": { "type": "b", "data": true }
+        }, null, null)
+        compare(asked.hasPairingRequest, true)
+    }
+
+    function test_pairing_requests_lists_the_devices_asking() {
+        PhoneConnect.applyBackend("kdeconnect")
+        PhoneConnect.applyDevices([
+            device("phone1", { paired: true, reachable: true }),
+            device("laptop", { type: "laptop", reachable: true, hasPairingRequest: true }),
+            device("tablet", { type: "tablet", reachable: false })
+        ])
+        compare(PhoneConnect.pairingRequests.length, 1)
+        compare(PhoneConnect.pairingRequests[0].id, "laptop")
+        PhoneConnect.applyBackend("none")
+        compare(PhoneConnect.pairingRequests.length, 0)
+    }
+
     // ---- Valent ----
 
     function valentManagedObjects() {
@@ -221,10 +259,11 @@ TestCase {
     }
 
     function test_normalize_valent_objects_carry_the_kdeconnect_only_fields_empty() {
-        // Valent's connectivity surface was not verifiable against a live
-        // daemon; the model still has the fields so the UI reads one shape,
-        // at the values that mean "unknown".
+        // Valent's pairing and connectivity surfaces were not verifiable
+        // against a live daemon; the model still has the fields so the UI
+        // reads one shape, at the values that mean "unknown".
         const phone = PhoneConnect.normalizeValentObjects(valentManagedObjects()).find(d => d.id === "abc123")
+        compare(phone.hasPairingRequest, false)
         compare(phone.reachableAddresses.length, 0)
         compare(phone.cellularNetworkType, "")
         compare(phone.cellularNetworkStrength, -1)
@@ -267,7 +306,7 @@ TestCase {
     function device(id, overrides) {
         return Object.assign({
             id: id, name: id, type: "phone", reachable: false, paired: false,
-            reachableAddresses: [],
+            hasPairingRequest: false, reachableAddresses: [],
             cellularNetworkType: "", cellularNetworkStrength: -1,
             batteryAvailable: false, batteryCharge: -1, batteryCharging: false
         }, overrides ?? {})

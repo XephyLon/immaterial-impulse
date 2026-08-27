@@ -14,10 +14,13 @@ Singleton {
     property bool installed: false // busctl found on PATH
     property string backend: "none" // "kdeconnect" | "valent" | "none"
     readonly property bool available: root.backend !== "none"
-    // [{ id, name, type, reachable, paired, reachableAddresses,
+    // [{ id, name, type, reachable, paired, hasPairingRequest, reachableAddresses,
     //    cellularNetworkType, cellularNetworkStrength,
     //    batteryAvailable, batteryCharge, batteryCharging }]
     property var devices: []
+    // The devices whose peer has asked to pair - what the dialog's pairing
+    // cards are drawn from.
+    readonly property var pairingRequests: root.devices.filter(d => d.hasPairingRequest === true)
 
     readonly property var activeDevice: root.devices.find(d => d.paired && d.reachable && d.type === "phone")
         ?? root.devices.find(d => d.paired && d.reachable)
@@ -66,6 +69,10 @@ Singleton {
     // battery GetAll and its connectivity_report GetAll, either null when
     // that leaf object does not exist - both are absent for unpaired
     // devices) onto the shared device model.
+    //
+    // A pairing request is Device::PairState 2 (RequestedByPeer; 1 is a
+    // request WE made, 3 is Paired) or the older isPairRequestedByPeer bool
+    // - both were read off the live daemon, and either spelling counts.
     function normalizeKdeconnectDevice(id: string, rawProps: var, rawBatteryProps: var, rawConnectivityProps: var): var {
         const props = root.unwrapVariants(rawProps);
         const battery = rawBatteryProps === null || rawBatteryProps === undefined
@@ -80,6 +87,7 @@ Singleton {
             type: props.type ?? "",
             reachable: props.isReachable === true,
             paired: props.isPaired === true,
+            hasPairingRequest: props.isPairRequestedByPeer === true || props.pairState === 2,
             reachableAddresses: addresses,
             cellularNetworkType: typeof report?.cellularNetworkType === "string" ? report.cellularNetworkType : "",
             cellularNetworkStrength: typeof report?.cellularNetworkStrength === "number" ? report.cellularNetworkStrength : -1,
@@ -105,6 +113,7 @@ Singleton {
                 type: props.Type ?? "",
                 reachable: (state & 1) !== 0,
                 paired: (state & 2) !== 0,
+                hasPairingRequest: false,
                 reachableAddresses: [],
                 cellularNetworkType: "",
                 cellularNetworkStrength: -1,

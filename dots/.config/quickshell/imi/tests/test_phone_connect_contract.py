@@ -51,6 +51,17 @@ def test_parser_region_is_byte_identical_between_service_and_double():
     )
 
 
+def test_the_derived_pairing_request_list_matches_the_double():
+    """`pairingRequests` sits outside the marked region like applyDevices does
+    (it is a binding on `devices`, not parser logic), and the QML suite drives
+    the double's copy - so the two spellings are held to each other."""
+    pattern = r"    readonly property var pairingRequests:.*\n"
+    service_line = re.search(pattern, SERVICE.read_text())
+    double_line = re.search(pattern, DOUBLE.read_text())
+    assert service_line and double_line, "pairingRequests missing on one side"
+    assert service_line.group(0) == double_line.group(0), "pairingRequests drifted"
+
+
 def test_the_kdeconnect_sweep_reads_the_connectivity_report_at_its_own_leaf():
     """The report is a child object (`<device>/connectivity_report`), and the
     path matters more than it reads: measured against the live daemon, a
@@ -65,6 +76,30 @@ def test_the_kdeconnect_sweep_reads_the_connectivity_report_at_its_own_leaf():
     assert 'devicePath + "/connectivity_report"' in calls[0], (
         f"the report must be read at its own leaf path: {calls[0].strip()}"
     )
+
+
+def test_pairing_is_answered_on_the_device_path_with_the_daemon_s_two_methods():
+    """Slice 3's whole transport: acceptPairing/cancelPairing are methods of
+    org.kde.kdeconnect.device on the device path itself (introspected live),
+    not of a plugin leaf, and the id reaches the path as an argument the
+    validator has already passed - never through a shell string."""
+    source = SERVICE.read_text()
+    for name in ("acceptPairing", "cancelPairing"):
+        body = re.search(rf"function {name}\(.*?\n    \}}\n", source, re.S)
+        assert body, f"{name}() missing"
+        text = body.group(0)
+        assert "root.runAction(root.busctlCall(" in text, f"{name}() does not go through runAction"
+        assert f'"org.kde.kdeconnect.device", "{name}", []' in text, (
+            f"{name}() does not call the device interface's {name} method"
+        )
+        assert "`/modules/kdeconnect/devices/${d.id}`" in text, (
+            f"{name}() is aimed at something other than the device path"
+        )
+        # An answer is to a request the peer made. Defaulting to the active
+        # device - the paired phone, which never asked - is the one shape a
+        # copy of ring() would carry here.
+        assert "!d.hasPairingRequest" in text, f"{name}() answers a device that never asked"
+        assert "root.activeDevice" not in text, f"{name}() falls back to the active device"
 
 
 def test_state_application_helpers_match_the_double():
@@ -137,7 +172,7 @@ def test_device_ids_are_validated_before_path_splicing():
         "valent object paths must be validated before DescribeAll is called on them"
     )
     # Actions build paths from ids/paths too - each must re-check.
-    for action in ("ring", "ping", "sendClipboard"):
+    for action in ("ring", "ping", "sendClipboard", "acceptPairing", "cancelPairing"):
         body = re.search(rf"function {action}\(.*?\n    \}}\n", source, re.S)
         assert body, f"{action}() missing"
         assert "validDeviceId" in body.group(0) or "validValentObjectPath" in body.group(0), (
