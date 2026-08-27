@@ -10,6 +10,12 @@
     # `nix flake update quickshell` can move it and the diff shows what moved.
     # The nested sdata/dist-nix flake used to hardcode a commit here, which is
     # a pin nothing updates and nothing explains.
+    #
+    # The lock's pin follows _commit in
+    # sdata/dist-arch/immaterial-impulse-quickshell-git/PKGBUILD - the commit
+    # the shell is built and tested against everywhere else. When that moves,
+    # `nix flake update quickshell` alone lands on the mirror's master, not on
+    # the PKGBUILD's commit; re-pin the lock to the same _commit instead.
     quickshell = {
       url = "github:quickshell-mirror/quickshell";
       inputs.nixpkgs.follows = "nixpkgs";
