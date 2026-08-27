@@ -1644,6 +1644,18 @@ if ! python3 "$SCRIPT_DIR/test_phone_tab_runtime.py"; then
     exit 1
 fi
 
+# What the tab and its sub-pages DRAW, in a real window: the Contacts list
+# owning the room under its header, the Android Apps empty state staying
+# clear of the search row it used to paint over, and a notification card's
+# app icon resolving off the file kdeconnectd wrote. A page whose content
+# resolves to zero height renders its header and nothing else, and the
+# source of that reads perfectly.
+echo "Running Phone tab layout runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_tab_layout_runtime.py"; then
+    echo "Phone tab layout runtime tests failed."
+    exit 1
+fi
+
 # The phone's notification mirror: the parser region synced with its double,
 # argv only, dismiss on the LEAF, the declared reply refetch delay, one
 # stream, the desktop dedupe gate at ingestion, and the cache key declared.
