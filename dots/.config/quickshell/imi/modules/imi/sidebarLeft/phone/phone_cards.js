@@ -115,6 +115,12 @@ function webcamSubtitleKey(flags) {
     if (!f.reachable) return "offline";
     if (f.connecting) return "connecting";
     if (f.active) return String(f.device || "").length > 0 ? "device" : "running";
+    // A launch that failed leaves the service back on `ready` with its
+    // lastError set, and the card draws lastError only while it is ACTIVE -
+    // so without this arm a webcam that could not start was a card that had
+    // gone back to saying "Tap to start", which is what "clicking it does
+    // nothing" looked like.
+    if (errorHeadline(f.error).length > 0) return "error";
     return "ready";
 }
 
@@ -129,6 +135,10 @@ function micSubtitleKey(flags) {
     if (f.connecting) return "connecting";
     if (f.active) return f.muted ? "muted" : "active";
     if (f.needsAdbDevice && f.adbDevice === false) return "noDevice";
+    // The webcam's reasoning, and the same silence: a microphone that failed
+    // to start was a card back on "Tap to start" with the reason in a
+    // property nothing drew.
+    if (errorHeadline(f.error).length > 0) return "error";
     return "ready";
 }
 

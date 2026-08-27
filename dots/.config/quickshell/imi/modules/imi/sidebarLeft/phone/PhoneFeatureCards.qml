@@ -196,7 +196,8 @@ Item {
                 reachable: root.deviceReachable,
                 connecting: PhoneCamera.connecting,
                 active: PhoneCamera.active,
-                device: PhoneCamera.device
+                device: PhoneCamera.device,
+                error: PhoneCamera.lastError
             })
 
             iconName: "videocam"
@@ -218,6 +219,8 @@ Item {
                     return PhoneCamera.device;
                 case "running":
                     return Translation.tr("Streaming from the phone's camera");
+                case "error":
+                    return PhoneCards.errorHeadline(PhoneCamera.lastError);
                 default:
                     return Translation.tr("Tap to start · settings to configure");
                 }
@@ -271,7 +274,8 @@ Item {
                 // over Wi-Fi, so only the preferred backend decides whether
                 // an empty `adb devices` is a refusal.
                 needsAdbDevice: PhoneMic.preferredBackend === "scrcpy",
-                adbDevice: root.adbDevice
+                adbDevice: root.adbDevice,
+                error: PhoneMic.lastError
             })
 
             iconName: "mic"
@@ -295,6 +299,8 @@ Item {
                     return Translation.tr("Active · click to mute");
                 case "noDevice":
                     return Translation.tr("No device over ADB · turn on USB or wireless debugging");
+                case "error":
+                    return PhoneCards.errorHeadline(PhoneMic.lastError);
                 default:
                     return Translation.tr("Tap to start · uses scrcpy or DroidCam");
                 }
