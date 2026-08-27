@@ -865,6 +865,15 @@ Singleton {
         property real searchWidth: 360
         property real sidebarWidth: 460
         property real sidebarWidthExtended: 750
+        // The Phone tab's footer toolbar. Its two actions flank the count
+        // pill, which is the row's only `Layout.fillWidth` item - so nothing
+        // about an icon-only button's own content can decide how wide it is,
+        // and left to size itself from a glyph plus an empty label each came
+        // out 44x35, near enough square to read as a circle under
+        // `rounding.full`. Both dimensions are stated here so the two buttons
+        // and the pill between them cannot disagree about the row's height.
+        property real phoneFooterButtonHeight: 35
+        property real phoneFooterButtonWidth: 48
         // Edit Mode's viewport is inset by exactly what the drawer will need,
         // so the drawer opens into space that already exists rather than
         // covering the desktop or resizing it (spec §1.2). This is the one
