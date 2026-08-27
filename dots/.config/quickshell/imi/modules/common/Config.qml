@@ -1441,6 +1441,9 @@ Singleton {
                     property bool enable: true
                     property bool artColors: false
                 }
+                property JsonObject phone: JsonObject {
+                    property bool enable: true
+                }
                 
                 property JsonObject ai: JsonObject {
                     property bool textFadeIn: false
@@ -1626,6 +1629,63 @@ Singleton {
                     property list<string> networkNameKeywords: ["airport", "cafe", "college", "company", "eduroam", "free", "guest", "public", "school", "university"]
                     property list<string> fileKeywords: ["anime", "booru", "ecchi", "hentai", "yande.re", "konachan", "breast", "nipples", "pussy", "nsfw", "spoiler", "girl"]
                     property list<string> linkKeywords: ["hentai", "porn", "sukebei", "hitomi.la", "rule34", "gelbooru", "fanbox", "dlsite"]
+                }
+            }
+
+            // The Phone tab (docs/superpowers/specs/2026-08-27-phone-tab-design.md).
+            // Appended at the end deliberately: the block is owned by one
+            // workstream while others touch this file, so it lands with no
+            // hunk in common. Defaults are the sibling fork's table.
+            property JsonObject phone: JsonObject {
+                property bool showPeripheralCards: true // the mirror / webcam / microphone cards
+                property JsonObject contacts: JsonObject {
+                    property bool enabled: true
+                    property list<string> favoriteIds: []
+                    property string sortBy: "first" // first | last
+                    property bool hideUnnamed: true
+                }
+                property JsonObject scrcpy: JsonObject {
+                    property bool stayAwake: false
+                    property bool turnScreenOff: false
+                    property bool noPowerOn: false
+                    property bool noAudio: false
+                    property bool showTouches: false
+                    property bool fullscreen: false
+                    property bool alwaysOnTop: false
+                    property int maxFps: 0 // 0 = the phone's own rate
+                    property string bitRate: "8M"
+                    property int maxSize: 0 // 0 = native
+                    property int videoBuffer: 0 // ms
+                    property bool useWireless: false
+                    property bool autoWirelessIp: true // the address KDE Connect reports
+                    property string wirelessIp: ""
+                    property string wirelessPort: "5555"
+                    property JsonObject appMode: JsonObject {
+                        property bool enabled: true
+                        property bool flexDisplay: true // --new-display + --flex-display
+                        property int displayWidth: 1280
+                        property int displayHeight: 960
+                        property int density: 160
+                        property bool keepActive: true
+                        property bool systemDecorations: true
+                        property list<string> favoritePackages: []
+                    }
+                }
+                property JsonObject webcam: JsonObject {
+                    property string cameraFacing: "front" // front | back - switched in the DroidCam app, recorded here
+                    property string resolution: "1280x720"
+                    property bool mirrorHorizontally: false
+                    property int rotateDegrees: 0
+                    property string connection: "wifi" // wifi | usb
+                    property string wifiIp: ""
+                    property int port: 4747
+                }
+                property JsonObject microphone: JsonObject {
+                    property string connection: "wifi" // wifi | usb
+                    property string wifiIp: ""
+                    property int port: 4748
+                    property int micGain: 100 // percent
+                    property bool setAsDefault: false
                 }
             }
         }
