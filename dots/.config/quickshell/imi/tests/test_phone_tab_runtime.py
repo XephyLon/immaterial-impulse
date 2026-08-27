@@ -12,6 +12,17 @@ the notification list owning the leftover height (measured: take the pairing
 card away and the list grows by exactly that card), the pairing card and the
 roster behind the chip's arrow - and clicks Accept and Decline.
 
+It also puts a fake `adb`, `scrcpy`, `droidcam-cli`, `pactl`, `v4l2-ctl`,
+`lsmod`, `modinfo` and `mpv` on PATH, so `PhoneDeps` answers the same way on
+every machine instead of reading the developer's own. The fake `adb` lists NO
+device - the machine this was written against, where KDE Connect reaches the
+phone over LAN and adb has never seen it - which is what puts the mirror and
+the microphone cards on their "no device over ADB" state before anything is
+clicked. The footer's geometry and the feature cards' click path are read
+back here because neither is reachable from `qmltestrunner`: it can build
+neither a laid-out box nor a RippleButton, which is why the cards' own
+decisions live in `phone_cards.js` and are driven by `tests/tst_phone_cards.qml`.
+
 Those two clicks are scored HERE, off the fake's recorded invocations:
 `acceptPairing` and `cancelPairing` must each have been called once, on the
 laptop's device path, and never on the phone's. A click that reached nothing
@@ -42,7 +53,7 @@ LAPTOP_ADDRESS = "192.168.100.99"
 # A literal, never read back out of the harness's own output: a step list
 # that shrinks must redden here instead of reporting `failures: 0` for a
 # shorter run.
-EXPECTED_CHECKS = 24
+EXPECTED_CHECKS = 49
 
 RECORD = """#!/usr/bin/env bash
 printf '%s %s\\n' "$(date +%s.%N)" "$*" >> "$PHONE_EXEC_LOG"
@@ -82,6 +93,36 @@ exit 0
        "phone_address": PHONE_ADDRESS, "laptop_address": LAPTOP_ADDRESS}
 
 
+# What each optional tool answers. `adb devices` lists nothing on purpose;
+# `scrcpy --version` answers a version so PhoneDeps' version probe has
+# something to parse, and any other scrcpy invocation fails the way a real one
+# does with no device attached.
+TOOL_FAKES = {
+    "adb": r"""case "$1" in
+  devices) printf 'List of devices attached\n\n' ;;
+  get-state) printf 'error: no devices/emulators found\n' >&2; exit 1 ;;
+esac
+exit 0
+""",
+    "scrcpy": r"""case "$1" in
+  --version) printf 'scrcpy 3.1 <https://github.com/Genymobile/scrcpy>\n' ;;
+  *) printf 'ERROR: Could not find any ADB device\n' >&2; exit 1 ;;
+esac
+exit 0
+""",
+    "droidcam-cli": "exit 1\n",
+    "v4l2-ctl": "exit 0\n",
+    "pactl": r"""printf 'alsa_output.fake\n'
+exit 0
+""",
+    "lsmod": r"""printf 'Module Size Used by\nv4l2loopback 53248 0\n'
+exit 0
+""",
+    "modinfo": "exit 0\n",
+    "mpv": "exit 0\n",
+}
+
+
 def _stop(proc):
     proc.terminate()
     try:
@@ -106,6 +147,11 @@ class PhoneTabRuntimeTest(unittest.TestCase):
         fake = self.bin / "busctl"
         fake.write_text(RECORD.replace("__BODY__", BUSCTL_BODY))
         fake.chmod(0o755)
+
+        for name, body in TOOL_FAKES.items():
+            tool = self.bin / name
+            tool.write_text(RECORD.replace("__BODY__", body))
+            tool.chmod(0o755)
 
         shell_config = self.home / "config" / "immaterial-impulse"
         shell_config.mkdir(parents=True)
