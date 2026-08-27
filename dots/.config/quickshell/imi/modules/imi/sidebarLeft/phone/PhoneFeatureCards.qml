@@ -114,7 +114,11 @@ Item {
                 running: PhoneScrcpy.mirrorRunning,
                 launching: PhoneScrcpy.mirrorLaunching,
                 adbDevice: root.adbDevice,
-                error: PhoneScrcpy.lastError
+                // The MIRROR's own failure, not the service-wide lastError:
+                // that one is written by any session's exit and by the
+                // supervisor's ladder, so a failed app launch used to put its
+                // message on this card.
+                error: PhoneScrcpy.mirrorError
             })
 
             iconName: "smart_display"
@@ -141,7 +145,7 @@ Item {
                 case "noDevice":
                     return Translation.tr("No device over ADB · turn on USB or wireless debugging");
                 case "error":
-                    return PhoneCards.errorHeadline(PhoneScrcpy.lastError);
+                    return PhoneCards.errorHeadline(PhoneScrcpy.mirrorError);
                 case "running":
                     return Translation.tr("Mirror is running · click to focus its window");
                 case "launching":
