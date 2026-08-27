@@ -1,7 +1,8 @@
 # Proposal: Phone Connect (KDE Connect / Valent integration)
 
-> Draft / tracking proposal. The service, its sidebar surface and
-> signal-driven updates are implemented; the slices below are what remains.
+> Draft / tracking proposal. The service, its sidebar surface,
+> signal-driven updates, the connectivity report and pairing are
+> implemented; the slices below are what remains.
 
 ## Goal
 
@@ -75,6 +76,53 @@ as a `readonly property bool` read from `onBackendChanged`, which is AGENT.md's
 change-handler trap — it answered with the previous backend, the monitor never
 started, and nothing showed it because the poll kept the model correct. It is a
 function now.
+
+**Slices 2 and 3 have landed**, and the sidebar surface was reshaped with
+them:
+
+- **`connectivity_report` and `reachableAddresses`** (f7a2952ed
+  "feat(phoneConnect): read connectivity_report and reachableAddresses onto
+  the device model"). One more `GetAll` per device, at the report's own
+  leaf path, plus the device's `reachableAddresses` property it was already
+  fetching; the model gains `reachableAddresses` (string entries only),
+  `cellularNetworkType` and `cellularNetworkStrength` (-1 when unknown), and
+  `connectivity_report.refreshed` joins the monitor's allowlist. Shapes read
+  off the live daemon: `reachableAddresses ["192.168.100.179"]`, the report
+  `{cellularNetworkType "LTE", cellularNetworkStrength 4}`. The finding
+  worth keeping: a `GetAll` naming the report's interface on the *device*
+  path is not an error — Qt's adaptor answers with every device property —
+  so the contract pins the leaf path, not the interface name. Valent
+  carries the fields at their "unknown" values.
+- **Pairing requests** (9395932d3 "feat(phoneConnect): surface a peer's
+  pairing request, and answer it"). This closes the open question below:
+  pairing *is* driveable from the shell, and it is `acceptPairing` /
+  `cancelPairing` on `org.kde.kdeconnect.device` at the device path,
+  introspected live. A request is `pairState` 2 (`Device::PairState`: 0
+  NotPaired, 1 Requested by us, 2 RequestedByPeer, 3 Paired) or the older
+  `isPairRequestedByPeer` bool; the model carries `hasPairingRequest` and a
+  derived `pairingRequests` list. Neither answer falls back to the active
+  device the way `ring()` does — that device is the paired phone, which
+  never asked — and the id reaches the path as a validated argument, never
+  through a shell string (the fork splices `devId` unquoted into `bash -c`).
+  Valent stays at `hasPairingRequest: false`, unverified.
+- **The surface** (0c6429028 "feat(phoneConnect): the dialog becomes a device
+  chip, pills, one action row and a notification area"). The device dialog
+  now follows the layout the maintainer rated on the fork: the device on a
+  chip whose arrow opens the roster; a connection pill (the wireless address
+  from `reachableAddresses`, or Offline), a battery pill and a cellular
+  pill; ONE row of round actions — ring, ping, clipboard, the three the
+  model answers, where the fork's other three are scrcpy, a file picker and
+  SFTP and are not drawn; the notification area owning the remaining height
+  with a real empty state (it says why while there is nothing to show — no
+  busctl, no daemon, no devices, not mirrored yet); and the secondary
+  features as cards stacked at the bottom, today the pairing request with
+  Accept and Decline. The roster row a user picks becomes the device the
+  chip, the pills and the actions are about, for the session — the
+  persisted choice is slice 6. `tests/test_phone_connect_contract.py` holds
+  the surface to the actions the model declares, and
+  `tests/test_phone_connect_dialog_runtime.py` builds the real dialog over
+  the real service against a fake daemon and reads all of it back,
+  including the area growing by exactly a card when that card goes.
 
 ## Prior art: P3DROVFX/ii-p3drovfx
 
@@ -190,12 +238,14 @@ Ordered by value. Each borrows the fork's shape and none of its transport:
 every read is a `busctl` argv, every write goes through `runAction`, and both
 backends stay behind the one model.
 
-**Slice 1 (signal-driven updates) is done** — see "Current state" above. The
-next slice is now notification mirroring, and it inherits the stream: its
-signals go in `signalChangesDevices`' allowlist and the match rule already
-covers the whole `/modules/kdeconnect` namespace, so nothing about the
-transport has to be rebuilt for it. What is still open from slice 1 is Valent:
-its signal set was not verifiable and it keeps the poll until it is.
+**Slices 1 (signal-driven updates), 2 and 3 are done** — see "Current
+state" above. The next slice is now notification mirroring, and it inherits
+the stream and the surface: its signals go in `signalChangesDevices`'
+allowlist, the match rule already covers the whole `/modules/kdeconnect`
+namespace, and the dialog's notification area is already the fill item
+waiting for it, so nothing about the transport or the layout has to be
+rebuilt. What is still open from slice 1 is Valent: its signal set was not
+verifiable and it keeps the poll until it is.
 
 1. **Notification mirroring.** Borrow: the leaf `notification.dismiss` (not
    `sendAction("cancel")`), `sendReply` with a re-fetch, `internalId` →
@@ -207,15 +257,15 @@ its signal set was not verifiable and it keeps the poll until it is.
    necessary. Not: the qdbus/`fetch_notifications.py` split; one `busctl`
    `GetAll` per leaf covers it. Not: "open on phone" — that is scrcpy+adb,
    out of scope.
-2. **`connectivity_report` and `reachableAddresses`.** One more `GetAll` on
-   the device path and one more signal, both already in the fork's event set;
-   the model gains cellular type/strength. Cheap now the stream exists.
-3. **Pairing requests.** Accept/decline banners in the device dialog, fed by
-   `pairingRequestsChanged` and `pairStateChanged`; the calls are
-   `acceptPairing`/`cancelPairing` on the device path. This closes the "Open
-   questions" item — the fork shows it wraps cleanly. Not: interpolating
-   `devId` into a shell string; the id is validated (`validDeviceId`) and
-   passed as an argument.
+2. **`connectivity_report` and `reachableAddresses`.** Done — see "Current
+   state". One more `GetAll` per device, at the report's own leaf path, and
+   one more signal; the model carries the addresses and the cellular
+   type/strength.
+3. **Pairing requests.** Done — see "Current state". Accept/decline cards in
+   the device dialog, fed by `pairingRequestsChanged` and `pairStateChanged`
+   through the stream; the calls are `acceptPairing`/`cancelPairing` on the
+   device path, aimed only at a device that asked, with the id validated and
+   passed as an argument rather than interpolated into a shell string.
 4. **Send and receive.** `share.shareUrl("file://…")` for file send, drop
    target on the drop shelf (`modules/imi/dropShelf/`) rather than a picker
    dialog, and `share.shareReceived` surfaced as a notification. Not: the
@@ -281,9 +331,11 @@ would be both laggy and wasteful.
 
 ## Open questions
 
-- Whether pairing should be driveable from the shell or deferred to the
-  daemon's own UI. Pairing involves a confirmation on both ends and is
-  security-relevant; wrapping it badly is worse than not wrapping it.
+- ~~Whether pairing should be driveable from the shell or deferred to the
+  daemon's own UI.~~ Answered by slice 3: it is, as two methods on the device
+  path, and the wrapping is narrow on purpose — an answer is refused for any
+  device that has not asked, the card says to accept only a pairing the user
+  started on that device, and nothing about the id ever reaches a shell.
 - Whether file-send should accept drops onto the drop shelf
   (`modules/imi/dropShelf/`), which already handles mid-drag interaction.
 

@@ -578,13 +578,19 @@ services/                  Singletons wrapping external state/processes - one pe
   PhoneConnect.qml             Paired-phone state from KDE Connect or Valent, driven over
                               `busctl --json=short` Process calls (the shell has no D-Bus
                               binding) - backend detection from the bus name list, one
-                              normalized device/battery model for both daemons, ring/ping/
-                              clipboard actions. KDE Connect's changes arrive as SIGNALS
+                              normalized device model for both daemons (battery, the
+                              reachable addresses, the cellular report, a peer's pairing
+                              request), ring/ping/clipboard actions and the two pairing
+                              answers. KDE Connect's changes arrive as SIGNALS
                               (`busctl monitor`, see the streaming note below); Valent's
                               still arrive on the poll, which stays on for both as the
                               reconcile. Its parser logic is kept byte-for-byte in
                               sync with a logic-only test double
-                              (tests/test_phone_connect_contract.py enforces it)
+                              (tests/test_phone_connect_contract.py enforces it, and holds
+                              the sidebar's phone dialog to the actions the model declares
+                              - a button whose call the service does not answer is a fake
+                              action). The dialog itself is driven end to end by
+                              tests/test_phone_connect_dialog_runtime.py
   SchemePreview.qml            Per-scheme swatches for the scheme pickers: one venv run of
                               scripts/colors/scheme_preview.py quantizes the wallpaper once and
                               builds every Material variant from it. Cached against the wallpaper
@@ -3968,6 +3974,23 @@ across daemon restarts. Four more things about that path, each of which cost a m
   `linksChanged`, `deviceAdded`, `deviceListChanged`), and each re-read is a chain of `busctl`
   spawns. The settle timer also has to **re-arm** rather than fire while a sweep is in flight,
   because the sweep declines then and firing would drop the change that asked for it.
+- **A `GetAll` naming an interface the object does not implement is not an error on a Qt
+  adaptor — it answers with every property of the object.** KDE Connect's connectivity report
+  is a child object (`<device>/connectivity_report`), and a `GetAll` naming its interface on
+  the DEVICE path came back with the device's own properties, measured live. A sweep reading
+  a leaf off the wrong path therefore parses a report with no cellular fields in it and shows
+  "unknown" for ever, with nothing in any log. Read a leaf at its own path, and pin the path
+  rather than the interface name (`tests/test_phone_connect_contract.py` does; the runtime
+  fake answers the report at the leaf only). f7a2952ed ("feat(phoneConnect): read
+  connectivity_report and reachableAddresses onto the device model").
+- **Pairing is two methods on the device path, and an answer is aimed only at a device that
+  asked.** `acceptPairing`/`cancelPairing` on `org.kde.kdeconnect.device`, introspected live;
+  the request itself is `pairState` 2 (`Device::PairState`: 0 NotPaired, 1 Requested *by us*,
+  2 RequestedByPeer, 3 Paired) or the older `isPairRequestedByPeer` bool, and either spelling
+  counts. Neither answer falls back to the active device the way `ring()` does — that device
+  is the paired phone, which never asked — so the guard refuses a device without a request
+  and the contract pins the absence of the fallback. 9395932d3 ("feat(phoneConnect): surface a
+  peer's pairing request, and answer it").
 
 The gate deciding whether to start it was first written as a `readonly property bool` derived from
 `backend` and read from `onBackendChanged` — the change-handler trap under
@@ -4125,6 +4148,19 @@ cosmetic error: when the missing token feeds a positioner's `spacing`/`margin`, 
 freezes the shell (this is exactly what a bulk token migration did to `ConfigRow.qml`,
 `NotificationListView.qml`, `PluginOptions.qml`, and `StyledPopupMenu.qml`). `tests/lint_qml_imports.sh`
 (run by `tests/run_tests.sh` and CI) guards against reintroducing it.
+
+**`Translation` is a `qs.services` singleton, not a `qs.modules.common` one, and the same
+non-transitivity applies.** A `modules/` file rewritten without `import qs.services` while
+keeping every `Translation.tr(...)` passes every static check and logs `ReferenceError:
+Translation is not defined` per binding at runtime — the phone panel's roster row did exactly
+that, and only the runtime harness that builds the real dialog saw it; the chip beside it had
+the same hole behind a ternary no device-full run evaluates, which no harness could have seen.
+`tests/lint_qml_imports.sh` covers `Translation` now (its table is one line per singleton), and
+it skips files that live IN the declaring module, since a sibling type is in scope on its own —
+every `services/*.qml` that translates a string would otherwise be an offender.
+0c6429028 ("feat(phoneConnect): the dialog becomes a device chip, pills, one action row and a
+notification area"), f37d0ac9e ("test(lint): a bareword Translation needs import qs.services,
+and a module's own files do not").
 
 **Strict UI Guidelines:** See [`docs/M3_GUIDELINES.md`](docs/M3_GUIDELINES.md) for the definitive rules on tokens, rounding, layering, and expressive motion that all new components must follow.
 
