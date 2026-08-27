@@ -120,6 +120,14 @@ own repo; the installer pins which revision it builds.
   the rest of this release's phone work is reached.
 
 ### Fixed
+- **Settings stops switching off the debounce on every config write in the
+  shell.** Opening the settings window was never actually required: the
+  settings page host is built while the shell starts, and it asked for its
+  config writes to be flushed immediately and never asked for that to stop —
+  so from startup onward every setting written anywhere in the shell, by any
+  panel, rewrote the whole of `config.json` and read it straight back, once
+  per value instead of once per burst. Settings still writes immediately while
+  its window is open, and only while its window is open.
 - **Both sidebars open on the monitor you are using again.** On a multi-monitor
   setup the left and right sidebars had started opening on whichever screen was
   focused when the shell started, wherever you actually were — the same thing
