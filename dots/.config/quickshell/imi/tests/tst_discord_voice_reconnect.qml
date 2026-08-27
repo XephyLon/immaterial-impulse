@@ -51,6 +51,16 @@ TestCase {
         compare(DiscordVoice.reconnectAttempts, 0)
     }
 
+    function test_authenticated_disarms_the_retry_too() {
+        // The Vesktop companion backend emits no "connected" - its first word
+        // is "authenticated" - so on that path this is the only answer that
+        // can stop the retry.
+        DiscordVoice.handleLine(line("unavailable"))
+        DiscordVoice.handleLine(line("authenticated", {user: {id: "1"}}))
+        verify(!DiscordVoice.reconnectPending)
+        compare(DiscordVoice.reconnectAttempts, 0)
+    }
+
     function test_a_manual_connect_disarms_the_retry_and_resets_the_ladder() {
         DiscordVoice.handleLine(line("unavailable"))
         DiscordVoice.handleLine(line("unavailable"))
