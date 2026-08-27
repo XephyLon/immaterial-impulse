@@ -137,18 +137,18 @@ TestCase {
         // PhoneCamera/PhoneMic publish startedAt in whole UNIX SECONDS, off
         // the session script's state file. Treating it as milliseconds reads
         // as a session that started in 1970.
-        compare(PhoneCards.elapsedMs(1000, 1_090_000), 90000);
+        compare(PhoneCards.elapsedMs(1000, 1090000), 90000);
     }
 
     function test_a_session_that_never_started_has_no_elapsed_time() {
-        compare(PhoneCards.elapsedMs(0, 1_000_000_000), 0);
-        compare(PhoneCards.elapsedMs(undefined, 1_000_000_000), 0);
+        compare(PhoneCards.elapsedMs(0, 1000000000), 0);
+        compare(PhoneCards.elapsedMs(undefined, 1000000000), 0);
         // A clock that stepped backwards is zero, not a negative duration.
-        compare(PhoneCards.elapsedMs(1000, 900_000), 0);
+        compare(PhoneCards.elapsedMs(1000, 900000), 0);
     }
 
     function test_elapsed_is_formatted_at_three_scales() {
-        compare(PhoneCards.formatElapsed(42_000), "42s");
+        compare(PhoneCards.formatElapsed(42000), "42s");
         compare(PhoneCards.formatElapsed(0), "0s");
         compare(PhoneCards.formatElapsed(7 * 60000 + 5000), "7m 05s");
         compare(PhoneCards.formatElapsed(59 * 60000 + 59000), "59m 59s");
@@ -157,8 +157,8 @@ TestCase {
 
     function test_seconds_are_padded_so_the_line_does_not_change_width_every_tick() {
         // 1m 9s -> 1m 10s reflows a monospaced detail line without this.
-        compare(PhoneCards.formatElapsed(69_000).length,
-                PhoneCards.formatElapsed(70_000).length);
+        compare(PhoneCards.formatElapsed(69000).length,
+                PhoneCards.formatElapsed(70000).length);
     }
 
     // ---------------------------------------------------------------------

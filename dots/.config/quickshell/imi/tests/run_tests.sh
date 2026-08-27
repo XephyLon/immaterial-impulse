@@ -1673,6 +1673,16 @@ fi
 # and the config schema declare: every PhoneX.member resolved against its
 # service, every Config.options.phone.* path against Config.qml, the seam with
 # the sub-page host W5a owns, and the install guide's constant-argv copy.
+# The QML engine's JS dialect is the Qt version's, and CI installs an older
+# Qt than a developer here runs: syntax that compiles locally fails there as
+# `compile() Unexpected token`, naming neither the file's problem nor the
+# rule. Numeric separators cost this branch one CI round.
+echo "Running QML/JS dialect lint..."
+if ! python3 "$SCRIPT_DIR/lint_qml_js_dialect.py"; then
+    echo "QML/JS dialect lint failed."
+    exit 1
+fi
+
 echo "Running Phone tab surface contract tests..."
 if ! python3 "$SCRIPT_DIR/test_phone_tab_surface_contract.py"; then
     echo "Phone tab surface contract tests failed."
