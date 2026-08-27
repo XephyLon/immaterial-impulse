@@ -438,6 +438,9 @@ ReloadPopup.qml, welcome.qml, killDialog.qml   Misc top-level overlays
 
 modules/common/             Shared, feature-agnostic building blocks
   Config.qml                 Singleton: the entire settings schema + JSON persistence (see below)
+  ConfigWriteDelayRef.qml    A surface's claim on an undebounced config write. Config.readWriteDelay
+                              is a readonly RESOLUTION over the live claims - nothing assigns it,
+                              and a claim's release is its own lifetime. See the Config section
   Appearance.qml              Singleton: design tokens - colors (M3 color roles), font sizes,
                               rounding, spacing, border widths, animation curves/durations, sizes.
                               Every widget reads from here rather than hardcoding values.
@@ -745,7 +748,8 @@ assets/                    Static images/fonts bundled with the shell
 `JsonAdapter`/`JsonObject` machinery automatically:
 
 1. Loads `~/.config/immaterial-impulse/config.json` into `Config.options` on startup.
-2. Persists any property write back to that file (debounced by `Config.readWriteDelay`, 50ms).
+2. Persists any property write back to that file (debounced by `Config.readWriteDelay`, 50ms by
+   default — see the claim entry below for what that debounce is for and who may shorten it).
 
 Consequences for making changes:
 
@@ -854,6 +858,48 @@ Consequences for making changes:
   add a local `Timer` (600ms is the convention already used, see `BarConfig.qml`'s
   `mediaDebounceTimer` and `BackgroundConfig.qml`'s `quoteDebounceTimer`) that assigns to
   `Config.options.x.y` only after typing pauses, instead of assigning directly in `onValueChanged`.
+- **...and that debounce is not a nicety, it is what keeps `watchChanges` from feeding the shell's
+  own write back at it — so `readWriteDelay` is a RESOLUTION over declared claims now, and nothing
+  assigns it.** `writeAdapter()` serializes the *whole* schema and `configFileView` watches the file
+  it just wrote, so one property write is a full serialization, an inotify event, a full re-read and
+  a full deserialize; the two timers coalesce a burst into one of each. At a delay of 0 the write
+  comes straight back as a reload, and a second property written in between is deserialized away by
+  a file that does not carry it yet.
+  Three surfaces used to set the delay to 0 by assignment. Two of them (`welcome.qml`,
+  `killDialog.qml`) are standalone `qs -p` processes whose whole life is one window, so the global
+  they mutated was their own; the third was `SettingsContent.qml`, inside the shell, and it never
+  restored it — **every config write from anywhere in the shell had been undebounced for the whole
+  session**. Worse than "once Settings has been opened", which is how the line reads: the panel
+  family loads `Settings` behind a `LazyLoader` gated on `Config.ready` and declares the content
+  statically inside the window, so `Component.onCompleted` ran at startup. Measured with the window
+  never opened, the delay read 0. The premise was true where it was written — 50e73d4a3 ("set config
+  read/write delay to 0 where delay is unnecessary") put it in a standalone `settings.qml` — and
+  came along unchanged when Settings became an in-shell panel with bb6e174be ("Supersede
+  dots-hyprland ii with the pC theme").
+  A surface that wants an undebounced write declares a `ConfigWriteDelayRef` (in `modules/common/`,
+  beside `Config`, so anything that can say `Config` can say it with no new import) bound to the
+  condition under which that is really true; `Config.readWriteDelay` is a readonly derivation over
+  the live claims. **"Restore the previous value" is the shape to refuse here**: a saved value is a
+  second thing to keep in sync, it has no answer when two surfaces want the delay at once, and it
+  still needs somebody alive to run the restore — which a destroyed surface has not got. A claim's
+  release is its own lifetime, which is the same reasoning as the derived idle inhibitor in
+  83544dedb ("feat(idle): a deliberately blanked monitor holds the keep-awake"). It is a count
+  rather than a list of per-claim values because every claimant wants the same thing.
+  `active` is `required` and defaults to nothing, because the defect was a claim whose condition was
+  "the surface exists" written where the real condition was "the window is on screen": the settings
+  claim is `active: settingsWindow.visible` in `Settings.qml` — the window, not the host, since the
+  host lives for the session. `tests/lint_config_write_delay_claims.py` fails on an assignment, on a
+  second writer of the claim count, on a claim with no stated condition, and on a claim held
+  unconditionally inside `modules/`, `services/` or `panelFamilies/` — that last rule is the one
+  that would have caught this. `ConfigWriteDelayRuntimeTest.qml` builds the real `Settings` scope
+  **without opening its window** and reads the delay back across an open, a close, a second open,
+  two claimants at once and a claim whose declaring object is destroyed under it (a hot reload);
+  the source contract can say the claim is in the wrong file, only the harness can say what the
+  delay actually was.
+  8de9c2cdd ("fix(config): resolve the write delay from claims instead of a global assignment"),
+  2fa736625 ("fix(settings): the faster config flush lasts as long as the window, not the session"),
+  24ff433f4 ("test(lint): fail on an assigned config write delay, and on a claim held for the session"),
+  e7c5e7a9f ("test(config): drive how long the settings window's faster flush lasts").
 
 `GlobalStates.qml` is the sibling singleton for state that should **not** persist (is this sidebar
 currently open, is the bar in autoHide-triggered-show state, etc.) - don't add ephemeral UI state to
