@@ -1578,6 +1578,16 @@ if ! python3 "$SCRIPT_DIR/test_phone_connect_contract.py"; then
     exit 1
 fi
 
+# The left sidebar's tab set: the tab-bar entries, the deep-link ids and the
+# SwipeView's pages are three literal arrays kept index-aligned by hand, and
+# a tab added to one of them alone shows the wrong page with nothing in any
+# log. Nothing else in the suite builds these widgets.
+echo "Running left sidebar tab set tests..."
+if ! python3 "$SCRIPT_DIR/test_sidebar_left_tabs.py"; then
+    echo "Left sidebar tab set tests failed."
+    exit 1
+fi
+
 # The stream's process lifetime, which no source check and no unit test can
 # reach: a real shell, a fake busctl whose monitor verb streams one signal in
 # one case and exits instantly in the other, and the spawn TIMESTAMPS read
