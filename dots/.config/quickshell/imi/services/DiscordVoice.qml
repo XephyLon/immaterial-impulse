@@ -25,6 +25,13 @@ Singleton {
     property bool muted: false
     property bool deafened: false
     property int restartAttempts: 0
+    // The process ladder (restartAttempts, onExited) never sees a bridge that
+    // is up with nothing behind it - Discord not running ("unavailable") or
+    // its RPC socket gone ("disconnected"). This second ladder re-issues
+    // connect on those, so a Discord started after the shell is picked up
+    // without the popup's manual connect.
+    property int reconnectAttempts: 0
+    readonly property alias reconnectPending: reconnectTimer.running
     property var pendingMessages: []
     readonly property bool authenticated: status === "authenticated" || channel !== null
     readonly property bool inVoice: channel !== null
@@ -81,8 +88,28 @@ Singleton {
     }
 
     function connect() {
+        disarmReconnect();
+        issueConnect();
+    }
+
+    function issueConnect() {
         errorMessage = "";
         send({cmd: "connect"});
+    }
+
+    function backoffDelay(attempt) {
+        return Math.min(30000, 1000 * Math.pow(2, attempt - 1));
+    }
+
+    function armReconnect() {
+        reconnectAttempts++;
+        reconnectTimer.interval = backoffDelay(reconnectAttempts);
+        reconnectTimer.restart();
+    }
+
+    function disarmReconnect() {
+        reconnectTimer.stop();
+        reconnectAttempts = 0;
     }
 
     function authorize() { send({cmd: "authorize"}); }
@@ -110,7 +137,7 @@ Singleton {
         switch (message.type) {
         case "ready": connect(); break;
         case "backend": backend = message.backend || ""; break;
-        case "connected": status = "connected"; break;
+        case "connected": status = "connected"; disarmReconnect(); break;
         case "auth_required": status = "auth_required"; break;
         case "authorizing":
             status = "authorizing";
@@ -119,6 +146,8 @@ Singleton {
             status = "authenticated";
             currentUser = message.user || {};
             restartAttempts = 0;
+            // The companion backend emits no "connected" before this.
+            disarmReconnect();
             break;
         case "voice_channel":
             channel = message.channel || null;
@@ -129,12 +158,12 @@ Singleton {
             muted = message.mute === true;
             deafened = message.deaf === true;
             break;
-        case "unavailable": status = "unavailable"; errorMessage = message.message || ""; break;
+        case "unavailable": status = "unavailable"; errorMessage = message.message || ""; armReconnect(); break;
         // The companion is one of two backends. Its failure leaves Discord's
         // own RPC usable, so this reports the reason without moving `status`
         // into an authorization state the user cannot act on.
         case "companion_error": errorMessage = message.message || ""; break;
-        case "disconnected": status = "disconnected"; backend = ""; channel = null; updateParticipants([]); break;
+        case "disconnected": status = "disconnected"; backend = ""; channel = null; updateParticipants([]); armReconnect(); break;
         case "error":
             status = "auth_required";
             errorMessage = message.message || "Discord RPC error";
@@ -147,6 +176,13 @@ Singleton {
     Timer {
         id: restartTimer
         onTriggered: root.start(false)
+    }
+
+    // One shot on purpose: the bridge answers every connect with "connected"
+    // or "unavailable", and that answer is what arms the next rung.
+    Timer {
+        id: reconnectTimer
+        onTriggered: root.issueConnect()
     }
 
     Timer {
@@ -164,6 +200,9 @@ Singleton {
         stdout: SplitParser { onRead: data => root.handleLine(data) }
         stderr: SplitParser { onRead: data => console.warn("[DiscordVoice]", data) }
         onExited: (code, status) => {
+            // A retry landing on a dead bridge would go through send() ->
+            // start(true), which zeroes the ceiling below.
+            root.disarmReconnect();
             root.channel = null;
             root.updateParticipants([]);
             if (root.restartAttempts >= root.maxRestartAttempts) {
@@ -173,7 +212,7 @@ Singleton {
             }
             root.restartAttempts++;
             root.status = "restarting";
-            restartTimer.interval = Math.min(30000, 1000 * Math.pow(2, root.restartAttempts - 1));
+            restartTimer.interval = root.backoffDelay(root.restartAttempts);
             restartTimer.restart();
         }
     }
