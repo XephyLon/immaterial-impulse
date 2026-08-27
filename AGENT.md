@@ -674,7 +674,9 @@ services/                  Singletons wrapping external state/processes - one pe
                               tests/test_phone_tab_runtime.py, and what its sub-pages
                               DRAW - the lists' and the empty states' geometry, and a
                               notification card's app icon - by
-                              tests/test_phone_tab_layout_runtime.py
+                              tests/test_phone_tab_layout_runtime.py, and how wide the
+                              webcam and microphone pages ASK to be by
+                              tests/test_phone_subpage_width_runtime.py
   PhoneNotifications.qml       The paired phone's notifications, mirrored off KDE Connect on
                               the same busctl transport through a serialized queue of its
                               own. No monitor of its own: the four notification signals sit
@@ -1978,6 +1980,35 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   2b921d8da ("refactor(phone): a contact card's padding gets a name of its own"),
   d9a9162ec ("test(phone): drive a contact card's box against what it holds, in two scripts"),
   07b819f07 ("fix(phone): a contact card is sized by what it holds, not by a constant").
+- **The third one in that family is a WIDTH, and it comes from `ContentPage.baseWidth` being 600
+  because the settings window is.** `ContentPage` sizes its content column
+  `Math.max(baseWidth, implicitWidth)` and anchors it to the flickable's horizontal CENTRE, which is
+  right in that window - the leftover is symmetric margin - and is an overflow on any surface
+  narrower than 600. The Phone tab's Webcam and Microphone pages are the only `ContentPage`s outside
+  the settings window, and the panel hands a sub-page 440: measured in a real window, a column of
+  600 drawn from **-80 to 520**, so the whole page hung off both edges and every row was clipped at
+  the panel's left edge - the error banner read "m did not start - is the DroidCam app open on the
+  phone?", the section headers "ra" and "ra settings" - while the page rendered perfectly, logged
+  nothing and left the suite green. A `ContentPage` on a panel states `forceWidth: true` and a
+  `baseWidth` bound to the width it is really given.
+  **The other half of that `Math.max` is the banner beside it**: a `NoticeBox` sizes itself from a
+  `StyledText` that wraps, and a wrapping `Text` still reports its string's UNWRAPPED width as its
+  implicit width - so the banner carrying `PhoneCamera.lastError` asked for **495** in a 440px page,
+  and a page-widening error string was one sentence away. The cap is a `Layout.maximumWidth` at the
+  call site, which is what a `QQuickLayout` clamps a child's preferred width to; it does not belong
+  in `NoticeBox`, which is shared with the settings pages, where a banner asking for its own
+  string's width is the right answer.
+  Nothing static can see any of this, and `qmltestrunner` builds neither a laid-out box nor a
+  `ContentPage`, so `PhoneSubPageWidthRuntimeTest.qml` reads the two numbers off the real pages
+  opened by the real sub-page loader - where each row is DRAWN, and what each row ASKS for
+  (`Math.min(implicitWidth, Layout.maximumWidth)`) - at two panel widths, because a column pinned to
+  a literal 440 passes every check at one. Its stubs are the other half of what it is for: `PhoneMic`
+  runs `pactl get-default-sink` from its own `Component.onCompleted` and can go on to
+  `set-default-sink`, which is why `PhoneTabLayoutRuntimeTest.qml` does not drive these two pages -
+  every tool `PhoneDeps` probes is a stub first on PATH there, `pactl` included.
+  94c92757a ("test(phone): drive how wide the webcam and microphone pages ask to be"),
+  01b9871b0 ("fix(phone): the webcam and microphone pages take the panel's width"),
+  1edb61495 ("fix(phone): a long service error wraps in its banner instead of widening the page").
 - **A keyboard is a LATTICE, not a stack of rows, and a `GridLayout` does not
   hand out equal columns on its own.** The numpad's `+` and its Enter are one
   key two rows tall, which a `RowLayout` cannot say — so each of them shipped
