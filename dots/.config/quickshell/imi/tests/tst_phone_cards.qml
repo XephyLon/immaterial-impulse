@@ -168,6 +168,37 @@ TestCase {
         compare(PhoneCards.micTitleKey(false), "install");
     }
 
+    function test_a_failed_launch_reaches_the_webcam_and_microphone_subtitles() {
+        // Both services leave `lastError` set and go back to `ready`, and the
+        // card draws lastError only while it is ACTIVE - so a webcam that
+        // could not connect was a card back on "Tap to start", which is
+        // exactly what "clicking it does nothing" looked like.
+        compare(PhoneCards.webcamSubtitleKey({
+            available: true, reachable: true, error: "DroidCam did not start"
+        }), "error");
+        compare(PhoneCards.micSubtitleKey({
+            available: true, reachable: true, error: "Phone microphone process exited"
+        }), "error");
+        // Whitespace is not an error: it would replace a usable "Tap to
+        // start" with a blank line.
+        compare(PhoneCards.webcamSubtitleKey({
+            available: true, reachable: true, error: "  \n "
+        }), "ready");
+        compare(PhoneCards.micSubtitleKey({ available: true, reachable: true, error: "" }), "ready");
+    }
+
+    function test_a_live_session_outranks_the_error_it_has_not_hit_yet() {
+        // lastError is cleared by the next start() and by nothing else, so a
+        // stale one must not take a running stream off its own state.
+        compare(PhoneCards.webcamSubtitleKey({
+            available: true, reachable: true, active: true, device: "/dev/video2",
+            error: "an old failure"
+        }), "device");
+        compare(PhoneCards.micSubtitleKey({
+            available: true, reachable: true, connecting: true, error: "an old failure"
+        }), "connecting");
+    }
+
     // ---------------------------------------------------------------------
     // The microphone's own ladder
     // ---------------------------------------------------------------------
