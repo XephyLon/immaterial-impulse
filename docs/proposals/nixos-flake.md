@@ -1,6 +1,6 @@
 # Proposal: NixOS flake
 
-> In progress. The first pass is implemented on `feat/nixos-flake`: a root
+> In progress. The first pass is implemented on `proposal/nixos-flake`: a root
 > `flake.nix` with `packages.<system>.immaterial-impulse`,
 > `homeManagerModules.default` and `devShells.default`, the three-tier
 > declarative/mutable split as designed below, and the nested
@@ -148,9 +148,29 @@ Not yet validated: running the shell's Wayland session from the store
 path (needs a compositor in the guest), and `tests/run_tests.sh` under
 `nix develop`.
 
+**Known blocker, named rather than fixed in this pass: the shell the
+module installs cannot generate colours.** Eight scripts under
+`scripts/` — `colors/generate_colors_material.py` (the whole wallpaper →
+palette path), `colors/switchwall.sh`, `colors/scheme_preview.py`,
+`background/subject_mask.py`, `hyprland/hyprconfigurator.py` and the
+three `*-venv.sh` wrappers — run inside the venv
+`sdata/lib/package-installers.sh` creates (`uv venv … -p 3.12` from
+`sdata/uv/requirements.txt`) and find it through
+`IMMATERIAL_IMPULSE_VIRTUAL_ENV`. The module ships the tree verbatim
+(`dontPatchShebangs` keeps the `env -S … source $VENV` shebang intact)
+and provides neither the venv nor the variable, so the first wallpaper
+change fails. This is the first thing a NixOS user hits, and it is
+separate from the PATH-enumeration open question below. A
+`python312.withPackages` closure is not a small addition:
+`requirements.txt` pins `materialyoucolor`, `material-color-utilities`
+and `kde-material-you-colors`, which nixpkgs' python package set does
+not carry, so closing this means packaging those or providing the venv
+another way — its own follow-up.
+
 ## Declarative vs mutable — settled
 
-Checked against the tree at `4b43790`, not assumed.
+Checked against the tree at 4b437909 ("feat(background): tell the renderer
+when its output is covered"), not assumed.
 
 ### The QML tree can be a read-only store path
 
@@ -235,7 +255,9 @@ Also out of the first pass, still TODO here:
 - `scripts/` shells out to a lot of binaries (`matugen`, `grim`, `slurp`,
   `hyprctl`, `ffmpeg`, ImageMagick, `cava`, `ydotool`…). Each is a `makeWrapper`
   `PATH` entry that has to be enumerated — the per-distro dep lists are the
-  starting point, but they are package names, not binary names.
+  starting point, but they are package names, not binary names. Separate from
+  and larger than this: the uv venv the colour scripts run inside (see the
+  known blocker under "Validated so far") — that one is not a PATH entry.
 - Single-user vs system-wide — **resolved for the first pass**: home-manager
   alone covers the shell, so the flake ships `homeManagerModules.default` and
   no `nixosModules.default` at all (omitted, not stubbed). What stays open is
