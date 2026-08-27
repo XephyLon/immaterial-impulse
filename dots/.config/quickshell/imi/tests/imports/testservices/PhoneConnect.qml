@@ -22,9 +22,8 @@ Singleton {
     // cards are drawn from.
     readonly property var pairingRequests: root.devices.filter(d => d.hasPairingRequest === true)
 
-    readonly property var activeDevice: root.devices.find(d => d.paired && d.reachable && d.type === "phone")
-        ?? root.devices.find(d => d.paired && d.reachable)
-        ?? null
+    property string persistedActiveDeviceId: ""
+    readonly property var activeDevice: root.preferredActiveDevice(root.devices, root.persistedActiveDeviceId)
     readonly property string materialSymbol: (root.available && root.activeDevice) ? "mobile" : "mobile_off"
 
     // BEGIN phone-connect parser logic (synced with services/PhoneConnect.qml)
@@ -281,6 +280,31 @@ Singleton {
         const root_ = (typeof mount === "string" ? mount : "").replace(/\/+$/, "");
         if (root_.length === 0) return "";
         return hasStorage ? root.sftpStoragePath(root_) : root_;
+    }
+
+    // Which device the surface is about: the persisted choice while that
+    // device is paired and reachable, else a reachable paired phone, else
+    // any reachable paired device.
+    function preferredActiveDevice(devices: var, persistedId: var): var {
+        const list = devices ?? [];
+        return list.find(d => d.id === persistedId && d.paired && d.reachable)
+            ?? list.find(d => d.paired && d.reachable && d.type === "phone")
+            ?? list.find(d => d.paired && d.reachable)
+            ?? null;
+    }
+
+    // The MRU list after a pick: the id first, once, at most `max` long.
+    // Walked by index rather than as an Array, because a list<string> read
+    // off a JsonAdapter is a QML sequence that fails Array.isArray.
+    function recentDeviceIdsAfterSelect(list: var, id: var, max: int): var {
+        const out = [];
+        if (root.validDeviceId(id)) out.push(id);
+        const src = list ?? [];
+        for (let i = 0; i < (src.length ?? 0); i++) {
+            const entry = src[i];
+            if (typeof entry === "string" && entry !== id && !out.includes(entry)) out.push(entry);
+        }
+        return out.slice(0, Math.max(0, max));
     }
     // END phone-connect parser logic
 
