@@ -551,6 +551,10 @@ PhoneSubPage {
                 // reach that came back with nothing.
                 shown: root.filteredApps.length === 0 && !root.adbOffline
                 dropIconWhenCramped: true
+                // A sentence, held to a measure and centred, rather than one
+                // line of text across the whole panel.
+                descriptionMaximumWidth: Appearance.font.pixelSize.small * 21
+                descriptionHorizontalAlignment: Text.AlignHCenter
                 icon: PhoneScrcpy.appModeSupported ? "apps" : "warning"
                 shape: MaterialShape.Shape.Ghostish
                 title: {
