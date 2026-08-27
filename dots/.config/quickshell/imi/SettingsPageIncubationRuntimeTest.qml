@@ -26,20 +26,20 @@ import qs.modules.imi.settings
  *   - `GlobalStates.currentPageInstance` names nothing while a page incubates,
  *     rather than the page the user just left;
  *   - the placeholder knows a page is building and does not flash it;
- *   - opening the window warms the rest, one at a time, and a warmed page is
- *     on screen the moment it is asked for.
+ *   - the warm-up reaches the rest, one at a time, and a warmed page is on
+ *     screen the moment it is asked for.
  *
  * The instrument for "blocks" is a 1ms heartbeat: the longest gap between two
  * of its ticks is how long the GUI thread was unavailable, which is what a
  * hitch IS. `sync` timings alone cannot see it - the old loop's cost lands in
  * the turn after the write, not inside it.
  *
- * `GlobalStates.settingsOpen` is the warm-up's gate here as it is in
- * production: `Settings.qml` binds its window's `visible` to that flag and
- * nothing else, so the harness holds it false to observe the un-warmed state
- * and then raises it. The harness's own window is visible throughout, because
- * a window nothing draws never polishes and every measurement would be of
- * nothing.
+ * The un-warmed state is read ONE TURN after the host is built rather than by
+ * holding the warm-up off: the warm-up's first tick is a motion tier away,
+ * while the loop this refuses queued its fifteen builds inside that same turn,
+ * so the turn boundary is what tells the two apart. The harness's own window is
+ * visible throughout, because a window nothing draws never polishes and every
+ * measurement would be of nothing.
  *
  * Driven by tests/test_settings_page_incubation_runtime.py, which also fails
  * on a `Binding loop` line - the keep-alive term used to read `item`, which is
@@ -130,6 +130,19 @@ ShellRoot {
             && `${obj.source ?? ""}`.endsWith(`pages/${pageType}.qml`)) ?? null;
     }
 
+    // How many of the fifteen page loaders have been asked for anything at
+    // all. `Loader.Null` is "not active"; anything else is a build that has
+    // started. Counting LOADERS rather than built pages is what makes this
+    // independent of how long a build takes - with `asynchronous: true` the
+    // eager loop's fifteen would be `Loading` rather than finished, and a
+    // check counting finished pages would report the same 0 as the fix.
+    function loadersAsked() {
+        return harness.everything().filter(obj =>
+            harness.typeName(obj) === "QQuickLoader"
+            && `${obj.source ?? ""}`.includes("/settings/pages/")
+            && obj.status !== Loader.Null).length;
+    }
+
     function buildingPlaceholder() {
         return harness.everything().find(obj =>
             harness.typeName(obj) === "PagePlaceholder" && obj.building !== undefined) ?? null;
@@ -177,29 +190,38 @@ ShellRoot {
 
     property real buildBlock: 0
     property int warmWaits: 0
+    property int pagesOneTurnAfterBuild: -1
 
     property var stepList: [
         () => {
             harness.hbReset();
             loader.active = true;
+            // The turn boundary is the measurement. The loop this refuses
+            // queued its fifteen builds from the host's own
+            // `Component.onCompleted`, i.e. before this callLater, so it has
+            // finished by the time this runs; the warm-up's first tick is a
+            // motion tier away and has not.
+            Qt.callLater(() => { harness.pagesOneTurnAfterBuild = harness.loadersAsked(); });
         },
 
-        // ---- what building the host costs, and what it built ------------
+        // ---- what building the host cost, and what one turn had built ----
         () => {
             harness.buildBlock = harness.hbMax;
-            const pages = harness.builtPages();
+            const oneTurn = harness.pagesOneTurnAfterBuild ?? -1;
             console.log(`[SettingsIncubation] build blocked the GUI thread for ${harness.buildBlock}ms,`
-                        + ` pages built: ${JSON.stringify(pages)}`);
-            harness.check(`only the page on screen is built while the window has never been opened,`
-                          + ` got ${JSON.stringify(pages)}`,
-                          pages.length === 1 && pages[0] === "QuickConfig");
+                        + ` page loaders asked one turn after it: ${oneTurn}`);
+            harness.check(`one turn after the host is built, only the page on screen has been asked`
+                          + ` for - the rest arrive one at a time, got ${oneTurn}`,
+                          oneTurn === 1);
             harness.check(`building the host blocked the GUI thread for less than ${harness.blockCeiling}ms,`
                           + ` measured ${harness.buildBlock}ms`,
                           harness.buildBlock < harness.blockCeiling);
-        },
 
-        // ---- a page asked for is incubated, not built inside the write ---
-        () => {
+            // ---- a page asked for is incubated, not built inside the write --
+            const built = harness.builtPages();
+            harness.check(`the warm-up has not reached ${harness.farPage} yet, so asking for it`
+                          + ` is a real first visit (built so far: ${built.length})`,
+                          !built.includes(harness.farPage));
             loader.item.currentPage = harness.farPageIndex;
             // Same turn as the write. A synchronous Loader has already
             // finished by now and hands back a whole page.
@@ -227,12 +249,11 @@ ShellRoot {
                           far?.item !== null && GlobalStates.currentPageInstance === far.item);
             harness.check(`...and the page left behind is kept rather than rebuilt, got`
                           + ` ${JSON.stringify(pages)}`,
-                          pages.length === 2 && pages.includes("QuickConfig"));
+                          pages.includes("QuickConfig") && pages.includes(harness.farPage));
         },
 
-        // ---- opening the window warms the rest ---------------------------
+        // ---- the warm-up reaches every page ------------------------------
         () => {
-            GlobalStates.settingsOpen = true;
             harness.hbReset();
             steps.running = false;
             warmWatch.running = true;
@@ -263,7 +284,7 @@ ShellRoot {
             warmWatch.running = false;
             console.log(`[SettingsIncubation] warm-up reached ${pages.length} pages`
                         + ` (warmedThrough=${through}), worst GUI block ${harness.hbMax}ms`);
-            harness.check(`opening the window warms every page, got ${pages.length}`,
+            harness.check(`the warm-up reaches every page, got ${pages.length}`,
                           pages.length === harness.pageTypes.length);
             steps.running = true;
         }
