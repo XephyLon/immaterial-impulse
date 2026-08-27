@@ -45,6 +45,14 @@ TestCase {
         PhoneDeps.v4l2loopbackLoaded = false
         PhoneDeps.v4l2loopbackInstalled = false
         PhoneDeps.scrcpyMajor = 0
+        PhoneScrcpy.reset()
+        PhoneScrcpy.available = true
+        PhoneScrcpy.appModeSupported = true
+        Config.options.phone.scrcpy.appMode.favoritePackages = []
+        Config.options.phone.scrcpy.useWireless = false
+        Config.options.phone.scrcpy.autoWirelessIp = true
+        Config.options.phone.scrcpy.wirelessIp = ""
+        Persistent.states.phone.scrcpy.recentPackages = []
     }
 
     // ================================================================
@@ -126,5 +134,238 @@ TestCase {
         compare(PhoneDeps.missingFor("mirror").map(d => d.key), ["android-tools"])
         PhoneDeps.adb = true
         compare(PhoneDeps.missingFor("mirror"), [])
+    }
+
+    // ================================================================
+    // PhoneScrcpy - the flag tables
+    // ================================================================
+
+    function test_scrcpy_mirror_args_from_the_defaults_is_the_bit_rate_alone() {
+        compare(PhoneScrcpy.mirrorArgs(Config.options.phone.scrcpy), ["--video-bit-rate=8M"])
+        compare(PhoneScrcpy.mirrorArgs({}), [])
+        compare(PhoneScrcpy.mirrorArgs(null), [])
+    }
+
+    function test_scrcpy_mirror_args_carries_every_flag_in_the_forks_order() {
+        const args = PhoneScrcpy.mirrorArgs({
+            stayAwake: true, turnScreenOff: true, noPowerOn: true, noAudio: true, showTouches: true,
+            fullscreen: true, alwaysOnTop: true, maxFps: 60, bitRate: "4M", maxSize: 1080, videoBuffer: 50
+        })
+        compare(args, ["--stay-awake", "--turn-screen-off", "--no-power-on", "--no-audio", "--show-touches",
+                       "--fullscreen", "--always-on-top", "--max-fps=60", "--video-bit-rate=4M",
+                       "--max-size=1080", "--video-buffer=50"])
+        compare(PhoneScrcpy.mirrorArgs({ maxFps: 0, bitRate: "  ", maxSize: -1, videoBuffer: 0 }), [])
+    }
+
+    function test_scrcpy_app_mode_args_opens_a_virtual_display_when_flex_is_on() {
+        compare(PhoneScrcpy.appModeArgs("org.mozilla.firefox", Config.options.phone.scrcpy.appMode),
+                ["--start-app=org.mozilla.firefox", "--new-display=1280x960/160", "--flex-display", "--keep-active"])
+        compare(PhoneScrcpy.appModeArgs("com.a", { flexDisplay: false }), ["--start-app=com.a"])
+        compare(PhoneScrcpy.appModeArgs("com.a", { flexDisplay: true, displayWidth: 1920, displayHeight: 1080, density: 240, keepActive: false, systemDecorations: false }),
+                ["--start-app=com.a", "--new-display=1920x1080/240", "--flex-display", "--no-vd-system-decorations"])
+        compare(PhoneScrcpy.appModeArgs("com.a", { flexDisplay: true, displayWidth: 0 }),
+                ["--start-app=com.a", "--new-display=1280x960/160", "--flex-display"])
+    }
+
+    function test_scrcpy_target_args_names_a_wireless_phone_only_when_asked() {
+        compare(PhoneScrcpy.targetArgs({ useWireless: false }, phone()), [])
+        compare(PhoneScrcpy.targetArgs({ useWireless: true, autoWirelessIp: true, wirelessPort: "5555" }, phone()),
+                ["-s", "192.168.1.50:5555"])
+        compare(PhoneScrcpy.targetArgs({ useWireless: true, autoWirelessIp: true, wirelessPort: "" }, phone({ reachableAddresses: ["", " 10.0.0.9 "] })),
+                ["-s", "10.0.0.9:5555"])
+        compare(PhoneScrcpy.targetArgs({ useWireless: true, autoWirelessIp: false, wirelessIp: "10.0.0.3", wirelessPort: "40001" }, phone()),
+                ["-s", "10.0.0.3:40001"])
+        compare(PhoneScrcpy.targetArgs({ useWireless: true, autoWirelessIp: false, wirelessIp: "10.0.0.3:41234" }, phone()),
+                ["-s", "10.0.0.3:41234"])
+        compare(PhoneScrcpy.targetArgs({ useWireless: true, autoWirelessIp: true }, phone({ reachableAddresses: [] })), [])
+        compare(PhoneScrcpy.targetArgs({ useWireless: true, autoWirelessIp: true }, null), [])
+    }
+
+    function test_scrcpy_recents_are_mru_and_capped() {
+        compare(PhoneScrcpy.pushRecent([], "a", 3), ["a"])
+        compare(PhoneScrcpy.pushRecent(["a", "b"], "b", 3), ["b", "a"])
+        compare(PhoneScrcpy.pushRecent(["a", "b", "c"], "d", 3), ["d", "a", "b"])
+        compare(PhoneScrcpy.toggleInList(["a"], "b"), ["a", "b"])
+        compare(PhoneScrcpy.toggleInList(["a", "b"], "a"), ["b"])
+    }
+
+    function test_scrcpy_backoff_doubles_from_one_second_to_a_thirty_second_cap() {
+        compare(PhoneScrcpy.backoffDelay(1), 1000)
+        compare(PhoneScrcpy.backoffDelay(2), 2000)
+        compare(PhoneScrcpy.backoffDelay(5), 16000)
+        compare(PhoneScrcpy.backoffDelay(6), 30000)
+        compare(PhoneScrcpy.backoffDelay(40), 30000)
+    }
+
+    // ================================================================
+    // PhoneScrcpy - the event ladder
+    // ================================================================
+
+    function test_scrcpy_started_and_exited_move_the_mirror_and_the_session_list() {
+        PhoneScrcpy.mirrorLaunching = true
+        PhoneScrcpy.handleLine('{"event":"started","id":"mirror","pid":4242,"title":"imi-phone-mirror-mirror"}')
+        verify(PhoneScrcpy.mirrorRunning)
+        verify(!PhoneScrcpy.mirrorLaunching)
+        compare(PhoneScrcpy.sessionCount, 1)
+        compare(PhoneScrcpy.sessions.get(0).title, "imi-phone-mirror-mirror")
+        compare(PhoneScrcpy.sessions.get(0).pid, 4242)
+        compare(PhoneScrcpy.sessions.get(0).package, "")
+        PhoneScrcpy.handleLine('{"event":"started","id":"app:org.mozilla.firefox","pid":4300,"title":"imi-phone-app-app_org.mozilla.firefox"}')
+        compare(PhoneScrcpy.sessionCount, 2)
+        compare(PhoneScrcpy.sessions.get(1).package, "org.mozilla.firefox")
+        verify(PhoneScrcpy.isAppRunning("org.mozilla.firefox"))
+        // A repeat `started` (alreadyRunning) updates the row in place.
+        PhoneScrcpy.handleLine('{"event":"started","id":"mirror","pid":4242,"title":"imi-phone-mirror-mirror","alreadyRunning":true}')
+        compare(PhoneScrcpy.sessionCount, 2)
+        PhoneScrcpy.handleLine('{"event":"exited","id":"mirror","code":0,"error":""}')
+        verify(!PhoneScrcpy.mirrorRunning)
+        compare(PhoneScrcpy.sessionCount, 1)
+        compare(PhoneScrcpy.lastError, "")
+        PhoneScrcpy.handleLine('{"event":"exited","id":"app:org.mozilla.firefox","code":1,"error":"ERROR: Could not find ADB device"}')
+        compare(PhoneScrcpy.sessionCount, 0)
+        compare(PhoneScrcpy.lastError, "ERROR: Could not find ADB device")
+        compare(PhoneScrcpy.feedbackLog.length, 1)
+        compare(PhoneScrcpy.feedbackLog[0].ok, false)
+    }
+
+    function test_scrcpy_an_error_event_ends_the_launch_and_names_the_cause() {
+        PhoneScrcpy.mirrorLaunching = true
+        PhoneScrcpy.handleLine('{"event":"error","id":"mirror","message":"Failed to launch scrcpy: [Errno 2]"}')
+        verify(!PhoneScrcpy.mirrorLaunching)
+        verify(!PhoneScrcpy.mirrorRunning)
+        compare(PhoneScrcpy.lastError, "Failed to launch scrcpy: [Errno 2]")
+    }
+
+    function test_scrcpy_a_cached_app_list_shows_but_keeps_loading_until_the_live_one() {
+        PhoneScrcpy.appsLoading = true
+        PhoneScrcpy.handleLine('{"event":"apps_list","deviceId":"dev_1","apps":[{"package":"com.a","name":"A","system":false}],"cached":true}')
+        compare(PhoneScrcpy.apps.length, 1)
+        verify(PhoneScrcpy.appsLoading)
+        PhoneScrcpy.handleLine('{"event":"apps_list","deviceId":"dev_1","apps":[{"package":"com.a","name":"A","system":false},{"package":"com.b","name":"B","system":true}]}')
+        compare(PhoneScrcpy.apps.length, 2)
+        verify(!PhoneScrcpy.appsLoading)
+        compare(PhoneScrcpy.appsError, "")
+    }
+
+    function test_scrcpy_an_apps_error_keeps_the_list_on_screen() {
+        PhoneScrcpy.apps = [{ package: "com.a", name: "A", system: false }]
+        PhoneScrcpy.appsLoading = true
+        PhoneScrcpy.handleLine('{"event":"apps_error","message":"Phone not reachable over ADB"}')
+        verify(!PhoneScrcpy.appsLoading)
+        compare(PhoneScrcpy.appsError, "Phone not reachable over ADB")
+        compare(PhoneScrcpy.apps.length, 1)
+    }
+
+    function test_scrcpy_ignores_lines_that_are_not_events() {
+        PhoneScrcpy.handleLine("")
+        PhoneScrcpy.handleLine("not json")
+        PhoneScrcpy.handleLine('{"cmd":"launch"}')
+        PhoneScrcpy.handleLine('[1,2]')
+        compare(PhoneScrcpy.sessionCount, 0)
+        compare(PhoneScrcpy.lastError, "")
+    }
+
+    // ================================================================
+    // PhoneScrcpy - the commands
+    // ================================================================
+
+    function test_scrcpy_launch_mirror_sends_the_flags_and_the_target() {
+        Config.options.phone.scrcpy.useWireless = true
+        PhoneScrcpy.launchMirror()
+        verify(PhoneScrcpy.mirrorLaunching)
+        compare(PhoneScrcpy.sentMessages.length, 1)
+        const msg = PhoneScrcpy.sentMessages[0]
+        compare(msg.cmd, "launch")
+        compare(msg.id, "mirror")
+        compare(msg.type, "mirror")
+        compare(msg.target_args, ["-s", "192.168.1.50:5555"])
+        compare(msg.extra_args, ["--video-bit-rate=8M"])
+    }
+
+    function test_scrcpy_launch_mirror_while_running_focuses_instead() {
+        PhoneScrcpy.handleLine('{"event":"started","id":"mirror","pid":1,"title":"t"}')
+        PhoneScrcpy.launchMirror()
+        compare(PhoneScrcpy.sentMessages, [{ cmd: "focus", id: "mirror" }])
+        PhoneScrcpy.stopMirror()
+        compare(PhoneScrcpy.sentMessages[1], { cmd: "stop", id: "mirror" })
+    }
+
+    function test_scrcpy_launch_mirror_without_scrcpy_is_refused() {
+        PhoneScrcpy.available = false
+        PhoneScrcpy.launchMirror()
+        verify(!PhoneScrcpy.mirrorLaunching)
+        compare(PhoneScrcpy.sentMessages, [])
+        compare(PhoneScrcpy.lastError, "scrcpy is not installed")
+    }
+
+    function test_scrcpy_refresh_apps_is_gated_on_app_mode_and_keyed_on_the_device() {
+        PhoneScrcpy.appModeSupported = false
+        PhoneScrcpy.refreshApps()
+        compare(PhoneScrcpy.sentMessages, [])
+        PhoneScrcpy.appModeSupported = true
+        PhoneScrcpy.refreshApps()
+        verify(PhoneScrcpy.appsLoading)
+        compare(PhoneScrcpy.sentMessages, [{ cmd: "list_apps", target_args: [], deviceId: "dev_1" }])
+        PhoneConnect.devices = []
+        compare(PhoneScrcpy.deviceId(), "default")
+    }
+
+    function test_scrcpy_launch_app_sends_app_mode_and_records_the_recent() {
+        PhoneScrcpy.launchApp("org.mozilla.firefox")
+        compare(PhoneScrcpy.sentMessages.length, 1)
+        const msg = PhoneScrcpy.sentMessages[0]
+        compare(msg.cmd, "launch")
+        compare(msg.id, "app:org.mozilla.firefox")
+        compare(msg.type, "app")
+        compare(msg.extra_args[0], "--start-app=org.mozilla.firefox")
+        compare(msg.extra_args[1], "--new-display=1280x960/160")
+        compare(Persistent.states.phone.scrcpy.recentPackages.length, 1)
+        compare(String(Persistent.states.phone.scrcpy.recentPackages[0]), "org.mozilla.firefox")
+        compare(String(PhoneScrcpy.recents[0]), "org.mozilla.firefox")
+        // Launching a running app focuses it.
+        PhoneScrcpy.handleLine('{"event":"started","id":"app:org.mozilla.firefox","pid":9,"title":"t"}')
+        PhoneScrcpy.launchApp("org.mozilla.firefox")
+        compare(PhoneScrcpy.sentMessages[1], { cmd: "focus", id: "app:org.mozilla.firefox" })
+        PhoneScrcpy.stopApp("org.mozilla.firefox")
+        compare(PhoneScrcpy.sentMessages[2], { cmd: "stop", id: "app:org.mozilla.firefox" })
+        PhoneScrcpy.stopAllApps()
+        compare(PhoneScrcpy.sentMessages[3], { cmd: "stop_all" })
+        PhoneScrcpy.launchApp("")
+        compare(PhoneScrcpy.sentMessages.length, 4)
+    }
+
+    function test_scrcpy_launch_app_needs_scrcpy_four() {
+        PhoneScrcpy.appModeSupported = false
+        PhoneScrcpy.launchApp("com.a")
+        compare(PhoneScrcpy.sentMessages, [])
+        compare(PhoneScrcpy.lastError, "scrcpy 4.0+ is required for App Mode")
+        compare(PhoneScrcpy.feedbackLog.length, 1)
+    }
+
+    function test_scrcpy_favorites_live_in_config() {
+        verify(!PhoneScrcpy.isFavorite("com.a"))
+        PhoneScrcpy.toggleFavorite("com.a")
+        verify(PhoneScrcpy.isFavorite("com.a"))
+        compare(Config.options.phone.scrcpy.appMode.favoritePackages.length, 1)
+        PhoneScrcpy.toggleFavorite("com.a")
+        verify(!PhoneScrcpy.isFavorite("com.a"))
+        compare(Config.options.phone.scrcpy.appMode.favoritePackages.length, 0)
+    }
+
+    function test_scrcpy_the_supervisor_is_wanted_while_anything_is_live_or_pending() {
+        verify(!PhoneScrcpy.managerWanted())
+        PhoneScrcpy.mirrorLaunching = true
+        verify(PhoneScrcpy.managerWanted())
+        PhoneScrcpy.mirrorLaunching = false
+        PhoneScrcpy.appsLoading = true
+        verify(PhoneScrcpy.managerWanted())
+        PhoneScrcpy.appsLoading = false
+        PhoneScrcpy.pendingMessages = [{ cmd: "focus", id: "mirror" }]
+        verify(PhoneScrcpy.managerWanted())
+        PhoneScrcpy.pendingMessages = []
+        PhoneScrcpy.handleLine('{"event":"started","id":"mirror","pid":1,"title":"t"}')
+        verify(PhoneScrcpy.managerWanted())
+        PhoneScrcpy.handleLine('{"event":"exited","id":"mirror","code":0,"error":""}')
+        verify(!PhoneScrcpy.managerWanted())
     }
 }
