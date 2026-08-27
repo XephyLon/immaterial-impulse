@@ -347,12 +347,47 @@ Item {
         }
     }
 
+    // Every service that can fail a gesture the user made on this tab reports
+    // it here. PhoneConnect was the only one connected, so a scrcpy that could
+    // not attach, a webcam that never connected and a microphone whose routing
+    // failed all raised a signal nothing listened to - three services carrying
+    // a "tell the user" channel with no listener, which is what a card that
+    // "does nothing when clicked" looked like from outside. The cards' own
+    // subtitles say the same thing once the state settles; the toast is what
+    // says it at the moment of the click.
+    function showToast(message: string, ok: bool): void {
+        if (!message)
+            return;
+        toast.message = message;
+        toast.ok = ok;
+        toastTimer.restart();
+    }
+
     Connections {
         target: PhoneConnect
         function onActionFeedback(message: string, ok: bool): void {
-            toast.message = message;
-            toast.ok = ok;
-            toastTimer.restart();
+            root.showToast(message, ok);
+        }
+    }
+
+    Connections {
+        target: PhoneScrcpy
+        function onFeedback(message: string, ok: bool): void {
+            root.showToast(message, ok);
+        }
+    }
+
+    Connections {
+        target: PhoneCamera
+        function onErrorOccurred(message: string): void {
+            root.showToast(message, false);
+        }
+    }
+
+    Connections {
+        target: PhoneMic
+        function onErrorOccurred(message: string): void {
+            root.showToast(message, false);
         }
     }
 
