@@ -131,6 +131,15 @@ own repo; the installer pins which revision it builds.
 - **The left sidebar's tabs stop disagreeing with the page on screen.** After
   clicking a tab once, swiping the panel — or following a link into a tab, such
   as the Phone quick toggle — moved the page without moving the tab bar.
+- **The shell no longer freezes for two thirds of a second while it starts.**
+  Settings built all fifteen of its pages — about 24500 items — in one go the
+  moment the configuration loaded: measured at 622ms with nothing on screen able
+  to move, bar and dock included, and paid on every launch whether or not the
+  window was ever opened. The pages are built one at a time in the background
+  now, and the same measurement reads 66ms. Switching pages stays as immediate
+  as it was; a page reached before the background pass gets to it says
+  "Building this page…" for the moment it takes, instead of showing an empty
+  pane.
 - **Leaving a Discord voice channel no longer kills the voice bridge.** Discord
   reports the empty selection as a null payload, which the bridge treated as a
   crash; after five restarts the widget gave up with "Discord bridge stopped
