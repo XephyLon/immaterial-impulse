@@ -20,6 +20,17 @@ Scope {
         GlobalStates.settingsOpen = false;
     }
 
+    // The settings window is where the user sits making one deliberate change
+    // at a time, so while it is up its writes are flushed on the next turn
+    // rather than debounced. The claim is bound to the WINDOW being on screen:
+    // this scope and the content inside it are built at `Config.ready` and
+    // outlive every open, so a claim tied to their existence is the whole
+    // session's - which is precisely what SettingsContent's old
+    // `Config.readWriteDelay = 0` turned out to be.
+    ConfigWriteDelayRef {
+        active: settingsWindow.visible
+    }
+
     // A real toplevel rather than an overlay layer: Settings is a place you sit
     // in and alt-tab back to, so it should be movable and managed by the
     // compositor like any other window.
