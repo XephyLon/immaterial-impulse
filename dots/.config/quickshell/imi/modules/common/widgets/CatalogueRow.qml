@@ -47,6 +47,15 @@ ColumnLayout {
     // a dock app's own icon is an `Image`. Set, it replaces the glyph; the
     // component is centred in the same width-only wrapper.
     property Component iconComponent: null
+    // The glyph drawn on a tonal chip - the toggle-row shape of the settings
+    // row grammar (AGENT.md, design language). Off by default: the chip is
+    // adopted page by page, and the wrapper below still reports width only,
+    // so a chip row is exactly as tall as a plain one and no other page
+    // reflows.
+    property bool iconChip: false
+    // A dimension rather than a spacing (docs/M3_GUIDELINES.md, Dimensions):
+    // the 19px glyph with room around it, landed on the 4dp grid.
+    readonly property real iconChipSize: 36
 
     property string title: ""
     property alias titleFont: titleLabel.font
@@ -99,7 +108,15 @@ ColumnLayout {
     Component {
         id: glyphIcon
         Item {
-            implicitWidth: glyph.implicitWidth
+            implicitWidth: root.iconChip ? root.iconChipSize : glyph.implicitWidth
+            Rectangle {
+                visible: root.iconChip
+                anchors.centerIn: parent
+                width: root.iconChipSize
+                height: root.iconChipSize
+                radius: Appearance.rounding.small
+                color: Appearance.colors.colSecondaryContainer
+            }
             MaterialSymbol {
                 id: glyph
                 anchors.centerIn: parent

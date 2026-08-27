@@ -12,6 +12,10 @@ RippleButton {
     // explanation doesn't stretch the row.
     property string infoText: ""
     property alias iconSize: catalogueRow.rowIconSize
+    // The icon on a tonal chip - the toggle-row shape of the settings row
+    // grammar. Opt-in per page; see CatalogueRow for why it cannot be the
+    // default.
+    property alias iconChip: catalogueRow.iconChip
     // A full-width row beneath everything else, for detail about the row - a
     // byline, tags stating a fact about it. It spans the whole control rather
     // than just the label block, so a call site can push trailing items to the
