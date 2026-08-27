@@ -1442,14 +1442,15 @@ Singleton {
                     property bool artColors: false
                 }
                 property JsonObject phone: JsonObject {
-                    // Off until the tab exists (W5 of the Phone tab design).
-                    // It gates more than the tab: PhoneNotifications reads it
-                    // as `mirrorActive`, and that is what tells
+                    // The Phone tab in the left sidebar, and with it the
+                    // notification mirror's dedupe: PhoneNotifications reads
+                    // this as `mirrorActive`, which is what tells
                     // services/Notifications.qml to drop kdeconnectd's own
-                    // desktop copy of a phone notification. On before there is
-                    // a list to read them in, the phone's notifications would
-                    // simply stop arriving anywhere. W5 turns it on.
-                    property bool enable: false
+                    // desktop copy of a phone notification. It shipped off
+                    // while there was no list to read them in - on then, the
+                    // phone's notifications stopped arriving anywhere at all.
+                    // modules/imi/sidebarLeft/phone/ is that list, so it is on.
+                    property bool enable: true
                 }
                 
                 property JsonObject ai: JsonObject {

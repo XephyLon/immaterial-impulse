@@ -93,6 +93,13 @@ STAGGER_ADOPTERS = {
     # dynamic-scope gate documented in AiChat.qml.
     "modules/imi/sidebarLeft/SidebarLeftContent.qml",
     "modules/imi/sidebarLeft/AiChat.qml",
+    # The Phone tab's own column, nested inside the left sidebar's wave the
+    # way AiChat's is. It carries NO leadIn and needs none: the tab is a
+    # SwipeView page, so its members answer `visible` false until it is the
+    # current one, and StaggerWave's own pendingEnter holds the entrance
+    # until then - the container question a lead-in is a guess at, answered
+    # for free by the thing that already had to be answered.
+    "modules/imi/sidebarLeft/phone/Phone.qml",
 }
 
 # The other half of that ratchet: a surface that adopted a wave, was judged on

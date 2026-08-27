@@ -181,6 +181,39 @@ ContentPage {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.topMargin: Appearance.spacing.space50
+                implicitHeight: phoneCol.implicitHeight + 24
+                radius: Appearance.rounding.normal
+                color: Appearance.colors.colLayer1
+                border.width: Appearance.borderWidth.standard
+                border.color: "transparent"
+
+                ColumnLayout {
+                    id: phoneCol
+                    anchors { fill: parent; margins: Appearance.spacing.space150 }
+                    spacing: Appearance.spacing.space100
+
+                    RowLayout {
+                        spacing: Appearance.spacing.space100
+                        ConfigSwitch {
+                            buttonIcon: "smartphone"
+                            text: Translation.tr("Enable Phone")
+                            // The switch is not only the tab's: with it off,
+                            // PhoneNotifications stops mirroring and
+                            // services/Notifications.qml stops dropping
+                            // kdeconnectd's own desktop copies, so the phone's
+                            // notifications keep arriving - through the daemon
+                            // instead of through the tab.
+                            infoText: Translation.tr("Shows the paired phone in the left sidebar and mirrors its notifications there instead of on the desktop.")
+                            checked: Config.options.sidebar.phone.enable
+                            onToggleRequested: Config.options.sidebar.phone.enable = !Config.options.sidebar.phone.enable
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.topMargin: Appearance.spacing.space50
                 implicitHeight: translatorCol.implicitHeight + 24
                 radius: Appearance.rounding.normal
                 color: Appearance.colors.colLayer1
