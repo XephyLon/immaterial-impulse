@@ -41,6 +41,18 @@ ShellRoot {
     readonly property string phoneId: Quickshell.env("PHONE_ID") ?? ""
     // The file the fake daemon reports as the first notification's iconPath.
     readonly property string iconPath: Quickshell.env("PHONE_ICON_PATH") ?? ""
+    // The two names in the vCard fixture, handed in rather than spelled a
+    // second time here: a row is found by the name the fixture wrote, so the
+    // harness and the fixture cannot disagree about which row is which.
+    readonly property string latinName: Quickshell.env("PHONE_CONTACT_LATIN") ?? ""
+    readonly property string arabicName: Quickshell.env("PHONE_CONTACT_ARABIC") ?? ""
+    // What "a real gap" means for the avatar: the shell's base unit. Below
+    // this the glyph reads as sitting on the card's edge - measured at 4px
+    // with the old fixed row height, and photographed by the maintainer.
+    readonly property real minAvatarGap: Appearance.spacing.space100
+
+    property string arabicId: ""
+    property real arabicCollapsedHeight: 0
     // How tall the tab's host is. The window cannot be resized under headless
     // weston - measured: assigning `implicitHeight` left the page at 880 and
     // the "cramped" step scored the tall page a second time - so the host's
@@ -76,6 +88,62 @@ ShellRoot {
 
     function first(type) {
         return harness.all(type)[0] ?? null;
+    }
+
+    function findNamed(item, objName, out) {
+        if (!item)
+            return out;
+        for (const child of item.children) {
+            if (child.objectName === objName)
+                out.push(child);
+            harness.findNamed(child, objName, out);
+        }
+        return out;
+    }
+
+    function firstNamed(item, objName) {
+        return harness.findNamed(item, objName, [])[0] ?? null;
+    }
+
+    // By the name the fixture wrote, never by index: the service sorts with
+    // localeCompare, so which row an Arabic name lands on is the collation's
+    // business and not something this harness may assume.
+    function contactRowFor(list, displayName) {
+        if (!list)
+            return null;
+        for (let i = 0; i < list.count; i++) {
+            const row = list.itemAtIndex(i);
+            if (row && String(row.modelData?.displayName ?? "") === displayName)
+                return row;
+        }
+        return null;
+    }
+
+    // Everything about the row defect is a comparison between the card's own
+    // box and the boxes of the three things it is supposed to contain.
+    function scoreRow(tag, row) {
+        const pad = row.rowPadding;
+        const headerBox = harness.boxIn(harness.firstNamed(row, "contactHeader"), row);
+        const avatarBox = harness.boxIn(harness.firstNamed(row, "contactAvatar"), row);
+        const identityBox = harness.boxIn(harness.firstNamed(row, "contactIdentity"), row);
+        console.log(`[PhoneTabLayout] ${tag} card h=${row.height} pad=${pad}`
+                    + ` header ${headerBox.top}-${headerBox.bottom}`
+                    + ` avatar ${avatarBox.top}-${avatarBox.bottom}`
+                    + ` identity ${identityBox.top}-${identityBox.bottom}`);
+        harness.check(`${tag}: the name and the number stay inside the card, got`
+                      + ` ${identityBox.top}-${identityBox.bottom} of 0-${row.height}`,
+                      identityBox.top >= -0.5 && identityBox.bottom <= row.height + 0.5);
+        harness.check(`${tag}: the avatar's bottom edge clears the card's by a real gap,`
+                      + ` got ${row.height - avatarBox.bottom} against`
+                      + ` ${harness.minAvatarGap}`,
+                      row.height - avatarBox.bottom >= harness.minAvatarGap);
+        harness.check(`${tag}: ...and its top edge does too, got ${avatarBox.top}`
+                      + ` against ${harness.minAvatarGap}`,
+                      avatarBox.top >= harness.minAvatarGap);
+        harness.check(`${tag}: the card is its content plus its own padding and nothing`
+                      + ` else, got ${row.height} against ${headerBox.bottom + pad}`,
+                      Math.abs(row.height - (headerBox.bottom + pad)) <= 1
+                      && Math.abs(headerBox.top - pad) <= 1);
     }
 
     // Where an item is DRAWN, in another item's coordinates. Everything about
@@ -241,6 +309,76 @@ ShellRoot {
                           + ` of ${page.height}`,
                           Math.abs(listBox.bottom - page.height) <= 1);
         },
+
+        // ---- a contact row fits its content, in either script ------------
+        // The reported defect: an Arabic name is taller than a Latin one at
+        // the same pixelSize, and a card sized from a constant fits one and
+        // not the other. Both scripts are on screen at once, because "the
+        // card is tall enough" is satisfied by a card that is tall enough for
+        // everything.
+        () => {
+            const page = harness.first("PhoneContactsPage");
+            const list = harness.findAll(page, "StyledListView", [])[0] ?? null;
+            const latin = harness.contactRowFor(list, harness.latinName);
+            const arabic = harness.contactRowFor(list, harness.arabicName);
+            harness.check(`both scripts have a row to measure, latin=${latin !== null}`
+                          + ` arabic=${arabic !== null} of ${list?.count} rows`,
+                          latin !== null && arabic !== null);
+            if (latin === null || arabic === null)
+                return;
+            harness.scoreRow("latin", latin);
+            harness.scoreRow("arabic", arabic);
+            // The half a per-row check cannot see: two cards that both fit
+            // because both were made generously tall are still a constant.
+            harness.check(`the card's height follows the script rather than a constant,`
+                          + ` latin ${latin.height} against arabic ${arabic.height}`,
+                          arabic.height > latin.height);
+            harness.arabicCollapsedHeight = arabic.height;
+            harness.arabicId = String(arabic.modelData.id);
+        },
+
+        // ---- ...and so does the stack it grows when it is expanded --------
+        () => {
+            harness.first("PhoneContactsPage").expandedId = harness.arabicId;
+        },
+        () => {},
+        () => {
+            const page = harness.first("PhoneContactsPage");
+            const list = harness.findAll(page, "StyledListView", [])[0] ?? null;
+            const arabic = harness.contactRowFor(list, harness.arabicName);
+            const details = harness.firstNamed(arabic, "contactDetails");
+            const detailsBox = harness.boxIn(details, arabic);
+            console.log(`[PhoneTabLayout] arabic expanded card h=${arabic?.height}`
+                        + ` details ${detailsBox.top}-${detailsBox.bottom}`
+                        + ` rows=${details?.children.length}`);
+            harness.check(`expanding the Arabic contact grows its card, got`
+                          + ` ${arabic?.height} against ${harness.arabicCollapsedHeight}`,
+                          arabic !== null && arabic.height > harness.arabicCollapsedHeight);
+            harness.check(`the number and address rows stay inside the card, got`
+                          + ` ${detailsBox.top}-${detailsBox.bottom} of 0-${arabic?.height}`,
+                          details !== null && detailsBox.top >= -0.5
+                          && detailsBox.bottom <= arabic.height + 0.5);
+            // Per row as well as per column: a child overflowing its own
+            // column still reports a column that fits.
+            let escaped = 0;
+            let drawn = 0;
+            for (const child of (details?.children ?? [])) {
+                if (!child.visible || child.height <= 0)
+                    continue;
+                drawn++;
+                const box = harness.boxIn(child, arabic);
+                if (box.top < -0.5 || box.bottom > arabic.height + 0.5)
+                    escaped++;
+            }
+            harness.check(`...and so does every one of the ${drawn} rows in it,`
+                          + ` ${escaped} escaped`,
+                          drawn > 0 && escaped === 0);
+        },
+        () => {
+            harness.first("PhoneContactsPage").expandedId = "";
+        },
+        () => {},
+
         () => loader.item.popSubPage(),
         () => {},
 

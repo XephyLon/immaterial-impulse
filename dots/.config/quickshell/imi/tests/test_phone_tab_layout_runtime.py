@@ -18,6 +18,13 @@ every other check in this suite:
   happens to be empty rather than full.
 - an app icon that is never drawn, and one whose file failed to load, are the
   same source. Only `Image.status` tells them apart.
+- a contact card sized from a constant fits one script. Arabic sets taller
+  than Latin at the same `pixelSize`, so `Layout.preferredHeight: huge * 2` on
+  the row's header drew the avatar flush on the card's bottom edge for a Latin
+  name and pushed an Arabic contact's avatar and number out through the bottom
+  of the card. An aligned layout child keeps its preferred size when the cell
+  is too small - it overflows rather than shrinking - so nothing errors and
+  nothing is logged. The fixture therefore carries both scripts.
 
 The fake `busctl` serves one paired, reachable phone and two mirrored
 notifications: leaf 70 carries an `iconPath` (a PNG this test writes, the way
@@ -53,7 +60,37 @@ PHONE_ADDRESS = "192.168.100.179"
 # A literal, never read back out of the harness's own output: a step list
 # that shrinks must redden here instead of reporting `failures: 0` for a
 # shorter run.
-EXPECTED_CHECKS = 21
+EXPECTED_CHECKS = 34
+
+# The two names the row-geometry steps measure, handed to the harness in the
+# environment so the fixture is the only place either is spelled. The Arabic
+# one is the maintainer's own screenshot, with the number it carried.
+LATIN_NAME = "Alice Rivers"
+ARABIC_NAME = "\u0627\u0628\u0648 \u0631\u0648\u0641\u0627\u0646 \u0627\u0644\u0645\u062d\u0644\u0645\u064a"
+
+# The Arabic face is the whole measurement, and this test redirects
+# XDG_CONFIG_HOME - which takes the developer's own ~/.config/fontconfig with
+# it. Measured: with the redirect and no replacement, an Arabic string in
+# "Google Sans Flex" falls back to DejaVu Sans and sets 19px, the same as the
+# Latin one, so the row that fits one script fits both and the harness reports
+# a defect it cannot see. This is the shape of the shell's own fontconfig, so
+# the harness measures the stack the user is looking at rather than whatever
+# the machine happens to sort to.
+FONTS_CONF = """<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+<fontconfig>
+  <match target="pattern">
+    <test compare="eq" name="family">
+      <string>sans-serif</string>
+    </test>
+    <edit name="family" mode="prepend" binding="strong">
+      <string>Noto Sans</string>
+      <string>Noto Sans Arabic</string>
+    </edit>
+  </match>
+</fontconfig>
+"""
+ARABIC_FACE = "Noto Sans Arabic"
 
 RECORD = """#!/usr/bin/env bash
 printf '%s %s\\n' "$(date +%s.%N)" "$*" >> "$PHONE_EXEC_LOG"
@@ -97,15 +134,17 @@ esac
 exit 0
 """
 
-# Three cards shaped after what Android's exporter writes: two named contacts
-# and one that is nothing but a number, so `hideUnnamed` has something to
-# hide and the list still has rows.
+# Four cards shaped after what Android's exporter writes: three named
+# contacts and one that is nothing but a number, so `hideUnnamed` has
+# something to hide and the list still has rows. One of the three is Arabic,
+# because the row's height is a function of the script and a fixture in one
+# script cannot say so.
 VCARDS = {
     "alice.vcf": (
         "BEGIN:VCARD\n"
         "VERSION:3.0\n"
         "UID:alice-uid-1\n"
-        "FN:Alice Rivers\n"
+        f"FN:{LATIN_NAME}\n"
         "N:Rivers;Alice;;;\n"
         "TEL;TYPE=CELL,PREF:+1 (555) 010-0001\n"
         "EMAIL;TYPE=HOME:alice@example.com\n"
@@ -118,6 +157,16 @@ VCARDS = {
         "FN:Bob Stone\n"
         "N:Stone;Bob;;;\n"
         "TEL;TYPE=HOME:555 010 0002\n"
+        "END:VCARD\n"
+    ),
+    "rufan.vcf": (
+        "BEGIN:VCARD\n"
+        "VERSION:3.0\n"
+        "UID:rufan-uid-1\n"
+        f"FN:{ARABIC_NAME}\n"
+        f"N:;{ARABIC_NAME};;;\n"
+        "TEL;TYPE=CELL,PREF:+201016000286\n"
+        "EMAIL;TYPE=WORK:rufan@example.com\n"
         "END:VCARD\n"
     ),
     "nameless.vcf": (
@@ -159,9 +208,26 @@ def _runtime_available():
     return all(shutil.which(name) for name in ("qs", "weston", "dbus-run-session"))
 
 
+def _arabic_face_available():
+    """Whether the face the row-geometry steps measure against is installed.
+
+    Without it the Arabic name sets at the Latin face's height and the two
+    cards come out the same, which reads as "the row is fine" rather than as
+    "the measurement never happened" - so it is a skip with a reason, not a
+    red check.
+    """
+    if not shutil.which("fc-list"):
+        return False
+    probe = subprocess.run(["fc-list", "--format=%{family}\n"],
+                           capture_output=True, text=True)
+    return ARABIC_FACE in probe.stdout
+
+
 @unittest.skipUnless(_runtime_available(), "needs qs, weston and dbus-run-session on PATH")
 class PhoneTabLayoutRuntimeTest(unittest.TestCase):
     def setUp(self):
+        if not _arabic_face_available():
+            self.skipTest(f"needs {ARABIC_FACE} to measure an Arabic row")
         self.home = Path(tempfile.mkdtemp(prefix="imi-phone-layout-"))
         self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
         self.exec_log = self.home / "exec.log"
@@ -186,7 +252,11 @@ class PhoneTabLayoutRuntimeTest(unittest.TestCase):
         cards = self.home / "data" / "kpeoplevcard" / f"kdeconnect-{PHONE_ID}"
         cards.mkdir(parents=True)
         for name, body in VCARDS.items():
-            (cards / name).write_text(body)
+            (cards / name).write_text(body, encoding="utf-8")
+
+        fontconfig = self.home / "config" / "fontconfig"
+        fontconfig.mkdir(parents=True)
+        (fontconfig / "fonts.conf").write_text(FONTS_CONF)
 
         shell_config = self.home / "config" / "immaterial-impulse"
         shell_config.mkdir(parents=True)
@@ -230,6 +300,8 @@ class PhoneTabLayoutRuntimeTest(unittest.TestCase):
         env["PHONE_EXEC_LOG"] = str(self.exec_log)
         env["PHONE_ID"] = PHONE_ID
         env["PHONE_ICON_PATH"] = str(self.icon_path)
+        env["PHONE_CONTACT_LATIN"] = LATIN_NAME
+        env["PHONE_CONTACT_ARABIC"] = ARABIC_NAME
 
         # dbus-run-session, not the inherited bus: the fake busctl is the only
         # daemon this harness may see.
