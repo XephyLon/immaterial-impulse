@@ -13,6 +13,11 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **Opening a Phone tab page fades the tab back behind it.** Contacts and
+  Android Apps slide in over a tab that now recedes and dims as they arrive,
+  rather than sitting there at full strength underneath. It follows the
+  animation-speed slider and the reduce-motion switch like the rest of the
+  shell.
 - **The Phone tab.** The paired phone gets a tab of its own in the left
   sidebar, beside Intelligence, Translator and Media. Top to bottom: the
   device on a chip whose arrow opens the list of every device the daemon
@@ -144,6 +149,19 @@ own repo; the installer pins which revision it builds.
   right edge. Both pages now take the width the panel gives them, and a long
   message from the camera or the microphone wraps inside its banner instead
   of stretching the page around it.
+- **The scrcpy Mirror card stops claiming a mirror it never opened.**
+  Clicking it on a phone your machine can reach over KDE Connect but that
+  `adb devices` does not list flipped the card to "scrcpy Mirror / Mirror is
+  running · click to focus its window" with a tick and "Active for 0s" — and
+  a second later dropped it back to exactly the line it had before the
+  click, with the icon missing from its badge. The card now says
+  "Connecting scrcpy…" for the whole time between the click and the answer,
+  and a launch that fails shows why it failed instead of quietly returning
+  to where it started. The badge keeps its icon throughout.
+- **The Phone tab's message bar stays inside the panel.** A long error — for
+  instance "DroidCam did not start - is the DroidCam app open on the phone?"
+  — drew as a red bar clipped at the panel's edge with its text running off
+  the end. It now wraps and stays within the tab, however long the message.
 - **The Phone tab's Contacts and Android Apps pages draw their contents
   again.** Contacts showed its count — "147 of 150 contacts" — and then an
   empty page, and Android Apps drew its big empty-state icon on top of its
