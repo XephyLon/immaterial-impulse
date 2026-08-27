@@ -531,6 +531,31 @@ def test_browse_files_mounts_then_reads_the_mount_point_and_opens_it_as_argv():
     assert 'Quickshell.execDetached(["xdg-open", ' in probe, "the mount is not opened with an xdg-open argv"
 
 
+def test_low_battery_is_observed_on_the_active_device_and_reported_with_notify_send_argv():
+    """Slice 6's battery half: the model is observed (onActiveDeviceChanged
+    fires on every sweep, since the model is rebuilt), the crossing is
+    decided by the synced batteryNoticeTransition the QML suite pins the
+    thresholds of, and each notice is one notify-send argv - the fork's
+    exact lines: `-i phone -u normal "Low battery: <name>" "Charge is at
+    <n>%."` and `-i phone -u low "Battery recovered: <name>" "Charge is
+    back to <n>%."` - never a shell string."""
+    source = SERVICE.read_text()
+    assert re.search(r"^    onActiveDeviceChanged: root\.observeBattery\(\)$", source, re.M), (
+        "the battery is not observed from onActiveDeviceChanged"
+    )
+    body = re.search(r"function observeBattery\(.*?\n    \}\n", source, re.S)
+    assert body, "observeBattery() missing"
+    text = body.group(0)
+    assert "root.batteryNoticeTransition(" in text, "the crossing is not decided by batteryNoticeTransition"
+    assert '"notify-send", "-i", "phone", "-u", "normal"' in text, "the low notice is not the fork's notify-send argv"
+    assert '"notify-send", "-i", "phone", "-u", "low"' in text, "the recovery notice is not the fork's notify-send argv"
+    assert 'Translation.tr("Low battery: %1")' in text and 'Translation.tr("Charge is at %1%.")' in text
+    assert 'Translation.tr("Battery recovered: %1")' in text and 'Translation.tr("Charge is back to %1%.")' in text
+    assert '"sh"' not in text and '"bash"' not in text and "${" not in text
+    # A different active device starts from a clean latch.
+    assert "root.batteryNoticeDeviceId" in text, "the latch is not per device"
+
+
 # ---- the sidebar surface ----------------------------------------------------
 
 
