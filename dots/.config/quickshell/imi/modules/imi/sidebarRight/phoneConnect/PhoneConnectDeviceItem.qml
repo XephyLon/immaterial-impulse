@@ -4,14 +4,17 @@ import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Layouts
 
+/**
+ * One row of the phone panel's roster: a device the daemon knows, its kind
+ * and its state. Clicking it makes that device the one the chip, the pills
+ * and the action row are about; the actions themselves live on the panel's
+ * one action row, not here.
+ */
 DialogListItem {
     id: root
     // Device entry from PhoneConnect.devices.
     required property var device
     readonly property bool online: root.device.paired && root.device.reachable
-
-    active: PhoneConnect.activeDevice !== null && PhoneConnect.activeDevice.id === root.device.id
-    pointingHandCursor: false
 
     contentItem: RowLayout {
         anchors {
@@ -56,6 +59,7 @@ DialogListItem {
                 elide: Text.ElideRight
                 textFormat: Text.PlainText
                 text: {
+                    if (root.device.hasPairingRequest) return Translation.tr("Wants to pair");
                     if (!root.device.paired) return Translation.tr("Not paired");
                     if (!root.device.reachable) return Translation.tr("Paired • Offline");
                     if (root.device.batteryAvailable)
@@ -64,69 +68,6 @@ DialogListItem {
                             : Translation.tr("%1%").arg(root.device.batteryCharge);
                     return Translation.tr("Connected");
                 }
-            }
-        }
-
-        DialogButton {
-            id: ringButton
-            visible: root.online
-            implicitWidth: implicitHeight
-
-            onClicked: PhoneConnect.ring(root.device)
-
-            contentItem: MaterialSymbol {
-                anchors.centerIn: parent
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                text: "ring_volume"
-                iconSize: Appearance.font.pixelSize.larger
-                color: ringButton.colEnabled
-            }
-
-            StyledToolTip {
-                text: Translation.tr("Ring")
-            }
-        }
-
-        DialogButton {
-            id: pingButton
-            visible: root.online && PhoneConnect.canPing
-            implicitWidth: implicitHeight
-
-            onClicked: PhoneConnect.ping(root.device)
-
-            contentItem: MaterialSymbol {
-                anchors.centerIn: parent
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                text: "send"
-                iconSize: Appearance.font.pixelSize.larger
-                color: pingButton.colEnabled
-            }
-
-            StyledToolTip {
-                text: Translation.tr("Ping")
-            }
-        }
-
-        DialogButton {
-            id: clipboardButton
-            visible: root.online && PhoneConnect.canSendClipboard
-            implicitWidth: implicitHeight
-
-            onClicked: PhoneConnect.sendClipboard(root.device)
-
-            contentItem: MaterialSymbol {
-                anchors.centerIn: parent
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                text: "content_paste"
-                iconSize: Appearance.font.pixelSize.larger
-                color: clipboardButton.colEnabled
-            }
-
-            StyledToolTip {
-                text: Translation.tr("Send clipboard")
             }
         }
     }
