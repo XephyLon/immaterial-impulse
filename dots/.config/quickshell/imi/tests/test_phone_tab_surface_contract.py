@@ -243,12 +243,24 @@ class SubPageContractTests(unittest.TestCase):
         host = strip_comments((SURFACE / "PhoneSubPage.qml").read_text(encoding="utf-8"))
         self.assertRegex(host, r"property string title", "no `title` on the host")
         self.assertRegex(host, r"signal back\b", "no `back()` on the host")
-        self.assertRegex(host, r"default property alias \w+:",
-                         "the host has no default content slot")
-        self.assertRegex(host, r"ColumnLayout \{",
+        slot = re.search(r"default property alias \w+: (\w+)\.data", host)
+        self.assertIsNotNone(slot, "the host has no default content slot")
+
+        # The slot's OWN type, not "a ColumnLayout appears in this file". The
+        # first version of this check asked the second question and matched
+        # the title bar's column while the slot itself was a plain `Item` -
+        # so `Layout.fillHeight` on every page's root column was inert, the
+        # column sat at its implicit height (73px inside an 836px slot,
+        # measured), and the Contacts page drew its count over an empty list.
+        # PhoneTabLayoutRuntimeTest.qml measures the consequence; this names
+        # the cause, because the two are a long way apart.
+        declaration = re.search(rf"(\w+) \{{\s*id: {slot.group(1)}\b", host)
+        self.assertIsNotNone(declaration,
+                             f"the slot `{slot.group(1)}` the default alias names is not declared")
+        self.assertEqual(declaration.group(1), "ColumnLayout",
                          "the content slot must be a ColumnLayout - the pages state "
-                         "their size with Layout.* and would warn about anchors "
-                         "inside anything else")
+                         "their size with Layout.*, and those attached properties do "
+                         "nothing at all in an item no layout manages")
 
     def test_every_page_is_rooted_on_the_host(self):
         for name in PAGES:
