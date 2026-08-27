@@ -57,7 +57,6 @@ Item {
     }
 
     PagePlaceholder {
-        anchors.fill: parent
         shown: root.count === 0
         dropIconWhenCramped: true
         icon: PhoneConnect.devices.length === 0 ? "mobile_off" : "notifications_off"
@@ -106,11 +105,6 @@ Item {
             implicitHeight: background.implicitHeight
             hoverEnabled: true
 
-            function dismissGroup(): void {
-                for (const notification of card.notifications)
-                    PhoneNotifications.dismiss(notification.publicId);
-            }
-
             function dismissWithAnimation(left: bool): void {
                 listView.resetDrag();
                 background.anchors.leftMargin = background.anchors.leftMargin; // break the binding
@@ -131,7 +125,17 @@ Item {
                     easing.type: Appearance.animation.elementMove.type
                     easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
                 }
-                onFinished: Qt.callLater(() => card.dismissGroup())
+                // Closes over plain data and a singleton, never over the
+                // delegate: the swipe's whole point is that this card is
+                // leaving, and the model refetch that follows destroys it -
+                // a closure holding `card` would run against a dead object.
+                onFinished: {
+                    const ids = card.notifications.map(n => n.publicId);
+                    Qt.callLater(() => {
+                        for (const id of ids)
+                            PhoneNotifications.dismiss(id);
+                    });
+                }
             }
 
             DragManager {
