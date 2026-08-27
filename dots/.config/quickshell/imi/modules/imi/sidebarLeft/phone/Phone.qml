@@ -329,7 +329,19 @@ Item {
         property string message: ""
         property bool ok: true
 
-        implicitWidth: toastRow.implicitWidth + Appearance.spacing.space300
+        // What the toast may not cross. Any service's error string can reach
+        // here - "DroidCam did not start - is the DroidCam app open on the
+        // phone?" is a real one - and with the width taken from the row's own
+        // implicit width and nothing above it, a long message drew a
+        // full-width bar clipped at the panel edge with its text running off
+        // the end. The bound comes from the panel and the spacing tokens
+        // rather than from a guess about the longest string: the tab's own
+        // column is inset by space125 on each side, and the toast sits inside
+        // the same margin.
+        readonly property real maxWidth: root.width - Appearance.spacing.space125 * 2
+        readonly property real horizontalPadding: Appearance.spacing.space300
+
+        implicitWidth: Math.min(toastRow.implicitWidth + toast.horizontalPadding, toast.maxWidth)
         implicitHeight: toastRow.implicitHeight + Appearance.spacing.space150
         radius: Appearance.rounding.full
         color: toast.ok ? Appearance.colors.colPrimaryContainer : Appearance.colors.colErrorContainer
@@ -351,12 +363,26 @@ Item {
             spacing: Appearance.spacing.space100
 
             MaterialSymbol {
+                id: toastGlyph
+                Layout.alignment: Qt.AlignVCenter
                 text: toast.ok ? "check_circle" : "error"
                 iconSize: Appearance.font.pixelSize.larger
                 color: toast.ok ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colOnErrorContainer
             }
             StyledText {
+                id: toastLabel
+                Layout.alignment: Qt.AlignVCenter
+                // Measured off the PANEL, not off the toast: the toast's own
+                // width is derived from this row's implicit width, so binding
+                // the label to it closes that circle. Wrapping first and
+                // eliding after keeps a two-line sentence readable and still
+                // refuses to grow a third line into the tab's content.
+                Layout.maximumWidth: toast.maxWidth - toast.horizontalPadding
+                    - toastGlyph.implicitWidth - toastRow.spacing
                 text: toast.message
+                wrapMode: Text.WordWrap
+                maximumLineCount: 2
+                elide: Text.ElideRight
                 font.pixelSize: Appearance.font.pixelSize.small
                 color: toast.ok ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colOnErrorContainer
             }
