@@ -723,7 +723,12 @@ services/                  Singletons wrapping external state/processes - one pe
                               apps_list. Started by the first command, stopped by a 10 s
                               idle timer once nothing is live, restarted on the DiscordVoice
                               ladder only while commands are queued. mirrorArgs()/
-                              appModeArgs() are the pure flag tables (tst_phone_scrcpy.qml)
+                              appModeArgs() are the pure flag tables (tst_phone_scrcpy.qml).
+                              `started` means the supervisor SPAWNED scrcpy, so the mirror
+                              stays `mirrorLaunching` until it survives mirrorSettleMs or
+                              the supervisor reports an exit, and `mirrorError` is the
+                              mirror's OWN last failure beside the service-wide lastError
+                              b53c8c260 ("fix(phone): a spawned scrcpy is still launching, not a running mirror")
   PhoneCamera.qml              The phone as a webcam through droidcam-cli into v4l2loopback,
                               launched DETACHED by scripts/phone/droidcam_session.sh (the
                               pidfile is the binary's own) so it outlives a shell restart
@@ -2985,6 +2990,19 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   string (a translation, a count in the hundreds) would simply have been drawn on top of them.
   `anchors.fill` plus `horizontalAlignment` is the spelling that both centres and bounds.
   8f8f14c8c ("fix(phone): the footer's count pill spells \"notifications\" out").
+- **The same family from the container's side: a box sized by its content, centred on a
+  panel, has no width of its own to elide against — the panel's is the one to derive from.**
+  The Phone tab's toast is `implicitWidth: toastRow.implicitWidth + <padding>` under
+  `anchors.horizontalCenter`, so its width was whatever the message wanted; with the label
+  inside it carrying no width, no wrap and no elide either, a long service error drew a
+  full-width bar clipped at the panel edge with the text running off the end (the real one
+  is "DroidCam did not start - is the DroidCam app open on the phone?"). Cap it from the
+  PANEL's width and the spacing tokens rather than from a guess about the longest string —
+  any service's error can reach a toast — and measure the label's own bound off the panel
+  too, never off the container, because the container's width is derived from the label and
+  reading it back closes that circle. Check it with a control: a cap only proves something
+  against a message it did not cap.
+  e2d1dcb70 ("fix(phone): the toast wraps inside the panel instead of running off it").
 - **The two bars load the same widget files out of `modules/imi/bar/`, and each used to decide
   which file for itself.** `Config.options.bar.layouts.*` is shared and Settings > Bar offers a
   plugin's bar widget whatever the orientation, but only `BarContent.qml` ever learned the
@@ -4694,6 +4712,68 @@ it; what needed the runtime harness is whether the click reaches the service at 
 the card or its settings chip is what a click at the card's centre lands on.
 b591575c4 ("fix(phone): a card that cannot start over ADB says so before the click"),
 cf945864c ("fix(phone): a failed webcam or microphone launch reaches its card's subtitle").
+
+**And the third: the mirror card believed the supervisor's `started`, which
+means "I spawned scrcpy" and not "a mirror is on screen".**
+`scripts/phone/scrcpy_session_manager.py` emits that event the instant
+`subprocess.Popen` returns; it has no way to know a window appeared. On a phone
+`adb devices` does not list, scrcpy prints `Could not find any ADB device` and
+exits about a second later — so for that second the card read **"scrcpy Mirror /
+Mirror is running · click to focus its window"**, with a filled check mark and a
+detail line saying "Active for 0s", on a machine where no mirror could exist,
+and then dropped back to the line it had before the click. A spawn keeps the
+mirror `launching` now and arms a settle (`PhoneScrcpy.mirrorSettleMs`);
+surviving the window in which a launch fails is the only evidence the three
+events there are can offer, and erring long only costs a beat more of
+"Connecting scrcpy…". `alreadyRunning` is exempt — that is the supervisor
+answering about a child it has been watching since an earlier launch — which is
+also why `launchMirror()` refuses while a launch is in flight: a second click
+inside the settle would otherwise get exactly that answer back about the child
+spawned a moment ago, i.e. the same weak evidence wearing the strong event's
+name. Three more things fall out of it:
+
+- **`mirrorError` is a second string on purpose.** `lastError` is written by
+  any session's exit and by the supervisor's own restart ladder, so a failed
+  *app* launch an hour ago was already reaching the mirror's card. Scoped to the
+  mirror and cleared by every `launchMirror()`, a non-empty one means "the click
+  you just made did not take" — which is what lets the subtitle ladder ask the
+  error BEFORE the ADB precondition. That ordering was the other way round, with
+  a test asserting it and a comment explaining it, and both were right while the
+  flag carried `lastError`: the repair is not the ordering but what the flag
+  means. Preferring the precondition made a failed launch byte-identical to no
+  launch at all — the card flashes and comes back to the words it started with.
+- **An exit with no stderr line still reports.** A launch that never settled
+  produced nothing whatever the exit code says, and an empty error string is
+  drawn as silence.
+- **None of it is reachable from a settled reading.** `PhoneTabRuntimeTest.qml`
+  drives the real supervisor (`Directories.scriptPath` resolves to the checkout,
+  so a `qs -p` harness really spawns the fake `scrcpy` on its PATH) and samples
+  the card every 25ms across the launch; the driver asserts the sample count
+  first, because a watch that never ran reports "nothing bad happened" exactly
+  as loudly as a correct one.
+
+b53c8c260 ("fix(phone): a spawned scrcpy is still launching, not a running mirror"),
+940c4c3be ("fix(phone): a failed mirror launch says why, instead of snapping back"),
+597e7a2cd ("test(phone): watch the three transitions a settled reading cannot see").
+
+**A deferred text swap fades the GLYPH and not the shape behind it, so on a
+badge it is an empty badge.** `StyledText`'s `animateChange` — the
+`Behavior on text` ending in a bare `PropertyAction` documented under
+[Design language](#design-language) — fades the Text to zero, applies the
+pending string there, and fades it back. Inside
+`MaterialShapeWrappedMaterialSymbol` the shape does not fade with it, so every
+frame of the swap is a painted blob with nothing in it. Two things made that a
+defect rather than a flourish on the Phone tab's feature cards. The card's other
+three elements (title, subtitle, trailing mark) change in one frame, so the
+glyph was the only part out of step with the state it labels. And a five-rung
+ladder can move twice inside one tier — `offline → connecting → offline` is what
+a launch that cannot start does — which retriggers the fade from wherever the
+first write had got to: measured in the runtime harness, the glyph sat at or
+under 0.02 opacity for over **200ms of a 150ms tier** and came out still drawing
+the icon it went in with, having swapped nothing. Before reaching for
+`animateChange`, ask whether the thing behind the glyph fades with it and how
+often the value can change.
+3c82747df ("fix(phone): the feature card's glyph stops blanking its own badge").
 
 **And the surfaces that DRIVE those services get their allowlist derived rather than written
 down.** "A button whose call no service answers is a fake action" is stated for the right
