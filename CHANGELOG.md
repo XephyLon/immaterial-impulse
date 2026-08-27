@@ -12,6 +12,14 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Icon buttons draw their icon in the middle.** The presets "save" button, the
+  password-reveal eye, the phone panel's ring and send buttons, the wallpaper
+  selector's close and audio buttons, the edit-mode menu's back arrow and the
+  clock-depth inspector all drew their glyph up-left of centre. The glyph was
+  told to centre itself in a way its button ignores; it now says so in the way
+  the button honours.
+
 ## [0.31.1] — 2026-08-26
 
 Three fixes: the overview really does follow the focused monitor now (the

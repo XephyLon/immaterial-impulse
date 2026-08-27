@@ -2448,6 +2448,16 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   that is showing (`showingBefore`/`showingAfter`), so the widget beside a collapsed pill gets the
   full end radius. `tests/tst_bar_group_collapse.qml` pins both.
   (fix(bar): a group whose content collapsed paints nothing, and the row's ends follow.)
+- **A `MaterialSymbol` used as a `Control`'s `contentItem` declares both alignments; anchors on it
+  are ignored.** A Control sizes its content item to the padded rect and positions it itself, so
+  `anchors.centerIn: parent` on the glyph is decoration, and a Text with no alignment draws its
+  glyph at the top-left of that rect — the icon sits up-left of centre. Eight buttons had that
+  spelling (the presets "save" button is the one photographed, 2026-08-27), one of them hiding it
+  with a hand `horizontalCenterOffset: -2`. `IconToolbarButton.qml` is the spelling that is right —
+  `horizontalAlignment: Text.AlignHCenter` and `verticalAlignment: Text.AlignVCenter` on the glyph —
+  and `tests/lint_icon_glyph_alignment.py` fails any `contentItem: MaterialSymbol` block without
+  both. (fix(widgets): every contentItem glyph is centred by alignment, not by an anchor the
+  Control ignores.)
 - **The two bars load the same widget files out of `modules/imi/bar/`, and each used to decide
   which file for itself.** `Config.options.bar.layouts.*` is shared and Settings > Bar offers a
   plugin's bar widget whatever the orientation, but only `BarContent.qml` ever learned the
