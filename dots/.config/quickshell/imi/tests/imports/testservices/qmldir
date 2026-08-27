@@ -6,6 +6,7 @@ singleton OpenRgb OpenRgb.qml
 singleton PhoneConnect PhoneConnect.qml
 singleton PhoneNotifications PhoneNotifications.qml
 singleton PhoneDeps PhoneDeps.qml
+singleton PhoneScrcpy PhoneScrcpy.qml
 singleton PluginStore PluginStore.qml
 singleton Tailscale Tailscale.qml
 singleton Vpn Vpn.qml
