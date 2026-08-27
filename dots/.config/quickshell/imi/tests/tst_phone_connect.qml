@@ -16,6 +16,7 @@ TestCase {
         PhoneConnect.installed = false
         PhoneConnect.backend = "none"
         PhoneConnect.devices = []
+        PhoneConnect.persistedActiveDeviceId = ""
     }
 
     // ---- parseBusctlReply ----
@@ -583,6 +584,48 @@ TestCase {
         compare(PhoneConnect.sftpStoragePath(mount), mount + "/storage/emulated/0")
         compare(PhoneConnect.sftpStoragePath(mount + "/"), mount + "/storage/emulated/0")
         compare(PhoneConnect.sftpStoragePath(""), "")
+    }
+
+    // ---- persisted active device and MRU (slice 6) ----
+
+    function test_active_device_prefers_the_persisted_choice_while_it_is_usable() {
+        PhoneConnect.applyBackend("kdeconnect")
+        PhoneConnect.applyDevices([
+            device("phone1", { type: "phone", paired: true, reachable: true, name: "aaa" }),
+            device("tablet", { type: "tablet", paired: true, reachable: true, name: "zzz" })
+        ])
+        compare(PhoneConnect.activeDevice.id, "phone1")
+        PhoneConnect.persistedActiveDeviceId = "tablet"
+        compare(PhoneConnect.activeDevice.id, "tablet")
+    }
+
+    function test_active_device_falls_back_when_the_persisted_choice_is_not_usable() {
+        PhoneConnect.applyBackend("kdeconnect")
+        PhoneConnect.applyDevices([
+            device("phone1", { type: "phone", paired: true, reachable: true }),
+            device("tablet", { type: "tablet", paired: true, reachable: false }),
+            device("laptop", { type: "laptop", paired: false, reachable: true })
+        ])
+        PhoneConnect.persistedActiveDeviceId = "tablet"
+        compare(PhoneConnect.activeDevice.id, "phone1")
+        PhoneConnect.persistedActiveDeviceId = "laptop"
+        compare(PhoneConnect.activeDevice.id, "phone1")
+        PhoneConnect.persistedActiveDeviceId = "gone"
+        compare(PhoneConnect.activeDevice.id, "phone1")
+        compare(PhoneConnect.preferredActiveDevice([], "phone1"), null)
+    }
+
+    function test_recent_device_ids_is_a_capped_most_recent_first_list() {
+        compare(PhoneConnect.recentDeviceIdsAfterSelect([], "a", 5).join(","), "a")
+        compare(PhoneConnect.recentDeviceIdsAfterSelect(["a", "b"], "c", 5).join(","), "c,a,b")
+        // Re-selecting moves to the front rather than duplicating.
+        compare(PhoneConnect.recentDeviceIdsAfterSelect(["a", "b", "c"], "b", 5).join(","), "b,a,c")
+        // Capped at max, oldest dropped.
+        compare(PhoneConnect.recentDeviceIdsAfterSelect(["a", "b", "c", "d", "e"], "f", 5).join(","), "f,a,b,c,d")
+        compare(PhoneConnect.recentDeviceIdsAfterSelect(null, "a", 5).join(","), "a")
+        // An id that fails the validator is not remembered.
+        compare(PhoneConnect.recentDeviceIdsAfterSelect(["a"], "../x", 5).join(","), "a")
+        compare(PhoneConnect.recentDeviceIdsAfterSelect(["a", "b"], "c", 2).join(","), "c,a")
     }
 
     // ---- device id guard ----
