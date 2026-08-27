@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""The reshaped phone dialog, driven against a fake daemon in a real shell.
+"""The Phone tab, driven against a fake daemon in a real shell.
 
-`PhoneConnectDialogRuntimeTest.qml` builds the real `PhoneConnectDialog` over
-the real `services/PhoneConnect.qml`, with a fake `busctl` on PATH exposing
-two devices: a paired, reachable phone (battery, address, LTE report) and an
+`PhoneTabRuntimeTest.qml` builds the real Phone tab over the real
+`services/PhoneConnect.qml`, with a fake `busctl` on PATH exposing two
+devices: a paired, reachable phone (battery, address, LTE report) and an
 unpaired laptop whose pairState says the peer asked. The harness reads the
-surface back - the chip, the three pills, one row of three actions, the
-notification area owning the leftover height (measured: take the pairing
-card away and the area grows by exactly that card), the pairing card and the
+surface back - the chip, the pills in their priority order, one row of six
+actions and which of them answer, the two navigation cards, the sub-page
+overlay degrading to nothing while the other workstream's pages are absent,
+the notification list owning the leftover height (measured: take the pairing
+card away and the list grows by exactly that card), the pairing card and the
 roster behind the chip's arrow - and clicks Accept and Decline.
 
 Those two clicks are scored HERE, off the fake's recorded invocations:
@@ -29,8 +31,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HARNESS = ROOT / "PhoneConnectDialogRuntimeTest.qml"
-SOCKET = "wayland-imi-phoneconnect-dialog"
+HARNESS = ROOT / "PhoneTabRuntimeTest.qml"
+SOCKET = "wayland-imi-phone-tab"
 
 PHONE_ID = "6131a746_571a_4176_a007_95625ff8e08e"
 LAPTOP_ID = "3b767a2479954eceaf9f1e7fa212f48e"
@@ -40,7 +42,7 @@ LAPTOP_ADDRESS = "192.168.100.99"
 # A literal, never read back out of the harness's own output: a step list
 # that shrinks must redden here instead of reporting `failures: 0` for a
 # shorter run.
-EXPECTED_CHECKS = 19
+EXPECTED_CHECKS = 24
 
 RECORD = """#!/usr/bin/env bash
 printf '%s %s\\n' "$(date +%s.%N)" "$*" >> "$PHONE_EXEC_LOG"
@@ -94,9 +96,9 @@ def _runtime_available():
 
 
 @unittest.skipUnless(_runtime_available(), "needs qs, weston and dbus-run-session on PATH")
-class PhoneConnectDialogRuntimeTest(unittest.TestCase):
+class PhoneTabRuntimeTest(unittest.TestCase):
     def setUp(self):
-        self.home = Path(tempfile.mkdtemp(prefix="imi-phoneconnect-dialog-"))
+        self.home = Path(tempfile.mkdtemp(prefix="imi-phone-tab-"))
         self.addCleanup(shutil.rmtree, self.home, ignore_errors=True)
         self.exec_log = self.home / "exec.log"
         self.bin = self.home / "bin"
@@ -110,9 +112,16 @@ class PhoneConnectDialogRuntimeTest(unittest.TestCase):
         # The poll is ten minutes out: the startup sweep populates the model
         # (the timer fires on start), and nothing may re-sweep while the
         # harness takes a pairing card away through the model and measures
-        # what the notification area does with the room.
+        # what the notification list does with the room.
+        #
+        # Contacts are off: the nav card's count reads PhoneContacts, whose
+        # construction starts a supervised monitor process this harness has
+        # nothing for - a backoff ladder running through the run is noise
+        # in the log and a process to reap, and the card's "Syncing…" state
+        # is the one the harness reads either way.
         (shell_config / "config.json").write_text(json.dumps({
             "networking": {"phoneConnect": {"enable": True, "pollInterval": 600000}},
+            "phone": {"contacts": {"enabled": False}},
         }, indent=2))
 
     def invocations(self):
@@ -120,7 +129,7 @@ class PhoneConnectDialogRuntimeTest(unittest.TestCase):
             return []
         return [line.partition(" ")[2] for line in self.exec_log.read_text().splitlines() if line.strip()]
 
-    def test_the_dialog_reads_the_model_and_answers_the_pairing_request(self):
+    def test_the_tab_reads_the_model_and_answers_the_pairing_request(self):
         env = dict(os.environ)
         # A runtime dir of the harness's own: everything this test starts talks
         # to its own weston and can never map a surface on the user's display.
@@ -164,7 +173,7 @@ class PhoneConnectDialogRuntimeTest(unittest.TestCase):
         output = proc.stdout + proc.stderr
         failed = [line for line in output.splitlines() if "FAIL" in line]
         self.assertEqual(failed, [], f"harness reported failures:\\n{output}")
-        self.assertIn(f"[PhoneConnectDialog] checks: {EXPECTED_CHECKS} failures: 0", output,
+        self.assertIn(f"[PhoneTab] checks: {EXPECTED_CHECKS} failures: 0", output,
                       f"harness did not finish cleanly:\\n{output}")
 
         # The two clicks, scored off what reached the daemon.
