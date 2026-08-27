@@ -37,7 +37,23 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WIDGETS = ROOT / "modules/common/widgets"
-PAGE = ROOT / "modules/imi/settings/pages/CaptureConfig.qml"
+PAGES = ROOT / "modules/imi/settings/pages"
+PAGE = PAGES / "CaptureConfig.qml"
+
+# Which settings pages have adopted the grammar, and where each one's own
+# adoption is checked. Capture is the reference and is checked in full below;
+# a later adopter is a line here plus page-shaped checks wherever that page's
+# other contracts already live, so this file does not accumulate one class per
+# page while the reference stays the thing that defines the grammar.
+#
+# It is a RATCHET, both ways: a page carrying the grammar's opt-ins without an
+# entry fails, and an entry whose page has dropped them fails too. Without the
+# second direction the register is a list nobody rechecks; without the first,
+# a page adopts the grammar and nothing holds it there.
+ADOPTERS = {
+    "CaptureConfig.qml": "this file",
+    "PhoneConfig.qml": "tests/test_phone_tab_surface_contract.py",
+}
 
 GRAMMAR_WIDGETS = (
     "CatalogueRow.qml",
@@ -239,6 +255,31 @@ class TokensOnlyTests(unittest.TestCase):
         self.assertGreaterEqual(fonts, 8)
         self.assertGreaterEqual(colors, 15)
         self.assertGreaterEqual(behaviors, 5)
+
+
+class AdoptionRegisterTests(unittest.TestCase):
+    """Who has adopted the grammar, in both directions."""
+
+    # The chip is the opt-in no page carries by accident: it defaults off
+    # precisely because 159 ConfigSwitch call sites draw that row and the
+    # chip must not move any of them.
+    MARKER = "iconChip: true"
+
+    def test_every_registered_adopter_still_carries_the_grammar(self):
+        for name in sorted(ADOPTERS):
+            path = PAGES / name
+            self.assertTrue(path.is_file(), f"{name} is registered as an adopter and is gone")
+            self.assertIn(self.MARKER, read(path),
+                          f"{name} is registered as an adopter and has dropped the "
+                          f"grammar's icon chips")
+
+    def test_a_page_that_adopted_the_grammar_is_in_the_register(self):
+        unregistered = sorted(
+            path.name for path in PAGES.glob("*.qml")
+            if self.MARKER in read(path) and path.name not in ADOPTERS)
+        self.assertEqual(unregistered, [], "these pages carry the row grammar but are "
+                                           "not in ADOPTERS - add the line and say where "
+                                           "the page's own adoption is checked")
 
 
 class CaptureConfigAdoptionTests(unittest.TestCase):
