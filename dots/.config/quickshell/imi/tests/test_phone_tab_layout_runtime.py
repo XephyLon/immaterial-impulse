@@ -3,7 +3,7 @@
 
 `PhoneTabLayoutRuntimeTest.qml` builds the real tab over the real services,
 opens the Contacts and Android Apps sub-pages and reads the drawn geometry
-back. It exists because three defects the maintainer hit are invisible to
+back. It exists because four defects the maintainer hit are invisible to
 every other check in this suite:
 
 - a sub-page whose content resolves to ZERO height renders its header and
@@ -25,6 +25,18 @@ every other check in this suite:
   of the card. An aligned layout child keeps its preferred size when the cell
   is too small - it overflows rather than shrinking - so nothing errors and
   nothing is logged. The fixture therefore carries both scripts.
+
+It also drives the Android Apps page through its three states, because which
+message that page draws is a question about all three at once and no source
+check can ask it: with no phone on ADB it must draw the danger panel and
+NEITHER of the two lines that used to say the same thing beside it (a red
+"Phone not reachable over ADB" from the session manager, and a "No apps yet"
+empty state that cannot say what to do about it); with a phone that answered
+and had nothing, the empty state and no panel; with apps, the list and no
+message at all. `adb` and `scrcpy` are faked for it - both are really installed
+on the maintainer's machine, so without the fakes the page reads whatever a
+real `adb devices` answers and the reported state disappears the moment a phone
+is plugged in.
 
 The fake `busctl` serves one paired, reachable phone and two mirrored
 notifications: leaf 70 carries an `iconPath` (a PNG this test writes, the way
@@ -60,7 +72,9 @@ PHONE_ADDRESS = "192.168.100.179"
 # A literal, never read back out of the harness's own output: a step list
 # that shrinks must redden here instead of reporting `failures: 0` for a
 # shorter run.
-EXPECTED_CHECKS = 34
+# 21 shared, 13 for the contact rows' geometry, 21 for the Apps page's
+# three ADB states.
+EXPECTED_CHECKS = 55
 
 # The two names the row-geometry steps measure, handed to the harness in the
 # environment so the fixture is the only place either is spelled. The Arabic
@@ -95,6 +109,51 @@ ARABIC_FACE = "Noto Sans Arabic"
 RECORD = """#!/usr/bin/env bash
 printf '%s %s\\n' "$(date +%s.%N)" "$*" >> "$PHONE_EXEC_LOG"
 __BODY__
+"""
+
+# `adb` and `scrcpy`, faked so the Apps page's three states are a property of
+# this test rather than of the machine running it. Both are really installed on
+# the maintainer's box - which is exactly why they have to be shadowed: with the
+# real ones the page reads whatever `adb devices` happens to answer, and the
+# state the screenshots were taken in (adb sees nothing) would flip the moment a
+# phone is plugged in.
+#
+# What is attached is a FILE the harness creates between steps, not an argument,
+# because the thing being driven is a change the shell has to notice on its own.
+ADB_BODY = """\
+case "$*" in
+  *"devices"*)
+    printf 'List of devices attached\\n'
+    if [ -f "$PHONE_ADB_ATTACHED" ]; then printf 'imi-fake-phone\\tdevice\\n'; fi
+    exit 0
+    ;;
+esac
+# Every other adb call - `shell pm list packages -3` is the one the session
+# manager falls back to - fails while nothing is attached, which is what tells
+# it apart from a phone that answered with no apps.
+[ -f "$PHONE_ADB_ATTACHED" ] || exit 1
+exit 0
+"""
+
+SCRCPY_BODY = """\
+case "$*" in
+  *--version*)
+    printf 'scrcpy 4.1 <https://github.com/Genymobile/scrcpy>\\n'
+    exit 0
+    ;;
+  *--list-apps*)
+    if [ -f "$PHONE_APPS_FILE" ]; then cat "$PHONE_APPS_FILE"; fi
+    exit 0
+    ;;
+esac
+exit 0
+"""
+
+# `scrcpy --list-apps` prints `* ` for a system app and `- ` for a user one.
+APP_LINES = """\
+ * Settings                        com.android.settings
+ - Signal                          org.thoughtcrime.securesms
+ - Firefox                         org.mozilla.firefox
 """
 
 # --json=short shapes lifted from a real busctl against a live KDE Connect
@@ -247,6 +306,20 @@ class PhoneTabLayoutRuntimeTest(unittest.TestCase):
         }))
         fake.chmod(0o755)
 
+        # Neither marker exists yet: the page opens in the state the
+        # screenshots were taken in, with no phone on ADB at all.
+        self.adb_attached = self.home / "adb-attached"
+        self.apps_file = self.home / "apps.txt"
+        # Staged beside it rather than written in place: the harness copies it
+        # over when it wants the third state, so the second state ("the phone
+        # answered with nothing") is a real empty answer from a real device.
+        self.apps_source = self.home / "apps-source.txt"
+        self.apps_source.write_text(APP_LINES)
+        for name, body in (("adb", ADB_BODY), ("scrcpy", SCRCPY_BODY)):
+            tool = self.bin / name
+            tool.write_text(RECORD.replace("__BODY__", body))
+            tool.chmod(0o755)
+
         # The vCards KDE Connect writes for KPeople, which the real monitor
         # reads: a fixture tree, never the machine's own contacts.
         cards = self.home / "data" / "kpeoplevcard" / f"kdeconnect-{PHONE_ID}"
@@ -302,6 +375,9 @@ class PhoneTabLayoutRuntimeTest(unittest.TestCase):
         env["PHONE_ICON_PATH"] = str(self.icon_path)
         env["PHONE_CONTACT_LATIN"] = LATIN_NAME
         env["PHONE_CONTACT_ARABIC"] = ARABIC_NAME
+        env["PHONE_ADB_ATTACHED"] = str(self.adb_attached)
+        env["PHONE_APPS_FILE"] = str(self.apps_file)
+        env["PHONE_APPS_SOURCE"] = str(self.apps_source)
 
         # dbus-run-session, not the inherited bus: the fake busctl is the only
         # daemon this harness may see.
