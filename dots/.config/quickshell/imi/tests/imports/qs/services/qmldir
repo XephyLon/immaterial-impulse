@@ -2,3 +2,4 @@ module qs.services
 singleton Audio Audio.qml
 singleton ResourceUsage ResourceUsage.qml
 singleton Translation Translation.qml
+singleton DiscordVoice DiscordVoice.qml
