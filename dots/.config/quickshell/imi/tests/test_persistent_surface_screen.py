@@ -318,11 +318,14 @@ def test_the_open_edge_latches_the_focused_monitor():
         assert "WM.focusedMonitor" in latch, \
             (f"{name}'s latch reads focus from somewhere other than "
              "WM.focusedMonitor - the shell's one window-manager facade")
-        assert "windowForFocusedMonitor()" in body, \
+        # Nothing between the `=` and the call: `activeWindow = activeWindow ??
+        # windowForFocusedMonitor()` still NAMES the latch and is the bug -
+        # every open after the first keeps the first screen's window.
+        assert re.search(r"activeWindow\s*=\s*\w+\.windowForFocusedMonitor\(\)", body), \
             (f"{name}'s `{handler}` does not resolve the focused monitor's window "
-             "afresh - the first version reused the window already showing, and "
-             "at the open edge the flag has just flipped, so every open after the "
-             "first landed on the first screen (#297 reopened)")
+             "afresh into `activeWindow` - the first version reused the window "
+             "already showing, and at the open edge the flag has just flipped, so "
+             "every open after the first landed on the first screen (#297 reopened)")
         assert "targetWindow()" not in body, \
             (f"{name}'s `{handler}` goes through targetWindow(), whose already-open "
              "shortcut is for the prefix toggles, not the open edge")
