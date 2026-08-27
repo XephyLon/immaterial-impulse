@@ -321,6 +321,8 @@ Item {
                     colBackground: "transparent"
                     onClicked: settingsSearchField.text = ""
                     contentItem: MaterialSymbol {
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                         anchors.centerIn: parent
                         text: "close"
                         iconSize: Appearance.font.pixelSize.large

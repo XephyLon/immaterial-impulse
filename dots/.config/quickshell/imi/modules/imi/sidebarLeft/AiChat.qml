@@ -775,6 +775,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     }
 
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         anchors.centerIn: parent
                         horizontalAlignment: Text.AlignHCenter
                         iconSize: 22

@@ -89,6 +89,7 @@ Scope {
             onClicked: GlobalStates.settingsOpen = false
 
             contentItem: MaterialSymbol {
+                verticalAlignment: Text.AlignVCenter
                 anchors.centerIn: parent
                 horizontalAlignment: Text.AlignHCenter
                 text: "close"

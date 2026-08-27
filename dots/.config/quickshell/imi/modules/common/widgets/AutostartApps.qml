@@ -70,6 +70,7 @@ ColumnLayout {
                 Quickshell.execDetached(["python3", `${Directories.scriptPath}/hyprland/autostart.py`])
             }
             contentItem: MaterialSymbol {
+                verticalAlignment: Text.AlignVCenter
                 anchors.centerIn: parent
                 horizontalAlignment: Text.AlignHCenter
                 text: "motion_play"
@@ -170,6 +171,7 @@ ColumnLayout {
                     colRipple: ColorUtils.transparentize(Appearance.colors.colError, 0.5)
                     onClicked: root.removeEntry(entryRow.index)
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         anchors.centerIn: parent
                         horizontalAlignment: Text.AlignHCenter
                         text: "delete"

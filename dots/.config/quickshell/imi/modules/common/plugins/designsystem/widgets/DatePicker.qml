@@ -129,6 +129,7 @@ Item {
                 enabled: !root.yearMode
                 onClicked: root.monthShift--
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     text: "chevron_left"; iconSize: Appearance.font.pixelSize.normal
                     horizontalAlignment: Text.AlignHCenter; color: Appearance.colors.colOnLayer1
                 }
@@ -140,6 +141,7 @@ Item {
                 enabled: !root.yearMode
                 onClicked: root.monthShift++
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     text: "chevron_right"; iconSize: Appearance.font.pixelSize.normal
                     horizontalAlignment: Text.AlignHCenter; color: Appearance.colors.colOnLayer1
                 }

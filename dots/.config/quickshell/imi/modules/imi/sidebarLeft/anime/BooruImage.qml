@@ -93,6 +93,7 @@ Button {
             colRipple: ColorUtils.transparentize(ColorUtils.mix(Appearance.m3colors.m3surface, Appearance.m3colors.m3onSurface, 0.6), 0.1)
 
             contentItem: MaterialSymbol {
+                verticalAlignment: Text.AlignVCenter
                 horizontalAlignment: Text.AlignHCenter
                 iconSize: Appearance.font.pixelSize.large
                 color: Appearance.m3colors.m3onSurface

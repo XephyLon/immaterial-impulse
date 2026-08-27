@@ -248,6 +248,7 @@ Item {
                                     onClicked: Notes.deleteNote(noteRow.modelData.id)
 
                                     contentItem: MaterialSymbol {
+                                        verticalAlignment: Text.AlignVCenter
                                         anchors.centerIn: parent
                                         horizontalAlignment: Text.AlignHCenter
                                         text: "delete"
@@ -280,6 +281,7 @@ Item {
                         onClicked: root.saveAndBack()
 
                         contentItem: MaterialSymbol {
+                            verticalAlignment: Text.AlignVCenter
                             anchors.centerIn: parent
                             horizontalAlignment: Text.AlignHCenter
                             text: "arrow_back"

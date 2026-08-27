@@ -436,6 +436,8 @@ Item {
                                             onClicked: PluginManager.requestUninstall(pluginCard.modelData.id)
 
                                             contentItem: MaterialSymbol {
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
                                                 anchors.centerIn: parent
                                                 text: "delete"
                                                 iconSize: Appearance.font.pixelSize.larger

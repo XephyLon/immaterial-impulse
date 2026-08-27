@@ -76,6 +76,8 @@ DialogListItem {
 
             contentItem: MaterialSymbol {
                 anchors.centerIn: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
                 text: "ring_volume"
                 iconSize: Appearance.font.pixelSize.larger
                 color: ringButton.colEnabled
@@ -95,6 +97,8 @@ DialogListItem {
 
             contentItem: MaterialSymbol {
                 anchors.centerIn: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
                 text: "send"
                 iconSize: Appearance.font.pixelSize.larger
                 color: pingButton.colEnabled
@@ -114,6 +118,8 @@ DialogListItem {
 
             contentItem: MaterialSymbol {
                 anchors.centerIn: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
                 text: "content_paste"
                 iconSize: Appearance.font.pixelSize.larger
                 color: clipboardButton.colEnabled

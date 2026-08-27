@@ -103,6 +103,7 @@ Item {
                     monthShift--;
                 }
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     text: "chevron_left"
                     iconSize: Appearance.font.pixelSize.larger
                     horizontalAlignment: Text.AlignHCenter
@@ -115,6 +116,7 @@ Item {
                     monthShift++;
                 }
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     text: "chevron_right"
                     iconSize: Appearance.font.pixelSize.larger
                     horizontalAlignment: Text.AlignHCenter

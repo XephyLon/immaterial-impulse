@@ -271,6 +271,7 @@ Scope {
                                     toggled: root.pinned
                                     onClicked: root.pinned = !root.pinned
                                     contentItem: MaterialSymbol {
+                                        verticalAlignment: Text.AlignVCenter
                                         text: "keep"
                                         horizontalAlignment: Text.AlignHCenter
                                         iconSize: Appearance.font.pixelSize.larger

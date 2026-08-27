@@ -111,6 +111,7 @@ Item {
                                     Todo.markUnfinished(index);
                             }
                             contentItem: MaterialSymbol {
+                                verticalAlignment: Text.AlignVCenter
                                 anchors.centerIn: parent
                                 horizontalAlignment: Text.AlignHCenter
                                 text: todoItem.modelData.done ? "remove_done" : "check"
@@ -126,6 +127,7 @@ Item {
                                     Todo.deleteItem(index);
                             }
                             contentItem: MaterialSymbol {
+                                verticalAlignment: Text.AlignVCenter
                                 anchors.centerIn: parent
                                 horizontalAlignment: Text.AlignHCenter
                                 text: "delete_forever"

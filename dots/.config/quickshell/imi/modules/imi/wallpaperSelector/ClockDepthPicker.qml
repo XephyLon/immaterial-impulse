@@ -196,6 +196,8 @@ Item {
                 onClicked: root.inspect = !root.inspect
                 contentItem: MaterialSymbol {
                     anchors.centerIn: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                     text: "chrome_reader_mode"
                     iconSize: Appearance.font.pixelSize.larger
                     color: inspectButton.toggled
@@ -213,6 +215,8 @@ Item {
                 onClicked: root.closeRequested()
                 contentItem: MaterialSymbol {
                     anchors.centerIn: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                     text: "close"
                     iconSize: Appearance.font.pixelSize.larger
                     color: Appearance.colors.colOnLayer0

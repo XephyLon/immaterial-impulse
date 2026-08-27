@@ -244,6 +244,7 @@ Item {
                         : root.blendedColors.colSecondaryContainerActive
                     downAction: () => root.player?.togglePlaying()
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         anchors.centerIn: parent
                         horizontalAlignment: Text.AlignHCenter
                         text: root.isPlaying ? "pause" : "play_arrow"
@@ -267,6 +268,7 @@ Item {
                     colRipple:          root.blendedColors.colSecondaryContainerActive
                     downAction: () => root.player?.next()
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         anchors.centerIn: parent
                         horizontalAlignment: Text.AlignHCenter
                         text: "skip_next"

@@ -280,6 +280,7 @@ OverlayBackground {
                 onClicked: root.startNewNote()
 
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     anchors.centerIn: parent
                     horizontalAlignment: Text.AlignHCenter
                     text: "add"
@@ -301,6 +302,7 @@ OverlayBackground {
                 onClicked: root.deleteCurrentNote()
 
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     anchors.centerIn: parent
                     horizontalAlignment: Text.AlignHCenter
                     text: "delete"

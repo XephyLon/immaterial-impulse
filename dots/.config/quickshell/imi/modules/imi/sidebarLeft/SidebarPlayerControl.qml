@@ -321,6 +321,7 @@ Item {
                     colRipple: blendedColors.colSecondaryContainerActive
                     downAction: () => root.player?.previous()
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         iconSize: 25
                         fill: 1
                         horizontalAlignment: Text.AlignHCenter
@@ -339,6 +340,7 @@ Item {
                     colRipple: (root.player?.isPlaying ?? false) ? blendedColors.colPrimaryActive : blendedColors.colSecondaryContainerActive
                     downAction: () => root.player?.togglePlaying()  
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         iconSize: 50
                         fill: 1
                         horizontalAlignment: Text.AlignHCenter
@@ -360,6 +362,7 @@ Item {
                     colRipple: blendedColors.colSecondaryContainerActive
                     downAction: () => root.player?.next()
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         iconSize: 25
                         fill: 1
                         horizontalAlignment: Text.AlignHCenter
@@ -387,6 +390,7 @@ Item {
                         if (root.player) root.player.volume = (root.player.volume > 0) ? 0 : 1.0  
                     }
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         iconSize: 18
                         fill: 1
                         horizontalAlignment: Text.AlignHCenter
@@ -409,6 +413,7 @@ Item {
                         if (root.player) root.player.volume = Math.max(0, (root.player.volume ?? 1) - 0.1)  
                     }
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         iconSize: 18
                         fill: 1
                         horizontalAlignment: Text.AlignHCenter
@@ -429,6 +434,7 @@ Item {
                         if (root.player) root.player.volume = Math.min(1.5, (root.player.volume ?? 1) + 0.1)  
                     }
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         iconSize: 18
                         fill: 1
                         horizontalAlignment: Text.AlignHCenter

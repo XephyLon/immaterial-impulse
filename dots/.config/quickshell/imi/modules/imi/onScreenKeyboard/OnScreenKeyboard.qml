@@ -108,6 +108,7 @@ Scope { // Scope
                             toggled: root.pinned
                             downAction: () => root.pinned = !root.pinned
                             contentItem: MaterialSymbol {
+                                verticalAlignment: Text.AlignVCenter
                                 text: "keep"
                                 horizontalAlignment: Text.AlignHCenter
                                 iconSize: Appearance.font.pixelSize.larger
@@ -119,6 +120,7 @@ Scope { // Scope
                                 oskRoot.hide()
                             }
                             contentItem: MaterialSymbol {
+                                verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 text: "keyboard_hide"
                                 iconSize: Appearance.font.pixelSize.larger

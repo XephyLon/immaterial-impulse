@@ -228,6 +228,8 @@ Item {
                     colBackgroundHover: Appearance.colors.colLayer2
                     contentItem: MaterialSymbol {
                         anchors.centerIn: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                         text: "chevron_left"
                         iconSize: Appearance.font.pixelSize.larger
                         color: Appearance.colors.colOnLayer1
@@ -250,6 +252,8 @@ Item {
                     colBackgroundHover: Appearance.colors.colLayer2
                     contentItem: MaterialSymbol {
                         anchors.centerIn: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                         text: "chevron_right"
                         iconSize: Appearance.font.pixelSize.larger
                         color: Appearance.colors.colOnLayer1

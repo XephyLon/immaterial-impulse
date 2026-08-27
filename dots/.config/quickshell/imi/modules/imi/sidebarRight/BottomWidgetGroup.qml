@@ -108,6 +108,7 @@ Rectangle {
                 root.setCollapsed(false);
             }
             contentItem: MaterialSymbol {
+                verticalAlignment: Text.AlignVCenter
                 text: "keyboard_arrow_up"
                 iconSize: Appearance.font.pixelSize.larger
                 horizontalAlignment: Text.AlignHCenter
@@ -185,6 +186,7 @@ Rectangle {
                     root.setCollapsed(true);
                 }
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     text: "keyboard_arrow_down"
                     iconSize: Appearance.font.pixelSize.larger
                     horizontalAlignment: Text.AlignHCenter

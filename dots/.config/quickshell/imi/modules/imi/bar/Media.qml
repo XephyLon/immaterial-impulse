@@ -383,6 +383,7 @@ Item {
                         colRipple: root.isPlaying ? Appearance.colors.colPrimaryActive : Appearance.colors.colPrimaryContainerActive
                         downAction: () => root.activePlayer?.togglePlaying()
                         contentItem: MaterialSymbol {
+                            verticalAlignment: Text.AlignVCenter
                             anchors.centerIn: parent
                             horizontalAlignment: Text.AlignHCenter
                             text: root.isPlaying ? "pause" : "play_arrow"
@@ -404,6 +405,7 @@ Item {
                         downAction: () => root.activePlayer?.next()
                         altAction: () => root.activePlayer?.previous()
                         contentItem: MaterialSymbol {
+                            verticalAlignment: Text.AlignVCenter
                             anchors.centerIn: parent
                             horizontalAlignment: Text.AlignHCenter
                             text: "skip_next"

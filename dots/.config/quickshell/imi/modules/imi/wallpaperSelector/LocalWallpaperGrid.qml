@@ -70,6 +70,8 @@ Item {
                 onClicked: contextMenu.visible = false
                 contentItem: MaterialSymbol {
                     anchors.centerIn: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                     text: "close"
                     iconSize: Appearance.font.pixelSize.larger
                     color: Appearance.colors.colPrimary
@@ -85,6 +87,8 @@ Item {
                 }
                 contentItem: MaterialSymbol {
                     anchors.centerIn: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                     text: "check"
                     iconSize: Appearance.font.pixelSize.larger
                     color: Appearance.colors.colPrimary

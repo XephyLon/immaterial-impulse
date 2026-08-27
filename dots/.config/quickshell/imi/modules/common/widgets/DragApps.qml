@@ -654,6 +654,7 @@ Item {
                                         baseHeight:   root.windowControlsHeight
                                         buttonRadius: Appearance.rounding.full
                                         contentItem: MaterialSymbol {
+                                            verticalAlignment: Text.AlignVCenter
                                             anchors.centerIn: parent
                                             horizontalAlignment: Text.AlignHCenter
                                             text: "close"
