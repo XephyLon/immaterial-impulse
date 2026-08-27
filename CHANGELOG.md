@@ -31,6 +31,15 @@ own repo; the installer pins which revision it builds.
   reachable, kdeconnectd's own desktop pop-ups of those same notifications
   are no longer shown beside them. This is the data behind the Phone tab,
   which draws it in a following release.
+- **The phone's contacts reach the shell.** A new `PhoneContacts` service
+  reads the vCards KDE Connect syncs to `~/.local/share/kpeoplevcard`, keeps
+  the list live as the phone syncs (and parses the names Android soft-wraps,
+  which used to come out truncated in the fork this is ported from), searches
+  it by name, organization, address or digits, hides the number-only cards
+  anti-spam apps leave behind - never a starred one - and can open the
+  phone's dialer or SMS composer for a number over adb, saying why when it
+  cannot. This is the model behind the Phone tab's Contacts card; the tab
+  itself follows.
 - **Phone Connect shows your phone's wireless address and cellular network,
   and answers pairing requests.** The panel reads the address KDE Connect
   reaches the phone on and its cellular network type (LTE, 5G, …) alongside
