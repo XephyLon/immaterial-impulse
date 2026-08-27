@@ -6,20 +6,33 @@ import QtQuick.Controls
 
 // Set password: true to mask the input with the lockscreen's animated Material
 // shape characters instead of plain text, with an optional reveal toggle.
+//
+// Set floatingLabel: true for the text-field shape of the settings row grammar
+// (AGENT.md, design language): the label lives INSIDE the field, resting where
+// the value will go and floating to the top edge once the field is focused or
+// holds a value, and the field takes the whole row in place of the label
+// column it no longer needs. The field grows to M3's filled-field height for
+// the label to float into. A row with a `description` keeps its label column
+// for the description's sake and the field stays at `fieldWidth`.
 RowLayout {
     id: root
 
     property string text: ""
     property string description: ""
+    // Shown as a hoverable "i" beside the label rather than inline, so a
+    // rationale does not become a paragraph under the label.
+    property string infoText: ""
     property string buttonIcon: ""
     property alias placeholderText: textArea.placeholderText
     property alias value: textArea.text
     property alias textArea: textArea
     property bool filled: true
     property bool showBorder: !filled
+    property bool floatingLabel: false
+    readonly property bool labelFloated: floatingLabel && (textArea.activeFocus || textArea.text.length > 0)
     property bool rounded: false
     property real fieldWidth: 220
-    property real fieldHeight: 40
+    property real fieldHeight: floatingLabel ? 56 : 40
     property color colBackground: filled ? Appearance.colors.colLayer1 : "transparent"
     property color colBackgroundFocused: filled ? Appearance.colors.colLayer2 : "transparent"
     property color colBorder: Appearance.colors.colOutlineVariant
@@ -55,9 +68,11 @@ RowLayout {
 
     ColumnLayout {
         Layout.fillWidth: true
+        visible: !root.floatingLabel || root.description.length > 0
         spacing: 0
         StyledText {
             Layout.fillWidth: true
+            visible: !root.floatingLabel
             text: root.text
             color: root.colLabel
             opacity: root.enabled ? 1 : 0.4
@@ -73,12 +88,19 @@ RowLayout {
         }
     }
 
+    InfoTooltipIcon {
+        tooltipText: root.infoText
+        opacity: root.enabled ? 1 : 0.4
+    }
+
     RowLayout {
+        Layout.fillWidth: root.floatingLabel && root.description.length === 0
         Layout.alignment: Qt.AlignVCenter
         spacing: Appearance.spacing.space50
 
         Rectangle {
             id: fieldBg
+            Layout.fillWidth: root.floatingLabel && root.description.length === 0
             Layout.preferredWidth: root.fieldWidth
             Layout.preferredHeight: root.fieldHeight
             Layout.alignment: Qt.AlignVCenter
@@ -102,11 +124,41 @@ RowLayout {
                 id: hoverHandler
             }
 
+            // The floating label. Under the TextArea in z-order, which is fine:
+            // the field has no background of its own, and while the label rests
+            // in the value's place the value is empty.
+            StyledText {
+                id: floatingLabelText
+                visible: root.floatingLabel
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: Appearance.spacing.space150
+                anchors.rightMargin: Appearance.spacing.space150
+                y: root.labelFloated ? Appearance.spacing.space75 : (parent.height - height) / 2
+                text: root.text
+                elide: Text.ElideRight
+                font.pixelSize: root.labelFloated ? Appearance.font.pixelSize.smaller : Appearance.font.pixelSize.small
+                color: root.labelFloated && textArea.activeFocus ? root.colBorderFocused : root.colLabel
+                opacity: root.enabled ? 1 : 0.4
+
+                Behavior on y {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+                Behavior on font.pixelSize {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
+                Behavior on color {
+                    animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                }
+            }
+
             TextArea {
                 id: textArea
                 anchors.fill: parent
                 anchors.leftMargin: Appearance.spacing.space150
                 anchors.rightMargin: Appearance.spacing.space150
+                // Leaves the top of the field to the floated label.
+                anchors.topMargin: root.floatingLabel ? Appearance.spacing.space300 : 0
                 enabled: root.enabled
                 // TextArea has no echoMode (TextEdit-based, unlike TextField) - masking is
                 // done purely by making the glyphs transparent and drawing PasswordChars
