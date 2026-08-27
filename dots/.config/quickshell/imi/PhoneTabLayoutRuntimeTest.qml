@@ -296,6 +296,34 @@ ShellRoot {
                           statusBox.left >= 0 && statusBox.right <= page.width + 1);
         },
 
+        // ---- and it still does at a page height that has nothing to spare -
+        () => {
+            window.implicitHeight = 380;
+        },
+        () => {},
+        () => {
+            const page = harness.first("PhoneAppsPage");
+            const placeholder = harness.findAll(page, "PagePlaceholder", [])[0] ?? null;
+            const region = placeholder?.parent ?? null;
+            const column = region?.parent ?? null;
+            const status = column?.children[1] ?? null;
+            const drawn = placeholder?.children[0] ?? null;
+            const statusBox = harness.boxIn(status, page);
+            const regionBox = harness.boxIn(placeholder, page);
+            const drawnBox = harness.boxIn(drawn, page);
+            console.log(`[PhoneTabLayout] cramped: status ${statusBox.top}-${statusBox.bottom}`
+                        + ` region ${regionBox.top}-${regionBox.bottom}`
+                        + ` drawn ${drawnBox.top}-${drawnBox.bottom} of page ${page.height}`);
+            // `dropIconWhenCramped` is what makes this hold: the glyph gives
+            // way and the two labels fit, rather than the column growing past
+            // the region and painting over the header again.
+            harness.check(`a short page still keeps the empty state under the status line,`
+                          + ` got ${drawnBox.top} against ${statusBox.bottom}`,
+                          drawnBox.top >= statusBox.bottom);
+            harness.check(`...and inside the page, got ${drawnBox.bottom} of ${page.height}`,
+                          drawnBox.bottom <= page.height + 1);
+        },
+
         () => harness.finish()
     ]
 
