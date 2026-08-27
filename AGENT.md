@@ -458,8 +458,8 @@ Four properties to know before changing any of it.
   descriptor**: bash sets no close-on-exec on a `{fd}<>` redirection. Measured —
   a backgrounded holder SIGKILLed while its child was alive left the lock held
   with no suite running. So the wait gives up on the lock (not on the run) after
-  two consecutive minutes with the record naming a pid that is gone and not
-  moving, and says so.
+  two consecutive minutes with the holder's record unchanged and naming no live
+  process, and says so.
 - **There is exactly ONE acquire point**, which is what makes the boundary cheap
   and is also the thing that can silently break: a harness wired in above it
   would run unserialized. `tests/lint_suite_lock_scope.py` fails the suite on

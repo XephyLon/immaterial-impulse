@@ -39,9 +39,9 @@ export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}"
 #
 # WHERE the lock is taken, and why it is not the whole run:
 #
-#   - Everything above the acquire is pure. Source-text lints, contract checks
-#     that parse QML and Python, unit tests: none of them start a process that
-#     competes for anything, so two suites are free to overlap there.
+#   - Everything above the acquire is pure. Source-text lints and contract
+#     checks that parse QML, Python and shell: none of them start a process
+#     that competes for anything, so two suites are free to overlap there.
 #   - The harnesses are interleaved with more static checks all the way to the
 #     end of the file rather than grouped, so the honest contiguous critical
 #     section is "the first harness to the end of the run".
@@ -75,8 +75,8 @@ export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}"
 # child has a copy. Measured while building this: a backgrounded holder
 # SIGKILLed while its child was still alive left the lock held with no suite
 # running. So the wait has a second strike - two consecutive minutes with the
-# record naming a pid that is gone and not moving - after which it says so and
-# runs unserialized rather than waiting on nothing for ever.
+# record unchanged and naming no live process - after which it says so and runs
+# unserialized rather than waiting on nothing for ever.
 if [[ "${XDG_RUNTIME_DIR:-}" ]]; then
     SUITE_LOCK_FILE="$XDG_RUNTIME_DIR/immaterial-impulse-test-suite.lock"
 else
@@ -151,19 +151,23 @@ acquire_suite_lock() {
             # record has not moved: a real handoff writes a new record within
             # milliseconds of taking the lock, so an unchanged record naming a
             # dead pid sixty seconds later is a leak and not a race with
-            # somebody else's acquire.
-            if [[ -n "$pid" ]] && ! kill -0 "$pid" 2>/dev/null; then
+            # somebody else's acquire. A record with no pid in it at all
+            # counts the same way and for the same reason: the only moment
+            # the file is empty is between one `flock` returning and the
+            # `printf` a few microseconds later, so an empty one that is
+            # still empty a minute on is not a suite either.
+            if [[ -z "$pid" ]] || ! kill -0 "$pid" 2>/dev/null; then
                 if [[ "$record" == "$previous" ]]; then
                     abandoned=1
                     break
                 fi
-                note=" - that pid has exited; if the lock is still held a minute from now, something it spawned is holding this descriptor open"
+                note=" - no live suite is running under that record; if the lock is still held a minute from now, something a finished run spawned is holding this descriptor open"
             fi
             echo "[suite-lock] still waiting after $((SECONDS - start))s for $record$note"
         done
         if (( abandoned )); then
-            echo "[suite-lock] giving up on the lock after $((SECONDS - start))s: it is held by something that outlived $record." >&2
-            echo "[suite-lock] no suite is running under that pid, so this run continues unserialized. Check for a stray weston or qs if the harnesses below misbehave." >&2
+            echo "[suite-lock] giving up on the lock after $((SECONDS - start))s: it is held by something that outlived the run recorded as $record." >&2
+            echo "[suite-lock] no live suite matches that record, so this run continues unserialized. Check for a stray weston or qs if the harnesses below misbehave." >&2
             # Deliberately no record and no IMI_SUITE_LOCK_HELD: this run does
             # not hold the lock, and saying it does would tell the next waiter
             # to wait for a run that is not the one blocking it.
