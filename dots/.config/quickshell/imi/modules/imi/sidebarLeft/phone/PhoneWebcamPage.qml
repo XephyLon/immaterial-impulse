@@ -49,8 +49,15 @@ PhoneSubPage {
         baseWidth: Math.max(0, page.width - Appearance.spacing.space200)
         bottomContentPadding: Appearance.spacing.space400
 
+        // A NoticeBox reports its string's UNWRAPPED width as its implicit
+        // width, so one long service error asks the column for more room than
+        // the panel has - 495px for PhoneCamera's own "DroidCam did not start
+        // - is the DroidCam app open on the phone?" in a 440px page, which is
+        // what `Math.max(baseWidth, implicitWidth)` above was widening on.
+        // Capped, the banner wraps inside itself instead of moving the page.
         NoticeBox {
             Layout.fillWidth: true
+            Layout.maximumWidth: page.baseWidth
             visible: !PhoneCamera.available
             materialIcon: "download"
             text: Translation.tr("DroidCam is not set up on this machine. %1 is missing.")
@@ -78,6 +85,7 @@ PhoneSubPage {
 
         NoticeBox {
             Layout.fillWidth: true
+            Layout.maximumWidth: page.baseWidth
             visible: PhoneCamera.available && !root.deviceReachable
             materialIcon: "phonelink_off"
             text: Translation.tr("No phone is reachable. Pair one in KDE Connect and bring it onto the network.")
@@ -85,6 +93,7 @@ PhoneSubPage {
 
         NoticeBox {
             Layout.fillWidth: true
+            Layout.maximumWidth: page.baseWidth
             visible: PhoneCamera.lastError.length > 0
             materialIcon: "error"
             text: PhoneCamera.lastError
