@@ -563,6 +563,28 @@ TestCase {
         compare(PhoneConnect.pickedFileUrls("relative/path\n/abs/ok").join("|"), "file:///abs/ok")
     }
 
+    // ---- SFTP browse (slice 5) ----
+
+    function test_sftp_browse_target_prefers_the_phone_s_storage_when_it_exists() {
+        // The mount root is not the user's storage (the fork's 3a7f653b4);
+        // storage/emulated/0 is, when the phone exposes it.
+        const mount = "/run/user/1000/6131a746/kdeconnect_6131a746"
+        compare(PhoneConnect.sftpBrowseTarget(mount, true), mount + "/storage/emulated/0")
+        compare(PhoneConnect.sftpBrowseTarget(mount, false), mount)
+        compare(PhoneConnect.sftpBrowseTarget(mount + "/", true), mount + "/storage/emulated/0")
+        compare(PhoneConnect.sftpBrowseTarget("", true), "")
+        compare(PhoneConnect.sftpBrowseTarget(null, false), "")
+    }
+
+    function test_sftp_storage_path_is_where_the_probe_looks() {
+        // The directory the `test -d` probe is aimed at is the one the
+        // target prefers - one spelling of "storage/emulated/0".
+        const mount = "/run/user/1000/x/kdeconnect_x"
+        compare(PhoneConnect.sftpStoragePath(mount), mount + "/storage/emulated/0")
+        compare(PhoneConnect.sftpStoragePath(mount + "/"), mount + "/storage/emulated/0")
+        compare(PhoneConnect.sftpStoragePath(""), "")
+    }
+
     // ---- device id guard ----
 
     function test_valid_device_id_accepts_kdeconnect_and_valent_ids() {

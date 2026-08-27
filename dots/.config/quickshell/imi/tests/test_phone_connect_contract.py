@@ -35,7 +35,8 @@ DIALOG = SURFACE / "PhoneConnectDialog.qml"
 # carries the three this model backs, and a fourth appears here or not at
 # all - a button whose call the service does not answer is a fake action.
 MODEL_ACTIONS = {"refresh", "ring", "ping", "sendClipboard", "acceptPairing", "cancelPairing",
-                 "shareUrls", "shareText", "shareClipboard", "pickAndSendFiles"}
+                 "shareUrls", "shareText", "shareClipboard", "pickAndSendFiles",
+                 "browseFiles"}
 
 BEGIN = "// BEGIN phone-connect parser logic"
 END = "    // END phone-connect parser logic"
@@ -453,6 +454,44 @@ def test_the_file_picker_is_kdialog_as_a_constant_argv_and_its_lines_become_file
     assert body, "pickAndSendFiles() missing"
     assert "filePickerProc.running" in body.group(0), "pickAndSendFiles does not start the picker (or guard one already open)"
     assert "root.validDeviceId(d.id)" in body.group(0), "pickAndSendFiles aims at an unvalidated device"
+
+
+def test_browse_files_mounts_then_reads_the_mount_point_and_opens_it_as_argv():
+    """Slice 5's transport: sftp.mount on the device's /sftp leaf through
+    runAction; then, on the read queue, sftp.isMounted until it answers
+    true (bounded - a mount that never comes up is a reported failure, not
+    a timer that polls for ever) and sftp.mountPoint, the daemon's own
+    answer for where it put the phone. `<mount>/storage/emulated/0` is
+    preferred when that directory exists (the fork's 3a7f653b4: the mount
+    root is not the user's storage), decided by the synced sftpBrowseTarget
+    from a `test -d` argv, and opened with an xdg-open argv. sftpMounted
+    tracks the isMounted answer."""
+    source = SERVICE.read_text()
+    assert re.search(r"^    property bool sftpMounted: false$", source, re.M), "sftpMounted missing"
+    assert re.search(r"readonly property int sftpMountAttemptCeiling:\s*\d+", source), (
+        "the wait for the mount has no declared ceiling"
+    )
+    body = re.search(r"function browseFiles\(.*?\n    \}\n", source, re.S)
+    assert body, "browseFiles() missing"
+    assert "root.validDeviceId(d.id)" in body.group(0)
+    assert 'root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/sftp`, "org.kde.kdeconnect.device.sftp", "mount", []))' in body.group(0), (
+        "browseFiles does not call sftp.mount on the sftp leaf"
+    )
+    poll = re.search(r"function pollSftpMount\(.*?\n    \}\n", source, re.S)
+    assert poll, "pollSftpMount() missing"
+    for member in ("isMounted", "mountPoint"):
+        assert f'"org.kde.kdeconnect.device.sftp", "{member}", []' in poll.group(0), (
+            f"the mount wait does not read sftp.{member}"
+        )
+    assert "root.sftpMounted = " in poll.group(0), "the isMounted answer does not land on sftpMounted"
+    assert "root.enqueue(" in poll.group(0) and "root.runAction(" not in poll.group(0), (
+        "reads belong on the serialized read queue, not the action process"
+    )
+    assert "root.reportFailure(" in poll.group(0), "a mount that never comes up is not reported"
+    probe = _process_block(source, "storageProbe")
+    assert 'storageProbe.exec(["test", "-d"' in source, "the storage directory is not probed with a test -d argv"
+    assert "root.sftpBrowseTarget(" in probe, "the directory to open is not decided by sftpBrowseTarget"
+    assert 'Quickshell.execDetached(["xdg-open", ' in probe, "the mount is not opened with an xdg-open argv"
 
 
 # ---- the sidebar surface ----------------------------------------------------
