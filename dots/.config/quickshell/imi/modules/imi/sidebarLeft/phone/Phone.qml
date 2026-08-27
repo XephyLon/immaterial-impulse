@@ -125,7 +125,23 @@ Item {
         anchors.margins: Appearance.spacing.space125
         spacing: Appearance.spacing.space125
 
+        // The outgoing half of the transition. The tab does not sit still
+        // behind the page sliding over it: it fades AND recedes, so what the
+        // eye reads is the tab going back a layer rather than being covered
+        // up. Both channels ride `subPageProgress` - the ONE scalar, with the
+        // one Behavior on it - because a second Behavior is two numbers that
+        // have to agree, agreeing at rest (where nobody looks) and
+        // disagreeing on exactly the frames the transition is made of.
+        //
+        // The scale's destination is derived, never picked:
+        // `entranceScaleFrom` matches the excursion to the shell's entrance
+        // rise at this panel's own width, floored at the survey's measured
+        // 0.85, which is the same derivation every StaggerEntrance member
+        // arrives on. A hand-picked 0.85 on a full-width column is a zoom.
+        readonly property real recedeTo: Appearance.animation.entranceScaleFrom(root.width)
         opacity: 1 - root.subPageProgress
+        scale: 1 - (1 - phoneColumn.recedeTo) * root.subPageProgress
+        transformOrigin: Item.Center
         // A page on top is a picture, not a control: a click landing on the
         // tab mid-slide is aimed at the page the pointer moved toward.
         enabled: root.subPage === ""
