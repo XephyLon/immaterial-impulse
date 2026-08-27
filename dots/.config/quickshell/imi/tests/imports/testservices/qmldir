@@ -5,6 +5,7 @@ singleton MediaCapture MediaCapture.qml
 singleton OpenRgb OpenRgb.qml
 singleton PhoneConnect PhoneConnect.qml
 singleton PhoneNotifications PhoneNotifications.qml
+singleton PhoneDeps PhoneDeps.qml
 singleton PluginStore PluginStore.qml
 singleton Tailscale Tailscale.qml
 singleton Vpn Vpn.qml
