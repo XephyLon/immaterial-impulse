@@ -41,6 +41,12 @@ ShellRoot {
     readonly property string phoneId: Quickshell.env("PHONE_ID") ?? ""
     // The file the fake daemon reports as the first notification's iconPath.
     readonly property string iconPath: Quickshell.env("PHONE_ICON_PATH") ?? ""
+    // How tall the tab's host is. The window cannot be resized under headless
+    // weston - measured: assigning `implicitHeight` left the page at 880 and
+    // the "cramped" step scored the tall page a second time - so the host's
+    // own height is what the short-page step moves.
+    property real viewportHeight: 900
+    property real tallPageHeight: 0
 
     function check(label, ok) {
         harness.checksRun++;
@@ -99,7 +105,8 @@ ShellRoot {
 
         Loader {
             id: loader
-            anchors.fill: parent
+            width: parent.width
+            height: harness.viewportHeight
             active: false
             sourceComponent: Phone {}
         }
@@ -294,11 +301,12 @@ ShellRoot {
             harness.check(`the status line stays inside the page, got`
                           + ` ${statusBox.left}-${statusBox.right} of ${page.width}`,
                           statusBox.left >= 0 && statusBox.right <= page.width + 1);
+            harness.tallPageHeight = page.height;
         },
 
         // ---- and it still does at a page height that has nothing to spare -
         () => {
-            window.implicitHeight = 380;
+            harness.viewportHeight = 200;
         },
         () => {},
         () => {
@@ -314,14 +322,28 @@ ShellRoot {
             console.log(`[PhoneTabLayout] cramped: status ${statusBox.top}-${statusBox.bottom}`
                         + ` region ${regionBox.top}-${regionBox.bottom}`
                         + ` drawn ${drawnBox.top}-${drawnBox.bottom} of page ${page.height}`);
+            // Or the step scores the tall page a second time and says nothing.
+            harness.check(`the page really did get shorter, got ${page.height}`
+                          + ` against ${harness.tallPageHeight}`,
+                          page.height < harness.tallPageHeight / 2);
             // `dropIconWhenCramped` is what makes this hold: the glyph gives
             // way and the two labels fit, rather than the column growing past
             // the region and painting over the header again.
             harness.check(`a short page still keeps the empty state under the status line,`
                           + ` got ${drawnBox.top} against ${statusBox.bottom}`,
                           drawnBox.top >= statusBox.bottom);
-            harness.check(`...and inside the page, got ${drawnBox.bottom} of ${page.height}`,
-                          drawnBox.bottom <= page.height + 1);
+            // Centred in what is LEFT, which is the whole of what the empty
+            // state owes and the only form of it that survives a region
+            // smaller than the labels: at 180px the two labels are 70 in a
+            // 63px region, so `dropIconWhenCramped` has already given up the
+            // glyph and the remainder overhangs a few pixels at both ends -
+            // symmetrically, which is what says it is centred on its own
+            // region rather than on the page.
+            harness.check(`...centred in the region it was given, got`
+                          + ` ${(drawnBox.top + drawnBox.bottom) / 2} against`
+                          + ` ${(regionBox.top + regionBox.bottom) / 2}`,
+                          Math.abs((drawnBox.top + drawnBox.bottom) / 2
+                                   - (regionBox.top + regionBox.bottom) / 2) <= 1);
         },
 
         () => harness.finish()
