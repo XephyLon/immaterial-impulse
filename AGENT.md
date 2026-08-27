@@ -580,8 +580,13 @@ services/                  Singletons wrapping external state/processes - one pe
                               binding) - backend detection from the bus name list, one
                               normalized device model for both daemons (battery, the
                               reachable addresses, the cellular report, a peer's pairing
-                              request), ring/ping/clipboard actions and the two pairing
-                              answers. KDE Connect's changes arrive as SIGNALS
+                              request), ring/ping/clipboard actions, the two pairing
+                              answers, share (file URLs, text, the clipboard as a link or
+                              as text, the house kdialog picker), an SFTP browse that opens
+                              the phone's storage, the persisted pick + MRU
+                              (Persistent.states.phone) and the low-battery notices. Every
+                              action is a queued argv; feedback is one actionFeedback
+                              signal plus lastActionError. KDE Connect's changes arrive as SIGNALS
                               (`busctl monitor`, see the streaming note below); Valent's
                               still arrive on the poll, which stays on for both as the
                               reconcile. Its parser logic is kept byte-for-byte in
@@ -3991,6 +3996,25 @@ across daemon restarts. Four more things about that path, each of which cost a m
   is the paired phone, which never asked — so the guard refuses a device without a request
   and the contract pins the absence of the fallback. 9395932d3 ("feat(phoneConnect): surface a
   peer's pairing request, and answer it").
+
+- **`Process.exec` on a Process that is still running terminates it first, so one Process fed
+  straight from `exec` keeps the last action of a burst and kills the rest.** Measured under
+  headless weston: a 2s command followed 500ms later by a second `exec` on the same Process
+  came back `exited code=15 status=1` with no output, and only the second ran. `PhoneConnect`'s
+  `runAction` was exactly that shape and would have dropped every `shareUrl` of a multi-file
+  send but one — silently, since a killed busctl prints nothing. It is a queue now
+  (`actionQueue`, pumped from the Process's own `onExited`); the contract refuses an `exec`
+  outside the pump. Anything else here that answers several clicks with one `Process` has the
+  same question. c7e160da1 ("feat(phoneConnect): actions queue behind one another instead of
+  killing the one in flight").
+- **A string the daemon hands to a `QUrl` is parsed as one, so a share URL is built like one.**
+  `share.shareUrl` takes a string and `QUrl`s it: a schemeless host (`example.org`, which the
+  fork's clipboard heuristic sends as-is) is relative to nothing, and a raw `#` or `?` in a
+  filename spliced after `file://` is a fragment or a query. `clipboardShareTarget` puts
+  `https://` on a bare host and `pickedFileUrls` percent-encodes each path segment; both are
+  in the synced region so `tst_phone_connect.qml` pins the strings. 8c29fc2be
+  ("feat(phoneConnect): share the clipboard as a link or as text"), 58f4cd225
+  ("feat(phoneConnect): pick files with kdialog and share each as a file URL").
 
 The gate deciding whether to start it was first written as a `readonly property bool` derived from
 `backend` and read from `onBackendChanged` — the change-handler trap under
