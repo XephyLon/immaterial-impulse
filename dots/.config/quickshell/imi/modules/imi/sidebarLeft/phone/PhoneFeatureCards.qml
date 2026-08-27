@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -73,7 +72,6 @@ Item {
 
     function openInstallGuide(feature: string, title: string): void {
         installGuide.feature = feature;
-        installGuide.dependencies = PhoneDeps.missingFor(feature);
         installGuide.headerTitle = title;
         installGuide.shown = true;
     }
@@ -362,20 +360,16 @@ Item {
         anchors.fill: parent
         visible: installGuide.shown
         z: 9999
+        // A binding, not an assignment: missingFor() reads every one of
+        // PhoneDeps' presence flags, so a Re-check that installs something
+        // empties this list on its own - and the popup dismisses itself when
+        // it does. Assigning the list once instead left the guide showing
+        // dependencies the probes had just stopped reporting.
+        dependencies: installGuide.feature.length > 0
+            ? PhoneDeps.missingFor(installGuide.feature)
+            : []
         detectedDistro: PhoneDeps.distro
         onCloseRequested: installGuide.shown = false
         onRecheckRequested: PhoneDeps.recheck()
-    }
-
-    // A re-check that resolves the feature closes the guide: leaving a list of
-    // dependencies that are no longer missing on screen reads as the install
-    // having failed.
-    Connections {
-        target: PhoneDeps
-        function onReadyChanged() {
-            if (installGuide.shown && PhoneDeps.ready && installGuide.dependencies.length > 0
-                    && PhoneDeps.missingFor(installGuide.feature).length === 0)
-                installGuide.shown = false;
-        }
     }
 }

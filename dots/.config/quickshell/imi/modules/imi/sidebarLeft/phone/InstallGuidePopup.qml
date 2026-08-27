@@ -6,7 +6,6 @@ import Quickshell
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
-import qs.modules.common.functions
 import "phone_cards.js" as PhoneCards
 
 /**
@@ -41,6 +40,13 @@ Item {
 
     onVisibleChanged: if (root.visible)
         root.selectedDistro = PhoneCards.initialDistro(root.detectedDistro);
+
+    // A re-check that resolves the feature asks to be dismissed. A guide left
+    // standing over an empty list reads as the install having failed, and the
+    // list is the same binding the rows are drawn from, so nothing else has to
+    // notice that the probes answered.
+    onDependenciesChanged: if (root.visible && root.dependencies.length === 0)
+        root.closeRequested();
 
     // A scrim that takes the click, so a click anywhere outside the card
     // dismisses the guide rather than reaching the cards behind it.
