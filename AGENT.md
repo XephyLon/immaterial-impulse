@@ -449,6 +449,14 @@ Wayland compositor die?` — indistinguishable from a real regression in whateve
 it was testing. Five times in one day, three full re-runs, and one agent
 "fixing" code that was never broken.
 
+**The queueing is inherent, not a cost of where the boundary sits**, and that
+was measured before it was argued about: on one full green run here, of 16m40s
+of work the compositor harnesses are **15m19s**, the free head above the acquire
+is **23s**, and everything else inside the lock is **1m21s**. So even a
+per-harness lock — forty acquire/release pairs and a rule every new harness has
+to remember — could overlap about a hundred seconds of a seventeen-minute run.
+Do not re-open that trade on the assumption that most of a run is static.
+
 Four properties to know before changing any of it.
 
 - **The lock lives on a file descriptor the shell holds open**, so the kernel
