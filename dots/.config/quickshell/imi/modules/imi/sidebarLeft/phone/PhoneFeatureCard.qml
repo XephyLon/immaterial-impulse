@@ -142,7 +142,24 @@ Item {
                 padding: Appearance.spacing.space125
                 color: ColorUtils.transparentize(root.colForeground, 0.82)
                 colSymbol: root.colForeground
-                animateChange: true
+                // No `animateChange` here, deliberately, and it is a fix
+                // rather than an omission. StyledText's deferred swap fades
+                // the GLYPH to zero, holds it there for the PropertyAction
+                // that applies the pending text, and fades it back - inside a
+                // MaterialShape that does not fade with it, so every frame of
+                // the swap is a badge with a hole in it. Two things make that
+                // worse here than anywhere else the idiom is used. This
+                // card's other three elements - the title, the subtitle and
+                // the trailing mark - change in one frame, so the glyph was
+                // the only part of the card out of step with its own state.
+                // And a rung can move twice inside one tier (offline ->
+                // connecting -> offline is what a launch that cannot start
+                // does), which retriggers the fade from wherever it had got
+                // to: measured in PhoneTabRuntimeTest, the glyph sat at or
+                // under 0.02 opacity for over 200ms of a 150ms tier and came
+                // out the other side still drawing the icon it went in with,
+                // having swapped nothing at all. Read on screen that is "the
+                // card's icon is gone".
             }
 
             ColumnLayout {
