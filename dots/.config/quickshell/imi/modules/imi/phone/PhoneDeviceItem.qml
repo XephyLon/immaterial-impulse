@@ -5,10 +5,10 @@ import QtQuick
 import QtQuick.Layouts
 
 /**
- * One row of the phone panel's roster: a device the daemon knows, its kind
+ * One row of a phone surface's roster: a device the daemon knows, its kind
  * and its state. Clicking it makes that device the one the chip, the pills
- * and the action row are about; the actions themselves live on the panel's
- * one action row, not here.
+ * and the action row are about; the actions themselves live on the
+ * surface's one action row, not here.
  */
 DialogListItem {
     id: root

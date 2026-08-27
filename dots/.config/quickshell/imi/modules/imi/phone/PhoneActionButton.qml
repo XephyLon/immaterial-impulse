@@ -3,7 +3,7 @@ import qs.modules.common.widgets
 import QtQuick
 
 /**
- * One round action on the phone panel's action row. The row is the fork's
+ * One round action on a phone surface's action row. The row is the fork's
  * shape; each button here is an action the service answers, and the
  * control dims itself while it cannot (RippleButton owns the disabled dim,
  * so nothing in here repeats it).

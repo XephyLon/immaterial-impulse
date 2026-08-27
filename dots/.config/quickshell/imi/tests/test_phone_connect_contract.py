@@ -27,8 +27,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SERVICE = ROOT / "services" / "PhoneConnect.qml"
 DOUBLE = ROOT / "tests" / "imports" / "testservices" / "PhoneConnect.qml"
-SURFACE = ROOT / "modules" / "imi" / "sidebarRight" / "phoneConnect"
-DIALOG = SURFACE / "PhoneConnectDialog.qml"
+# The surface is two directories: the pieces every phone panel shares
+# (modules/imi/phone) and the panel drawing them.
+SURFACE_DIRS = [ROOT / "modules" / "imi" / "phone",
+                ROOT / "modules" / "imi" / "sidebarRight" / "phoneConnect"]
+DIALOG = ROOT / "modules" / "imi" / "sidebarRight" / "phoneConnect" / "PhoneConnectDialog.qml"
+PAIRING_CARD = ROOT / "modules" / "imi" / "phone" / "PhonePairingCard.qml"
 
 # Everything the sidebar surface may ask the service to DO. The device
 # dialog is shaped after a fork whose action row carries six buttons; ours
@@ -575,8 +579,9 @@ def test_low_battery_is_observed_on_the_active_device_and_reported_with_notify_s
 
 def test_the_surface_calls_only_actions_the_model_exposes():
     called = set()
-    for path in sorted(SURFACE.glob("*.qml")):
-        called |= set(re.findall(r"\bPhoneConnect\.(\w+)\(", path.read_text()))
+    for directory in SURFACE_DIRS:
+        for path in sorted(directory.glob("*.qml")):
+            called |= set(re.findall(r"\bPhoneConnect\.(\w+)\(", path.read_text()))
     assert called, "the surface calls nothing on the service"
     assert called <= MODEL_ACTIONS, f"the surface invents actions: {sorted(called - MODEL_ACTIONS)}"
     declared = set(re.findall(r"^    function (\w+)\(", SERVICE.read_text(), re.M))
@@ -589,7 +594,7 @@ def test_the_dialog_has_one_action_row_of_the_three_model_actions():
     picker and SFTP."""
     dialog = DIALOG.read_text()
     assert dialog.count("id: actionRow") == 1, "the dialog must carry exactly one action row"
-    buttons = re.findall(r"PhoneConnectActionButton \{(.*?)\n(?:\s{12}|\s{8})\}", dialog, re.S)
+    buttons = re.findall(r"PhoneActionButton \{(.*?)\n(?:\s{12}|\s{8})\}", dialog, re.S)
     assert len(buttons) == 3, f"expected three action buttons, found {len(buttons)}"
     called = [re.search(r"PhoneConnect\.(\w+)\(", body).group(1) for body in buttons]
     assert called == ["ring", "ping", "sendClipboard"], called
@@ -600,7 +605,7 @@ def test_the_pairing_card_answers_through_the_two_device_methods_in_a_button_row
     WindowDialogButtonRow so the filled-confirm / outlined-dismiss rule is
     derived by the row rather than spelled at the card (the polkit contract
     refuses an `outlined:` outside the widgets directory for that reason)."""
-    card = (SURFACE / "PhoneConnectPairingCard.qml").read_text()
+    card = PAIRING_CARD.read_text()
     assert "PhoneConnect.acceptPairing(" in card and "PhoneConnect.cancelPairing(" in card
     assert "WindowDialogButtonRow {" in card, "the two answers must sit in a WindowDialogButtonRow"
     assert "outlined:" not in card, "the card spells the outline rule for itself"
