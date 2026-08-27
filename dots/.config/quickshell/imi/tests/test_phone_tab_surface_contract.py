@@ -230,7 +230,11 @@ class SubPageContractTests(unittest.TestCase):
                          "hazard, one branch behind the other.")
 
     def test_the_stub_declares_the_interface_the_pages_use(self):
-        stub = SUBPAGE_STUB.read_text(encoding="utf-8")
+        # Comment-stripped: the stub's own header names every one of these,
+        # and a check that reads the prose passes on a stub whose code has
+        # lost them - planted, `signal back` renamed to `signal notBack` was
+        # green until this line.
+        stub = strip_comments(SUBPAGE_STUB.read_text(encoding="utf-8"))
         self.assertRegex(stub, r"property string title", "no `title` on the stub")
         self.assertRegex(stub, r"signal back\b", "no `back()` on the stub")
         self.assertRegex(stub, r"default property alias contentData:",
