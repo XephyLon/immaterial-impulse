@@ -33,14 +33,40 @@ function cardState(available, reachable, connecting, active) {
 // The mirror's own state. A launch error is drawn as `offline` (the sibling
 // fork's choice): the card is not running, and the subtitle carries the
 // error's first line, so a second state would say the same thing twice.
+//
+// The same is true of a phone that is reachable over KDE Connect but that
+// `adb devices` does not list: scrcpy has nothing to attach to, so the card
+// cannot start - and that is knowable BEFORE the click, the way missing
+// tooling already is. It is `offline` for the same reason a launch error is,
+// and the subtitle says which of the two links is the missing one.
+//
+// `adbDevice` is deliberately TRI-STATE. `undefined` means the probe has not
+// answered yet, which must not read as a refusal - PhoneDeps' flags all start
+// false, so a plain falsy test would put every card on "no device" for the
+// first frames of every session, and would silently refuse for ever at any
+// call site that forgot to pass the flag at all.
 function mirrorState(flags) {
     const f = flags || {};
     if (!f.available) return "unavailable";
     if (f.running) return "active";
     if (f.launching) return "connecting";
     if (!f.reachable) return "offline";
+    if (f.adbDevice === false) return "offline";
     if (errorHeadline(f.error).length > 0) return "offline";
     return "ready";
+}
+
+// The microphone's, which the service cannot answer for itself: PhoneMic's
+// own `stateFor` knows whether a phone is reachable and not whether adb can
+// see it, and its scrcpy backend - the preferred one wherever scrcpy is
+// installed - drives the phone over ADB. The droidcam backend does not, so
+// the refusal is asked for rather than assumed (`needsAdbDevice`); the webcam
+// is the case that never asks, since droidcam-cli reaches the phone over
+// Wi-Fi when adb has nothing.
+function micState(flags) {
+    const f = flags || {};
+    const linked = f.reachable && !(f.needsAdbDevice && f.adbDevice === false);
+    return cardState(f.available, linked, f.connecting, f.active);
 }
 
 // A service's lastError is whatever the process wrote; only its first line
@@ -72,6 +98,9 @@ function mirrorSubtitleKey(flags) {
     // the error first put a live mirror's card on a stale line.
     if (f.running) return "running";
     if (f.launching) return "launching";
+    // Asked before the error, because "the phone is not on ADB" is what to do
+    // about the error scrcpy's exit produced.
+    if (f.adbDevice === false) return "noDevice";
     if (errorHeadline(f.error).length > 0) return "error";
     return "ready";
 }
@@ -99,6 +128,7 @@ function micSubtitleKey(flags) {
     if (!f.reachable) return "offline";
     if (f.connecting) return "connecting";
     if (f.active) return f.muted ? "muted" : "active";
+    if (f.needsAdbDevice && f.adbDevice === false) return "noDevice";
     return "ready";
 }
 
