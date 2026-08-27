@@ -418,6 +418,13 @@ def test_feedback_is_one_signal_and_one_error_string_and_a_failed_action_reaches
     )
     block = _process_block(source, "actionProc")
     assert "root.reportFailure(" in block, "a failed busctl action does not report through reportFailure"
+    # ...and every fire-and-forget action acknowledges the click, so the
+    # toast is one channel rather than one per action.
+    for name in ("ring", "ping", "sendClipboard"):
+        body = re.search(rf"function {name}\(.*?\n    \}}\n", source, re.S)
+        assert body and re.search(r"root\.actionFeedback\(Translation\.tr\(.*\), true\)", body.group(0)), (
+            f"{name}() raises no actionFeedback on success"
+        )
 
 
 def test_share_goes_through_the_share_plugin_one_url_per_call():
