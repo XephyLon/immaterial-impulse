@@ -180,6 +180,11 @@ Singleton {
                     property list<var> laps: []
                 }
             }
+
+            property JsonObject phone: JsonObject {
+                property string activeDeviceId: ""
+                property list<string> recentDeviceIds: []
+            }
         }
     }
 }
