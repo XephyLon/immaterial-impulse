@@ -173,6 +173,41 @@ W5), so the dialog still draws three actions until the tab replaces it.
   fork's extra guard on the previous charge being ≥ 20 (which kept a phone
   already at 15% at boot silent) is not carried.
 
+**The notification slice has landed** (5cad7ad40 "feat(phoneNotifications):
+mirror the phone's notifications off KDE Connect over busctl", 1cead70b8
+"feat(notifications): drop the daemon's copy of a notification the phone tab
+mirrors"), as the Phone tab design's W2:
+
+- `services/PhoneNotifications.qml`, a second singleton on the same transport
+  with a serialized busctl queue of its own and no monitor: the four
+  notification signals joined `signalChangesDevices`' allowlist and
+  `PhoneConnect.deviceChangeSettled()` is the refetch trigger, beside a change
+  of the active device and a 60s reconcile. A sweep is the device's
+  `activeNotifications` - a list of PUBLIC ids, captured live as
+  `{"type":"as","data":[["70"]]}` - and one `GetAll` per
+  `<device>/notifications/<publicId>` leaf; the package comes out of the
+  `internalId` (`0|com.truecaller|…`).
+- Dismiss is the leaf's own `dismiss()`, never `sendAction("cancel")`; a
+  reply is device-level `sendReply(replyId, text)` and a refetch 800ms later
+  (a declared constant); `sendAction` is keyed on the `internalId`, which is
+  the Android key the daemon relays - the daemon exposes no action names over
+  D-Bus, so the leaf's `actions` is empty on the daemon this was measured
+  against.
+- The list is cached per device in `Persistent.states.phone` and restored
+  once the active device is known, so the tab is not empty before the first
+  sweep.
+- The dedupe: `services/Notifications.qml` drops a desktop notification posted
+  as `kdeconnect` / `kde connect` / `org.kde.kdeconnect` or as a paired
+  device's name, at ingestion, only while the tab is enabled and the active
+  device is reachable.
+- Covered by `tests/tst_phone_notifications.qml` (on the captured replies),
+  `tests/test_phone_notifications_contract.py` (parser region synced with the
+  double, argv only, leaf dismiss, declared delay, one stream, the gate) and
+  `tests/test_phone_notifications_runtime.py` (a fake busctl serving one
+  notification whose monitor verb posts a second - the signal is the only
+  thing that can deliver it - with dismiss, sendReply and sendAction scored
+  off the fake's log on the leaf path).
+
 ## Prior art: P3DROVFX/ii-p3drovfx
 
 Recorded because the next slice is decided from it, not because any of it is
@@ -287,25 +322,20 @@ Ordered by value. Each borrows the fork's shape and none of its transport:
 every read is a `busctl` argv, every write goes through `runAction`, and both
 backends stay behind the one model.
 
-**Slices 1 (signal-driven updates) through 6 are done** — see "Current
-state" above. The next slice is now notification mirroring, and it inherits
-the stream and the surface: its signals go in `signalChangesDevices`'
-allowlist, the match rule already covers the whole `/modules/kdeconnect`
-namespace, and the notification area is already the fill item waiting for
-it, so nothing about the transport or the layout has to be rebuilt. What is
-still open from slice 1 is Valent: its signal set was not verifiable and it
-keeps the poll until it is.
+**Slices 1 (signal-driven updates) through 6 and the notification slice are
+done** — see "Current state" above. What is still open from slice 1 is
+Valent: its signal set was not verifiable and it keeps the poll until it
+is, and the notification mirror is KDE Connect only for the same reason.
 
-1. **Notification mirroring.** Borrow: the leaf `notification.dismiss` (not
-   `sendAction("cancel")`), `sendReply` with a re-fetch, `internalId` →
-   package, group-by-app, and the dedupe rule against kdeconnectd's own
-   desktop notifications with its "only while we are showing them" gate. Not:
-   the second `RemoteNotification*` list — the "Approach" below still says
-   route through the shell's own notification system, and that is the
-   decision to make first; the parallel-list design is what makes the dedupe
-   necessary. Not: the qdbus/`fetch_notifications.py` split; one `busctl`
-   `GetAll` per leaf covers it. Not: "open on phone" — that is scrcpy+adb,
-   out of scope.
+1. **Notification mirroring.** Done — see "Current state". The design
+   (`docs/superpowers/specs/2026-08-27-phone-tab-design.md`) decided the
+   question this item left open: a dedicated list in the Phone tab, deduped
+   at the desktop server, rather than routing through the shell's own
+   notification system. Borrowed as planned: the leaf `notification.dismiss`,
+   `sendReply` with a re-fetch, `internalId` → package, group-by-app, and the
+   gated dedupe. Not borrowed: the qdbus/`fetch_notifications.py` split (one
+   `busctl` `GetAll` per leaf), and "open on phone" (scrcpy+adb, another
+   workstream).
 2. **`connectivity_report` and `reachableAddresses`.** Done — see "Current
    state". One more `GetAll` per device, at the report's own leaf path, and
    one more signal; the model carries the addresses and the cellular

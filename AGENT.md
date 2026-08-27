@@ -596,6 +596,17 @@ services/                  Singletons wrapping external state/processes - one pe
                               - a button whose call the service does not answer is a fake
                               action). The dialog itself is driven end to end by
                               tests/test_phone_connect_dialog_runtime.py
+  PhoneNotifications.qml       The paired phone's notifications, mirrored off KDE Connect on
+                              the same busctl transport through a serialized queue of its
+                              own. No monitor of its own: the four notification signals sit
+                              on PhoneConnect's allowlist and its deviceChangeSettled() is the
+                              trigger (one stream). A sweep is activeNotifications - a list of
+                              PUBLIC ids - plus one GetAll per leaf; dismiss is the LEAF's own
+                              method (see the busctl notes below); the list is cached per
+                              device in Persistent.states.phone. Parser region synced with a
+                              logic-only double (tests/test_phone_notifications_contract.py);
+                              driven end to end by tests/test_phone_notifications_runtime.py
+                              5cad7ad40 ("feat(phoneNotifications): mirror the phone's notifications off KDE Connect over busctl")
   SchemePreview.qml            Per-scheme swatches for the scheme pickers: one venv run of
                               scripts/colors/scheme_preview.py quantizes the wallpaper once and
                               builds every Material variant from it. Cached against the wallpaper
@@ -3996,6 +4007,34 @@ across daemon restarts. Four more things about that path, each of which cost a m
   is the paired phone, which never asked — so the guard refuses a device without a request
   and the contract pins the absence of the fallback. 9395932d3 ("feat(phoneConnect): surface a
   peer's pairing request, and answer it").
+- **A notification is dismissed on its LEAF, and the daemon's `sendAction` is keyed on the
+  internalId.** `<device>/notifications` answers `activeNotifications` with a list of PUBLIC
+  ids (`"70"`), and each `<device>/notifications/<publicId>` leaf carries the fields and a
+  `dismiss()` of its own - introspected live. The device-level `sendAction(key, action)`
+  invokes a named Android action button, so the fork's first dismiss, `sendAction(id,
+  "cancel")`, removed the card and left the phone showing it ("cancel" is not a button); and
+  its `key` is the Android notification key the daemon relays as `internalId`, not the public
+  id. The daemon exposes no action names over D-Bus at all, so `actions` is whatever a leaf
+  happens to carry - empty on the daemon this was measured against.
+  `services/PhoneNotifications.qml` runs no monitor of its own: its four signals are on
+  `signalChangesDevices`' allowlist and `deviceChangeSettled()` is its trigger, which the
+  runtime harness proves by seeding both timers far out so only the signal can deliver the
+  second notification. Two traps from that harness: a second `exec()` on a running `Process`
+  is refused rather than queued, so writes share the serialized read queue (dismissAll is one
+  call per leaf); and a bash fake that strips a suffix off `$*` directly strips it per
+  argument, which left the fake's state file untouched and the driver's dismiss list red.
+  5cad7ad40 ("feat(phoneNotifications): mirror the phone's notifications off KDE Connect over
+  busctl"), dbe6e73d5 ("test(phoneNotifications): drive the sweep, a signal, dismiss and reply
+  against a fake busctl").
+- **kdeconnectd's desktop copy of a mirrored notification is dropped at ingestion, behind the
+  mirror gate.** `services/Notifications.qml`'s `onNotification` asks
+  `PhoneNotifications.mirrorsDesktopNotification(appName)` before tracking - the daemon posts
+  relayed notifications as "KDE Connect" or as the phone's own name - and the gate is
+  `mirrorActive` (tab enabled AND the active device reachable), because with the tab off or
+  the phone away the daemon's copy is the only one the user gets. The tab switch is read as
+  `Config.options.sidebar?.phone?.enable ?? true`: the key is declared by another workstream,
+  and an undeclared key reads `undefined`, not an error. 1cead70b8 ("feat(notifications): drop
+  the daemon's copy of a notification the phone tab mirrors").
 
 - **`Process.exec` on a Process that is still running terminates it first, so one Process fed
   straight from `exec` keeps the last action of a burst and kills the rest.** Measured under
