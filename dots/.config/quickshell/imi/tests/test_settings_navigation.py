@@ -43,6 +43,30 @@ class SettingsNavigationTests(unittest.TestCase):
             source = (ROOT / f"modules/imi/settings/pages/{page}.qml").read_text(encoding="utf-8")
             self.assertIn("function goTo(term)", source, page)
 
+    def test_section_jumps_animate_on_the_scroll_tier(self):
+        """A page's goTo() must not write contentY: ContentPage is a momentum
+        StyledFlickable, and momentum (like expressive) disables the
+        `Behavior on contentY`, so a direct write snaps the page to the section
+        in one frame. StyledFlickable.scrollToY animates on the scroll tier in
+        every mode, whole (duration, type and curve from one tier), and every
+        user input stops it."""
+        flickable = (ROOT / "modules/common/widgets/StyledFlickable.qml").read_text(encoding="utf-8")
+        self.assertIn("function scrollToY(y)", flickable)
+        anim = re.search(r"NumberAnimation \{\s*id: programmaticScroll(.*?)\n    \}", flickable, re.S)
+        self.assertIsNotNone(anim, "no programmaticScroll animation on StyledFlickable")
+        for prop in ("duration: Appearance.animation.scroll.duration",
+                     "easing.type: Appearance.animation.scroll.type",
+                     "easing.bezierCurve: Appearance.animation.scroll.bezierCurve"):
+            self.assertIn(prop, anim.group(1), prop)
+        self.assertEqual(flickable.count("programmaticScroll.stop()"), 5,
+                         "scrollToY itself, the three wheel paths and onMovementStarted each stop the programmatic scroll")
+        for page in sorted((ROOT / "modules/imi/settings/pages").glob("*.qml")):
+            source = page.read_text(encoding="utf-8")
+            if "function goTo(term)" not in source:
+                continue
+            self.assertNotIn("page.contentY =", source, f"{page.name} writes contentY directly - that snaps under momentum scrolling")
+            self.assertIn("page.scrollToY(", source, f"{page.name}'s goTo does not scroll through scrollToY")
+
     def test_branches_animate_height_opacity_and_arrow(self):
         self.assertIn("id: sectionRevealer", self.source)
         self.assertIn("vertical: true", self.source)
