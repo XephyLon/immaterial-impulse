@@ -133,6 +133,18 @@ own repo; the installer pins which revision it builds.
   sit dead centre instead of a pixel and a half to the left.
 
 ### Fixed
+- **The Phone tab's Android Apps page says what to turn on when it cannot
+  reach the phone.** App Mode drives the phone over ADB, which is a
+  different link from the one KDE Connect pairs: with a phone reachable on
+  the network but no `adb devices` entry, the page drew one thin line of red
+  text ("Phone not reachable over ADB") and an unhelpful "No apps yet" under
+  it. It now draws one panel in the error colours, carrying both ways to get
+  a device - USB debugging over a cable, and wireless debugging with the
+  pair-and-connect Android 11 and newer needs after every toggle - and the
+  empty state stays out of the way until there is a phone that answered with
+  nothing. As soon as a device appears the panel goes and the app list is
+  fetched without a click. The empty state's own line is held to a readable
+  measure and centred instead of running the full width of the panel.
 - **Contacts with an Arabic name fit inside their row.** In the Phone tab's
   Contacts list, a contact whose name is written in Arabic had its number and
   its avatar drawn below the bottom of its own card - a row taller than the
