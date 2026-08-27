@@ -33,9 +33,20 @@ PhoneSubPage {
     readonly property bool canStart: PhoneCamera.available && root.deviceReachable
 
     ContentPage {
+        id: page
+
         Layout.fillWidth: true
         Layout.fillHeight: true
-        forceWidth: false
+        // ContentPage centres its content column at
+        // `Math.max(baseWidth, implicitWidth)`, and `baseWidth` defaults to
+        // 600 - the settings window's number. The panel hands this page 440,
+        // so the column was drawn from -80 to 520 and every row was clipped
+        // at the panel's left edge while the page rendered perfectly and
+        // logged nothing (measured in PhoneSubPageWidthRuntimeTest.qml). The
+        // column takes the width it is really given, less the lane the scroll
+        // bar overlays.
+        forceWidth: true
+        baseWidth: Math.max(0, page.width - Appearance.spacing.space200)
         bottomContentPadding: Appearance.spacing.space400
 
         NoticeBox {
