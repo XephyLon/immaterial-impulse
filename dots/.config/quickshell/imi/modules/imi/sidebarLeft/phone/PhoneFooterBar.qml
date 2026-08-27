@@ -21,6 +21,16 @@ import QtQuick.Layouts
  * the two actions off the row - but its label was centred in it with nothing
  * bounding it, and a centred label paints straight over its neighbours rather
  * than eliding. The label is anchored to the pill's own box now.
+ *
+ * The two actions state BOTH of their dimensions
+ * (`Appearance.sizes.phoneFooterButton*`) rather than sizing themselves from
+ * their content. `RippleButtonWithIcon` measures a glyph plus a label, and
+ * with the label empty its `Layout.fillWidth` slot still took the row's
+ * leftover width - so each button came out 44x35, near enough square to read
+ * as a circle under `rounding.full`, with the glyph drawn 2.5px left of the
+ * button's own centre. An icon-only button is a `RippleButton` whose
+ * contentItem is a `MaterialSymbol` declaring both alignments, which is what
+ * centres a Control's content item (an anchor on it is decoration).
  */
 Item {
     id: root
@@ -39,16 +49,24 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Appearance.spacing.space100
 
-        RippleButtonWithIcon {
+        RippleButton {
             id: syncButton
-            materialIcon: "sync"
-            mainText: ""
+            implicitWidth: Appearance.sizes.phoneFooterButtonWidth
+            implicitHeight: Appearance.sizes.phoneFooterButtonHeight
             enabled: root.online
             buttonRadius: Appearance.rounding.full
             colBackground: Appearance.colors.colSecondaryContainer
             colBackgroundHover: Appearance.colors.colSecondaryContainerHover
             colRipple: Appearance.colors.colSecondaryContainerActive
             onClicked: PhoneNotifications.refresh()
+
+            contentItem: MaterialSymbol {
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                text: "sync"
+                iconSize: Appearance.font.pixelSize.larger
+                color: Appearance.colors.colOnSecondaryContainer
+            }
 
             StyledToolTip {
                 text: Translation.tr("Sync notifications")
@@ -58,7 +76,7 @@ Item {
         Rectangle {
             id: countPill
             Layout.fillWidth: true
-            implicitHeight: 35
+            implicitHeight: Appearance.sizes.phoneFooterButtonHeight
             radius: Appearance.rounding.full
             color: Appearance.colors.colLayer2
 
@@ -82,16 +100,25 @@ Item {
             }
         }
 
-        RippleButtonWithIcon {
+        RippleButton {
             id: clearButton
-            materialIcon: root.count > 0 ? "delete_sweep" : "do_not_disturb_on"
-            mainText: ""
+            implicitWidth: Appearance.sizes.phoneFooterButtonWidth
+            implicitHeight: Appearance.sizes.phoneFooterButtonHeight
             enabled: root.online && root.count > 0
             buttonRadius: Appearance.rounding.full
             colBackground: Appearance.colors.colSecondaryContainer
             colBackgroundHover: Appearance.colors.colSecondaryContainerHover
             colRipple: Appearance.colors.colSecondaryContainerActive
             onClicked: PhoneNotifications.dismissAll()
+
+            contentItem: MaterialSymbol {
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                text: root.count > 0 ? "delete_sweep" : "do_not_disturb_on"
+                iconSize: Appearance.font.pixelSize.larger
+                color: Appearance.colors.colOnSecondaryContainer
+                animateChange: true
+            }
 
             StyledToolTip {
                 text: root.count > 0
