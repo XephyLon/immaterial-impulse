@@ -13,6 +13,16 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **Phone Connect warns when your phone's battery is low, and can send it
+  files, links and your clipboard, or open its storage.** A desktop
+  notification arrives once when the paired phone drops below 20% while
+  not charging, and again when it is back at 25% or plugged in. The phone
+  service can now share files picked with the file dialog, a link or a
+  piece of text from the clipboard (a link is recognised and sent as one),
+  and browse the phone over SFTP, opening its internal storage rather than
+  the bare mount. The device you pick in the panel is remembered across
+  restarts, with the last five picks kept for the list. The buttons for the
+  new actions arrive with the Phone tab; the notifications work now.
 - **Phone Connect shows your phone's wireless address and cellular network,
   and answers pairing requests.** The panel reads the address KDE Connect
   reaches the phone on and its cellular network type (LTE, 5G, …) alongside
