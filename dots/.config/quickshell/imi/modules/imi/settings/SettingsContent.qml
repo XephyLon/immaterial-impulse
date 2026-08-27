@@ -780,6 +780,37 @@ Item {
                         descriptionHorizontalAlignment: Text.AlignHCenter
                     }
 
+                    // ...and the same pane is empty for the frames a page takes
+                    // to incubate. It is gated on a settle rather than on the
+                    // status directly: a page that arrives inside one motion
+                    // tier needs no announcement, and a placeholder that fades
+                    // in and straight back out is a flash the switch does not
+                    // otherwise have.
+                    PagePlaceholder {
+                        id: buildingPlaceholder
+                        readonly property var currentLoader: pagesRepeater.itemAt(root.currentPage) ?? null
+                        readonly property bool building: !root.showingProfile
+                            && currentLoader?.status === Loader.Loading
+                        onBuildingChanged: {
+                            if (building)
+                                buildingSettle.restart();
+                            else
+                                buildingSettle.stop();
+                        }
+                        shown: building && buildingSettle.elapsed
+                        icon: "hourglass"
+                        title: Translation.tr("Building this page…")
+                        descriptionHorizontalAlignment: Text.AlignHCenter
+
+                        Timer {
+                            id: buildingSettle
+                            property bool elapsed: false
+                            interval: Appearance.animation.elementMoveFast.duration
+                            onTriggered: buildingSettle.elapsed = true
+                            onRunningChanged: if (running) buildingSettle.elapsed = false
+                        }
+                    }
+
                     Loader {
                         id: profileLoader
                         asynchronous: true
