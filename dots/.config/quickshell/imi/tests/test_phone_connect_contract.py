@@ -34,7 +34,8 @@ DIALOG = SURFACE / "PhoneConnectDialog.qml"
 # dialog is shaped after a fork whose action row carries six buttons; ours
 # carries the three this model backs, and a fourth appears here or not at
 # all - a button whose call the service does not answer is a fake action.
-MODEL_ACTIONS = {"refresh", "ring", "ping", "sendClipboard", "acceptPairing", "cancelPairing"}
+MODEL_ACTIONS = {"refresh", "ring", "ping", "sendClipboard", "acceptPairing", "cancelPairing",
+                 "shareUrls", "shareText"}
 
 BEGIN = "// BEGIN phone-connect parser logic"
 END = "    // END phone-connect parser logic"
@@ -180,7 +181,8 @@ def test_device_ids_are_validated_before_path_splicing():
         "valent object paths must be validated before DescribeAll is called on them"
     )
     # Actions build paths from ids/paths too - each must re-check.
-    for action in ("ring", "ping", "sendClipboard", "acceptPairing", "cancelPairing"):
+    for action in ("ring", "ping", "sendClipboard", "acceptPairing", "cancelPairing",
+                   "shareUrls", "shareText"):
         body = re.search(rf"function {action}\(.*?\n    \}}\n", source, re.S)
         assert body, f"{action}() missing"
         assert "validDeviceId" in body.group(0) or "validValentObjectPath" in body.group(0), (
@@ -378,6 +380,33 @@ def test_feedback_is_one_signal_and_one_error_string_and_a_failed_action_reaches
     )
     block = _process_block(source, "actionProc")
     assert "root.reportFailure(" in block, "a failed busctl action does not report through reportFailure"
+
+
+def test_share_goes_through_the_share_plugin_one_url_per_call():
+    """Slice 4's transport: `org.kde.kdeconnect.device.share.shareUrl` /
+    `shareText` on the device's /share leaf, one string argument each
+    (busctl signature "s"), serialized through runAction. shareUrls takes
+    whatever list it is handed and keeps only file:// and http(s):// entries
+    through the synced shareableUrls filter, so a stray path or an empty
+    line never reaches the daemon as a URL."""
+    source = SERVICE.read_text()
+    assert re.search(r'readonly property bool canShare: root\.backend === "kdeconnect"', source), (
+        "canShare is not declared as kdeconnect-only"
+    )
+    urls = re.search(r"function shareUrls\(.*?\n    \}\n", source, re.S)
+    assert urls, "shareUrls() missing"
+    assert "root.shareableUrls(" in urls.group(0), "shareUrls does not filter through shareableUrls"
+    assert 'root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/share`, "org.kde.kdeconnect.device.share", "shareUrl", ["s", url]))' in urls.group(0), (
+        "shareUrls does not call share.shareUrl on the share leaf with one string argument"
+    )
+    text = re.search(r"function shareText\(.*?\n    \}\n", source, re.S)
+    assert text, "shareText() missing"
+    assert '"org.kde.kdeconnect.device.share", "shareText", ["s", text]' in text.group(0), (
+        "shareText does not call share.shareText with one string argument"
+    )
+    assert "root.runAction(" in text.group(0)
+    for body in (urls, text):
+        assert 'root.backend !== "kdeconnect"' in body.group(0), "a share action runs on a backend that has no share plugin"
 
 
 # ---- the sidebar surface ----------------------------------------------------
