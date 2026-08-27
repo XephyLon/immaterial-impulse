@@ -525,6 +525,31 @@ TestCase {
         compare(PhoneConnect.shareableUrls("https://example.org").length, 0)
     }
 
+    function test_clipboard_share_target_sends_a_url_as_a_link() {
+        // The fork's heuristic: a scheme, or something shaped like a host.
+        compare(JSON.stringify(PhoneConnect.clipboardShareTarget("https://example.org/a?b=c")),
+                JSON.stringify({ kind: "url", value: "https://example.org/a?b=c" }))
+        compare(PhoneConnect.clipboardShareTarget("HTTP://EXAMPLE.ORG").kind, "url")
+        compare(PhoneConnect.clipboardShareTarget("  https://example.org  ").value, "https://example.org")
+        // A bare host is a link too - but the daemon opens a QUrl, and a
+        // schemeless one is relative, so it leaves with https:// on it.
+        compare(JSON.stringify(PhoneConnect.clipboardShareTarget("example.org")),
+                JSON.stringify({ kind: "url", value: "https://example.org" }))
+        compare(PhoneConnect.clipboardShareTarget("docs.example.co.uk/path/to").value, "https://docs.example.co.uk/path/to")
+    }
+
+    function test_clipboard_share_target_sends_prose_as_text_and_refuses_nothing() {
+        compare(JSON.stringify(PhoneConnect.clipboardShareTarget("meet me at 5")),
+                JSON.stringify({ kind: "text", value: "meet me at 5" }))
+        // A host followed by more words is a sentence, not a link.
+        compare(PhoneConnect.clipboardShareTarget("example.org is down again").kind, "text")
+        compare(PhoneConnect.clipboardShareTarget("v1.2").kind, "text")
+        compare(PhoneConnect.clipboardShareTarget("  two words  ").value, "two words")
+        compare(PhoneConnect.clipboardShareTarget("").kind, "empty")
+        compare(PhoneConnect.clipboardShareTarget("   \n").kind, "empty")
+        compare(PhoneConnect.clipboardShareTarget(null).kind, "empty")
+    }
+
     // ---- device id guard ----
 
     function test_valid_device_id_accepts_kdeconnect_and_valent_ids() {

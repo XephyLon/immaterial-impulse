@@ -35,7 +35,7 @@ DIALOG = SURFACE / "PhoneConnectDialog.qml"
 # carries the three this model backs, and a fourth appears here or not at
 # all - a button whose call the service does not answer is a fake action.
 MODEL_ACTIONS = {"refresh", "ring", "ping", "sendClipboard", "acceptPairing", "cancelPairing",
-                 "shareUrls", "shareText"}
+                 "shareUrls", "shareText", "shareClipboard"}
 
 BEGIN = "// BEGIN phone-connect parser logic"
 END = "    // END phone-connect parser logic"
@@ -407,6 +407,31 @@ def test_share_goes_through_the_share_plugin_one_url_per_call():
     assert "root.runAction(" in text.group(0)
     for body in (urls, text):
         assert 'root.backend !== "kdeconnect"' in body.group(0), "a share action runs on a backend that has no share plugin"
+
+
+def test_share_clipboard_reads_wl_paste_as_a_constant_argv_and_decides_through_the_synced_rule():
+    """The clipboard is read with `wl-paste --no-newline` - a constant argv,
+    never a shell string with anything interpolated - and what to do with
+    the text is the synced clipboardShareTarget decision, so the QML suite
+    pins the URL heuristic. An empty clipboard is a reported failure
+    ("Clipboard is empty"), not a share of nothing."""
+    source = SERVICE.read_text()
+    block = _process_block(source, "clipboardProc")
+    assert re.search(r'command:\s*\["wl-paste", "--no-newline"\]', block), (
+        "the clipboard read is not the constant argv [wl-paste, --no-newline]"
+    )
+    assert "${" not in block and '"sh"' not in block and '"bash"' not in block
+    assert "root.clipboardShareTarget(" in block, "the clipboard text is not classified through clipboardShareTarget"
+    assert 'root.reportFailure(Translation.tr("Clipboard is empty"))' in block, (
+        "an empty clipboard is not reported as one"
+    )
+    assert "root.shareUrls(" in block and "root.shareText(" in block, (
+        "the clipboard does not reach both share actions"
+    )
+    body = re.search(r"function shareClipboard\(.*?\n    \}\n", source, re.S)
+    assert body, "shareClipboard() missing"
+    assert "clipboardProc.running" in body.group(0), "shareClipboard does not start the read (or guard a read in flight)"
+    assert "root.validDeviceId(d.id)" in body.group(0), "shareClipboard aims at an unvalidated device"
 
 
 # ---- the sidebar surface ----------------------------------------------------
