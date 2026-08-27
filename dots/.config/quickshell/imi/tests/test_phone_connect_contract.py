@@ -338,6 +338,26 @@ def test_signal_bursts_are_coalesced_and_never_dropped():
     )
 
 
+def test_actions_queue_behind_one_another_instead_of_killing_the_one_in_flight():
+    """`Process.exec` on a Process that is still running terminates it first
+    (measured under headless weston: a 2s command followed 500ms later by a
+    second exec exited with code 15, status 1, and no output). One
+    `actionProc` fed straight from runAction therefore drops every action but
+    the last of a burst - and a multi-file share IS a burst. runAction pushes
+    onto a queue that the process's own exit pumps."""
+    source = SERVICE.read_text()
+    body = re.search(r"function runAction\(.*?\n    \}\n", source, re.S)
+    assert body, "runAction() missing"
+    assert "actionProc.exec(" not in body.group(0), "runAction execs straight onto a Process that may be busy"
+    assert "root.actionQueue.push(" in body.group(0), "runAction does not queue"
+    pump = re.search(r"function pumpActions\(.*?\n    \}\n", source, re.S)
+    assert pump, "pumpActions() missing"
+    assert "actionProc.running" in pump.group(0), "the pump does not check whether the process is busy"
+    assert "actionProc.exec(" in pump.group(0), "the pump is not what starts the process"
+    block = _process_block(source, "actionProc")
+    assert "root.pumpActions()" in block, "the action process's exit does not pump the queue"
+
+
 # ---- the sidebar surface ----------------------------------------------------
 
 
