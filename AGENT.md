@@ -4775,6 +4775,71 @@ the icon it went in with, having swapped nothing. Before reaching for
 often the value can change.
 3c82747df ("fix(phone): the feature card's glyph stops blanking its own badge").
 
+**And where the missing link is the whole page rather than one card's subtitle,
+it is drawn as a panel that says what to do.** The Phone tab's Android Apps
+page is another reader of `PhoneDeps.adbDevice` and the first where the answer
+is everything on screen: with a phone paired to KDE Connect over the LAN and
+nothing under `adb devices`, App Mode has no transport, so the page has no list,
+and what it drew was the session manager's own sentence - "Phone not reachable
+over ADB", `scrcpy_session_manager.py`'s `apps_error` - as one line of red text,
+with a "No apps yet" empty state underneath saying the same thing in weaker
+words and offering no way out of it. Four things from repairing it.
+
+- **The state is read off `PhoneDeps.adbDevice`, never off
+  `PhoneScrcpy.appsError`.** That string is a *consequence*: it exists only
+  after a list request has been made and failed, so it is absent on a page
+  nobody has asked yet and present for reasons that are not this one, and a
+  surface matching on its text is a second answer to a question the probe
+  already answers. The tri-state rule b591575c4 records carries unchanged -
+  `PhoneDeps.ready ? PhoneDeps.adbDevice : undefined`, because every flag in
+  that singleton starts `false` and a plain falsy test draws the panel for the
+  first frames of every session.
+- **Two messages about one fact is one message too many, and the one that goes
+  is the one that cannot act.** `PagePlaceholder` is kept for the state it is
+  actually about - a phone the shell can reach that came back with no apps -
+  and the status line stands down while the panel is up rather than repeating
+  the supervisor's sentence above it. Both are `visible`/`shown` gates on the
+  same derivation, so there is no ordering between them to get wrong.
+- **A panel naming a state owes the ways out of it, and only the ones that
+  exist.** Both routes are on it because the machine this was reported from has
+  neither: USB debugging over a cable (Developer options, then the fingerprint
+  prompt), and wireless debugging, which on Android 11+ picks a **new port
+  every time the switch is toggled** - so the `adb pair`/`adb connect` pair is
+  typed by hand and typed again after each toggle and each reboot. The fork
+  polls mDNS for that port; this shell does not, and the panel therefore
+  promises no button. What it does promise is what the shell really does: the
+  card stack's own five-second poll keeps re-asking `adb devices` while the tab
+  is open (it stays loaded under a sub-page, so this page adds no second
+  poller), and the page asks for the app list once when a device appears -
+  an observation of that one state change, not a timer and not a binding, which
+  is what keeps `--list-apps` from starting a scrcpy per turn.
+- **A `PagePlaceholder` description handed the page's whole width is a
+  paragraph at a measure nobody chose.** `dropIconWhenCramped` widens that
+  column to the page - only so the fit decision measures against a width that
+  cannot move under it - and the description, which fills, inherited it: 63
+  characters across 440px, drawn edge to edge and aligned left. The clamp is
+  `descriptionMaximumWidth` on the shared widget, opt-in at -1 so the callers
+  drawing a two-word description keep exactly what they drew, and it carries
+  the centring with it because a clamped paragraph left against the column's
+  edge reads as a margin on one side only. The other three cramped call sites
+  (Contacts, and both notification lists) have the same paragraph problem and
+  are left alone here.
+
+None of it is reachable from a source check or from `qmltestrunner`: which
+message is on screen is a question about three states at once.
+`PhoneTabLayoutRuntimeTest.qml` walks all three in one run - no device, a
+device with no apps, a device with apps - behind a fake `adb` and a fake
+`scrcpy` that answer off two files the harness creates between steps. The fakes
+are the load-bearing part: both tools are really installed on the maintainer's
+machine, so without them the page reads whatever a real `adb devices` answers
+and the reported state vanishes the moment a phone is plugged in.
+(feat(widgets): NoticeBox draws in whichever container role it is given,
+feat(widgets): PagePlaceholder can hold its description to a measure,
+fix(phone): the Apps page says what to turn on when ADB has no device,
+fix(phone): the Apps page's empty state stands down while the panel is up,
+fix(phone): the Apps page's empty state reads as a paragraph, not a rule,
+test(phone): drive the Apps page through its three ADB states.)
+
 **And the surfaces that DRIVE those services get their allowlist derived rather than written
 down.** "A button whose call no service answers is a fake action" is stated for the right
 sidebar's phone dialog as a hand-typed `MODEL_ACTIONS` set. The Phone tab's pages reach five
