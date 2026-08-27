@@ -1567,6 +1567,18 @@ row. ("perf(search): rebuild the launcher results once per turn, not per input c
 
 ## Dynamic/data-driven QML gotchas
 
+- **CI's Qt is older than yours, and its JS parser is too.** The workflow
+  installs Ubuntu's `qt6-declarative-dev`; a developer here runs Arch's
+  current one. Syntax the newer parser accepts is a COMPILE error on the
+  older one, and in a `tst_*.qml` it surfaces as
+  `FAIL!  : ...::compile() Unexpected token `identifier'` - naming neither
+  the construct nor the line. Numeric separators (`1_090_000`, ES2021) cost
+  one CI round this way. `tests/lint_qml_js_dialect.py` now fails the suite
+  on them, on logical assignment (`??=`, `||=`, `&&=`) and on optional catch
+  binding, with strings and comments stripped first so a device name like
+  `alsa_output.pci-0000_00_1f.3` is not mistaken for one
+  8402b3de5 ("test(phone): the sub-page shim becomes a symlink to the host it stood in for")
+
 Relevant to anything that instantiates QML components from external data (JSON manifests, config
 arrays, etc.) rather than static declarations - e.g. the plugin system in
 `modules/common/plugins/`:
