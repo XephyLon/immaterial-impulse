@@ -425,7 +425,7 @@ Scope {
             overviewScope.toggleClipboard();
         }
         // Which screen's window the last open landed on - what
-        // tests/run_overview_focus_probe.sh reads after moving focus between
+        // tests/run_persistent_surface_focus_probe.sh reads after moving focus between
         // two outputs. Empty until the first open.
         function activeScreen(): string {
             return overviewScope.activeWindow?.modelData.name ?? "";
