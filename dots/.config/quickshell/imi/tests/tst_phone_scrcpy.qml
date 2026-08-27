@@ -50,6 +50,9 @@ TestCase {
         PhoneScrcpy.appModeSupported = true
         PhoneCamera.reset()
         PhoneCamera.available = true
+        PhoneMic.reset()
+        PhoneMic.available = true
+        PhoneMic.preferredBackend = "scrcpy"
         Config.options.phone.scrcpy.appMode.favoritePackages = []
         Config.options.phone.scrcpy.useWireless = false
         Config.options.phone.scrcpy.autoWirelessIp = true
@@ -58,7 +61,12 @@ TestCase {
         Config.options.phone.webcam.wifiIp = ""
         Config.options.phone.webcam.mirrorHorizontally = false
         Config.options.phone.webcam.rotateDegrees = 0
+        Config.options.phone.microphone.connection = "wifi"
+        Config.options.phone.microphone.wifiIp = ""
+        Config.options.phone.microphone.micGain = 100
+        Config.options.phone.microphone.setAsDefault = false
         Persistent.states.phone.scrcpy.recentPackages = []
+        Persistent.states.phone.mic.originalDefaultSink = ""
     }
 
     // ================================================================
@@ -566,5 +574,311 @@ TestCase {
         compare(s.ip, "1.2.3.4")
         compare(PhoneCamera.parseSessionStatus("not json"), null)
         compare(PhoneCamera.parseSessionStatus(""), null)
+    }
+
+    // ================================================================
+    // PhoneMic
+    // ================================================================
+
+    function test_mic_argv_builders() {
+        compare(PhoneMic.scrcpyMicArgs(["-s", "ABC"]),
+                ["scrcpy", "--no-video", "--no-window", "--audio-source=mic", "--audio-buffer=50", "-s", "ABC"])
+        compare(PhoneMic.scrcpyMicArgs([]).length, 5)
+        compare(PhoneMic.droidcamAudioArgs("usb", "", 4748),
+                ["env", "PULSE_SINK=DroidCam-Mic", "droidcam-cli", "-a", "-nocontrols", "adb", "4748"])
+        compare(PhoneMic.droidcamAudioArgs("wifi", "10.0.0.2", 4748),
+                ["env", "PULSE_SINK=DroidCam-Mic", "droidcam-cli", "-a", "-nocontrols", "10.0.0.2", "4748"])
+        compare(PhoneMic.muteArgs("DroidCam-Mic.monitor", true), ["pactl", "set-source-mute", "DroidCam-Mic.monitor", "1"])
+        compare(PhoneMic.gainArgs("DroidCam-Mic.monitor", 250), ["pactl", "set-source-volume", "DroidCam-Mic.monitor", "200%"])
+        compare(PhoneMic.sessionFor("scrcpy"), "scrcpy-mic")
+        compare(PhoneMic.sessionFor("droidcam"), "audio")
+        compare(PhoneMic.connectionPlan({ connection: "wifi" }, "device", []), { mode: "usb", ip: "", port: 4748 })
+    }
+
+    function test_mic_stream_evidence_and_the_restore_plan() {
+        verify(PhoneMic.streamPresent("Sink Input #57\n\tapplication.name = \"scrcpy\"\n"))
+        verify(!PhoneMic.streamPresent("Sink Input #57\n\tapplication.name = \"Firefox\"\n"))
+        compare(PhoneMic.restorePlan("Arctis_Media", "alsa_output.x", false), "")
+        compare(PhoneMic.restorePlan("DroidCam-Mic", "alsa_output.x", true), "")
+        compare(PhoneMic.restorePlan("DroidCam-Mic\n", "alsa_output.x", false), "alsa_output.x")
+        compare(PhoneMic.restorePlan("DroidCam-Mic", "", false), "@DEFAULT_SINK@")
+        compare(PhoneMic.restorePlan("DroidCam-Mic", "DroidCam-Mic", false), "@DEFAULT_SINK@")
+        const status = PhoneMic.parseStatus('{"installed":true,"audio_source":"DroidCam-Mic.monitor","audio_has_sink_input":true,"audio_running":true}')
+        compare(status.audioRunning, true)
+        compare(status.audioHasSinkInput, true)
+        compare(PhoneMic.parseStatus("nope"), null)
+    }
+
+    function scrcpyMicResponder(sinkInputs) {
+        return argv => {
+            const line = argv.join(" ")
+            if (line === "bash " + setupScript) return { text: "DroidCam-Mic.monitor\n", code: 0 }
+            if (line === "pactl get-default-sink") return { text: "alsa_output.arctis\n", code: 0 }
+            if (argv[2] === "launch") return { text: "777\n", code: 0 }
+            if (line === "pactl list sink-inputs") return { text: sinkInputs || "", code: 0 }
+            if (line === "pactl get-default-source") return { text: "alsa_input.laptop\n", code: 0 }
+            return null
+        }
+    }
+
+    function test_mic_start_on_scrcpy_swaps_the_default_sink_and_launches_detached() {
+        PhoneMic.responder = scrcpyMicResponder("")
+        PhoneMic.start()
+        verify(PhoneMic.connecting)
+        compare(PhoneMic.state, "connecting")
+        compare(PhoneMic.backend, "scrcpy")
+        compare(PhoneMic.pulseSource, "DroidCam-Mic.monitor")
+        compare(argvJoined(PhoneMic.ranCommands), [
+            "pactl unload-module module-loopback",
+            "bash " + setupScript,
+            "pactl get-default-sink",
+            "pactl set-default-sink DroidCam-Mic",
+            "bash " + sessionScript + " launch scrcpy-mic scrcpy --no-video --no-window --audio-source=mic --audio-buffer=50"
+        ])
+        compare(PhoneMic.swappedSink, "alsa_output.arctis")
+        compare(Persistent.states.phone.mic.originalDefaultSink, "alsa_output.arctis")
+        compare(Persistent.states.phone.mic.lastBackend, "scrcpy")
+        compare(PhoneMic.sessionPid, 777)
+        compare(PhoneMic.swapRestoreArmed, 1)
+        compare(PhoneMic.verifyArmed, 1)
+    }
+
+    function test_mic_the_swap_is_undone_the_moment_the_stream_appears() {
+        PhoneMic.responder = scrcpyMicResponder("")
+        PhoneMic.start()
+        PhoneMic.ranCommands = []
+        PhoneMic.pollSwap()
+        compare(argvJoined(PhoneMic.ranCommands), ["pactl list sink-inputs"])
+        compare(PhoneMic.swappedSink, "alsa_output.arctis")
+        PhoneMic.responder = scrcpyMicResponder("Sink Input #57\n\tapplication.name = \"scrcpy\"\n")
+        PhoneMic.pollSwap()
+        compare(argvJoined(PhoneMic.ranCommands)[2], "pactl set-default-sink alsa_output.arctis")
+        compare(PhoneMic.swappedSink, "")
+        compare(Persistent.states.phone.mic.originalDefaultSink, "")
+        compare(PhoneMic.swapRestoreArmed, 0)
+        // Restoring twice is a no-op.
+        PhoneMic.restoreDefaultSink()
+        compare(PhoneMic.ranCommands.length, 3)
+    }
+
+    function test_mic_a_default_sink_that_is_already_the_null_sink_is_not_remembered() {
+        PhoneMic.responder = argv => {
+            const line = argv.join(" ")
+            if (line === "bash " + setupScript) return { text: "DroidCam-Mic.monitor\n", code: 0 }
+            if (line === "pactl get-default-sink") return { text: "DroidCam-Mic\n", code: 0 }
+            return { text: "1\n", code: 0 }
+        }
+        PhoneMic.start()
+        compare(PhoneMic.swappedSink, "")
+        compare(Persistent.states.phone.mic.originalDefaultSink, "")
+    }
+
+    function test_mic_verify_needs_the_process_and_the_stream() {
+        PhoneMic.responder = scrcpyMicResponder("")
+        PhoneMic.start()
+        PhoneMic.ranCommands = []
+        PhoneMic.responder = argv => ({ text: '{"audio_running":true,"audio_has_sink_input":false}', code: 0 })
+        PhoneMic.verify()
+        verify(PhoneMic.connecting)
+        compare(PhoneMic.verifyRetryArmed, 1)
+        compare(argvJoined(PhoneMic.ranCommands), ["bash " + statusScript])
+        PhoneMic.responder = argv => ({ text: '{"audio_running":true,"audio_has_sink_input":true}', code: 0 })
+        PhoneMic.verify()
+        verify(PhoneMic.active)
+        verify(!PhoneMic.connecting)
+        compare(PhoneMic.state, "active")
+        compare(PhoneMic.gain, 100)
+        verify(!PhoneMic.muted)
+        compare(PhoneMic.watchdogArmed, 1)
+        verify(PhoneMic.startedAt > 0)
+    }
+
+    function test_mic_verify_with_a_dead_process_fails_and_tears_down() {
+        PhoneMic.responder = scrcpyMicResponder("")
+        PhoneMic.start()
+        PhoneMic.ranCommands = []
+        PhoneMic.responder = argv => ({ text: '{"audio_running":false,"audio_has_sink_input":false}', code: 0 })
+        PhoneMic.verify()
+        verify(!PhoneMic.connecting)
+        verify(!PhoneMic.active)
+        verify(PhoneMic.lastError.indexOf("exited") >= 0)
+        const ran = argvJoined(PhoneMic.ranCommands)
+        compare(ran[0], "bash " + statusScript)
+        verify(ran.indexOf("pactl set-default-sink alsa_output.arctis") > 0)
+        verify(ran.indexOf("bash " + sessionScript + " stop audio") > 0)
+        verify(ran.indexOf("bash " + sessionScript + " stop scrcpy-mic") > 0)
+        verify(ran.indexOf("bash " + teardownScript) > 0)
+        compare(PhoneMic.swappedSink, "")
+    }
+
+    function test_mic_verify_past_the_deadline_with_no_stream_names_the_hijack() {
+        PhoneMic.responder = scrcpyMicResponder("")
+        PhoneMic.start()
+        PhoneMic.deadlinePassed = true
+        PhoneMic.responder = argv => ({ text: '{"audio_running":true,"audio_has_sink_input":false}', code: 0 })
+        PhoneMic.verify()
+        verify(!PhoneMic.connecting)
+        verify(PhoneMic.lastError.indexOf("another audio processor") >= 0)
+    }
+
+    function activeScrcpyMic() {
+        PhoneMic.responder = scrcpyMicResponder("")
+        PhoneMic.start()
+        PhoneMic.responder = argv => ({ text: '{"audio_running":true,"audio_has_sink_input":true}', code: 0 })
+        PhoneMic.verify()
+        PhoneMic.responder = scrcpyMicResponder("")
+        PhoneMic.ranCommands = []
+    }
+
+    function test_mic_mute_and_gain_reach_the_monitor_source() {
+        activeScrcpyMic()
+        PhoneMic.toggleMute()
+        verify(PhoneMic.muted)
+        PhoneMic.setGain(150)
+        compare(PhoneMic.gain, 150)
+        compare(Config.options.phone.microphone.micGain, 150)
+        compare(argvJoined(PhoneMic.ranCommands), [
+            "pactl set-source-mute DroidCam-Mic.monitor 1",
+            "pactl set-source-volume DroidCam-Mic.monitor 150%"
+        ])
+    }
+
+    function test_mic_default_input_is_taken_and_given_back() {
+        activeScrcpyMic()
+        PhoneMic.setAsDefaultInput()
+        verify(PhoneMic.isDefaultInput)
+        compare(PhoneMic.previousDefaultSource, "alsa_input.laptop")
+        compare(argvJoined(PhoneMic.ranCommands), [
+            "pactl get-default-source",
+            "pactl set-default-source DroidCam-Mic.monitor"
+        ])
+        PhoneMic.setAsDefaultInput()
+        compare(PhoneMic.ranCommands.length, 2)
+        PhoneMic.restoreDefaultInput()
+        verify(!PhoneMic.isDefaultInput)
+        compare(argvJoined(PhoneMic.ranCommands)[2], "pactl set-default-source alsa_input.laptop")
+        compare(PhoneMic.previousDefaultSource, "")
+    }
+
+    function test_mic_a_configured_gain_and_default_apply_when_the_stream_is_up() {
+        Config.options.phone.microphone.micGain = 80
+        Config.options.phone.microphone.setAsDefault = true
+        activeScrcpyMic()
+        compare(PhoneMic.gain, 80)
+        verify(PhoneMic.isDefaultInput)
+    }
+
+    function test_mic_stop_restores_everything_and_tears_the_sink_down() {
+        activeScrcpyMic()
+        PhoneMic.setAsDefaultInput()
+        PhoneMic.ranCommands = []
+        PhoneMic.stop()
+        verify(!PhoneMic.active)
+        verify(PhoneMic.userStopped)
+        verify(!PhoneMic.isDefaultInput)
+        compare(PhoneMic.pulseSource, "")
+        compare(argvJoined(PhoneMic.ranCommands), [
+            "pactl set-default-source alsa_input.laptop",
+            "bash " + sessionScript + " stop audio",
+            "bash " + sessionScript + " stop scrcpy-mic",
+            "pactl unload-module module-loopback",
+            "bash " + teardownScript
+        ])
+        PhoneMic.stop()
+        compare(PhoneMic.ranCommands.length, 5)
+    }
+
+    function test_mic_start_on_droidcam_routes_through_pulse_sink() {
+        PhoneMic.preferredBackend = "droidcam"
+        Config.options.phone.microphone.connection = "usb"
+        PhoneMic.responder = argv => {
+            const line = argv.join(" ")
+            if (line === "bash " + setupScript) return { text: "DroidCam-Mic.monitor\n", code: 0 }
+            if (argv[2] === "launch") return { text: "888\n", code: 0 }
+            return null
+        }
+        PhoneMic.start()
+        compare(PhoneMic.backend, "droidcam")
+        compare(argvJoined(PhoneMic.ranCommands), [
+            "pactl unload-module module-loopback",
+            "bash " + setupScript,
+            "bash " + sessionScript + " launch audio env PULSE_SINK=DroidCam-Mic droidcam-cli -a -nocontrols adb 4748"
+        ])
+        compare(PhoneMic.swappedSink, "")
+        compare(PhoneMic.sessionPid, 888)
+        compare(PhoneMic.verifyArmed, 1)
+        compare(Persistent.states.phone.mic.lastMode, "usb")
+        compare(Persistent.states.phone.mic.lastPort, 4748)
+    }
+
+    function test_mic_start_fails_when_the_null_sink_cannot_be_made() {
+        PhoneMic.responder = argv => argv[0] === "bash" ? { text: "", code: 1 } : null
+        PhoneMic.start()
+        verify(!PhoneMic.connecting)
+        verify(PhoneMic.lastError.indexOf("null sink") >= 0)
+    }
+
+    function test_mic_start_is_refused_without_a_reachable_phone() {
+        PhoneConnect.devices = [phone({ reachable: false })]
+        PhoneMic.start()
+        verify(!PhoneMic.connecting)
+        compare(PhoneMic.ranCommands, [])
+        compare(PhoneMic.state, "offline")
+    }
+
+    function test_mic_boot_reconciliation_restores_a_leftover_swap() {
+        Persistent.states.phone.mic.originalDefaultSink = "alsa_output.arctis"
+        PhoneMic.swappedSink = "alsa_output.arctis"
+        PhoneMic.responder = argv => {
+            const line = argv.join(" ")
+            if (argv[2] === "status") return { text: '{"session":"' + argv[3] + '","alive":false}', code: 0 }
+            if (line === "pactl get-default-sink") return { text: "DroidCam-Mic\n", code: 0 }
+            return null
+        }
+        PhoneMic.reconcile()
+        verify(!PhoneMic.active)
+        compare(argvJoined(PhoneMic.ranCommands), [
+            "bash " + sessionScript + " status scrcpy-mic",
+            "bash " + sessionScript + " status audio",
+            "pactl get-default-sink",
+            "pactl set-default-sink alsa_output.arctis"
+        ])
+        compare(Persistent.states.phone.mic.originalDefaultSink, "")
+        compare(PhoneMic.swappedSink, "")
+    }
+
+    function test_mic_boot_reconciliation_adopts_a_live_session_and_leaves_the_sink() {
+        PhoneMic.responder = argv => {
+            const line = argv.join(" ")
+            if (argv[2] === "status" && argv[3] === "scrcpy-mic")
+                return { text: '{"session":"scrcpy-mic","pid":"777","alive":true,"started":"1700000000","port":"","mode":"wifi","ip":""}', code: 0 }
+            if (argv[2] === "status") return { text: '{"session":"audio","alive":false}', code: 0 }
+            if (line === "bash " + setupScript) return { text: "DroidCam-Mic.monitor\n", code: 0 }
+            if (line === "pactl get-default-sink") return { text: "DroidCam-Mic\n", code: 0 }
+            return null
+        }
+        PhoneMic.reconcile()
+        verify(PhoneMic.active)
+        compare(PhoneMic.backend, "scrcpy")
+        compare(PhoneMic.sessionPid, 777)
+        compare(PhoneMic.startedAt, 1700000000)
+        compare(PhoneMic.pulseSource, "DroidCam-Mic.monitor")
+        compare(PhoneMic.watchdogArmed, 1)
+        verify(argvJoined(PhoneMic.ranCommands).indexOf("pactl set-default-sink @DEFAULT_SINK@") < 0)
+    }
+
+    function test_mic_boot_reconciliation_leaves_a_normal_default_alone() {
+        PhoneMic.responder = argv => argv[0] === "pactl" ? { text: "Arctis_Media\n", code: 0 } : { text: '{"alive":false}', code: 0 }
+        PhoneMic.reconcile()
+        compare(PhoneMic.ranCommands.length, 3)
+    }
+
+    function test_mic_watchdog_reports_a_lost_stream() {
+        activeScrcpyMic()
+        PhoneMic.responder = argv => ({ text: '{"session":"scrcpy-mic","alive":false}', code: 0 })
+        PhoneMic.checkSession()
+        verify(!PhoneMic.active)
+        verify(PhoneMic.lastError.indexOf("lost") >= 0)
+        compare(argvJoined(PhoneMic.ranCommands)[0], "bash " + sessionScript + " status scrcpy-mic")
     }
 }
