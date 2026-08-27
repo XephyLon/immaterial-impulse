@@ -18,6 +18,18 @@
 # sidebars keep the same defect through the release that fixed it: the shell's
 # answer has to be asked of each of them.
 #
+# Two things about moving the focus, both learned by this probe passing 18/18
+# while measuring one monitor eighteen times. `hyprctl dispatch focusmonitor
+# WAYLAND-2` is a LUA call on this build - the compositor wraps the argument as
+# `hl.dispatch(focusmonitor WAYLAND-2)` and answers "')' expected near
+# 'WAYLAND'" - so every dispatch this probe made had always failed, silently,
+# into /dev/null. The focus is moved by putting the POINTER on the monitor
+# instead (`hl.dsp.cursor.move`, the form SidebarLeft.qml already uses), which
+# is both a spelling that works and the gesture the user makes. And the run
+# now FAILS if the focused monitor never changed: eighteen agreements about one
+# screen is what a probe with nothing to say looks like, and it is
+# indistinguishable from a pass.
+#
 # Not part of run_tests.sh: it needs a Wayland parent and opens two windows
 # on it. Run by hand from a graphical session.
 set -u
@@ -56,11 +68,12 @@ if [ "$(echo $MONS | wc -w)" -lt 2 ]; then echo "FAILED: second output never cam
 qs -c imi > "$TMP/qs.log" 2>&1 &
 QPID=$!
 sleep 12
-fail=0; checks=0
+fail=0; checks=0; SEEN=""
 for M in $MONS $MONS $MONS; do
-  WS=$(hyprctl monitors -j | python3 -c "import json,sys; print([m for m in json.load(sys.stdin) if m['name']=='$M'][0]['activeWorkspace']['id'])")
-  hyprctl dispatch workspace $WS >/dev/null; sleep 0.3; hyprctl dispatch focusmonitor "$M" >/dev/null; sleep 0.6
+  CENTRE=$(hyprctl monitors -j | python3 -c "import json,sys; m=[m for m in json.load(sys.stdin) if m['name']=='$M'][0]; print(m['x']+m['width']//2, m['y']+m['height']//2)")
+  hyprctl dispatch "hl.dsp.cursor.move({x=${CENTRE% *},y=${CENTRE#* }})" >/dev/null; sleep 0.6
   FOCUSED=$(hyprctl monitors -j | python3 -c 'import json,sys; print(",".join(m["name"] for m in json.load(sys.stdin) if m["focused"]))')
+  SEEN="$SEEN $FOCUSED"
   for T in $SURFACES; do
     qs -c imi ipc call $T open >/dev/null 2>&1; sleep 1.0
     LANDED=$(qs -c imi ipc call $T activeScreen 2>/dev/null | tr -d '\n')
@@ -70,6 +83,14 @@ for M in $MONS $MONS $MONS; do
   done
 done
 kill $QPID 2>/dev/null; sleep 1; kill $HPID 2>/dev/null; sleep 1; kill -9 $HPID 2>/dev/null
-echo "$checks checks, $( [ $fail = 0 ] && echo all on the focused monitor || echo FAILED )"
+# The control. Every check agreeing about ONE monitor is what this probe
+# reported for its whole life, and it is what a probe that never moved the
+# focus reports whether or not the shell is broken.
+VISITED=$(printf '%s\n' $SEEN | sort -u | grep -c .)
+if [ "$VISITED" -lt 2 ]; then
+  echo "FAILED: the focus never left ${FOCUSED:-<none>} - $checks checks measured one monitor"
+  fail=1
+fi
+echo "$checks checks over $VISITED monitors, $( [ $fail = 0 ] && echo all on the focused monitor || echo FAILED )"
 exit $fail
 NESTED
