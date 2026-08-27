@@ -132,8 +132,17 @@ Item {
             visible: tabButtonList.length > 0
             Layout.fillWidth: true
             tabButtonList: root.tabButtonList
+            // One source of truth, one direction each way: the bar DRAWS the
+            // view's index and ASKS for a new one. It used to write
+            // `swipeView.currentIndex` from its own `onCurrentIndexChanged`
+            // while the view bound `currentIndex: tabBar.currentIndex` - an id
+            // declared inside VerticalTabBar.qml and so not in scope here, so
+            // that binding threw a ReferenceError on every evaluation and the
+            // view was really driven by the handler alone.
             currentIndex: swipeView.currentIndex
-            onCurrentIndexChanged: swipeView.currentIndex = currentIndex
+            onCurrentIndexRequested: index => {
+                swipeView.currentIndex = Math.max(0, Math.min(swipeView.count - 1, index));
+            }
         }
 
         Rectangle {
@@ -154,7 +163,6 @@ Item {
                 id: swipeView
                 anchors.fill: parent
                 spacing: Appearance.spacing.space150
-                currentIndex: tabBar.currentIndex
 
                 clip: true
                 layer.enabled: true
