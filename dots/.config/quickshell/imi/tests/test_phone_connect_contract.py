@@ -36,7 +36,7 @@ DIALOG = SURFACE / "PhoneConnectDialog.qml"
 # all - a button whose call the service does not answer is a fake action.
 MODEL_ACTIONS = {"refresh", "ring", "ping", "sendClipboard", "acceptPairing", "cancelPairing",
                  "shareUrls", "shareText", "shareClipboard", "pickAndSendFiles",
-                 "browseFiles"}
+                 "browseFiles", "selectDevice"}
 
 BEGIN = "// BEGIN phone-connect parser logic"
 END = "    // END phone-connect parser logic"
@@ -110,6 +110,43 @@ def test_pairing_is_answered_on_the_device_path_with_the_daemon_s_two_methods():
         # copy of ring() would carry here.
         assert "!d.hasPairingRequest" in text, f"{name}() answers a device that never asked"
         assert "root.activeDevice" not in text, f"{name}() falls back to the active device"
+
+
+def test_the_active_device_rule_matches_the_double_and_reads_the_persisted_choice():
+    """Slice 6: activeDevice prefers the persisted device while it is paired
+    and reachable, else the old rule. The rule is preferredActiveDevice in
+    the synced region; the binding that calls it is outside it and the QML
+    suite drives the double's, so both bindings are held to each other. The
+    service reads the persisted id off Persistent; the double carries it as
+    a plain property the suite can set."""
+    pattern = r"    readonly property var activeDevice:.*\n"
+    service_line = re.search(pattern, SERVICE.read_text())
+    double_line = re.search(pattern, DOUBLE.read_text())
+    assert service_line and double_line, "activeDevice missing on one side"
+    assert service_line.group(0) == double_line.group(0), "activeDevice drifted"
+    assert "root.preferredActiveDevice(root.devices, root.persistedActiveDeviceId)" in service_line.group(0)
+    assert re.search(r"readonly property string persistedActiveDeviceId: Persistent\.states\?\.phone\?\.activeDeviceId \?\? \"\"",
+                     SERVICE.read_text()), "the service does not read the persisted id off Persistent.states.phone"
+    assert re.search(r"^    property string persistedActiveDeviceId: \"\"$", DOUBLE.read_text(), re.M), (
+        "the double does not carry persistedActiveDeviceId as a settable property"
+    )
+
+
+def test_select_device_writes_the_persisted_id_and_the_recent_list():
+    source = SERVICE.read_text()
+    body = re.search(r"function selectDevice\(.*?\n    \}\n", source, re.S)
+    assert body, "selectDevice() missing"
+    text = body.group(0)
+    assert "root.validDeviceId(id)" in text, "selectDevice persists an unvalidated id"
+    assert "Persistent.states.phone.activeDeviceId = id" in text, "selectDevice does not persist the choice"
+    assert "Persistent.states.phone.recentDeviceIds = root.recentDeviceIdsAfterSelect(" in text, (
+        "selectDevice does not maintain the MRU list through the synced rule"
+    )
+    persistent = (ROOT / "modules" / "common" / "Persistent.qml").read_text()
+    block = re.search(r"property JsonObject phone: JsonObject \{(.*?)\n            \}", persistent, re.S)
+    assert block, "Persistent.states has no phone JsonObject"
+    assert re.search(r'property string activeDeviceId: ""', block.group(1)), "phone.activeDeviceId missing"
+    assert re.search(r"property list<string> recentDeviceIds: \[\]", block.group(1)), "phone.recentDeviceIds missing"
 
 
 def test_state_application_helpers_match_the_double():
