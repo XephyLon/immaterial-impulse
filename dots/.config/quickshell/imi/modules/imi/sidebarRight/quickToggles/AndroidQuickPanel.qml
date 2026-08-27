@@ -170,7 +170,7 @@ AbstractQuickPanel {
                     onOpenNightLightDialog: root.openNightLightDialog()
                     onOpenWifiDialog: root.openWifiDialog()
                     onOpenTailscaleDialog: root.openTailscaleDialog()
-                    onOpenPhoneConnectDialog: root.openPhoneConnectDialog()
+                    onOpenPhoneTab: root.openPhoneTab()
                 }
             }
 

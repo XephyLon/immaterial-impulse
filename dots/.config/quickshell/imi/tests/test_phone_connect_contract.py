@@ -19,6 +19,15 @@ The rest pins the busctl I/O the double deliberately omits:
   monitor Process must carry no `running` binding, every restart must go
   through the backoff plan, and the poll must stay on (gated on
   enableService && installed) as the reconcile behind it.
+
+The last section holds the SURFACE, which is the Phone tab in the left
+sidebar (docs/superpowers/specs/2026-08-27-phone-tab-design.md) plus the
+pieces it shares with anything else that draws a phone. It was the right
+sidebar's dialog until W5; the checks moved with it rather than being
+dropped, because what they pin is the shape rather than the panel - one
+action row, every button an action the service answers AND a backend gate
+that says it will, one fillHeight, and the pairing answers where they can
+be reached.
 """
 
 import re
@@ -28,16 +37,16 @@ ROOT = Path(__file__).resolve().parents[1]
 SERVICE = ROOT / "services" / "PhoneConnect.qml"
 DOUBLE = ROOT / "tests" / "imports" / "testservices" / "PhoneConnect.qml"
 # The surface is two directories: the pieces every phone panel shares
-# (modules/imi/phone) and the panel drawing them.
-SURFACE_DIRS = [ROOT / "modules" / "imi" / "phone",
-                ROOT / "modules" / "imi" / "sidebarRight" / "phoneConnect"]
-DIALOG = ROOT / "modules" / "imi" / "sidebarRight" / "phoneConnect" / "PhoneConnectDialog.qml"
+# (modules/imi/phone) and the Phone tab drawing them.
+TAB_DIR = ROOT / "modules" / "imi" / "sidebarLeft" / "phone"
+SURFACE_DIRS = [ROOT / "modules" / "imi" / "phone", TAB_DIR]
+TAB = TAB_DIR / "Phone.qml"
+ACTIONS_ROW = TAB_DIR / "PhoneActionsRow.qml"
 PAIRING_CARD = ROOT / "modules" / "imi" / "phone" / "PhonePairingCard.qml"
 
-# Everything the sidebar surface may ask the service to DO. The device
-# dialog is shaped after a fork whose action row carries six buttons; ours
-# carries the three this model backs, and a fourth appears here or not at
-# all - a button whose call the service does not answer is a fake action.
+# Everything the phone surface may ask the service to DO. A seventh action
+# appears here or not at all - a button whose call the service does not
+# answer is a fake action.
 MODEL_ACTIONS = {"refresh", "ring", "ping", "sendClipboard", "acceptPairing", "cancelPairing",
                  "shareUrls", "shareText", "shareClipboard", "pickAndSendFiles",
                  "browseFiles", "selectDevice"}
@@ -574,7 +583,7 @@ def test_low_battery_is_observed_on_the_active_device_and_reported_with_notify_s
     assert "root.batteryNoticeDeviceId" in text, "the latch is not per device"
 
 
-# ---- the sidebar surface ----------------------------------------------------
+# ---- the phone surface ----------------------------------------------------
 
 
 def test_the_surface_calls_only_actions_the_model_exposes():
@@ -588,16 +597,43 @@ def test_the_surface_calls_only_actions_the_model_exposes():
     assert called <= declared, f"the surface calls what the service does not declare: {sorted(called - declared)}"
 
 
-def test_the_dialog_has_one_action_row_of_the_three_model_actions():
+def test_the_tab_has_one_action_row_of_the_six_model_actions():
     """ONE row of round action buttons, each a model action, in the fork's
-    order (ring, ping, clipboard) minus the three it backs with scrcpy, a
-    picker and SFTP."""
-    dialog = DIALOG.read_text()
-    assert dialog.count("id: actionRow") == 1, "the dialog must carry exactly one action row"
-    buttons = re.findall(r"PhoneActionButton \{(.*?)\n(?:\s{12}|\s{8})\}", dialog, re.S)
-    assert len(buttons) == 3, f"expected three action buttons, found {len(buttons)}"
+    order: ring, ping, send the clipboard, send a file, share the clipboard
+    as a link or text, browse the phone's storage."""
+    row = ACTIONS_ROW.read_text()
+    assert row.count("id: actionRow") == 1, "the tab must carry exactly one action row"
+    buttons = re.findall(r"PhoneActionButton \{(.*?)\n(?:\s{12}|\s{8})\}", row, re.S)
+    assert len(buttons) == 6, f"expected six action buttons, found {len(buttons)}"
     called = [re.search(r"PhoneConnect\.(\w+)\(", body).group(1) for body in buttons]
-    assert called == ["ring", "ping", "sendClipboard"], called
+    assert called == ["ring", "ping", "sendClipboard", "pickAndSendFiles",
+                      "shareClipboard", "browseFiles"], called
+
+
+def test_every_action_is_gated_on_what_the_backend_answers_not_only_on_reachability():
+    """Two terms, not one. Valent's action names beyond findmyphone.ring
+    were never verifiable against a live daemon, so everything past Ring is
+    kdeconnect-only - a row of six live buttons on Valent would be five
+    that silently do nothing. Ring is the exception BOTH backends answer,
+    so it is gated on reachability alone."""
+    row = ACTIONS_ROW.read_text()
+    buttons = re.findall(r"PhoneActionButton \{(.*?)\n(?:\s{12}|\s{8})\}", row, re.S)
+    gates = {}
+    for body in buttons:
+        action = re.search(r"PhoneConnect\.(\w+)\(", body).group(1)
+        enabled = re.search(r"enabled: (.+)", body)
+        assert enabled, f"{action} declares no enabled expression"
+        gates[action] = enabled.group(1).strip()
+    assert gates["ring"] == "root.online", gates["ring"]
+    expected = {"ping": "canPing", "sendClipboard": "canSendClipboard",
+                "pickAndSendFiles": "canShare", "shareClipboard": "canShare",
+                "browseFiles": "canBrowseFiles"}
+    for action, gate in expected.items():
+        assert gates[action] == f"root.online && PhoneConnect.{gate}", (
+            f"{action} is gated on {gates[action]!r}, not on reachability and PhoneConnect.{gate}"
+        )
+        assert re.search(rf'readonly property bool {gate}: root\.backend === "kdeconnect"',
+                         SERVICE.read_text()), f"{gate} is not a kdeconnect-only gate on the service"
 
 
 def test_the_pairing_card_answers_through_the_two_device_methods_in_a_button_row():
@@ -611,16 +647,76 @@ def test_the_pairing_card_answers_through_the_two_device_methods_in_a_button_row
     assert "outlined:" not in card, "the card spells the outline rule for itself"
 
 
-def test_the_notification_area_owns_the_remaining_height():
-    """The area is the one child of the dialog's column that fills, so every
+def test_the_notification_list_owns_the_remaining_height():
+    """The list is the one child of the tab's column that fills, so every
     other row keeps its own height and the empty state takes what is left -
     nothing floats in empty space, and nothing else competes for it."""
-    dialog = DIALOG.read_text()
-    fills = [line.strip() for line in dialog.splitlines() if "Layout.fillHeight: true" in line]
-    assert len(fills) == 1, f"expected exactly one fillHeight in the dialog, found {fills}"
-    area = re.search(r"PhoneConnectNotificationArea \{(.*?)\n    \}", dialog, re.S)
-    assert area, "the dialog does not declare a PhoneConnectNotificationArea"
-    assert "Layout.fillHeight: true" in area.group(1), "the notification area does not fill"
+    tab = TAB.read_text()
+    fills = [line.strip() for line in tab.splitlines() if "Layout.fillHeight: true" in line]
+    assert len(fills) == 1, f"expected exactly one fillHeight in the tab, found {fills}"
+    listing = re.search(r"PhoneNotificationList \{(.*?)\n        \}", tab, re.S)
+    assert listing, "the tab does not declare a PhoneNotificationList"
+    assert "Layout.fillHeight: true" in listing.group(1), "the notification list does not fill"
+
+
+def test_the_tab_resolves_its_sub_pages_and_its_card_stack_by_url_not_by_type():
+    """The other half of the tab (the four sub-pages, the feature-card
+    stack) is a separate workstream, so this file may not NAME those types:
+    a bare `PhoneContactsPage {}` would take the whole tab down with
+    `Type ... unavailable` until every one of them exists, which is the
+    cascade AGENT.md's "Where to look when something goes wrong" describes.
+    Resolved by file name through a Loader, a page that has not landed is a
+    Loader error with a null item and the tab still draws."""
+    tab = TAB.read_text()
+    resolver = re.search(r"function subPageSource\(.*?\n    \}", tab, re.S)
+    assert resolver, "subPageSource() missing - the tab names its pages as types"
+    body = resolver.group(0)
+    for page_id, file_name in (("contacts", "PhoneContactsPage.qml"), ("apps", "PhoneAppsPage.qml"),
+                               ("webcam", "PhoneWebcamPage.qml"), ("mic", "PhoneMicPage.qml")):
+        assert f'case "{page_id}": return "{file_name}";' in body, (
+            f"the {page_id} page is not resolved to {file_name}"
+        )
+    assert 'Qt.resolvedUrl(root.subPageSource(' in tab, "the sub-page loader does not resolve by URL"
+    assert 'source: Qt.resolvedUrl("PhoneFeatureCards.qml")' in tab, (
+        "the bottom card stack is not loaded by URL"
+    )
+    for absent in ("PhoneContactsPage {", "PhoneAppsPage {", "PhoneWebcamPage {",
+                   "PhoneMicPage {", "PhoneFeatureCards {"):
+        assert absent not in tab, f"the tab names {absent.strip(' {')} as a type"
+
+
+def test_the_pairing_cards_are_drawn_by_the_tab_itself():
+    """Answering a pairing request is the only way into the shell for a
+    phone that is not paired yet, and the dialog that used to carry it is
+    gone - so the cards are the tab's own, never the feature stack's, which
+    is a file that may not be there."""
+    tab = TAB.read_text()
+    assert "PhonePairingCard {" in tab, "the tab draws no pairing cards"
+    assert "values: PhoneConnect.pairingRequests" in tab, (
+        "the pairing cards are not drawn from PhoneConnect.pairingRequests"
+    )
+
+
+def test_the_quick_toggle_opens_the_tab_instead_of_a_dialog():
+    """The right sidebar's phone toggle names the tab and opens the left
+    panel. The dialog and its ToggleDialog wiring are gone, and the deep
+    link is the untranslated id - resolving one against a tab's LABEL
+    breaks on a language change (1c674c8f5)."""
+    content = (ROOT / "modules" / "imi" / "sidebarRight" / "SidebarRightContent.qml").read_text()
+    assert "PhoneConnectDialog" not in content, "the right sidebar still builds the phone dialog"
+    assert not (ROOT / "modules" / "imi" / "sidebarRight" / "phoneConnect").exists(), (
+        "the right sidebar's phoneConnect directory is still there"
+    )
+    handler = re.search(r"function onOpenPhoneTab\(\) \{(.*?)\n            \}", content, re.S)
+    assert handler, "onOpenPhoneTab() missing - the toggle reaches nothing"
+    assert 'GlobalStates.sidebarLeftTab = "phone"' in handler.group(1), (
+        "the toggle does not name the Phone tab"
+    )
+    assert "GlobalStates.sidebarLeftOpen = true" in handler.group(1), (
+        "the toggle does not open the left sidebar"
+    )
+    tab_ids = (ROOT / "modules" / "imi" / "sidebarLeft" / "SidebarLeftContent.qml").read_text()
+    assert '["phone"]' in tab_ids, "SidebarLeftContent declares no `phone` tab id to resolve against"
 
 
 if __name__ == "__main__":

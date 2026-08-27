@@ -22,7 +22,7 @@ DelegateChooser {
     signal openNightLightDialog()
     signal openWifiDialog()
     signal openTailscaleDialog()
-    signal openPhoneConnectDialog()
+    signal openPhoneTab()
 
     // The role a choice is picked by is the one `StableQuickToggleModel`
     // binds permanently to a row's id, and it is the whole reason a delegate
@@ -129,7 +129,7 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
-        onOpenMenu: root.openPhoneConnectDialog()
+        onOpenMenu: root.openPhoneTab()
     } }
 
     DelegateChoice { roleValue: "vpn"; AndroidVpnToggle {

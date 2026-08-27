@@ -21,7 +21,6 @@ import qs.modules.imi.sidebarRight.nightLight
 import qs.modules.imi.sidebarRight.volumeMixer
 import qs.modules.imi.sidebarRight.wifiNetworks
 import qs.modules.imi.sidebarRight.tailscale
-import qs.modules.imi.sidebarRight.phoneConnect
 import qs.modules.imi.sidebarRight.iconPicker
 
 Item {
@@ -35,7 +34,6 @@ Item {
     property bool showNightLightDialog: false
     property bool showWifiDialog: false
     property bool showTailscaleDialog: false
-    property bool showPhoneConnectDialog: false
     property bool editMode: false
     property bool showIconPickerDialog: false
 
@@ -100,7 +98,6 @@ Item {
             if (!GlobalStates.sidebarRightOpen) {
                 root.showWifiDialog = false;
                 root.showTailscaleDialog = false;
-                root.showPhoneConnectDialog = false;
                 root.showBluetoothDialog = false;
                 root.showAudioOutputDialog = false;
                 root.showAudioInputDialog = false;
@@ -485,14 +482,6 @@ Item {
     }
 
     ToggleDialog {
-        shownPropertyString: "showPhoneConnectDialog"
-        dialog: PhoneConnectDialog {}
-        onShownChanged: {
-            if (shown) PhoneConnect.refresh();
-        }
-    }
-
-    ToggleDialog {
         shownPropertyString: "showIconPickerDialog"
         dialog: IconPickerDialog {}
     }
@@ -546,7 +535,17 @@ Item {
             function onOpenNightLightDialog() { root.showNightLightDialog = true; }
             function onOpenWifiDialog() { root.showWifiDialog = true; }
             function onOpenTailscaleDialog() { root.showTailscaleDialog = true; }
-            function onOpenPhoneConnectDialog() { root.showPhoneConnectDialog = true; }
+            // The phone lives in the LEFT sidebar now: this toggle names
+            // the tab and opens that panel, where it used to raise a dialog
+            // of its own. The refresh goes with the open, as the dialog's
+            // did - a tile the user just pressed should not show the sweep
+            // before last.
+            function onOpenPhoneTab() {
+                PhoneConnect.refresh();
+                GlobalStates.sidebarLeftTab = "phone";
+                GlobalStates.sidebarLeftOpen = true;
+                GlobalStates.sidebarRightOpen = false;
+            }
         }
     }
 

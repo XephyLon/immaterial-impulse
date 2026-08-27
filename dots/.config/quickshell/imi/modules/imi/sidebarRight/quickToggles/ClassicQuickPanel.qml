@@ -43,7 +43,7 @@ AbstractQuickPanel {
         }
         PhoneConnectToggle {
             altAction: () => {
-                root.openPhoneConnectDialog();
+                root.openPhoneTab();
             }
         }
         Repeater {
