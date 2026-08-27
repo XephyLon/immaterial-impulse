@@ -127,6 +127,7 @@ Item {
                 baseWidth: height
                 buttonRadius: Appearance.rounding.small
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     anchors.centerIn: parent
                     horizontalAlignment: Text.AlignHCenter
                     iconSize: Appearance.font.pixelSize.larger
@@ -143,6 +144,7 @@ Item {
                 buttonRadius: Appearance.rounding.small
                 enabled: inputCanvas.inputTextArea.text.length > 0
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     anchors.centerIn: parent
                     horizontalAlignment: Text.AlignHCenter
                     iconSize: Appearance.font.pixelSize.larger
@@ -175,6 +177,7 @@ Item {
                 colBackgroundHover: Appearance.colors.colTertiaryContainerHover
                 buttonRadius: Appearance.rounding.full
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     anchors.centerIn: parent
                     horizontalAlignment: Text.AlignHCenter
                     iconSize: Appearance.font.pixelSize.larger
@@ -208,6 +211,7 @@ Item {
                 buttonRadius: Appearance.rounding.small
                 enabled: outputCanvas.displayedText.trim().length > 0
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     anchors.centerIn: parent
                     horizontalAlignment: Text.AlignHCenter
                     iconSize: Appearance.font.pixelSize.larger
@@ -224,6 +228,7 @@ Item {
                 buttonRadius: Appearance.rounding.small
                 enabled: outputCanvas.displayedText.trim().length > 0
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     anchors.centerIn: parent
                     horizontalAlignment: Text.AlignHCenter
                     iconSize: Appearance.font.pixelSize.larger

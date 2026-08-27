@@ -20,6 +20,7 @@ RippleButton {
     }
 
     contentItem: MaterialSymbol {
+        verticalAlignment: Text.AlignVCenter
         id: icon
         anchors.centerIn: parent
         horizontalAlignment: Text.AlignHCenter

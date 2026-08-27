@@ -109,6 +109,7 @@ Item {
             colRippleToggled: Appearance.colors.colSecondaryContainerActive
 
             contentItem: MaterialSymbol {
+                verticalAlignment: Text.AlignVCenter
                 anchors.centerIn: parent
                 iconSize: Appearance.font.pixelSize.larger
                 text: Config.options.bar.bottom ? "keyboard_control_key" : "expand_more"

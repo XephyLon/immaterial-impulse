@@ -27,6 +27,8 @@ WindowDialog {
             onClicked: PhoneConnect.refresh()
 
             contentItem: MaterialSymbol {
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
                 anchors.centerIn: parent
                 text: "refresh"
                 iconSize: Appearance.font.pixelSize.larger

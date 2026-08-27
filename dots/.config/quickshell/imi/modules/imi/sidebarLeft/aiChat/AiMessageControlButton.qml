@@ -13,6 +13,7 @@ GroupButton {
     colBackgroundActive: Appearance.colors.colSecondaryContainerActive
 
     contentItem: MaterialSymbol {
+        verticalAlignment: Text.AlignVCenter
         horizontalAlignment: Text.AlignHCenter
         iconSize: Appearance.font.pixelSize.larger
         text: buttonIcon

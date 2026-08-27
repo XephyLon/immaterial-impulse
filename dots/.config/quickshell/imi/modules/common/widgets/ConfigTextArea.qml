@@ -190,7 +190,8 @@ RowLayout {
 
             contentItem: MaterialSymbol {
                 anchors.centerIn: parent
-                anchors.horizontalCenterOffset: -2
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
                 iconSize: Appearance.font.pixelSize.larger
                 text: root.revealed ? "visibility_off" : "visibility"
                 color: Appearance.colors.colOnLayer1
@@ -210,6 +211,8 @@ RowLayout {
 
         contentItem: MaterialSymbol {
             anchors.centerIn: parent
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
             text: root.confirmButtonIcon
             iconSize: Appearance.font.pixelSize.large
             color: root.colOnConfirmBackground

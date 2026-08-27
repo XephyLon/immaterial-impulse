@@ -37,6 +37,8 @@ Rectangle {
             id: parentDirButton
             downAction: () => root.navigateToDirectory(FileUtils.parentDirectory(root.directory))
             contentItem: MaterialSymbol {
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
                 text: "drive_folder_upload"
                 iconSize: Appearance.font.pixelSize.larger
             }
@@ -107,6 +109,8 @@ Rectangle {
             toggled: !root.showBreadcrumb
             downAction: () => root.showBreadcrumb = !root.showBreadcrumb
             contentItem: MaterialSymbol {
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
                 text: "edit"
                 iconSize: Appearance.font.pixelSize.larger
                 color: dirEditButton.toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer2

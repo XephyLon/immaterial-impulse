@@ -142,6 +142,7 @@ Scope { // Scope
                     }
 
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         anchors.centerIn: parent
                         horizontalAlignment: Text.AlignHCenter
                         font.pixelSize: Appearance.font.pixelSize.title

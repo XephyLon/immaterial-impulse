@@ -447,6 +447,8 @@ MouseArea {
                                     onClicked: Config.options.wallpaperSelector.wallpaperEngine.silent = !Config.options.wallpaperSelector.wallpaperEngine.silent
                                     contentItem: MaterialSymbol {
                                         anchors.centerIn: parent
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
                                         text: Config.options.wallpaperSelector.wallpaperEngine.silent ? "volume_off" : "volume_up"
                                         color: parent.toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer2
                                     }
@@ -502,6 +504,8 @@ MouseArea {
                             }
                             contentItem: MaterialSymbol {
                                 anchors.centerIn: parent
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
                                 text: "search"
                                 iconSize: Appearance.font.pixelSize.larger
                                 color: root.toolbarVisible

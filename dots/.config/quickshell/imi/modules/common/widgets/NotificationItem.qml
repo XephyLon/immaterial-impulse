@@ -259,6 +259,7 @@ Item { // Notification item area
                                 }
 
                                 contentItem: MaterialSymbol {
+                                    verticalAlignment: Text.AlignVCenter
                                     iconSize: Appearance.font.pixelSize.larger
                                     horizontalAlignment: Text.AlignHCenter
                                     color: (notificationObject.urgency == NotificationUrgency.Critical) ? 
@@ -304,6 +305,7 @@ Item { // Notification item area
                                 }
 
                                 contentItem: MaterialSymbol {
+                                    verticalAlignment: Text.AlignVCenter
                                     id: copyIcon
                                     iconSize: Appearance.font.pixelSize.larger
                                     horizontalAlignment: Text.AlignHCenter

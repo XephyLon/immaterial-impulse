@@ -51,6 +51,7 @@ RippleButton {
     }
 
     contentItem: MaterialSymbol {
+        verticalAlignment: Text.AlignVCenter
         id: icon
         anchors.fill: parent
         color: button.colText

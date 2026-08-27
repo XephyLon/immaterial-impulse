@@ -25,6 +25,7 @@ RippleButton {
     colRipple: Appearance.colors.colErrorActive
 
     contentItem: MaterialSymbol {
+        verticalAlignment: Text.AlignVCenter
         anchors.centerIn: parent
         horizontalAlignment: Text.AlignHCenter
         text: "close"

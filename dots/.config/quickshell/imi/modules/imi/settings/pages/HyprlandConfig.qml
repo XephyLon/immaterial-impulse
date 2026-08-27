@@ -485,6 +485,7 @@ ContentPage {
                                     HyprlandKeybinds.findBinding(overrideRow.modelData.identity);
                             }
                             contentItem: MaterialSymbol {
+                                verticalAlignment: Text.AlignVCenter
                                 anchors.centerIn: parent
                                 horizontalAlignment: Text.AlignHCenter
                                 iconSize: Appearance.font.pixelSize.larger
@@ -501,6 +502,7 @@ ContentPage {
                             buttonRadius: Appearance.rounding.full
                             onClicked: HyprlandKeybindOverrides.reset(overrideRow.modelData.identity)
                             contentItem: MaterialSymbol {
+                                verticalAlignment: Text.AlignVCenter
                                 anchors.centerIn: parent
                                 horizontalAlignment: Text.AlignHCenter
                                 iconSize: Appearance.font.pixelSize.larger

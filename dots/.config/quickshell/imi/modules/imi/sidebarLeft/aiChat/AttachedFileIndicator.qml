@@ -106,6 +106,7 @@ Rectangle {
                 implicitHeight: 28
                 implicitWidth: 28
                 contentItem: MaterialSymbol {
+                    verticalAlignment: Text.AlignVCenter
                     anchors.centerIn: parent
                     text: "close"
                     horizontalAlignment: Text.AlignHCenter

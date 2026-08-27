@@ -29,6 +29,7 @@ Item {
         colBackgroundHover: root.blendedColors.colSecondaryContainerHover
         colRipple: root.blendedColors.colSecondaryContainerActive
         contentItem: MaterialSymbol {
+            verticalAlignment: Text.AlignVCenter
             iconSize: Appearance.font.pixelSize.huge
             fill: 1
             horizontalAlignment: Text.AlignHCenter
@@ -199,6 +200,7 @@ Item {
                     colRipple: root.player?.isPlaying ? root.blendedColors.colPrimaryActive : root.blendedColors.colSecondaryContainerActive
 
                     contentItem: MaterialSymbol {
+                        verticalAlignment: Text.AlignVCenter
                         iconSize: Appearance.font.pixelSize.huge
                         fill: 1
                         horizontalAlignment: Text.AlignHCenter
