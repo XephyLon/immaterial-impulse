@@ -72,6 +72,45 @@ TestCase {
         }), "running");
     }
 
+    function test_a_phone_adb_cannot_see_is_offline_before_the_click() {
+        // The machine this was found on: KDE Connect reaches the phone over
+        // LAN and `adb devices` lists nothing, so scrcpy has nothing to attach
+        // to - and the card said "Opens a floating window for the active
+        // phone" right up until the click.
+        const away = {
+            available: true, reachable: true, running: false, launching: false,
+            adbDevice: false, error: ""
+        };
+        compare(PhoneCards.mirrorState(away), "offline");
+        compare(PhoneCards.mirrorSubtitleKey(away), "noDevice");
+        // And it says which link is missing rather than which failed: the
+        // error the failed launch left behind is the consequence.
+        compare(PhoneCards.mirrorSubtitleKey(Object.assign({}, away,
+            { error: "ERROR: Could not find any ADB device" })), "noDevice");
+    }
+
+    function test_a_probe_that_has_not_answered_yet_is_not_a_refusal() {
+        // Every PhoneDeps flag starts false, so a plain falsy test would put
+        // every card on "no device" for the first frames of every session -
+        // and would refuse for ever at any call site that forgot the flag.
+        const unknown = { available: true, reachable: true, running: false, launching: false };
+        compare(PhoneCards.mirrorState(unknown), "ready");
+        compare(PhoneCards.mirrorSubtitleKey(unknown), "ready");
+        compare(PhoneCards.mirrorState(Object.assign({}, unknown, { adbDevice: undefined })), "ready");
+        compare(PhoneCards.mirrorState(Object.assign({}, unknown, { adbDevice: true })), "ready");
+    }
+
+    function test_a_running_mirror_outranks_adb_losing_sight_of_the_phone() {
+        // The transport dropping does not stop the window that is already up;
+        // the supervisor's exit event is what does.
+        compare(PhoneCards.mirrorState({
+            available: true, reachable: true, running: true, adbDevice: false
+        }), "active");
+        compare(PhoneCards.mirrorSubtitleKey({
+            available: true, reachable: true, running: true, adbDevice: false
+        }), "running");
+    }
+
     function test_the_mirror_titles_follow_its_ladder() {
         compare(PhoneCards.mirrorTitleKey({ available: false }), "install");
         compare(PhoneCards.mirrorTitleKey({ available: true, running: true }), "running");
@@ -127,6 +166,47 @@ TestCase {
         compare(PhoneCards.micSubtitleKey({ available: false }), "install");
         compare(PhoneCards.micTitleKey(true), "mic");
         compare(PhoneCards.micTitleKey(false), "install");
+    }
+
+    // ---------------------------------------------------------------------
+    // The microphone's own ladder
+    // ---------------------------------------------------------------------
+
+    function test_the_microphone_asks_for_adb_only_on_the_backend_that_uses_it() {
+        // scrcpy --audio-source=mic drives the phone over ADB; droidcam-cli
+        // reaches it over Wi-Fi, so an empty `adb devices` refuses one and
+        // not the other.
+        const base = { available: true, reachable: true, connecting: false, active: false };
+        compare(PhoneCards.micState(Object.assign({}, base,
+            { needsAdbDevice: true, adbDevice: false })), "offline");
+        compare(PhoneCards.micSubtitleKey(Object.assign({}, base,
+            { needsAdbDevice: true, adbDevice: false })), "noDevice");
+        compare(PhoneCards.micState(Object.assign({}, base,
+            { needsAdbDevice: false, adbDevice: false })), "ready");
+        compare(PhoneCards.micSubtitleKey(Object.assign({}, base,
+            { needsAdbDevice: false, adbDevice: false })), "ready");
+        compare(PhoneCards.micState(Object.assign({}, base,
+            { needsAdbDevice: true, adbDevice: true })), "ready");
+    }
+
+    function test_the_microphones_ladder_is_still_the_shared_one() {
+        // micState is the shared ladder with one extra term, not a second
+        // ladder: everything else it answers must match cardState.
+        const base = { available: true, reachable: true, needsAdbDevice: true, adbDevice: true };
+        compare(PhoneCards.micState(Object.assign({}, base, { available: false, active: true })), "unavailable");
+        compare(PhoneCards.micState(Object.assign({}, base, { active: true, reachable: false })), "active");
+        compare(PhoneCards.micState(Object.assign({}, base, { connecting: true })), "connecting");
+        compare(PhoneCards.micState(Object.assign({}, base, { reachable: false })), "offline");
+        compare(PhoneCards.micState(base), "ready");
+        // An unanswered probe is not a refusal here either.
+        compare(PhoneCards.micState({ available: true, reachable: true, needsAdbDevice: true }), "ready");
+        compare(PhoneCards.micState(undefined), "unavailable");
+    }
+
+    function test_an_active_microphone_outranks_adb_losing_sight_of_the_phone() {
+        compare(PhoneCards.micState({
+            available: true, reachable: true, active: true, needsAdbDevice: true, adbDevice: false
+        }), "active");
     }
 
     // ---------------------------------------------------------------------

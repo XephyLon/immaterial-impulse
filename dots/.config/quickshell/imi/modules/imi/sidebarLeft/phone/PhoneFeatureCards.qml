@@ -38,6 +38,10 @@ Item {
     readonly property bool showCards: Config.options.phone?.showPeripheralCards ?? true
     readonly property var activeDevice: PhoneConnect.activeDevice
     readonly property bool deviceReachable: PhoneConnect.activeDevice?.reachable === true
+    // `undefined` while the probes are still running, never `false`: every
+    // PhoneDeps flag starts false, and phone_cards.js reads `false` as a
+    // refusal to draw. One derivation, because two cards ask it.
+    readonly property var adbDevice: PhoneDeps.ready ? PhoneDeps.adbDevice : undefined
 
     // The elapsed clock for whichever cards are running. A Timer rather than
     // DateTime's own: that clock ticks per MINUTE unless the user asked for
@@ -54,6 +58,19 @@ Item {
     }
 
     onAnyActiveChanged: root.nowMs = Date.now()
+
+    // Whether adb can see the phone is live state, and a card that says "no
+    // device over ADB" has to stop saying it once the user plugs the phone in.
+    // The probe answers once at construction like every other one in
+    // PhoneDeps; this re-asks it, and only while this stack is on screen AND
+    // adb has still seen nothing - so it stops the moment it has an answer to
+    // give, and costs nothing at all on a tab nobody has opened.
+    Timer {
+        interval: 5000
+        repeat: true
+        running: root.visible && PhoneDeps.adb && !PhoneDeps.adbDevice
+        onTriggered: PhoneDeps.refreshAdbDevices()
+    }
 
     // PhoneScrcpy's session rows carry `startedAt` in milliseconds (Date.now()
     // at the moment the supervisor reported the window), where PhoneCamera and
@@ -96,6 +113,7 @@ Item {
                 reachable: root.deviceReachable,
                 running: PhoneScrcpy.mirrorRunning,
                 launching: PhoneScrcpy.mirrorLaunching,
+                adbDevice: root.adbDevice,
                 error: PhoneScrcpy.lastError
             })
 
@@ -120,6 +138,8 @@ Item {
                     return Translation.tr("Click to see missing dependencies and install guide");
                 case "offline":
                     return Translation.tr("Pair a reachable device to mirror its screen");
+                case "noDevice":
+                    return Translation.tr("No device over ADB · turn on USB or wireless debugging");
                 case "error":
                     return PhoneCards.errorHeadline(PhoneScrcpy.lastError);
                 case "running":
@@ -246,13 +266,18 @@ Item {
                 reachable: root.deviceReachable,
                 connecting: PhoneMic.connecting,
                 active: PhoneMic.active,
-                muted: PhoneMic.muted
+                muted: PhoneMic.muted,
+                // scrcpy drives the phone over ADB; droidcam-cli reaches it
+                // over Wi-Fi, so only the preferred backend decides whether
+                // an empty `adb devices` is a refusal.
+                needsAdbDevice: PhoneMic.preferredBackend === "scrcpy",
+                adbDevice: root.adbDevice
             })
 
             iconName: "mic"
             iconShape: MaterialShape.Shape.Sunny
             hasSettings: true
-            cardState: PhoneMic.state
+            cardState: PhoneCards.micState(micCard.flags)
             title: PhoneCards.micTitleKey(PhoneMic.available) === "install"
                 ? Translation.tr("Install scrcpy or DroidCam")
                 : Translation.tr("Phone Microphone")
@@ -268,6 +293,8 @@ Item {
                     return Translation.tr("Muted · click to unmute");
                 case "active":
                     return Translation.tr("Active · click to mute");
+                case "noDevice":
+                    return Translation.tr("No device over ADB · turn on USB or wireless debugging");
                 default:
                     return Translation.tr("Tap to start · uses scrcpy or DroidCam");
                 }
