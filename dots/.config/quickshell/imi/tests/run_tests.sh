@@ -1636,6 +1636,16 @@ if ! python3 "$SCRIPT_DIR/test_phone_contacts_contract.py"; then
     exit 1
 fi
 
+# The scrcpy supervisor over its real stdin/stdout, with fake scrcpy/adb/
+# hyprctl first on PATH: the exact argv, the events, focus by window title,
+# the USB-over-wireless rule, the app-list parse and its fallback, the cache
+# file, and stop-on-EOF.
+echo "Running Phone scrcpy session manager tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_scrcpy_manager.py"; then
+    echo "Phone scrcpy session manager tests failed."
+    exit 1
+fi
+
 echo "Running registry entry validator tests..."
 if ! python3 "$SCRIPT_DIR/test_registry_validate.py"; then
     echo "Registry entry validator tests failed."
