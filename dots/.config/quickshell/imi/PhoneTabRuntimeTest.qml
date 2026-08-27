@@ -27,6 +27,16 @@ import qs.modules.imi.sidebarLeft.phone
  * pairState says the peer asked (2) and which has no battery or report
  * leaf at all - so every branch of the surface is on screen at once.
  *
+ * The driver also puts a fake `adb`, `scrcpy`, `droidcam-cli`, `pactl`,
+ * `v4l2-ctl`, `lsmod`, `modinfo` and `mpv` on PATH, so PhoneDeps answers the
+ * same way on every machine and the three feature cards are in a state other
+ * than `unavailable`. The fake `adb` lists NO device, which is the machine
+ * this branch was written against: KDE Connect reaches the phone over LAN and
+ * adb has never seen it. What is read back here is the click PATH and the
+ * card GEOMETRY, neither of which is reachable from qmltestrunner - the
+ * decisions themselves live in phone_cards.js and are driven by
+ * tests/tst_phone_cards.qml.
+ *
  *   PATH=<dir with fake busctl>:$PATH qs -p PhoneTabRuntimeTest.qml
  */
 ShellRoot {
@@ -87,6 +97,42 @@ ShellRoot {
     function contentColumn() {
         const list = harness.first("PhoneNotificationList");
         return list ? list.parent : null;
+    }
+
+    // Items are found by TYPE everywhere above; the toast is a bare
+    // Rectangle, so it is found by the two properties only it declares.
+    function withProperties(item, names, out) {
+        for (const child of item.children) {
+            if (names.every(name => child[name] !== undefined))
+                out.push(child);
+            harness.withProperties(child, names, out);
+        }
+        return out;
+    }
+
+    function toastCard() {
+        return harness.withProperties(loader.item, ["message", "ok"], [])[0] ?? null;
+    }
+
+    // A glyph a Control positions itself: its centre must land on the
+    // button's, which an anchor cannot do and both alignments can.
+    function glyphOffCentre(button) {
+        const glyph = harness.findAll(button, "MaterialSymbol", [])[0] ?? null;
+        if (!glyph) return Number.NaN;
+        const centre = glyph.mapToItem(button, glyph.width / 2, glyph.height / 2);
+        return Math.abs(centre.x - button.width / 2);
+    }
+
+    function cardTitled(fragment) {
+        return harness.all("PhoneFeatureCard").find(c => `${c.title}`.indexOf(fragment) >= 0) ?? null;
+    }
+
+    // The footer's row, read structurally rather than by type: its three
+    // children ARE the two actions and the pill between them, in that order,
+    // and which of them is which is the whole thing being measured.
+    function footerRow() {
+        const footer = harness.first("PhoneFooterBar");
+        return footer ? (footer.children[0] ?? null) : null;
     }
 
     FloatingWindow {
@@ -284,8 +330,176 @@ ShellRoot {
                           grewBy === harness.cardHeight + harness.columnSpacing);
         },
 
+        // ---- the footer toolbar: the pill's word, and the two actions ----
+        () => {
+            // The roster step above left the unpaired laptop showing, which is
+            // the pill's other branch: a count of zero must not stand in for
+            // "the phone is not here".
+            const label = harness.findAll(harness.first("PhoneFooterBar"), "StyledText", [])[0] ?? null;
+            harness.check(`an offline device says so instead of counting, got "${label?.text}"`,
+                          label !== null && label.text === "Device offline");
+            loader.item.pickedDeviceId = harness.phoneId;
+        },
+        () => {
+            const row = harness.footerRow();
+            const slots = row ? row.children : [];
+            harness.footerButtons = slots.length === 3 ? [slots[0], slots[2]] : [];
+            harness.footerPill = slots.length === 3 ? slots[1] : null;
+            harness.footerLabel = harness.footerPill
+                ? (harness.findAll(harness.footerPill, "StyledText", [])[0] ?? null) : null;
+            const buttons = harness.footerButtons;
+            const pill = harness.footerLabel;
+            console.log(`[PhoneTab] footer w=${row?.width}`
+                + ` buttons=${buttons.map(b => `${b.width}x${b.height}@${b.x}`)}`
+                + ` label="${pill?.text}" w=${pill?.width} in pill ${harness.footerPill?.width}`);
+
+            harness.check(`the footer draws two actions around one pill, got ${slots.length} slots`,
+                          buttons.length === 2 && pill !== null);
+            // The abbreviation is what the maintainer asked to be spelled out.
+            harness.check(`the count pill spells the word out, got "${pill?.text}"`,
+                          pill !== null && pill.text.indexOf("notification") >= 0
+                          && pill.text.indexOf("notif.") < 0);
+            harness.check("...and it is the plural, since the fake daemon mirrors none",
+                          pill !== null && pill.text === "0 notifications");
+        },
+        () => {
+            const buttons = harness.footerButtons;
+            const wider = buttons.every(b => b.width > b.height);
+            harness.check(`each action is wider than it is tall, got ${buttons.map(b => `${b.width}x${b.height}`)}`,
+                          buttons.length === 2 && wider);
+            harness.check("both actions take the same stated width",
+                          buttons.length === 2 && buttons[0].width === buttons[1].width
+                          && buttons[0].width === Appearance.sizes.phoneFooterButtonWidth
+                          && buttons[0].height === Appearance.sizes.phoneFooterButtonHeight);
+            const offsets = buttons.map(b => harness.glyphOffCentre(b));
+            console.log(`[PhoneTab] glyph off centre by ${offsets}`);
+            // A RippleButtonWithIcon's glyph sat 2.5px left of centre here,
+            // because the empty label's Layout.fillWidth slot took the rest.
+            harness.check(`each glyph is centred in its action, off by ${offsets}`,
+                          offsets.every(offset => offset < 1));
+        },
+        () => {
+            // The pill is the row's only fillWidth item, so the label must
+            // elide inside it rather than paint over the two actions.
+            const label = harness.footerLabel;
+            const pill = harness.footerPill;
+            const buttons = harness.footerButtons;
+            const left = label.mapToItem(pill.parent, 0, 0).x;
+            const right = left + label.width;
+            harness.check("the label elides rather than overflowing its pill",
+                          label.elide === Text.ElideRight
+                          && label.width <= pill.width);
+            harness.check(`the label stays clear of both actions (${left}..${right})`,
+                          left >= buttons[0].x + buttons[0].width
+                          && right <= buttons[1].x);
+            harness.check("neither action was squeezed to make room for it",
+                          buttons.every(b => b.width === Appearance.sizes.phoneFooterButtonWidth));
+        },
+
+        // ---- the feature cards: what a click reaches ---------------------
+        () => {
+            const cards = harness.all("PhoneFeatureCard");
+            console.log(`[PhoneTab] cards=${cards.map(c => `"${c.title}" ${c.cardState} @${c.y} ${c.width}x${c.height}`)}`);
+            harness.check(`the three feature cards are drawn, got ${cards.length}`, cards.length === 3);
+            harness.check("PhoneDeps answered every probe before the cards were read",
+                          PhoneDeps.ready);
+            harness.check(`the fake adb lists no device, got adbDevice=${PhoneDeps.adbDevice}`,
+                          PhoneDeps.adb && !PhoneDeps.adbDevice);
+        },
+        () => {
+            // The state a card can know BEFORE the click: the phone is
+            // reachable over KDE Connect and adb cannot see it, so scrcpy has
+            // nothing to attach to and the card says which link is missing.
+            const mirror = harness.cardTitled("scrcpy Mirror");
+            const mic = harness.cardTitled("Microphone");
+            console.log(`[PhoneTab] mirror=${mirror?.cardState} "${mirror?.subtitle}"`
+                + ` mic=${mic?.cardState} "${mic?.subtitle}"`);
+            harness.check("a mirror with no ADB device is offline before it is clicked",
+                          mirror !== null && mirror.cardState === "offline"
+                          && mirror.subtitle.indexOf("No device over ADB") === 0);
+            // The microphone's preferred backend is scrcpy, which drives the
+            // phone over ADB; the webcam's droidcam-cli does not, so it is
+            // deliberately still ready.
+            harness.check("so is a microphone whose backend drives the phone over ADB",
+                          mic !== null && mic.cardState === "offline"
+                          && mic.subtitle.indexOf("No device over ADB") === 0);
+            const webcam = harness.cardTitled("Webcam");
+            harness.check("the webcam, which reaches the phone over Wi-Fi, is not refused",
+                          webcam !== null && webcam.cardState === "ready");
+        },
+        () => {
+            // Does the primary click fire at all, or is it swallowed by the
+            // settings chip or by the status mark beside it? Clicked at the
+            // card's own centre, and scored on the service.
+            const mirror = harness.cardTitled("scrcpy Mirror");
+            harness.check("the mirror is not already launching", !PhoneScrcpy.mirrorLaunching);
+            harness.click(mirror);
+        },
+        () => {
+            harness.check("a click on the card's body reaches launchMirror()",
+                          PhoneScrcpy.mirrorLaunching || PhoneScrcpy.mirrorRunning
+                          || PhoneScrcpy.lastError.length > 0);
+            // Disarmed through the model rather than by stopping the mirror:
+            // this harness has no phone and the supervisor's own exit is not
+            // what is being scored here.
+            PhoneScrcpy.mirrorLaunching = false;
+        },
+        () => {
+            // The settings chip is a SECOND affordance on the same card, and
+            // it must not be what the card's own click reaches.
+            const webcam = harness.cardTitled("Webcam");
+            const chip = harness.findAll(webcam, "RippleButton", [])[0] ?? null;
+            harness.check("the webcam card carries its settings chip", chip !== null);
+            harness.check("the sub-page is closed before the chip is clicked",
+                          loader.item.subPage === "");
+            if (chip) harness.click(chip);
+        },
+        () => {
+            harness.check(`the chip opens the webcam page, got "${loader.item.subPage}"`,
+                          loader.item.subPage === "webcam");
+            loader.item.popSubPage();
+        },
+
+        // ---- a launch that fails says so, on the card and in the toast ----
+        () => {
+            // PhoneCamera leaves lastError set and goes back to `ready`, and
+            // the card draws lastError only while it is ACTIVE - so this is
+            // the path on which a failed webcam looked exactly like a card
+            // that had ignored the click.
+            PhoneCamera.lastError = "DroidCam did not start - is the app open on the phone?";
+            PhoneCamera.errorOccurred(PhoneCamera.lastError);
+        },
+        () => {
+            const webcam = harness.cardTitled("Webcam");
+            console.log(`[PhoneTab] webcam=${webcam?.cardState} "${webcam?.subtitle}"`);
+            harness.check(`a failed launch reaches the card's subtitle, got "${webcam?.subtitle}"`,
+                          webcam !== null
+                          && webcam.subtitle === "DroidCam did not start - is the app open on the phone?");
+            const toast = harness.toastCard();
+            harness.check(`the tab hears the service's own error signal, got "${toast?.message}"`,
+                          toast !== null && toast.message === PhoneCamera.lastError && !toast.ok);
+            PhoneCamera.lastError = "";
+        },
+        () => {
+            const webcam = harness.cardTitled("Webcam");
+            harness.check("clearing the error puts the card back on its ready line",
+                          webcam.cardState === "ready"
+                          && webcam.subtitle.indexOf("Tap to start") === 0);
+            // The mirror's own feedback signal had no listener either.
+            PhoneScrcpy.feedback("scrcpy: no device found", false);
+        },
+        () => {
+            const toast = harness.toastCard();
+            harness.check(`the tab hears PhoneScrcpy.feedback, got "${toast?.message}"`,
+                          toast !== null && toast.message === "scrcpy: no device found" && !toast.ok);
+        },
+
         () => harness.finish()
     ]
+
+    property var footerButtons: []
+    property var footerPill: null
+    property var footerLabel: null
 
     property real listWithCard: 0
     property real cardHeight: 0
