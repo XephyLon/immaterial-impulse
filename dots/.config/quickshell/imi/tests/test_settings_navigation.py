@@ -165,5 +165,100 @@ class PageIndexPinTests(unittest.TestCase):
         self.assertIn("currentPage === pages.length - 1", content)
 
 
+def braced_block(source, marker):
+    """The `{ ... }` block that ENCLOSES `marker`.
+
+    Not the one that follows it: an `id:` line sits inside its own object, and
+    a check reading forward from one lands on whichever sub-block happens to be
+    declared next - for `id: pageWarmer` that is `onTriggered`, so the interval
+    and the `running` gate the check is about are outside what it read.
+    """
+    marker_at = source.index(marker)
+    depth = 0
+    for offset in range(marker_at, -1, -1):
+        if source[offset] == "}":
+            depth += 1
+        elif source[offset] == "{":
+            if depth == 0:
+                break
+            depth -= 1
+    else:
+        raise AssertionError(f"no enclosing block for {marker!r}")
+    open_brace, depth = offset, 0
+    for offset in range(open_brace, len(source)):
+        if source[offset] == "{":
+            depth += 1
+        elif source[offset] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[open_brace:offset + 1]
+    raise AssertionError(f"unterminated block around {marker!r}")
+
+
+class PageIncubationContractTests(unittest.TestCase):
+    """How the settings host builds its pages.
+
+    The host used to assign `active = true` to all fifteen page loaders inside
+    one `Qt.callLater` at `Config.ready`, which destroyed the `active:` binding
+    declared beside them and built ~24500 items in one turn of the event loop -
+    measured at 622ms of frozen GUI thread, paid by the whole shell at startup
+    whether or not the window was ever opened. `tests/
+    test_settings_page_incubation_runtime.py` drives the behaviour; this is the
+    half that runs where there is no compositor.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.source = SETTINGS.read_text(encoding="utf-8")
+        cls.page_loader = braced_block(cls.source, "id: pageLoader")
+
+    def test_no_loop_activates_every_page_loader(self):
+        # The exact idiom that was there: walk the repeater, assign `active`.
+        # The two dialog loaders in the same file legitimately assign theirs -
+        # they carry no binding to destroy - so this is scoped to the page
+        # loaders by the names that reach them.
+        self.assertNotRegex(self.source, r"pagesRepeater\.itemAt\([^)]*\)[^\n]*\.active\s*=")
+        self.assertNotRegex(self.source, r"\bloader\.active\s*=")
+        self.assertNotRegex(self.source, r"\bprofileLoader\.active\s*=")
+
+    def test_a_page_is_incubated_across_frames(self):
+        self.assertIn("asynchronous: true", self.page_loader)
+        profile = braced_block(self.source, "id: profileLoader")
+        self.assertIn("asynchronous: true", profile)
+
+    def test_the_keep_alive_term_is_not_the_thing_active_produces(self):
+        # `item` is what `active` makes, so reading it from `active`'s own
+        # binding closes a circle: `Binding loop detected for property
+        # "active"`, and Qt drops the re-evaluation rather than erroring.
+        active = re.search(r"\n\s*active:.*?(?=\n\s*\n)", self.page_loader, re.S)
+        self.assertIsNotNone(active, "the page loader has no active binding")
+        self.assertNotIn("item !== null", active.group(0))
+        self.assertIn("built", active.group(0))
+        self.assertIn("pageLoader.built = true", self.page_loader)
+
+    def test_the_pane_names_both_states_it_can_be_in(self):
+        # A blank pane reads as a broken app whichever reason it is blank for.
+        self.assertIn("currentLoader?.status === Loader.Error", self.source)
+        self.assertIn("This page failed to load", self.source)
+        self.assertIn("currentLoader?.status === Loader.Loading", self.source)
+        building = braced_block(self.source, "id: buildingPlaceholder")
+        # Gated on a settle, so a page that arrives inside one motion tier does
+        # not fade a placeholder in and straight back out.
+        self.assertIn("shown: building && buildingSettle.elapsed", building)
+        self.assertIn("interval: Appearance.animation.elementMoveFast.duration", building)
+
+    def test_the_warm_up_is_idle_work_that_yields_to_the_user(self):
+        warmer = braced_block(self.source, "id: pageWarmer")
+        self.assertIn("interval: Appearance.animation.elementMoveFast.duration", warmer)
+        # Only while the window is up, never while a navigation is settling,
+        # and never two pages at once - the engine incubates in the order it
+        # was asked, so a warm-up that queued all fifteen would put the page
+        # the user just clicked behind fourteen they did not.
+        self.assertIn("GlobalStates.settingsOpen", warmer)
+        self.assertIn("!warmHold.running", warmer)
+        self.assertIn("status === Loader.Loading", warmer)
+        self.assertIn("warmHold.restart()", self.source)
+
+
 if __name__ == "__main__":
     unittest.main()
