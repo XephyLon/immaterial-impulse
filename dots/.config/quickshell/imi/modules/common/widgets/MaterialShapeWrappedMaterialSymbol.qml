@@ -9,6 +9,12 @@ MaterialShape {
     property alias iconSize: symbol.iconSize
     property alias font: symbol.font
     property alias colSymbol: symbol.color
+    // The designsystem plugin's copy of this widget has always carried
+    // this alias and this one had not, so a call site written against
+    // that one assigns a property this component does not have. QML
+    // reports that only when the file is COMPILED, which for the Phone
+    // tab's cards is the first time someone opens the tab.
+    property alias animateChange: symbol.animateChange
     property real padding: Appearance.spacing.space100
     property var wrappedShape: MaterialShape.Shape.Clover4Leaf
 

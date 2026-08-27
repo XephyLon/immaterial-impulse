@@ -330,16 +330,12 @@ Item {
             onStopClicked: PhoneMic.stop()
         }
 
-        // ---- 4. a card per peer asking to pair ----
-        Repeater {
-            model: PhoneConnect.pairingRequests
-
-            delegate: PhoneConnectPairingCard {
-                required property var modelData
-                Layout.fillWidth: true
-                device: modelData
-            }
-        }
+        // No pairing cards here, though the spec groups them into this stack:
+        // Phone.qml draws them itself, because answering a request is the only
+        // way an unpaired phone gets into the shell and this file is loaded by
+        // URL - a stack that failed to load would take pairing with it. The
+        // type also moved to qs.modules.imi.phone as PhonePairingCard; the
+        // name that used to be here was the dialog's.
     }
 
     // The guide covers the phone panel rather than the three cards it was

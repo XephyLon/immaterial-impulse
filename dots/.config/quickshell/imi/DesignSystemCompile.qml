@@ -69,6 +69,23 @@ ShellRoot {
                 // wallpaper selector, so it compiles for the first time when
                 // someone clicks its toolbar button - which on a shell where
                 // nobody has is never.
+                // The Phone tab's own pieces. Nothing else in this sweep
+                // reaches them: the tab is one of four in a SwipeView, its
+                // sub-pages and its card stack are resolved BY URL through
+                // Loaders (deliberately, so a missing file degrades instead of
+                // taking the tab down), and a Loader that never activates
+                // never compiles what it points at. That is exactly how
+                // PhoneFeatureCards.qml shipped naming PhoneConnectPairingCard
+                // - a type renamed when the shared pieces moved to
+                // qs.modules.imi.phone - through a green suite, and said so
+                // only on a live shell.
+                Quickshell.shellPath("modules/imi/sidebarLeft/phone/Phone.qml"),
+                Quickshell.shellPath("modules/imi/sidebarLeft/phone/PhoneFeatureCards.qml"),
+                Quickshell.shellPath("modules/imi/sidebarLeft/phone/PhoneContactsPage.qml"),
+                Quickshell.shellPath("modules/imi/sidebarLeft/phone/PhoneAppsPage.qml"),
+                Quickshell.shellPath("modules/imi/sidebarLeft/phone/PhoneWebcamPage.qml"),
+                Quickshell.shellPath("modules/imi/sidebarLeft/phone/PhoneMicPage.qml"),
+                Quickshell.shellPath("modules/imi/sidebarLeft/phone/InstallGuidePopup.qml"),
                 Quickshell.shellPath("modules/imi/wallpaperSelector/ClockDepthPicker.qml"),
                 // Same shape one step on: the desktop subject selector's
                 // surface is behind a Loader that stays inactive until somebody
