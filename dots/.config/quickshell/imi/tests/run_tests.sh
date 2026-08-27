@@ -1115,6 +1115,16 @@ if ! python3 "$SCRIPT_DIR/test_settings_page_incubation_runtime.py"; then
     exit 1
 fi
 
+# How long the settings window's faster config flush lasts, driven against the
+# real Settings scope: an open, a close, a second open, two claimants, and a
+# claim whose declaring object is destroyed under it. Brings its own headless
+# weston and session bus.
+echo "Running config write delay runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_config_write_delay_runtime.py"; then
+    echo "Config write delay runtime tests failed."
+    exit 1
+fi
+
 echo "Running expressive design system tests..."
 if ! python3 "$SCRIPT_DIR/test_expressive_design_system.py"; then
     echo "Expressive design system tests failed."
