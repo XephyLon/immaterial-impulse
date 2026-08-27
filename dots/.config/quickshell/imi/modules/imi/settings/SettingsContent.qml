@@ -696,6 +696,15 @@ Item {
                             required property var index
                             source: modelData.component
 
+                            // Incubated ACROSS frames, never inside one. These
+                            // pages are large - fifteen of them come to ~24500
+                            // items - and building one is the only expensive
+                            // thing a page switch does. Synchronously that is a
+                            // block; asynchronously the engine spends whatever
+                            // is left of each frame on it and the window keeps
+                            // drawing. `item` is null for the frames that takes,
+                            // which every reader below has to tolerate.
+                            asynchronous: true
                             // `built`, never `item !== null`: `item` is what
                             // `active` PRODUCES, so a keep-alive term reading it
                             // closes a circle through this very binding. It
@@ -719,8 +728,9 @@ Item {
 
                             onLoaded: {
                                 pageLoader.built = true;
-                                if (root.currentPage === index) {
+                                if (pageLoader.isActive) {
                                     GlobalStates.currentPageInstance = item;
+                                    root.selectedSection = item.currentSection || "";
                                 }
                             }
 
@@ -728,7 +738,14 @@ Item {
                                 if (isActive && item) {
                                     GlobalStates.currentPageInstance = item;
                                     root.selectedSection = item.currentSection || "";
-                                } else if (!isActive && GlobalStates.currentPageInstance === item) {
+                                } else if (isActive) {
+                                    // Still incubating. Leaving this naming the
+                                    // page we just left points every reader at a
+                                    // page nobody can see, and `onLoaded` names
+                                    // this one the moment it exists.
+                                    GlobalStates.currentPageInstance = null;
+                                    root.selectedSection = "";
+                                } else if (GlobalStates.currentPageInstance === item) {
                                     GlobalStates.currentPageInstance = null;
                                 }
                             }
@@ -765,6 +782,7 @@ Item {
 
                     Loader {
                         id: profileLoader
+                        asynchronous: true
                         // The loop above assigned this too, so it also had no
                         // binding to be built by. See the page loader's `built`
                         // above for why this is not `item !== null`.
@@ -788,7 +806,9 @@ Item {
                         onIsActiveChanged: {
                             if (isActive && item) {
                                 GlobalStates.currentPageInstance = item;
-                            } else if (!isActive && GlobalStates.currentPageInstance === item) {
+                            } else if (isActive) {
+                                GlobalStates.currentPageInstance = null;
+                            } else if (GlobalStates.currentPageInstance === item) {
                                 GlobalStates.currentPageInstance = null;
                             }
                         }
