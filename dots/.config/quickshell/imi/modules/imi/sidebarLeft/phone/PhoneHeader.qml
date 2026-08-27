@@ -21,8 +21,6 @@ Item {
     // The device the tab is about; null while the daemon knows none.
     property var device: null
     property bool rosterOpen: false
-    readonly property bool online: root.device !== null
-        && root.device.paired && root.device.reachable
 
     signal toggleRoster()
 
