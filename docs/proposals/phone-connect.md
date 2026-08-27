@@ -124,6 +124,55 @@ them:
   the real service against a fake daemon and reads all of it back,
   including the area growing by exactly a card when that card goes.
 
+**Slices 4, 5 and 6 have landed** on the service; the buttons that reach
+them are the Phone tab's (`docs/superpowers/specs/2026-08-27-phone-tab-design.md`,
+W5), so the dialog still draws three actions until the tab replaces it.
+
+- **Actions queue** (c7e160da1 "feat(phoneConnect): actions queue behind one
+  another instead of killing the one in flight"). Measured first: `Process.exec`
+  on a Process still running terminates it (exit 15, status 1, no output), so
+  `runAction` fed straight from `exec` kept the last action of a burst and
+  killed the rest — and one `shareUrl` per file IS a burst. `runAction` pushes
+  onto a queue the Process's own exit pumps. Feedback is one channel
+  (d021d10b0 "feat(phoneConnect): lastActionError and an actionFeedback signal
+  for toasts"): every action raises `actionFeedback(message, ok)`, every
+  failure sets `lastActionError` through one `reportFailure`.
+- **Send** (39f359ad4 "feat(phoneConnect): shareUrls and shareText through
+  the share plugin"; 8c29fc2be "feat(phoneConnect): share the clipboard as a
+  link or as text"; 58f4cd225 "feat(phoneConnect): pick files with kdialog
+  and share each as a file URL"). `share.shareUrl`/`shareText` on the
+  device's `/share` leaf, one string argument each (busctl signature `s`),
+  never a shell — the fork's `_shellQuote` has no counterpart here.
+  `shareClipboard` reads `wl-paste --no-newline` as a constant argv and
+  decides through the fork's heuristic (`/^https?:\/\//i`, or a host-shaped
+  token that is the whole string or starts a path), with one correction: a
+  bare host leaves with `https://` on it, because the daemon hands the string
+  to a `QUrl` and `example.org` is relative to nothing. The picker is the
+  house `kdialog --getopenfilename $HOME --multiple` (the wallpaper picker's
+  shape), its lines percent-encoded per segment before `file://` for the same
+  `QUrl` reason — a raw `#` in a filename is a fragment. Not taken: the
+  zenity fallback, and the proposal's own "drop shelf rather than a picker":
+  the spec answered both, the picker here and a `DropArea` on the tab.
+- **SFTP** (c487842e4 "feat(phoneConnect): browse the phone over SFTP,
+  opening its storage when it has one"). `sftp.mount`, then — on the read
+  queue, not the action process — `isMounted` every 600 ms up to ten times
+  (`mount()` returns before sshfs is up), then `mountPoint`, then a `test -d`
+  argv on `<mount>/storage/emulated/0` (the fork's 3a7f653b4: the mount root
+  is not the user's storage), then `xdg-open` on whichever exists.
+  `sftpMounted` is the daemon's last `isMounted` answer. Not taken: `gio open`
+  ahead of `xdg-open`, and the unmount — nothing in the tab asks for it yet.
+- **Persisted device, MRU, battery** (b603cbeb7 "feat(phoneConnect):
+  remember the picked device, and the five picked before it"; cdad588f8
+  "feat(phoneConnect): a low-battery notice once, and a recovery notice").
+  `Persistent.states.phone.{activeDeviceId, recentDeviceIds}`; `activeDevice`
+  prefers the persisted device while it is paired and reachable, else the
+  rule that was there. The MRU walk goes by index because a `list<string>`
+  off a `JsonAdapter` fails `Array.isArray`. The thresholds are the
+  proposal's, literally, pinned as numbers in `tests/tst_phone_connect.qml`:
+  low once below 20 and not charging, recovered at 25 or on charging; the
+  fork's extra guard on the previous charge being ≥ 20 (which kept a phone
+  already at 15% at boot silent) is not carried.
+
 ## Prior art: P3DROVFX/ii-p3drovfx
 
 Recorded because the next slice is decided from it, not because any of it is
@@ -238,14 +287,14 @@ Ordered by value. Each borrows the fork's shape and none of its transport:
 every read is a `busctl` argv, every write goes through `runAction`, and both
 backends stay behind the one model.
 
-**Slices 1 (signal-driven updates), 2 and 3 are done** — see "Current
+**Slices 1 (signal-driven updates) through 6 are done** — see "Current
 state" above. The next slice is now notification mirroring, and it inherits
 the stream and the surface: its signals go in `signalChangesDevices`'
 allowlist, the match rule already covers the whole `/modules/kdeconnect`
-namespace, and the dialog's notification area is already the fill item
-waiting for it, so nothing about the transport or the layout has to be
-rebuilt. What is still open from slice 1 is Valent: its signal set was not
-verifiable and it keeps the poll until it is.
+namespace, and the notification area is already the fill item waiting for
+it, so nothing about the transport or the layout has to be rebuilt. What is
+still open from slice 1 is Valent: its signal set was not verifiable and it
+keeps the poll until it is.
 
 1. **Notification mirroring.** Borrow: the leaf `notification.dismiss` (not
    `sendAction("cancel")`), `sendReply` with a re-fetch, `internalId` →
@@ -266,15 +315,16 @@ verifiable and it keeps the poll until it is.
    through the stream; the calls are `acceptPairing`/`cancelPairing` on the
    device path, aimed only at a device that asked, with the id validated and
    passed as an argument rather than interpolated into a shell string.
-4. **Send and receive.** `share.shareUrl("file://…")` for file send, drop
-   target on the drop shelf (`modules/imi/dropShelf/`) rather than a picker
-   dialog, and `share.shareReceived` surfaced as a notification. Not: the
-   kdialog/zenity picker chain.
-5. **SFTP mount/browse.** `sftp.mount`/`unmount` plus a file-manager open;
-   the fork's `3a7f653b4` records that the mount root is not the user's
-   storage — open `<mount>/storage/emulated/0` when it exists.
-6. **Persisted active device, MRU, and low-battery hooks.** Small; take the
-   thresholds (<20% not charging, recover at ≥25% or charging) as they are.
+4. **Send and receive.** Done for the send half — see "Current state":
+   `share.shareUrl("file://…")` per file, the clipboard as a link or text,
+   and the house kdialog picker (the spec overruled "rather than a picker":
+   the tab gets a `DropArea` as well). Still open: `share.shareReceived`
+   surfaced as a notification, which belongs with notification mirroring.
+5. **SFTP mount/browse.** Done — see "Current state". `sftp.mount`, a
+   bounded wait on `isMounted`, `mountPoint`, and `<mount>/storage/emulated/0`
+   when it exists. Unmount is not wired; nothing asks for it yet.
+6. **Persisted active device, MRU, and low-battery hooks.** Done — see
+   "Current state", thresholds taken literally.
 
 Still open regardless: media (`mprisremote`), clipboard *receive*, and Valent
 action coverage beyond `findmyphone.ring` (its other action names were not
@@ -336,8 +386,11 @@ would be both laggy and wasteful.
   path, and the wrapping is narrow on purpose — an answer is refused for any
   device that has not asked, the card says to accept only a pairing the user
   started on that device, and nothing about the id ever reaches a shell.
-- Whether file-send should accept drops onto the drop shelf
-  (`modules/imi/dropShelf/`), which already handles mid-drag interaction.
+- ~~Whether file-send should accept drops onto the drop shelf
+  (`modules/imi/dropShelf/`), which already handles mid-drag interaction.~~
+  Answered by the Phone tab spec: both — the picker landed with slice 4 on
+  the service, and the tab carries a `DropArea` that hands dropped `file://`
+  URLs to the same `shareUrls`.
 
 ## Out of scope
 
