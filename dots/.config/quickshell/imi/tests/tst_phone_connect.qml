@@ -550,6 +550,19 @@ TestCase {
         compare(PhoneConnect.clipboardShareTarget(null).kind, "empty")
     }
 
+    function test_picked_file_urls_turn_picker_lines_into_file_urls() {
+        // kdialog --multiple prints one path per line; a cancelled picker
+        // prints nothing. The daemon hands each URL to a QUrl, so a path is
+        // percent-encoded per segment - a raw "#" would become a fragment.
+        compare(PhoneConnect.pickedFileUrls("/home/me/a.jpg\n/home/me/with space #1.txt\n").join("|"),
+                "file:///home/me/a.jpg|file:///home/me/with%20space%20%231.txt")
+        compare(PhoneConnect.pickedFileUrls("  /home/me/a.jpg  \n\n   \n").join("|"), "file:///home/me/a.jpg")
+        compare(PhoneConnect.pickedFileUrls("").length, 0)
+        compare(PhoneConnect.pickedFileUrls(null).length, 0)
+        // A line that is not an absolute path is not a file.
+        compare(PhoneConnect.pickedFileUrls("relative/path\n/abs/ok").join("|"), "file:///abs/ok")
+    }
+
     // ---- device id guard ----
 
     function test_valid_device_id_accepts_kdeconnect_and_valent_ids() {

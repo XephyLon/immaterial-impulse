@@ -35,7 +35,7 @@ DIALOG = SURFACE / "PhoneConnectDialog.qml"
 # carries the three this model backs, and a fourth appears here or not at
 # all - a button whose call the service does not answer is a fake action.
 MODEL_ACTIONS = {"refresh", "ring", "ping", "sendClipboard", "acceptPairing", "cancelPairing",
-                 "shareUrls", "shareText", "shareClipboard"}
+                 "shareUrls", "shareText", "shareClipboard", "pickAndSendFiles"}
 
 BEGIN = "// BEGIN phone-connect parser logic"
 END = "    // END phone-connect parser logic"
@@ -432,6 +432,27 @@ def test_share_clipboard_reads_wl_paste_as_a_constant_argv_and_decides_through_t
     assert body, "shareClipboard() missing"
     assert "clipboardProc.running" in body.group(0), "shareClipboard does not start the read (or guard a read in flight)"
     assert "root.validDeviceId(d.id)" in body.group(0), "shareClipboard aims at an unvalidated device"
+
+
+def test_the_file_picker_is_kdialog_as_a_constant_argv_and_its_lines_become_file_urls():
+    """The house picker (`kdialog --getopenfilename $HOME --multiple`, the
+    pattern at SidebarRightContent.qml:113) as a constant argv: the only
+    non-literal element is the start directory, read from the environment
+    and never interpolated into a shell string. Its stdout is one path per
+    line, turned into file:// URLs by the synced pickedFileUrls and handed
+    to shareUrls - so the picker never talks to the daemon itself."""
+    source = SERVICE.read_text()
+    block = _process_block(source, "filePickerProc")
+    command = re.search(r'command:\s*\["kdialog", "--getopenfilename", ([^\]]*)\]', block)
+    assert command, "the picker is not the constant argv [kdialog, --getopenfilename, <home>, --multiple]"
+    assert command.group(1).endswith('"--multiple"'), f"the picker does not ask for several files: {command.group(0)}"
+    assert "${" not in block and '"sh"' not in block and '"bash"' not in block
+    assert "root.pickedFileUrls(" in block, "the picker's lines are not turned into URLs by pickedFileUrls"
+    assert "root.shareUrls(" in block, "the picker does not hand its files to shareUrls"
+    body = re.search(r"function pickAndSendFiles\(.*?\n    \}\n", source, re.S)
+    assert body, "pickAndSendFiles() missing"
+    assert "filePickerProc.running" in body.group(0), "pickAndSendFiles does not start the picker (or guard one already open)"
+    assert "root.validDeviceId(d.id)" in body.group(0), "pickAndSendFiles aims at an unvalidated device"
 
 
 # ---- the sidebar surface ----------------------------------------------------
