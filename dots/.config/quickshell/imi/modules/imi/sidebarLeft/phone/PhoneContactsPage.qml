@@ -149,8 +149,17 @@ PhoneSubPage {
                     readonly property bool favourite: PhoneContacts.isFavorite(contactRow.modelData.id, PhoneContacts.favorites)
                     readonly property var phones: contactRow.modelData.phones ?? []
 
+                    // The card's padding, spelled ONCE. It used to be two
+                    // numbers - `space50` on the column's anchors and
+                    // `space100` added to the height - which agree only while
+                    // one happens to be exactly twice the other, so changing
+                    // either leaves the card a different height from what is
+                    // in it. Same coupling `WindowDialog.contentPadding`
+                    // removed, one widget down.
+                    readonly property real rowPadding: Appearance.spacing.space50
+
                     width: contactList.width
-                    implicitHeight: rowColumn.implicitHeight + Appearance.spacing.space100
+                    implicitHeight: rowColumn.implicitHeight + contactRow.rowPadding * 2
                     height: implicitHeight
                     radius: Appearance.rounding.normal
                     color: contactRow.expanded ? Appearance.colors.colLayer3 : Appearance.colors.colLayer2
@@ -168,11 +177,16 @@ PhoneSubPage {
                             left: parent.left
                             right: parent.right
                             top: parent.top
-                            margins: Appearance.spacing.space50
+                            margins: contactRow.rowPadding
                         }
                         spacing: Appearance.spacing.space50
 
                         RippleButton {
+                            // Named so a runtime harness can find the three
+                            // boxes this card is supposed to contain by name,
+                            // rather than by walking a tree whose shape is the
+                            // thing being measured.
+                            objectName: "contactHeader"
                             Layout.fillWidth: true
                             Layout.preferredHeight: Appearance.font.pixelSize.huge * 2
                             buttonRadius: Appearance.rounding.small
@@ -186,6 +200,7 @@ PhoneSubPage {
 
                                 Rectangle {
                                     id: avatar
+                                    objectName: "contactAvatar"
                                     Layout.alignment: Qt.AlignVCenter
                                     Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space200
                                     Layout.preferredHeight: avatar.Layout.preferredWidth
@@ -227,6 +242,7 @@ PhoneSubPage {
                                 }
 
                                 ColumnLayout {
+                                    objectName: "contactIdentity"
                                     Layout.fillWidth: true
                                     Layout.alignment: Qt.AlignVCenter
                                     spacing: 0
@@ -300,6 +316,7 @@ PhoneSubPage {
                         }
 
                         ColumnLayout {
+                            objectName: "contactDetails"
                             Layout.fillWidth: true
                             Layout.leftMargin: Appearance.spacing.space100
                             Layout.rightMargin: Appearance.spacing.space100
