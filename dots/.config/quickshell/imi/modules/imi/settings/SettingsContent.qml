@@ -213,20 +213,27 @@ Item {
     // A page that has never been visited costs a measured 10-510ms to
     // incubate, which is not a stall - the loaders are asynchronous - but it is
     // a wait, and the placeholder is what the user sees during it. So the pages
-    // are built ahead of the user while the window is open, ONE AT A TIME: the
-    // engine incubates in the order it was asked, so a warm-up that queued all
-    // fifteen would put the page the user just clicked behind fourteen they did
-    // not.
+    // are built ahead of the user, ONE AT A TIME: the engine incubates in the
+    // order it was asked, so a warm-up that queued all fifteen would put the
+    // page the user just clicked behind fourteen they did not.
     //
     // Deliberately not what it replaced, which was fifteen SYNCHRONOUS builds
-    // inside one turn of the event loop at `Config.ready` - 622ms of frozen GUI
-    // thread paid by the whole shell at startup whether or not the window was
-    // ever opened.
+    // inside one turn of the event loop - 622ms of frozen GUI thread paid by
+    // the whole shell at startup.
+    //
+    // The gate is `Config.ready` and NOT `GlobalStates.settingsOpen`, which
+    // reads like the better answer and is not: `pages/HyprlandConfig.qml` and
+    // `pages/CursorConfig.qml` push their whole `Config.options.hyprland` block
+    // into `~/.config/hypr/hyprland/shellOverrides/main.lua` from their own
+    // `Component.onCompleted`, so WHEN a settings page is built is load-bearing
+    // outside this window. Warming only for an open window would stop those
+    // overrides being regenerated at all for anyone who never opens Settings -
+    // silently, and on the file that is the one the compositor reads.
     Timer {
         id: pageWarmer
         interval: Appearance.animation.elementMoveFast.duration
         repeat: true
-        running: GlobalStates.settingsOpen && !warmHold.running
+        running: Config.ready && !warmHold.running
             && root.warmedThrough < root.pages.length - 1
         onTriggered: {
             for (let i = 0; i < root.pages.length; i++) {

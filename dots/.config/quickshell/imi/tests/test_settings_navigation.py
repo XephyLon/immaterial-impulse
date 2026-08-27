@@ -250,12 +250,21 @@ class PageIncubationContractTests(unittest.TestCase):
     def test_the_warm_up_is_idle_work_that_yields_to_the_user(self):
         warmer = braced_block(self.source, "id: pageWarmer")
         self.assertIn("interval: Appearance.animation.elementMoveFast.duration", warmer)
-        # Only while the window is up, never while a navigation is settling,
-        # and never two pages at once - the engine incubates in the order it
-        # was asked, so a warm-up that queued all fifteen would put the page
-        # the user just clicked behind fourteen they did not.
-        self.assertIn("GlobalStates.settingsOpen", warmer)
+        # Never while a navigation is settling, and never two pages at once -
+        # the engine incubates in the order it was asked, so a warm-up that
+        # queued all fifteen would put the page the user just clicked behind
+        # fourteen they did not.
         self.assertIn("!warmHold.running", warmer)
+        # `Config.ready`, and deliberately NOT `GlobalStates.settingsOpen`:
+        # HyprlandConfig.qml and CursorConfig.qml push their whole config block
+        # into hypr/shellOverrides/main.lua from Component.onCompleted, so WHEN
+        # a page is built is load-bearing outside this window.
+        self.assertIn("running: Config.ready", warmer)
+        self.assertNotIn("GlobalStates.settingsOpen", warmer)
+        for page in ("HyprlandConfig", "CursorConfig"):
+            source = (ROOT / f"modules/imi/settings/pages/{page}.qml").read_text(encoding="utf-8")
+            self.assertIn("Component.onCompleted", source, page)
+            self.assertIn("HyprlandConfig.setMany", source, page)
         self.assertIn("status === Loader.Loading", warmer)
         self.assertIn("warmHold.restart()", self.source)
 
