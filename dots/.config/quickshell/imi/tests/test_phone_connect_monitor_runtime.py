@@ -10,8 +10,9 @@ by a `running` binding is a tight respawn loop that starves Quickshell.
 So this drives the real singleton in a real `qs` with a fake `busctl` on PATH
 and reads the spawns back:
 
-- stream: the monitor comes up for KDE Connect, and a battery change reaches
-  the shell from a SIGNAL. That is an oracle rather than an observation
+- stream: the monitor comes up for KDE Connect, the device's reachable
+  address and its connectivity_report reach the model off the sweep's two
+  extra reads, and a battery change reaches the shell from a SIGNAL. That is an oracle rather than an observation
   because the poll interval is seeded at ten minutes for this case - the
   timer cannot deliver the new charge inside the run, so a stream that never
   worked reports the pre-signal value and reddens. (Seeded through
@@ -50,6 +51,12 @@ SOCKET = "wayland-imi-phoneconnect-monitor"
 DEVICE_ID = "6131a746_571a_4176_a007_95625ff8e08e"
 CHARGE_BEFORE = 41
 CHARGE_AFTER = 87
+# What the device's reachableAddresses and its connectivity_report leaf say -
+# the two reads slice 2 added to the sweep, checked back off the model so a
+# sweep that dropped either GetAll (or read the report off the device path,
+# where the daemon answers with something else) reddens here.
+ADDRESS = "192.168.100.179"
+CELLULAR = "LTE"
 
 # The service's own declared ceiling. Read out of the source rather than
 # copied: a check that carries its own copy of the number passes when the
@@ -88,8 +95,15 @@ case "$*" in
   *"GetAll s org.kde.kdeconnect.device.battery")
     printf '{"type":"a{sv}","data":[{"charge":{"type":"i","data":%%s},"isCharging":{"type":"b","data":false}}]}\\n' "$charge"
     ;;
+  *"/connectivity_report org.freedesktop.DBus.Properties GetAll s org.kde.kdeconnect.device.connectivity_report")
+    # Answered at the leaf's own path only. The real daemon answers the same
+    # interface named on the DEVICE path with the device's properties, which
+    # carry no cellular fields; the fake answers it with nothing. Either way
+    # a sweep reading the report off the wrong path never sees the LTE.
+    printf '{"type":"a{sv}","data":[{"cellularNetworkStrength":{"type":"i","data":4},"cellularNetworkType":{"type":"s","data":"%(cellular)s"},"iconName":{"type":"s","data":"network-mobile-100-lte"}}]}\\n'
+    ;;
   *"GetAll s org.kde.kdeconnect.device")
-    printf '{"type":"a{sv}","data":[{"name":{"type":"s","data":"Galaxy S23 Ultra"},"type":{"type":"s","data":"phone"},"isPaired":{"type":"b","data":true},"isReachable":{"type":"b","data":true}}]}\\n'
+    printf '{"type":"a{sv}","data":[{"name":{"type":"s","data":"Galaxy S23 Ultra"},"type":{"type":"s","data":"phone"},"isPaired":{"type":"b","data":true},"isReachable":{"type":"b","data":true},"pairState":{"type":"i","data":3},"reachableAddresses":{"type":"as","data":["%(address)s"]}}]}\\n'
     ;;
   *"GetManagedObjects")
     printf '{"type":"a{oa{sa{sv}}}","data":[{"/ca/andyholmes/Valent/Device/0":{"ca.andyholmes.Valent.Device":{"Id":{"type":"s","data":"abc123"},"Name":{"type":"s","data":"Pixel 9"},"Type":{"type":"s","data":"phone"},"State":{"type":"u","data":3}}}}]}\\n'
@@ -115,15 +129,18 @@ case "$*" in
     ;;
 esac
 exit 0
-""" % {"device": DEVICE_ID, "before": CHARGE_BEFORE, "after": CHARGE_AFTER}
+""" % {"device": DEVICE_ID, "before": CHARGE_BEFORE, "after": CHARGE_AFTER,
+       "address": ADDRESS, "cellular": CELLULAR}
 
 
 # How many checks the harness runs, per shape it is launched in. Literals
 # rather than anything read back out of the harness's own output: a harness
 # whose step list shrinks must redden here instead of reporting
-# `failures: 0` for a shorter run.
-EXPECTED_CHECKS_STREAMING = 5
-EXPECTED_CHECKS_GAVE_UP = 6
+# `failures: 0` for a shorter run. KDE Connect cases carry two more than
+# Valent's: the address and the cellular report are its reads alone.
+EXPECTED_CHECKS_STREAMING = 7
+EXPECTED_CHECKS_GAVE_UP = 8
+EXPECTED_CHECKS_VALENT = 5
 EXPECTED_CHECKS_NO_DAEMON = 3
 
 
@@ -207,6 +224,8 @@ class PhoneConnectMonitorRuntimeTest(unittest.TestCase):
         env["PHONE_EXPECT_BACKEND"] = backend
         env["PHONE_EXPECT_MONITOR"] = expect_monitor
         env["PHONE_EXPECT_CHARGE"] = str(expect_charge)
+        env["PHONE_EXPECT_ADDRESS"] = ADDRESS
+        env["PHONE_EXPECT_CELLULAR"] = CELLULAR
         env["PHONE_SETTLE_MS"] = str(settle_ms)
         # dbus-run-session, not the inherited DBUS_SESSION_BUS_ADDRESS: this
         # harness must see the services it declares and no others.
@@ -281,7 +300,7 @@ class PhoneConnectMonitorRuntimeTest(unittest.TestCase):
     def test_valent_is_never_streamed_because_its_signals_are_unverified(self):
         self.launch(backend="valent", monitor_mode="crash",
                     expect_monitor="idle", expect_charge=CHARGE_BEFORE,
-                    checks=EXPECTED_CHECKS_STREAMING,
+                    checks=EXPECTED_CHECKS_VALENT,
                     poll_ms=2000, settle_ms=6000)
         self.assertEqual(self.monitor_spawns(), [],
                          "a monitor was spawned for a backend with no verified signal set")

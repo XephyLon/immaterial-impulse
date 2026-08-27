@@ -21,8 +21,9 @@ import qs.services
  * that never worked.
  *
  * What each case pins:
- * - stream: the monitor comes up for KDE Connect and a battery change
- *   arrives from the signal rather than from the timer.
+ * - stream: the monitor comes up for KDE Connect, the model carries the
+ *   device's reachable address and its cellular report off the sweep, and a
+ *   battery change arrives from the signal rather than from the timer.
  * - crash: a busctl that exits immediately - the shape CONTRIBUTING.md
  *   forbids answering with a `running` binding - is retried a bounded number
  *   of times and then given up on, with the poll still populating the model.
@@ -44,6 +45,8 @@ ShellRoot {
     readonly property string expectBackend: Quickshell.env("PHONE_EXPECT_BACKEND") ?? "none"
     readonly property string expectMonitor: Quickshell.env("PHONE_EXPECT_MONITOR") ?? "idle"
     readonly property int expectCharge: Number(Quickshell.env("PHONE_EXPECT_CHARGE") ?? "-1")
+    readonly property string expectAddress: Quickshell.env("PHONE_EXPECT_ADDRESS") ?? ""
+    readonly property string expectCellular: Quickshell.env("PHONE_EXPECT_CELLULAR") ?? ""
     readonly property int settleMs: Number(Quickshell.env("PHONE_SETTLE_MS") ?? "6000")
 
     function check(label, ok) {
@@ -111,6 +114,14 @@ ShellRoot {
             harness.check("the device is reachable and paired", (device?.reachable ?? false) && (device?.paired ?? false));
             harness.check(`battery charge is ${harness.expectCharge}, got ${device?.batteryCharge}`,
                           (device?.batteryCharge ?? -99) === harness.expectCharge);
+            if (harness.expectBackend === "kdeconnect") {
+                // The sweep's two slice-2 reads: the device's own
+                // reachableAddresses and the connectivity_report leaf.
+                harness.check(`reachable address is ${harness.expectAddress}, got ${device?.reachableAddresses?.[0]}`,
+                              (device?.reachableAddresses?.[0] ?? "") === harness.expectAddress);
+                harness.check(`cellular type is ${harness.expectCellular}, got ${device?.cellularNetworkType}`,
+                              (device?.cellularNetworkType ?? "") === harness.expectCellular);
+            }
             harness.finish();
         }
     }
