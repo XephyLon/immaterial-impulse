@@ -12,6 +12,11 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.32.0] — 2026-08-27
+
+One behaviour change, small in code and large on the hand: picking a section
+in Settings scrolls the page there instead of snapping.
+
 ### Changed
 - **Picking a section in Settings scrolls to it instead of jumping.** Choosing
   a category in the left tree (or landing on a search hit) used to snap the
@@ -2656,7 +2661,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.2...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.32.0...HEAD
+[0.32.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.2...v0.32.0
 [0.31.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.1...v0.31.2
 [0.31.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.0...v0.31.1
 [0.31.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.30.2...v0.31.0
