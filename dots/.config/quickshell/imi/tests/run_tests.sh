@@ -1091,6 +1091,17 @@ if ! python3 "$SCRIPT_DIR/test_settings_navigation.py"; then
     exit 1
 fi
 
+# WHEN the settings host builds its fifteen pages. It used to build all of them
+# synchronously in one turn at Config.ready - 622ms of frozen GUI thread paid by
+# the whole shell at startup, measured on the harness's own heartbeat, and
+# invisible to any `sync` timing around the write because the cost lands in the
+# turn after it. Brings its own headless weston and session bus.
+echo "Running settings page incubation runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_settings_page_incubation_runtime.py"; then
+    echo "Settings page incubation runtime tests failed."
+    exit 1
+fi
+
 echo "Running expressive design system tests..."
 if ! python3 "$SCRIPT_DIR/test_expressive_design_system.py"; then
     echo "Expressive design system tests failed."
