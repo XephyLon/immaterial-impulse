@@ -613,18 +613,22 @@ Singleton {
             root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/findmyphone`, "org.kde.kdeconnect.device.findmyphone", "ring", []));
         else if (root.backend === "valent" && root.validValentObjectPath(d.objectPath))
             root.runAction(root.busctlCall("ca.andyholmes.Valent", d.objectPath, "org.gtk.Actions", "Activate", ["sava{sv}", "findmyphone.ring", "0", "0"]));
+        else return;
+        root.actionFeedback(Translation.tr("Ringing phone…"), true);
     }
 
     function ping(device: var): void {
         const d = device ?? root.activeDevice;
         if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
         root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/ping`, "org.kde.kdeconnect.device.ping", "sendPing", []));
+        root.actionFeedback(Translation.tr("Ping sent"), true);
     }
 
     function sendClipboard(device: var): void {
         const d = device ?? root.activeDevice;
         if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
         root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/clipboard`, "org.kde.kdeconnect.device.clipboard", "sendClipboard", []));
+        root.actionFeedback(Translation.tr("Clipboard sent"), true);
     }
 
     // One share.shareUrl per entry, each its own queued action, so a
