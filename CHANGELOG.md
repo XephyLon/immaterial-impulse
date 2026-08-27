@@ -23,6 +23,14 @@ own repo; the installer pins which revision it builds.
   the bare mount. The device you pick in the panel is remembered across
   restarts, with the last five picks kept for the list. The buttons for the
   new actions arrive with the Phone tab; the notifications work now.
+- **Your phone's notifications are mirrored into the shell.** With a phone
+  paired through KDE Connect, the shell reads its active notifications off
+  the daemon as they arrive, keeps them grouped by app, dismisses one on the
+  phone itself rather than only hiding the card, replies inline where the app
+  allows it, and remembers the list across a restart. While the phone is
+  reachable, kdeconnectd's own desktop pop-ups of those same notifications
+  are no longer shown beside them. This is the data behind the Phone tab,
+  which draws it in a following release.
 - **Phone Connect shows your phone's wireless address and cellular network,
   and answers pairing requests.** The panel reads the address KDE Connect
   reaches the phone on and its cellular network type (LTE, 5G, …) alongside
