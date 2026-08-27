@@ -12,6 +12,12 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+## [0.31.2] — 2026-08-27
+
+Two fixes found on one button and applied everywhere the same spelling lived:
+icon buttons centre their glyph, and the text field's confirm button arrives
+and leaves smoothly instead of snapping.
+
 ### Fixed
 - **Icon buttons draw their icon in the middle.** The presets "save" button, the
   password-reveal eye, the phone panel's ring and send buttons, the wallpaper
@@ -2643,7 +2649,8 @@ illogical-impulse), collecting the work done to date:
   (`Super`+`/`).
 - This changelog and versioning.
 
-[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.1...HEAD
+[Unreleased]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.2...HEAD
+[0.31.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.1...v0.31.2
 [0.31.1]: https://github.com/XephyLon/immaterial-impulse/compare/v0.31.0...v0.31.1
 [0.31.0]: https://github.com/XephyLon/immaterial-impulse/compare/v0.30.2...v0.31.0
 [0.30.2]: https://github.com/XephyLon/immaterial-impulse/compare/v0.30.1...v0.30.2
