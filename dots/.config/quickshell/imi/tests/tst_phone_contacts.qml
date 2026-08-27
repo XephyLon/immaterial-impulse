@@ -137,6 +137,12 @@ TestCase {
         const upper = contact({ id: "u", displayName: "Adam B", givenName: "Adam", familyName: "B" })
         PhoneContacts.contacts = [upper, lower]
         compare(ids(PhoneContacts.filtered), ["l", "u"], "equal keys fall back to the display name")
+        // The tie-break must not be the runner's collation: this ordering was
+        // green under en_US.UTF-8 and red in CI's C locale, because
+        // localeCompare put "Adam B" before "adam" there.
+        compare(PhoneContacts.compareFolded("adam", "Adam B"), -1, "the fold decides, not the case")
+        compare(PhoneContacts.compareFolded("Adam B", "adam"), 1, "and it decides the same way round")
+        compare(PhoneContacts.compareFolded("ADAM", "adam"), 0, "case alone is not an ordering")
     }
 
     function test_the_filter_does_not_mutate_the_source_list() {

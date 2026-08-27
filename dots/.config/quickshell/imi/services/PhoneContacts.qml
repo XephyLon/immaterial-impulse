@@ -121,9 +121,23 @@ Singleton {
         return String(name || contact?.displayName || "").toLowerCase();
     }
 
+    // The tie-break is CASE-FOLDED and compared by code point, not by
+    // localeCompare: collation is the runner's locale, and "adam" vs "Adam B"
+    // orders one way under en_US.UTF-8 and the other under C - green here and
+    // red in CI. The primary key keeps localeCompare (it is already folded, so
+    // case cannot reach it, and accents order the way a reader expects); the
+    // tie-break is what has to be the same on every machine.
+    function compareFolded(a: var, b: var): int {
+        const x = String(a ?? "").toLowerCase();
+        const y = String(b ?? "").toLowerCase();
+        if (x === y) return 0;
+        return x < y ? -1 : 1;
+    }
+
     function sortContacts(list: var, sortBy: string): var {
         return [...(list ?? [])].sort((a, b) => root.sortKey(a, sortBy).localeCompare(root.sortKey(b, sortBy))
-            || String(a?.displayName ?? "").localeCompare(String(b?.displayName ?? "")));
+            || root.compareFolded(a?.displayName, b?.displayName)
+            || root.compareFolded(a?.id, b?.id));
     }
 
     function filterContacts(list: var, query: var, hideUnnamed: bool, favorites: var, sortBy: string): var {
