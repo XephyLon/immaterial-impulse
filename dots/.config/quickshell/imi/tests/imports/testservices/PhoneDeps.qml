@@ -29,7 +29,6 @@ Singleton {
     property int scrcpyMinor: 0
     property string distro: "unknown"
     property bool adbDevice: false
-    property string adbDeviceSerial: ""
 
     readonly property bool appModeSupported: root.scrcpy && root.scrcpyMajor >= 4
 
@@ -72,23 +71,19 @@ Singleton {
     // per transport. Only a row in the `device` state is a phone the tools can
     // drive: `unauthorized` is a phone that has not answered the RSA prompt
     // and `offline` a transport that has dropped, and either is a launch that
-    // fails a second later with nothing on screen having said so. The
-    // supervisor prefers a USB serial over an ip:port, so the USB ones come
-    // first here too and the serial reported is the one a launch would use.
-    function parseAdbDevices(text: string): var {
-        const usb = [];
-        const wireless = [];
+    // fails a second later with nothing on screen having said so. WHICH
+    // transport is not answered here - the scrcpy supervisor resolves that
+    // for itself on every launch, and a second answer to it would be a second
+    // answer that can disagree.
+    function parseAdbDevices(text: string): bool {
         for (const raw of (text ?? "").split("\n")) {
             const line = raw.trim();
             if (line.length === 0) continue;
             if (line.indexOf("List of devices") === 0) continue;
             const parts = line.split(/\s+/);
-            if (parts.length < 2 || parts[1] !== "device") continue;
-            if (parts[0].indexOf(":") >= 0) wireless.push(parts[0]);
-            else usb.push(parts[0]);
+            if (parts.length >= 2 && parts[1] === "device") return true;
         }
-        const serials = usb.concat(wireless);
-        return { present: serials.length > 0, serial: serials.length > 0 ? serials[0] : "" };
+        return false;
     }
 
     // The install guide's rows: the sibling fork's table, verbatim.
