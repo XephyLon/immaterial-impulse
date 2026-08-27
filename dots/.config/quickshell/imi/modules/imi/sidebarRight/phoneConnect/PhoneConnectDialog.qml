@@ -6,9 +6,33 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 
+/**
+ * The phone panel: one device on a chip with its state as pills, one row of
+ * the actions the service answers, the notification area owning whatever
+ * height is left, and the secondary features stacked at the bottom.
+ *
+ * Shaped after the fork's Phone tab (docs/proposals/phone-connect.md, "Prior
+ * art") on the sidebar's own dialog pattern. Its action row carries six
+ * buttons; ours carries the three this model backs - the other three are
+ * scrcpy, a file picker and SFTP, which are drawn nowhere rather than drawn
+ * dead. The roster of every device sits behind the chip's arrow.
+ */
 WindowDialog {
     id: root
-    backgroundHeight: 480
+    backgroundHeight: 600
+
+    // Which device the chip, the pills and the action row are about: the
+    // roster row the user picked, else the active device, else whichever is
+    // first. Session state only - a persisted choice is the proposal's
+    // slice 6.
+    property string pickedDeviceId: ""
+    property bool rosterOpen: false
+    readonly property var shownDevice: PhoneConnect.devices.find(d => d.id === root.pickedDeviceId)
+        ?? PhoneConnect.activeDevice
+        ?? (PhoneConnect.devices[0] ?? null)
+    readonly property bool shownOnline: root.shownDevice !== null
+        && root.shownDevice.paired && root.shownDevice.reachable
+    readonly property string shownAddress: root.shownDevice?.reachableAddresses?.[0] ?? ""
 
     RowLayout {
         Layout.fillWidth: true
@@ -41,38 +65,116 @@ WindowDialog {
         }
     }
     WindowDialogSeparator {}
-    ListView {
-        Layout.fillHeight: true
+
+    // ---- the device, and its state as pills ----
+    Flow {
         Layout.fillWidth: true
-        Layout.topMargin: -Appearance.spacing.space200
-        Layout.bottomMargin: -Appearance.spacing.space200
+        spacing: Appearance.spacing.space100
+
+        PhoneConnectDeviceChip {
+            id: deviceChip
+            device: root.shownDevice
+            open: root.rosterOpen
+            enabled: PhoneConnect.devices.length > 0
+            onClicked: root.rosterOpen = !root.rosterOpen
+        }
+        Badge {
+            id: connectionPill
+            visible: root.shownDevice !== null
+            badgeIcon: root.shownDevice?.reachable ? "wifi" : "wifi_off"
+            label: !root.shownDevice?.reachable
+                ? Translation.tr("Offline")
+                : (root.shownAddress || Translation.tr("Connected"))
+        }
+        Badge {
+            id: batteryPill
+            visible: root.shownDevice?.batteryAvailable ?? false
+            badgeIcon: root.shownDevice?.batteryCharging ? "battery_charging_full" : "battery_full"
+            label: `${root.shownDevice?.batteryCharge ?? 0}%`
+        }
+        Badge {
+            id: cellularPill
+            visible: (root.shownDevice?.cellularNetworkType ?? "") !== ""
+            badgeIcon: "signal_cellular_alt"
+            label: root.shownDevice?.cellularNetworkType ?? ""
+        }
+    }
+
+    // ---- the roster, behind the chip's arrow ----
+    ColumnLayout {
+        id: roster
+        visible: root.rosterOpen
+        Layout.fillWidth: true
         Layout.leftMargin: -root.contentPadding
         Layout.rightMargin: -root.contentPadding
-
-        clip: true
         spacing: 0
 
-        model: ScriptModel {
-            values: PhoneConnect.devices
+        Repeater {
+            model: ScriptModel {
+                values: PhoneConnect.devices
+            }
+            delegate: PhoneConnectDeviceItem {
+                required property var modelData
+                device: modelData
+                Layout.fillWidth: true
+                active: root.shownDevice !== null && root.shownDevice.id === modelData.id
+                onClicked: {
+                    root.pickedDeviceId = modelData.id;
+                    root.rosterOpen = false;
+                }
+            }
         }
-        delegate: PhoneConnectDeviceItem {
+    }
+
+    // ---- one row of the actions the model answers ----
+    RowLayout {
+        id: actionRow
+        Layout.alignment: Qt.AlignHCenter
+        spacing: Appearance.spacing.space150
+
+        PhoneConnectActionButton {
+            id: ringButton
+            glyph: "ring_volume"
+            label: Translation.tr("Ring")
+            enabled: root.shownOnline
+            onClicked: PhoneConnect.ring(root.shownDevice)
+        }
+        PhoneConnectActionButton {
+            id: pingButton
+            glyph: "send"
+            label: Translation.tr("Ping")
+            visible: PhoneConnect.canPing
+            enabled: root.shownOnline
+            onClicked: PhoneConnect.ping(root.shownDevice)
+        }
+        PhoneConnectActionButton {
+            id: clipboardButton
+            glyph: "content_paste"
+            label: Translation.tr("Send clipboard")
+            visible: PhoneConnect.canSendClipboard
+            enabled: root.shownOnline
+            onClicked: PhoneConnect.sendClipboard(root.shownDevice)
+        }
+    }
+
+    // ---- the notification area owns what is left ----
+    PhoneConnectNotificationArea {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+    }
+
+    // ---- the bottom stack: secondary features as cards ----
+    Repeater {
+        model: ScriptModel {
+            values: PhoneConnect.pairingRequests
+        }
+        delegate: PhoneConnectPairingCard {
             required property var modelData
             device: modelData
-            width: ListView.view.width
+            Layout.fillWidth: true
         }
     }
-    StyledText {
-        visible: PhoneConnect.devices.length === 0
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        color: Appearance.colors.colSubtext
-        font.pixelSize: Appearance.font.pixelSize.small
-        text: !PhoneConnect.installed
-            ? Translation.tr("busctl was not found on PATH")
-            : !PhoneConnect.available
-                ? Translation.tr("Neither KDE Connect nor Valent is running")
-                : Translation.tr("No devices yet — pair your phone from KDE Connect or Valent")
-    }
+
     WindowDialogSeparator {}
     WindowDialogButtonRow {
         StyledText {

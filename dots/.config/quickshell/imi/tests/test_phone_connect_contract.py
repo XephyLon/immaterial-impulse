@@ -27,6 +27,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SERVICE = ROOT / "services" / "PhoneConnect.qml"
 DOUBLE = ROOT / "tests" / "imports" / "testservices" / "PhoneConnect.qml"
+SURFACE = ROOT / "modules" / "imi" / "sidebarRight" / "phoneConnect"
+DIALOG = SURFACE / "PhoneConnectDialog.qml"
+
+# Everything the sidebar surface may ask the service to DO. The device
+# dialog is shaped after a fork whose action row carries six buttons; ours
+# carries the three this model backs, and a fourth appears here or not at
+# all - a button whose call the service does not answer is a fake action.
+MODEL_ACTIONS = {"refresh", "ring", "ping", "sendClipboard", "acceptPairing", "cancelPairing"}
 
 BEGIN = "// BEGIN phone-connect parser logic"
 END = "    // END phone-connect parser logic"
@@ -328,6 +336,54 @@ def test_signal_bursts_are_coalesced_and_never_dropped():
         r"function handleMonitorLine\(.*?\n    \}", source, re.S).group(0), (
         "monitor lines do not go through the settle timer"
     )
+
+
+# ---- the sidebar surface ----------------------------------------------------
+
+
+def test_the_surface_calls_only_actions_the_model_exposes():
+    called = set()
+    for path in sorted(SURFACE.glob("*.qml")):
+        called |= set(re.findall(r"\bPhoneConnect\.(\w+)\(", path.read_text()))
+    assert called, "the surface calls nothing on the service"
+    assert called <= MODEL_ACTIONS, f"the surface invents actions: {sorted(called - MODEL_ACTIONS)}"
+    declared = set(re.findall(r"^    function (\w+)\(", SERVICE.read_text(), re.M))
+    assert called <= declared, f"the surface calls what the service does not declare: {sorted(called - declared)}"
+
+
+def test_the_dialog_has_one_action_row_of_the_three_model_actions():
+    """ONE row of round action buttons, each a model action, in the fork's
+    order (ring, ping, clipboard) minus the three it backs with scrcpy, a
+    picker and SFTP."""
+    dialog = DIALOG.read_text()
+    assert dialog.count("id: actionRow") == 1, "the dialog must carry exactly one action row"
+    buttons = re.findall(r"PhoneConnectActionButton \{(.*?)\n(?:\s{12}|\s{8})\}", dialog, re.S)
+    assert len(buttons) == 3, f"expected three action buttons, found {len(buttons)}"
+    called = [re.search(r"PhoneConnect\.(\w+)\(", body).group(1) for body in buttons]
+    assert called == ["ring", "ping", "sendClipboard"], called
+
+
+def test_the_pairing_card_answers_through_the_two_device_methods_in_a_button_row():
+    """Accept and Decline are the model's two pairing calls, and they sit in a
+    WindowDialogButtonRow so the filled-confirm / outlined-dismiss rule is
+    derived by the row rather than spelled at the card (the polkit contract
+    refuses an `outlined:` outside the widgets directory for that reason)."""
+    card = (SURFACE / "PhoneConnectPairingCard.qml").read_text()
+    assert "PhoneConnect.acceptPairing(" in card and "PhoneConnect.cancelPairing(" in card
+    assert "WindowDialogButtonRow {" in card, "the two answers must sit in a WindowDialogButtonRow"
+    assert "outlined:" not in card, "the card spells the outline rule for itself"
+
+
+def test_the_notification_area_owns_the_remaining_height():
+    """The area is the one child of the dialog's column that fills, so every
+    other row keeps its own height and the empty state takes what is left -
+    nothing floats in empty space, and nothing else competes for it."""
+    dialog = DIALOG.read_text()
+    fills = [line.strip() for line in dialog.splitlines() if "Layout.fillHeight: true" in line]
+    assert len(fills) == 1, f"expected exactly one fillHeight in the dialog, found {fills}"
+    area = re.search(r"PhoneConnectNotificationArea \{(.*?)\n    \}", dialog, re.S)
+    assert area, "the dialog does not declare a PhoneConnectNotificationArea"
+    assert "Layout.fillHeight: true" in area.group(1), "the notification area does not fill"
 
 
 if __name__ == "__main__":
