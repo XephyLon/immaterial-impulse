@@ -18,6 +18,13 @@ import "phone_cards.js" as PhoneCards
  * glyph is what the fork falls back to anyway whenever its extractor cannot
  * resolve one.
  *
+ * The page has three states and draws exactly one message in each: no phone on
+ * ADB (a danger panel carrying the two ways to get one, and no placeholder
+ * under it), a phone that answered with nothing (the placeholder), and a phone
+ * with apps (the list). `PhoneDeps.adbDevice` is what separates the first from
+ * the second - never `PhoneScrcpy.appsError`, which is the supervisor's
+ * sentence about the same fact and would be a second answer to it.
+ *
  * The search query lives HERE rather than on PhoneScrcpy: a text field on one
  * page writing a property on a singleton makes the query global state, and the
  * filter itself is phone_cards.js's `filterApps` (tests/tst_phone_cards.qml).
@@ -30,6 +37,17 @@ PhoneSubPage {
     property string query: ""
 
     readonly property var filteredApps: PhoneCards.filterApps(PhoneScrcpy.apps, root.query)
+
+    // Whether adb can see a phone. That is a different link from the one the
+    // device chip reports: a phone paired to KDE Connect over the LAN is
+    // reachable there and lists nothing under `adb devices`, and App Mode runs
+    // on the second one. Deliberately TRI-STATE, the way PhoneFeatureCards
+    // derives it - every PhoneDeps flag starts `false`, so a plain falsy test
+    // would draw the panel below for the first frames of every session.
+    readonly property var adbDevice: PhoneDeps.ready ? PhoneDeps.adbDevice : undefined
+    // App Mode is installed and has no transport: nothing on this page can
+    // start, and the reason is the whole content of the page.
+    readonly property bool adbOffline: PhoneScrcpy.appModeSupported && root.adbDevice === false
 
     // The live sessions, as a plain list. PhoneScrcpy.sessions is a ListModel,
     // which is not a binding source - `sessionCount` is read so this
@@ -48,9 +66,24 @@ PhoneSubPage {
     // The list is asked for once, when the page opens with nothing in it.
     // Never on a timer and never from a binding: `--list-apps` starts a scrcpy
     // against the phone.
-    Component.onCompleted: {
+    function askForApps(): void {
         if (PhoneScrcpy.appModeSupported && PhoneScrcpy.apps.length === 0 && !PhoneScrcpy.appsLoading)
             PhoneScrcpy.refreshApps();
+    }
+
+    Component.onCompleted: root.askForApps()
+
+    // ...and once more when a phone appears on ADB while the page is open,
+    // which is the one event that turns an unanswerable request into an
+    // answerable one. That is an observation of a state change rather than a
+    // second trigger borrowed from something else, so it fires once per plug-in
+    // and the panel below can honestly say the list arrives on its own.
+    Connections {
+        target: PhoneDeps
+        function onAdbDeviceChanged() {
+            if (PhoneDeps.adbDevice)
+                root.askForApps();
+        }
     }
 
     ColumnLayout {
@@ -107,9 +140,15 @@ PhoneSubPage {
             }
         }
 
+        // The count, or whatever there is to say instead of one. It stands
+        // down while the panel below is up: with no device on ADB the list
+        // request fails with "Phone not reachable over ADB", and a red line
+        // saying that over a panel saying it at length is the same sentence
+        // twice.
         StyledText {
             Layout.fillWidth: true
             Layout.leftMargin: Appearance.spacing.space50
+            visible: !root.adbOffline
             text: {
                 if (!PhoneScrcpy.appModeSupported)
                     return Translation.tr("App Mode needs scrcpy 4.0 or newer");
@@ -122,6 +161,71 @@ PhoneSubPage {
             font.pixelSize: Appearance.font.pixelSize.smaller
             color: PhoneScrcpy.appsError.length > 0 ? Appearance.colors.colError : Appearance.colors.colSubtext
             wrapMode: Text.WordWrap
+        }
+
+        // ---- no transport, and how to get one ----
+        //
+        // A page with nothing in it because a link is missing owes the reader
+        // the link, not a footnote: this is the whole page in that state, so it
+        // carries the two routes there actually are. Both are typed by hand on
+        // purpose - the shell has no pairing button, and Android 11+ picks a
+        // new wireless-debugging port every time the switch is toggled, so
+        // there is no port to remember on the user's behalf either.
+        NoticeBox {
+            Layout.fillWidth: true
+            visible: root.adbOffline
+            colBackground: Appearance.colors.colErrorContainer
+            colOnBackground: Appearance.colors.colOnErrorContainer
+            materialIcon: "usb_off"
+            text: Translation.tr("App Mode starts each app over ADB, and no phone is on ADB. Pairing in KDE Connect does not do it: that link carries notifications and files, not debugging. Turn one of these on, on the phone.")
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                // A layout nested in a layout fills by default, which would
+                // take the notice's own row unbounded.
+                Layout.fillHeight: false
+                spacing: Appearance.spacing.space75
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Over a USB cable")
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    font.weight: Font.DemiBold
+                    color: Appearance.colors.colOnErrorContainer
+                    wrapMode: Text.WordWrap
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Settings → System → Developer options → USB debugging. Plug the cable in and accept the fingerprint the phone asks about.")
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colOnErrorContainer
+                    wrapMode: Text.WordWrap
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Over Wi-Fi, on Android 11 and newer")
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    font.weight: Font.DemiBold
+                    color: Appearance.colors.colOnErrorContainer
+                    wrapMode: Text.WordWrap
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Developer options → Wireless debugging → Pair device with pairing code, then in a terminal: adb pair IP:PAIRING_PORT, and adb connect IP:PORT with the port the Wireless debugging screen shows. Android picks new ports every time that switch is turned off and on, so the pair and the connect are done again after a toggle or a reboot.")
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colOnErrorContainer
+                    wrapMode: Text.WordWrap
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("The tab keeps asking while it is open. As soon as a device answers, this goes and the app list is fetched on its own.")
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colOnErrorContainer
+                    wrapMode: Text.WordWrap
+                }
+            }
         }
 
         // ---- what is running right now ----
