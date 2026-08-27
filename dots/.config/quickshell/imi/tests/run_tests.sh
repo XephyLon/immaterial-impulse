@@ -985,6 +985,14 @@ if ! python3 "$SCRIPT_DIR/lint_suite_registration.py"; then
     exit 1
 fi
 
+# A glyph used as a Control's contentItem declares both alignments: anchors on
+# a contentItem are ignored, and an unaligned Text draws top-left of its rect.
+echo "Running icon glyph alignment lint..."
+if ! python3 "$SCRIPT_DIR/lint_icon_glyph_alignment.py"; then
+    echo "Icon glyph alignment lint failed."
+    exit 1
+fi
+
 # The bar popup's section wave: armed on a takeover from idle, released by
 # the gate, and never fired against a tree that was not parked. This register
 # existed for a while without being wired in here - the mutations it plants
