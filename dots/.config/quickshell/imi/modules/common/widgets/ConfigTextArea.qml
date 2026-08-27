@@ -198,10 +198,30 @@ RowLayout {
             }
         }
     }
+    // Enters and leaves the way the bar's standalone pills do (TimerPill,
+    // SubmapIndicator): the width glides between 0 and its size on the same
+    // tier as the fade and the scale, so the field beside it reflows with the
+    // motion instead of jumping a button-width in one frame, and the button
+    // leaves the layout only once its width is gone. Recorded by the
+    // maintainer on the presets "save" button: it snapped in and out.
     RippleButton {
-        visible: root.confirmButtonVisible
-        implicitWidth: 40
+        readonly property bool shown: root.confirmButtonVisible
+        visible: implicitWidth > 0
+        enabled: shown
+        implicitWidth: shown ? 40 : 0
         implicitHeight: 40
+        opacity: shown ? 1 : 0
+        scale: shown ? 1 : 0.7
+        transformOrigin: Item.Center
+        Behavior on implicitWidth {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
+        Behavior on opacity {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
+        Behavior on scale {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
         Layout.alignment: Qt.AlignVCenter
         buttonRadius: Appearance.rounding.small
         colBackground: root.colConfirmBackground
