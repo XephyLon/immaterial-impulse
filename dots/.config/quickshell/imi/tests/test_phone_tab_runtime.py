@@ -28,6 +28,16 @@ Those two clicks are scored HERE, off the fake's recorded invocations:
 laptop's device path, and never on the phone's. A click that reached nothing
 would leave the harness green (a button is a button) and this red.
 
+The mirror card's click is driven all the way through the real supervisor -
+the fake `scrcpy` on PATH exits 1 with "Could not find any ADB device", which
+is what a real one does with no phone attached - and the harness watches the
+card frame by frame across it. That is the only place the three defects this
+harness grew for are visible: a card that reads "running" between the spawn
+and the exit, a badge whose glyph fades to nothing inside a shape that does
+not, and a failed launch that snaps back to the line it started on. The
+sub-page cross-fade and the toast's width are watched the same way, each with
+a control, since a settled reading is identical whether or not anything moved.
+
 Brings its own headless weston and its own session bus (`dbus-run-session`).
 Skips when weston, qs or dbus-run-session are missing, as in CI.
 """
@@ -53,7 +63,7 @@ LAPTOP_ADDRESS = "192.168.100.99"
 # A literal, never read back out of the harness's own output: a step list
 # that shrinks must redden here instead of reporting `failures: 0` for a
 # shorter run.
-EXPECTED_CHECKS = 49
+EXPECTED_CHECKS = 70
 
 RECORD = """#!/usr/bin/env bash
 printf '%s %s\\n' "$(date +%s.%N)" "$*" >> "$PHONE_EXEC_LOG"
