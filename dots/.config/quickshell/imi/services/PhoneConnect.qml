@@ -68,6 +68,7 @@ Singleton {
     readonly property bool canPing: root.backend === "kdeconnect"
     readonly property bool canSendClipboard: root.backend === "kdeconnect"
     readonly property bool canShare: root.backend === "kdeconnect"
+    readonly property bool canBrowseFiles: root.backend === "kdeconnect"
 
     // What the last action had to say: the toast reads the signal, an
     // inline line reads the string. Cleared by the next action that starts.
