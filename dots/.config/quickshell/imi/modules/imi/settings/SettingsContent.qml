@@ -193,13 +193,6 @@ Item {
 
     Component.onCompleted: {
         Config.readWriteDelay = 0
-        Qt.callLater(() => {
-            for (let i = 0; i < root.pages.length; i++) {
-                let loader = pagesRepeater.itemAt(i)
-                if (loader) loader.active = true
-            }
-            if (profileLoader) profileLoader.active = true
-        })
     }
 
     // Three ways to the search field, because three different habits reach for
@@ -760,7 +753,9 @@ Item {
 
                     Loader {
                         id: profileLoader
-                        active: false
+                        // The loop above assigned this too, so it also had no
+                        // binding to be built by.
+                        active: root.showingProfile || item !== null
                         anchors.fill: parent
                         source: Qt.resolvedUrl("pages/Profile.qml")
 
