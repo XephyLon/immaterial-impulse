@@ -120,6 +120,17 @@ own repo; the installer pins which revision it builds.
   the rest of this release's phone work is reached.
 
 ### Fixed
+- **Both sidebars open on the monitor you are using again.** On a multi-monitor
+  setup the left and right sidebars had started opening on whichever screen was
+  focused when the shell started, wherever you actually were — the same thing
+  the overview did in 0.30.0, arriving through the same change (the panels' own
+  surfaces now outlive the gesture, and a surface that is created once has to
+  say which screen it lives on). Each sidebar is one surface per screen now, and
+  every open picks the focused monitor afresh. Pinning the left sidebar reserves
+  space on that screen only.
+- **The left sidebar's tabs stop disagreeing with the page on screen.** After
+  clicking a tab once, swiping the panel — or following a link into a tab, such
+  as the Phone quick toggle — moved the page without moving the tab bar.
 - **Leaving a Discord voice channel no longer kills the voice bridge.** Discord
   reports the empty selection as a null payload, which the bridge treated as a
   crash; after five restarts the widget gave up with "Discord bridge stopped
