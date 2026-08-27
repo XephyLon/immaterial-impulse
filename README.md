@@ -16,6 +16,26 @@ The installer is idempotent - re-running it updates an existing install
 components: Wallpaper Engine integration, the imi-sddm-theme login theme,
 and a Plymouth boot splash.
 
+### NixOS (experimental)
+
+The repository root is a Nix flake. Instead of the installer, a
+home-manager user adds:
+
+```nix
+inputs.immaterial-impulse.url = "github:XephyLon/immaterial-impulse";
+```
+
+and imports `inputs.immaterial-impulse.homeManagerModules.default` with
+`programs.immaterial-impulse.enable = true`. The module symlinks the
+shell tree and the matugen config from the store, seeds
+`~/.config/immaterial-impulse` once, and refuses to manage matugen's
+generated outputs (it warns if your home-manager config does).
+
+What does not work yet: wallpaper-driven colour generation (the scripts
+need a Python venv the module does not provide) and the Wallpaper Engine
+integration. Design, validation status, and open questions are in
+[docs/proposals/nixos-flake.md](docs/proposals/nixos-flake.md).
+
 ## Compositor support
 
 **Hyprland only.** There are no plans to support Niri or any other
