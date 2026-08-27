@@ -281,6 +281,19 @@ if ! python3 "$SCRIPT_DIR/lint_cava_claims.py"; then
     exit 1
 fi
 
+# Config.readWriteDelay debounces the write of the whole schema and the reload
+# the shell's own write provokes. SettingsContent set it to 0 and never put it
+# back, and the settings host is built at Config.ready rather than at window
+# open - so every config write in the shell was undebounced from startup, for
+# the session, on every machine. The delay is resolved from declared claims now;
+# this refuses an assignment, a second writer of the count, a claim with no
+# stated condition, and a claim held unconditionally inside the shell's own tree.
+echo "Running config write delay claim lint..."
+if ! python3 "$SCRIPT_DIR/lint_config_write_delay_claims.py"; then
+    echo "Config write delay claim lint failed."
+    exit 1
+fi
+
 echo "Running process pattern lint..."
 if ! python3 "$SCRIPT_DIR/lint_self_matching_process_patterns.py"; then
     echo "Process pattern lint failed."
