@@ -396,6 +396,12 @@ def test_actions_queue_behind_one_another_instead_of_killing_the_one_in_flight()
     assert "actionProc.exec(" in pump.group(0), "the pump is not what starts the process"
     block = _process_block(source, "actionProc")
     assert "root.pumpActions()" in block, "the action process's exit does not pump the queue"
+    # ...and the pump is the ONLY exec on that Process, anywhere in the file:
+    # a second one written beside a new action is the kill coming back.
+    execs = [line.strip() for line in source.splitlines() if "actionProc.exec(" in line]
+    assert execs == ["actionProc.exec(root.actionQueue.shift());"], (
+        f"actionProc is exec'd outside the pump: {execs}"
+    )
 
 
 def test_feedback_is_one_signal_and_one_error_string_and_a_failed_action_reaches_both():
