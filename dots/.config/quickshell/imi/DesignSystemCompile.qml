@@ -150,6 +150,20 @@ ShellRoot {
                 Quickshell.shellPath("modules/imi/bar/Bar.qml"),
                 Quickshell.shellPath("modules/imi/verticalBar/VerticalBar.qml"),
                 Quickshell.shellPath("modules/imi/verticalBar/VerticalBarContent.qml"),
+                // The overview's window and the left sidebar's tab bar.
+                // Bar.qml's argument one step further: these are built on every
+                // startup, so only a live load ever found anything wrong with
+                // them - and a live load is what an agent working in a worktree
+                // has not got. The two sidebars' own windows deliberately are
+                // NOT here: a by-URL compile resolves neither `SidebarLeftContent`
+                // nor `SidebarRightContent`, because the implicit module for the
+                // directory each of them sits in is not registered in a
+                // `qs -p` process, so adding them would report a failure that is
+                // the probe's rather than the file's. They are covered by
+                // tests/run_persistent_surface_focus_probe.sh, which loads the
+                // whole shell.
+                Quickshell.shellPath("modules/imi/overview/Overview.qml"),
+                Quickshell.shellPath("modules/common/widgets/VerticalTabBar.qml"),
                 Quickshell.shellPath("modules/common/plugins/bundled/docker/DockerPopup.qml"),
                 Quickshell.shellPath("modules/common/plugins/bundled/docker/DockerWidget.qml"),
                 Quickshell.shellPath("modules/common/plugins/bundled/discordVoice/DiscordVoicePopup.qml"),
