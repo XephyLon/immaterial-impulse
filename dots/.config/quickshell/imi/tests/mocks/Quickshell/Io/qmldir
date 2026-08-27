@@ -5,3 +5,4 @@ FileView 1.0 FileView.qml
 Process 1.0 Process.qml
 StdioCollector 1.0 StdioCollector.qml
 IpcHandler 1.0 IpcHandler.qml
+SplitParser 1.0 SplitParser.qml
