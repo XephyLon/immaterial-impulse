@@ -6,26 +6,28 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.imi.phone
-import qs.modules.imi.sidebarRight.phoneConnect
+import qs.modules.imi.sidebarLeft.phone
 
 /**
- * Builds the REAL phone dialog over the REAL services/PhoneConnect.qml,
- * fed by a fake `busctl` on PATH, and reads the surface back: which device
- * the chip names, what the pills say, how many action buttons there are and
- * whether they answer, which child of the column owns the leftover height,
- * and what the pairing card does when its two buttons are clicked.
+ * Builds the REAL Phone tab over the REAL services/PhoneConnect.qml, fed
+ * by a fake `busctl` on PATH, and reads the surface back: which device the
+ * chip names, what the pills say, how many action buttons there are and
+ * which of them answer, which child of the column owns the leftover
+ * height, what the pairing card does when its two buttons are clicked, and
+ * that the sub-page overlay degrades to nothing while the other
+ * workstream's pages are absent.
  *
- * Driven by tests/test_phone_connect_dialog_runtime.py, which reads the
- * fake's recorded invocations afterwards: the two pairing clicks are scored
+ * Driven by tests/test_phone_tab_runtime.py, which reads the fake's
+ * recorded invocations afterwards: the two pairing clicks are scored
  * there, as `acceptPairing`/`cancelPairing` argv aimed at the device that
  * asked and never at the paired phone.
  *
  * The fake daemon exposes two devices - a paired, reachable phone with a
  * battery, an address and an LTE report, and an unpaired laptop whose
- * pairState says the peer asked (2) and which has no battery or report leaf
- * at all - so every branch of the surface is on screen at once.
+ * pairState says the peer asked (2) and which has no battery or report
+ * leaf at all - so every branch of the surface is on screen at once.
  *
- *   PATH=<dir with fake busctl>:$PATH qs -p PhoneConnectDialogRuntimeTest.qml
+ *   PATH=<dir with fake busctl>:$PATH qs -p PhoneTabRuntimeTest.qml
  */
 ShellRoot {
     id: harness
@@ -41,7 +43,7 @@ ShellRoot {
 
     function check(label, ok) {
         harness.checksRun++;
-        console.log(`[PhoneConnectDialog] ${label}: ${ok ? "ok" : "FAIL"}`);
+        console.log(`[PhoneTab] ${label}: ${ok ? "ok" : "FAIL"}`);
         if (!ok)
             harness.failures++;
     }
@@ -80,38 +82,38 @@ ShellRoot {
         driver.mouseClick(loader.item, centre.x, centre.y, Qt.LeftButton);
     }
 
-    // The dialog's content column: the one ColumnLayout whose children
-    // include the notification area.
+    // The tab's content column: the one ColumnLayout whose children include
+    // the notification list.
     function contentColumn() {
-        const area = harness.first("PhoneConnectNotificationArea");
-        return area ? area.parent : null;
+        const list = harness.first("PhoneNotificationList");
+        return list ? list.parent : null;
     }
 
     FloatingWindow {
         id: window
         visible: true
-        implicitWidth: 500
-        implicitHeight: 800
+        implicitWidth: 460
+        implicitHeight: 900
         color: "black"
 
         TestCase {
             id: driver
             when: false
-            name: "PhoneConnectDialogDriver"
+            name: "PhoneTabDriver"
         }
 
         Loader {
             id: loader
             anchors.fill: parent
             active: false
-            sourceComponent: PhoneConnectDialog {}
+            sourceComponent: Phone {}
         }
     }
 
     Component.onCompleted: {
         // A singleton is constructed on first use; this read starts the
         // presence probe and the first sweep.
-        console.log(`[PhoneConnectDialog] service constructed, installed=${PhoneConnect.installed}`);
+        console.log(`[PhoneTab] service constructed, installed=${PhoneConnect.installed}`);
     }
 
     Timer {
@@ -134,14 +136,13 @@ ShellRoot {
     }
 
     function finish() {
-        console.log(`[PhoneConnectDialog] checks: ${harness.checksRun} failures: ${harness.failures}`);
+        console.log(`[PhoneTab] checks: ${harness.checksRun} failures: ${harness.failures}`);
         Qt.exit(harness.failures === 0 ? 0 : 1);
     }
 
     property var stepList: [
         () => {
             loader.active = true;
-            loader.item.show = true;
         },
 
         // ---- the chip and its pills read the active phone ---------------
@@ -149,38 +150,74 @@ ShellRoot {
             const chip = harness.first("PhoneDeviceChip");
             harness.check(`the chip names the paired phone, got ${chip?.device?.name}`,
                           chip !== null && chip.device?.id === harness.phoneId);
-            const address = harness.badge(harness.expectAddress);
-            harness.check(`the connection pill carries the phone's address ${harness.expectAddress}`,
-                          address !== null && address.visible);
+            // The pill says the CELLULAR type where the daemon reported one,
+            // and falls back to the address only where it did not - which is
+            // the whole ordering the header exists to get right.
+            const cellular = harness.badge("LTE");
+            harness.check("the connection pill carries the report's network type",
+                          cellular !== null && cellular.visible);
+            harness.check("...and not the address it outranks",
+                          harness.badge(harness.expectAddress) === null);
             const battery = harness.badge("85%");
             harness.check("the battery pill carries the phone's charge",
                           battery !== null && battery.visible);
-            const cellular = harness.badge("LTE");
-            harness.check("the cellular pill carries the report's network type",
-                          cellular !== null && cellular.visible);
         },
 
-        // ---- one row of the three model actions, live for a paired phone --
+        // ---- one row of six actions, live for a paired phone -------------
         () => {
             const buttons = harness.all("PhoneActionButton");
-            harness.check(`one action row of three buttons, got ${buttons.length}`, buttons.length === 3);
-            harness.check("every action answers for a paired, reachable phone",
-                          buttons.length === 3 && buttons.every(b => b.enabled && b.visible));
+            harness.check(`one action row of six buttons, got ${buttons.length}`, buttons.length === 6);
+            harness.check("every action answers for a paired, reachable phone on kdeconnect",
+                          buttons.length === 6 && buttons.every(b => b.enabled && b.visible));
             const rows = new Set(buttons.map(b => b.parent));
-            harness.check("the three sit in one row", rows.size === 1);
+            harness.check("the six sit in one row", rows.size === 1);
         },
 
-        // ---- the notification area owns the leftover height --------------
+        // ---- the notification list owns the leftover height --------------
         () => {
-            const area = harness.first("PhoneConnectNotificationArea");
+            const list = harness.first("PhoneNotificationList");
             const chip = harness.first("PhoneDeviceChip");
             const action = harness.first("PhoneActionButton");
-            console.log(`[PhoneConnectDialog] area=${area?.height} chip=${chip?.height} action=${action?.height}`);
-            harness.check("the notification area stands taller than the fixed rows around it",
-                          area !== null && area.height > chip.height && area.height > action.height);
-            const empty = harness.findAll(area, "StyledText", []).filter(t => t.visible);
+            console.log(`[PhoneTab] list=${list?.height} chip=${chip?.height} action=${action?.height}`);
+            harness.check("the notification list stands taller than the fixed rows around it",
+                          list !== null && list.height > chip.height && list.height > action.height);
+            const empty = harness.findAll(list, "StyledText", []).filter(t => t.visible);
             harness.check("and it draws a real empty state rather than nothing",
-                          empty.length >= 1 && harness.findAll(area, "MaterialSymbol", []).some(s => s.visible));
+                          empty.length >= 1);
+        },
+
+        // ---- the footer names the count ----------------------------------
+        () => {
+            const footer = harness.first("PhoneFooterBar");
+            harness.check("the footer bar is drawn under the list",
+                          footer !== null && footer.y > harness.first("PhoneNotificationList").y);
+        },
+
+        // ---- the nav cards, and the sub-page overlay that has no pages ----
+        () => {
+            // Read by their LABELS rather than by the inline component's
+            // type name: an inline component's name is not what a
+            // `${obj}` reports, and a type check that silently matches
+            // nothing here would report two missing cards as a clean run.
+            const cards = harness.first("PhoneNavCards");
+            const labels = harness.findAll(cards, "StyledText", []).map(t => t.text);
+            harness.check(`the two navigation cards are named, got ${labels}`,
+                          cards !== null && labels.includes("Contacts") && labels.includes("Android Apps"));
+            loader.item.openSubPage("contacts");
+        },
+        () => {
+            // The other workstream's pages are not in the tree yet, so the
+            // overlay must degrade to an empty Loader rather than take the
+            // tab down. This is the check that has to keep passing once they
+            // land, with `item` no longer null.
+            harness.check("asking for a page that does not exist yet leaves the tab standing",
+                          loader.item !== null && loader.item.shownSubPage === "contacts");
+            harness.check("...and the column is still there behind it",
+                          harness.first("PhoneNotificationList") !== null);
+            loader.item.popSubPage();
+        },
+        () => {
+            harness.check("popping the page clears the request", loader.item.subPage === "");
         },
 
         // ---- the pairing card, for the device that asked ------------------
@@ -216,41 +253,41 @@ ShellRoot {
                           chip?.device?.id === harness.laptopId);
             const buttons = harness.all("PhoneActionButton");
             harness.check("the actions stand down for a device that is not paired",
-                          buttons.length === 3 && buttons.every(b => !b.enabled));
+                          buttons.length === 6 && buttons.every(b => !b.enabled));
             harness.check("the connection pill follows the shown device",
                           harness.badge(harness.expectLaptopAddress) !== null
-                          && harness.badge(harness.expectAddress) === null);
+                          && harness.badge("LTE") === null);
             harness.check("a device without a battery has no battery pill",
                           harness.badge("85%") === null);
         },
 
-        // ---- what the area owns is what is LEFT: take a card away and it
+        // ---- what the list owns is what is LEFT: take a card away and it
         // grows by exactly that card. Driven through the model, since the
         // fake daemon is stateless; the poll is seeded far out so a sweep
         // cannot put the card back between the two reads. -----------------
         () => {
-            const area = harness.first("PhoneConnectNotificationArea");
+            const list = harness.first("PhoneNotificationList");
             const card = harness.first("PhonePairingCard");
-            harness.areaWithCard = area.height;
+            harness.listWithCard = list.height;
             harness.cardHeight = card.height;
             harness.columnSpacing = harness.contentColumn().spacing;
             PhoneConnect.applyDevices(PhoneConnect.devices.map(d => Object.assign({}, d, { hasPairingRequest: false })));
         },
         () => {
-            const area = harness.first("PhoneConnectNotificationArea");
+            const list = harness.first("PhoneNotificationList");
             const cards = harness.all("PhonePairingCard");
-            const grewBy = area.height - harness.areaWithCard;
-            console.log(`[PhoneConnectDialog] cards=${cards.length} area ${harness.areaWithCard} -> ${area.height}`
+            const grewBy = list.height - harness.listWithCard;
+            console.log(`[PhoneTab] cards=${cards.length} list ${harness.listWithCard} -> ${list.height}`
                         + ` (+${grewBy}; card was ${harness.cardHeight}, spacing ${harness.columnSpacing})`);
             harness.check("answering the request takes its card off the stack", cards.length === 0);
-            harness.check("and the notification area grows by exactly the card it no longer shares the column with",
+            harness.check("and the notification list grows by exactly the card it no longer shares the column with",
                           grewBy === harness.cardHeight + harness.columnSpacing);
         },
 
         () => harness.finish()
     ]
 
-    property real areaWithCard: 0
+    property real listWithCard: 0
     property real cardHeight: 0
     property real columnSpacing: 0
 

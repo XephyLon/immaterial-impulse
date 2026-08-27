@@ -1599,12 +1599,14 @@ if ! python3 "$SCRIPT_DIR/test_phone_connect_monitor_runtime.py"; then
     exit 1
 fi
 
-# The reshaped phone dialog against the real service and a fake daemon: the
-# chip, the pills, one row of three model actions, the notification area's
-# height, and the pairing card's two clicks read back off the fake's log.
-echo "Running Phone Connect dialog runtime tests..."
-if ! python3 "$SCRIPT_DIR/test_phone_connect_dialog_runtime.py"; then
-    echo "Phone Connect dialog runtime tests failed."
+# The Phone tab against the real service and a fake daemon: the chip, the
+# pills in their priority order, one row of six model actions and which of
+# them answer, the sub-page overlay with no pages behind it, the
+# notification list's height, and the pairing card's two clicks read back
+# off the fake's log.
+echo "Running Phone tab runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_tab_runtime.py"; then
+    echo "Phone tab runtime tests failed."
     exit 1
 fi
 
