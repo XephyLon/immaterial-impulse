@@ -359,6 +359,18 @@ Singleton {
         }
         return out.slice(0, Math.max(0, max));
     }
+
+    // The low-battery latch, as one decision. Thresholds are the
+    // proposal's, literally: "low" once when the charge is below 20 and
+    // the phone is not charging; "recovered" at 25 or above, or the moment
+    // it charges, while the latch is set. An unknown charge (-1) moves
+    // nothing.
+    function batteryNoticeTransition(notified: bool, charge: int, charging: bool): var {
+        if (charge < 0) return { notice: "", notified: notified };
+        if (!notified && charge < 20 && !charging) return { notice: "low", notified: true };
+        if (notified && (charge >= 25 || charging)) return { notice: "recovered", notified: false };
+        return { notice: "", notified: notified };
+    }
     // END phone-connect parser logic
 
     function applyBackend(newBackend: string): void {
@@ -558,6 +570,38 @@ Singleton {
         if (root.monitorState === "failed") root.monitorState = "idle";
         if (root.monitorMatchRule(root.backend) === "") root.stopMonitor();
         else root.startMonitor();
+    }
+
+    // ---- low-battery hooks ----
+
+    // The latch is per device: a different active device starts clean.
+    property string batteryNoticeDeviceId: ""
+    property bool batteryNoticed: false
+
+    // activeDevice is rebuilt on every sweep, so this handler sees every
+    // battery change the model does.
+    onActiveDeviceChanged: root.observeBattery()
+
+    function observeBattery(): void {
+        const d = root.activeDevice;
+        if (!d) return;
+        if (d.id !== root.batteryNoticeDeviceId) {
+            root.batteryNoticeDeviceId = d.id;
+            root.batteryNoticed = false;
+        }
+        if (!d.batteryAvailable) return;
+        const next = root.batteryNoticeTransition(root.batteryNoticed, d.batteryCharge, d.batteryCharging);
+        root.batteryNoticed = next.notified;
+        const name = d.name || Translation.tr("Phone");
+        if (next.notice === "low") {
+            Quickshell.execDetached(["notify-send", "-i", "phone", "-u", "normal",
+                Translation.tr("Low battery: %1").arg(name),
+                Translation.tr("Charge is at %1%.").arg(String(d.batteryCharge))]);
+        } else if (next.notice === "recovered") {
+            Quickshell.execDetached(["notify-send", "-i", "phone", "-u", "low",
+                Translation.tr("Battery recovered: %1").arg(name),
+                Translation.tr("Charge is back to %1%.").arg(String(d.batteryCharge))]);
+        }
     }
 
     // ---- actions ----
