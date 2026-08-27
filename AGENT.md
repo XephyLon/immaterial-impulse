@@ -607,6 +607,18 @@ services/                  Singletons wrapping external state/processes - one pe
                               logic-only double (tests/test_phone_notifications_contract.py);
                               driven end to end by tests/test_phone_notifications_runtime.py
                               5cad7ad40 ("feat(phoneNotifications): mirror the phone's notifications off KDE Connect over busctl")
+  PhoneContacts.qml            The active phone's contacts, for the Phone tab's Contacts card
+                              and page. Not on the bus: KDE Connect writes one vCard per
+                              contact under ~/.local/share/kpeoplevcard/kdeconnect-<id>/,
+                              and scripts/phone/contacts_monitor.py reads that directory
+                              as one streaming NDJSON process per session (gio-watched, a
+                              3 s poll when it cannot be), supervised on PhoneConnect's own
+                              backoff ladder. `filtered` is the list the page draws - the
+                              query, hide-unnamed and sort decisions are pure functions
+                              kept byte-for-byte in a logic-only double
+                              (tests/test_phone_contacts_contract.py enforces it). The
+                              dialer and SMS actions are `adb shell am start` intents,
+                              refused with `lastError` when adb cannot reach the phone
   SchemePreview.qml            Per-scheme swatches for the scheme pickers: one venv run of
                               scripts/colors/scheme_preview.py quantizes the wallpaper once and
                               builds every Material variant from it. Cached against the wallpaper
@@ -653,6 +665,13 @@ scripts/                   Standalone helper scripts (Python/bash) invoked via P
                               prompted mask's clicks live in a PNG text chunk it parses by hand for
                               exactly that reason; `run` and `select` need the uv venv
                               (subject-mask-venv.sh)
+  phone/contacts_monitor.py   Publishes a KDE Connect device's contacts from its kpeoplevcard
+                              directory as NDJSON (`ready`, `snapshot` only when the SHA-256
+                              of the parsed set moves, `error no_contact_source`). Stdlib
+                              only: `gio monitor -d` is a subprocess, not PyGObject. See the
+                              vCard 2.1 note under "busctl monitor" below before touching the
+                              parser; tests/test_phone_contacts_monitor.py drives it against
+                              a fixture tree and never the machine's own cards
 translations/              i18n string tables (Translation.tr(...) singleton)
 assets/                    Static images/fonts bundled with the shell
 ```
@@ -4067,6 +4086,40 @@ true of six spawns in six milliseconds, which is the bug.
 (feat(phoneConnect): drive updates from the daemon's signals, not from the poll,
 fix(phoneConnect): the monitor's gate is a function, because a handler cannot read its own binding,
 test(phoneConnect): drive the monitor's start, its stream, its backoff and its ceiling.)
+
+**A phone's contacts are not on the bus - they are vCards KDE Connect writes to disk, and the
+vCards are version 2.1.** KDE Connect's contacts plugin answers no "list the contacts" call; it
+writes one `.vcf` per contact into `~/.local/share/kpeoplevcard/kdeconnect-<deviceId>/` for
+KPeople. `services/PhoneContacts.qml` reads that directory through
+`scripts/phone/contacts_monitor.py`, one streaming Python process per session on the same
+lifecycle as the busctl monitor above (`exec()`, no `running` binding, the restart-safe marker,
+and every exit through `PhoneConnect.monitorExitPlan` - *reused*, so the shell has one spelling
+of the backoff ladder rather than three). A device change restarts it from the top of the ladder,
+and Quickshell does raise `exited` for a deliberate `running = false`, measured in a headless
+`qs` before the restart was written that way. Three things measured against the 150 cards on this
+machine, none visible from the fork's parser:
+
+- **Android's exporter soft-wraps QUOTED-PRINTABLE names with a trailing `=` continued on an
+  UNINDENTED line** - 32 such lines in one export. An RFC 2425 unfold joins only indented
+  continuations, so every long non-ASCII name was truncated at the wrap and the remainder
+  parsed as a line with no `:` and skipped, silently. The unfolder joins a QP line ending in
+  `=` with the physical line after it.
+- **Photos travel inline as `data:` URIs.** The whole export carries 140 KB of photo base64,
+  so a snapshot stays small and there is no avatar cache to sweep or bust; the fork wrote each
+  photo to a cache file and emitted a path.
+- **A raw contact that never had a name arrives with its number as FN and N** (SIM imports,
+  call-blocker lists - three here, about a thousand on the fork author's phone). They are
+  flagged `nameless` rather than dropped, so `hideUnnamed` can hide them and a starred one
+  still shows: starring is an explicit statement that the number matters.
+
+The dialer and SMS actions are `adb [-s <serial>] shell am start -a <DIAL|SENDTO> -d <tel:|sms:>`
+with the serial re-resolved from `adb devices` on every intent (the wireless-debugging port
+moves on every toggle and reboot), a USB serial ahead of an ip:port, and refused with
+`lastError` when adb is absent or no device is in the `device` state - never `execDetached`,
+because a refused intent has to say so. The tests never read the machine's own cards:
+`tests/test_phone_contacts_monitor.py` builds a fixture tree shaped after the real files.
+209852182 ("feat(phone): contacts_monitor.py reads the vCards KDE Connect writes"),
+b7b8ffcda ("feat(phone): PhoneContacts.qml, the contacts model over a supervised monitor").
 
 **A player on the MPRIS bus may be a proxy for another player, and every field you would match on
 is the borrowed one.** `playerctld` is `playerctl`'s daemon, not a player: it re-publishes whichever
