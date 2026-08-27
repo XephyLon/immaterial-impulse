@@ -162,6 +162,10 @@ Item {
     }
 
     onCurrentPageChanged: {
+        // The warm-up below is idle work, so navigating stands it down: a page
+        // built for nobody must never be the thing that stutters the page the
+        // user asked for.
+        warmHold.restart()
         // About is the last page; a hardcoded index here went stale once
         // before when a page was inserted (About 7 -> 8, specs never loaded).
         if (currentPage === pages.length - 1) {
@@ -193,6 +197,44 @@ Item {
 
     Component.onCompleted: {
         Config.readWriteDelay = 0
+    }
+
+    // Every page up to here has been asked for, so it is built and kept. This
+    // only grows: a page built once stays built (`built` below).
+    property int warmedThrough: -1
+
+    // Restarted by every navigation, and never bound: `Timer.restart()` writes
+    // `running`, which would destroy a binding on it.
+    Timer {
+        id: warmHold
+        interval: Appearance.animation.elementMoveFast.duration
+    }
+
+    // A page that has never been visited costs a measured 10-510ms to
+    // incubate, which is not a stall - the loaders are asynchronous - but it is
+    // a wait, and the placeholder is what the user sees during it. So the pages
+    // are built ahead of the user while the window is open, ONE AT A TIME: the
+    // engine incubates in the order it was asked, so a warm-up that queued all
+    // fifteen would put the page the user just clicked behind fourteen they did
+    // not.
+    //
+    // Deliberately not what it replaced, which was fifteen SYNCHRONOUS builds
+    // inside one turn of the event loop at `Config.ready` - 622ms of frozen GUI
+    // thread paid by the whole shell at startup whether or not the window was
+    // ever opened.
+    Timer {
+        id: pageWarmer
+        interval: Appearance.animation.elementMoveFast.duration
+        repeat: true
+        running: GlobalStates.settingsOpen && !warmHold.running
+            && root.warmedThrough < root.pages.length - 1
+        onTriggered: {
+            for (let i = 0; i < root.pages.length; i++) {
+                if (pagesRepeater.itemAt(i)?.status === Loader.Loading)
+                    return
+            }
+            root.warmedThrough++
+        }
     }
 
     // Three ways to the search field, because three different habits reach for
@@ -716,7 +758,8 @@ Item {
                             // kept silently is not. `built` is written from
                             // `onLoaded` and read by nothing that makes it.
                             property bool built: false
-                            active: Config.ready && (root.currentPage === index || built)
+                            active: Config.ready
+                                && (root.currentPage === index || built || index <= root.warmedThrough)
 
                             anchors.fill: parent
 
