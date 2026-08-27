@@ -6,6 +6,11 @@ import qs.modules.common.widgets
 ColumnLayout {
     id: root
     property string title: ""
+    // A leading Material Symbol before the title - the subsection-header shape
+    // of the settings row grammar (AGENT.md, design language). Empty draws
+    // nothing and takes no width, which is what every subsection outside the
+    // reference page still wants.
+    property string icon: ""
     property string tooltip: ""
     // Named contentData rather than data: aliasing 'data' shadows Item's own
     // member, which Qt warns about on every instantiation.
@@ -16,6 +21,14 @@ ColumnLayout {
     spacing: Appearance.spacing.space25
 
     RowLayout {
+        spacing: Appearance.spacing.space50
+        MaterialSymbol {
+            visible: root.icon.length > 0
+            Layout.leftMargin: Appearance.spacing.space25
+            text: root.icon
+            iconSize: Appearance.font.pixelSize.large
+            color: Appearance.colors.colSubtext
+        }
         ContentSubsectionLabel {
             visible: root.title && root.title.length > 0
             text: root.title
