@@ -13,6 +13,16 @@ Singleton {
     property bool barOpen: true
     property bool crosshairOpen: false
     property bool sidebarLeftOpen: false
+    // Which tab the left sidebar shows next time it opens, as the tab's
+    // untranslated id rather than its index: every name in the tab bar is a
+    // Translation.tr(...) call, so a deep link resolved against the label
+    // stops working the moment the user changes language, and an index goes
+    // stale the day a tab is inserted - the settings deep-link's own two
+    // failures (1c674c8f5 ("fix(settings): address a settings deep link by
+    // page id, not by its label")). Empty means "whichever tab was last
+    // shown"; SidebarLeftContent consumes it on open and clears it, the way
+    // GlobalStates.settingsPage is consumed.
+    property string sidebarLeftTab: ""
     property bool sidebarRightOpen: false
     property bool mediaControlsOpen: false
     property bool sysTrayOverflowOpen: false
