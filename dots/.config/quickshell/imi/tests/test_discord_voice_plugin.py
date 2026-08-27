@@ -6,6 +6,7 @@ import io
 import json
 import os
 import stat
+import struct
 import tempfile
 import unittest
 import warnings
@@ -307,6 +308,62 @@ class DiscordVoiceBridgeTests(unittest.TestCase):
         # that the good frame survived the bad one is what reached the shell.
         self.assertIn("voice_channel", emitted)
         self.assertLess(emitted.index("voice_channel"), emitted.index("disconnected"))
+
+    def test_a_null_data_frame_does_not_end_the_read_loop(self):
+        # Discord sends "data": null on some events - leaving a voice channel
+        # is the common one - and dict.get("data", {}) only defaults on an
+        # ABSENT key, so None reached the payload's .get() sites, the read
+        # loop raised out of the bridge, and after five backoff restarts the
+        # shell gave up with "Discord bridge stopped after repeated failures".
+        def frame(payload):
+            body = json.dumps(payload).encode()
+            return struct.pack("<II", bridge_module.OP_FRAME, len(body)) + body
+
+        class Writer:
+            def __init__(self): self.closed = False
+            def is_closing(self): return self.closed
+            def write(self, data): pass
+            async def drain(self): pass
+            def close(self): self.closed = True
+
+        class Reader:
+            def __init__(self, frames): self.buffer = b"".join(frames)
+            async def readexactly(self, size):
+                if len(self.buffer) < size:
+                    raise asyncio.IncompleteReadError(self.buffer, size)
+                chunk, self.buffer = self.buffer[:size], self.buffer[size:]
+                return chunk
+
+        frames = [
+            frame({"cmd": "DISPATCH", "evt": "VOICE_CHANNEL_SELECT", "data": None}),
+            # The bridge answers that dispatch with GET_SELECTED_VOICE_CHANNEL
+            # under nonce "1"; this is Discord's reply to it once no channel
+            # is selected.
+            frame({"cmd": "GET_SELECTED_VOICE_CHANNEL", "nonce": "1", "data": None}),
+            frame({"cmd": "DISPATCH", "evt": "VOICE_STATE_DELETE", "data": None}),
+            frame({"evt": "ERROR", "nonce": "99", "data": None}),
+            # A frame AFTER the null ones is what proves the loop kept reading.
+            frame({"cmd": "DISPATCH", "evt": "VOICE_SETTINGS_UPDATE",
+                   "data": {"mute": True, "deaf": False}}),
+        ]
+
+        async def scenario():
+            bridge = bridge_module.Bridge()
+            writer = Writer()
+            bridge.writer = writer
+            await bridge.read_loop(Reader(frames), writer)
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            asyncio.run(scenario())
+        emitted = [json.loads(line) for line in output.getvalue().splitlines() if line]
+        types = [message["type"] for message in emitted]
+        self.assertIn("voice_channel", types)
+        self.assertIsNone(emitted[types.index("voice_channel")]["channel"])
+        self.assertEqual(emitted[types.index("error")]["message"], "Discord RPC error")
+        self.assertTrue(emitted[types.index("voice_settings")]["mute"])
+        # End of stream is the only way this loop may end, and it says so.
+        self.assertEqual(types[-1], "disconnected")
 
     def test_companion_failure_does_not_masquerade_as_an_auth_prompt(self):
         bridge = BRIDGE_PATH.read_text()
