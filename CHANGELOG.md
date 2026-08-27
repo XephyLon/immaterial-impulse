@@ -12,6 +12,17 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **Leaving a Discord voice channel no longer kills the voice bridge.** Discord
+  reports the empty selection as a null payload, which the bridge treated as a
+  crash; after five restarts the widget gave up with "Discord bridge stopped
+  after repeated failures". A null payload is read as an empty one now.
+- **Discord started after the shell is picked up on its own.** With Discord
+  closed, or its RPC socket dropped, the voice widget used to sit on "Start
+  Discord, then reconnect" until you pressed connect. It now retries by itself,
+  backing off from one second to every thirty, and stops the moment it
+  connects.
+
 ## [0.32.0] — 2026-08-27
 
 One behaviour change, small in code and large on the hand: picking a section
