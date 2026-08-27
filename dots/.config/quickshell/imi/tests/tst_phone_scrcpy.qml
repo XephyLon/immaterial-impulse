@@ -48,10 +48,16 @@ TestCase {
         PhoneScrcpy.reset()
         PhoneScrcpy.available = true
         PhoneScrcpy.appModeSupported = true
+        PhoneCamera.reset()
+        PhoneCamera.available = true
         Config.options.phone.scrcpy.appMode.favoritePackages = []
         Config.options.phone.scrcpy.useWireless = false
         Config.options.phone.scrcpy.autoWirelessIp = true
         Config.options.phone.scrcpy.wirelessIp = ""
+        Config.options.phone.webcam.connection = "wifi"
+        Config.options.phone.webcam.wifiIp = ""
+        Config.options.phone.webcam.mirrorHorizontally = false
+        Config.options.phone.webcam.rotateDegrees = 0
         Persistent.states.phone.scrcpy.recentPackages = []
     }
 
@@ -367,5 +373,198 @@ TestCase {
         verify(PhoneScrcpy.managerWanted())
         PhoneScrcpy.handleLine('{"event":"exited","id":"mirror","code":0,"error":""}')
         verify(!PhoneScrcpy.managerWanted())
+    }
+
+    // ================================================================
+    // PhoneCamera
+    // ================================================================
+
+    function test_camera_state_ladder() {
+        compare(PhoneCamera.stateFor(false, true, true, true), "unavailable")
+        compare(PhoneCamera.stateFor(true, false, false, false), "offline")
+        compare(PhoneCamera.stateFor(true, true, false, false), "ready")
+        compare(PhoneCamera.stateFor(true, true, true, false), "connecting")
+        compare(PhoneCamera.stateFor(true, true, false, true), "active")
+        compare(PhoneCamera.stateFor(true, false, false, true), "active")
+        compare(PhoneCamera.state, "ready")
+        PhoneCamera.available = false
+        compare(PhoneCamera.state, "unavailable")
+        PhoneCamera.available = true
+        PhoneConnect.devices = [phone({ reachable: false })]
+        compare(PhoneCamera.state, "offline")
+    }
+
+    function test_camera_finds_the_droidcam_node_in_v4l2_ctl_output() {
+        // Captured on the development machine, DroidCam's own module.
+        compare(PhoneCamera.parseV4l2Devices("Droidcam (platform:v4l2loopback_dc-000):\n\t/dev/video0\n"), "/dev/video0")
+        const mixed = "Integrated Camera (usb-0000:00:14.0-8):\n\t/dev/video1\n\t/dev/video2\n\nDroidCam (platform:v4l2loopback-000):\n\t/dev/video10\n\t/dev/video11\n"
+        compare(PhoneCamera.parseV4l2Devices(mixed), "/dev/video10")
+        const loopbackOnly = "Integrated Camera (usb-0000:00:14.0-8):\n\t/dev/video1\n\nDummy video device (0x0000) (platform:v4l2loopback-000):\n\t/dev/video10\n"
+        compare(PhoneCamera.parseV4l2Devices(loopbackOnly), "/dev/video10")
+        compare(PhoneCamera.parseV4l2Devices("Integrated Camera (usb-0000:00:14.0-8):\n\t/dev/video1\n"), "")
+        compare(PhoneCamera.parseV4l2Devices(""), "")
+    }
+
+    function test_camera_droidcam_args_single_dash_size_and_flips() {
+        compare(PhoneCamera.droidcamArgs({ resolution: "1280x720" }, "usb", "", 4747),
+                ["droidcam-cli", "-nocontrols", "-size=1280x720", "adb", "4747"])
+        compare(PhoneCamera.droidcamArgs({ resolution: "640x480", mirrorHorizontally: true }, "wifi", "192.168.1.50", 4747),
+                ["droidcam-cli", "-nocontrols", "-size=640x480", "-hflip", "192.168.1.50", "4747"])
+        compare(PhoneCamera.droidcamArgs({ resolution: "", rotateDegrees: 180 }, "wifi", "10.0.0.2", 4748),
+                ["droidcam-cli", "-nocontrols", "-hflip", "-vflip", "10.0.0.2", "4748"])
+        compare(PhoneCamera.droidcamArgs({ mirrorHorizontally: true, rotateDegrees: 180 }, "usb", "", 4747),
+                ["droidcam-cli", "-nocontrols", "-hflip", "-vflip", "adb", "4747"])
+    }
+
+    function test_camera_connection_plan_is_usb_first() {
+        compare(PhoneCamera.connectionPlan({ connection: "usb" }, "", []), { mode: "usb", ip: "", port: 4747 })
+        compare(PhoneCamera.connectionPlan({ connection: "wifi", wifiIp: " 10.0.0.5 ", port: 4750 }, "device", ["1.2.3.4"]),
+                { mode: "wifi", ip: "10.0.0.5", port: 4750 })
+        compare(PhoneCamera.connectionPlan({ connection: "wifi" }, "device\n", ["1.2.3.4"]), { mode: "usb", ip: "", port: 4747 })
+        compare(PhoneCamera.connectionPlan({ connection: "wifi" }, "offline", ["", "1.2.3.4"]), { mode: "wifi", ip: "1.2.3.4", port: 4747 })
+        verify(PhoneCamera.connectionPlan({ connection: "wifi" }, "", []).error.length > 0)
+    }
+
+    function test_camera_preview_falls_back_from_mpv_to_ffplay_to_vlc() {
+        compare(PhoneCamera.previewCommand("/dev/video0", { mpv: true, ffplay: true, vlc: true }),
+                ["mpv", "--profile=low-latency", "--no-fullscreen", "--no-osc", "--title=imi webcam preview", "av://v4l2:/dev/video0"])
+        compare(PhoneCamera.previewCommand("/dev/video0", { ffplay: true, vlc: true })[0], "ffplay")
+        compare(PhoneCamera.previewCommand("/dev/video0", { vlc: true }), ["vlc", "--no-video-title-show", "--no-fullscreen", "v4l2:///dev/video0"])
+        compare(PhoneCamera.previewCommand("/dev/video0", {}), [])
+        compare(PhoneCamera.previewCommand("", { mpv: true }), [])
+    }
+
+    function test_camera_start_probes_usb_then_launches_detached() {
+        PhoneCamera.responder = argv => {
+            if (argv[0] === "adb") return { text: "device\n", code: 0 }
+            if (argv[2] === "launch") return { text: "31337\n", code: 0 }
+            return null
+        }
+        PhoneCamera.start()
+        verify(PhoneCamera.connecting)
+        compare(PhoneCamera.state, "connecting")
+        compare(argvJoined(PhoneCamera.ranCommands), [
+            "adb get-state",
+            "bash " + sessionScript + " launch video droidcam-cli -nocontrols -size=1280x720 adb 4747"
+        ])
+        compare(PhoneCamera.activeMode, "usb")
+        compare(PhoneCamera.sessionPid, 31337)
+        compare(PhoneCamera.connectTimersArmed, 1)
+        compare(Persistent.states.phone.camera.lastMode, "usb")
+        compare(Persistent.states.phone.camera.lastPort, 4747)
+    }
+
+    function test_camera_start_takes_a_configured_address_without_probing() {
+        Config.options.phone.webcam.wifiIp = "10.0.0.7"
+        Config.options.phone.webcam.mirrorHorizontally = true
+        PhoneCamera.responder = argv => ({ text: "1\n", code: 0 })
+        PhoneCamera.start()
+        compare(argvJoined(PhoneCamera.ranCommands), [
+            "bash " + sessionScript + " launch video droidcam-cli -nocontrols -size=1280x720 -hflip 10.0.0.7 4747"
+        ])
+        compare(PhoneCamera.activeIp, "10.0.0.7")
+        compare(Persistent.states.phone.camera.lastIp, "10.0.0.7")
+    }
+
+    function test_camera_start_falls_back_to_kde_connects_address() {
+        PhoneCamera.responder = argv => argv[0] === "adb" ? { text: "", code: 1 } : { text: "5\n", code: 0 }
+        PhoneCamera.start()
+        compare(PhoneCamera.activeMode, "wifi")
+        compare(PhoneCamera.activeIp, "192.168.1.50")
+    }
+
+    function test_camera_start_with_nothing_to_connect_to_fails_with_a_reason() {
+        PhoneConnect.devices = [phone({ reachableAddresses: [] })]
+        PhoneCamera.responder = argv => ({ text: "", code: 1 })
+        PhoneCamera.start()
+        verify(!PhoneCamera.connecting)
+        verify(PhoneCamera.lastError.indexOf("USB or Wi-Fi IP") >= 0)
+        compare(PhoneCamera.ranCommands.length, 1)
+    }
+
+    function test_camera_start_is_refused_without_a_reachable_phone() {
+        PhoneConnect.devices = [phone({ reachable: false })]
+        PhoneCamera.start()
+        verify(!PhoneCamera.connecting)
+        compare(PhoneCamera.ranCommands, [])
+        verify(PhoneCamera.lastError.length > 0)
+        PhoneCamera.available = false
+        PhoneConnect.devices = [phone()]
+        PhoneCamera.start()
+        compare(PhoneCamera.ranCommands, [])
+    }
+
+    function test_camera_a_live_status_makes_it_active_and_arms_the_watchdog() {
+        PhoneCamera.connecting = true
+        PhoneCamera.responder = argv => argv[2] === "status"
+            ? { text: '{"session":"video","pid":"31337","alive":true,"started":"1787811446","port":"4747","mode":"usb","ip":"adb","device":"/dev/video0","video_running":true,"audio_running":false}\n', code: 0 }
+            : null
+        PhoneCamera.checkSession()
+        verify(PhoneCamera.active)
+        verify(!PhoneCamera.connecting)
+        compare(PhoneCamera.state, "active")
+        compare(PhoneCamera.device, "/dev/video0")
+        compare(PhoneCamera.sessionPid, 31337)
+        compare(PhoneCamera.startedAt, 1787811446)
+        compare(PhoneCamera.watchdogArmed, 1)
+        compare(argvJoined(PhoneCamera.ranCommands), ["bash " + sessionScript + " status video"])
+    }
+
+    function test_camera_a_dead_status_while_active_reports_the_loss() {
+        PhoneCamera.active = true
+        PhoneCamera.device = "/dev/video0"
+        PhoneCamera.responder = argv => ({ text: '{"session":"video","pid":"","alive":false}', code: 0 })
+        PhoneCamera.checkSession()
+        verify(!PhoneCamera.active)
+        compare(PhoneCamera.device, "")
+        compare(PhoneCamera.lastError, "The webcam stream ended")
+    }
+
+    function test_camera_a_dead_status_past_the_deadline_fails_the_connect() {
+        PhoneCamera.connecting = true
+        PhoneCamera.responder = argv => ({ text: '{"alive":false}', code: 0 })
+        PhoneCamera.checkSession()
+        verify(PhoneCamera.connecting)
+        PhoneCamera.deadlinePassed = true
+        PhoneCamera.checkSession()
+        verify(!PhoneCamera.connecting)
+        verify(PhoneCamera.lastError.indexOf("9s") >= 0)
+    }
+
+    function test_camera_stop_goes_through_the_session_script() {
+        PhoneCamera.active = true
+        PhoneCamera.device = "/dev/video0"
+        PhoneCamera.stop()
+        verify(!PhoneCamera.active)
+        verify(PhoneCamera.userStopped)
+        compare(PhoneCamera.device, "")
+        compare(argvJoined(PhoneCamera.ranCommands), ["bash " + sessionScript + " stop video"])
+        PhoneCamera.stop()
+        compare(PhoneCamera.ranCommands.length, 1)
+    }
+
+    function test_camera_mirror_writes_the_config_and_flips_the_live_device() {
+        PhoneDeps.v4l2Ctl = true
+        PhoneCamera.mirror(true)
+        compare(Config.options.phone.webcam.mirrorHorizontally, true)
+        compare(PhoneCamera.ranCommands, [])
+        PhoneCamera.active = true
+        PhoneCamera.device = "/dev/video0"
+        PhoneCamera.mirror(false)
+        compare(argvJoined(PhoneCamera.ranCommands), ["v4l2-ctl -d /dev/video0 --set-ctrl=horizontal_flip=0"])
+        PhoneCamera.flip()
+        compare(Config.options.phone.webcam.cameraFacing, "back")
+        PhoneCamera.flip()
+        compare(Config.options.phone.webcam.cameraFacing, "front")
+    }
+
+    function test_camera_parse_session_status_tolerates_the_scripts_strings() {
+        const s = PhoneCamera.parseSessionStatus('{"session":"video","pid":"12","alive":"true","started":"7","port":"4747","mode":"wifi","ip":"1.2.3.4","device":""}')
+        compare(s.alive, true)
+        compare(s.pid, 12)
+        compare(s.port, 4747)
+        compare(s.ip, "1.2.3.4")
+        compare(PhoneCamera.parseSessionStatus("not json"), null)
+        compare(PhoneCamera.parseSessionStatus(""), null)
     }
 }
