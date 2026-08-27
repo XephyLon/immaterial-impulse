@@ -67,6 +67,24 @@ own repo; the installer pins which revision it builds.
   command for Arch, Fedora and Debian. The settings live under
   `phone.*` in config.json (mirror flags, app-mode display, webcam and
   microphone connection); the Phone tab is where they are reached from.
+- **The Phone tab's feature cards, its sub-pages, and a Devices & Phone
+  settings page.** The bottom of the Phone tab is three cards — the scrcpy
+  mirror, the phone as a webcam, the phone as a microphone — that say which
+  of the five things they are (not installed, no phone, connecting, ready,
+  running), grow while one is running to carry how long it has been up, a
+  Stop button and its own quick actions, and take a file dropped on them to
+  send to the phone. A card for a tool that is not installed opens a guide
+  naming exactly what is missing, with the install command for Arch, Fedora
+  or Debian and a button to copy it, and a Re-check that closes the guide
+  once it is satisfied. A pairing request joins the same stack. Behind the
+  tab's two navigation cards: Contacts, which searches the phone's contacts
+  by name or number, shows their own photos, stars the ones that matter and
+  opens the phone's dialer or SMS composer; and Android Apps, which lists
+  what the phone has installed, starts one on a display of its own, and
+  shows what is already running with Focus, Close and Stop all. The webcam
+  and microphone each get a page with their toggle and settings. Settings >
+  Devices & Phone collects everything the tab persists — the panel's cards,
+  the contacts rules, and the mirror's connection, options and App Mode.
 - **Phone Connect shows your phone's wireless address and cellular network,
   and answers pairing requests.** The panel reads the address KDE Connect
   reaches the phone on and its cellular network type (LTE, 5G, …) alongside
