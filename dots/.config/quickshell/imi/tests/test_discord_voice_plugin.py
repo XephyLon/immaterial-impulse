@@ -422,6 +422,26 @@ class DiscordVoicePluginSafetyTests(unittest.TestCase):
         self.assertIn("pendingMessages = pendingMessages.concat([message])", service)
         self.assertIn("onStarted: root.flushPendingMessages()", service)
 
+    def test_session_reconnect_is_one_shot_and_stands_down_with_the_process(self):
+        # The behavioural half is tst_discord_voice_reconnect.qml. This pins
+        # what a test driving handleLine() cannot see: the retry timer is one
+        # shot (the bridge's answer decides the next rung), both ladders are
+        # one arithmetic, and the exit handler disarms the retry - a retry
+        # landing on a dead bridge goes through send() -> start(true), which
+        # zeroes the process ladder's ceiling.
+        service = SERVICE.read_text()
+        timer = service[service.index("id: reconnectTimer"):]
+        timer = timer[:timer.index("}")]
+        self.assertNotIn("repeat: true", timer)
+        self.assertIn("reconnectTimer.interval = backoffDelay(reconnectAttempts)", service)
+        self.assertIn("restartTimer.interval = root.backoffDelay(root.restartAttempts)", service)
+        exited = service[service.index("onExited: (code, status) => {"):]
+        exited = exited[:exited.index("if (root.restartAttempts")]
+        self.assertIn("root.disarmReconnect()", exited)
+        # "authenticated" disarms as well: the companion backend never emits
+        # "connected", so on that path it is the only answer that can.
+        self.assertRegex(service, r'(?s)case "authenticated":(?:(?!break;).)*disarmReconnect\(\)')
+
     def test_native_bar_route_is_click_only_and_closes_on_focus_loss(self):
         # Which file draws a bar widget is one mapping both bars ask now, so
         # the native route is pinned there - and holds for the vertical bar
