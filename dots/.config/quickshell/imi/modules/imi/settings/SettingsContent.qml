@@ -195,9 +195,11 @@ Item {
         return list
     }
 
-    Component.onCompleted: {
-        Config.readWriteDelay = 0
-    }
+    // The undebounced write this host used to ask for from here belongs to the
+    // WINDOW, not to the host: `Settings.qml` holds the claim for as long as
+    // its window is on screen. This object is built at `Config.ready` and
+    // lives for the session (see the warm-up's gate below), so a claim made
+    // here is a claim nobody ever releases.
 
     // Every page up to here has been asked for, so it is built and kept. This
     // only grows: a page built once stays built (`built` below).
