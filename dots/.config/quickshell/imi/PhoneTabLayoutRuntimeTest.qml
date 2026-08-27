@@ -1,6 +1,7 @@
 import QtQuick
 import QtTest
 import Quickshell
+import Quickshell.Io
 import qs
 import qs.services
 import qs.modules.common
@@ -26,6 +27,13 @@ import qs.modules.imi.sidebarLeft.phone
  * that the real contacts monitor reads - so the Contacts page has rows to
  * lay out and the notification cards have an icon to resolve.
  *
+ * A fake `adb` and a fake `scrcpy` are on the same PATH, answering off two
+ * files this harness creates between steps, which is what lets the Android
+ * Apps page be walked through its three states in one run - no phone on ADB,
+ * a phone that answered with nothing, and a phone with apps - and what makes
+ * the first of those a property of the test rather than of whichever machine
+ * is running it.
+ *
  * Driven by tests/test_phone_tab_layout_runtime.py, which brings the weston
  * and the session bus.
  *
@@ -39,6 +47,13 @@ ShellRoot {
     property int elapsed: 0
 
     readonly property string phoneId: Quickshell.env("PHONE_ID") ?? ""
+    // The two files the fake `adb` and the fake `scrcpy` read their answers
+    // off. Nothing else in this harness can move the Apps page between its
+    // three states: what the page draws is a consequence of what the tools
+    // report, and the tools are asked again by the shell's own probes.
+    readonly property string adbAttachedPath: Quickshell.env("PHONE_ADB_ATTACHED") ?? ""
+    readonly property string appsFilePath: Quickshell.env("PHONE_APPS_FILE") ?? ""
+    readonly property string appsSourcePath: Quickshell.env("PHONE_APPS_SOURCE") ?? ""
     // The file the fake daemon reports as the first notification's iconPath.
     readonly property string iconPath: Quickshell.env("PHONE_ICON_PATH") ?? ""
     // The two names in the vCard fixture, handed in rather than spelled a
@@ -144,6 +159,21 @@ ShellRoot {
                       + ` else, got ${row.height} against ${headerBox.bottom + pad}`,
                       Math.abs(row.height - (headerBox.bottom + pad)) <= 1
                       && Math.abs(headerBox.top - pad) <= 1);
+    }
+
+    Process { id: fixtureStep }
+
+    function writeFixture(argv) {
+        fixtureStep.exec(argv);
+    }
+
+    // Whether an item is really on screen, which is not the same question as
+    // `visible`: PagePlaceholder fades, so a placeholder standing down reports
+    // `visible` false only once its opacity has finished leaving, and one that
+    // is up at opacity 0 is a message nobody can read.
+    function onScreen(item) {
+        return item !== null && item.visible && item.opacity > 0.5
+            && item.width > 0 && item.height > 0;
     }
 
     // Where an item is DRAWN, in another item's coordinates. Everything about
@@ -382,12 +412,70 @@ ShellRoot {
         () => loader.item.popSubPage(),
         () => {},
 
-        // ---- the Apps page's empty state stays under its own header -------
+        // ---- the Apps page with no phone on ADB ---------------------------
+        //
+        // The state the maintainer photographed: a phone paired to KDE Connect
+        // over the LAN, and `adb devices` listing nothing. What was on screen
+        // was a line of red text and an empty state under it, neither of which
+        // says what to do; what has to be on screen is one panel that does.
         () => loader.item.openSubPage("apps"),
+        () => {},
         () => {},
         () => {
             const page = harness.first("PhoneAppsPage");
             const placeholder = harness.findAll(page, "PagePlaceholder", [])[0] ?? null;
+            const notice = harness.findAll(page, "NoticeBox", [])[0] ?? null;
+            const list = harness.findAll(page, "StyledListView", [])[0] ?? null;
+            const region = placeholder?.parent ?? null;
+            const column = region?.parent ?? null;
+            const status = column?.children[1] ?? null;
+            const noticeText = harness.findAll(notice, "StyledText", [])
+                .map(t => String(t.text)).join(" | ");
+            console.log(`[PhoneTabLayout] no-adb: ready=${PhoneDeps.ready} adb=${PhoneDeps.adb}`
+                        + ` adbDevice=${PhoneDeps.adbDevice} appMode=${PhoneScrcpy.appModeSupported}`
+                        + ` appsError="${PhoneScrcpy.appsError}" notice h=${notice?.height}`
+                        + ` placeholderShown=${placeholder?.shown} status=${status?.visible}`
+                        + ` list=${list?.visible}`);
+
+            harness.check(`the fake tooling answered: app mode is supported and adb sees`
+                          + ` no phone, got ready=${PhoneDeps.ready} adb=${PhoneDeps.adb}`
+                          + ` device=${PhoneDeps.adbDevice} appMode=${PhoneScrcpy.appModeSupported}`,
+                          PhoneDeps.ready && PhoneDeps.adb && !PhoneDeps.adbDevice
+                          && PhoneScrcpy.appModeSupported);
+            harness.check(`the page draws a panel, got ${notice?.height}px of one`,
+                          harness.onScreen(notice));
+            harness.check(`...in the error container role, got ${notice?.color}`,
+                          notice !== null && String(notice.color)
+                          === String(Appearance.colors.colErrorContainer));
+            // Both routes, because the machine this was reported from has
+            // neither: a panel naming only the cable is no use to someone
+            // whose phone is across the room.
+            harness.check("...naming USB debugging and wireless debugging both",
+                          noticeText.indexOf("USB debugging") >= 0
+                          && noticeText.indexOf("Wireless debugging") >= 0);
+            harness.check("...and the pairing the wireless route needs by hand",
+                          noticeText.indexOf("adb pair") >= 0
+                          && noticeText.indexOf("adb connect") >= 0);
+            // The two messages that used to say the same thing beside it.
+            harness.check(`the empty state stands down, got shown=${placeholder?.shown}`,
+                          placeholder !== null && !placeholder.shown);
+            harness.check(`the status line's red duplicate stands down too, got`
+                          + ` visible=${status?.visible} text="${status?.text}"`,
+                          status !== null && !status.visible);
+            harness.check(`and no list is drawn, got visible=${list?.visible}`,
+                          list === null || !list.visible);
+        },
+
+        // ---- a phone appears on ADB, and the page asks for the list itself -
+        () => harness.writeFixture(["touch", harness.adbAttachedPath]),
+        () => PhoneDeps.refreshAdbDevices(),
+        () => {},
+        () => {},
+        () => {
+            const page = harness.first("PhoneAppsPage");
+            const placeholder = harness.findAll(page, "PagePlaceholder", [])[0] ?? null;
+            const notice = harness.findAll(page, "NoticeBox", [])[0] ?? null;
+            const list = harness.findAll(page, "StyledListView", [])[0] ?? null;
             // The same structural walk as the Contacts step: the placeholder
             // is anchored into the leftover region, whose parent is the
             // page's content column, whose children are its rows in order.
@@ -409,6 +497,27 @@ ShellRoot {
                             + ` status=${status} placeholder=${placeholder}`);
                 return;
             }
+
+            console.log(`[PhoneTabLayout] on-adb: adbDevice=${PhoneDeps.adbDevice}`
+                        + ` apps=${PhoneScrcpy.apps.length} loading=${PhoneScrcpy.appsLoading}`
+                        + ` appsError="${PhoneScrcpy.appsError}" notice=${notice?.height}`
+                        + ` placeholderShown=${placeholder.shown} status="${status.text}"`);
+
+            harness.check(`adb sees the phone now, got ${PhoneDeps.adbDevice}`,
+                          PhoneDeps.adbDevice === true);
+            harness.check(`the panel goes with it, got height=${notice?.height}`
+                          + ` visible=${notice?.visible}`,
+                          !harness.onScreen(notice));
+            // The page asked for the list on its own when the device appeared:
+            // the supervisor ran, the phone had nothing to give, and the error
+            // that stood there while there was no transport is gone.
+            harness.check(`...and the list was asked for without a click, got`
+                          + ` error="${PhoneScrcpy.appsError}" loading=${PhoneScrcpy.appsLoading}`,
+                          PhoneScrcpy.appsError === "" && !PhoneScrcpy.appsLoading);
+            harness.check(`the empty state is the message now, got shown=${placeholder.shown}`
+                          + ` title="${placeholder.title}"`,
+                          placeholder.shown && harness.onScreen(drawn)
+                          && String(placeholder.title).length > 0);
 
             const fieldBox = harness.boxIn(field, page);
             const statusBox = harness.boxIn(status, page);
@@ -439,6 +548,33 @@ ShellRoot {
             harness.check(`the status line stays inside the page, got`
                           + ` ${statusBox.left}-${statusBox.right} of ${page.width}`,
                           statusBox.left >= 0 && statusBox.right <= page.width + 1);
+
+            // ---- and the description reads as a paragraph, not as a rule ---
+            const texts = harness.findAll(placeholder, "StyledText", []);
+            const description = texts.find(t => String(t.text)
+                                           === String(placeholder.description)) ?? null;
+            const descriptionBox = description === null ? null
+                : harness.boxIn(description, page);
+            console.log(`[PhoneTabLayout] description w=${description?.width}`
+                        + ` implicit=${description?.implicitWidth}`
+                        + ` ${descriptionBox?.left}-${descriptionBox?.right} of ${page.width}`);
+            // Or the measure is vacuous: a string shorter than the clamp is
+            // held to its own width whatever the clamp says.
+            harness.check(`the description is longer than its measure, got`
+                          + ` ${description?.implicitWidth} against ${description?.width}`,
+                          description !== null
+                          && description.implicitWidth > description.width);
+            harness.check(`...so it is held short of the page, got`
+                          + ` ${descriptionBox?.left}-${descriptionBox?.right}`
+                          + ` of ${page.width}`,
+                          descriptionBox !== null && descriptionBox.left > 0
+                          && descriptionBox.right < page.width);
+            harness.check(`...and centred in the region rather than left against it,`
+                          + ` got ${(descriptionBox?.left + descriptionBox?.right) / 2}`
+                          + ` against ${(regionBox.left + regionBox.right) / 2}`,
+                          descriptionBox !== null
+                          && Math.abs((descriptionBox.left + descriptionBox.right) / 2
+                                      - (regionBox.left + regionBox.right) / 2) <= 1);
             harness.tallPageHeight = page.height;
         },
 
@@ -482,6 +618,48 @@ ShellRoot {
                           + ` ${(regionBox.top + regionBox.bottom) / 2}`,
                           Math.abs((drawnBox.top + drawnBox.bottom) / 2
                                    - (regionBox.top + regionBox.bottom) / 2) <= 1);
+        },
+
+        // ---- the phone has apps: the list, and nothing else ----------------
+        () => {
+            harness.viewportHeight = 900;
+            harness.writeFixture(["cp", harness.appsSourcePath, harness.appsFilePath]);
+        },
+        // The click the panel's last sentence points at, once there is a
+        // device: the refresh button's own call.
+        () => PhoneScrcpy.refreshApps(),
+        () => {},
+        () => {},
+        () => {
+            const page = harness.first("PhoneAppsPage");
+            const placeholder = harness.findAll(page, "PagePlaceholder", [])[0] ?? null;
+            const notice = harness.findAll(page, "NoticeBox", [])[0] ?? null;
+            const list = harness.findAll(page, "StyledListView", [])[0] ?? null;
+            const region = placeholder?.parent ?? null;
+            const column = region?.parent ?? null;
+            const status = column?.children[1] ?? null;
+            const delegate = list === null ? null : list.itemAtIndex(0);
+            console.log(`[PhoneTabLayout] with-apps: apps=${PhoneScrcpy.apps.length}`
+                        + ` list count=${list?.count} h=${list?.height}`
+                        + ` contentHeight=${list?.contentHeight} delegate=${delegate?.height}`
+                        + ` placeholderShown=${placeholder?.shown} notice=${notice?.height}`
+                        + ` status="${status?.text}"`);
+
+            harness.check(`the phone's three apps arrived, got ${PhoneScrcpy.apps.length}`,
+                          PhoneScrcpy.apps.length === 3);
+            harness.check(`the list holds them, got ${list?.count}`,
+                          list !== null && list.visible && list.count === 3);
+            harness.check(`...at a height to draw into, got ${list?.height}`
+                          + ` with a first row of ${delegate?.height}`,
+                          list !== null && list.height > 0
+                          && delegate !== null && delegate.height > 0);
+            harness.check(`the empty state is gone, got shown=${placeholder?.shown}`,
+                          placeholder !== null && !placeholder.shown);
+            harness.check(`the panel is gone, got height=${notice?.height}`,
+                          !harness.onScreen(notice));
+            harness.check(`and the status line counts them, got "${status?.text}"`,
+                          status !== null && status.visible
+                          && String(status.text).indexOf("3 of 3") >= 0);
         },
 
         () => harness.finish()
