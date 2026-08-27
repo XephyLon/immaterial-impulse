@@ -491,7 +491,18 @@ modules/imi/                 The "imi" (Immaterial Impulse) panel family - one d
                               popup's content on a single morphing card - it serves the vertical
                               bar too, which loads the same widget files
                               (d29cd6e45 ("feat(bar): add the static overlay surface the popup card will live on"))
-  sidebarLeft/, sidebarRight/ Slide-out panels (AI chat, quick settings, notifications, volume mixer)
+  sidebarLeft/, sidebarRight/ Slide-out panels (AI chat, translator, media, the Phone tab;
+                              quick settings, notifications, volume mixer). sidebarLeft/phone/ is
+                              the Phone tab - the paired phone's chip, six actions, two navigation
+                              cards, its notification list and a footer toolbar, over
+                              PhoneConnect + PhoneNotifications. It replaced the right sidebar's
+                              phone dialog, whose quick toggle now writes
+                              GlobalStates.sidebarLeftTab and opens this panel
+                              f7a6ef75a ("refactor(sidebar): the phone quick toggle opens the tab, and the dialog goes")
+  phone/                      The pieces every phone surface draws, shared out of that dialog
+                              rather than owned by one panel: the device chip, the round action
+                              button, the roster row and the pairing card
+                              da7154a58 ("refactor(phone): the shared phone pieces move out of the right sidebar")
   onScreenDisplay/            Transient toast/OSD popups (volume, brightness, gamma, keyboard
                               layout, audio device switches) - see "OSD system" below
   screenCorners/              Decorative fake screen-rounding + corner hover/click zones that open
@@ -592,10 +603,11 @@ services/                  Singletons wrapping external state/processes - one pe
                               reconcile. Its parser logic is kept byte-for-byte in
                               sync with a logic-only test double
                               (tests/test_phone_connect_contract.py enforces it, and holds
-                              the sidebar's phone dialog to the actions the model declares
-                              - a button whose call the service does not answer is a fake
-                              action). The dialog itself is driven end to end by
-                              tests/test_phone_connect_dialog_runtime.py
+                              the Phone tab to the actions the model declares - a button
+                              whose call the service does not answer is a fake action, and
+                              a button past Ring needs the BACKEND gate too, since Valent
+                              answers none of them). The tab itself is driven end to end by
+                              tests/test_phone_tab_runtime.py
   PhoneNotifications.qml       The paired phone's notifications, mirrored off KDE Connect on
                               the same busctl transport through a serialized queue of its
                               own. No monitor of its own: the four notification signals sit
@@ -858,6 +870,24 @@ reading `name`, and on any `GlobalStates.settingsPage` write in the tree whose v
 declared id — the realistic regression is a fifteenth page or a third deep link copied from whatever
 sits beside it, not someone rewriting the resolver.
 1c674c8f5 ("fix(settings): address a settings deep link by page id, not by its label").
+
+**The left sidebar's tabs are three literal arrays kept index-aligned by hand, and its deep link
+learned the same lesson the settings one did.** `SidebarLeftContent.qml` has no registry behind its
+tabs: `tabButtonList` (what the tab bar draws), `tabIdList` (the untranslated ids a link names) and
+the `SwipeView`'s `contentChildren` are three literals, and a tab added to one of them alone shows
+the **wrong page** — silently, because every index is still a valid index, the QML suite never
+builds these widgets, and a mis-aligned `SwipeView` renders perfectly. Two asymmetries make that
+easy to get wrong: the placeholder page sits between the last real tab and Anime with no tab-bar
+entry of its own, and closet mode (`policies.weeb === 2`) puts an Anime *page* in the view with no
+entry either — so the lists are legitimately different lengths, and only the entries before the
+placeholder are aligned. `GlobalStates.sidebarLeftTab` is a **string id** rather than an index for
+the paragraph above's reason and one more: an index goes stale the day a tab is inserted, which is
+the alternative that paragraph already rejected. It is *consumed* on open, the way
+`GlobalStates.settingsPage` is — left set, the sidebar returns to that tab on every later open and
+the link stops being a link. `tests/test_sidebar_left_tabs.py` pins all of it; before it the tab set
+was unpinned, so adding a tab broke no test at all.
+31b58f7f9 ("test(sidebar): pin the left sidebar's tab set, which nothing pinned"),
+ba63a5eea ("feat(sidebar): the Phone tab joins the left sidebar, and the gate opens").
 
 ## Hyprland integration
 

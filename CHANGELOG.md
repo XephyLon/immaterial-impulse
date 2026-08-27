@@ -13,6 +13,23 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The Phone tab.** The paired phone gets a tab of its own in the left
+  sidebar, beside Intelligence, Translator and Media. Top to bottom: the
+  device on a chip whose arrow opens the list of every device the daemon
+  knows, with its cellular network (or its wireless address) and its
+  battery as pills beside it; one row of six round actions — ring it, ping
+  it, send it your clipboard, send it a file, share the clipboard as a link
+  or as text, and browse its storage; cards for Contacts and Android Apps
+  that say how many contacts synced and whether this machine's scrcpy can
+  do App Mode; your phone's notifications filling the rest of the panel,
+  grouped by app, with swipe-to-dismiss, inline reply, action buttons and
+  copy; and a toolbar to re-read them, count them or clear them all. Files
+  dropped anywhere on the tab are sent to the phone, and pairing requests
+  appear as cards at the bottom. The right sidebar's Phone quick toggle
+  opens this tab instead of its old dialog, which is gone.
+
+  Everything the last few releases built for the phone but had nowhere to
+  show is now reachable, and the phone's notifications stop appearing twice.
 - **Phone Connect warns when your phone's battery is low, and can send it
   files, links and your clipboard, or open its storage.** A desktop
   notification arrives once when the paired phone drops below 20% while
@@ -22,15 +39,15 @@ own repo; the installer pins which revision it builds.
   and browse the phone over SFTP, opening its internal storage rather than
   the bare mount. The device you pick in the panel is remembered across
   restarts, with the last five picks kept for the list. The buttons for the
-  new actions arrive with the Phone tab; the notifications work now.
+  new actions are the Phone tab's six-button row, in this same release.
 - **Your phone's notifications are mirrored into the shell.** With a phone
   paired through KDE Connect, the shell reads its active notifications off
   the daemon as they arrive, keeps them grouped by app, dismisses one on the
   phone itself rather than only hiding the card, replies inline where the app
   allows it, and remembers the list across a restart. While the phone is
   reachable, kdeconnectd's own desktop pop-ups of those same notifications
-  are no longer shown beside them. This is the data behind the Phone tab,
-  which draws it in a following release.
+  are no longer shown beside them. The Phone tab draws them, in this same
+  release.
 - **The phone's contacts reach the shell.** A new `PhoneContacts` service
   reads the vCards KDE Connect syncs to `~/.local/share/kpeoplevcard`, keeps
   the list live as the phone syncs (and parses the names Android soft-wraps,
@@ -38,8 +55,7 @@ own repo; the installer pins which revision it builds.
   it by name, organization, address or digits, hides the number-only cards
   anti-spam apps leave behind - never a starred one - and can open the
   phone's dialer or SMS composer for a number over adb, saying why when it
-  cannot. This is the model behind the Phone tab's Contacts card; the tab
-  itself follows.
+  cannot. It is what the Phone tab's Contacts card counts.
 - **The phone's screen, camera and microphone reach the desktop.** Groundwork
   for the Phone tab: scrcpy mirrors the phone in a window and opens one
   Android app on a virtual display of its own (scrcpy 4+, "App Mode"), the
@@ -50,7 +66,7 @@ own repo; the installer pins which revision it builds.
   when the shell starts, and what is missing is answered with the install
   command for Arch, Fedora and Debian. The settings live under
   `phone.*` in config.json (mirror flags, app-mode display, webcam and
-  microphone connection); the tab that shows them follows.
+  microphone connection); the Phone tab is where they are reached from.
 - **Phone Connect shows your phone's wireless address and cellular network,
   and answers pairing requests.** The panel reads the address KDE Connect
   reaches the phone on and its cellular network type (LTE, 5G, …) alongside
@@ -75,15 +91,15 @@ own repo; the installer pins which revision it builds.
   float their labels into the field; and every explanation moved from a
   paragraph under its row to an (i) you hover. The other settings pages are
   unchanged and follow in later releases.
-- **The phone panel is laid out like a phone panel.** The device sits on a
-  chip whose arrow opens the list of every device the daemon knows; its
-  connection, battery and cellular network are pills beside it; the actions
-  are one row of round buttons (ring, ping, send clipboard) instead of
-  buttons repeated on every device row; the middle of the panel is reserved
-  for your phone's notifications and says so while there is nothing to show;
-  and secondary features — pairing requests today — stack as cards at the
-  bottom. Picking a device in the list makes it the one the panel is about
-  for the rest of the session.
+- **The phone panel is laid out like a phone panel, and it moved.** The
+  device sits on a chip whose arrow opens the list of every device the
+  daemon knows; its connection, battery and cellular network are pills
+  beside it; the actions are one row of round buttons instead of buttons
+  repeated on every device row; the middle of the panel is reserved for
+  your phone's notifications; and secondary features — pairing requests
+  among them — stack as cards at the bottom. It landed as a dialog in the
+  right sidebar and ships as the Phone tab in the left one, which is where
+  the rest of this release's phone work is reached.
 
 ### Fixed
 - **Leaving a Discord voice channel no longer kills the voice bridge.** Discord

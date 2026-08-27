@@ -106,8 +106,9 @@ them:
   through a shell string (the fork splices `devId` unquoted into `bash -c`).
   Valent stays at `hasPairingRequest: false`, unverified.
 - **The surface** (0c6429028 "feat(phoneConnect): the dialog becomes a device
-  chip, pills, one action row and a notification area"). The device dialog
-  now follows the layout the maintainer rated on the fork: the device on a
+  chip, pills, one action row and a notification area"). It landed as the
+  device dialog and is the Phone tab now; the layout below is what the
+  maintainer rated on the fork and what the tab draws: the device on a
   chip whose arrow opens the roster; a connection pill (the wireless address
   from `reachableAddresses`, or Offline), a battery pill and a cellular
   pill; ONE row of round actions — ring, ping, clipboard, the three the
@@ -120,13 +121,19 @@ them:
   chip, the pills and the actions are about, for the session — the
   persisted choice is slice 6. `tests/test_phone_connect_contract.py` holds
   the surface to the actions the model declares, and
-  `tests/test_phone_connect_dialog_runtime.py` builds the real dialog over
+  `tests/test_phone_tab_runtime.py` builds the real tab over
   the real service against a fake daemon and reads all of it back,
-  including the area growing by exactly a card when that card goes.
+  including the notification list growing by exactly a card when that card
+  goes.
 
-**Slices 4, 5 and 6 have landed** on the service; the buttons that reach
-them are the Phone tab's (`docs/superpowers/specs/2026-08-27-phone-tab-design.md`,
-W5), so the dialog still draws three actions until the tab replaces it.
+**Slices 4, 5 and 6 have landed** on the service, and the buttons that reach
+them are the Phone tab's six-action row
+(`docs/superpowers/specs/2026-08-27-phone-tab-design.md`, W5). That tab
+replaced the right sidebar's dialog: `modules/imi/sidebarLeft/phone/` draws
+the surface, `modules/imi/phone/` holds the pieces any phone surface shares,
+and the quick toggle writes `GlobalStates.sidebarLeftTab` instead of raising
+a dialog of its own. `canBrowseFiles` joined `canShare` with it - the SFTP
+slice shipped without the gate the row needed.
 
 - **Actions queue** (c7e160da1 "feat(phoneConnect): actions queue behind one
   another instead of killing the one in flight"). Measured first: `Process.exec`
