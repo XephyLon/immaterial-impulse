@@ -4191,6 +4191,18 @@ both `StyledFlickable`s and both `StyledListView`s already write out. Naming two
 animation is the tell.
 (fix(overview): the niri overview scrolls on the scroll tier, whole.)
 
+**A programmatic scroll goes through `StyledFlickable.scrollToY()`; a direct `contentY` write
+snaps wherever the `Behavior` is off.** `StyledFlickable`'s `Behavior on contentY` is disabled
+under `expressiveScroll` and `momentumScroll` — those paths drive `contentY` per input event and a
+Behavior would fight them — and `ContentPage` is a momentum flickable, so all fifteen settings
+pages' `goTo(term)` wrote `contentY` and jumped to the section in one frame (the maintainer's
+request, 2026-08-27). `scrollToY(y)` clamps, stops the settle/bounce/programmatic animations,
+records `scrollTargetY` and runs one `NumberAnimation` on the scroll tier taken whole; the three
+wheel paths and `onMovementStarted` stop it, so user input always wins.
+`tests/test_settings_navigation.py` pins the helper's tier, the five stop sites, and that no page
+writes `contentY` itself. (feat(settings): a section pick scrolls the page there on the scroll
+tier.)
+
 **...and the sibling defect is the one that lint deliberately waved through: a duration read out
 of `animationCurves` is the tier's BASE, and the speed multiplier is not in it.**
 `Appearance.animation.<tier>.duration` is `motion.scale(...)` applied to

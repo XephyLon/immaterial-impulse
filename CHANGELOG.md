@@ -12,6 +12,13 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- **Picking a section in Settings scrolls to it instead of jumping.** Choosing
+  a category in the left tree (or landing on a search hit) used to snap the
+  page to that section in one frame; the page now glides there on the same
+  curve every other scroll in the shell uses, and any wheel or drag takes over
+  from wherever it got to.
+
 ## [0.31.2] — 2026-08-27
 
 Two fixes found on one button and applied everywhere the same spelling lived:
