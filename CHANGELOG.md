@@ -19,6 +19,10 @@ own repo; the installer pins which revision it builds.
   clock-depth inspector all drew their glyph up-left of centre. The glyph was
   told to centre itself in a way its button ignores; it now says so in the way
   the button honours.
+- **The presets "save" button arrives and leaves smoothly.** It used to pop in
+  at full size the moment you typed a name and vanish the moment you cleared
+  it, shoving the text field a button-width in one frame each way. It now
+  glides in and out like the bar's pills, and the field reflows with it.
 
 ## [0.31.1] — 2026-08-26
 
