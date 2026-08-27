@@ -292,6 +292,19 @@ Singleton {
             .map(entry => typeof entry === "string" ? entry.trim() : "")
             .filter(entry => /^(file|https?):\/\//i.test(entry));
     }
+
+    // What to do with the desktop clipboard: a link goes as a URL, prose as
+    // text, nothing is refused. The URL heuristic is the fork's - a scheme,
+    // or a host-shaped token that is the whole string or the start of a
+    // path. A bare host leaves with https:// on it: the daemon hands the
+    // string to a QUrl, and a schemeless one is relative to nothing.
+    function clipboardShareTarget(text: var): var {
+        const value = (typeof text === "string" ? text : "").trim();
+        if (value.length === 0) return { kind: "empty", value: "" };
+        if (/^https?:\/\//i.test(value)) return { kind: "url", value: value };
+        if (/^[\w.-]+\.\w{2,}(\/|$)/.test(value)) return { kind: "url", value: `https://${value}` };
+        return { kind: "text", value: value };
+    }
     // END phone-connect parser logic
 
     function applyBackend(newBackend: string): void {
@@ -529,6 +542,46 @@ Singleton {
         const d = device ?? root.activeDevice;
         if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id) || !text) return;
         root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/share`, "org.kde.kdeconnect.device.share", "shareText", ["s", text]));
+    }
+
+    // The desktop clipboard, shared as a link or as text. Read with
+    // wl-paste rather than Quickshell's clipboard binding so the service
+    // stays a process it can observe; the read is one-shot, and a second
+    // click while it runs is dropped rather than restarting it.
+    property var clipboardShareDevice: null
+
+    function shareClipboard(device: var): void {
+        const d = device ?? root.activeDevice;
+        if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
+        if (clipboardProc.running) return;
+        root.lastActionError = "";
+        root.clipboardShareDevice = d;
+        clipboardProc.running = true;
+    }
+
+    Process {
+        id: clipboardProc
+        command: ["wl-paste", "--no-newline"]
+        stdout: StdioCollector {
+            id: clipboardOut
+        }
+        // "Nothing is copied" on stderr and exit 1 is an empty clipboard;
+        // the empty stdout says the same thing.
+        stderr: StdioCollector {}
+        onExited: (exitCode, exitStatus) => {
+            const target = root.clipboardShareTarget(clipboardOut.text);
+            const d = root.clipboardShareDevice;
+            root.clipboardShareDevice = null;
+            if (target.kind === "empty") {
+                root.reportFailure(Translation.tr("Clipboard is empty"));
+            } else if (target.kind === "url") {
+                root.shareUrls(d, [target.value]);
+                root.actionFeedback(Translation.tr("Link shared"), true);
+            } else {
+                root.shareText(d, target.value);
+                root.actionFeedback(Translation.tr("Text shared"), true);
+            }
+        }
     }
 
     // Both answer a request the PEER made, so neither falls back to the
