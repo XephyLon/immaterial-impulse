@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
-# The overview opens on the monitor that has focus, every time - not the one
-# it opened on first.
+# Every persistent surface opens on the monitor that has focus, every time -
+# not on the one it opened on first.
 #
 # A nested Hyprland with two wayland outputs (each a window on the parent
 # session; headless outputs never take a mode under the nested backend), the
-# full shell inside it against an empty config, and the overview opened by
-# IPC after focus is moved to each output in turn. `search activeScreen` is
+# full shell inside it against an empty config, and each surface opened by
+# IPC after focus is moved to each output in turn. `<target> activeScreen` is
 # the shell's own answer for which screen's window the open landed on; the
 # probe compares it with `hyprctl monitors` `focused`. #297 reopened on
 # exactly this: on one monitor the first fix looked right, on two every open
-# after the first reused the first screen's window.
+# after the first reused the first screen's window - and then a third time,
+# once both sidebars followed the overview onto a surface that outlives the
+# gesture.
+#
+# The three surfaces are driven in one run on purpose. They share one bug and
+# one shape, and a probe that covered the overview alone is what let the
+# sidebars keep the same defect through the release that fixed it: the shell's
+# answer has to be asked of each of them.
 #
 # Not part of run_tests.sh: it needs a Wayland parent and opens two windows
 # on it. Run by hand from a graphical session.
@@ -33,6 +40,9 @@ export WAYLAND_DISPLAY="$PARENT_SOCKET"
 dbus-run-session -- bash -s "$TMP" <<'NESTED'
 set -u
 TMP="$1"
+# The IPC targets that answer open/close/activeScreen - one per persistent
+# surface. A surface converted to the per-screen family joins this list.
+SURFACES="search sidebarLeft sidebarRight"
 Hyprland -c "$TMP/hypr.lua" > "$TMP/hypr.log" 2>&1 &
 HPID=$!
 SIG=""
@@ -51,11 +61,13 @@ for M in $MONS $MONS $MONS; do
   WS=$(hyprctl monitors -j | python3 -c "import json,sys; print([m for m in json.load(sys.stdin) if m['name']=='$M'][0]['activeWorkspace']['id'])")
   hyprctl dispatch workspace $WS >/dev/null; sleep 0.3; hyprctl dispatch focusmonitor "$M" >/dev/null; sleep 0.6
   FOCUSED=$(hyprctl monitors -j | python3 -c 'import json,sys; print(",".join(m["name"] for m in json.load(sys.stdin) if m["focused"]))')
-  qs -c imi ipc call search open >/dev/null 2>&1; sleep 1.0
-  LANDED=$(qs -c imi ipc call search activeScreen 2>/dev/null | tr -d '\n')
-  qs -c imi ipc call search close >/dev/null 2>&1; sleep 0.8
-  checks=$((checks+1))
-  if [ "$LANDED" = "$FOCUSED" ]; then echo "ok   focused=$FOCUSED opened on $LANDED"; else echo "FAIL focused=$FOCUSED opened on ${LANDED:-<none>}"; fail=1; fi
+  for T in $SURFACES; do
+    qs -c imi ipc call $T open >/dev/null 2>&1; sleep 1.0
+    LANDED=$(qs -c imi ipc call $T activeScreen 2>/dev/null | tr -d '\n')
+    qs -c imi ipc call $T close >/dev/null 2>&1; sleep 0.8
+    checks=$((checks+1))
+    if [ "$LANDED" = "$FOCUSED" ]; then echo "ok   $T focused=$FOCUSED opened on $LANDED"; else echo "FAIL $T focused=$FOCUSED opened on ${LANDED:-<none>}"; fail=1; fi
+  done
 done
 kill $QPID 2>/dev/null; sleep 1; kill $HPID 2>/dev/null; sleep 1; kill -9 $HPID 2>/dev/null
 echo "$checks checks, $( [ $fail = 0 ] && echo all on the focused monitor || echo FAILED )"
