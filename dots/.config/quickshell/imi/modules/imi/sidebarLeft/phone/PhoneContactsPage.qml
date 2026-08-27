@@ -188,7 +188,22 @@ PhoneSubPage {
                             // thing being measured.
                             objectName: "contactHeader"
                             Layout.fillWidth: true
-                            Layout.preferredHeight: Appearance.font.pixelSize.huge * 2
+                            // No stated height, and the padding said out
+                            // loud. A Control sizes itself from its content
+                            // item, and what this row holds is a different
+                            // height in every script: measured in a real
+                            // window, the name-and-number column is 34px tall
+                            // for a Latin name and 47 for an Arabic one at
+                            // the same pixelSize, because the shell's font
+                            // carries no Arabic and the fallback sets taller.
+                            // `Layout.preferredHeight: huge * 2` therefore
+                            // fitted one script - the avatar ended 6px above
+                            // the card's own edge in Latin and 1px in Arabic,
+                            // and the NUMBER 3px below it, outside the card.
+                            // An aligned layout child answers a cell that is
+                            // too small by overflowing it, not by shrinking,
+                            // so nothing errors and nothing is logged.
+                            verticalPadding: Appearance.spacing.space75
                             buttonRadius: Appearance.rounding.small
                             colBackground: "transparent"
                             colBackgroundHover: Appearance.colors.colLayer3Hover
