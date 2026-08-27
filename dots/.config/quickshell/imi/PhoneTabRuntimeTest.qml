@@ -373,8 +373,9 @@ ShellRoot {
                           && buttons[0].height === Appearance.sizes.phoneFooterButtonHeight);
             const offsets = buttons.map(b => harness.glyphOffCentre(b));
             console.log(`[PhoneTab] glyph off centre by ${offsets}`);
-            // A RippleButtonWithIcon's glyph sat 2.5px left of centre here,
-            // because the empty label's Layout.fillWidth slot took the rest.
+            // A RippleButtonWithIcon's glyph was drawn 1.5px left of centre
+            // here, because the empty label's Layout.fillWidth slot took the
+            // rest of the row's width from inside the button.
             harness.check(`each glyph is centred in its action, off by ${offsets}`,
                           offsets.every(offset => offset < 1));
         },
