@@ -32,7 +32,16 @@ ApplicationWindow {
 
     Component.onCompleted: {
         MaterialThemeLoader.reapplyTheme();
-        Config.readWriteDelay = 0 // Welcome app always only sets one var at a time so delay isn't needed
+    }
+
+    // The welcome app is its own short-lived Quickshell process with its own
+    // Config singleton, and it sets one var at a time, so the debounce buys it
+    // nothing. `active: true` - existing really is the condition here, since
+    // the process is this window - stated rather than defaulted, because a
+    // claim that reads "for as long as I exist" written where the surface
+    // outlives the gesture is the defect this component replaced.
+    ConfigWriteDelayRef {
+        active: true
     }
 
     minimumWidth: 600

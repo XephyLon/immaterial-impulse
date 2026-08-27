@@ -36,13 +36,20 @@ ApplicationWindow {
     // This dialog is its own short-lived Quickshell process and it *does* write
     // config: the "Always" buttons below persist conflictKiller.autoKill*. It
     // then quits as soon as it is closed, so a debounced or backgrounded write
-    // would be lost with the process. Hence no delay and a blocking write -
-    // `blockWrites` is FileView's threading mode ("block until the write
-    // completes"), not a permission switch, which is the behaviour wanted here.
+    // would be lost with the process. Hence the claim below and a blocking
+    // write - `blockWrites` is FileView's threading mode ("block until the
+    // write completes"), not a permission switch, which is the behaviour
+    // wanted here.
     Component.onCompleted: {
-        Config.readWriteDelay = 0;
         Config.blockWrites = true;
         MaterialThemeLoader.reapplyTheme();
+    }
+
+    // `active: true` - this process IS this window, so existing really is the
+    // condition. Stated rather than defaulted, for the reason the component's
+    // own header gives.
+    ConfigWriteDelayRef {
+        active: true
     }
 
     minimumWidth: 400
