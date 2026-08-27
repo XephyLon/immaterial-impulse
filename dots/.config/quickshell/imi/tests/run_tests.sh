@@ -335,6 +335,17 @@ if ! python3 "$SCRIPT_DIR/lint_display_isolation.py"; then
     exit 1
 fi
 
+# ...and its sibling: a harness with a compositor of its own must also run
+# INSIDE the suite lock taken below, or two worktrees' suites still bring two
+# westons up at once and the loser reports a broken Wayland connection that
+# looks like a regression. One acquire point is what makes that rule simple;
+# this is what keeps a harness from being wired in above it.
+echo "Running suite lock scope lint..."
+if ! python3 "$SCRIPT_DIR/lint_suite_lock_scope.py"; then
+    echo "Suite lock scope lint failed."
+    exit 1
+fi
+
 echo "Running key monitor tests..."
 if ! python3 "$SCRIPT_DIR/test_key_monitor.py"; then
     echo "Key monitor tests failed."
