@@ -8,3 +8,4 @@ singleton PhoneNotifications PhoneNotifications.qml
 singleton PluginStore PluginStore.qml
 singleton Tailscale Tailscale.qml
 singleton Vpn Vpn.qml
+singleton PhoneContacts PhoneContacts.qml
