@@ -43,6 +43,7 @@ Flickable {
         anchors.fill: parent
         acceptedButtons: Qt.NoButton
         onWheel: function(wheelEvent) {
+            programmaticScroll.stop();
             const delta = wheelEvent.angleDelta.y / root.mouseScrollDeltaThreshold;
             var scrollFactor = Math.abs(wheelEvent.angleDelta.y) >= root.mouseScrollDeltaThreshold ? root.mouseScrollFactor : root.touchpadScrollFactor;
 
@@ -56,6 +57,34 @@ Flickable {
         }
     }
 
+    // A programmatic scroll - a settings page jumping to the section the user
+    // picked in the tree, a search hit - animates on the scroll tier in every
+    // mode. The contentY Behavior below is off under expressive and
+    // momentum scrolling (those paths drive contentY per event and a Behavior
+    // would fight them), so a page that wrote `contentY = y` directly snapped
+    // there in one frame on every settings page (ContentPage is momentum).
+    // Any user input takes the scroll back: each wheel path and a drag stop
+    // this animation first and continue from wherever it got to.
+    function scrollToY(y) {
+        const maxY = Math.max(0, root.contentHeight - root.height);
+        const target = Math.max(0, Math.min(y, maxY));
+        settleAnim.stop();
+        bounceAnim.stop();
+        programmaticScroll.stop();
+        root.scrollTargetY = target;
+        programmaticScroll.from = root.contentY;
+        programmaticScroll.to = target;
+        programmaticScroll.start();
+    }
+    NumberAnimation {
+        id: programmaticScroll
+        target: root
+        property: "contentY"
+        duration: Appearance.animation.scroll.duration
+        easing.type: Appearance.animation.scroll.type
+        easing.bezierCurve: Appearance.animation.scroll.bezierCurve
+    }
+    onMovementStarted: programmaticScroll.stop()
     Behavior on contentY {
         enabled: !root.expressiveScroll && !root.momentumScroll
         NumberAnimation {
@@ -79,6 +108,7 @@ Flickable {
         anchors.fill: parent
         acceptedButtons: Qt.NoButton
         onWheel: function(wheelEvent) {
+            programmaticScroll.stop();
             const maxY = Math.max(0, root.contentHeight - root.height);
             var scrollFactor = Math.abs(wheelEvent.angleDelta.y) >= root.mouseScrollDeltaThreshold ? root.mouseScrollFactor : root.touchpadScrollFactor;
             const delta = wheelEvent.angleDelta.y / root.mouseScrollDeltaThreshold;
@@ -153,6 +183,7 @@ Flickable {
         enabled: root.momentumScroll
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: function(wheelEvent) {
+            programmaticScroll.stop();
             const maxY = Math.max(0, root.contentHeight - root.height);
             const px = wheelEvent.pixelDelta.y;
             const ang = wheelEvent.angleDelta.y;

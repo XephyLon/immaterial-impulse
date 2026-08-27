@@ -66,7 +66,7 @@ ContentPage {
         let target = findTarget(mainLayout)
         if (target) {
             let pos = target.mapToItem(mainLayout, 0, 0)
-            page.contentY = Math.max(0, pos.y - 0)
+            page.scrollToY(pos.y)
         }
     }
 
