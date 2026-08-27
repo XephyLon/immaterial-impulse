@@ -164,6 +164,13 @@ Singleton {
         persistenceSupported: true
 
         onNotification: (notification) => {
+            // The Phone tab mirrors the daemon's notifications itself, so
+            // kdeconnectd's desktop copy - posted as "KDE Connect" or as the
+            // phone - would be the same notification twice. Dropped only
+            // while the tab is showing them (PhoneNotifications.mirrorActive
+            // is inside the wrapper); otherwise the daemon's copy is the
+            // only one the user gets. Untracked, the server discards it.
+            if (PhoneNotifications.mirrorsDesktopNotification(notification.appName)) return;
             notification.tracked = true
             const newNotifObject = notifComponent.createObject(root, {
                 "notificationId": notification.id + root.idOffset,
