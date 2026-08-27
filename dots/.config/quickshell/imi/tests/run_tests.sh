@@ -1627,6 +1627,15 @@ if ! python3 "$SCRIPT_DIR/test_phone_contacts_monitor.py"; then
     exit 1
 fi
 
+# The QML suite drives a logic-only double of PhoneContacts; this is the sync
+# check that makes its green transfer, plus the argv-only rule, the monitor's
+# lifecycle ladder, and the refusals the adb intents must make.
+echo "Running Phone contacts contract tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_contacts_contract.py"; then
+    echo "Phone contacts contract tests failed."
+    exit 1
+fi
+
 echo "Running registry entry validator tests..."
 if ! python3 "$SCRIPT_DIR/test_registry_validate.py"; then
     echo "Registry entry validator tests failed."
