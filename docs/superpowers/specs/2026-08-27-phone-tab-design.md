@@ -272,8 +272,10 @@ videoBuffer, useWireless, autoWirelessIp, wirelessIp, wirelessPort}`,
 density, keepActive, systemDecorations, favoritePackages}`,
 `webcam.{cameraFacing, resolution, mirrorHorizontally, rotateDegrees,
 connection, wifiIp, port}`, `microphone.{connection, wifiIp, port,
-micGain, setAsDefault}`. Plus `Config.options.sidebar.phone.enable`
-(default `true`).
+micGain, setAsDefault}`. Plus `Config.options.sidebar.phone.enable`,
+which ships **`false`** until W5: it also gates the mirror's dedupe, and
+on before there is a list to read them in, the phone's notifications
+would stop arriving anywhere. W5 flips it to `true` with the tab.
 
 Tests: the Python supervisor test with fake binaries (launch/exit/focus/
 list_apps parsing incl. the `pm list packages` fallback); QML unit tests

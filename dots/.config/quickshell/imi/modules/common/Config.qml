@@ -1442,7 +1442,14 @@ Singleton {
                     property bool artColors: false
                 }
                 property JsonObject phone: JsonObject {
-                    property bool enable: true
+                    // Off until the tab exists (W5 of the Phone tab design).
+                    // It gates more than the tab: PhoneNotifications reads it
+                    // as `mirrorActive`, and that is what tells
+                    // services/Notifications.qml to drop kdeconnectd's own
+                    // desktop copy of a phone notification. On before there is
+                    // a list to read them in, the phone's notifications would
+                    // simply stop arriving anywhere. W5 turns it on.
+                    property bool enable: false
                 }
                 
                 property JsonObject ai: JsonObject {
