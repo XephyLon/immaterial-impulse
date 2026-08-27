@@ -12,6 +12,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Phone Connect shows your phone's wireless address and cellular network,
+  and answers pairing requests.** The panel reads the address KDE Connect
+  reaches the phone on and its cellular network type (LTE, 5G, …) alongside
+  the battery. When another device asks to pair with this one, the panel
+  shows the request as a card with Accept and Decline, so pairing no longer
+  needs KDE Connect's own window — and it is answered only for the device
+  that asked.
+
 ### Changed
 - **The right sidebar's quick sliders arrive one card at a time.** Each slider
   card now fades in, zooms up from slightly smaller and rises into place —
@@ -28,6 +37,15 @@ own repo; the installer pins which revision it builds.
   float their labels into the field; and every explanation moved from a
   paragraph under its row to an (i) you hover. The other settings pages are
   unchanged and follow in later releases.
+- **The phone panel is laid out like a phone panel.** The device sits on a
+  chip whose arrow opens the list of every device the daemon knows; its
+  connection, battery and cellular network are pills beside it; the actions
+  are one row of round buttons (ring, ping, send clipboard) instead of
+  buttons repeated on every device row; the middle of the panel is reserved
+  for your phone's notifications and says so while there is nothing to show;
+  and secondary features — pairing requests today — stack as cards at the
+  bottom. Picking a device in the list makes it the one the panel is about
+  for the rest of the session.
 
 ### Fixed
 - **Leaving a Discord voice channel no longer kills the voice bridge.** Discord
