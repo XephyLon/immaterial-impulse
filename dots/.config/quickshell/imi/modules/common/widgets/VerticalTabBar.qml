@@ -2,17 +2,26 @@ pragma ComponentBehavior: Bound
 import qs.modules.common
 import qs.services
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import qs.modules.common.widgets
 
 Item {
     id: root
-    property alias currentIndex: tabBar.currentIndex
+
+    // The index this bar DRAWS as current. A plain property the call site binds
+    // to whatever owns the selection (the left sidebar's SwipeView), and that
+    // this widget never writes: a control that assigns to its own bound
+    // property destroys the binding and then shows local state for the rest of
+    // the session - #158's defect, and the reason ConfigSwitch answers a click
+    // with an intent. A click here is the same thing, `currentIndexRequested`,
+    // and the call site moves the source.
+    property int currentIndex: 0
+    signal currentIndexRequested(int index)
+
     required property var tabButtonList
-    function incrementCurrentIndex() { tabBar.incrementCurrentIndex() }
-    function decrementCurrentIndex() { tabBar.decrementCurrentIndex() }
-    function setCurrentIndex(index)  { tabBar.setCurrentIndex(index) }
+    function incrementCurrentIndex() { root.currentIndexRequested(root.currentIndex + 1) }
+    function decrementCurrentIndex() { root.currentIndexRequested(root.currentIndex - 1) }
+    function setCurrentIndex(index)  { root.currentIndexRequested(index) }
 
     property real cardHeight: 30
     property bool expanded: false
@@ -134,13 +143,4 @@ Item {
         }
     }
 
-    TabBar {
-        id: tabBar
-        z: -1
-        background: null
-        Repeater {
-            model: root.tabButtonList.length
-            delegate: TabButton { background: null }
-        }
-    }
 }
