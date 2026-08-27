@@ -441,9 +441,10 @@ def test_share_goes_through_the_share_plugin_one_url_per_call():
     through the synced shareableUrls filter, so a stray path or an empty
     line never reaches the daemon as a URL."""
     source = SERVICE.read_text()
-    assert re.search(r'readonly property bool canShare: root\.backend === "kdeconnect"', source), (
-        "canShare is not declared as kdeconnect-only"
-    )
+    for gate in ("canShare", "canBrowseFiles"):
+        assert re.search(rf'readonly property bool {gate}: root\.backend === "kdeconnect"', source), (
+            f"{gate} is not declared as kdeconnect-only"
+        )
     urls = re.search(r"function shareUrls\(.*?\n    \}\n", source, re.S)
     assert urls, "shareUrls() missing"
     assert "root.shareableUrls(" in urls.group(0), "shareUrls does not filter through shareableUrls"
