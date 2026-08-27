@@ -19,6 +19,15 @@ own repo; the installer pins which revision it builds.
   zero with the icon turning, as before. It is the sibling fork's slider
   entrance on the shell's own motion tiers, so the animation speed slider and
   reduce motion reach it.
+- **Settings > Capture reads as one grammar of rows.** Subsection headers lead
+  with an icon; every Quality and selection option carries an icon; a live line
+  under Quality says what the chosen tier costs on this screen ("~44 Mbps -
+  5120x1440 - 60 fps on this screen", computed from the monitor the window is
+  on, with the frame rate capped at the screen's refresh); toggle rows carry an
+  icon chip; the codec dropdown marks Auto as recommended; the path fields
+  float their labels into the field; and every explanation moved from a
+  paragraph under its row to an (i) you hover. The other settings pages are
+  unchanged and follow in later releases.
 
 ### Fixed
 - **Leaving a Discord voice channel no longer kills the voice bridge.** Discord
