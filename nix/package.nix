@@ -12,7 +12,16 @@ stdenvNoCC.mkDerivation {
   pname = "immaterial-impulse";
   inherit version;
 
-  src = lib.cleanSource ../dots/.config/quickshell/imi;
+  # cleanSource drops VCS and editor litter but not Python's caches, and a
+  # local build after a test-suite run would ship __pycache__/.pytest_cache
+  # into the store otherwise.
+  src = lib.cleanSourceWith {
+    src = ../dots/.config/quickshell/imi;
+    filter = path: type:
+      lib.cleanSourceFilter path type
+      && !(type == "directory"
+        && lib.elem (baseNameOf path) [ "__pycache__" ".pytest_cache" ]);
+  };
 
   dontConfigure = true;
   dontBuild = true;
