@@ -317,6 +317,22 @@ Singleton {
             .filter(line => line.startsWith("/"))
             .map(path => "file://" + path.split("/").map(encodeURIComponent).join("/"));
     }
+
+    // Where the phone's user storage sits under an SFTP mount. The mount
+    // root is not the user's storage (the fork's 3a7f653b4 records it):
+    // storage/emulated/0 is, when the phone exposes it.
+    function sftpStoragePath(mount: var): string {
+        const root_ = (typeof mount === "string" ? mount : "").replace(/\/+$/, "");
+        return root_.length === 0 ? "" : `${root_}/storage/emulated/0`;
+    }
+
+    // The directory to open for a browse: the storage when it exists, the
+    // mount root otherwise.
+    function sftpBrowseTarget(mount: var, hasStorage: bool): string {
+        const root_ = (typeof mount === "string" ? mount : "").replace(/\/+$/, "");
+        if (root_.length === 0) return "";
+        return hasStorage ? root.sftpStoragePath(root_) : root_;
+    }
     // END phone-connect parser logic
 
     function applyBackend(newBackend: string): void {
@@ -627,6 +643,63 @@ Singleton {
             root.actionFeedback(urls.length === 1
                 ? Translation.tr("Sending file…")
                 : Translation.tr("Sending %1 files…").arg(String(urls.length)), true);
+        }
+    }
+
+    // Browse the phone over SFTP: sftp.mount, then wait for isMounted (the
+    // mount is sshfs coming up, and the daemon's mount() returns before it
+    // has), read mountPoint, prefer the phone's storage under it, and open
+    // the directory. sftpMounted is the daemon's last isMounted answer.
+    property bool sftpMounted: false
+    property string sftpBrowseDeviceId: ""
+    property int sftpMountAttempts: 0
+    readonly property int sftpMountAttemptCeiling: 10
+
+    function browseFiles(device: var): void {
+        const d = device ?? root.activeDevice;
+        if (!d || root.backend !== "kdeconnect" || !root.validDeviceId(d.id)) return;
+        root.lastActionError = "";
+        root.sftpBrowseDeviceId = d.id;
+        root.sftpMountAttempts = 0;
+        root.runAction(root.busctlCall("org.kde.kdeconnect.daemon", `/modules/kdeconnect/devices/${d.id}/sftp`, "org.kde.kdeconnect.device.sftp", "mount", []));
+        root.actionFeedback(Translation.tr("Mounting phone storage…"), true);
+        sftpMountWait.restart();
+    }
+
+    function pollSftpMount(): void {
+        const id = root.sftpBrowseDeviceId;
+        if (!root.validDeviceId(id)) return;
+        const sftpPath = `/modules/kdeconnect/devices/${id}/sftp`;
+        root.enqueue(root.busctlCall("org.kde.kdeconnect.daemon", sftpPath, "org.kde.kdeconnect.device.sftp", "isMounted", []), mountedText => {
+            root.sftpMounted = root.parseBusctlReply(mountedText)?.[0] === true;
+            if (!root.sftpMounted) {
+                if (++root.sftpMountAttempts < root.sftpMountAttemptCeiling) sftpMountWait.restart();
+                else root.reportFailure(Translation.tr("Phone storage did not mount"));
+                return;
+            }
+            root.enqueue(root.busctlCall("org.kde.kdeconnect.daemon", sftpPath, "org.kde.kdeconnect.device.sftp", "mountPoint", []), pointText => {
+                const mount = root.parseBusctlReply(pointText)?.[0];
+                if (typeof mount !== "string" || mount.length === 0) {
+                    root.reportFailure(Translation.tr("Phone storage has no mount point"));
+                    return;
+                }
+                storageProbe.mount = mount;
+                storageProbe.exec(["test", "-d", root.sftpStoragePath(mount)]);
+            });
+        });
+    }
+
+    Timer {
+        id: sftpMountWait
+        interval: 600
+        onTriggered: root.pollSftpMount()
+    }
+
+    Process {
+        id: storageProbe
+        property string mount: ""
+        onExited: (exitCode, exitStatus) => {
+            Quickshell.execDetached(["xdg-open", root.sftpBrowseTarget(storageProbe.mount, exitCode === 0)]);
         }
     }
 
