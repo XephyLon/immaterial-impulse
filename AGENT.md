@@ -616,7 +616,10 @@ services/                  Singletons wrapping external state/processes - one pe
                               whose call the service does not answer is a fake action, and
                               a button past Ring needs the BACKEND gate too, since Valent
                               answers none of them). The tab itself is driven end to end by
-                              tests/test_phone_tab_runtime.py
+                              tests/test_phone_tab_runtime.py, and what its sub-pages
+                              DRAW - the lists' and the empty states' geometry, and a
+                              notification card's app icon - by
+                              tests/test_phone_tab_layout_runtime.py
   PhoneNotifications.qml       The paired phone's notifications, mirrored off KDE Connect on
                               the same busctl transport through a serialized queue of its
                               own. No monitor of its own: the four notification signals sit
@@ -1821,6 +1824,43 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   keyboard's rows agreed before there was anything to the right of the spacebar.
   afd3bf661 ("fix(osk): make the key pitch a multiple of four, so a quarter unit is whole pixels"),
   e119c7b1d ("refactor(osk): no key fills the row any more").
+- **`Layout.*` is inert in an item no layout manages, and the failure is a page that draws
+  its header and nothing else.** A component whose `default property alias` points at a plain
+  `Item` invites every caller to state `Layout.fillWidth`/`fillHeight` on the child it puts
+  there - the attached properties exist on every Item, they are accepted, they are never read,
+  and nothing is logged. `PhoneSubPage` was that shape: measured in a real window, the Contacts
+  page's root column sat at its IMPLICIT height, **73px inside an 836px slot**, so the region
+  holding the list was handed 0 while the list itself reported `count` 2, `contentHeight` 110
+  and a first delegate 52px tall. On screen that is "147 of 150 contacts" over an empty body.
+  Its sibling is the same defect on the page whose list happens to be *empty*: `PagePlaceholder`
+  centres its column in itself and clips nothing, so a zero-height region at y=117 drew that
+  column from y=32 to y=202 - over the search field at 44-86 and the status line at 94-109,
+  which reads as an empty state painted on top of its own header rather than as a missing
+  height. If a slot's callers are meant to fill it, the slot is a layout.
+  da09d103b ("fix(phone): the sub-page's content slot is a layout, not a plain Item").
+- **...and making it a layout is only half of it, because a nested layout holding a filling
+  child grows to whatever is going.** `Layout.fillHeight` defaults to **true** for an item that
+  is itself a layout, and a `RowLayout`'s own maximum height is derived from its children - so a
+  row whose only children are content-sized cannot grow and needs nothing said about it, while
+  the same row holding one `Layout.fillHeight: true` child becomes unbounded and takes the
+  column's entire leftover. `ToolbarTextField` declares that flag **in the shared widget**, so
+  every search row in this tree is the second case and looks exactly like the first. Probed with
+  `qml6` against the same skeleton rather than reasoned about: 35px for the row and 286 for the
+  region below it, against **313 and 8** with one filling child, and back to 35/286 with
+  `Layout.fillHeight: false` stated on the row. Watch the direction of the failure - the list
+  does not disappear, it comes back eighteen pixels tall, which reads as a scroll bug.
+  f29079c51 ("fix(phone): the search row is content-height, so the list keeps the leftover").
+- **Neither of those is reachable from a source check, and the source check that existed was
+  green over the first one.** `test_phone_tab_surface_contract.py` already required that slot to
+  be a `ColumnLayout` and said why; it asked `assertRegex(host, r"ColumnLayout \{")`, which is
+  "does a ColumnLayout appear anywhere in this file", and the file has one - the title bar's.
+  A check about ONE object has to resolve that object: it reads the id the default alias names
+  and then that declaration's type. The consequence is measured separately
+  (`PhoneTabLayoutRuntimeTest.qml` reads the drawn boxes back out of a real window under
+  headless weston), because a height is not in the source and a rule about the source is a long
+  way from the pixel it protects.
+  b0e8f8af6 ("test(phone): the host check reads the slot's own type, not any ColumnLayout"),
+  1a2e39ee4 ("test(phone): measure what the tab's sub-pages actually draw").
 - **A keyboard is a LATTICE, not a stack of rows, and a `GridLayout` does not
   hand out equal columns on its own.** The numpad's `+` and its Enter are one
   key two rows tall, which a `RowLayout` cannot say — so each of them shipped
@@ -4320,6 +4360,20 @@ across daemon restarts. Four more things about that path, each of which cost a m
   5cad7ad40 ("feat(phoneNotifications): mirror the phone's notifications off KDE Connect over
   busctl"), dbe6e73d5 ("test(phoneNotifications): drive the sweep, a signal, dismiss and reply
   against a fake busctl").
+- **A mirrored notification's `iconPath` is a PATH the daemon wrote, so it is the picture slot
+  and never the icon-theme one.** kdeconnectd saves the posting app's icon payload to a file -
+  40 of them under `/tmp/kdeconnect_<user>/` on this machine, PNGs at 90-128px - and hands the
+  absolute path over as `iconPath`; `PhoneNotifications.groupsForList` already carried it as
+  each group's `appIcon`, the same derivation `services/Notifications.qml` makes for a desktop
+  group, and the tab's card simply never drew it. It goes through
+  `modules/common/widgets/NotificationAppIcon.qml`, which is the shell's own notification icon,
+  through `image` (a URL to a file) rather than `appIcon` - that slot resolves through
+  `Quickshell.iconPath`, i.e. the icon THEME, which knows nothing about a path a daemon wrote
+  and would answer `image-missing` for every notification. An empty `iconPath` leaves the slot
+  empty and the widget falls back to the glyph it guesses from the title, which is the fallback
+  the desktop cards have always had. What separates "the icon is not drawn" from "the file did
+  not load" is `Image.status`, and nothing else, so the check for it is a runtime one.
+  9cc805f9b ("feat(phone): a phone notification card draws the posting app's icon").
 - **kdeconnectd's desktop copy of a mirrored notification is dropped at ingestion, behind the
   mirror gate.** `services/Notifications.qml`'s `onNotification` asks
   `PhoneNotifications.mirrorsDesktopNotification(appName)` before tracking - the daemon posts

@@ -120,6 +120,19 @@ own repo; the installer pins which revision it builds.
   the rest of this release's phone work is reached.
 
 ### Fixed
+- **The Phone tab's Contacts and Android Apps pages draw their contents
+  again.** Contacts showed its count — "147 of 150 contacts" — and then an
+  empty page, and Android Apps drew its big empty-state icon on top of its
+  own search box, hiding the line explaining that the phone was not
+  reachable. Both pages were being given no height to draw into, so a full
+  list showed nothing and an empty one spilled over the header above it.
+  Each page now fills the room under its title bar: the list runs to the
+  bottom of the panel, and an empty state centres in what is left.
+- **Phone notifications show the app's icon.** A mirrored notification drew
+  the app's name and its text but never the icon KDE Connect sends with it.
+  The icon is now on the card, beside the app name, with the same
+  guessed-glyph fallback the shell's own notifications use for an app that
+  sends none.
 - **Settings stops switching off the debounce on every config write in the
   shell.** Opening the settings window was never actually required: the
   settings page host is built while the shell starts, and it asked for its
