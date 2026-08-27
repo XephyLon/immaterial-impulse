@@ -951,6 +951,31 @@ This is purely a manual-testing/CLI concern - IPC events, layer-shell behavior, 
 QML code touches are unaffected by this; only raw `hyprctl dispatch <dispatcher> <args>` calls typed
 by a human/agent need the Lua-call form on this particular machine.
 
+**...and "typed by a human/agent" includes a harness, which is where it went unnoticed for the life
+of a probe.** `tests/run_persistent_surface_focus_probe.sh` starts a NESTED Hyprland - the same
+binary, so the same Lua config layer - and moved the focus between its two outputs with
+`hyprctl dispatch focusmonitor WAYLAND-2 >/dev/null`. The compositor answered
+`[string "return hl.dispatch(focusmonitor WAYLAND-2)"]:1: ')' expected near 'WAYLAND'` into the
+redirect, the focus never moved, and the probe reported 18 checks passing while comparing the
+shell's answer with the same monitor eighteen times. Two rules fall out of it, and the second is
+the one that matters: a `hyprctl dispatch` in a script needs the Lua form as much as one in a
+terminal (`hl.dsp.cursor.move({x=..,y=..})` is the working spelling here, and moving the POINTER is
+also the gesture the user makes), and **a probe that moves something has to assert it moved** - the
+run fails now if fewer than two monitors were ever focused. Sibling of the "a measurement without a
+control measures something else" family already recorded for the notification blur probe and the
+weather sweep. (test(surfaces): the focus probe actually moves the focus, and says so when it did
+not.)
+
+**A panel closing hands the focused monitor back, so a probe that places the pointer once and then
+opens three surfaces measures the first one.** Same probe, immediately after the above was fixed:
+with one cursor move per round the overview landed on the pointer's monitor and both sidebars
+landed on the *other* one, which reads exactly like two of three surfaces being broken and cost a
+round of instrumenting the shell to disbelieve. What actually happens is that the first panel's
+close returns keyboard focus, and Hyprland's focused monitor goes with it, before the next open.
+The pointer is placed again before every open now. Anything else driving several focus-taking
+surfaces in one run has the same question to answer. (test(surfaces): the focus probe re-places the
+pointer before every open.)
+
 **`hyprctl` picks its target instance from `HYPRLAND_INSTANCE_SIGNATURE` and from nothing else — so
 a `hyprctl` inside a nested-compositor harness talks to the *user's* session.** `WAYLAND_DISPLAY` is
 irrelevant to it: measured, `WAYLAND_DISPLAY=wayland-99 hyprctl monitors` answers correctly for the
