@@ -374,9 +374,11 @@ Item {
 
             Loader {
                 id: slidersLoader
-                // Not a wave member: the sliders own their entrance (the
-                // fill sweep) - a fading section over sweeping sliders is
-                // the compound the toggle grid already paid for.
+                // Not a wave member: the sliders own their entrance - the
+                // fill sweep, and a card wave of their own inside
+                // (QuickSliders.qml), the toggle grid's shape. A fading
+                // section over fading cards is the compound that grid
+                // already paid for.
                 Layout.fillWidth: true
                 visible: active
                 active: {
