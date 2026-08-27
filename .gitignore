@@ -10,3 +10,5 @@ __pycache__/
 /os-release
 # Emacs auto backup file
 *~
+# nix build leaves a result symlink at the root
+/result
