@@ -544,7 +544,12 @@ PhoneSubPage {
 
             PagePlaceholder {
                 anchors.fill: parent
-                shown: root.filteredApps.length === 0
+                // Not while the panel above is up. "No apps yet" and "no phone
+                // on ADB" are the same fact told twice, and the placeholder is
+                // the half that cannot say what to do about it. What it is
+                // for is the state it is actually about: a phone the shell can
+                // reach that came back with nothing.
+                shown: root.filteredApps.length === 0 && !root.adbOffline
                 dropIconWhenCramped: true
                 icon: PhoneScrcpy.appModeSupported ? "apps" : "warning"
                 shape: MaterialShape.Shape.Ghostish
@@ -564,7 +569,10 @@ PhoneSubPage {
                         return Translation.tr("scrcpy is asking the phone what it has installed.");
                     if (root.query.length > 0)
                         return Translation.tr("Try part of a name or a package.");
-                    return Translation.tr("Connect the phone over USB or wireless debugging, then refresh.");
+                    // The panel above owns the case where there is no phone on
+                    // ADB, so this one is about a phone that answered and had
+                    // nothing to say.
+                    return Translation.tr("The phone answered with no apps. Unlock its screen and refresh to ask again.");
                 }
             }
         }
