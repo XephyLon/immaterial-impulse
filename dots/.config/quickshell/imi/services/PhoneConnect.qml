@@ -67,6 +67,16 @@ Singleton {
     readonly property bool canPing: root.backend === "kdeconnect"
     readonly property bool canSendClipboard: root.backend === "kdeconnect"
 
+    // What the last action had to say: the toast reads the signal, an
+    // inline line reads the string. Cleared by the next action that starts.
+    property string lastActionError: ""
+    signal actionFeedback(string message, bool ok)
+
+    function reportFailure(message: string): void {
+        root.lastActionError = message;
+        root.actionFeedback(message, false);
+    }
+
     // BEGIN phone-connect parser logic (synced with tests/imports/testservices/PhoneConnect.qml)
     // Parses one `busctl --json=short` reply. Returns the payload ("data")
     // array, or null when the text is not a busctl JSON document (empty
@@ -536,9 +546,11 @@ Singleton {
         }
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0) {
+                const message = actionErr.text.trim() || Translation.tr("Phone Connect command failed");
+                root.reportFailure(message);
                 Quickshell.execDetached(["notify-send",
                     Translation.tr("Phone Connect"),
-                    actionErr.text.trim() || Translation.tr("Phone Connect command failed"),
+                    message,
                     "-a", "Shell"
                 ]);
             }
