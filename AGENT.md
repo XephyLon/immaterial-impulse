@@ -4054,6 +4054,28 @@ box. Derive the growing axis too, but compute it *arithmetically* from the input
 child layout's `implicitWidth`: the content is anchored to this item's width, so reading its implicit
 size back would bind width to itself. Cap the result and let the grid wrap instead of growing forever.
 
+**Discord's RPC sends `"data": null`, and `.get("data", {})` does not default on it.** A dict default
+applies only when the key is absent; an explicit null comes through as `None`, and leaving a voice
+channel is exactly that — a `VOICE_CHANNEL_SELECT` dispatch and then a `GET_SELECTED_VOICE_CHANNEL`
+reply, both null. Four `.get()` sites in `scripts/discordVoice/discord_voice_bridge.py` raised on
+it, the read loop died with the bridge, and after five backoff restarts `services/DiscordVoice.qml`
+reported "Discord bridge stopped after repeated failures" — for the most ordinary thing a user does
+in a call. Read a nullable field as `payload.get("data") or {}`. The sibling trap is in the service:
+its restart ladder covers the bridge *process* only, and the two answers that mean "nothing to talk
+to" (`unavailable`, `disconnected`) come from a bridge that is alive and idle, so nothing retried
+them and a Discord started after the shell sat unconnected until the popup's manual connect. The
+service carries a second ladder for those now — the same arithmetic (`backoffDelay`, 1s doubling to
+a 30s cap), one shot per answer so the bridge's reply decides the next rung, disarmed by
+`connected`, by `authenticated` (the Vesktop companion backend never says `connected`), by the
+manual connect, and by the process exit handler, because a retry landing on a dead bridge goes
+through `send()` → `start(true)`, which zeroes the process ladder's ceiling.
+`tests/tst_discord_voice_reconnect.qml` drives the real singleton for it — the `Process` and
+`SplitParser` mocks under `tests/mocks/Quickshell/Io` grew the bridge's surface so it loads under
+`qmltestrunner` — and `tests/test_discord_voice_plugin.py` pins the one-shot shape, the shared
+ladder and the exit-handler disarm, beside the read-loop test that feeds the null frames.
+874311484 ("fix(discordVoice): treat a null data field from Discord as an empty payload"),
+8d8d97965 ("fix(discordVoice): retry the connection with backoff when Discord is not there").
+
 **A Wayland client is never told about keys aimed at something else, so the OSK's
 physical-key highlight reads /dev/input — and its LIFETIME is the safeguard, not
 a promise in a comment.** `scripts/keyboard/key_monitor.py` needs membership of
