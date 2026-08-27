@@ -134,6 +134,10 @@ class Supervisor:
             time.sleep(0.02)
 
     def close(self):
+        # Idempotent: a test that closes stdin itself is closed again by
+        # the cleanup, and the pipes may only be read once.
+        if self.proc.stderr.closed:
+            return ""
         if self.proc.stdin and not self.proc.stdin.closed:
             self.proc.stdin.close()
         try:
