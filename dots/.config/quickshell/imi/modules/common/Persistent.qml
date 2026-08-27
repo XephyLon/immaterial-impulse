@@ -167,6 +167,9 @@ Singleton {
                 }
             }
 
+            // The Phone tab's state. The notification cache is
+            // PhoneNotifications' (one JSON document keyed by device id);
+            // the scrcpy/contacts workstreams add their keys beside it.
             property JsonObject timer: JsonObject {
                 property JsonObject pomodoro: JsonObject {
                     property bool running: false
@@ -184,6 +187,7 @@ Singleton {
             property JsonObject phone: JsonObject {
                 property string activeDeviceId: ""
                 property list<string> recentDeviceIds: []
+                property string cachedNotificationsJson: ""
             }
         }
     }
