@@ -1669,6 +1669,16 @@ if ! python3 "$SCRIPT_DIR/test_phone_sessions_contract.py"; then
     exit 1
 fi
 
+# The Phone tab's pages, cards and settings page against what the services
+# and the config schema declare: every PhoneX.member resolved against its
+# service, every Config.options.phone.* path against Config.qml, the seam with
+# the sub-page host W5a owns, and the install guide's constant-argv copy.
+echo "Running Phone tab surface contract tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_tab_surface_contract.py"; then
+    echo "Phone tab surface contract tests failed."
+    exit 1
+fi
+
 echo "Running registry entry validator tests..."
 if ! python3 "$SCRIPT_DIR/test_registry_validate.py"; then
     echo "Registry entry validator tests failed."
