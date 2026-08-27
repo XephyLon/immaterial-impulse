@@ -185,9 +185,31 @@ Singleton {
             }
 
             property JsonObject phone: JsonObject {
+                // The device the Phone tab is about, and the ones it was
+                // about recently (MRU, newest first).
                 property string activeDeviceId: ""
                 property list<string> recentDeviceIds: []
+                // The last notification sweep, so the tab is not empty
+                // before the first one after a restart.
                 property string cachedNotificationsJson: ""
+                property JsonObject scrcpy: JsonObject {
+                    property list<string> recentPackages: []
+                }
+                property JsonObject camera: JsonObject {
+                    property string lastMode: "wifi"
+                    property string lastIp: ""
+                    property int lastPort: 4747
+                }
+                property JsonObject mic: JsonObject {
+                    // The user's real default sink while it is swapped to
+                    // DroidCam-Mic for scrcpy's stream to land on. Persisted
+                    // so a shell restart mid-launch can put it back.
+                    property string originalDefaultSink: ""
+                    property string lastBackend: ""
+                    property string lastMode: "wifi"
+                    property string lastIp: ""
+                    property int lastPort: 4748
+                }
             }
         }
     }
