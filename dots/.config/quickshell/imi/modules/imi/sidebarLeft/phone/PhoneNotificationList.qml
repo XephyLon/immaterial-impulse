@@ -231,6 +231,12 @@ Item {
                             color: Appearance.colors.colSubtext
                         }
                         NotificationGroupExpandButton {
+                            // Only where there is a second notification to
+                            // reveal. `NotificationGroup` gates its own on
+                            // `multipleNotifications: notificationCount > 1`
+                            // and this copy did not, so a group of one drew an
+                            // affordance that expanded nothing.
+                            visible: card.notificationCount > 1
                             count: card.notificationCount
                             expanded: card.expanded
                             onClicked: card.expanded = !card.expanded
