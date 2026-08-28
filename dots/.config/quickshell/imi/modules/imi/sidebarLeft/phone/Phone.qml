@@ -163,23 +163,46 @@ Item {
             onToggleRoster: root.rosterOpen = !root.rosterOpen
         }
 
-        // The roster behind the chip's arrow. Not a wave member: it is
-        // folded at every open, and a member that is off screen when the
-        // wave runs takes no slot anyway.
-        ColumnLayout {
-            id: roster
+        // The roster behind the chip's arrow: every device the daemon knows,
+        // one selectable row each. Drawn by the component the Wi-Fi and the
+        // Bluetooth dialogs already draw their device lists with - a
+        // `StyledListView` of `DialogListItem` rows, which is exactly what
+        // `PhoneDeviceItem` is - rather than by a `Repeater` of its own. What
+        // that buys past one shape for three lists is the view's own
+        // add/remove transitions on the shared tier: a device joining or
+        // leaving the network becomes a row that arrives or leaves instead of
+        // a column that jumps.
+        //
+        // Not a wave member: it is folded at every open, and a member that is
+        // off screen when the wave runs takes no slot anyway.
+        Item {
+            id: rosterReveal
             Layout.fillWidth: true
+            Layout.preferredHeight: rosterList.height
             visible: root.rosterOpen
-            spacing: 0
 
-            Repeater {
+            // The list stands at its OWN content height whatever this wrapper
+            // is doing. A `ListView` told it is zero pixels tall builds no
+            // delegates, so it reports a content height of zero and can never
+            // grow out of it - the height that folds has to be a box around
+            // the list rather than the list's own.
+            StyledListView {
+                id: rosterList
+                width: rosterReveal.width
+                height: rosterList.contentHeight
+                interactive: false
+                spacing: 0
+
                 model: ScriptModel {
                     values: PhoneConnect.devices
                 }
                 delegate: PhoneDeviceItem {
                     required property var modelData
                     device: modelData
-                    Layout.fillWidth: true
+                    anchors {
+                        left: parent?.left
+                        right: parent?.right
+                    }
                     active: root.device !== null && root.device.id === modelData.id
                     onClicked: {
                         root.pickedDeviceId = modelData.id;
