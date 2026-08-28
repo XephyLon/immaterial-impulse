@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+#
+# Deploy this checkout's shell to ~/.config/quickshell/imi, and refuse to do it
+# behind an open PR's back.
+#
+# ~/.config/quickshell/imi is a *copy*, not a checkout: `qs -c imi` loads it,
+# and nothing under it is version controlled. So "what is running?" has always
+# been answered by inference - by whichever branch the person deploying happened
+# to be standing on - and deploying itself was an ad-hoc
+# `rsync -a --delete dots/.config/quickshell/imi/ ~/.config/quickshell/imi/`
+# copied out of a plan document.
+#
+# That one-liner is correct exactly once. While several PRs are open, running it
+# from a branch cut off main overwrites the live shell with main's content and
+# silently takes away every unmerged fix. It happened: a branch for one issue
+# reverted three fixes the maintainer was reviewing on their own machine, and
+# the live log stayed clean throughout - because main is clean. A clean log is
+# not evidence that the code you think is running is running.
+#
+# So this does three things the one-liner cannot:
+#   - names every open PR branch this deploy would roll back, and stops;
+#   - records what it deployed, so "what is live?" is answerable by reading;
+#   - prints the SHA it deployed rather than leaving you to infer it.
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE="$REPO_ROOT/dots/.config/quickshell/imi/"
+TARGET="${IMI_DEPLOY_TARGET:-$HOME/.config/quickshell/imi}"
+FORCE=0
+
+for arg in "$@"; do
+    case "$arg" in
+        --anyway) FORCE=1 ;;
+        -h|--help)
+            echo "usage: ${0##*/} [--anyway]"
+            echo "  --anyway   deploy even though open PR branches would be reverted"
+            exit 0
+            ;;
+        *) echo "unknown argument: $arg" >&2; exit 2 ;;
+    esac
+done
+
+cd "$REPO_ROOT"
+HEAD_SHA="$(git rev-parse HEAD)"
+HEAD_REF="$(git rev-parse --abbrev-ref HEAD)"
+
+# Which open PRs would this deploy roll back?
+#
+# Two refinements, both found by running this against the tree it was written
+# for. A branch counts as PRESENT if its commits are patch-equivalent to
+# something in HEAD - cherry-picked work has different SHAs, and a plain
+# ancestor test calls it missing. And a commit only MATTERS if it touches the
+# deployed subtree: a docs-only proposal branch cannot change the running shell,
+# and a guard that names it anyway teaches you to pass --anyway out of habit,
+# which is the same as having no guard at all.
+DEPLOYED_SUBTREE="dots/.config/quickshell/imi"
+LOST=()
+if command -v gh >/dev/null 2>&1; then
+    while read -r branch; do
+        [ -z "$branch" ] && continue
+        ref="refs/remotes/gh/$branch"
+        git show-ref --verify --quiet "$ref" || ref="refs/heads/$branch"
+        git show-ref --verify --quiet "$ref" || continue
+
+        missing=0
+        while read -r mark sha; do
+            [ "$mark" = "+" ] || continue
+            if git show --name-only --format= "$sha" -- "$DEPLOYED_SUBTREE" | grep -q .; then
+                missing=1
+                break
+            fi
+        done < <(git cherry HEAD "$ref" 2>/dev/null || true)
+
+        [ "$missing" -eq 1 ] && LOST+=("$branch")
+    done < <(gh pr list --state open --json headRefName --jq '.[].headRefName' 2>/dev/null || true)
+else
+    echo "note: gh is not on PATH, so open PRs could not be checked" >&2
+fi
+
+if [ ${#LOST[@]} -gt 0 ]; then
+    echo "Deploying $HEAD_REF ($(git rev-parse --short HEAD)) would revert these open PR branches"
+    echo "on the live shell, because their commits are not in HEAD:"
+    for branch in "${LOST[@]}"; do
+        echo "  - $branch"
+    done
+    if [ "$FORCE" -ne 1 ]; then
+        echo
+        echo "Deploy an integration of them instead, or pass --anyway if reverting is what you want."
+        exit 1
+    fi
+    echo "--anyway given; deploying regardless."
+fi
+
+mkdir -p "$TARGET"
+rsync -a --delete --exclude="__pycache__" "$SOURCE" "$TARGET/"
+
+# What is live, recorded where the live shell is - so the question is answered
+# by reading rather than by inferring from the branch someone happens to be on.
+{
+    echo "sha: $HEAD_SHA"
+    echo "ref: $HEAD_REF"
+    echo "deployed: $(date -Iseconds)"
+} > "$TARGET/.deployed-from"
+
+echo "deployed $HEAD_REF ($(git rev-parse --short HEAD)) -> $TARGET"
