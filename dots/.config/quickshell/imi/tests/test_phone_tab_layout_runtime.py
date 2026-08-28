@@ -26,17 +26,32 @@ every other check in this suite:
   is too small - it overflows rather than shrinking - so nothing errors and
   nothing is logged. The fixture therefore carries both scripts.
 
-It also drives the Android Apps page through its three states, because which
-message that page draws is a question about all three at once and no source
-check can ask it: with no phone on ADB it must draw the danger panel and
-NEITHER of the two lines that used to say the same thing beside it (a red
-"Phone not reachable over ADB" from the session manager, and a "No apps yet"
-empty state that cannot say what to do about it); with a phone that answered
-and had nothing, the empty state and no panel; with apps, the list and no
-message at all. `adb` and `scrcpy` are faked for it - both are really installed
-on the maintainer's machine, so without the fakes the page reads whatever a
-real `adb devices` answers and the reported state disappears the moment a phone
-is plugged in.
+It also drives the Android Apps page through every state it has, because which
+message that page draws is a question about several facts at once and no source
+check can ask it. Two families:
+
+- what adb IS on this machine, which used to be one state and is three. `adb`
+  is stripped out of the harness's PATH entirely (the maintainer's own lives in
+  /opt/android-sdk/platform-tools), and the two stubs are copied in between
+  steps: absent, then one that answers the way the dynamic loader does - the
+  `error while loading shared libraries` sentence on stderr and exit 127 -
+  then one that works. `command -v` reports the middle one as present, which
+  is the whole defect: the webcam card read `ready`, the click did nothing, and
+  the message pointed at the phone.
+- what is ON adb: with no device the page must draw the pairing panel and
+  NEITHER of the two lines that used to say the same thing beside it (a red
+  "Phone not reachable over ADB" from the session manager, and a "No apps yet"
+  empty state that cannot say what to do about it); with a phone that answered
+  and had nothing, the empty state and no panel; with apps, the list and no
+  message at all.
+
+The pairing panel itself is driven end to end - discovery through a fake
+`avahi-browse`, then `adb pair` and `adb connect` through the fake adb, whose
+`connect` creates the attach marker so the panel is taken down by the phone
+turning up under `adb devices` rather than by adb's own line (which is a claim:
+the real `adb connect` exits 0 on a refused connection). It is measured at two
+page widths, because a column pinned to one width passes every check at that
+width.
 
 The fake `busctl` serves one paired, reachable phone and two mirrored
 notifications: leaf 70 carries an `iconPath` (a PNG this test writes, the way
@@ -72,9 +87,10 @@ PHONE_ADDRESS = "192.168.100.179"
 # A literal, never read back out of the harness's own output: a step list
 # that shrinks must redden here instead of reporting `failures: 0` for a
 # shorter run.
-# 21 shared, 13 for the contact rows' geometry, 21 for the Apps page's
-# three ADB states.
-EXPECTED_CHECKS = 55
+# 21 shared, 13 for the contact rows' geometry, 44 for the Apps page - the
+# three states adb itself can be in, the three states the page can be in, and
+# the pairing panel driven through discovery, pair and connect at two widths.
+EXPECTED_CHECKS = 78
 
 # The two names the row-geometry steps measure, handed to the harness in the
 # environment so the fixture is the only place either is spelled. The Arabic
@@ -120,11 +136,28 @@ __BODY__
 #
 # What is attached is a FILE the harness creates between steps, not an argument,
 # because the thing being driven is a change the shell has to notice on its own.
+# The working adb. `connect` creates the attach marker, so the panel is taken
+# down by the phone appearing under `adb devices` rather than by the sentence
+# adb printed - which is the distinction that matters, since the real
+# `adb connect` exits 0 on a refused connection too.
 ADB_BODY = """\
-case "$*" in
-  *"devices"*)
+case "$1" in
+  --version)
+    printf 'Android Debug Bridge version 1.0.41\\n'
+    exit 0
+    ;;
+  devices)
     printf 'List of devices attached\\n'
     if [ -f "$PHONE_ADB_ATTACHED" ]; then printf 'imi-fake-phone\\tdevice\\n'; fi
+    exit 0
+    ;;
+  pair)
+    printf 'Successfully paired to %s [guid=adb-imi-fake]\\n' "$2"
+    exit 0
+    ;;
+  connect)
+    : > "$PHONE_ADB_ATTACHED"
+    printf 'connected to %s\\n' "$2"
     exit 0
     ;;
 esac
@@ -132,6 +165,35 @@ esac
 # manager falls back to - fails while nothing is attached, which is what tells
 # it apart from a phone that answered with no apps.
 [ -f "$PHONE_ADB_ATTACHED" ] || exit 1
+exit 0
+"""
+
+# An adb that is on PATH and cannot start, spelled exactly the way the dynamic
+# loader spells it: the sentence on stderr, nothing on stdout, and 127. This is
+# what droidcam-cli did on the maintainer's machine while `command -v` reported
+# it present.
+ADB_BROKEN_LIB = "libimi-not-a-real-library.so.7"
+ADB_BROKEN_BODY = """\
+printf '%s: error while loading shared libraries: %s: cannot open shared object file: No such file or directory\\n' \\
+  "$0" "$PHONE_ADB_BROKEN_LIB" >&2
+exit 127
+"""
+
+# The two service types Android advertises while wireless debugging is on, in
+# avahi's parsable resolved form. The unresolved `+` line is there because the
+# parser has to skip one.
+AVAHI_BODY = """\
+case "$*" in
+  *_adb-tls-pairing._tcp*)
+    printf '+;wlan0;IPv4;adb-imi-fake;_adb-tls-pairing._tcp;local\\n'
+    printf '=;wlan0;IPv4;adb-imi-fake;_adb-tls-pairing._tcp;local;phone.local;%s;37129;\\n' \\
+      "$PHONE_LAN_ADDRESS"
+    ;;
+  *_adb-tls-connect._tcp*)
+    printf '=;wlan0;IPv4;adb-imi-fake;_adb-tls-connect._tcp;local;phone.local;%s;41235;\\n' \\
+      "$PHONE_LAN_ADDRESS"
+    ;;
+esac
 exit 0
 """
 
@@ -315,10 +377,22 @@ class PhoneTabLayoutRuntimeTest(unittest.TestCase):
         # answered with nothing") is a real empty answer from a real device.
         self.apps_source = self.home / "apps-source.txt"
         self.apps_source.write_text(APP_LINES)
-        for name, body in (("adb", ADB_BODY), ("scrcpy", SCRCPY_BODY)):
+        # scrcpy and avahi-browse are on PATH from the start; `adb` is NOT.
+        # It is staged beside them and copied in by the harness, which is the
+        # only way a test can say what `command -v adb` answers - the machine
+        # this runs on has one, and the first state the page has to draw is
+        # the one where it does not.
+        for name, body in (("scrcpy", SCRCPY_BODY), ("avahi-browse", AVAHI_BODY)):
             tool = self.bin / name
             tool.write_text(RECORD.replace("__BODY__", body))
             tool.chmod(0o755)
+        self.adb_bin = self.bin / "adb"
+        self.adb_ok = self.home / "adb-ok"
+        self.adb_broken = self.home / "adb-broken"
+        self.adb_ok.write_text(RECORD.replace("__BODY__", ADB_BODY))
+        self.adb_ok.chmod(0o755)
+        self.adb_broken.write_text(RECORD.replace("__BODY__", ADB_BROKEN_BODY))
+        self.adb_broken.chmod(0o755)
 
         # The vCards KDE Connect writes for KPeople, which the real monitor
         # reads: a fixture tree, never the machine's own contacts.
@@ -369,7 +443,16 @@ class PhoneTabLayoutRuntimeTest(unittest.TestCase):
         env["XDG_STATE_HOME"] = str(self.home / "state")
         env["XDG_CACHE_HOME"] = str(self.home / "cache")
         env["XDG_DATA_HOME"] = str(self.home / "data")
-        env["PATH"] = f"{self.bin}{os.pathsep}{env['PATH']}"
+        # Every directory holding an `adb` comes out: this test decides
+        # whether adb exists, and on the maintainer's machine it lives in
+        # /opt/android-sdk/platform-tools rather than anywhere a stub could
+        # shadow it (`command -v` searches the whole of PATH, so a
+        # non-executable placeholder in front would simply be skipped).
+        inherited = [d for d in env["PATH"].split(os.pathsep)
+                     if d and not (Path(d) / "adb").exists()]
+        env["PATH"] = os.pathsep.join([str(self.bin)] + inherited)
+        self.assertIsNone(shutil.which("adb", path=env["PATH"]),
+                          "adb is still reachable, so the absent state is not a state")
         env["PHONE_EXEC_LOG"] = str(self.exec_log)
         env["PHONE_ID"] = PHONE_ID
         env["PHONE_ICON_PATH"] = str(self.icon_path)
@@ -378,6 +461,11 @@ class PhoneTabLayoutRuntimeTest(unittest.TestCase):
         env["PHONE_ADB_ATTACHED"] = str(self.adb_attached)
         env["PHONE_APPS_FILE"] = str(self.apps_file)
         env["PHONE_APPS_SOURCE"] = str(self.apps_source)
+        env["PHONE_ADB_BIN"] = str(self.adb_bin)
+        env["PHONE_ADB_OK"] = str(self.adb_ok)
+        env["PHONE_ADB_BROKEN"] = str(self.adb_broken)
+        env["PHONE_ADB_BROKEN_LIB"] = ADB_BROKEN_LIB
+        env["PHONE_LAN_ADDRESS"] = PHONE_ADDRESS
 
         # dbus-run-session, not the inherited bus: the fake busctl is the only
         # daemon this harness may see.
