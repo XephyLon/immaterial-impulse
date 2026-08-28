@@ -319,9 +319,16 @@ ShellRoot {
         () => {
             const list = harness.first("PhoneNotificationList");
             const icons = harness.findAll(list, "NotificationAppIcon", []);
-            harness.check(`every notification card carries an app icon, got ${icons.length} for`
-                          + ` ${PhoneNotifications.appNameList.length} cards`,
-                          icons.length === PhoneNotifications.appNameList.length && icons.length === 2);
+            // Per CARD, not a total. The phone draws the shell's own card now,
+            // and that card carries an icon on the group header AND on each
+            // notification inside it - so a count of "one icon per card" was
+            // arithmetic about the old tree rather than about the icon.
+            const cards = harness.findAll(list, "NotificationGroup", []);
+            const bare = cards.filter(c => harness.findAll(c, "NotificationAppIcon", []).length === 0);
+            harness.check(`every notification card carries an app icon, got ${icons.length}`
+                          + ` across ${cards.length} cards with ${bare.length} bare`,
+                          cards.length === PhoneNotifications.appNameList.length
+                          && cards.length === 2 && bare.length === 0);
 
             // The one whose group carries an iconPath must have RESOLVED it:
             // a card drawing a broken Image is the same source as one drawing
