@@ -1769,6 +1769,22 @@ row. ("perf(search): rebuild the launcher results once per turn, not per input c
 
 ## Dynamic/data-driven QML gotchas
 
+- **A `Flow` with no width of its own and an incubated parent wraps once and
+  stays wrapped.** `Flow` takes its `implicitWidth` when a layout does not
+  give it a width, and computes that implicit width from the width it
+  currently has - the two define each other. Built in one pass it settles
+  on one line; built a few frames at a time, which is what
+  `SettingsContent`'s page host does since it stopped blocking on
+  construction, it latches at the narrow intermediate width and never
+  re-flows, because the wrap is what keeps the implicit width narrow.
+  Measured on `ConfigSelectionArray` at 628px: 43px synchronous, 154px
+  incubated, and every segmented row on every settings page looked like
+  the second one. Give such a Flow a `Layout.preferredWidth` summed from
+  its children's own implicit widths - an answer rather than a circle.
+  Note also that `Layout.alignment` hands a child its preferred size and
+  positions it, never resizes it, so an aligned Flow overflows a narrow
+  row instead of wrapping; that is a separate, older question.
+
 - **CI's Qt is older than yours, and its JS parser is too.** The workflow
   installs Ubuntu's `qt6-declarative-dev`; a developer here runs Arch's
   current one. Syntax the newer parser accepts is a COMPILE error on the
