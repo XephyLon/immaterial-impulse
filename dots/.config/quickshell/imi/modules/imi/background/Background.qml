@@ -101,6 +101,23 @@ Variants {
 
         // True fullscreen only, not maximized - see
         // HyprlandData.fullscreenByMonitorName.
+        // Whether this screen is the one that plays the wallpaper's sound.
+        // The named monitor if it is still connected, else the first screen -
+        // so unplugging the named one moves the audio somewhere audible
+        // instead of silencing it.
+        readonly property bool weAudioOutput: {
+            const we = Config.options.wallpaperSelector.wallpaperEngine;
+            if (we.silent ?? true)
+                return false;
+            const name = bgRoot.monitor?.name ?? "";
+            if (name === "")
+                return false;
+            const wanted = we.audioMonitor ?? "";
+            const screens = Quickshell.screens ?? [];
+            const named = wanted !== "" && screens.some(s => s.name === wanted);
+            return named ? name === wanted : name === (screens[0]?.name ?? "");
+        }
+
         readonly property bool monitorHasFullscreen:
             HyprlandData.fullscreenByMonitorName[bgRoot.monitor?.name ?? ""] ?? false
 
@@ -839,6 +856,18 @@ Variants {
                 // Inert until the pin moves - the layer only forwards this to a
                 // surface that has an `occluded` property. Until then WE's own
                 // detector still does the pausing.
+                // Sound belongs to ONE output. There is a renderer per screen,
+                // so binding each one to `silent` alone played the wallpaper's
+                // audio once per monitor, slightly out of phase - #338. Which
+                // screen has the speakers is not something the shell can infer,
+                // so it is named in config; empty means the first the
+                // compositor reports.
+                Binding {
+                    target: weLoader.item
+                    property: "audioWanted"
+                    value: bgRoot.weAudioOutput
+                }
+
                 Binding {
                     target: weLoader.item
                     property: "covered"

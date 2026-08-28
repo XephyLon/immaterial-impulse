@@ -21,6 +21,13 @@ WallpaperEngineSurface {
     // whether or not the binary underneath understands occlusion.
     property bool covered: false
 
+    // Whether THIS output is the one that plays the wallpaper's sound. Set by
+    // Background.qml, which is the only thing that knows which screen this
+    // surface is on. It used to be read straight off the `silent` config here,
+    // and since there is one of these per output, every monitor played the
+    // same track at once - #338.
+    property bool audioWanted: false
+
     // The selector's volume button toggles `silent`. `audioEnabled` only exists
     // on newer qs-wallpaperengine builds, so bind it dynamically - on an older
     // binary this is a silent no-op instead of a load-breaking assignment.
@@ -28,8 +35,7 @@ WallpaperEngineSurface {
     // there); brief black-out on toggle is expected.
     Component.onCompleted: {
         if ("audioEnabled" in root) {
-            root.audioEnabled = Qt.binding(() =>
-                !(Config.options.wallpaperSelector.wallpaperEngine.silent ?? true));
+            root.audioEnabled = Qt.binding(() => root.audioWanted);
         }
         // `occluded` idles the RENDER THREAD while this output is covered, which
         // is the half QML cannot otherwise reach: suppressing the contents stops
