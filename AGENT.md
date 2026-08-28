@@ -124,6 +124,23 @@ or use a worktree, validate headlessly, then perform one controlled live load.
   reactive, it just had nothing to observe yet. (feat(search): launch Minecraft modpacks from the
   search bar.)
 
+**The live shell is a copy of this checkout, not the checkout itself.** `qs -c imi` loads
+`~/.config/quickshell/imi`, and nothing under that directory is version controlled — it is filled by
+an `rsync --delete` from `dots/.config/quickshell/imi/`. Two things follow. Editing a file in the
+checkout changes nothing that is running until a deploy; and a deploy from the wrong branch removes
+whatever the live shell had that the branch does not. Deploy with `./deploy-shell` at the repo root
+rather than by hand: it names every open PR branch the deploy would roll back and stops, and it
+writes `.deployed-from` (sha, ref, timestamp) into the target so "what is actually running?" is
+answered by reading one file instead of by inferring from whichever branch you are standing on.
+`tests/test_deploy_guard.py` drives it. 12cf54d00 ("tools: deploy the shell through a guard, not an
+ad-hoc rsync").
+
+**A clean log is not evidence that the code you think is running is running.** The deploy above was
+written after a branch cut off main reverted three fixes that were live on the maintainer's machine,
+and the check that "confirmed" the deploy was a grep of the live log for errors — which was clean,
+because main is clean. A log tells you the shell loaded *something* without complaining. To find out
+*what*, read `.deployed-from`, or grep the live tree for a line only the code you expect contains.
+
 ### Where to look when something goes wrong
 
 The running `qs` process writes two logs per instance, found under
