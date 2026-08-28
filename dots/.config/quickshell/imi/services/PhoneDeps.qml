@@ -10,8 +10,8 @@ import QtQuick
  * (docs/superpowers/specs/2026-08-27-phone-tab-design.md, W3).
  *
  * Nothing here is an installer dependency: scrcpy, adb, DroidCam, the
- * v4l2loopback module, pactl and the preview players are all probed with a
- * constant `command -v` at construction
+ * v4l2loopback module, pactl, avahi-browse and the preview players are all
+ * probed with a constant `command -v` at construction
  * (tests/lint_capability_probe_gating.py is why every probe starts itself),
  * and `missingFor(feature)` turns the flags into the install guide's rows -
  * one per missing dependency, with the sibling fork's per-distro commands
@@ -24,6 +24,11 @@ import QtQuick
  * moved past is on PATH and dies before main, and a flag that says "present"
  * for it is a card that reads `ready` and does nothing when clicked. See
  * `parseLoaderFailure` for the measurement.
+ *
+ * It also owns the two commands that CHANGE what adb can see - `adb pair` and
+ * `adb connect`, both constant argv - and the avahi lookup that finds the
+ * two ports Android re-rolls on every toggle, because every other adb fact
+ * the tab has is already answered here.
  *
  * The dependency table and the feature -> dependency mapping between the
  * sync markers are kept byte-for-byte in sync with the logic-only double
@@ -60,6 +65,10 @@ Singleton {
     property bool vlc: false
     property bool kdialog: false
     property bool wlPaste: false
+    // Not a Phone-tab tool: it is how the wireless-debugging ports are found
+    // without the user reading them off the phone. Absent is ordinary - the
+    // pairing form simply asks for both addresses by hand.
+    property bool avahiBrowse: false
     property bool v4l2loopbackLoaded: false
     property bool v4l2loopbackInstalled: false
     property string scrcpyVersion: ""
@@ -89,6 +98,10 @@ Singleton {
     // How long a run probe may take before it is killed. Generous, because
     // the only thing a short one buys is a wrong answer.
     readonly property int runProbeTimeoutMs: 5000
+    // How long `adb pair` / `adb connect` may take before the panel is told
+    // nothing came back. A pairing is a TLS handshake with a phone on the
+    // LAN, so this is the round trip plus a lot of slack.
+    readonly property int adbActionTimeoutMs: 30000
 
     // BEGIN phone-deps logic (synced with tests/imports/testservices/PhoneDeps.qml)
     // `scrcpy --version` prints "scrcpy 4.1 <url>" on its first line.
@@ -296,6 +309,146 @@ Singleton {
         return missing;
     }
 
+    // ---- wireless debugging, as arithmetic -----------------------------
+    //
+    // Android 11+ re-rolls BOTH ports every time the Wireless debugging
+    // switch is flipped: "Pair device with pairing code" shows one address
+    // and a six-digit code, while the connect step uses a different port
+    // printed on the Wireless debugging screen itself. Neither is guessable,
+    // which is why the two steps are two addresses rather than one.
+
+    // `adb pair HOST:PORT CODE` takes the code as an ARGUMENT and does not
+    // prompt - measured against platform-tools 37.0.1 (Version 37.0.1-...):
+    // `adb help` documents `pair HOST[:PORT] [PAIRING CODE]`, and running
+    // `adb pair 127.0.0.1:1` with no code and stdin closed answers
+    // "Enter pairing code: adb: No pairing code provided" and exits 1, so the
+    // code has to be on the command line. Both the address and the code are
+    // the user's own typing, so they are separate argv elements and there is
+    // no shell anywhere on this path.
+    function adbPairArgv(address: string, code: string): var {
+        return ["adb", "pair", String(address ?? "").trim(), String(code ?? "").trim()];
+    }
+
+    function adbConnectArgv(address: string): var {
+        return ["adb", "connect", String(address ?? "").trim()];
+    }
+
+    // The two service types Android advertises while wireless debugging is
+    // on: the pairing screen publishes `_adb-tls-pairing._tcp` only while it
+    // is open, and `_adb-tls-connect._tcp` is up for as long as the switch
+    // is.
+    function avahiBrowseArgv(serviceType: string): var {
+        return ["avahi-browse", "-rpt", String(serviceType ?? "")];
+    }
+
+    // avahi-browse's parsable RESOLVED record is
+    // `=;iface;proto;name;type;domain;host;address;port;txt`, so the address
+    // is field 8 and the port field 9 - the layout the sibling fork's
+    // `_adb-tls-connect._tcp` snippet reads with `awk -F';' $8":"$9`. It
+    // could not be confirmed against a live daemon here (avahi-daemon is not
+    // running on this machine), so this VALIDATES rather than trusts the
+    // positions: a record whose field 9 is not a port number is skipped
+    // rather than becoming an address the user is asked to believe.
+    function parseAvahiRecords(text: string): var {
+        const out = [];
+        for (const raw of String(text ?? "").split("\n")) {
+            const line = raw.trim();
+            if (line.length === 0 || line.charAt(0) !== "=") continue;
+            const parts = line.split(";");
+            if (parts.length < 9) continue;
+            const host = String(parts[7] ?? "").trim();
+            const port = String(parts[8] ?? "").trim();
+            if (host.length === 0) continue;
+            if (!/^\d{1,5}$/.test(port)) continue;
+            const number = parseInt(port);
+            if (number < 1 || number > 65535) continue;
+            out.push({ host: host, port: port, address: host + ":" + port });
+        }
+        return out;
+    }
+
+    // The phone KDE Connect already reaches wins when several are
+    // advertising; otherwise the first record is offered and the user can
+    // correct it, which is the whole reason the address stays a field.
+    function pickAvahiRecord(records: var, preferredHost: string): var {
+        const list = records ?? [];
+        const want = String(preferredHost ?? "").trim();
+        if (want.length > 0)
+            for (let i = 0; i < list.length; i++)
+                if (String(list[i].host) === want) return list[i];
+        return list.length > 0 ? list[0] : null;
+    }
+
+    function firstMeaningfulLine(text: string): string {
+        for (const raw of String(text ?? "").split("\n")) {
+            const line = raw.trim();
+            if (line.length > 0) return line;
+        }
+        return "";
+    }
+
+    // `adb pair` reports through its exit code AND its own sentence, and both
+    // are required so that an adb which one day exits 0 on a refusal is still
+    // read as one. Measured: an unreachable target answers "error: protocol
+    // fault (couldn't read status message): Success" with exit 1; a
+    // successful pairing prints "Successfully paired to HOST [guid=...]".
+    function parsePairResult(exitCode: int, out: string, err: string): var {
+        const text = (String(out ?? "") + "\n" + String(err ?? "")).trim();
+        return {
+            ok: exitCode === 0 && /successfully paired/i.test(text),
+            message: root.firstMeaningfulLine(text)
+        };
+    }
+
+    // `adb connect` exits **0 whatever happens** - measured against
+    // platform-tools 37.0.1, `adb connect 127.0.0.1:1` prints
+    // "failed to connect to '127.0.0.1:1': Connection refused" and exits 0,
+    // and so does a host that does not resolve. The exit code is therefore
+    // not evidence here and the printed line is the whole of it; the phone
+    // turning up under `adb devices` is the confirmation, which is why the
+    // caller re-asks that rather than believing this.
+    function parseConnectResult(exitCode: int, out: string, err: string): var {
+        const text = (String(out ?? "") + "\n" + String(err ?? "")).trim();
+        return {
+            ok: exitCode === 0 && /^(already )?connected to /im.test(text),
+            message: root.firstMeaningfulLine(text)
+        };
+    }
+
+    // The code the phone shows is six digits; anything else is a typo a pair
+    // would spend a round trip discovering.
+    function normalizePairingCode(text: string): string {
+        return String(text ?? "").replace(/\D/g, "").substring(0, 6);
+    }
+
+    // `host:port`, split at the LAST colon so a bracketed IPv6 literal - the
+    // only form adb accepts - keeps its own. Returns null for something that
+    // is not an address at all; an empty port is a legal answer, because
+    // `adb connect` defaults to 5555 while a pairing address never can.
+    function splitAddress(text: string): var {
+        const raw = String(text ?? "").trim();
+        if (raw.length === 0) return null;
+        const index = raw.lastIndexOf(":");
+        if (index < 0) return { host: raw, port: "" };
+        const host = raw.substring(0, index).trim();
+        const port = raw.substring(index + 1).trim();
+        if (host.length === 0) return null;
+        if (port.length === 0) return { host: host, port: "" };
+        if (!/^\d{1,5}$/.test(port)) return null;
+        const number = parseInt(port);
+        if (number < 1 || number > 65535) return null;
+        return { host: host, port: port };
+    }
+
+    function pairInputsReady(address: string, code: string): bool {
+        const parts = root.splitAddress(address);
+        return parts !== null && parts.port.length > 0
+            && root.normalizePairingCode(code).length === 6;
+    }
+
+    function connectInputReady(address: string): bool {
+        return root.splitAddress(address) !== null;
+    }
     // END phone-deps logic
 
     function flags(): var {
@@ -326,7 +479,7 @@ Singleton {
     function recheck(): void {
         for (const probe of [scrcpyProbe, adbProbe, droidcamProbe, v4l2CtlProbe, pactlProbe,
                              mpvProbe, ffplayProbe, vlcProbe, kdialogProbe, wlPasteProbe,
-                             lsmodProbe, modinfoProbe, distroProbe])
+                             avahiBrowseProbe, lsmodProbe, modinfoProbe, distroProbe])
             root.startProbe(probe);
     }
 
@@ -345,6 +498,190 @@ Singleton {
     }
 
     Component.onCompleted: root.probed = true
+
+    // ---- the two commands that CHANGE what adb can see ------------------
+    //
+    // Everything above answers a question about the machine; these two act on
+    // it. They live here because this singleton already owns every adb fact
+    // the Phone tab has - whether adb is installed, whether it starts, and
+    // whether `adb devices` lists a phone - and pairing is that last fact
+    // being changed. The surface that draws the form therefore reaches no
+    // Process of its own, which is the same rule the feature cards follow.
+
+    // idle | busy | ok | failed, per step. `pairMessage` and
+    // `connectMessage` are adb's OWN sentence rather than one written here:
+    // the whole point of running the command instead of printing a recipe is
+    // that its answer is the one the user gets.
+    property string pairState: "idle"
+    property string pairMessage: ""
+    property string connectState: "idle"
+    property string connectMessage: ""
+
+    function pairWireless(address: string, code: string): void {
+        if (root.pairState === "busy") return;
+        if (!root.adb) {
+            root.pairState = "failed";
+            root.pairMessage = Translation.tr("adb is not available on this machine.");
+            return;
+        }
+        if (!root.pairInputsReady(address, code)) {
+            root.pairState = "failed";
+            root.pairMessage = Translation.tr("A pairing address needs a host and the port the phone shows, and the code is six digits.");
+            return;
+        }
+        root.pairState = "busy";
+        root.pairMessage = "";
+        pairProcess.exec(root.adbPairArgv(address, root.normalizePairingCode(code)));
+    }
+
+    function connectWireless(address: string): void {
+        if (root.connectState === "busy") return;
+        if (!root.adb) {
+            root.connectState = "failed";
+            root.connectMessage = Translation.tr("adb is not available on this machine.");
+            return;
+        }
+        if (!root.connectInputReady(address)) {
+            root.connectState = "failed";
+            root.connectMessage = Translation.tr("A connect address needs a host, and the port the Wireless debugging screen shows.");
+            return;
+        }
+        root.connectState = "busy";
+        root.connectMessage = "";
+        connectProcess.exec(root.adbConnectArgv(address));
+    }
+
+    Process {
+        id: pairProcess
+        stdout: StdioCollector { id: pairOut }
+        stderr: StdioCollector { id: pairErr }
+        onRunningChanged: {
+            if (running) pairGuard.restart();
+            else pairGuard.stop();
+        }
+        onExited: (exitCode, exitStatus) => {
+            const result = root.parsePairResult(exitCode, pairOut.text, pairErr.text);
+            root.pairState = result.ok ? "ok" : "failed";
+            root.pairMessage = result.message;
+        }
+    }
+
+    Process {
+        id: connectProcess
+        stdout: StdioCollector { id: connectOut }
+        stderr: StdioCollector { id: connectErr }
+        onRunningChanged: {
+            if (running) connectGuard.restart();
+            else connectGuard.stop();
+        }
+        onExited: (exitCode, exitStatus) => {
+            const result = root.parseConnectResult(exitCode, connectOut.text, connectErr.text);
+            root.connectState = result.ok ? "ok" : "failed";
+            root.connectMessage = result.message;
+            // The line adb printed is a claim; the phone turning up under
+            // adb devices is the evidence, and it is what takes the panel
+            // down.
+            root.refreshAdbDevices();
+        }
+    }
+
+    Timer {
+        id: pairGuard
+        interval: root.adbActionTimeoutMs
+        onTriggered: if (pairProcess.running) pairProcess.signal(15)
+    }
+
+    Timer {
+        id: connectGuard
+        interval: root.adbActionTimeoutMs
+        onTriggered: if (connectProcess.running) connectProcess.signal(15)
+    }
+
+    // ---- and where the two addresses come from ---------------------------
+    //
+    // Both ports are re-rolled on every toggle of the Wireless debugging
+    // switch, so the honest default is to ask the network rather than to
+    // remember. Absent avahi is an ordinary absence: the state goes
+    // `unavailable`, the fields stay empty, and the form promises nothing.
+
+    // idle | searching | done | unavailable
+    property string mdnsState: "idle"
+    property string mdnsPairingAddress: ""
+    property string mdnsConnectAddress: ""
+    property int mdnsPending: 0
+
+    function discoverWirelessPorts(): void {
+        if (root.mdnsState === "searching") return;
+        if (!root.avahiBrowse) {
+            root.mdnsState = "unavailable";
+            return;
+        }
+        root.mdnsState = "searching";
+        root.mdnsPairingAddress = "";
+        root.mdnsConnectAddress = "";
+        root.mdnsPending = 2;
+        pairingBrowse.exec(root.avahiBrowseArgv("_adb-tls-pairing._tcp"));
+        connectBrowse.exec(root.avahiBrowseArgv("_adb-tls-connect._tcp"));
+    }
+
+    // The phone's LAN address as KDE Connect already knows it, which is the
+    // host half of both addresses and the tie-breaker when more than one
+    // phone is advertising. Read here rather than in the surface so the pure
+    // picker takes it as an argument and stays testable.
+    function preferredWirelessHost(): string {
+        const addresses = PhoneConnect.activeDevice?.reachableAddresses ?? [];
+        for (let i = 0; i < addresses.length; i++) {
+            const address = String(addresses[i] ?? "").trim();
+            if (address.length > 0) return address;
+        }
+        return "";
+    }
+
+    function mdnsAnswered(): void {
+        root.mdnsPending = Math.max(0, root.mdnsPending - 1);
+        if (root.mdnsPending === 0) root.mdnsState = "done";
+    }
+
+    Process {
+        id: pairingBrowse
+        stdout: StdioCollector { id: pairingBrowseOut }
+        stderr: StdioCollector {}
+        onRunningChanged: {
+            if (running) mdnsGuard.restart();
+            else root.mdnsAnswered();
+        }
+        onExited: (exitCode, exitStatus) => {
+            const record = root.pickAvahiRecord(root.parseAvahiRecords(pairingBrowseOut.text),
+                                                root.preferredWirelessHost());
+            root.mdnsPairingAddress = record ? record.address : "";
+        }
+    }
+
+    Process {
+        id: connectBrowse
+        stdout: StdioCollector { id: connectBrowseOut }
+        stderr: StdioCollector {}
+        onRunningChanged: {
+            if (running) mdnsGuard.restart();
+            else root.mdnsAnswered();
+        }
+        onExited: (exitCode, exitStatus) => {
+            const record = root.pickAvahiRecord(root.parseAvahiRecords(connectBrowseOut.text),
+                                                root.preferredWirelessHost());
+            root.mdnsConnectAddress = record ? record.address : "";
+        }
+    }
+
+    // `avahi-browse -t` terminates on its own once the cache is exhausted and
+    // fails immediately with no daemon, but it is a network wait either way.
+    Timer {
+        id: mdnsGuard
+        interval: root.runProbeTimeoutMs
+        onTriggered: {
+            if (pairingBrowse.running) pairingBrowse.signal(15);
+            if (connectBrowse.running) connectBrowse.signal(15);
+        }
+    }
 
     // One constant `command -v` per tool. Each starts itself at construction
     // (the capability-probe lint's rule) and again from recheck(). The flag
@@ -547,6 +884,14 @@ Singleton {
         Component.onCompleted: root.startProbe(this)
         onRunningChanged: if (!running) root.probeAnswered()
         onExited: (exitCode, exitStatus) => { root.wlPaste = exitCode === 0; }
+    }
+
+    Process {
+        id: avahiBrowseProbe
+        command: ["sh", "-c", "command -v avahi-browse"]
+        Component.onCompleted: root.startProbe(this)
+        onRunningChanged: if (!running) root.probeAnswered()
+        onExited: (exitCode, exitStatus) => { root.avahiBrowse = exitCode === 0; }
     }
 
     Process {
