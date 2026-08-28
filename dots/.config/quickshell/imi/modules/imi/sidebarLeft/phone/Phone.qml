@@ -63,6 +63,20 @@ Item {
         && root.device.paired && root.device.reachable
 
     property bool rosterOpen: false
+    // The roster's reveal: ONE scalar with ONE `Behavior`, the shape
+    // `subPageProgress` below already uses and for the same two reasons. A
+    // second Behavior is two numbers that have to agree, agreeing at rest -
+    // the only place anyone looks - and disagreeing on exactly the frames the
+    // transition is made of; and the tier is taken WHOLE off `Appearance`, so
+    // the motion-speed slider and the reduce-motion floor reach the roster the
+    // way they reach everything else. `elementMove` rather than
+    // `elementMoveEnter`/`Exit`: those two carry directional curves, and this
+    // is a toggle the user can reverse in the middle of.
+    property real rosterProgress: root.rosterOpen ? 1 : 0
+
+    Behavior on rosterProgress {
+        animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+    }
 
     // "" | "contacts" | "apps" | "webcam" | "mic"
     property string subPage: ""
@@ -178,8 +192,14 @@ Item {
         Item {
             id: rosterReveal
             Layout.fillWidth: true
-            Layout.preferredHeight: rosterList.height
-            visible: root.rosterOpen
+            // Unrolled from nothing to the list's own height, and faded with
+            // it, both off the one scalar declared at the top of this file.
+            // The clip is what makes the height a reveal rather than a squash:
+            // the rows keep their own size and the box uncovers them.
+            Layout.preferredHeight: rosterList.height * root.rosterProgress
+            visible: root.rosterProgress > 0
+            opacity: root.rosterProgress
+            clip: true
 
             // The list stands at its OWN content height whatever this wrapper
             // is doing. A `ListView` told it is zero pixels tall builds no
