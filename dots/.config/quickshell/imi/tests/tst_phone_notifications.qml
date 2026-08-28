@@ -199,6 +199,40 @@ TestCase {
         compare(PhoneNotifications.cachedNotificationsFor(second, "other").length, 2)
     }
 
+    // A cache is written by whichever version of the service was running that
+    // day. This one predates the fields the shared notification card reads,
+    // and restoring it used to hand the card a row of undefineds: four
+    // buttons refusing `urgency`, the icon refusing `image`, and
+    // NotificationUtils calling `.replace` on an undefined body. Found on a
+    // live shell, because every fixture in this suite writes a CURRENT cache.
+    function test_a_cache_written_before_the_card_s_fields_is_upgraded_on_restore() {
+        const legacy = JSON.stringify({
+            [deviceId]: {
+                notifications: [{
+                    // Boring by the same rule every id in this service is
+                    // held to before it is spliced into a D-Bus path.
+                    publicId: "notif_7",
+                    deviceId: deviceId,
+                    appName: "Example",
+                    title: "Old shape",
+                    text: "Written before the card's fields existed",
+                    iconPath: "/tmp/example.png",
+                    actions: [],
+                    receivedAt: 1000
+                }]
+            }
+        });
+        const restored = PhoneNotifications.cachedNotificationsFor(legacy, deviceId);
+        compare(restored.length, 1);
+        // The daemon's own names survive...
+        compare(restored[0].title, "Old shape");
+        // ...and the card's are derived rather than left undefined.
+        compare(restored[0].summary, "Old shape");
+        compare(restored[0].body, "Written before the card's fields existed");
+        compare(typeof restored[0].urgency, "number");
+        verify(String(restored[0].image).indexOf("example.png") >= 0);
+    }
+
     function test_the_cache_answers_nothing_for_an_unknown_device_or_a_broken_document() {
         compare(PhoneNotifications.cachedNotificationsFor("", deviceId), [])
         compare(PhoneNotifications.cachedNotificationsFor(null, deviceId), [])
