@@ -2640,6 +2640,24 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   `RippleButton`, because it is the touch spelling of a right click and every ripple button should
   answer both the same way. 9d073fc3d ("refactor(widgets): build GroupButton on RippleButton so a
   group button ripples").
+- **Re-rooting a widget hands every subclass the base's properties, and a subclass that already
+  declared one now has TWO.** `AndroidQuickToggleButton` declared `property real appear: 1` back
+  when `GroupButton` was rooted on `Button`. The move onto `RippleButton` gave it a second, and QML
+  carries both: the panel's wave writes the derived property, while `RippleButton`'s
+  `opacity: dimOpacity * appear` binding is compiled in the base's scope and reads its own, which
+  stays at 1. Nothing errors. `StaggerEntrance` compounded it from the other side - it leaves
+  opacity and scale to any control exposing `interactionMotion`, which those tiles started doing
+  the same day, so it stopped dressing them while the binding meant to take over was reading the
+  wrong property. Between the two the quick toggles arrived at full strength with no entrance at
+  all, and it was the user who saw it, not the suite. Two things generalise. A duck-typed protocol
+  (here: "a member is a child that declares `appear`") silently widens when a shared base gains the
+  property it keys on - re-rooting is a protocol change, not just an inheritance change. And when a
+  lint walks this repo's type graph it must key a name to EVERY file that has it: the first version
+  of `tests/lint_shadowed_stagger_appear.py` kept one path per stem, `rglob` handed it the vendored
+  designsystem's second `RippleButton.qml` (which declares no `appear`), the chain dead-ended one
+  link early, and it passed over the very regression it was written for. d10c5137c
+  ("fix(quickToggles): one `appear` per tile, so the toggles fade in again"), e45f8f8ca
+  ("test(lint): fail on a wave member's `appear` shadowing an inherited one").
 - **A layout owns `x`, so an animation that writes it has to remember a position - and it
   remembered the wrong one.** `StyledText.animateChange` slid the text out and back by animating
   `root.x`/`root.y` toward an `originalX` captured in `Component.onCompleted`. For anything inside
