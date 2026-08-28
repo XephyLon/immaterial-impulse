@@ -11,6 +11,9 @@ import Quickshell.Services.Notifications
 Item { // Notification item area
     id: root
     property var notificationObject
+    // See NotificationGroup: the operations this card is allowed to perform,
+    // defaulting to the shell's own service.
+    property NotificationController controller: NotificationController {}
     property bool expanded: false
     property bool onlyNotification: false
     property real fontSize: Appearance.font.pixelSize.small
@@ -57,7 +60,7 @@ Item { // Notification item area
             easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
         }
         onFinished: () => {
-            Notifications.discardNotification(notificationObject.notificationId);
+            root.controller.discard(root.notificationObject);
         }
     }
 
@@ -278,7 +281,7 @@ Item { // Notification item area
                                     buttonText: modelData.text
                                     urgency: notificationObject.urgency
                                     onClicked: {
-                                        Notifications.attemptInvokeAction(notificationObject.notificationId, modelData.identifier);
+                                        root.controller.invokeAction(root.notificationObject, modelData);
                                     }
                                 }
                             }
