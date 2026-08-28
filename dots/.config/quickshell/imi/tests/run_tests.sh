@@ -536,6 +536,19 @@ if ! python3 "$SCRIPT_DIR/test_changelog_receipt.py"; then
     exit 1
 fi
 
+# The deploy guard. ~/.config/quickshell/imi is a copy and the deploy that
+# fills it is `rsync --delete`, so deploying from a branch cut off main takes
+# every other open PR's work off the maintainer's running shell - which is what
+# happened, invisibly, because a clean live log proves nothing when main is
+# clean. This drives `deploy-shell` over a throwaway repo with a stub `gh`,
+# holding both exemptions the first draft got wrong: cherry-picked work counts
+# as present, and a branch outside the deployed subtree is not a loss.
+echo "Running deploy guard tests..."
+if ! python3 "$SCRIPT_DIR/test_deploy_guard.py"; then
+    echo "Deploy guard tests failed."
+    exit 1
+fi
+
 # Static lint: a manifest's option keys and the host's own per-plugin state
 # share one PluginState namespace, so the `__` prefix is the host's alone.
 echo "Running plugin option key lint..."
