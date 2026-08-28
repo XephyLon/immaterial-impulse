@@ -1769,6 +1769,16 @@ row. ("perf(search): rebuild the launcher results once per turn, not per input c
 
 ## Dynamic/data-driven QML gotchas
 
+- **A clickable card that contains buttons puts its control BEHIND the
+  content, not around it.** Rooting the card on a `RippleButton` nests its
+  own buttons inside a control that dims itself when disabled, and opacity
+  composites - two dims render at x*x, not x, which is what
+  `lint_disabled_opacity.py` fails on. `ExpandablePanel` shows the shape:
+  a non-dimming root, a `RippleButton` filling it for the gesture, and the
+  other controls as that surface's siblings. Reached by measuring in
+  `PhoneFeatureCard.qml`, whose three cards were the only controls in this
+  shell a keyboard could not reach until they became controls at all.
+
 - **A `Flow` with no width of its own and an incubated parent wraps once and
   stays wrapped.** `Flow` takes its `implicitWidth` when a layout does not
   give it a width, and computes that implicit width from the width it

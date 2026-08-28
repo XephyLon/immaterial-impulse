@@ -13,6 +13,13 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **The phone panel's buttons behave like the rest of the shell's.** Its
+  notification bar is the same one the right sidebar draws, so its two
+  actions square off and swell under a press instead of sitting still;
+  the mirror, webcam and microphone cards ripple, dim when they cannot
+  start, and can be reached from the keyboard; a contact card expands
+  the way the Docker panel's cards do; and a notification group of one
+  no longer offers to expand into nothing.
 - **Settings rows show their choices in a row again.** Every segmented
   option row on every settings page had started stacking its buttons one
   per line - Bar position, Bar style, Group style and the rest - since
