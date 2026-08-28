@@ -197,51 +197,32 @@ Item {
             // it, both off the one scalar declared at the top of this file.
             // The clip is what makes the height a reveal rather than a squash:
             // the rows keep their own size and the box uncovers them.
-            Layout.preferredHeight: (rosterList.height + Appearance.spacing.space100 * 2)
-                * root.rosterProgress
+            Layout.preferredHeight: rosterGroup.implicitHeight * root.rosterProgress
             visible: root.rosterProgress > 0
             opacity: root.rosterProgress
             clip: true
 
-            // The menu's container. `DialogListItem` is drawn with square
-            // corners on the layer-3 tone because it expects to sit INSIDE
-            // something - the Wi-Fi and Bluetooth pickers give it a dialog.
-            // This one gave it nothing, so the rows sat straight on the panel
-            // and the roster read as a bare list rather than as the menu it
-            // is. The surface is what makes it one, and the clip is what lets
-            // square rows keep rounded ends.
-            StyledRectangle {
-                id: rosterSurface
-                objectName: "rosterSurface"
-                anchors.fill: parent
-                contentLayer: StyledRectangle.ContentLayer.Group
-                radius: Appearance.rounding.normal
-                clip: true
-
-                // The list stands at its OWN content height whatever this
-                // wrapper is doing. A `ListView` told it is zero pixels tall
-                // builds no delegates, so it reports a content height of zero
-                // and can never grow out of it - the height that folds has to
-                // be a box around the list rather than the list's own.
-                StyledListView {
-                    id: rosterList
-                    y: Appearance.spacing.space100
-                    width: rosterReveal.width
-                    height: rosterList.contentHeight
-                    interactive: false
-                    spacing: 0
-
-                    model: ScriptModel {
-                        values: PhoneConnect.devices
-                    }
-                    delegate: PhoneDeviceItem {
-                        required property var modelData
+            // The presentation M3_GUIDELINES.md names for rows that are
+            // related but stay visually distinct - each row on its own plate,
+            // the group's outer corners rounded and the inner ones not. This
+            // used to be a StyledRectangle wrapped around a list view, which
+            // is the thing that rule exists to prevent, and it drew square
+            // besides: `clip` on a Rectangle clips to the box, not the radius,
+            // so the rows painted over the corners it was supposed to have.
+            GroupedList {
+                id: rosterGroup
+                objectName: "rosterGroup"
+                anchors { left: parent.left; right: parent.right; top: parent.top }
+                bgcolor: Appearance.colors.colLayer2
+                itemVerticalPadding: 0
+                model: PhoneConnect.devices
+                rowDelegate: Component {
+                    PhoneDeviceItem {
+                        // Handed to the row by the plate; see GroupedList.
+                        property var modelData: null
                         device: modelData
-                        anchors {
-                            left: parent?.left
-                            right: parent?.right
-                        }
-                        active: root.device !== null && root.device.id === modelData.id
+                        active: root.device !== null && modelData !== null
+                            && root.device.id === modelData.id
                         onClicked: {
                             root.pickedDeviceId = modelData.id;
                             PhoneConnect.selectDevice(modelData.id);
