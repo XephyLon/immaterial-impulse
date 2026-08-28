@@ -701,20 +701,32 @@ services/                  Singletons wrapping external state/processes - one pe
                               dialer and SMS actions are `adb shell am start` intents,
                               refused with `lastError` when adb cannot reach the phone
   PhoneDeps.qml                What the Phone tab's OPTIONAL tooling looks like on this
-                              machine: scrcpy, adb, droidcam-cli, v4l2-ctl, pactl, the
-                              preview players, the v4l2loopback module (loaded/installed),
-                              scrcpy's major version and the distro - every one a constant
-                              `command -v`/argv probe started at construction, never from a
-                              feature's own activation (lint_capability_probe_gating.py).
+                              machine: scrcpy, adb, droidcam-cli, v4l2-ctl, pactl,
+                              avahi-browse, the preview players, the v4l2loopback module
+                              (loaded/installed), scrcpy's major version and the distro -
+                              every one a constant `command -v`/argv probe started at
+                              construction, never from a feature's own activation
+                              (lint_capability_probe_gating.py).
                               missingFor(feature) is the install guide's rows with the
                               sibling fork's per-distro commands verbatim; nothing here is
                               an installer dependency (sdata/deps-info.md "Phone (optional)").
+                              A tool has THREE states, not two: the three binaries the tab
+                              SPAWNS (scrcpy, adb, droidcam-cli) are started as well as
+                              located, so `scrcpy`/`adb`/`droidcamCli` mean "installed and
+                              able to start" while `*Present` is the raw `command -v`
+                              answer and `*RunError` the soname the loader could not find
+                              - see the entry below
                               `adbDevice` is the one LIVE fact in the file - whether
                               `adb devices` lists a phone in the `device` state, started by
-                              the adb presence probe's own exit and re-asked through
+                              the adb run probe's own exit and re-asked through
                               refreshAdbDevices(), so a card can say "no device over ADB"
                               before it is clicked
                               b591575c4 ("fix(phone): a card that cannot start over ADB says so before the click")
+                              ...and it owns the two commands that CHANGE that fact -
+                              `adb pair` and `adb connect`, constant argv - plus the
+                              avahi lookup that finds the ports Android re-rolls, because
+                              every other adb fact the tab has is already answered here
+                              (feat(phone): PhoneDeps runs adb pair and adb connect, as constant argv)
   PhoneScrcpy.qml              The screen mirror and app mode. QML holds no scrcpy handle:
                               scripts/phone/scrcpy_session_manager.py is ONE supervisor
                               speaking NDJSON on stdin/stdout that owns every scrcpy child
@@ -4839,6 +4851,108 @@ fix(phone): the Apps page says what to turn on when ADB has no device,
 fix(phone): the Apps page's empty state stands down while the panel is up,
 fix(phone): the Apps page's empty state reads as a paragraph, not a rule,
 test(phone): drive the Apps page through its three ADB states.)
+
+**`command -v` answers presence, and presence is not "this feature can start" - a package
+linked against a library the system has moved past is on PATH and dies before `main`.**
+`droidcam-cli` was exactly that here: on PATH, and `error while loading shared libraries:
+libswscale.so.9: cannot open shared object file`, because the package was built against
+ffmpeg 8 on a system that had moved to ffmpeg 9's `libswscale.so.10`. So the webcam card
+read `ready`, the click did nothing, and the message the user got - "is the DroidCam app
+open on the phone?" - sent them to look at the wrong machine entirely. Note the shape:
+nothing errors, nothing is logged, the QML is correct, and the flag is a perfectly good
+answer to the question it was asked.
+
+`services/PhoneDeps.qml` has three states now. The three binaries the tab SPAWNS - scrcpy,
+adb, droidcam-cli - are started as well as located, each run probe kicked by its own
+presence probe rather than by a feature's activation (which is
+`lint_capability_probe_gating.py`'s rule one hop along, since that check only sees the
+`command -v` half). Five things about it are worth not re-deriving.
+
+- **The classifier needs BOTH halves of the loader's signature.** The loader writes its
+  sentence to stderr and the process comes back **127**; `droidcam-cli` with no arguments
+  prints a page of usage and exits **1**, which is a tool that ran and refused. Matching the
+  phrase alone would classify that as broken, and matching 127 alone names no library, so
+  there is nothing to tell the user. 127 cannot be a shell's "command not found" here
+  because every probe is a constant argv with no shell on the path.
+- **A tool that BLOCKS is neither state, and must not become a probe that never answers.**
+  Each run probe carries a kill guard; a killed process is not a loader failure, so it lands
+  on "it runs". Erring that way is deliberate - calling a slow tool broken is a worse lie
+  than the one this replaced.
+- **The plain names stay the ones consumers read.** `scrcpy`/`adb`/`droidcamCli` mean
+  "installed and able to start", which is the question every one of them was really asking;
+  `*Present` and `*RunError` are the two halves. That is what makes the fix reach
+  `PhoneCamera.available` and the webcam card without either of them learning a new word.
+- **A broken tool is missing, and its install-guide row says what it actually is.**
+  `missingDeps` counts it as missing - the click does nothing either way - and
+  `brokenDependency` swaps the description for the loader's own missing library and a note
+  that the package needs rebuilding, keeping the install commands, because on Arch
+  `yay -S droidcam` IS the rebuild.
+- **Only the tools the tab spawns are asked.** `pactl`, `v4l2-ctl` and the preview players
+  keep a presence probe alone: their failure is a message on a page rather than a feature
+  that silently does nothing, and three extra processes per sweep buys nothing.
+
+`tests/tst_phone_scrcpy.qml` drives the classifier from both sides through the double, and
+`PhoneTabLayoutRuntimeTest.qml` walks the real page through all three states behind a fake
+adb the driver copies in between steps. **That harness strips `adb` out of PATH entirely**,
+which is the only way a test on this machine can say what `command -v adb` answers - the
+maintainer's own lives in `/opt/android-sdk/platform-tools`, and `command -v` searches the
+whole of PATH, so a non-executable placeholder in front is skipped rather than shadowing.
+(feat(phone): PhoneDeps tells a tool that cannot run from one that is absent,
+test(phone): drive the loader failure and the dependency row it produces,
+test(phone): drive adb's three states and the pairing panel end to end.)
+
+**...and where a page's whole content is "a link is missing", the link is a job the shell
+can do rather than a command line to retype.** The Apps page's panel printed `adb pair
+host:port code` and `adb connect host:port` and told the reader to open a terminal. It runs
+them now, as a form: two address fields, a six-digit code field, and a button per step. Five
+things measured rather than assumed, all against the installed platform-tools (1.0.41,
+Version 37.0.1-15733141):
+
+- **`adb pair HOST:PORT CODE` takes the code as an ARGUMENT and does not prompt.** `adb
+  help` documents `pair HOST[:PORT] [PAIRING CODE]`, and `adb pair 127.0.0.1:1` with no code
+  and stdin closed answers `Enter pairing code: adb: No pairing code provided` and exits 1.
+  So the code has to be on the command line, and it is one argv element - the address and
+  the code are the user's own typing and there is no shell anywhere on this path. The
+  sibling fork's every adb helper is a `bash -c` string with values pasted through a
+  hand-rolled quoter, one of them a *translated* string pasted into single quotes; that is
+  the shape this may not take.
+- **`adb connect` exits 0 whatever happens.** `adb connect 127.0.0.1:1` prints `failed to
+  connect to '127.0.0.1:1': Connection refused` and exits **0**; so does a host that does not
+  resolve. The exit code is therefore not evidence and the printed line is - and the line is
+  still only a claim, so what takes the panel down is the phone turning up under `adb
+  devices`, which the connect handler re-asks. `adb pair` reports through both, so both are
+  required: a success sentence with a non-zero exit is not a pairing.
+- **Android re-rolls BOTH ports on every toggle of the switch**, and they are different
+  ports: the pairing screen advertises `_adb-tls-pairing._tcp` only while it is open, and
+  `_adb-tls-connect._tcp` is up for as long as wireless debugging is. `avahi-browse -rpt`
+  finds them; its parsable resolved record puts the address in field 8 and the port in field
+  9 (the layout the fork reads with `awk -F';' $8":"$9`). **That layout could not be
+  confirmed against a live daemon here** - avahi-daemon is not running on this machine - so
+  the parser validates the port rather than trusting the position and skips a record it
+  cannot read, because an address offered confidently and wrongly is worse than none.
+- **What is honestly prefillable is the HOST, and it is offered as a head start rather than
+  as an address.** `PhoneConnect.activeDevice.reachableAddresses` is where KDE Connect
+  reaches the phone, which is the same LAN address wireless debugging listens on; the ports
+  are not derivable from it. So the field is prefilled with the bare host and the Pair button
+  stays refused until a port is there. The six-digit code is never prefillable - it is
+  generated per pairing and advertised nowhere - and with no avahi-browse installed the
+  discovery row is simply not drawn rather than being a button that cannot work.
+- **Every prefill is an ASSIGNMENT guarded on the field still holding the shell's last
+  suggestion.** A binding on a `TextField.text` is destroyed by the first keystroke
+  ([#158](https://github.com/XephyLon/immaterial-impulse/issues/158)'s shape), and the guard
+  is what stops a discovery that lands after the user has typed from taking their typing
+  away.
+
+The panel also answers **which** link is missing, which used to be one message covering three
+facts: adb absent (the old wording assumed it away and sent the reader to their phone), adb
+present and unable to start (the entry above), and adb working with nothing on it. Only the
+third is a pairing job. And the runtime harness measures the form at **two page widths**,
+because a column pinned to one passes every check at that one - `ContentPage.baseWidth` is
+the case that already cost a round - scoring items that are DRAWN rather than lit, since a
+disabled `RippleButton` dims to 0.4 through the interaction model and still occupies the
+width it asked for.
+(feat(phone): the Apps page pairs over Wi-Fi instead of printing a recipe,
+test(phone): pin the pairing argv, the two parsed results and the mDNS records.)
 
 **And the surfaces that DRIVE those services get their allowlist derived rather than written
 down.** "A button whose call no service answers is a fake action" is stated for the right
