@@ -1319,6 +1319,16 @@ if ! python3 "$SCRIPT_DIR/test_wallpaper_engine.py"; then
     exit 1
 fi
 
+# The wallpaper's sound plays on ONE output. There is a WE renderer per screen
+# (Background.qml is a Variants over Quickshell.screens), so a per-output
+# surface reading the global `silent` flag played the same track once per
+# monitor - issue #338.
+echo "Running Wallpaper Engine audio-output contract..."
+if ! python3 "$SCRIPT_DIR/test_we_audio_single_output.py"; then
+    echo "Wallpaper Engine audio-output contract failed."
+    exit 1
+fi
+
 echo "Running preset state tests..."
 if ! python3 "$SCRIPT_DIR/test_presets.py"; then
     echo "Preset state tests failed."
