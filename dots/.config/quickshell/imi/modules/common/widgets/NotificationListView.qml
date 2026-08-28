@@ -9,6 +9,8 @@ import Quickshell
 StyledListView { // Scrollable window
     id: root
     property bool popup: false
+    // See NotificationGroup. Handed to every card this view builds.
+    property NotificationController controller: NotificationController {}
 
     spacing: Appearance.spacing.space50
 
@@ -54,15 +56,14 @@ StyledListView { // Scrollable window
     Component.onCompleted: Qt.callLater(root.refreshCardItems)
 
     model: ScriptModel {
-        values: root.popup ? Notifications.popupAppNameList : Notifications.appNameList
+        values: root.controller.appNames(root.popup)
     }
     delegate: NotificationGroup {
         required property int index
         required property var modelData
         popup: root.popup
+        controller: root.controller
         width: ListView.view.width // https://doc.qt.io/qt-6/qml-qtquick-listview.html
-        notificationGroup: popup ? 
-            Notifications.popupGroupsByAppName[modelData] :
-            Notifications.groupsByAppName[modelData]
+        notificationGroup: root.controller.groupForApp(modelData, root.popup)
     }
 }

@@ -13,6 +13,9 @@ import Quickshell.Services.Notifications
 MouseArea { // Notification group area
     id: root
     property var notificationGroup
+    // Which backend this card is drawn for. The default is the shell's own
+    // freedesktop service, so a call site that says nothing is unchanged.
+    property NotificationController controller: NotificationController {}
     property var notifications: notificationGroup?.notifications ?? []
     property int notificationCount: notifications.length
     property bool multipleNotifications: notificationCount > 1
@@ -51,7 +54,7 @@ MouseArea { // Notification group area
         onTriggered: {
             if (root.containsMouse) return;
             root.notifications.forEach(notif => {
-                Notifications.timeoutNotification(notif.notificationId);
+                root.controller.timeout(notif);
             });
         }
     }
@@ -61,7 +64,7 @@ MouseArea { // Notification group area
         if (root.containsMouse) {
             leaveHideTimer.stop();
             root.notifications.forEach(notif => {
-                Notifications.cancelTimeout(notif.notificationId);
+                root.controller.cancelTimeout(notif);
             });
         } else {
             leaveHideTimer.restart();
@@ -84,7 +87,7 @@ MouseArea { // Notification group area
         onFinished: () => {
             root.notifications.forEach((notif) => {
                 Qt.callLater(() => {
-                    Notifications.discardNotification(notif.notificationId);
+                    root.controller.discard(notif);
                 });
             });
         }
@@ -267,6 +270,7 @@ MouseArea { // Notification group area
                         required property int index
                         required property var modelData
                         notificationObject: modelData
+                        controller: root.controller
                         expanded: root.expanded
                         onlyNotification: (root.notificationCount === 1)
                         opacity: (!root.expanded && index == 1 && root.notificationCount > 2) ? 0.5 : 1
