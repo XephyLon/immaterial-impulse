@@ -33,28 +33,35 @@ Text {
         easing.bezierCurve: Appearance.animation.elementMoveFaster.bezierCurve
     }
 
-    Component.onCompleted: {
-        textAnimationBehavior.originalX = root.x;
-        textAnimationBehavior.originalY = root.y;
+    // The change animation moves THIS, never `root.x`/`root.y`. A layout owns
+    // the position of the items it holds, so a text that animated its own x
+    // had to remember where it started, and it remembered at
+    // Component.onCompleted - before the layout had placed it. Every later
+    // glyph swap then "returned" the item to that stale position: a ListView's
+    // first delegate, built before the view had width, parked its chevron
+    // mid-row the first time it was expanded. A transform is the item's own
+    // and no layout writes it, so the rest position is simply zero.
+    transform: Translate {
+        id: textShift
     }
 
     Behavior on text {
         id: textAnimationBehavior
-        property real originalX: root.x
-        property real originalY: root.y
         enabled: root.animateChange
 
         SequentialAnimation {
             alwaysRunToEnd: true
             ParallelAnimation {
                 Anim {
+                    target: textShift
                     property: "x"
-                    to: textAnimationBehavior.originalX - root.animationDistanceX
+                    to: -root.animationDistanceX
                     easing.type: Easing.InSine
                 }
                 Anim {
+                    target: textShift
                     property: "y"
-                    to: textAnimationBehavior.originalY - root.animationDistanceY
+                    to: -root.animationDistanceY
                     easing.type: Easing.InSine
                 }
                 Anim {
@@ -65,24 +72,26 @@ Text {
             }
             PropertyAction {} // Tie the text update to this point (we don't want it to happen during the first slide+fade)
             PropertyAction {
-                target: root
+                target: textShift
                 property: "x"
-                value: textAnimationBehavior.originalX + root.animationDistanceX
+                value: root.animationDistanceX
             }
             PropertyAction {
-                target: root
+                target: textShift
                 property: "y"
-                value: textAnimationBehavior.originalY + root.animationDistanceY
+                value: root.animationDistanceY
             }
             ParallelAnimation {
                 Anim {
+                    target: textShift
                     property: "x"
-                    to: textAnimationBehavior.originalX
+                    to: 0
                     easing.type: Easing.OutSine
                 }
                 Anim {
+                    target: textShift
                     property: "y"
-                    to: textAnimationBehavior.originalY
+                    to: 0
                     easing.type: Easing.OutSine
                 }
                 Anim {
