@@ -90,26 +90,41 @@ install_from_official_zip() {
     download_droidcam "$zpath" || { rm -rf "$tmpdir"; return 1; }
     verify_droidcam "$zpath" || { rm -rf "$tmpdir"; return 1; }
 
+    # The extract was unchecked and so was the `cd` after it, so a corrupt or
+    # truncated download left `sudo ./install-client` running in whatever
+    # directory the caller happened to be in — as root.
     echo "▸ Extracting..."
-    unzip -q -o "$zpath" -d "$tmpdir/droidcam"
+    local clientdir="$tmpdir/droidcam"
+    if ! unzip -q -o "$zpath" -d "$clientdir"; then
+        echo "✗ Could not extract the DroidCam archive."
+        rm -rf "$tmpdir"
+        return 1
+    fi
+    if [ ! -f "$clientdir/install-client" ]; then
+        echo "✗ The archive did not contain install-client."
+        rm -rf "$tmpdir"
+        return 1
+    fi
 
+    # Each step runs in a subshell, so the directory is this function's
+    # business and never the caller's, and a failed `cd` cannot leak into the
+    # next command.
     echo "▸ Running install-client (sudo required)..."
-    cd "$tmpdir/droidcam"
-    sudo ./install-client || {
+    if ! ( cd "$clientdir" && sudo ./install-client ); then
         echo "✗ install-client failed."
         rm -rf "$tmpdir"
         return 1
-    }
+    fi
 
     echo ""
     echo "▸ Compiling video module (v4l2loopback-dc) ..."
-    sudo ./install-video || {
+    ( cd "$clientdir" && sudo ./install-video ) || {
         echo "  ! install-video failed (this may be expected if you already have v4l2loopback from your distro)."
     }
 
     echo ""
     echo "▸ Loading audio loopback module ..."
-    sudo ./install-sound || {
+    ( cd "$clientdir" && sudo ./install-sound ) || {
         echo "  ! install-sound failed (optional — you may already have pipe wire/PulseAudio working)."
     }
 
