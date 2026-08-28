@@ -1648,6 +1648,17 @@ Singleton {
                     property int fps: 30
                     property string scaling: "fill"
                     property bool silent: true
+                    // Which output plays the wallpaper's sound. Empty means
+                    // the first screen the compositor reports.
+                    //
+                    // There is one renderer PER OUTPUT (Background.qml is a
+                    // Variants over Quickshell.screens), so binding every one
+                    // of them to `silent` alone played the same audio track
+                    // once per monitor - #338. Audio is a LOAD-TIME decision
+                    // inside WE, so this cannot follow the focused monitor
+                    // without reloading wallpapers on every focus change; it
+                    // is a place the user names once instead.
+                    property string audioMonitor: ""
                 }
             }
 
