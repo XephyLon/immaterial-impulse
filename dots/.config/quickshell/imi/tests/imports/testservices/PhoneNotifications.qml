@@ -142,6 +142,29 @@ Singleton {
     // { "<deviceId>": { savedAt, notifications } }. An entry whose public id
     // would not pass validPublicId is dropped on the way back in, since
     // nothing could dismiss it.
+    // A cached notification was written by whatever version of this service
+    // was running that day, so it is NOT safe to hand one straight to a card.
+    // The fields the shared card reads - summary, body, image, urgency - were
+    // added after the cache format existed, and a restored entry that predates
+    // them reaches the card as a row of undefineds: `urgency` refused by four
+    // buttons, `image` refused by the icon, and `body` handed to
+    // NotificationUtils.processNotificationBody, which calls `.replace` on it.
+    // Derived here rather than defaulted in the card, because the daemon's own
+    // fields are what they are derived FROM and the card is not allowed to
+    // know that.
+    function withCardFields(n: var): var {
+        if (!n || typeof n !== "object") return n;
+        if (typeof n.summary === "string" && typeof n.body === "string"
+                && typeof n.image === "string" && typeof n.urgency === "number")
+            return n;
+        return Object.assign({}, n, {
+            summary: typeof n.summary === "string" ? n.summary : (n.title ?? ""),
+            body: typeof n.body === "string" ? n.body : (n.text ?? ""),
+            image: typeof n.image === "string" ? n.image : root.iconUrl(n.iconPath ?? ""),
+            urgency: typeof n.urgency === "number" ? n.urgency : 1
+        });
+    }
+
     function cachedNotificationsFor(json: var, deviceId: string): var {
         let doc;
         try {
@@ -151,7 +174,9 @@ Singleton {
         }
         const entry = (doc && typeof doc === "object") ? doc[deviceId] : null;
         if (!entry || !Array.isArray(entry.notifications)) return [];
-        return entry.notifications.filter(n => n && typeof n === "object" && root.validPublicId(n.publicId));
+        return entry.notifications
+            .filter(n => n && typeof n === "object" && root.validPublicId(n.publicId))
+            .map(n => root.withCardFields(n));
     }
 
     function cacheWith(json: var, deviceId: string, list: var, savedAt: real): string {
