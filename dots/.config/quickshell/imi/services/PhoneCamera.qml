@@ -418,10 +418,13 @@ Singleton {
     // A webcam left running by the previous shell is adopted, not doubled.
     Component.onCompleted: root.checkSession()
 
-    // The player is this process's child, so a clean exit takes it with it.
-    // Saying so out loud makes a reload a decision rather than a property of
-    // Quickshell's teardown order - and the stream, which is not a child, is
-    // still there to be re-adopted when the shell comes back.
+    // Belt and braces, and measured as such: planted out and re-run, the
+    // player is STILL reaped when the shell exits, because Quickshell kills a
+    // Process it owns rather than leaving it behind. So this line states that
+    // the preview's death at shutdown is intended - it is not the mechanism
+    // that produces it, and it must not be read as one. The stream is not a
+    // child of this process and is untouched either way, which is what lets
+    // it be re-adopted when the shell comes back.
     Component.onDestruction: root.closePreview()
 
     onActiveDeviceIdChanged: if (root.active || root.connecting) root.stop()
