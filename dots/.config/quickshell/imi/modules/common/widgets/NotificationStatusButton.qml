@@ -39,6 +39,12 @@ GroupButton {
                 text: buttonText
                 font.pixelSize: Appearance.font.pixelSize.small
                 color: button.colText
+                // The middle slot of a status row states a count that grows
+                // with the list, and the two actions beside it are not for
+                // pushing off the end of the bar.
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
             }
         }
     }

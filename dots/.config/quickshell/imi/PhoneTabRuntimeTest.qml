@@ -175,12 +175,20 @@ ShellRoot {
         return harness.all("PhoneFeatureCard").find(c => `${c.title}`.indexOf(fragment) >= 0) ?? null;
     }
 
-    // The footer's row, read structurally rather than by type: its three
-    // children ARE the two actions and the pill between them, in that order,
-    // and which of them is which is the whole thing being measured.
-    function footerRow() {
+    // The footer's three slots. Read by TYPE now, not by walking children: the
+    // bar is a ButtonGroup, whose `default property alias data` reparents what
+    // it is given into an inner RowLayout, so the bar's own first child is that
+    // layout rather than the first button. Which slot is which is still the
+    // thing being measured - the two actions are the ends, the count is the
+    // middle - so the order matters and the count does.
+    function footerSlots() {
         const footer = harness.first("PhoneFooterBar");
-        return footer ? (footer.children[0] ?? null) : null;
+        return footer ? harness.findAll(footer, "NotificationStatusButton", []) : [];
+    }
+
+    function footerRow() {
+        const slots = harness.footerSlots();
+        return slots.length > 0 ? slots[0].parent : null;
     }
 
     // The badge a feature card leads with: the MaterialShape and the
@@ -544,14 +552,18 @@ ShellRoot {
             // The roster step above left the unpaired laptop showing, which is
             // the pill's other branch: a count of zero must not stand in for
             // "the phone is not here".
-            const label = harness.findAll(harness.first("PhoneFooterBar"), "StyledText", [])[0] ?? null;
+            // The middle slot's own label: every slot is the same component now,
+            // and the two actions carry an empty one, so the first StyledText
+            // under the bar is not the count.
+            const countSlot = harness.footerSlots()[1] ?? null;
+            const label = countSlot ? (harness.findAll(countSlot, "StyledText", [])[0] ?? null) : null;
             harness.check(`an offline device says so instead of counting, got "${label?.text}"`,
                           label !== null && label.text === "Device offline");
             loader.item.pickedDeviceId = harness.phoneId;
         },
         () => {
             const row = harness.footerRow();
-            const slots = row ? row.children : [];
+            const slots = harness.footerSlots();
             harness.footerButtons = slots.length === 3 ? [slots[0], slots[2]] : [];
             harness.footerPill = slots.length === 3 ? slots[1] : null;
             harness.footerLabel = harness.footerPill
@@ -576,10 +588,15 @@ ShellRoot {
             const wider = buttons.every(b => b.width > b.height);
             harness.check(`each action is wider than it is tall, got ${buttons.map(b => `${b.width}x${b.height}`)}`,
                           buttons.length === 2 && wider);
-            harness.check("both actions take the same stated width",
-                          buttons.length === 2 && buttons[0].width === buttons[1].width
-                          && buttons[0].width === Appearance.sizes.phoneFooterButtonWidth
-                          && buttons[0].height === Appearance.sizes.phoneFooterButtonHeight);
+            // Against each other and against the component, not against a
+            // phone-only token: this bar is the right sidebar's status row now,
+            // and NotificationStatusButton states its own baseHeight. The width
+            // follows the glyph, as it does over there.
+            harness.check(`both actions are one shape, got ${buttons.map(b => `${b.width}x${b.height}`)}`,
+                          buttons.length === 2
+                          && buttons[0].width === buttons[1].width
+                          && buttons[0].height === buttons[1].height
+                          && buttons[0].height === buttons[0].baseHeight);
             const offsets = buttons.map(b => harness.glyphOffsetText(b));
             console.log(`[PhoneTab] glyph off centre by ${offsets}`);
             // A RippleButtonWithIcon's glyph was drawn 1.5px left of centre
@@ -603,7 +620,7 @@ ShellRoot {
                           left >= buttons[0].x + buttons[0].width
                           && right <= buttons[1].x);
             harness.check("neither action was squeezed to make room for it",
-                          buttons.every(b => b.width === Appearance.sizes.phoneFooterButtonWidth));
+                          buttons.every(b => b.width === b.baseWidth));
         },
 
         // ---- ...and they stay centred once the count moves ---------------
