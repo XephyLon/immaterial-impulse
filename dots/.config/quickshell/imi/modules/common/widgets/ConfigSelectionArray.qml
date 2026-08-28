@@ -72,6 +72,42 @@ ColumnLayout {
             Layout.alignment: Qt.AlignRight
             spacing: Appearance.spacing.space25
 
+            // A Flow with no width of its own takes its implicitWidth, and a
+            // Flow computes THAT from the width it currently has - so the two
+            // define each other. Built in one pass it happens to settle on one
+            // line; incubated across frames (which is how a settings page is
+            // built since the page host stopped blocking on construction) it
+            // latches at the narrow intermediate width, wraps every chip onto
+            // its own line, and never re-flows, because the wrap is what keeps
+            // the implicit width narrow. Measured on this row at 628px: 43px
+            // tall built synchronously, 154px incubated.
+            //
+            // `naturalWidth` is summed from the buttons' own implicit widths,
+            // which owe nothing to this Flow, so it is an answer rather than a
+            // circle. Handing it over as the PREFERRED width leaves the layout
+            // free to give less when there is less, and the chips wrap then for
+            // the real reason.
+            readonly property real naturalWidth: {
+                let total = 0;
+                let counted = 0;
+                for (let i = 0; i < children.length; i++) {
+                    const child = children[i];
+                    if (!child.visible || child.implicitWidth <= 0) continue;
+                    total += child.implicitWidth;
+                    counted++;
+                }
+                return counted > 0 ? total + spacing * (counted - 1) : 0;
+            }
+            Layout.preferredWidth: root.text ? buttonsFlow.naturalWidth : -1
+            // Not paired with a `Layout.minimumWidth: 0`: an ALIGNED child is
+            // handed its preferred size and positioned, never resized, so the
+            // minimum is never consulted. A row too narrow for its chips
+            // therefore overflows rather than wrapping - measured, a 228px row
+            // leaves this Flow at its full 333px. That predates this fix and is
+            // its own change: making the chips yield means giving up
+            // `Layout.alignment`, and then the right edge has to be earned some
+            // other way.
+
             Repeater {
                 model: root.options
                 delegate: SelectionGroupButton {

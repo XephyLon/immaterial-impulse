@@ -13,6 +13,11 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **Settings rows show their choices in a row again.** Every segmented
+  option row on every settings page had started stacking its buttons one
+  per line - Bar position, Bar style, Group style and the rest - since
+  the settings window stopped building all of its pages at once. A page
+  built a few frames at a time gave the buttons a width they then kept.
 - **The phone webcam's preview window closes with the session instead of
   freezing on screen.** Open the webcam, open the preview, then stop the
   camera: the preview used to stay up, frozen on its last frame, and nothing in

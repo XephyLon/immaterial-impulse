@@ -4,3 +4,17 @@ LiveDesktopEntry 1.0 LiveDesktopEntry.qml
 WallpaperBlurSurface 1.0 WallpaperBlurSurface.qml
 StaggerEntrance 1.0 StaggerEntrance.qml
 StaggerWave 1.0 StaggerWave.qml
+ConfigSelectionArray 1.0 ConfigSelectionArray.qml
+SelectionGroupButton 1.0 SelectionGroupButton.qml
+OptionalMaterialSymbol 1.0 OptionalMaterialSymbol.qml
+InfoTooltipIcon 1.0 InfoTooltipIcon.qml
+StyledText 1.0 StyledText.qml
+MaterialSymbol 1.0 MaterialSymbol.qml
+RippleButton 1.0 RippleButton.qml
+StyledToolTip 1.0 StyledToolTip.qml
+StyledToolTipContent 1.0 StyledToolTipContent.qml
+GroupButton 1.0 GroupButton.qml
+ButtonMouseArea 1.0 ButtonMouseArea.qml
+StyledRectangularShadow 1.0 StyledRectangularShadow.qml
+MaterialShape 1.0 MaterialShape.qml
+CircleUtilButton 1.0 CircleUtilButton.qml
