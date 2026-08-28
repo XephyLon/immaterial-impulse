@@ -317,8 +317,16 @@ class FeatureCardsContractTests(unittest.TestCase):
         for service in SERVICE_NAMES:
             self.assertNotIn(f"{service}.", self.card,
                              f"PhoneFeatureCard reaches {service} directly")
-        for name in ("clicked", "settingsClicked", "stopClicked"):
+        # `clicked` is the Button's own now that the card is rooted on
+        # RippleButton - redeclaring it would be a duplicate-signal error - so
+        # what is checked is that the card still RAISES rather than calls, and
+        # that the click has somewhere to go.
+        for name in ("settingsClicked", "stopClicked"):
             self.assertRegex(self.card, rf"signal {name}\b", f"the card has no {name} signal")
+        self.assertNotRegex(
+            self.card, r"signal clicked\b",
+            "the card redeclares `clicked`, which the control underneath already carries",
+        )
 
     def test_every_state_key_the_arithmetic_can_answer_with_has_an_arm(self):
         """An unmapped key draws an empty line, which reads as a card with
@@ -466,6 +474,63 @@ class SettingsPageTests(unittest.TestCase):
             self.assertNotIn(key, self.page,
                              f"Settings repeats {key}, which the sub-page owns")
 
+
+
+class ClickableSurfacesAreControls(unittest.TestCase):
+    """A thing the user clicks is a control, not a Rectangle with a MouseArea.
+
+    The feature cards - the scrcpy mirror, the webcam, the microphone, which are
+    the tab's three primary actions - were a `Rectangle` washed by a second
+    `Rectangle` at two hand-picked opacities with a `MouseArea` on top. That
+    re-earns hover and press and still gets none of the ripple, the press radius
+    morph, the disabled dim, or the keyboard: a Button is focusable and
+    activates on Space and Enter, and those three actions could not be reached
+    from a keyboard at all. Nothing in the suite could see it, because a
+    MouseArea clicks perfectly well under a synthetic mouse.
+    """
+
+    # Files whose root is deliberately not a control, with the reason.
+    NOT_CONTROLS = {
+        "Phone.qml": "the tab itself; its children are the controls",
+        "PhoneHeader.qml": "a layout of pills, each its own control",
+        "PhoneActionsRow.qml": "a layout of PhoneActionButtons",
+        "PhoneNavCards.qml": "a layout; its NavCard component is the RippleButton",
+        "PhoneNotificationList.qml": "a list; the cards inside carry the gestures",
+        "PhoneFooterBar.qml": "a ButtonGroup of NotificationStatusButtons",
+        "PhoneSubPage.qml": "a page frame",
+        "PhoneFeatureCards.qml": "a stack of PhoneFeatureCards",
+        "PhoneContactsPage.qml": "a page",
+        "PhoneAppsPage.qml": "a page",
+        "PhoneWebcamPage.qml": "a page",
+        "PhoneMicPage.qml": "a page",
+        "InstallGuidePopup.qml": "an overlay",
+        "PhoneAdbPairPanel.qml": "a form of controls",
+    }
+
+    def test_a_card_the_user_clicks_is_a_button(self):
+        card = SURFACE / "PhoneFeatureCard.qml"
+        source = strip_comments(card.read_text(encoding="utf-8"))
+        root = re.search(r"^(\w+) \{", source, re.M)
+        self.assertIsNotNone(root, "PhoneFeatureCard.qml has no root object")
+        self.assertEqual(
+            root.group(1), "RippleButton",
+            "the feature card's root is not a control, so its click has no ripple, no press "
+            "morph, no disabled dim and no keyboard - it is one of the tab's three primary actions",
+        )
+
+    def test_no_surface_hand_rolls_a_hover_wash(self):
+        """The giveaway for the shape above: an opacity keyed on a MouseArea's
+        own hover and press state, standing in for the interaction model."""
+        offenders = []
+        for path in sorted(SURFACE.glob("*.qml")):
+            source = strip_comments(path.read_text(encoding="utf-8"))
+            if re.search(r"opacity:[^\n]*contains(Press|Mouse)", source):
+                offenders.append(path.name)
+        self.assertEqual(
+            offenders, [],
+            "these draw their own hover/press wash instead of letting the control do it: "
+            + ", ".join(offenders),
+        )
 
 if __name__ == "__main__":
     unittest.main(verbosity=1)
