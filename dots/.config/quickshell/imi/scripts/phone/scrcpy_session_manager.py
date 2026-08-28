@@ -38,6 +38,7 @@ import json
 import os
 import queue
 import re
+import signal
 import subprocess
 import sys
 import threading
@@ -407,6 +408,35 @@ class ScrcpySessionManager:
         else:
             sys.stderr.write(f"unknown command: {cmd}\n")
 
+    def install_signal_handlers(self):
+        """A signal is the other way this process ends, and it was unhandled.
+
+        The docstring above promises that a shell restart never leaves
+        headless scrcpy windows behind, and only the clean-EOF path kept it:
+        `PhoneScrcpy.stopManager()` sets `running = false`, which Quickshell
+        sends as SIGTERM, and Python's default handler exits the process
+        without running `stop_all()` - so every mirror and every app window
+        the supervisor owned was orphaned. Measured: the child was still
+        alive a second after the supervisor was gone.
+
+        The signal is re-raised through the default handler afterwards, so
+        the exit status still says what killed it. Called from `main`,
+        because `signal.signal` only works on the main thread.
+        """
+        def handler(signum, _frame):
+            self.stop_all()
+            signal.signal(signum, signal.SIG_DFL)
+            os.kill(os.getpid(), signum)
+
+        for name in ("SIGTERM", "SIGINT", "SIGHUP"):
+            number = getattr(signal, name, None)
+            if number is None:
+                continue
+            try:
+                signal.signal(number, handler)
+            except (ValueError, OSError):
+                pass
+
     def run(self):
         for line in sys.stdin:
             self.handle_line(line)
@@ -423,6 +453,7 @@ def main():
     if args.list_apps:
         manager.list_apps(device_id=args.device_id)
         return 0
+    manager.install_signal_handlers()
     manager.run()
     return 0
 
