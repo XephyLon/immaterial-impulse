@@ -47,6 +47,9 @@ TestCase {
         PhoneDeps.scrcpyMajor = 0
         PhoneDeps.adbDevice = false
         PhoneDeps.adbDeviceRefreshes = 0
+        PhoneDeps.scrcpyRunError = ""
+        PhoneDeps.adbRunError = ""
+        PhoneDeps.droidcamCliRunError = ""
         PhoneScrcpy.reset()
         PhoneScrcpy.available = true
         PhoneScrcpy.appModeSupported = true
@@ -179,6 +182,73 @@ TestCase {
         compare(PhoneDeps.missingFor("mirror").map(d => d.key), ["android-tools"])
         PhoneDeps.adb = true
         compare(PhoneDeps.missingFor("mirror"), [])
+    }
+
+    // ================================================================
+    // PhoneDeps - a tool that is there and cannot run
+    // ================================================================
+
+    // The loader writes its sentence to stderr and the process comes back
+    // 127. Both halves are required: `droidcam-cli` with no arguments prints
+    // a page of usage and exits 1, which is a tool that RAN.
+    function test_deps_a_loader_failure_is_exit_127_and_the_loaders_own_sentence() {
+        compare(PhoneDeps.parseLoaderFailure(127,
+            "droidcam-cli: error while loading shared libraries: libswscale.so.9: "
+            + "cannot open shared object file: No such file or directory\n"),
+            "libswscale.so.9")
+        // A tool that ran and failed is not a tool that cannot start.
+        compare(PhoneDeps.parseLoaderFailure(1,
+            "droidcam-cli: error while loading shared libraries: libswscale.so.9: x"), "")
+        compare(PhoneDeps.parseLoaderFailure(1, "Usage:\n droidcam-cli [options] -l <port>\n"), "")
+        // 127 alone is not it either - the phrase is what names the library,
+        // and without one there is nothing to tell the user.
+        compare(PhoneDeps.parseLoaderFailure(127, "something else entirely"), "")
+        compare(PhoneDeps.parseLoaderFailure(0, ""), "")
+        compare(PhoneDeps.parseLoaderFailure(127, undefined), "")
+    }
+
+    // The three states, at the level the cards read: absent, present and
+    // working, present and unable to run. The middle one is the only one that
+    // used to exist.
+    function test_deps_a_broken_tool_is_missing_and_says_what_it_actually_is() {
+        const absent = PhoneDeps.missingDeps("webcam",
+            { v4l2loopbackLoaded: true, v4l2Ctl: true, mpv: true })
+        compare(absent.map(d => d.key), ["droidcam-cli"])
+        compare(absent[0].broken, undefined)
+        verify(absent[0].description.indexOf("Connects to the DroidCam app") === 0)
+
+        const working = PhoneDeps.missingDeps("webcam",
+            { droidcamCli: true, v4l2loopbackLoaded: true, v4l2Ctl: true, mpv: true })
+        compare(working, [])
+
+        // The reported case: on PATH, linked against ffmpeg 8, on a system
+        // that ships libswscale.so.10.
+        const broken = PhoneDeps.missingDeps("webcam",
+            { droidcamCli: false, droidcamCliRunError: "libswscale.so.9",
+              v4l2loopbackLoaded: true, v4l2Ctl: true, mpv: true })
+        compare(broken.map(d => d.key), ["droidcam-cli"])
+        compare(broken[0].broken, true)
+        compare(broken[0].missingLibrary, "libswscale.so.9")
+        verify(broken[0].description.indexOf("libswscale.so.9") > 0)
+        // ...and it must not be the "is the DroidCam app open on your phone"
+        // family of message, nor an instruction to install what is installed.
+        verify(broken[0].description.indexOf("phone") < 0)
+        verify(broken[0].description.indexOf("rebuilding") > 0)
+        // The commands stay, because reinstalling IS the repair.
+        compare(broken[0].commands.arch, "yay -S droidcam")
+    }
+
+    function test_deps_a_broken_adb_reaches_the_mirrors_rows_too() {
+        const rows = PhoneDeps.missingDeps("mirror",
+            { scrcpy: true, adb: false, adbRunError: "libc++.so.1" })
+        compare(rows.map(d => d.key), ["android-tools"])
+        compare(rows[0].broken, true)
+        compare(rows[0].missingLibrary, "libc++.so.1")
+        // And the audio backend row names whichever of the two is broken.
+        const audio = PhoneDeps.missingDeps("microphone",
+            { pactl: true, scrcpyRunError: "libavutil.so.58" })
+        compare(audio.map(d => d.key), ["audio-backend"])
+        compare(audio[0].missingLibrary, "libavutil.so.58")
     }
 
     // ================================================================
