@@ -90,13 +90,18 @@ PHONE_ADDRESS = "192.168.100.179"
 # 21 shared, 13 for the contact rows' geometry, 44 for the Apps page - the
 # three states adb itself can be in, the three states the page can be in, and
 # the pairing panel driven through discovery, pair and connect at two widths.
-EXPECTED_CHECKS = 79
+EXPECTED_CHECKS = 81
 
 # The two names the row-geometry steps measure, handed to the harness in the
 # environment so the fixture is the only place either is spelled. The Arabic
 # one is the maintainer's own screenshot, with the number it carried.
 LATIN_NAME = "Alice Rivers"
 ARABIC_NAME = "\u0627\u0628\u0648 \u0631\u0648\u0641\u0627\u0646 \u0627\u0644\u0645\u062d\u0644\u0645\u064a"
+LONG_NAME = ("Abdelrahman Mohamed Al-Sayed Ibrahim El-Masry "
+             "of the Engineering Department")
+# 1x1 PNG. The pipeline under test is "the card has a photo at all",
+# not what it depicts.
+PHOTO_B64 = ("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP8z8DwHwAFAQIA3f7C2wAAAABJRU5ErkJggg==")
 
 # The Arabic face is the whole measurement, and this test redirects
 # XDG_CONFIG_HOME - which takes the developer's own ~/.config/fontconfig with
@@ -288,6 +293,21 @@ VCARDS = {
         f"N:;{ARABIC_NAME};;;\n"
         "TEL;TYPE=CELL,PREF:+201016000286\n"
         "EMAIL;TYPE=WORK:rufan@example.com\n"
+        "END:VCARD\n"
+    ),
+    # A name no card can fit and an inline photo, which is what the phone
+    # actually exports and what the fixture's three short unadorned names
+    # never exercised: the trailing chevron was reported drawn mid-name on
+    # one row, and a row is only special here through its DATA.
+    "long.vcf": (
+        "BEGIN:VCARD\n"
+        "VERSION:3.0\n"
+        "UID:long-uid-1\n"
+        f"FN:{LONG_NAME}\n"
+        f"N:;{LONG_NAME};;;\n"
+        "TEL;TYPE=CELL,PREF:+20 100 000 0000 (work mobile, do not share)\n"
+        "EMAIL;TYPE=WORK:a.very.long.address.for.one.contact@example.com\n"
+        f"PHOTO;ENCODING=b;TYPE=PNG:{PHOTO_B64}\n"
         "END:VCARD\n"
     ),
     "nameless.vcf": (
