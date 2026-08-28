@@ -205,6 +205,44 @@ def test_persistent_declares_the_cache_key_the_service_writes():
     assert "Persistent.ready" in _function(source, "restoreCache"), "restoreCache does not wait for Persistent"
 
 
+def test_the_phone_draws_the_shells_card_and_never_a_copy_of_it():
+    """The phone list is the shared list view pointed at another backend.
+
+    It was 429 lines that re-spelled the shared card from the inside - the
+    same 70px drag threshold, the same 0.3/0.1 neighbour lean, the same
+    dismiss animation - and then drifted from it: a group of one drew an
+    expand chevron that expanded nothing, because the original gates that on
+    `multipleNotifications` and the copy never learned to. This is what stops
+    the copy growing back one convenience at a time.
+    """
+    source = (ROOT / "modules/imi/sidebarLeft/phone/PhoneNotificationList.qml").read_text()
+    assert "NotificationListView {" in source, (
+        "the phone's notification list must BE the shell's list view")
+    # The tells of a hand-rolled card, every one of which the shared card owns.
+    for spelling in ("dragConfirmThreshold", "dismissOvershoot", "DragManager",
+                     "NotificationGroupExpandButton", "SequentialAnimation"):
+        assert spelling not in source, (
+            f"`{spelling}` in the phone's list is the shared card being "
+            f"re-spelled; it belongs to modules/common/widgets/NotificationGroup.qml")
+
+
+def test_what_differs_between_the_backends_lives_in_the_controller():
+    """...and the differences are operations, not a second card."""
+    controller = (ROOT / "modules/imi/phone/PhoneNotificationController.qml").read_text()
+    assert controller.lstrip().startswith("import"), "controller should be a QML file"
+    assert "NotificationController {" in controller, (
+        "the phone controller must extend the shared seam, not restate it")
+    # Every backend-specific operation the card is not allowed to assume.
+    for operation in ("discard", "invokeAction", "reply", "canReply", "actionsOf"):
+        assert f"function {operation}(" in controller, (
+            f"`{operation}` is backend-specific and belongs in the controller")
+    # And the card itself must not reach past the seam to a phone service.
+    for widget in ("NotificationGroup.qml", "NotificationItem.qml", "NotificationListView.qml"):
+        body = (ROOT / "modules/common/widgets" / widget).read_text()
+        assert "PhoneNotifications" not in body, (
+            f"{widget} names a backend; that is what the controller is for")
+
+
 if __name__ == "__main__":
     import sys
     from contract_runner import run
