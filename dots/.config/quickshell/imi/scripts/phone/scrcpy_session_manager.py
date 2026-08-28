@@ -23,11 +23,12 @@ Events (one JSON object per line on stdout):
 Every scrcpy child is spawned as
   scrcpy [-s <serial>] --window-title=imi-phone-<type>-<id> <extra_args...>
 so that `focus` can address the window by its title and nothing else. The
-`-s` target is resolved from `adb devices` on every launch: a USB serial (no
-":" in it) wins over any ip:port, and only when adb lists nothing do the
-caller's target_args stand. A wireless target the caller names is `adb
-connect`ed first, bounded, so a phone on wireless debugging that adb has not
-seen yet still resolves.
+`-s` target is resolved from `adb devices` on every launch: a USB serial the
+caller names and adb lists wins outright, then any USB serial (no ":" in it)
+over any ip:port, and only when adb lists nothing do the caller's target_args
+stand. Among several USB devices the pick is sorted, not adb's print order. A
+wireless target the caller names is `adb connect`ed first, bounded, so a phone
+on wireless debugging that adb has not seen yet still resolves.
 
 stdin closing means the shell went away; every session is stopped then, so a
 shell restart never leaves headless scrcpy windows behind.
@@ -141,12 +142,18 @@ class ScrcpySessionManager:
     # ---- adb -------------------------------------------------------------
 
     @staticmethod
-    def wireless_serial(target_args):
+    def named_serial(target_args):
+        """The serial the caller asked for, `-s <serial>`, or ""."""
         args = list(target_args or [])
         for index, arg in enumerate(args):
-            if arg == "-s" and index + 1 < len(args) and ":" in args[index + 1]:
+            if arg == "-s" and index + 1 < len(args):
                 return args[index + 1]
         return ""
+
+    @classmethod
+    def wireless_serial(cls, target_args):
+        serial = cls.named_serial(target_args)
+        return serial if ":" in serial else ""
 
     def connect_wireless(self, target_args):
         serial = self.wireless_serial(target_args)
@@ -159,7 +166,24 @@ class ScrcpySessionManager:
             pass
 
     def resolve_adb_target(self, target_args=None):
+        """Which phone this launch is aimed at.
+
+        A USB serial still beats a WIRELESS one the caller named, and that is
+        deliberate rather than an oversight: `PhoneScrcpy.targetArgs()` names
+        a wireless address whenever the "use wireless" setting is on and
+        never names a USB serial at all, scrcpy over USB is the better link,
+        and the rule is stated in the docstring at the top of this file and
+        pinned by `test_a_usb_serial_wins_over_a_wireless_one`.
+
+        What was wrong is narrower and had no argument behind it: with two
+        phones attached, `usb_devices[0]` is whichever `adb devices` happened
+        to print first, and nothing - not the caller, not the tab - could
+        steer it. So a USB serial the caller names and adb really lists is
+        honoured, and the unsteered pick is sorted rather than left to adb's
+        output order, which is not a choice anybody made.
+        """
         self.connect_wireless(target_args)
+        requested = self.named_serial(target_args)
         try:
             res = subprocess.run(["adb", "devices"], capture_output=True,
                                  text=True, timeout=4)
@@ -173,10 +197,12 @@ class ScrcpySessionManager:
                 if len(parts) >= 2 and parts[1] == "device":
                     serial = parts[0]
                     (ip_devices if ":" in serial else usb_devices).append(serial)
+            if requested and requested in usb_devices:
+                return ["-s", requested]
             if usb_devices:
-                return ["-s", usb_devices[0]]
+                return ["-s", sorted(usb_devices)[0]]
             if ip_devices:
-                return ["-s", ip_devices[0]]
+                return ["-s", sorted(ip_devices)[0]]
         except Exception:
             pass
         return list(target_args or [])
