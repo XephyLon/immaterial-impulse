@@ -49,26 +49,57 @@ read_json_field() {
     sed -n "s/.*\"$2\"[[:space:]]*:[[:space:]]*\"\{0,1\}\([^\",}]*\)\"\{0,1\}.*/\1/p" "$1" 2>/dev/null | head -n1
 }
 
-# session_signature <session> → substring the process cmdline must contain
-session_signature() {
+# session_binary <session> → the binary `pgrep -x` must match
+session_binary() {
     case "$1" in
-        video)      echo "droidcam-cli" ;;
-        audio)      echo "droidcam-cli -a" ;;
-        scrcpy-mic) echo "--audio-source=mic" ;;
+        scrcpy-mic) echo "scrcpy" ;;
+        video|audio) echo "droidcam-cli" ;;
         *)          echo "" ;;
     esac
+}
+
+# session_matches <session> <cmdline> → 0 when the cmdline belongs to that
+# session kind.
+#
+# This was a plain substring per session, and a substring cannot express what
+# separates the webcam from the microphone: the audio process IS
+# `droidcam-cli -a ...`, so its cmdline contains the video signature
+# `droidcam-cli` and matched it. With `video.json` absent - a shell restart
+# with only the mic up - `status video` therefore answered with the MIC's
+# pid, the tab drew a webcam stream that did not exist, and the user turning
+# it off ran `stop video`, which sent SIGTERM to the microphone. The port
+# could not break the tie either: `find_running` is called with an empty port
+# whenever there is no state file.
+#
+# The `-a` test is on a whole token (the cmdline is padded, and cmdline_of
+# has already turned its NULs into spaces), so `-nocontrols` and a `-size=`
+# value cannot be mistaken for it.
+session_matches() {
+    local session="$1" cl=" $2 "
+    case "$session" in
+        video)
+            case "$cl" in
+                *droidcam-cli*) case "$cl" in *" -a "*) return 1 ;; esac; return 0 ;;
+            esac
+            return 1 ;;
+        audio)
+            case "$cl" in
+                *droidcam-cli*) case "$cl" in *" -a "*) return 0 ;; esac ;;
+            esac
+            return 1 ;;
+        scrcpy-mic)
+            case "$cl" in *"--audio-source=mic"*) return 0 ;; esac
+            return 1 ;;
+    esac
+    return 1
 }
 
 # find_running <session> [port] → pid (empty if none). Matches live processes
 # of the session kind whose cmdline contains the port (when given).
 find_running() {
-    local session="$1" port="${2:-}" sig pid cl comm argv0 want
-    sig="$(session_signature "$session")"
-    [ -n "$sig" ] || return 1
-    case "$session" in
-        scrcpy-mic) want="scrcpy" ;;
-        *)          want="droidcam-cli" ;;
-    esac
+    local session="$1" port="${2:-}" pid cl want
+    want="$(session_binary "$session")"
+    [ -n "$want" ] || return 1
     # `pgrep -x` on the binary's own name, never a full-cmdline match on
     # the signature: that matches every process carrying these args,
     # including the shell that was invoked to launch one, so a session would
@@ -77,13 +108,10 @@ find_running() {
     for pid in $(pgrep -x "$want" 2>/dev/null); do
         [ -r "/proc/$pid/cmdline" ] || continue
         cl="$(cmdline_of "$pid")"
+        session_matches "$session" "$cl" || continue
+        if [ -z "$port" ]; then printf '%s' "$pid"; return 0; fi
         case "$cl" in
-            *"$sig"*)
-                if [ -z "$port" ]; then printf '%s' "$pid"; return 0; fi
-                case "$cl" in
-                    *"$port"*) printf '%s' "$pid"; return 0 ;;
-                esac
-                ;;
+            *"$port"*) printf '%s' "$pid"; return 0 ;;
         esac
     done
     return 1
@@ -281,24 +309,25 @@ cmd_stop() {
         return 0
     fi
 
-    # Safety: only kill if the cmdline still looks like our kind of process.
+    # Safety: only kill if the cmdline still belongs to THIS session kind.
+    # `droidcam-cli or scrcpy` was the same over-broad test the signature
+    # was, one function along, and it is the half that actually pulls the
+    # trigger: it would have let `stop video` kill a scrcpy mic just as
+    # happily as a droidcam one.
     local cl
     cl="$(cmdline_of "$pid")"
-    case "$cl" in
-        *"droidcam-cli"*|*"scrcpy"*)
-            kill -TERM "$pid" 2>/dev/null
-            for _ in 1 2 3 4 5 6 7 8; do
-                is_alive "$pid" || break
-                sleep 0.25
-            done
-            if is_alive "$pid"; then
-                kill -KILL "$pid" 2>/dev/null || true
-            fi
-            ;;
-        *)
-            echo "droidcam_session: pid $pid no longer matches droidcam/scrcpy — not killing" >&2
-            ;;
-    esac
+    if session_matches "$session" "$cl"; then
+        kill -TERM "$pid" 2>/dev/null
+        for _ in 1 2 3 4 5 6 7 8; do
+            is_alive "$pid" || break
+            sleep 0.25
+        done
+        if is_alive "$pid"; then
+            kill -KILL "$pid" 2>/dev/null || true
+        fi
+    else
+        echo "droidcam_session: pid $pid is not a '$session' session — not killing" >&2
+    fi
     rm -f "$statefile"
 }
 
