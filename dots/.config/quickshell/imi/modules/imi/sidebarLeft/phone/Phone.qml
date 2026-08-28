@@ -191,43 +191,62 @@ Item {
         // off screen when the wave runs takes no slot anyway.
         Item {
             id: rosterReveal
+            objectName: "rosterReveal"
             Layout.fillWidth: true
             // Unrolled from nothing to the list's own height, and faded with
             // it, both off the one scalar declared at the top of this file.
             // The clip is what makes the height a reveal rather than a squash:
             // the rows keep their own size and the box uncovers them.
-            Layout.preferredHeight: rosterList.height * root.rosterProgress
+            Layout.preferredHeight: (rosterList.height + Appearance.spacing.space100 * 2)
+                * root.rosterProgress
             visible: root.rosterProgress > 0
             opacity: root.rosterProgress
             clip: true
 
-            // The list stands at its OWN content height whatever this wrapper
-            // is doing. A `ListView` told it is zero pixels tall builds no
-            // delegates, so it reports a content height of zero and can never
-            // grow out of it - the height that folds has to be a box around
-            // the list rather than the list's own.
-            StyledListView {
-                id: rosterList
-                width: rosterReveal.width
-                height: rosterList.contentHeight
-                interactive: false
-                spacing: 0
+            // The menu's container. `DialogListItem` is drawn with square
+            // corners on the layer-3 tone because it expects to sit INSIDE
+            // something - the Wi-Fi and Bluetooth pickers give it a dialog.
+            // This one gave it nothing, so the rows sat straight on the panel
+            // and the roster read as a bare list rather than as the menu it
+            // is. The surface is what makes it one, and the clip is what lets
+            // square rows keep rounded ends.
+            StyledRectangle {
+                id: rosterSurface
+                objectName: "rosterSurface"
+                anchors.fill: parent
+                contentLayer: StyledRectangle.ContentLayer.Group
+                radius: Appearance.rounding.normal
+                clip: true
 
-                model: ScriptModel {
-                    values: PhoneConnect.devices
-                }
-                delegate: PhoneDeviceItem {
-                    required property var modelData
-                    device: modelData
-                    anchors {
-                        left: parent?.left
-                        right: parent?.right
+                // The list stands at its OWN content height whatever this
+                // wrapper is doing. A `ListView` told it is zero pixels tall
+                // builds no delegates, so it reports a content height of zero
+                // and can never grow out of it - the height that folds has to
+                // be a box around the list rather than the list's own.
+                StyledListView {
+                    id: rosterList
+                    y: Appearance.spacing.space100
+                    width: rosterReveal.width
+                    height: rosterList.contentHeight
+                    interactive: false
+                    spacing: 0
+
+                    model: ScriptModel {
+                        values: PhoneConnect.devices
                     }
-                    active: root.device !== null && root.device.id === modelData.id
-                    onClicked: {
-                        root.pickedDeviceId = modelData.id;
-                        PhoneConnect.selectDevice(modelData.id);
-                        root.rosterOpen = false;
+                    delegate: PhoneDeviceItem {
+                        required property var modelData
+                        device: modelData
+                        anchors {
+                            left: parent?.left
+                            right: parent?.right
+                        }
+                        active: root.device !== null && root.device.id === modelData.id
+                        onClicked: {
+                            root.pickedDeviceId = modelData.id;
+                            PhoneConnect.selectDevice(modelData.id);
+                            root.rosterOpen = false;
+                        }
                     }
                 }
             }

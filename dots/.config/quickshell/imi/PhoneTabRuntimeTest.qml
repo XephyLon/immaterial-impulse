@@ -213,9 +213,18 @@ ShellRoot {
         return row ? (row.parent?.parent ?? null) : null;
     }
 
+    // The box that folds, found by walking OUT of the list until the item
+    // that owns the reveal turns up. The list's parent is the menu's surface
+    // now, and a locator spelled as "the list's parent" silently measured
+    // that surface instead the day the surface appeared.
     function rosterBox() {
-        const list = harness.rosterList();
-        return list ? list.parent : null;
+        let item = harness.rosterList();
+        while (item) {
+            if (item.objectName === "rosterReveal")
+                return item;
+            item = item.parent;
+        }
+        return null;
     }
 
     // The Stop button of a card that is on its `active` rung, found by what it
@@ -458,6 +467,16 @@ ShellRoot {
                           + ` got ${harness.typeName(list)} of ${list?.count}`,
                           list !== null && harness.typeName(list) === "StyledListView"
                           && list.count === PhoneConnect.devices.length);
+            // ...and the container that makes those rows a MENU rather than a
+            // bare list. `DialogListItem` draws square corners on the layer-3
+            // tone because it expects one; without it the roster's rows sat
+            // straight on the panel.
+            const surface = list?.parent ?? null;
+            harness.check(`the roster's rows sit on a menu surface, got`
+                          + ` ${harness.typeName(surface)} radius=${surface?.radius}`,
+                          surface !== null
+                          && harness.typeName(surface) === "StyledRectangle"
+                          && surface.radius > 0);
             harness.rosterSaw = { samples: 0, mid: 0, maxHeight: 0 };
             harness.click(harness.first("PhoneDeviceChip"));
             rosterWatch.running = true;
@@ -480,9 +499,15 @@ ShellRoot {
                           saw.samples > 10);
             harness.check(`the roster unrolls rather than appearing whole,`
                           + ` ${saw.mid} frames strictly between`, saw.mid > 0);
-            harness.check(`...and settles at the list's own content height, got ${box?.height}`,
+            // The list's content plus the menu surface's own vertical padding,
+            // which is the height a menu HAS - read off the surface rather
+            // than restated as a number here, so the two cannot drift apart.
+            const surfacePad = (list?.parent ? list.y : 0) * 2;
+            harness.check(`...and settles at the list's content height plus the menu's`
+                          + ` padding, got ${box?.height} against`
+                          + ` ${list?.contentHeight} + ${surfacePad}`,
                           box !== null && list !== null && list.contentHeight > 0
-                          && Math.abs(box.height - list.contentHeight) < 1);
+                          && Math.abs(box.height - (list.contentHeight + surfacePad)) < 1);
 
             const rows = harness.all("PhoneDeviceItem").filter(i => i.visible);
             harness.check(`opening the chip lists both devices, got ${rows.length}`, rows.length === 2);

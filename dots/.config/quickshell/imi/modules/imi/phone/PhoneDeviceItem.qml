@@ -1,5 +1,6 @@
 import qs.services
 import qs.modules.common
+import qs.modules.common.functions
 import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Layouts
@@ -15,6 +16,16 @@ DialogListItem {
     // Device entry from PhoneConnect.devices.
     required property var device
     readonly property bool online: root.device.paired && root.device.reachable
+
+    // M3 marks the chosen item of a menu with the selected container tone AND
+    // a trailing check. `active` used only to cancel the hover colour, which
+    // told the user which device was picked by drawing nothing at all.
+    colBackground: root.active
+        ? Appearance.colors.colSecondaryContainer
+        : ColorUtils.transparentize(Appearance.colors.colLayer3)
+    colBackgroundHover: root.active
+        ? Appearance.colors.colSecondaryContainer
+        : Appearance.colors.colLayer3Hover
 
     contentItem: RowLayout {
         anchors {
@@ -38,7 +49,9 @@ DialogListItem {
                 default: return "devices";
                 }
             }
-            color: root.online ? Appearance.colors.colPrimary : Appearance.colors.colOnSurfaceVariant
+            color: root.active ? Appearance.colors.colOnSecondaryContainer
+                : root.online ? Appearance.colors.colPrimary
+                : Appearance.colors.colOnSurfaceVariant
         }
 
         ColumnLayout {
@@ -47,7 +60,8 @@ DialogListItem {
 
             StyledText {
                 Layout.fillWidth: true
-                color: Appearance.colors.colOnSurfaceVariant
+                color: root.active ? Appearance.colors.colOnSecondaryContainer
+                    : Appearance.colors.colOnSurfaceVariant
                 elide: Text.ElideRight
                 text: root.device.name || root.device.id
                 textFormat: Text.PlainText
@@ -69,6 +83,14 @@ DialogListItem {
                     return Translation.tr("Connected");
                 }
             }
+        }
+
+        MaterialSymbol {
+            objectName: "rosterSelectedCheck"
+            visible: root.active
+            text: "check"
+            iconSize: Appearance.font.pixelSize.larger
+            color: Appearance.colors.colOnSecondaryContainer
         }
     }
 }
