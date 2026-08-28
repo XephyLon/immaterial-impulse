@@ -37,7 +37,7 @@ import qs.modules.imi.sidebarLeft.phone
  * decisions themselves live in phone_cards.js and are driven by
  * tests/tst_phone_cards.qml.
  *
- * Three things here are WATCHED rather than read once, because each of them
+ * Four things here are WATCHED rather than read once, because each of them
  * is a defect that only exists between two settled states:
  *
  *  - the mirror launch. `Directories.scriptPath` resolves to this checkout,
@@ -52,6 +52,12 @@ import qs.modules.imi.sidebarLeft.phone
  *    opacity and scale, and the check that matters is that a MID-flight
  *    reading exists: every "was it ever out of range" assertion passes
  *    identically on a transition that never ran;
+ *  - the footer's clear action, across the one glyph swap this bar has. A
+ *    deferred text swap on a Control's content item lands the glyph on the
+ *    padded rect's corner rather than on its centre and leaves it there, so
+ *    the reading taken before the count first moves is identical whether or
+ *    not the rest of the session is drawn off centre. `swapWatch` samples
+ *    both axes and the glyph's opacity across it;
  *  - the toast's width, against a control. A short message must produce a
  *    toast narrower than the cap before a long one is allowed to prove the
  *    cap holds.
@@ -135,11 +141,30 @@ ShellRoot {
 
     // A glyph a Control positions itself: its centre must land on the
     // button's, which an anchor cannot do and both alignments can.
-    function glyphOffCentre(button) {
-        const glyph = harness.findAll(button, "MaterialSymbol", [])[0] ?? null;
-        if (!glyph) return Number.NaN;
+    //
+    // BOTH axes, signed. The first version returned |dx| alone and could not
+    // have seen the defect it was written for: a `Behavior on text` animates
+    // the Text's OWN x and y, so a one-axis reading reports half of what is
+    // on screen and an absolute one cannot say which way it went.
+    function glyphOffset(button) {
+        const glyph = harness.footerGlyph(button);
+        if (!glyph) return { dx: Number.NaN, dy: Number.NaN };
         const centre = glyph.mapToItem(button, glyph.width / 2, glyph.height / 2);
-        return Math.abs(centre.x - button.width / 2);
+        return { dx: centre.x - button.width / 2, dy: centre.y - button.height / 2 };
+    }
+
+    function glyphOffCentre(button) {
+        const off = harness.glyphOffset(button);
+        return Math.max(Math.abs(off.dx), Math.abs(off.dy));
+    }
+
+    function glyphOffsetText(button) {
+        const off = harness.glyphOffset(button);
+        return `(${off.dx.toFixed(2)},${off.dy.toFixed(2)})`;
+    }
+
+    function footerGlyph(button) {
+        return harness.findAll(button, "MaterialSymbol", [])[0] ?? null;
     }
 
     function cardTitled(fragment) {
@@ -403,13 +428,13 @@ ShellRoot {
                           buttons.length === 2 && buttons[0].width === buttons[1].width
                           && buttons[0].width === Appearance.sizes.phoneFooterButtonWidth
                           && buttons[0].height === Appearance.sizes.phoneFooterButtonHeight);
-            const offsets = buttons.map(b => harness.glyphOffCentre(b));
+            const offsets = buttons.map(b => harness.glyphOffsetText(b));
             console.log(`[PhoneTab] glyph off centre by ${offsets}`);
             // A RippleButtonWithIcon's glyph was drawn 1.5px left of centre
             // here, because the empty label's Layout.fillWidth slot took the
             // rest of the row's width from inside the button.
             harness.check(`each glyph is centred in its action, off by ${offsets}`,
-                          offsets.every(offset => offset < 1));
+                          buttons.every(b => harness.glyphOffCentre(b) < 1));
         },
         () => {
             // The pill is the row's only fillWidth item, so the label must
@@ -427,6 +452,76 @@ ShellRoot {
                           && right <= buttons[1].x);
             harness.check("neither action was squeezed to make room for it",
                           buttons.every(b => b.width === Appearance.sizes.phoneFooterButtonWidth));
+        },
+
+        // ---- ...and they stay centred once the count moves ---------------
+        //
+        // The clear action is the one whose glyph is a ternary on the count,
+        // so it is the only one of the two whose text ever changes - and a
+        // reading taken before the first change is identical whether or not
+        // the change displaces the glyph for the rest of the session. The
+        // count is driven through the model, since the fake daemon serves no
+        // notifications.
+        () => {
+            const clear = harness.footerButtons[1];
+            harness.swapSaw = { samples: 0, maxOff: 0, minOpacity: 1 };
+            harness.glyphBefore = harness.footerGlyph(clear)?.text ?? "";
+            PhoneNotifications.notifications = [{
+                publicId: "70",
+                deviceId: harness.phoneId,
+                internalId: "0|org.thunderdog.challegram|1|null|10248",
+                package: "org.thunderdog.challegram",
+                appName: "Telegram",
+                title: "Alice",
+                text: "on my way",
+                ticker: "",
+                iconPath: "",
+                dismissable: true,
+                replyId: "",
+                actions: [],
+                receivedAt: Date.now()
+            }];
+            swapWatch.running = true;
+        },
+        () => {},
+        () => {
+            swapWatch.running = false;
+            const buttons = harness.footerButtons;
+            const clear = buttons[1];
+            const after = harness.footerGlyph(clear)?.text ?? "";
+            const saw = harness.swapSaw;
+            const offsets = buttons.map(b => harness.glyphOffsetText(b));
+            console.log(`[PhoneTab] count 0 -> ${PhoneNotifications.count}:`
+                + ` clear glyph "${harness.glyphBefore}" -> "${after}"`
+                + ` off centre by ${offsets}; watched ${saw.samples} samples,`
+                + ` worst ${saw.maxOff.toFixed(2)}px, min opacity ${saw.minOpacity.toFixed(2)}`);
+
+            // The control first: everything below is vacuous on a swap that
+            // never happened.
+            harness.check(`the count change swapped the clear action's glyph,`
+                          + ` got "${harness.glyphBefore}" -> "${after}"`,
+                          harness.glyphBefore === "do_not_disturb_on" && after === "delete_sweep");
+            harness.check(`the swap was watched frame by frame, got ${saw.samples} samples`,
+                          saw.samples > 10);
+            harness.check(`both glyphs settle back on their own centres, off by ${offsets}`,
+                          buttons.every(b => harness.glyphOffCentre(b) < 1));
+            // A `Behavior on text` animates the Text's own x and y and lands
+            // it back on whatever those were when the item completed - which
+            // for a Control's content item is BEFORE the Control has placed
+            // it. The container behind the glyph does not fade with it
+            // either, so the swap is an empty pill for its own length: the
+            // same pair 3c82747df removed from the feature card's badge.
+            harness.check(`neither glyph leaves its own centre during the swap,`
+                          + ` worst ${saw.maxOff.toFixed(2)}px`,
+                          saw.maxOff < 1);
+            harness.check(`...nor fades inside a container that does not,`
+                          + ` min opacity ${saw.minOpacity.toFixed(2)}`,
+                          saw.minOpacity > 0.99);
+            PhoneNotifications.notifications = [];
+        },
+        () => {
+            harness.check(`clearing the model puts the count pill back, got "${harness.footerLabel?.text}"`,
+                          harness.footerLabel?.text === "0 notifications");
         },
 
         // ---- the feature cards: what a click reaches ---------------------
@@ -713,6 +808,27 @@ ShellRoot {
                     saw.blankGlyph = `${badge?.text}|${glyph.text}`;
             }
             harness.launchSaw = saw;
+        }
+    }
+
+    property string glyphBefore: ""
+    property var swapSaw: ({ samples: 0, maxOff: 0, minOpacity: 1 })
+
+    Timer {
+        id: swapWatch
+        interval: 25
+        repeat: true
+        onTriggered: {
+            const buttons = harness.footerButtons;
+            if (buttons.length !== 2) return;
+            const saw = harness.swapSaw;
+            saw.samples++;
+            for (const button of buttons) {
+                saw.maxOff = Math.max(saw.maxOff, harness.glyphOffCentre(button));
+                const glyph = harness.footerGlyph(button);
+                if (glyph) saw.minOpacity = Math.min(saw.minOpacity, glyph.opacity);
+            }
+            harness.swapSaw = saw;
         }
     }
 

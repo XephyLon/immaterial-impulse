@@ -38,6 +38,13 @@ not, and a failed launch that snaps back to the line it started on. The
 sub-page cross-fade and the toast's width are watched the same way, each with
 a control, since a settled reading is identical whether or not anything moved.
 
+So is the footer's clear action, which carries the one glyph on that bar whose
+text ever changes: the count is driven through `PhoneNotifications` and the
+swap sampled in both axes and in opacity, because a deferred text swap on a
+Control's content item lands the glyph on the padded rect's corner and leaves
+it there - a reading taken before the first change agrees with itself either
+way.
+
 Brings its own headless weston and its own session bus (`dbus-run-session`).
 Skips when weston, qs or dbus-run-session are missing, as in CI.
 """
@@ -63,7 +70,7 @@ LAPTOP_ADDRESS = "192.168.100.99"
 # A literal, never read back out of the harness's own output: a step list
 # that shrinks must redden here instead of reporting `failures: 0` for a
 # shorter run.
-EXPECTED_CHECKS = 70
+EXPECTED_CHECKS = 76
 
 RECORD = """#!/usr/bin/env bash
 printf '%s %s\\n' "$(date +%s.%N)" "$*" >> "$PHONE_EXEC_LOG"
