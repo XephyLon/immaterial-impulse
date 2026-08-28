@@ -809,7 +809,11 @@ scripts/                   Standalone helper scripts (Python/bash) invoked via P
   phone/                      The Phone tab's process owners. scrcpy_session_manager.py is
                               the NDJSON supervisor PhoneScrcpy speaks to (protocol in its
                               docstring; tests/test_phone_scrcpy_manager.py drives it with
-                              fake scrcpy/adb/hyprctl on PATH). droidcam_session.sh
+                              fake scrcpy/adb/hyprctl on PATH, including a fake that fills
+                              the stderr pipe and a SIGTERM, which are two of the ways it
+                              really ends). The four SHELL scripts are driven by
+                              tests/test_phone_shell_scripts.py - see the entry on what
+                              nothing ever running them cost. droidcam_session.sh
                               launches droidcam-cli / the scrcpy mic stream detached under
                               ${XDG_STATE_HOME:-~/.local/state}/quickshell/imi/phone/ and
                               answers status/stop by pidfile; droidcam_status.sh is the
@@ -4953,6 +4957,155 @@ disabled `RippleButton` dims to 0.4 through the interaction model and still occu
 width it asked for.
 (feat(phone): the Apps page pairs over Wi-Fi instead of printing a recipe,
 test(phone): pin the pairing argv, the two parsed results and the mDNS records.)
+**The Phone tab's four SHELL scripts had never been RUN by anything, and what
+that cost is the reason this section exists.** `test_phone_sessions_contract.py`
+reads them as source text - the state directory, the `pgrep -x` rule - and
+`tst_phone_scrcpy.qml` drives the QML that parses their output against strings a
+human typed into the test. So the producer and the consumer were each checked
+against a description of the other, and a producer that stopped emitting those
+strings stayed green on both sides.
+`tests/test_phone_shell_scripts.py` runs all four for real with stubbed
+`pgrep`, `pactl`, `v4l2-ctl`, `droidcam-cli`, `scrcpy` and `sudo` on PATH; the
+stubs are the process TABLE and the sound server, while the processes are real
+(launched through `droidcam_session.sh launch`, with real pids and real
+`/proc/<pid>/cmdline`), so the signature matching, the port disambiguation and
+the kill guard all run against what they run against in production. Eight
+defects were sitting in them, and six of the traps generalise past this feature:
+
+- **`exit` inside a shell function ends the SCRIPT, and neither a redirection
+  nor a `|| true` on the call makes a subshell of it.** `cmd_stop`'s two
+  non-kill paths ended with `exit 0`, so `cmd_killall`'s loop over
+  video/audio/scrcpy-mic stopped at the first session with no state file, never
+  stopped the other two, and exited 0 - which the caller reads as success. A
+  command function returns; the dispatch at the bottom of the file is what sets
+  the status. a0b5d84c4 ("fix(phone): killall stops every session instead of
+  exiting on the first").
+- **A substring cannot express a negative, and the two things being told apart
+  here are one binary with and without a flag.** `video`'s signature was
+  `droidcam-cli` and `audio`'s was `droidcam-cli -a`, so the microphone's
+  cmdline matched the WEBCAM's signature; the port could not break the tie
+  because `find_running` is called with an empty port whenever there is no state
+  file. Reachable with no pid reuse at all: a shell restart with only the mic up
+  and `video.json` absent made `status video` answer with the mic's pid, so the
+  tab drew a stream that did not exist and turning it off sent SIGTERM to the
+  microphone. It is a predicate now, and the kill guard asks the same one - it
+  was `*droidcam-cli*|*scrcpy*`, the same over-broad test one function along and
+  the half that pulls the trigger. 44e496940 ("fix(phone): a session signature
+  tells the webcam from the microphone").
+- **`IFS=$'\n\t'` drops space, so an unquoted expansion does not split a
+  cmdline at all.** `cmdline_of` turns NULs into spaces and the rediscovery
+  paths passed `$cl` unquoted to `extract_port`/`extract_ip`, which therefore
+  saw ONE non-numeric argument: every session rediscovered after a restart
+  reported an empty port and an empty address. Split under a local `IFS` and
+  keep the callers on argv arrays rather than putting space back into the global
+  one. d98959eb7 ("fix(phone): a rediscovered session reports the port and
+  address it was given").
+- **`cmd | grep -oE ... | tail -n1 || echo 0` never falls back**, because the
+  pipeline's status is `tail`'s and `tail` succeeds on empty input. This is the
+  sibling of the `cmd | grep -q` trap under
+  [External binaries the shell drives](#external-binaries-the-shell-drives),
+  arriving from the other side. Watch what the empty value then does: the port
+  is printed with an unquoted `%s` because it is a JSON *number*, so the line
+  came out as `"video_port":,`, the QML `JSON.parse` threw, and EVERY field in
+  the payload was lost rather than one. A producer emitting JSON by `printf`
+  needs each unquoted field to be a value it can always emit.
+  c3837b1aa ("fix(phone): the status probe always emits a port, so its payload
+  parses").
+- **`pgrep` answers with the process table as it was when it sampled it**, so
+  `/proc/<pid>/cmdline` needs the `[ -r ]` guard `find_running` already carried.
+  Without it the read fails, the cmdline is empty, and an empty string matches
+  the `*)` default - which was the video arm, so a dead pid was reported as a
+  running webcam. The `2>/dev/null` on that line covers `tr` and not the
+  redirection that opens the file, so the shell's own error reached stderr too.
+  7ad0dc204 ("fix(phone): a process that exited between pgrep and the read is
+  not a webcam").
+- **Two lookups for one fact drift, and here the drift LOADS something.**
+  `setup_droidcam_input.sh`'s idempotence check asked for `DroidCam-Mic.monitor`
+  while the lookup twenty lines below it, for the same fact, tried
+  `alsa_output.DroidCam-Mic.monitor` first - so on a server using the prefixed
+  form that does not also propagate `device.description`, every call missed the
+  sink it had loaded itself and loaded another under the same name, while
+  teardown's awk `exit`ed after the first match and removed one per call. Three
+  setups, three null sinks. It is one `find_monitor` now, and the module index
+  `pactl load-module` prints - the handle teardown otherwise reconstructs by
+  grepping - is captured rather than discarded, so the failure path can take
+  back what it loaded. 5cebeccaa ("fix(phone): the null sink is resolved once,
+  however the server names its monitor"), 9631f2e4e ("fix(phone): setup unloads
+  the null sink it loaded when the monitor never appears"), ec0f42792
+  ("fix(phone): teardown unloads every DroidCam-Mic sink, not just the first").
+
+`install_droidcam.sh` is the fourth, and its defects are the same shape one
+level up: an unchecked `$AUR_HELPER -S` under a `✓ DroidCam installed` and a
+footer telling the user the cards should read "Ready", and an unchecked `unzip`
+followed by an unchecked `cd`, so a failed extract ran `sudo ./install-client`
+in the CALLER's working directory. Its Arch branch also installed neither
+`v4l-utils` nor `android-tools` - both of which the Fedora and Debian branches
+install, both of which `PhoneDeps.missingFor("webcam")` names, and without the
+first of which `droidcam_status.sh` cannot resolve the webcam's `/dev/videoN` at
+all - so on Arch the installer could complete and the webcam still not be found.
+Its dispatch is a `main()` behind the usual `BASH_SOURCE` guard now, because a
+branch nobody can select is a branch nobody can test: the maintainer is on Arch,
+CI is on Ubuntu, and `detect_distro` reads `/etc`.
+bf49d3f72 ("refactor(phone): the installer's dispatch becomes main(), so it can
+be driven"), ce86796d6 ("fix(phone): a failed extract no longer runs
+install-client as root elsewhere"), 0c1b9d31a ("fix(phone): the Arch branch
+stops reporting a failed install as a success"), 6712ce64b ("fix(phone): the
+Arch branch installs the tools the webcam actually needs").
+
+**And the supervisor beside them had three of the same family, all of them
+about a process's OTHER ends.** `scripts/phone/scrcpy_session_manager.py` is one
+long-lived process speaking NDJSON, so every one of these is silent:
+
+- **`stderr=subprocess.PIPE` must be drained WHILE the child runs.** It was read
+  after `proc.wait()`, and a pipe holds about 64 KiB - past that scrcpy blocks
+  in `write()` with nobody reading, so it never exits, `wait()` never returns,
+  no `exited` event is ever emitted, and the card sits on "running" over a
+  mirror that has frozen or died. Measured with a fake writing ~300 KiB: no
+  `exited` in twelve seconds against ~0.1s when the same fake is quiet. A drain
+  thread with a bounded tail, so `wait()` still decides when the event fires and
+  a grandchild holding stderr open delays nothing.
+  b64dd2147 ("fix(phone): drain scrcpy's stderr while it runs, not after it
+  exits").
+- **`print(x, flush=True)` is two writes, and every reaper thread emits.** Under
+  the GIL two small writes are effectively atomic, which is why this hid: the
+  corruption needs an event large enough to flush part way, and an `apps_list`
+  for a real phone is tens of kilobytes. Observed at roughly one in three runs
+  of a stress harness - `{...apps_list...}{"event": "exited", ...}` on one line -
+  which is too rare to be a check, so the check swaps in a stdout whose `write`
+  is deliberately not atomic and requires every line to parse. Note what
+  interleaving costs: the QML parser returns null and BOTH events are dropped,
+  and a lost `exited` leaves a session row live with no window behind it.
+  9121bb5f6 ("fix(phone): one lock around one write, so an event is never half a
+  line").
+- **A blocking command handler blocks the whole protocol.** `list_apps` ran on
+  the command loop and is worth ~26s of subprocesses (`adb connect` 4s +
+  `adb devices` 4s + `scrcpy --list-apps` 10s + `pm list` 8s), during which
+  `stop`, `stop_all` and `focus` were not read off stdin - measured, a focus
+  sent 0.3s into a 4s scan was acted on at 4.01s. A queue with ONE worker, not a
+  thread per request: two scans would run `adb` at each other, and a request
+  dropped as a duplicate is an `apps_list` the page waits for and never gets.
+  The emit lock is a prerequisite for making anything here concurrent.
+  c1caf34ad ("fix(phone): the app scan runs off the command loop").
+- **The docstring's promise held only on the clean-EOF path.** There was no
+  signal handler, and `PhoneScrcpy.stopManager()` sets the Process's
+  `running = false`, which Quickshell sends as SIGTERM - so Python's default
+  handler exited without `stop_all()` and every window the supervisor owned was
+  orphaned. When a script promises something about how it is shut down, ask how
+  its caller shuts it down. 76d9f863d ("fix(phone): a SIGTERMed supervisor stops
+  its scrcpy children").
+
+The one finding there that did NOT stand is worth recording, because it is
+AGENT.md's own rule about a removal being a decision, applied to a preference.
+`resolve_adb_target` returning a USB serial in preference to a wireless one the
+caller named reads as "the tab's device selection is silently ignored", and it
+is not: `PhoneScrcpy.targetArgs()` only ever produces a wireless `-s ip:port`,
+and only when the "use wireless" setting is on - it never names a USB serial, so
+the tab's active device does not reach that function as a serial at all. The
+preference is stated in two docstrings and pinned by a test, and it stays. What
+was fixed is the half with no argument behind it: `usb_devices[0]` is whichever
+`adb devices` printed first, so a named serial adb really lists is honoured now
+and the unsteered pick is sorted. e7c042c19 ("fix(phone): a named USB serial
+wins, and the unsteered pick is deterministic").
 
 **And the surfaces that DRIVE those services get their allowlist derived rather than written
 down.** "A button whose call no service answers is a fake action" is stated for the right
