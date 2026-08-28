@@ -14,6 +14,12 @@ Item { // Notification item area
     // See NotificationGroup: the operations this card is allowed to perform,
     // defaulting to the shell's own service.
     property NotificationController controller: NotificationController {}
+    // Inline reply, which only some backends have: the freedesktop server has
+    // no reply channel at all, and a phone notification has one only when the
+    // posting app attached a `replyId`. Both questions are the controller's.
+    readonly property bool canReply: root.controller.supportsReply
+        && root.controller.canReply(root.notificationObject)
+    property bool replying: false
     property bool expanded: false
     property bool onlyNotification: false
     property real fontSize: Appearance.font.pixelSize.small
@@ -254,7 +260,7 @@ Item { // Notification item area
                                 Layout.fillWidth: true
                                 buttonText: Translation.tr("Close")
                                 urgency: notificationObject.urgency
-                                implicitWidth: (notificationObject.actions.length == 0) ? ((actionsFlickable.width - actionRowLayout.spacing) / 2) : 
+                                implicitWidth: (root.controller.actionsOf(root.notificationObject).length == 0) ? ((actionsFlickable.width - actionRowLayout.spacing) / 2) : 
                                     (contentItem.implicitWidth + leftPadding + rightPadding)
 
                                 onClicked: {
@@ -273,7 +279,7 @@ Item { // Notification item area
 
                             Repeater {
                                 id: actionRepeater
-                                model: notificationObject.actions
+                                model: root.controller.actionsOf(root.notificationObject)
                                 NotificationActionButton {
                                     id: notifAction
                                     required property var modelData
@@ -287,9 +293,33 @@ Item { // Notification item area
                             }
 
                             NotificationActionButton {
+                                id: replyToggle
+                                visible: root.canReply
+                                urgency: notificationObject.urgency
+                                toggled: root.replying
+                                implicitWidth: replyToggle.contentItem.implicitWidth
+                                    + replyToggle.leftPadding + replyToggle.rightPadding
+                                onClicked: root.replying = !root.replying
+
+                                contentItem: MaterialSymbol {
+                                    anchors.centerIn: parent
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    text: "reply"
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: (notificationObject.urgency == NotificationUrgency.Critical) ?
+                                        Appearance.m3colors.m3onSurfaceVariant : Appearance.m3colors.m3onSurface
+                                }
+
+                                StyledToolTip {
+                                    text: Translation.tr("Reply")
+                                }
+                            }
+
+                            NotificationActionButton {
                                 Layout.fillWidth: true
                                 urgency: notificationObject.urgency
-                                implicitWidth: (notificationObject.actions.length == 0) ? ((actionsFlickable.width - actionRowLayout.spacing) / 2) : 
+                                implicitWidth: (root.controller.actionsOf(root.notificationObject).length == 0) ? ((actionsFlickable.width - actionRowLayout.spacing) / 2) : 
                                     (contentItem.implicitWidth + leftPadding + rightPadding)
 
                                 onClicked: {
@@ -318,6 +348,51 @@ Item { // Notification item area
                                 }
                             }
                             
+                        }
+                    }
+                }
+
+                // The reply field, under the actions rather than among them:
+                // it is a text entry and they are chips, and it is present
+                // only while the user is actually replying.
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: root.canReply && root.replying
+                    spacing: Appearance.spacing.space50
+
+                    ToolbarTextField {
+                        id: replyField
+                        Layout.fillWidth: true
+                        implicitHeight: 34
+                        colBackground: Appearance.colors.colLayer3
+                        placeholderText: Translation.tr("Reply…")
+                        onAccepted: replySendButton.send()
+                    }
+
+                    NotificationActionButton {
+                        id: replySendButton
+                        urgency: notificationObject.urgency
+                        enabled: replyField.text.length > 0
+                        implicitWidth: replySendButton.contentItem.implicitWidth
+                            + replySendButton.leftPadding + replySendButton.rightPadding
+
+                        function send(): void {
+                            if (replyField.text.length === 0)
+                                return;
+                            root.controller.reply(root.notificationObject, replyField.text);
+                            replyField.text = "";
+                            root.replying = false;
+                        }
+
+                        onClicked: replySendButton.send()
+
+                        contentItem: MaterialSymbol {
+                            anchors.centerIn: parent
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            text: "send"
+                            iconSize: Appearance.font.pixelSize.larger
+                            color: Appearance.colors.colOnLayer2
                         }
                     }
                 }

@@ -43,8 +43,15 @@ QtObject {
         Notifications.cancelTimeout(notif.notificationId);
     }
 
-    // `action` is an entry of the notification's own actions list, in
-    // whatever shape that backend's model carries.
+    // The card draws `{ text, identifier }`. The freedesktop model already
+    // carries that shape; a backend whose actions are bare strings maps them
+    // HERE rather than in the card, and rather than in a service whose own
+    // tests pin the daemon's shape.
+    function actionsOf(notif): var {
+        return notif?.actions ?? [];
+    }
+
+    // `action` is an entry of whatever `actionsOf` returned.
     function invokeAction(notif, action): void {
         Notifications.attemptInvokeAction(notif.notificationId, action.identifier);
     }
