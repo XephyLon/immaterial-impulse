@@ -180,6 +180,21 @@ case "$DISTRO" in
             return 1
         fi
 
+        # v4l-utils and android-tools are what the OTHER branches install and
+        # what PhoneDeps treats as dependencies: droidcam_status.sh reports
+        # the webcam device through `v4l2-ctl --list-devices` and cannot find
+        # it at all without them, and adb is the mirror's whole transport. The
+        # Arch branch installed neither, so it could complete successfully and
+        # leave the webcam unfindable.
+        echo ""
+        echo "▸ Installing v4l-utils and android-tools..."
+        if ! sudo pacman -S --needed --noconfirm v4l-utils android-tools; then
+            echo ""
+            echo "✗ Could not install v4l-utils / android-tools."
+            press_enter_to_close
+            return 1
+        fi
+
         # Also install pactl (in pulseaudio-utils) for microphone routing.
         if ! command -v pactl >/dev/null 2>&1; then
             echo ""
