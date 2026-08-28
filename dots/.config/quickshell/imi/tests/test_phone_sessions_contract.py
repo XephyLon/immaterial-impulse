@@ -20,7 +20,13 @@ CONTRIBUTING.md names outright:
   managerWanted() before stopping anything;
 - the DroidCam sessions are launched detached through droidcam_session.sh
   rather than held by a Process, and the microphone's default-sink swap is
-  both persisted and undone on every exit path.
+  both persisted and undone on every exit path;
+- the webcam PREVIEW is the opposite arrangement, deliberately: it is a
+  Process the service owns, because `Quickshell.execDetached` returns no
+  handle and a player nothing can stop sits frozen on a /dev/videoN that has
+  stopped producing frames. Which endings actually reap it is
+  tests/test_phone_preview_lifetime_runtime.py's question; this half pins that
+  there is one player, one observer of the session, and no detached spawn.
 """
 
 import re
@@ -98,6 +104,12 @@ def _process_block(source: str, process_id: str) -> str:
         if re.search(rf"\bid:\s*{process_id}\b", block):
             return block
     raise AssertionError(f"Process block for id {process_id} not found")
+
+
+def _without_comments(source: str) -> str:
+    """Line comments removed, newlines kept. A check that reads a file whose
+    comments explain the interface reads the prose (c8810d5ef)."""
+    return re.sub(r"//[^\n]*", "", source)
 
 
 def _shell_strings(source: str):
@@ -241,6 +253,55 @@ def test_droidcam_sessions_are_launched_detached_through_the_session_script():
             )
         assert 'root.checkSession()' in source or 'root.reconcile()' in source
         assert "Component.onCompleted" in source, f"{name}.qml never re-adopts a session at boot"
+
+
+def test_the_webcam_preview_is_a_process_the_service_owns():
+    """The player is a handle, never a detached spawn.
+
+    `Quickshell.execDetached` returns nothing to hold, so ending the session
+    left the preview window on screen frozen on the last frame a dead
+    /dev/videoN produced. Recording a detached pid instead would buy the stop
+    and cost a stale one - the user closes that window whenever they like, and
+    the pid is then free for the kernel to reissue - so the shape is a Process,
+    which cannot address anything it did not start.
+    """
+    source = _source("PhoneCamera")
+    # Comment-stripped, because the block explaining why the player is not
+    # detached has to be able to name the call it is not making.
+    assert "execDetached" not in _without_comments(source), (
+        "PhoneCamera.qml detaches a process again; a detached player has no handle to stop"
+    )
+    block = _process_block(source, "previewProc")
+    assert "process-lifecycle: restart-safe" in block, "the preview player lacks the marker"
+    assert source.count("previewProc.exec(") == 1, "more than one thing starts the player"
+    assert source.count("previewProc.running = false") == 1, "more than one thing stops the player"
+    assert "readonly property bool previewRunning: previewProc.running" in source, (
+        "previewRunning is not the handle's own state, so it can disagree with the player"
+    )
+
+
+def test_the_preview_watches_the_session_rather_than_each_way_it_can_end():
+    """One observer, in the synced region, so the double drives it too.
+
+    A closePreview() spelled into stop(), into checkSession()'s death branch
+    and into fail() is three places for a fourth ending to be forgotten in.
+    `active` is the session, and every ending writes it.
+    """
+    source = _source("PhoneCamera")
+    region = _synced_region(SERVICES / "PhoneCamera.qml", SYNCED["PhoneCamera"])
+    assert "onActiveChanged: if (!root.active) root.closePreview();" in region, (
+        "the preview is not closed by observing the session"
+    )
+    assert source.count("root.closePreview()") == 2, (
+        "closePreview() is called somewhere other than the session observer and the "
+        "destruction hook; every ending already writes `active`"
+    )
+    assert "Component.onDestruction: root.closePreview()" in source, (
+        "a shell restart would leave the player behind"
+    )
+    assert "if (root.previewRunning) return;" in region, (
+        "a second click opens a second player on the same node"
+    )
 
 
 # ---- process lifetimes -------------------------------------------------------

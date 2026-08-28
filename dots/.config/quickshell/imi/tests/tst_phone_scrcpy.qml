@@ -747,6 +747,80 @@ TestCase {
         compare(PhoneCamera.previewCommand("", { mpv: true }), [])
     }
 
+    function test_camera_open_preview_starts_one_player_and_a_click_on_top_of_it_starts_none() {
+        PhoneDeps.mpv = true
+        PhoneCamera.active = true
+        PhoneCamera.device = "/dev/video0"
+        PhoneCamera.openPreview()
+        compare(argvJoined(PhoneCamera.previewCommands),
+                ["mpv --profile=low-latency --no-fullscreen --no-osc --title=imi webcam preview av://v4l2:/dev/video0"])
+        verify(PhoneCamera.previewRunning)
+        // The page's button and the feature card's inline action both call
+        // this; a second window on the same node is two players fighting over
+        // one stream rather than a second preview.
+        PhoneCamera.openPreview()
+        compare(PhoneCamera.previewCommands.length, 1)
+    }
+
+    function test_camera_open_preview_without_a_player_reports_instead_of_starting_one() {
+        PhoneCamera.active = true
+        PhoneCamera.device = "/dev/video0"
+        PhoneCamera.openPreview()
+        compare(PhoneCamera.previewCommands, [])
+        verify(!PhoneCamera.previewRunning)
+        verify(PhoneCamera.lastError.indexOf("mpv") >= 0)
+    }
+
+    function test_camera_the_stop_button_takes_the_preview_with_it() {
+        PhoneDeps.mpv = true
+        PhoneCamera.active = true
+        PhoneCamera.device = "/dev/video0"
+        PhoneCamera.openPreview()
+        PhoneCamera.stop()
+        verify(!PhoneCamera.previewRunning)
+        compare(PhoneCamera.previewStops, 1)
+    }
+
+    function test_camera_a_session_that_dies_on_its_own_takes_the_preview_with_it() {
+        PhoneDeps.mpv = true
+        PhoneCamera.active = true
+        PhoneCamera.device = "/dev/video0"
+        PhoneCamera.openPreview()
+        // The watchdog's own reply: the pidfile names a process that is gone.
+        PhoneCamera.responder = argv => ({ text: '{"session":"video","pid":"","alive":false}', code: 0 })
+        PhoneCamera.checkSession()
+        verify(!PhoneCamera.active)
+        verify(!PhoneCamera.previewRunning)
+        compare(PhoneCamera.previewStops, 1)
+    }
+
+    function test_camera_a_connect_that_never_arrives_leaves_no_player_behind() {
+        PhoneDeps.mpv = true
+        PhoneCamera.active = true
+        PhoneCamera.device = "/dev/video0"
+        PhoneCamera.openPreview()
+        // fail() drops `active`, which is the only thing the preview watches,
+        // so the timeout path needs no closePreview() of its own.
+        PhoneCamera.fail("Could not connect")
+        verify(!PhoneCamera.previewRunning)
+        compare(PhoneCamera.previewStops, 1)
+    }
+
+    function test_camera_a_player_closed_by_hand_leaves_nothing_for_a_later_stop_to_kill() {
+        PhoneDeps.mpv = true
+        PhoneCamera.active = true
+        PhoneCamera.device = "/dev/video0"
+        PhoneCamera.openPreview()
+        // What the service sees when the user closes the window: the handle
+        // reports the player gone. A pid recorded at launch would still be a
+        // number here, and the stop below would spend it on a stranger.
+        PhoneCamera.previewRunning = false
+        PhoneCamera.stop()
+        compare(PhoneCamera.previewStops, 0)
+        PhoneCamera.closePreview()
+        compare(PhoneCamera.previewStops, 0)
+    }
+
     function test_camera_start_probes_usb_then_launches_detached() {
         PhoneCamera.responder = argv => {
             if (argv[0] === "adb") return { text: "device\n", code: 0 }
