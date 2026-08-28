@@ -317,16 +317,8 @@ class FeatureCardsContractTests(unittest.TestCase):
         for service in SERVICE_NAMES:
             self.assertNotIn(f"{service}.", self.card,
                              f"PhoneFeatureCard reaches {service} directly")
-        # `clicked` is the Button's own now that the card is rooted on
-        # RippleButton - redeclaring it would be a duplicate-signal error - so
-        # what is checked is that the card still RAISES rather than calls, and
-        # that the click has somewhere to go.
-        for name in ("settingsClicked", "stopClicked"):
+        for name in ("clicked", "settingsClicked", "stopClicked"):
             self.assertRegex(self.card, rf"signal {name}\b", f"the card has no {name} signal")
-        self.assertNotRegex(
-            self.card, r"signal clicked\b",
-            "the card redeclares `clicked`, which the control underneath already carries",
-        )
 
     def test_every_state_key_the_arithmetic_can_answer_with_has_an_arm(self):
         """An unmapped key draws an empty line, which reads as a card with
@@ -507,15 +499,24 @@ class ClickableSurfacesAreControls(unittest.TestCase):
         "PhoneAdbPairPanel.qml": "a form of controls",
     }
 
-    def test_a_card_the_user_clicks_is_a_button(self):
+    def test_a_card_the_user_clicks_goes_through_a_control(self):
+        """Not "the root is a Button": the card contains a Stop button and a
+        settings chip, and nesting those inside a control that dims itself
+        composites the two dims at x*x - `lint_disabled_opacity.py` fails on it.
+        The surface is a RippleButton drawn BEHIND the content instead, which is
+        what `ExpandablePanel` does for its own clickable header. What matters is
+        that the click is a control's and not a bare MouseArea's."""
         card = SURFACE / "PhoneFeatureCard.qml"
         source = strip_comments(card.read_text(encoding="utf-8"))
-        root = re.search(r"^(\w+) \{", source, re.M)
-        self.assertIsNotNone(root, "PhoneFeatureCard.qml has no root object")
-        self.assertEqual(
-            root.group(1), "RippleButton",
-            "the feature card's root is not a control, so its click has no ripple, no press "
-            "morph, no disabled dim and no keyboard - it is one of the tab's three primary actions",
+        surface = re.search(r"RippleButton \{[^}]*?anchors\.fill: parent", source, re.S)
+        self.assertIsNotNone(
+            surface,
+            "the feature card has no control filling it, so its click has no ripple, no press "
+            "morph and no keyboard - and it is one of the tab's three primary actions",
+        )
+        self.assertNotRegex(
+            source, r"MouseArea \{[^}]*?onClicked",
+            "the card's click is a bare MouseArea again",
         )
 
     def test_no_surface_hand_rolls_a_hover_wash(self):

@@ -33,7 +33,7 @@ import qs.modules.common.functions
  * Transitions, and a string property shadowing it means a typo elsewhere in
  * the file silently becomes a state name that matches nothing.
  */
-RippleButton {
+Item {
     id: root
 
     property string cardState: "ready"
@@ -59,7 +59,6 @@ RippleButton {
     // the install guide, and `active`, where it is the feature's own toggle.
     property bool hasSettings: false
 
-    // `clicked` comes from the Button underneath - not redeclared here.
     signal settingsClicked
     signal stopClicked
     signal filesDropped(var urls)
@@ -78,25 +77,46 @@ RippleButton {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
 
-    // The card IS the button. It used to be a Rectangle with a second
-    // Rectangle washing it at two hand-picked opacities and a MouseArea on top,
-    // which re-earned hover and press and got neither the ripple, the press
-    // radius morph, the keyboard, nor the disabled dim - and the tab's three
-    // primary actions were the only controls in this shell a keyboard could not
-    // reach. `RippleButton` drives InteractionMotion once, which is the whole
-    // point of f62673b7f's toolbar note: the states come from the control
-    // rather than being re-earned per widget.
-    buttonRadius: Appearance.rounding.normal
-    colBackground: root.isMuted ? Appearance.colors.colLayer3 : Appearance.colors.colPrimaryContainer
-    colBackgroundHover: root.isMuted ? Appearance.colors.colLayer3Hover : Appearance.colors.colPrimaryContainerHover
-    colRipple: root.isMuted ? Appearance.colors.colLayer3Active : Appearance.colors.colPrimaryContainerActive
+    signal clicked
 
-    Behavior on colBackground {
-        animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+    // The card's surface IS a control, drawn BEHIND the content rather than
+    // around it - the shape ExpandablePanel uses for its own clickable header,
+    // and for the same reason. Rooting the card ON the button instead nests the
+    // Stop button and the settings chip inside a control that dims itself when
+    // disabled, and opacity composites: two dims render at x*x, not x.
+    // lint_disabled_opacity.py failed on exactly that, and it was right.
+    //
+    // What this replaced: a Rectangle with a second Rectangle washing it at two
+    // hand-picked opacities (0.14 pressed, 0.07 hovered) under a MouseArea.
+    // That re-earns hover and press and still gets none of the ripple, the
+    // press radius morph, the disabled dim, or the keyboard - and these three
+    // cards are the tab's primary actions, the only controls in this shell a
+    // keyboard could not reach.
+    RippleButton {
+        id: cardSurface
+        anchors.fill: parent
+        buttonRadius: Appearance.rounding.normal
+        colBackground: root.isMuted ? Appearance.colors.colLayer3 : Appearance.colors.colPrimaryContainer
+        colBackgroundHover: root.isMuted ? Appearance.colors.colLayer3Hover : Appearance.colors.colPrimaryContainerHover
+        colRipple: root.isMuted ? Appearance.colors.colLayer3Active : Appearance.colors.colPrimaryContainerActive
+        onClicked: root.clicked()
+
+        Behavior on colBackground {
+            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+        }
     }
 
-    contentItem: ColumnLayout {
+
+    ColumnLayout {
         id: cardColumn
+        anchors {
+            left: parent.left
+            right: parent.right
+            top: parent.top
+            leftMargin: Appearance.spacing.space150
+            rightMargin: Appearance.spacing.space150
+            topMargin: Appearance.spacing.space100
+        }
         spacing: Appearance.spacing.space75
 
         RowLayout {
@@ -165,6 +185,10 @@ RippleButton {
 
             RippleButton {
                 id: settingsButton
+                // Named because the card's own surface is a RippleButton too
+                // now, and "the first RippleButton in the card" stopped being
+                // this one the moment the surface was drawn behind it.
+                objectName: "cardSettingsChip"
                 Layout.alignment: Qt.AlignVCenter
                 Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
                 Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
