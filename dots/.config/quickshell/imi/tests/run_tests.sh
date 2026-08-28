@@ -294,6 +294,17 @@ if ! python3 "$SCRIPT_DIR/lint_grouped_list_row_visible.py"; then
     exit 1
 fi
 
+# Static lint: the other half of the same component's rule. A group of related
+# rows is a GroupedList and never a rectangle wrapped around a list view -
+# M3_GUIDELINES.md says so in prose, and the phone roster was written the
+# forbidden way anyway. It drew square, because `clip` on a Rectangle clips to
+# the box and not to the radius.
+echo "Running hand-rolled row group lint..."
+if ! python3 "$SCRIPT_DIR/lint_hand_rolled_row_group.py"; then
+    echo "Hand-rolled row group lint failed."
+    exit 1
+fi
+
 # Static lint: the same rule for the interaction model's transform. A scale
 # composites exactly the way an opacity does, and the lint above recognises a
 # doubled dim by its opacity EXPRESSION - so the doubled scale discordVoice
