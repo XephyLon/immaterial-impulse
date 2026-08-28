@@ -18,3 +18,4 @@ ButtonMouseArea 1.0 ButtonMouseArea.qml
 StyledRectangularShadow 1.0 StyledRectangularShadow.qml
 MaterialShape 1.0 MaterialShape.qml
 CircleUtilButton 1.0 CircleUtilButton.qml
+InteractionMotion 1.0 InteractionMotion.qml
