@@ -64,11 +64,14 @@ if [ -n "$existing" ]; then
     # load rather than reporting a source nothing can open.
 fi
 
-# Load module-null-sink with the DroidCam name and description.
-pactl load-module module-null-sink \
+# Load module-null-sink with the DroidCam name and description. The index it
+# prints is the handle teardown otherwise reconstructs by grepping, and it was
+# being discarded into /dev/null — so the failure path below had nothing to
+# undo with.
+module_id="$(pactl load-module module-null-sink \
     sink_name="$SINK_NAME" \
     sink_properties="device.description='$SINK_DESC'" \
-    >/dev/null 2>&1 || {
+    2>/dev/null)" || {
         echo "Failed to load module-null-sink" >&2
         exit 1
     }
@@ -76,6 +79,13 @@ pactl load-module module-null-sink \
 found="$(find_monitor || true)"
 
 if [ -z "$found" ]; then
+    # Undo what this run did before giving up. Exiting 1 with the module still
+    # resident left a null sink behind on every failed attempt, and the caller
+    # never learned there was one to unload.
+    case "$module_id" in
+        ''|*[!0-9]*) ;;
+        *) pactl unload-module "$module_id" >/dev/null 2>&1 || true ;;
+    esac
     echo "Could not find monitor source after loading null-sink" >&2
     exit 1
 fi
