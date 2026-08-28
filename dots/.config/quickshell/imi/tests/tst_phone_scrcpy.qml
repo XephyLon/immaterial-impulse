@@ -47,6 +47,7 @@ TestCase {
         PhoneDeps.scrcpyMajor = 0
         PhoneDeps.adbDevice = false
         PhoneDeps.adbDeviceRefreshes = 0
+        PhoneDeps.avahiBrowse = false
         PhoneDeps.scrcpyRunError = ""
         PhoneDeps.adbRunError = ""
         PhoneDeps.droidcamCliRunError = ""
@@ -249,6 +250,136 @@ TestCase {
             { pactl: true, scrcpyRunError: "libavutil.so.58" })
         compare(audio.map(d => d.key), ["audio-backend"])
         compare(audio[0].missingLibrary, "libavutil.so.58")
+    }
+
+    // ================================================================
+    // PhoneDeps - wireless debugging
+    // ================================================================
+
+    // Constant argv, always: the address and the code are the user's own
+    // typing and never reach a shell. `adb pair HOST:PORT CODE` takes the
+    // code as an argument - measured against platform-tools 37.0.1, where
+    // omitting it makes adb prompt on stdin instead.
+    function test_deps_the_pair_and_connect_argv_are_constant() {
+        compare(PhoneDeps.adbPairArgv("192.168.1.42:37129", "123456"),
+                ["adb", "pair", "192.168.1.42:37129", "123456"])
+        compare(PhoneDeps.adbPairArgv("  192.168.1.42:37129  ", " 123456 "),
+                ["adb", "pair", "192.168.1.42:37129", "123456"])
+        // Whatever the user types stays ONE element - there is nothing here
+        // for a shell metacharacter to mean.
+        compare(PhoneDeps.adbPairArgv("1.2.3.4:1; rm -rf ~", "1 2"),
+                ["adb", "pair", "1.2.3.4:1; rm -rf ~", "1 2"])
+        compare(PhoneDeps.adbConnectArgv("192.168.1.42:41235"),
+                ["adb", "connect", "192.168.1.42:41235"])
+        compare(PhoneDeps.avahiBrowseArgv("_adb-tls-pairing._tcp"),
+                ["avahi-browse", "-rpt", "_adb-tls-pairing._tcp"])
+    }
+
+    function test_deps_a_pairing_code_is_six_digits_and_an_address_carries_a_port() {
+        compare(PhoneDeps.normalizePairingCode("123 456"), "123456")
+        compare(PhoneDeps.normalizePairingCode("12-34-56"), "123456")
+        compare(PhoneDeps.normalizePairingCode("1234567"), "123456")
+        compare(PhoneDeps.normalizePairingCode(""), "")
+        compare(PhoneDeps.normalizePairingCode(undefined), "")
+
+        compare(PhoneDeps.splitAddress("192.168.1.42:37129"),
+                { host: "192.168.1.42", port: "37129" })
+        compare(PhoneDeps.splitAddress("phone.local"), { host: "phone.local", port: "" })
+        // A bracketed IPv6 literal keeps its own colons.
+        compare(PhoneDeps.splitAddress("[fe80::1]:5555"), { host: "[fe80::1]", port: "5555" })
+        compare(PhoneDeps.splitAddress("192.168.1.42:nope"), null)
+        compare(PhoneDeps.splitAddress("192.168.1.42:70000"), null)
+        compare(PhoneDeps.splitAddress(":5555"), null)
+        compare(PhoneDeps.splitAddress("   "), null)
+
+        // The pairing port is never guessable, so it is required; the connect
+        // one has a default adb supplies.
+        verify(PhoneDeps.pairInputsReady("192.168.1.42:37129", "123456"))
+        verify(!PhoneDeps.pairInputsReady("192.168.1.42", "123456"))
+        verify(!PhoneDeps.pairInputsReady("192.168.1.42:37129", "12345"))
+        verify(PhoneDeps.connectInputReady("192.168.1.42"))
+        verify(!PhoneDeps.connectInputReady(""))
+    }
+
+    // avahi-browse -p prints one semicolon-separated field list per record;
+    // a resolved one starts with `=` and carries the address in field 8 and
+    // the port in field 9.
+    function test_deps_the_mdns_records_are_validated_rather_than_trusted() {
+        const text =
+            "+;wlan0;IPv4;adb-R5CT30ABCDE-abcdef;_adb-tls-pairing._tcp;local\n"
+            + "=;wlan0;IPv4;adb-R5CT30ABCDE-abcdef;_adb-tls-pairing._tcp;local;"
+            + "phone.local;192.168.100.179;37129;\n"
+        const records = PhoneDeps.parseAvahiRecords(text)
+        compare(records.length, 1)
+        compare(records[0].host, "192.168.100.179")
+        compare(records[0].port, "37129")
+        compare(records[0].address, "192.168.100.179:37129")
+
+        // An unresolved record, a truncated one and one whose ninth field is
+        // not a port are all skipped rather than offered as an address.
+        compare(PhoneDeps.parseAvahiRecords("=;wlan0;IPv4;name;_x._tcp;local\n").length, 0)
+        compare(PhoneDeps.parseAvahiRecords(
+            "=;wlan0;IPv4;n;_x._tcp;local;h;192.168.1.5;txt-not-a-port;\n").length, 0)
+        compare(PhoneDeps.parseAvahiRecords(
+            "=;wlan0;IPv4;n;_x._tcp;local;h;;37129;\n").length, 0)
+        compare(PhoneDeps.parseAvahiRecords(""), [])
+        compare(PhoneDeps.parseAvahiRecords(undefined), [])
+    }
+
+    function test_deps_the_phone_kde_connect_reaches_wins_when_several_advertise() {
+        const records = [
+            { host: "192.168.100.5", port: "1", address: "192.168.100.5:1" },
+            { host: "192.168.100.179", port: "2", address: "192.168.100.179:2" }
+        ]
+        compare(PhoneDeps.pickAvahiRecord(records, "192.168.100.179").address, "192.168.100.179:2")
+        // No preference, or a preference nothing advertises: the first record
+        // is offered and the user can correct it, which is why the address is
+        // a field rather than a fact.
+        compare(PhoneDeps.pickAvahiRecord(records, "").address, "192.168.100.5:1")
+        compare(PhoneDeps.pickAvahiRecord(records, "10.0.0.1").address, "192.168.100.5:1")
+        compare(PhoneDeps.pickAvahiRecord([], "192.168.100.179"), null)
+        compare(PhoneDeps.pickAvahiRecord(null, ""), null)
+    }
+
+    // The two commands report differently and neither is read the other way.
+    function test_deps_a_pair_is_believed_only_on_adbs_own_success_sentence() {
+        const ok = PhoneDeps.parsePairResult(0,
+            "Successfully paired to 192.168.100.179:37129 [guid=adb-R5CT30ABCDE-abcdef]\n", "")
+        compare(ok.ok, true)
+        verify(ok.message.indexOf("Successfully paired") === 0)
+
+        // The measured failure: an address nothing answers on.
+        const refused = PhoneDeps.parsePairResult(1, "",
+            "error: protocol fault (couldn't read status message): Success\n")
+        compare(refused.ok, false)
+        verify(refused.message.indexOf("error: protocol fault") === 0)
+
+        // Exit 0 with no success sentence is not a pairing, and a success
+        // sentence with a non-zero exit is not one either.
+        compare(PhoneDeps.parsePairResult(0, "Failed to pair to 192.168.1.42:37129\n", "").ok, false)
+        compare(PhoneDeps.parsePairResult(1, "Successfully paired to x\n", "").ok, false)
+    }
+
+    // `adb connect` exits 0 whatever happens - measured, a refused connection
+    // and a host that does not resolve both come back 0 - so the exit code
+    // alone would report every failure as a success.
+    function test_deps_a_connect_is_read_off_what_adb_printed_not_off_its_exit_code() {
+        compare(PhoneDeps.parseConnectResult(0, "connected to 192.168.100.179:41235\n", "").ok, true)
+        compare(PhoneDeps.parseConnectResult(0, "already connected to 192.168.100.179:41235\n", "").ok, true)
+
+        const refused = PhoneDeps.parseConnectResult(0,
+            "failed to connect to '127.0.0.1:1': Connection refused\n", "")
+        compare(refused.ok, false)
+        verify(refused.message.indexOf("failed to connect") === 0)
+
+        const unresolved = PhoneDeps.parseConnectResult(0,
+            "failed to resolve host: 'no-such-host.invalid': Name or service not known\n", "")
+        compare(unresolved.ok, false)
+        verify(unresolved.message.indexOf("failed to resolve host") === 0)
+
+        // An exit that printed nothing at all still has to say something.
+        compare(PhoneDeps.parseConnectResult(0, "", "").ok, false)
+        compare(PhoneDeps.parseConnectResult(0, "", "").message, "")
     }
 
     // ================================================================
