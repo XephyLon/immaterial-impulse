@@ -88,9 +88,18 @@ if command -v v4l2-ctl >/dev/null 2>&1; then
 fi
 
 # ─── Processes: droidcam-cli (video or audio) and scrcpy (mic) ──────────
+# `pgrep` answers with the process table as it was when it sampled it, so a
+# process that exits before the read below leaves nothing to read. The guard
+# is the one droidcam_session.sh's `find_running` already carries: without
+# it, `/proc/<pid>/cmdline` fails, `cl` is empty, and an empty string matches
+# the `*)` default - the VIDEO arm - so a dead pid was reported as a running
+# webcam, with the shell's own "No such file or directory" going to stderr
+# because `2>/dev/null` covers `tr`, not the redirection that opens the file.
 if command -v pgrep >/dev/null 2>&1; then
     for pid in $(pgrep -x droidcam-cli 2>/dev/null); do
+        [ -r "/proc/$pid/cmdline" ] || continue
         cl="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | sed 's/[[:space:]]*$//')"
+        [ -n "$cl" ] || continue
         case "$cl" in
             *' -a '*|*'-a '*)   # audio mode: droidcam-cli ... -a ...
                 audio_running=true
@@ -125,7 +134,9 @@ if command -v pgrep >/dev/null 2>&1; then
     done
     # scrcpy with --audio-source=mic is an audio session too.
     for pid in $(pgrep -x scrcpy 2>/dev/null); do
+        [ -r "/proc/$pid/cmdline" ] || continue
         cl="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | sed 's/[[:space:]]*$//')"
+        [ -n "$cl" ] || continue
         case "$cl" in
             *'--audio-source=mic'*) audio_running=true ;;
         esac
