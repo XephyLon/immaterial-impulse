@@ -46,10 +46,18 @@ GroupButton {
     Behavior on baseHeight {
         animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
     }
-    // The tile's arrival is the panel's convergent wave now (the panel's
-    // StaggerEntrance owns opacity/scale/translate through this): a tile
-    // added mid-session simply appears in place, which is what the old
-    // opacity: 0 + onCompleted self-fade approximated one tile at a time.
+    // The tile's arrival is the panel's convergent wave. `appear` is
+    // INHERITED - RippleButton declares it and folds it into the opacity
+    // binding that also carries the disabled dim - and this file must not
+    // declare it again. It did, back when GroupButton was rooted on Button
+    // and had no `appear` of its own, and it inherited a second one the day
+    // GroupButton moved onto RippleButton. QML then carried TWO properties
+    // of that name: the wave wrote this one while the base's opacity
+    // binding, compiled in the base's scope, read the other. Nothing
+    // errored; the tiles simply stopped fading in. StaggerEntrance had also
+    // stopped dressing them, because it leaves opacity and scale to any
+    // control exposing `interactionMotion` - which a RippleButton does - so
+    // between the two nothing drove the entrance at all.
     // No Behavior on opacity: the wave animates `appear` and opacity is a
     // binding on it, so a Behavior here is a second animation on the same
     // channel. The one left behind by the self-fade's retirement turned
@@ -59,7 +67,6 @@ GroupButton {
     // animated - b710ef731's frozen-Behavior shape - so the tile landed
     // ~200ms after its own wave slot). That was the "toggles visible, then
     // the animation begins" pause.
-    property real appear: 1
 
     // A tile born mid-session - edit mode adding it, a config change - used
     // to pop in at full strength in one frame: the dresser dresses arrivals,
