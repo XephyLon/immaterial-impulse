@@ -120,6 +120,14 @@ own repo; the installer pins which revision it builds.
   that asked.
 
 ### Changed
+- **The Phone tab's device roster unrolls instead of appearing all at once.**
+  Clicking the device chip used to put the list of every device the daemon
+  knows on screen in one frame and take it away in one. It now unrolls from
+  under the chip and folds back the same way, and it is drawn by the same list
+  the Wi-Fi and Bluetooth device pickers use, so a device joining or leaving
+  the network arrives and leaves as a row rather than making the list jump. The
+  reveal follows the animation-speed slider and the reduce-motion switch like
+  the rest of the shell.
 - **The right sidebar's quick sliders arrive one card at a time.** Each slider
   card now fades in, zooms up from slightly smaller and rises into place —
   the bottom row first, brightness last — while its fill still sweeps up from
@@ -208,6 +216,14 @@ own repo; the installer pins which revision it builds.
   another under the same name on every launch, while the teardown removed
   exactly one per call. A setup that fails now takes its own sink back with
   it.
+- **The Stop button on a running Phone tab card draws its icon and its label in
+  the middle.** They were pressed against the button's left edge with the rest
+  of it empty, and the gap between the icon and the word grew as the button did.
+- **The Phone tab's clear-notifications button stops drifting out of its
+  circle.** The moment the notification count first changed, that button's icon
+  slid up and to the left and stayed there for the rest of the session - and
+  blinked out entirely while it moved, leaving an empty pill behind. Its
+  neighbour was unaffected, which is what made it read as one broken button.
 - **The Phone tab's Android Apps page says what to turn on when it cannot
   reach the phone.** App Mode drives the phone over ADB, which is a
   different link from the one KDE Connect pairs: with a phone reachable on
