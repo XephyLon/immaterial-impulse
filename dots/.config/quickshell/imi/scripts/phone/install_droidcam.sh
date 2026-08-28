@@ -12,11 +12,6 @@
 set -u
 IFS=$'\n\t'
 
-echo "╔═══════════════════════════════════════════════╗"
-echo "║     DroidCam Installer for the ImI Phone tab     ║"
-echo "╚═══════════════════════════════════════════════╝"
-echo ""
-
 # ─── Distro detection ─────────────────────────────────
 detect_distro() {
     if [ -f /etc/arch-release ]; then
@@ -30,13 +25,14 @@ detect_distro() {
     fi
 }
 
-DISTRO=$(detect_distro)
-
 # Common pause helper
 press_enter_to_close() {
     echo ""
     echo "Press Enter to close..."
-    read -r
+    # `read` answers 1 at EOF, and this is the last command on the success
+    # path, so without the guard a completed install exits non-zero whenever
+    # stdin is not a terminal.
+    read -r || true
 }
 
 # URL of the official DroidCam Linux client zip.
@@ -123,6 +119,14 @@ install_from_official_zip() {
     return 0
 }
 
+main() {
+    local DISTRO="${1:-$(detect_distro)}"
+
+    echo "╔═══════════════════════════════════════════════╗"
+    echo "║     DroidCam Installer for the ImI Phone tab     ║"
+    echo "╚═══════════════════════════════════════════════╝"
+    echo ""
+
 case "$DISTRO" in
     arch)
         echo "▸ Detected: Arch Linux"
@@ -144,7 +148,7 @@ case "$DISTRO" in
             echo "    git clone https://aur.archlinux.org/yay.git /tmp/yay"
             echo "    cd /tmp/yay && makepkg -si"
             press_enter_to_close
-            exit 1
+            return 1
         fi
 
         echo "▸ Using AUR helper: $AUR_HELPER"
@@ -221,7 +225,7 @@ case "$DISTRO" in
             echo ""
             echo "✗ Installation failed."
             press_enter_to_close
-            exit 1
+            return 1
         }
         ;;
 
@@ -254,7 +258,7 @@ case "$DISTRO" in
             echo ""
             echo "✗ Installation failed."
             press_enter_to_close
-            exit 1
+            return 1
         }
         ;;
 
@@ -269,7 +273,7 @@ case "$DISTRO" in
         echo "  Debian:  sudo apt install v4l2loopback-dkms v4l-utils pulseaudio-utils"
         echo "           Download from https://www.dev47apps.com/droidcam/linux/"
         press_enter_to_close
-        exit 1
+        return 1
         ;;
 esac
 
@@ -281,4 +285,14 @@ echo "   2. Open DroidCam on phone, enter IP, connect"
 echo "   3. Re-open the Phone tab in ImI — cards should"
 echo "      now show 'Ready' instead of 'Install'"
 echo "═══════════════════════════════════════════════"
-press_enter_to_close
+    press_enter_to_close
+}
+
+# The dispatch lives in a function so that the file can be SOURCED without
+# installing anything: nothing had ever run these scripts, and a test that
+# has to pick the branch (the maintainer is on Arch, CI is on Ubuntu, and the
+# Arch branch is the one with the defects) cannot do it through
+# `detect_distro`, which reads /etc.
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
+fi
