@@ -209,8 +209,13 @@ ShellRoot {
     // content item, and the tab draws a second StyledListView - the
     // notification list - that a search by type would reach first.
     function rosterList() {
-        const row = harness.all("PhoneDeviceItem")[0] ?? null;
-        return row ? (row.parent?.parent ?? null) : null;
+        return harness.first("GroupedList");
+    }
+
+    // The roster's rows in the order they are drawn, which is the order their
+    // plates are in - the corners belong to the first and the last of them.
+    function rosterRows() {
+        return harness.all("PhoneDeviceItem").filter(r => r.visible);
     }
 
     // The box that folds, found by walking OUT of the list until the item
@@ -461,22 +466,14 @@ ShellRoot {
             const list = harness.rosterList();
             harness.check("the roster is folded until the chip is opened",
                           harness.all("PhoneDeviceItem").filter(i => i.visible).length === 0);
-            // The component, not a shape of its own: the same StyledListView
-            // the Wi-Fi and Bluetooth device lists are, over the same model.
-            harness.check(`the roster is the shell's own list view over the daemon's devices,`
-                          + ` got ${harness.typeName(list)} of ${list?.count}`,
-                          list !== null && harness.typeName(list) === "StyledListView"
-                          && list.count === PhoneConnect.devices.length);
-            // ...and the container that makes those rows a MENU rather than a
-            // bare list. `DialogListItem` draws square corners on the layer-3
-            // tone because it expects one; without it the roster's rows sat
-            // straight on the panel.
-            const surface = list?.parent ?? null;
-            harness.check(`the roster's rows sit on a menu surface, got`
-                          + ` ${harness.typeName(surface)} radius=${surface?.radius}`,
-                          surface !== null
-                          && harness.typeName(surface) === "StyledRectangle"
-                          && surface.radius > 0);
+            // The component the guidelines name for rows that are related but
+            // stay visually distinct, over the daemon's devices. Not a shape of
+            // its own: a rectangle wrapped around a list view was exactly the
+            // hand-rolled surface that rule exists to prevent.
+            harness.check(`the roster is the shell's grouped list over the daemon's devices,`
+                          + ` got ${harness.typeName(list)} of ${list?.model?.length}`,
+                          list !== null && harness.typeName(list) === "GroupedList"
+                          && (list.model?.length ?? -1) === PhoneConnect.devices.length);
             harness.rosterSaw = { samples: 0, mid: 0, maxHeight: 0 };
             harness.click(harness.first("PhoneDeviceChip"));
             rosterWatch.running = true;
@@ -488,7 +485,7 @@ ShellRoot {
             const list = harness.rosterList();
             const saw = harness.rosterSaw;
             console.log(`[PhoneTab] roster open: samples=${saw.samples} mid=${saw.mid}`
-                + ` peak=${saw.maxHeight.toFixed(2)} settled=${box?.height} of list ${list?.contentHeight}`);
+                + ` peak=${saw.maxHeight.toFixed(2)} settled=${box?.height} of list ${list?.implicitHeight}`);
 
             // The sample count first: a watch that never ran reports the same
             // "nothing was ever part way" a correct reveal does. Then the
@@ -499,17 +496,34 @@ ShellRoot {
                           saw.samples > 10);
             harness.check(`the roster unrolls rather than appearing whole,`
                           + ` ${saw.mid} frames strictly between`, saw.mid > 0);
-            // The list's content plus the menu surface's own vertical padding,
-            // which is the height a menu HAS - read off the surface rather
-            // than restated as a number here, so the two cannot drift apart.
-            const surfacePad = (list?.parent ? list.y : 0) * 2;
-            harness.check(`...and settles at the list's content height plus the menu's`
-                          + ` padding, got ${box?.height} against`
-                          + ` ${list?.contentHeight} + ${surfacePad}`,
-                          box !== null && list !== null && list.contentHeight > 0
-                          && Math.abs(box.height - (list.contentHeight + surfacePad)) < 1);
+            harness.check(`...and settles at the group's own height, got ${box?.height}`
+                          + ` against ${list?.implicitHeight}`,
+                          box !== null && list !== null && list.implicitHeight > 0
+                          && Math.abs(box.height - list.implicitHeight) < 1);
 
-            const rows = harness.all("PhoneDeviceItem").filter(i => i.visible);
+            const rows = harness.rosterRows();
+            // The group's SHAPE, read off the rows as they are drawn rather
+            // than off a property of a container. The check this replaces
+            // asked a wrapper for its `radius` and was told 17 while the
+            // screen showed four square corners: the rows were painting over
+            // them, because `clip` on a Rectangle clips to the box and not to
+            // the radius. A property is not a pixel.
+            const first = rows[0] ?? null;
+            const last = rows[rows.length - 1] ?? null;
+            const inner = rows.length > 2 ? rows[1] : null;
+            console.log(`[PhoneTab] roster corners first=${first?.cornerTopLeft}`
+                        + `/${first?.cornerBottomLeft} last=${last?.cornerTopLeft}`
+                        + `/${last?.cornerBottomLeft} inner=${inner?.cornerTopLeft}`);
+            harness.check(`the group's outer corners are rounded, got`
+                          + ` ${first?.cornerTopLeft} at the top and`
+                          + ` ${last?.cornerBottomLeft} at the bottom of ${rows.length} rows`,
+                          first !== null && last !== null
+                          && first.cornerTopLeft === Appearance.rounding.normal
+                          && last.cornerBottomLeft === Appearance.rounding.normal);
+            harness.check(`...and the seams between them are not, got`
+                          + ` ${first?.cornerBottomLeft} under the first row`,
+                          first !== null
+                          && first.cornerBottomLeft < Appearance.rounding.normal);
             harness.check(`opening the chip lists both devices, got ${rows.length}`, rows.length === 2);
             const laptop = rows.find(r => r.device?.id === harness.laptopId) ?? null;
             harness.rosterSaw = { samples: 0, mid: 0, maxHeight: 0 };
@@ -1065,7 +1079,12 @@ ShellRoot {
             // rest of the run and the fold's own check passes on a snap.
             if (box.visible) {
                 saw.maxHeight = Math.max(saw.maxHeight, box.height);
-                if (box.height > 1 && box.height < list.contentHeight - 1) saw.mid++;
+                // The settled height is the group's own. It was the list
+                // view's `contentHeight` while the roster was one; a
+                // GroupedList has no such property, and `undefined` in this
+                // comparison is a silent false - the mid-flight band empties
+                // and the reveal reads as a snap it is not.
+                if (box.height > 1 && box.height < list.implicitHeight - 1) saw.mid++;
             }
             harness.rosterSaw = saw;
         }
