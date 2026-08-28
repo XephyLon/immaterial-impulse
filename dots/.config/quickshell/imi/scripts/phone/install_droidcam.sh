@@ -169,15 +169,28 @@ case "$DISTRO" in
         echo "▸ Using AUR helper: $AUR_HELPER"
         echo ""
         # The 'droidcam' AUR package bundles the client AND the v4l2loopback-dc
-        # kernel module, so this single command covers everything.
-        $AUR_HELPER -S --needed droidcam
+        # kernel module, so this single command covers the client itself.
+        # It was UNCHECKED, and the "✓ DroidCam installed" below printed
+        # regardless — after which the footer told the user the Phone tab's
+        # cards should now read "Ready".
+        if ! "$AUR_HELPER" -S --needed droidcam; then
+            echo ""
+            echo "✗ $AUR_HELPER could not install droidcam."
+            press_enter_to_close
+            return 1
+        fi
 
         # Also install pactl (in pulseaudio-utils) for microphone routing.
         if ! command -v pactl >/dev/null 2>&1; then
             echo ""
             echo "▸ Installing pactl (for microphone routing)..."
-            sudo pacman -S --needed --noconfirm pulseaudio-utils || \
-                sudo pacman -S --needed --noconfirm pipewire-pulse
+            if ! sudo pacman -S --needed --noconfirm pulseaudio-utils \
+                && ! sudo pacman -S --needed --noconfirm pipewire-pulse; then
+                echo ""
+                echo "✗ Could not install a PulseAudio client (pactl)."
+                press_enter_to_close
+                return 1
+            fi
         fi
 
         echo ""
