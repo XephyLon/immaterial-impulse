@@ -531,6 +531,13 @@ Singleton {
         }
         root.pairState = "busy";
         root.pairMessage = "";
+        // Armed HERE rather than from the process going live, because a
+        // Process whose binary is not on PATH never emits `exited` - it drops
+        // `running` and says nothing - and a step armed off `running` would
+        // then sit on "busy" with its button refused for the rest of the
+        // session. The guard resolves that as well as killing a pair that
+        // takes too long.
+        pairGuard.restart();
         pairProcess.exec(root.adbPairArgv(address, root.normalizePairingCode(code)));
     }
 
@@ -548,6 +555,7 @@ Singleton {
         }
         root.connectState = "busy";
         root.connectMessage = "";
+        connectGuard.restart();
         connectProcess.exec(root.adbConnectArgv(address));
     }
 
@@ -555,11 +563,8 @@ Singleton {
         id: pairProcess
         stdout: StdioCollector { id: pairOut }
         stderr: StdioCollector { id: pairErr }
-        onRunningChanged: {
-            if (running) pairGuard.restart();
-            else pairGuard.stop();
-        }
         onExited: (exitCode, exitStatus) => {
+            pairGuard.stop();
             const result = root.parsePairResult(exitCode, pairOut.text, pairErr.text);
             root.pairState = result.ok ? "ok" : "failed";
             root.pairMessage = result.message;
@@ -570,11 +575,8 @@ Singleton {
         id: connectProcess
         stdout: StdioCollector { id: connectOut }
         stderr: StdioCollector { id: connectErr }
-        onRunningChanged: {
-            if (running) connectGuard.restart();
-            else connectGuard.stop();
-        }
         onExited: (exitCode, exitStatus) => {
+            connectGuard.stop();
             const result = root.parseConnectResult(exitCode, connectOut.text, connectErr.text);
             root.connectState = result.ok ? "ok" : "failed";
             root.connectMessage = result.message;
@@ -585,16 +587,37 @@ Singleton {
         }
     }
 
+    // A live command is killed and reports through its own exit; one that
+    // never started has nothing to kill and is reported here, because a step
+    // stuck on "busy" is a button that never comes back.
     Timer {
         id: pairGuard
         interval: root.adbActionTimeoutMs
-        onTriggered: if (pairProcess.running) pairProcess.signal(15)
+        onTriggered: {
+            if (pairProcess.running) {
+                pairProcess.signal(15);
+                return;
+            }
+            if (root.pairState === "busy") {
+                root.pairState = "failed";
+                root.pairMessage = Translation.tr("adb did not answer.");
+            }
+        }
     }
 
     Timer {
         id: connectGuard
         interval: root.adbActionTimeoutMs
-        onTriggered: if (connectProcess.running) connectProcess.signal(15)
+        onTriggered: {
+            if (connectProcess.running) {
+                connectProcess.signal(15);
+                return;
+            }
+            if (root.connectState === "busy") {
+                root.connectState = "failed";
+                root.connectMessage = Translation.tr("adb did not answer.");
+            }
+        }
     }
 
     // ---- and where the two addresses come from ---------------------------
@@ -620,6 +643,7 @@ Singleton {
         root.mdnsPairingAddress = "";
         root.mdnsConnectAddress = "";
         root.mdnsPending = 2;
+        mdnsGuard.restart();
         pairingBrowse.exec(root.avahiBrowseArgv("_adb-tls-pairing._tcp"));
         connectBrowse.exec(root.avahiBrowseArgv("_adb-tls-connect._tcp"));
     }
@@ -646,10 +670,10 @@ Singleton {
         id: pairingBrowse
         stdout: StdioCollector { id: pairingBrowseOut }
         stderr: StdioCollector {}
-        onRunningChanged: {
-            if (running) mdnsGuard.restart();
-            else root.mdnsAnswered();
-        }
+        // The count hangs off `running` rather than `exited` for the reason
+        // the presence probes do: an absent binary drops one and never emits
+        // the other.
+        onRunningChanged: if (!running) root.mdnsAnswered()
         onExited: (exitCode, exitStatus) => {
             const record = root.pickAvahiRecord(root.parseAvahiRecords(pairingBrowseOut.text),
                                                 root.preferredWirelessHost());
@@ -661,10 +685,7 @@ Singleton {
         id: connectBrowse
         stdout: StdioCollector { id: connectBrowseOut }
         stderr: StdioCollector {}
-        onRunningChanged: {
-            if (running) mdnsGuard.restart();
-            else root.mdnsAnswered();
-        }
+        onRunningChanged: if (!running) root.mdnsAnswered()
         onExited: (exitCode, exitStatus) => {
             const record = root.pickAvahiRecord(root.parseAvahiRecords(connectBrowseOut.text),
                                                 root.preferredWirelessHost());
@@ -674,12 +695,17 @@ Singleton {
 
     // `avahi-browse -t` terminates on its own once the cache is exhausted and
     // fails immediately with no daemon, but it is a network wait either way.
+    // Armed by the caller for the reason the two above are.
     Timer {
         id: mdnsGuard
         interval: root.runProbeTimeoutMs
         onTriggered: {
             if (pairingBrowse.running) pairingBrowse.signal(15);
             if (connectBrowse.running) connectBrowse.signal(15);
+            if (root.mdnsState === "searching" && root.mdnsPending > 0) {
+                root.mdnsPending = 0;
+                root.mdnsState = "done";
+            }
         }
     }
 
