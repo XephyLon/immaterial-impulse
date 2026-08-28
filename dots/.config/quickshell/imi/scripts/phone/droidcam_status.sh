@@ -102,8 +102,22 @@ if command -v pgrep >/dev/null 2>&1; then
                     case "$cl" in
                         *' adb '*) video_mode="usb" ;;
                     esac
-                    # Port = last numeric token.
-                    video_port="$(echo "$cl" | grep -oE '[0-9]{3,5}$' | tail -n1 || echo 0)"
+                    # Port = the last token, when it is a number.
+                    # `grep ... | tail -n1 || echo 0` never fell back: grep
+                    # exits 1 with no match but `tail` exits 0, so the
+                    # pipeline succeeded with an empty answer and the
+                    # unquoted `%s` below emitted `"video_port":,`. That is
+                    # invalid JSON, so the QML JSON.parse threw and EVERY
+                    # field in the payload was lost, not just the port - and
+                    # the pattern only ever admitted 3-to-5-digit ports, so
+                    # a configured port of 80 was enough to trigger it.
+                    # droidcam-cli's argv ends `<ip|adb> <port>`, so the last
+                    # word is the answer and there is nothing to search for.
+                    last_token="${cl##* }"
+                    case "$last_token" in
+                        ''|*[!0-9]*) video_port=0 ;;
+                        *)           video_port="$last_token" ;;
+                    esac
                 fi
                 video_running=true
                 ;;
