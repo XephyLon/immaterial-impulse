@@ -12,6 +12,16 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Fixed
+- **The phone webcam's preview window closes with the session instead of
+  freezing on screen.** Open the webcam, open the preview, then stop the
+  camera: the preview used to stay up, frozen on its last frame, and nothing in
+  the shell could close it - the player had been launched with no handle to
+  hold. It now closes whichever way the session ends: you press stop, the
+  stream drops on its own, the phone goes away, or the shell restarts. The
+  Preview button is a toggle too, so you can close the window from the page you
+  opened it from.
+
 ### Added
 - **The Phone tab pairs your phone over Wi-Fi instead of telling you to open a
   terminal.** The Android Apps page used to print the two commands Android 11

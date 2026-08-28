@@ -745,7 +745,12 @@ services/                  Singletons wrapping external state/processes - one pe
                               launched DETACHED by scripts/phone/droidcam_session.sh (the
                               pidfile is the binary's own) so it outlives a shell restart
                               and is re-adopted at boot from the session's state file.
-                              USB first: adb get-state, then KDE Connect's address
+                              USB first: adb get-state, then KDE Connect's address.
+                              The preview PLAYER is the opposite arrangement and the
+                              only process this file owns: a Process, closed by one
+                              observer of `active`, because the user can close it and a
+                              recorded pid would go stale - see the execDetached entry
+                              below, and tests/test_phone_preview_lifetime_runtime.py
   PhoneMic.qml                 The phone as a microphone: the stream lands on a null sink
                               (DroidCam-Mic) whose .monitor is what applications record.
                               scrcpy's SDL audio ignores PULSE_SINK on PipeWire, so the
@@ -4692,6 +4697,66 @@ singletons (`PhoneConnect.activeDevice`, `PhoneScrcpy.targetArgs`) - the doubles
 them too. The one-shot serialized queue (`run`/`pump`/one `Process` with `exec`) is
 `PhoneConnect`'s busctl queue, reused rather than one Process per command.
 ("test(phone): pin the four session services' process I/O to their doubles").
+
+**`Quickshell.execDetached` returns no handle, so a process spawned with it can
+only ever be stopped by the user - and "detach it and record the pid" is the
+wrong repair for anything the user can close.** The webcam PREVIEW was the
+case. `PhoneCamera.openPreview()` detached its player, so `stop()` - which
+clears `device` and runs `droidcam_session.sh stop video` - had nothing to stop
+it with: ending the session left the player holding a window on a
+`/dev/videoN` that had stopped producing frames, frozen on its last frame,
+until the user closed it by hand. Nothing errors, nothing logs, and the QML
+reads correctly.
+
+The player is a `Process` the service owns now, and which of the two shapes a
+process here takes is decided by **who can end it**, not by how long it should
+live. The stream is detached and tracked by pidfile
+(`scripts/phone/droidcam_session.sh`) because only this shell ever stops it, so
+a recorded pid is good until it is used, and because a webcam other
+applications are using has to survive a shell restart. A player is closed by
+the USER at any moment, so a pid recorded when it started is a number the
+kernel is free to reissue, and a later stop would spend it on a stranger - the
+sibling of the `pgrep -f` trap under
+[Where to look when something goes wrong](#where-to-look-when-something-goes-wrong),
+arriving through a pid rather than through a pattern. A `Process` cannot
+address anything it did not start, which removes that failure by construction.
+What it costs is that the player does not outlive a shell restart the way the
+stream deliberately does; a preview is one click to reopen, and an unstoppable
+one is the worse bug.
+
+Three more things from it.
+
+- **Which ending closes it is ONE observer.** `onActiveChanged` in the synced
+  region, not a `closePreview()` spelled into `stop()`, into `checkSession()`'s
+  death branch and into `fail()` - `active` IS the session and every ending
+  writes it, including the device disappearing, which arrives through
+  `onActiveDeviceIdChanged`'s own `stop()`. Three call sites is three places
+  for a fourth ending to be forgotten in, which is
+  [State propagation is reactive](#state-propagation-is-reactive-or-it-is-a-bug-waiting)
+  applied to a teardown.
+- **`Component.onDestruction: root.closePreview()` is belt and braces, and the
+  measurement says so.** Planted out and re-run, the player is still reaped at
+  shutdown, because Quickshell kills a Process it owns. The line stays as a
+  statement of intent and is pinned by the source contract rather than by the
+  harness, since removing it reddens nothing at runtime - do not read it as the
+  mechanism.
+- **A state flag is not evidence a process died, and here it is exactly what
+  the bug already reported.** Every ending set the service's flags correctly
+  while the window stayed on screen, so
+  `tests/test_phone_preview_lifetime_runtime.py` scores `kill -0` against the
+  pid the player itself wrote, five ways: the stop button, the stream killed
+  under the shell and found by the watchdog, the player's window closed by the
+  user (after which a later stop must reap nothing - a control process is
+  asked), the phone leaving the daemon, and the shell exiting, which is the
+  driver's half with a control of its own. `droidcam-cli` cannot run on this
+  machine at all - built against ffmpeg 8 where the system has 9, so it dies on
+  `libswscale.so.9` - so the stream is a stub of that name, launched by the
+  REAL session script; it deliberately does not `exec`, because
+  `droidcam_session.sh` refuses to kill a pid whose cmdline has stopped looking
+  like droidcam's.
+45d0afbdd ("fix(phone): the webcam preview is a player the shell owns, not a detached spawn"),
+661189c35 ("test(phone): score the preview player's death against its pid, five ways"),
+96574ee7f ("test(phone): say which half of the shutdown reap is measured, and stop leaking a sleep").
 
 **A feature card reported its TOOLING and nothing else, so "the phone is reachable" was
 answering the wrong question.** The Phone tab's three cards gate on
