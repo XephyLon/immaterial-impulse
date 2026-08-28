@@ -1,24 +1,22 @@
 import qs.modules.common
 import qs.modules.common.widgets
-import qs.modules.common.functions
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 
 /**
- * Material 3 button with expressive bounciness. 
+ * Material 3 button with expressive bounciness.
  * See https://m3.material.io/components/button-groups/overview
+ *
+ * Built ON RippleButton rather than beside it. Both were rooted on `Button`
+ * and both spelled their own background, their own mouse handling and their
+ * own press morph, which is why a button gained or lost its ripple according
+ * to which of the two a call site happened to pick - the notification footer
+ * lost its ripple the day it moved onto the group vocabulary. What is left
+ * here is only what a button GROUP adds: the bounce, the segmented end radii
+ * and the index bookkeeping that tells a button where in its group it sits.
  */
-Button {
+RippleButton {
     id: root
-    property bool toggled
-    property string buttonText
-    property real buttonRadius: Appearance?.rounding?.small ?? 8
-    property real buttonRadiusPressed: Appearance?.rounding?.small ?? 6
-    property var downAction // When left clicking (down)
-    property var releaseAction // When left clicking (release)
-    property var altAction // When right clicking
-    property var middleClickAction // When middle clicking
     property bool bounce: true
     property real baseWidth: contentItem.implicitWidth + horizontalPadding * 2
     property real baseHeight: contentItem.implicitHeight + verticalPadding * 2
@@ -36,23 +34,40 @@ Button {
     implicitWidth: (root.down && bounce) ? clickedWidth : baseWidth
     implicitHeight: (root.down && bounce) ? clickedHeight : baseHeight
 
-    property color colBackground: ColorUtils.transparentize(colBackgroundHover, 1) || "transparent"
-    property color colBackgroundHover: Appearance?.colors.colLayer1Hover ?? "#E5DFED"
+    // The pressed state layer. M3 draws a press as the layer AND the ripple,
+    // so these keep their own names and feed the ripple colours a call site
+    // would otherwise have to set twice.
     property color colBackgroundActive: Appearance?.colors.colLayer1Active ?? "#D6CEE2"
-    property color colBackgroundToggled: Appearance?.colors.colPrimary ?? "#65558F"
-    property color colBackgroundToggledHover: Appearance?.colors.colPrimaryHover ?? "#77699C"
     property color colBackgroundToggledActive: Appearance?.colors.colPrimaryActive ?? "#D6CEE2"
+    colRipple: root.colBackgroundActive
+    colRippleToggled: root.colBackgroundToggledActive
 
-    property real radius: root.down ? root.buttonRadiusPressed : root.buttonRadius
-    property real leftRadius: root.down ? root.buttonRadiusPressed : root.buttonRadius
-    property real rightRadius: root.down ? root.buttonRadiusPressed : root.buttonRadius
-    property color color: root.enabled ? (root.toggled ? 
-        (root.down ? colBackgroundToggledActive : 
-            root.hovered ? colBackgroundToggledHover : 
+    // A group's ends are rounded and its joins are not, so the two sides are
+    // named separately. They follow the shared press progress rather than
+    // `down` directly: the corners ARRIVE at the pressed radius instead of
+    // snapping there in one frame.
+    property real radius: root.buttonEffectiveRadius
+    property real leftRadius: root.buttonEffectiveRadius
+    property real rightRadius: root.buttonEffectiveRadius
+    cornerTopLeft: root.leftRadius
+    cornerBottomLeft: root.leftRadius
+    cornerTopRight: root.rightRadius
+    cornerBottomRight: root.rightRadius
+
+    property color color: root.enabled ? (root.toggled ?
+        (root.down ? colBackgroundToggledActive :
+            root.hovered ? colBackgroundToggledHover :
             colBackgroundToggled) :
-        (root.down ? colBackgroundActive : 
-            root.hovered ? colBackgroundHover : 
+        (root.down ? colBackgroundActive :
+            root.hovered ? colBackgroundHover :
             colBackground)) : colBackground
+    buttonColor: root.color
+
+    // Keyboard focus is the one state with no pointer to show it.
+    property bool tabbedTo: root.focus && (focusReason === Qt.TabFocusReason || focusReason === Qt.BacktabFocusReason)
+    border: root.tabbedTo
+    borderWidth: 2
+    colBorder: Appearance.colors.colSecondary
 
     onDownChanged: {
         if (root.down) {
@@ -77,65 +92,5 @@ Button {
     }
     Behavior on rightRadius {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-    }
-
-    property alias mouseArea: buttonMouseArea
-    MouseArea {
-        id: buttonMouseArea
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        onPressed: (event) => { 
-            if(event.button === Qt.RightButton) {
-                if (root.altAction) root.altAction();
-                return;
-            }
-            if(event.button === Qt.MiddleButton) {
-                if (root.middleClickAction) root.middleClickAction();
-                return;
-            }
-            root.down = true
-            if (root.downAction) root.downAction();
-        }
-        onReleased: (event) => {
-            root.down = false
-            if (event.button != Qt.LeftButton) return;
-            if (root.releaseAction) root.releaseAction();
-        }
-        onClicked: (event) => {
-            if (event.button != Qt.LeftButton) return;
-            root.click()
-        }
-        onCanceled: (event) => {
-            root.down = false
-        }
-
-        onPressAndHold: () => {
-            altAction(); 
-            root.down = false; 
-            root.clicked = false;
-        };
-    }
-
-    property bool tabbedTo: root.focus && (focusReason === Qt.TabFocusReason || focusReason === Qt.BacktabFocusReason)
-    background: Rectangle {
-        id: buttonBackground
-        topLeftRadius: root.leftRadius
-        topRightRadius: root.rightRadius
-        bottomLeftRadius: root.leftRadius
-        bottomRightRadius: root.rightRadius
-        implicitHeight: 50
-
-        color: root.color
-        Behavior on color {
-            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-        }
-
-        border.width: root.tabbedTo ? 2 : 0
-        border.color: Appearance.colors.colSecondary
-    }
-
-    contentItem: StyledText {
-        text: root.buttonText
     }
 }
