@@ -13,6 +13,18 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Fixed
+- **A contact's expand arrow stays where it belongs.** Opening the first
+  contact in the list used to fling its arrow into the middle of the
+  person's name and leave it there. Anything in the shell whose text
+  animates as it changes could drift the same way; none of them can now.
+- **The phone's notification buttons ripple again**, along with every
+  other button that belongs to a group - the quick toggles, the settings
+  chips, the AI chat controls. Their corners also settle into the
+  pressed shape instead of snapping to it.
+- **The phone's device list looks like a menu.** Its rows sat straight on
+  the panel with square corners; they sit on a proper menu surface now,
+  and the device you picked is marked with a tick and its own colour
+  instead of looking exactly like the ones you did not.
 - **The phone panel's buttons behave like the rest of the shell's.** Its
   notification bar is the same one the right sidebar draws, so its two
   actions square off and swell under a press instead of sitting still;

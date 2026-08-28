@@ -2618,10 +2618,59 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   declaration, because both `RippleButton`s spell `buttonEffectiveRadius` across two lines with
   `pressProgress` on the continuation, and a line-scoped version finds no radius control at all and
   reports a clean tree. And the rule reaches only controls that apply the model:
-  `common/widgets/GroupButton.qml` drives its own `down`-keyed radius and bounce and has never
-  adopted it, so it is a non-adoption rather than a doubling and the lint leaves it alone.
+  `common/widgets/GroupButton.qml` drove its own `down`-keyed radius and bounce and had never
+  adopted it, so it was a non-adoption rather than a doubling and the lint left it alone. It is
+  a `RippleButton` now (see the button-vocabulary point below), so the model reaches it through
+  the base and its ends read `buttonEffectiveRadius` rather than keying `down` themselves.
   fix(sessionScreen): let RippleButton own the session button's press,
   test(lint): fail on a hover/press radius inside a control that already tightens.
+- **Two buttons, and which one a call site picked decided whether it rippled.** `GroupButton` and
+  `RippleButton` were both rooted on `Button`, and each spelled its own background, its own
+  `MouseArea` and its own press morph - twelve property names in common. The notification footer
+  lost its ripple the day it moved onto the group vocabulary: the morph came with `GroupButton`,
+  the ripple never did, and nothing said so. `GroupButton` extends `RippleButton` now and keeps
+  only what a button GROUP adds - the bounce, the segmented `leftRadius`/`rightRadius` ends mapped
+  onto the base's per-corner overrides, and the index bookkeeping. Three things are worth not
+  re-deriving. The call-site surface survived because `colBackgroundActive` and
+  `colBackgroundToggledActive` kept their names and now FEED `colRipple`: M3 draws a press as the
+  state layer and the ripple both, so the old pressed background is not redundant with the new
+  ripple. The one property that did not survive was the `mouseArea` alias, which
+  `AndroidQuickToggleButton` read `containsMouse` through - a `Control` has said `hovered` all
+  along. And the long-press-to-`altAction` that `GroupButton`'s own `MouseArea` carried moved INTO
+  `RippleButton`, because it is the touch spelling of a right click and every ripple button should
+  answer both the same way. 9d073fc3d ("refactor(widgets): build GroupButton on RippleButton so a
+  group button ripples").
+- **A layout owns `x`, so an animation that writes it has to remember a position - and it
+  remembered the wrong one.** `StyledText.animateChange` slid the text out and back by animating
+  `root.x`/`root.y` toward an `originalX` captured in `Component.onCompleted`. For anything inside
+  a layout that capture is taken before the layout has run, so every later glyph swap "returned"
+  the item to a stale place and left it there. A `ListView` builds its first delegate before the
+  view has width, which is what selected the victim: in the contacts list, expanding the FIRST row
+  swapped `expand_more` for `expand_less` and parked that row's chevron **311px** left of the
+  card's trailing edge - in the middle of the contact's name - while every row built after the view
+  had width was correct. It animates a `Translate` now, which no layout writes, so the rest
+  position is zero and there is nothing to remember. This is the same rule `BarGroup` is built on
+  two points up, arrived at from the other end. 1a3f683be ("fix(widgets): move a text change with a
+  transform, not the item's own x"), 764e81d06 ("test(phone): measure the contact chevron, at rest
+  and after the glyph swap").
+- **A skip for a reason it did not name is a check that cannot fail.** Moving `GroupButton` onto
+  `RippleButton` pulled `InteractionMotion` into the chain, and the QML unit tests' import tree - a
+  mirror of symlinks under `tests/imports` with its own `qmldir` - had no entry for it, so the row
+  under test stopped building. `tst_config_selection_array` skipped on ANY load error, so the suite
+  reported two more skips, zero failures and exit 0. The guard now excuses the one thing it is
+  allowed to, the way `tst_grouped_list` already did: a Qt too old for the per-corner radii. When a
+  widget moves onto a new base, its base's dependencies have to reach `tests/imports` too.
+  80d970c89 ("test: resolve InteractionMotion, and fail rather than skip on a load error").
+- **`DialogListItem` is drawn for a container, and a caller that gives it none gets a bare list.**
+  It carries `buttonRadius: 0` on the layer-3 tone because the Wi-Fi and Bluetooth pickers put it
+  inside a dialog. The phone roster used it with nothing around it, so its rows sat straight on the
+  panel and the menu read as a list. It unrolls inside a `StyledRectangle` at the group tier now,
+  with the menu's radius, its vertical padding and a clip so square rows keep rounded ends, and the
+  chosen device carries what M3 gives a selected menu item - the secondary container tone, its
+  matching ink, a trailing check - where `active` had done nothing but cancel the hover colour.
+  Watch the harness when a surface appears: `rosterBox()` was spelled "the list's parent", which
+  the new wrapper would silently have become. 102e91e64 ("fix(phone): give the roster the menu
+  surface its rows are drawn for").
 - **A one-tree widget's geometry reads the SETTLED span's box, never the animating one.** Three
   trees were written with `spanW: root.implicitWidth`, and `implicitWidth` carries a Behavior: every
   rect became a per-frame target, so the Behaviors that carry the travel never converged, and any
