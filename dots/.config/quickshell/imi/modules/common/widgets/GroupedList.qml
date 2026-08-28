@@ -30,6 +30,22 @@ import QtQuick.Layouts
 Item {
     id: root
     default property list<Item> items
+    // ---- a group whose rows are not known when the file is written --------
+    //
+    // The declared spelling above cannot say "one row per device the daemon
+    // knows". A call site that needed that used to wrap a list view in a
+    // rectangle of its own, which is the presentation M3_GUIDELINES.md names
+    // this component for - and it came out square, because `clip` on a
+    // Rectangle clips to the box and not to the radius, so opaque rows paint
+    // straight over the rounded corners.
+    //
+    // A row built from a model gets its data and its plate's corners handed to
+    // it BY NAME after it loads: a Component declared at the call site resolves
+    // its names in the call site's scope, not in the Loader's, so a plate that
+    // merely exposed `modelData` would hand it nothing.
+    property var model: null
+    property Component rowDelegate: null
+    readonly property bool modelDriven: root.rowDelegate !== null
     property real bigRadius: Appearance.rounding.normal
     property real smallRadius: Appearance.rounding.unsharpenmore
     property bool cohesive: false
@@ -45,6 +61,14 @@ Item {
     // rounding while the row above it is drawn square.
     readonly property var drawnIndices: {
         const drawn = [];
+        // A model's rows are all drawn: `rowVisible` is a declared row's way of
+        // leaving the group, and a model leaves by not carrying the entry.
+        if (root.modelDriven) {
+            const count = root.model?.length ?? 0;
+            for (let i = 0; i < count; i++)
+                drawn.push(i);
+            return drawn;
+        }
         for (let i = 0; i < root.items.length; i++) {
             const item = root.items[i];
             if (item && (item.rowVisible ?? true))
@@ -59,9 +83,11 @@ Item {
         spacing: root.cohesive ? 0 : Appearance.spacing.space25
 
         Repeater {
-            model: root.items.length
+            model: root.modelDriven ? root.model : root.items.length
             delegate: Rectangle {
+                id: plate
                 required property int index
+                required property var modelData
                 readonly property bool isFirst: index === root.drawnIndices[0]
                 readonly property bool isLast: index === root.drawnIndices[root.drawnIndices.length - 1]
                 // A `ColumnLayout` leaves an invisible child out of the layout
@@ -70,7 +96,9 @@ Item {
                 // and leaving the other.
                 visible: root.drawnIndices.indexOf(index) !== -1
                 Layout.fillWidth: true
-                implicitHeight: (root.items[index]?.implicitHeight ?? 0) + root.itemVerticalPadding
+                implicitHeight: (root.modelDriven
+                    ? (rowLoader.item?.implicitHeight ?? 0)
+                    : (root.items[index]?.implicitHeight ?? 0)) + root.itemVerticalPadding
                 color: root.bgcolor
                 topLeftRadius:     isFirst ? root.bigRadius : (root.cohesive ? 0 : root.smallRadius)
                 topRightRadius:    isFirst ? root.bigRadius : (root.cohesive ? 0 : root.smallRadius)
@@ -78,6 +106,8 @@ Item {
                 bottomRightRadius: isLast  ? root.bigRadius : (root.cohesive ? 0 : root.smallRadius)
 
                 Component.onCompleted: {
+                    if (root.modelDriven)
+                        return;
                     const child = root.items[index]
                     if (child) {
                         child.parent = contentArea
@@ -89,6 +119,49 @@ Item {
                     id: contentArea
                     anchors { fill: parent; margins: Appearance.spacing.space100 }
                     spacing: 0
+
+                    Loader {
+                        id: rowLoader
+                        active: root.modelDriven
+                        Layout.fillWidth: true
+                        sourceComponent: root.rowDelegate
+                    }
+                }
+
+                // The row's data, and - for a row that paints its own
+                // background, which a plate cannot show through - the plate's
+                // own corners. Bindings rather than an `onLoaded` assignment so
+                // that a row keeps following its entry when the model is
+                // re-filtered under it instead of holding the first one it saw.
+                Binding {
+                    target: rowLoader.item
+                    property: "modelData"
+                    value: plate.modelData
+                    when: rowLoader.item !== null
+                }
+                Binding {
+                    target: rowLoader.item
+                    property: "cornerTopLeft"
+                    value: plate.topLeftRadius
+                    when: rowLoader.item?.cornerTopLeft !== undefined
+                }
+                Binding {
+                    target: rowLoader.item
+                    property: "cornerTopRight"
+                    value: plate.topRightRadius
+                    when: rowLoader.item?.cornerTopRight !== undefined
+                }
+                Binding {
+                    target: rowLoader.item
+                    property: "cornerBottomLeft"
+                    value: plate.bottomLeftRadius
+                    when: rowLoader.item?.cornerBottomLeft !== undefined
+                }
+                Binding {
+                    target: rowLoader.item
+                    property: "cornerBottomRight"
+                    value: plate.bottomRightRadius
+                    when: rowLoader.item?.cornerBottomRight !== undefined
                 }
             }
         }
