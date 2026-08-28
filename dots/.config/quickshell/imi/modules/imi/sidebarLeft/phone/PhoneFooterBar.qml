@@ -34,6 +34,22 @@ import QtQuick.Layouts
  * contentItem is a `MaterialSymbol` declaring both alignments, which is what
  * centres a Control's content item - an anchor on it is decoration, because a
  * Control sizes and positions its content item itself.
+ *
+ * Neither glyph carries `animateChange`, and on the clear action that is a fix
+ * rather than an omission. `StyledText`'s deferred swap animates the Text's OWN
+ * `x` and `y` away and back to the `originalX`/`originalY` it recorded in its
+ * own `Component.onCompleted` - which for a Control's content item runs BEFORE
+ * the Control has placed it, so those two are (0, 0) and the glyph lands on the
+ * top-left corner of the padded rect instead of on its centre, for the rest of
+ * the session. Measured in PhoneTabRuntimeTest at the sidebar's 460px: after
+ * one swap the clear glyph settled 4.00px left and 4.00px above the button's
+ * centre - exactly the Control's own padding - having travelled 10.00px off it
+ * on the way, while the sync glyph beside it, whose text never changes, read
+ * (0.00, 0.00) throughout. The swap also fades the glyph to zero (measured
+ * minimum opacity 0.00) inside a button background that does not fade with it,
+ * so the action is an empty pill for a tier's length: the same pair 3c82747df
+ * removed from the feature card's badge. The count is the one thing on this bar
+ * that changes, which is why this was the one glyph it could happen to.
  */
 Item {
     id: root
@@ -120,7 +136,6 @@ Item {
                 text: root.count > 0 ? "delete_sweep" : "do_not_disturb_on"
                 iconSize: Appearance.font.pixelSize.larger
                 color: Appearance.colors.colOnSecondaryContainer
-                animateChange: true
             }
 
             StyledToolTip {
