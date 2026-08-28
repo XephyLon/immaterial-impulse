@@ -6,7 +6,8 @@
 # as a *microphone* (source), we create a null-sink named "DroidCam-Mic" whose
 # `.monitor` source becomes an available input device for system apps.
 #
-# Output: prints the monitor source name on stdout (e.g. "alsa_output.DroidCam-Mic.monitor")
+# Output: prints the monitor source name on stdout ("DroidCam-Mic.monitor", or
+#         "alsa_output.DroidCam-Mic.monitor" on a server that prefixes it)
 #         so the QML service can use it with `pactl set-source-*` commands.
 # Exit codes: 0 on success (sink already existed or was created), 1 on failure.
 
@@ -20,25 +21,47 @@ if ! command -v pactl >/dev/null 2>&1; then
     exit 1
 fi
 
-# Check if the null-sink is already loaded (idempotent).
+# find_monitor → the null-sink's monitor source name, empty when it is absent.
+#
+# There is ONE resolution now, and that is the whole fix. The idempotence
+# check used to ask for `DroidCam-Mic.monitor` alone, while the lookup after a
+# fresh load — twenty lines below it, for the same fact — tried
+# `alsa_output.DroidCam-Mic.monitor` FIRST and then two fallbacks. So on a
+# server using the prefixed form that does not also propagate
+# `device.description`, the existing-sink branch missed a sink it had already
+# loaded and loaded a second one under the same name, on every call, while
+# teardown removed one per call. Driven against a fake server: three setups,
+# three null sinks.
+find_monitor() {
+    local name resolved
+    for name in "alsa_output.${SINK_NAME}.monitor" "${SINK_NAME}.monitor"; do
+        resolved="$(pactl list short sources 2>/dev/null \
+            | awk -v m="$name" '$2 == m { print $2; exit }')"
+        if [ -n "$resolved" ]; then
+            echo "$resolved"
+            return 0
+        fi
+    done
+    # Last resort: the server named it something else entirely, so ask by the
+    # description the sink was loaded with.
+    resolved="$(pactl list sources 2>/dev/null | awk -v desc="$SINK_DESC" '
+        /Name:/ { name=$2 }
+        /Description:/ && $0 ~ desc { print name; exit }
+    ')"
+    [ -n "$resolved" ] || return 1
+    echo "$resolved"
+}
+
+# Already loaded? Then the monitor it published is the answer (idempotent).
 existing="$(pactl list short sinks 2>/dev/null | awk -v sink="$SINK_NAME" '$2 == sink {print $1; exit}' || true)"
 if [ -n "$existing" ]; then
-    # Already loaded — emit the monitor source name.
-    monitor_name=""
-    # PulseAudio convention: <driver>.<sink_name>.monitor
-    monitor_name="$(pactl list short sources 2>/dev/null | awk -v sink="$SINK_NAME" -v monitor="$SINK_NAME.monitor" '$2 == monitor {print $2; exit}')"
-    if [ -z "$monitor_name" ]; then
-        # Fallback: search by description match
-        monitor_name="$(pactl list sources 2>/dev/null | awk -v desc="$SINK_DESC" '
-            /Name:/ { name=$2 }
-            /Description:/ && $0 ~ desc { print name; exit }
-        ')"
-    fi
+    monitor_name="$(find_monitor || true)"
     if [ -n "$monitor_name" ]; then
         echo "$monitor_name"
         exit 0
     fi
-    # Fall through to recreate if monitor not found.
+    # A sink whose monitor cannot be named is not usable; fall through to the
+    # load rather than reporting a source nothing can open.
 fi
 
 # Load module-null-sink with the DroidCam name and description.
@@ -50,26 +73,7 @@ pactl load-module module-null-sink \
         exit 1
     }
 
-# The monitor source follows the naming convention:
-#   <server_type>.<sink_name>.monitor
-# PipeWire (most common now): "alsa_output.DroidCam-Mic.monitor"
-# PulseAudio: same convention.
-MONITOR="alsa_output.${SINK_NAME}.monitor"
-found="$(pactl list short sources 2>/dev/null | awk -v m="$MONITOR" '$2 == m {print $2; exit}')"
-
-if [ -z "$found" ]; then
-    # Try alternate naming: just <sink_name>.monitor
-    MONITOR="${SINK_NAME}.monitor"
-    found="$(pactl list short sources 2>/dev/null | awk -v m="$MONITOR" '$2 == m {print $2; exit}')"
-fi
-
-if [ -z "$found" ]; then
-    # Last resort: search by description.
-    found="$(pactl list sources 2>/dev/null | awk -v desc="$SINK_DESC" '
-        /Name:/ { name=$2 }
-        /Description:/ && $0 ~ desc { print name; exit }
-    ')"
-fi
+found="$(find_monitor || true)"
 
 if [ -z "$found" ]; then
     echo "Could not find monitor source after loading null-sink" >&2
