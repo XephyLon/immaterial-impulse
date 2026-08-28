@@ -2657,6 +2657,25 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   `RippleButton`, because it is the touch spelling of a right click and every ripple button should
   answer both the same way. 9d073fc3d ("refactor(widgets): build GroupButton on RippleButton so a
   group button ripples").
+- **A widget grew a second copy because the shared one had no seam, and the copy then drifted.**
+  `NotificationGroup` was written against `services/Notifications.qml` end to end - eight call
+  sites, dismissal by an id the freedesktop server minted, a popup timeout - so the phone could not
+  use it and wrote its own: 429 lines re-spelling the same 70px drag threshold, the same 20px
+  overshoot, the same 0.3/0.1 neighbour lean. Then they diverged, and the copy was the one that got
+  it wrong (a group of one drew an expand chevron that expanded nothing, which the original gates
+  on `multipleNotifications`). The seam is `NotificationController`: it takes whole notification
+  objects rather than ids, so which id a backend dismisses by stays the backend's business, and its
+  DEFAULTS are the freedesktop behaviour so no existing call site changed. The phone's list is 67
+  lines now. Three things worth not re-deriving. Field names normalise at the SERVICE
+  (`summary`/`body`/`image` beside the daemon's `title`/`text`/`iconPath`), operations normalise at
+  the CONTROLLER, and the split is not arbitrary: the service's own tests pin the daemon's shape,
+  so the actions list - which the card wants as `{text, identifier}` and the daemon sends as bare
+  strings - maps in `actionsOf` rather than in either file. A capability that only one backend has
+  (inline reply) is a `supportsReply` flag, not a branch in the card. And a service's PERSISTED
+  cache is a version boundary: adding those fields meant every restored notification arrived
+  without them, which no fixture in this suite could catch because they all write a current cache -
+  it took a deploy and the live log, six errors stamped at the second the code loaded. 39f9b7da6
+  ("fix(phone): upgrade a cached notification to the card's shape on restore").
 - **Re-rooting a widget hands every subclass the base's properties, and a subclass that already
   declared one now has TWO.** `AndroidQuickToggleButton` declared `property real appear: 1` back
   when `GroupButton` was rooted on `Button`. The move onto `RippleButton` gave it a second, and QML

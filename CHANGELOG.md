@@ -12,6 +12,13 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Changed
+- **The phone's notifications are drawn by the same card as the shell's own**,
+  so they behave the same way: the swipe, the stack's lean, the group that
+  expands and the buttons are one implementation instead of two that had
+  already started to disagree. Replying to a phone notification and its app's
+  own actions still work exactly where they did.
+
 ### Fixed
 - **A contact's expand arrow stays where it belongs.** Opening the first
   contact in the list used to fling its arrow into the middle of the
