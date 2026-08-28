@@ -36,6 +36,7 @@ import argparse
 import collections
 import json
 import os
+import queue
 import re
 import subprocess
 import sys
@@ -111,6 +112,9 @@ class ScrcpySessionManager:
         self.emit_lock = threading.Lock()
         self.processes = {}     # session_id -> subprocess.Popen
         self.session_info = {}  # session_id -> {id, type, title, pid, startedAt}
+        # The app scan runs on a worker of its own (see request_apps).
+        self.apps_queue = queue.Queue()
+        self.apps_worker = None
 
     def emit(self, event):
         """One lock around one write.
@@ -200,6 +204,37 @@ class ScrcpySessionManager:
             os.replace(tmp, path)
         except Exception as error:
             sys.stderr.write(f"cache write failed: {error}\n")
+
+    def request_apps(self, target_args=None, device_id="default"):
+        """Queue an app scan for the worker, and return to reading stdin.
+
+        `list_apps` was called straight from the command loop, and it is
+        worth up to ~26 seconds of blocking subprocesses: `adb connect` (4s)
+        + `adb devices` (4s) + `scrcpy --list-apps` (10s) + `pm list` (8s).
+        For all of that time `stop`, `stop_all` and `focus` were not even
+        read off stdin, so a click on a live mirror did nothing until the
+        scan the user had not asked about finished. Measured with a fake
+        that sleeps 4s in `--list-apps`: a focus sent 0.3s in was acted on at
+        4.01s.
+
+        A queue with one worker rather than a thread per request, so two
+        scans cannot run `adb` at each other, and so every request is
+        answered in the order it arrived - a scan dropped as a duplicate is
+        an `apps_list` the page waits for and never gets.
+        """
+        if self.apps_worker is None or not self.apps_worker.is_alive():
+            self.apps_worker = threading.Thread(target=self._apps_loop, daemon=True)
+            self.apps_worker.start()
+        self.apps_queue.put((target_args, device_id))
+
+    def _apps_loop(self):
+        while True:
+            target_args, device_id = self.apps_queue.get()
+            try:
+                self.list_apps(target_args, device_id)
+            except Exception as error:
+                self.emit({"event": "apps_error",
+                           "message": f"Failed to list apps: {error}"})
 
     def list_apps(self, target_args=None, device_id="default"):
         device_id = device_id or "default"
@@ -358,8 +393,8 @@ class ScrcpySessionManager:
             return
         cmd = msg.get("cmd")
         if cmd == "list_apps":
-            self.list_apps(target_args=msg.get("target_args"),
-                           device_id=msg.get("deviceId", "default"))
+            self.request_apps(target_args=msg.get("target_args"),
+                              device_id=msg.get("deviceId", "default"))
         elif cmd == "launch":
             self.launch_session(msg.get("id"), msg.get("type", "app"),
                                 msg.get("target_args"), msg.get("extra_args"))
