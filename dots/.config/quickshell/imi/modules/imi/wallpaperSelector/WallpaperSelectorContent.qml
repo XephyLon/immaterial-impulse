@@ -439,6 +439,47 @@ MouseArea {
                                     onActivated: index => Config.options.wallpaperSelector.wallpaperEngine.scaling = model[index].value
                                 }
 
+                                // Which screen plays the sound. Offered beside
+                                // the volume button because that is where the
+                                // user turns sound on, and only where the
+                                // question exists: one screen, or muted, and
+                                // there is nothing to choose.
+                                //
+                                // There is one renderer per output, so before
+                                // this the audio played once per monitor (#338).
+                                StyledComboBox {
+                                    id: audioOutputBox
+                                    implicitWidth: 116
+                                    visible: !Config.options.wallpaperSelector.wallpaperEngine.silent
+                                        && (Quickshell.screens?.length ?? 0) > 1
+
+                                    readonly property var outputs: [{
+                                        value: "",
+                                        displayName: Translation.tr("Auto")
+                                    }].concat((Quickshell.screens ?? []).map(screen => ({
+                                        value: screen.name,
+                                        displayName: screen.name
+                                    })))
+
+                                    model: audioOutputBox.outputs
+                                    textRole: "displayName"
+                                    // Bound rather than set once on completion:
+                                    // a screen can arrive or leave while this is
+                                    // on screen, and the neighbours above only
+                                    // get away with Component.onCompleted
+                                    // because their options are a fixed list.
+                                    currentIndex: Math.max(0, audioOutputBox.outputs
+                                        .findIndex(output => output.value
+                                            === (Config.options.wallpaperSelector.wallpaperEngine.audioMonitor ?? "")))
+                                    onActivated: index =>
+                                        Config.options.wallpaperSelector.wallpaperEngine.audioMonitor
+                                            = audioOutputBox.outputs[index].value
+
+                                    StyledToolTip {
+                                        text: Translation.tr("Screen that plays the wallpaper's sound")
+                                    }
+                                }
+
                                 RippleButton {
                                     implicitWidth: 38
                                     implicitHeight: 38
