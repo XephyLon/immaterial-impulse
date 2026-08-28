@@ -13,6 +13,17 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The Phone tab pairs your phone over Wi-Fi instead of telling you to open a
+  terminal.** The Android Apps page used to print the two commands Android 11
+  and newer needs — `adb pair host:port code`, then `adb connect host:port` —
+  and leave you to retype them after every toggle of the Wireless debugging
+  switch. It now offers them as a form: an address and the six-digit code the
+  phone shows, a Pair button, then the connect address and a Connect button,
+  with whatever adb answered printed under each step. Where `avahi-browse` is
+  installed, **Find the ports** asks the network which ports the phone is
+  advertising and fills both addresses in; the address KDE Connect already
+  reaches the phone on is filled in either way. The six-digit code is still
+  read off the phone — it is generated per pairing and published nowhere.
 - **Opening a Phone tab page fades the tab back behind it.** Contacts and
   Android Apps slide in over a tab that now recedes and dims as they arrive,
   rather than sitting there at full strength underneath. It follows the
@@ -133,6 +144,18 @@ own repo; the installer pins which revision it builds.
   sit dead centre instead of a pixel and a half to the left.
 
 ### Fixed
+- **A phone feature no longer says "ready" when the tool it needs cannot
+  start.** The shell checked whether scrcpy, adb and DroidCam CLI were
+  installed and not whether they run. On this machine `droidcam-cli` was
+  installed and died on startup with a missing `libswscale.so.9` — the package
+  was built against an older ffmpeg than the system now ships — so the webcam
+  card read "ready", pressing it did nothing, and the message on screen asked
+  whether the DroidCam app was open on the phone. The three tools are started
+  as well as located now, and a tool that cannot start says so: which library
+  is missing, and that the package needs rebuilding rather than installing.
+  The Android Apps page tells the same three states apart too — adb missing,
+  adb unable to start, and adb working with no phone on it — where it used to
+  assume the first two away.
 - **The Phone tab's Android Apps page says what to turn on when it cannot
   reach the phone.** App Mode drives the phone over ADB, which is a
   different link from the one KDE Connect pairs: with a phone reachable on
