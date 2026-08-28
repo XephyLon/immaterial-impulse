@@ -305,6 +305,17 @@ if ! python3 "$SCRIPT_DIR/lint_hand_rolled_row_group.py"; then
     exit 1
 fi
 
+# Static lint: a wave member declares `appear` once. Declaring it over a base
+# that already has one puts two properties of that name on the object - the
+# wave writes the derived one, the base's opacity binding reads its own, and
+# the member silently stops fading. The android quick toggles did exactly that
+# the day GroupButton moved onto RippleButton.
+echo "Running shadowed stagger appear lint..."
+if ! python3 "$SCRIPT_DIR/lint_shadowed_stagger_appear.py"; then
+    echo "Shadowed stagger appear lint failed."
+    exit 1
+fi
+
 # Static lint: the same rule for the interaction model's transform. A scale
 # composites exactly the way an opacity does, and the lint above recognises a
 # doubled dim by its opacity EXPRESSION - so the doubled scale discordVoice
