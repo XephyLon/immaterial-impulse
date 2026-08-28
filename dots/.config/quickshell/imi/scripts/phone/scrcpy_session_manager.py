@@ -105,12 +105,31 @@ def cache_path(device_id):
 class ScrcpySessionManager:
     def __init__(self):
         self.lock = threading.Lock()
+        # A lock of its own, never `self.lock`: that one is held around the
+        # process maps and an emit inside it would tie the two orders
+        # together.
+        self.emit_lock = threading.Lock()
         self.processes = {}     # session_id -> subprocess.Popen
         self.session_info = {}  # session_id -> {id, type, title, pid, startedAt}
 
     def emit(self, event):
+        """One lock around one write.
+
+        `print(json.dumps(event), flush=True)` is two writes into a shared
+        buffered stream, and every reaper thread emits `exited` concurrently
+        with the main thread and with the app scan. An event large enough to
+        flush part way through - an `apps_list` for a real phone is tens of
+        kilobytes - can therefore be split by another thread's line, and
+        interleaved NDJSON makes the QML parser return null and drop BOTH
+        events. A lost `exited` leaves a session row live with no window
+        behind it. Observed against real stdout at roughly one corruption in
+        three runs of a stress harness.
+        """
+        line = json.dumps(event) + "\n"
         try:
-            print(json.dumps(event), flush=True)
+            with self.emit_lock:
+                sys.stdout.write(line)
+                sys.stdout.flush()
         except Exception as error:  # a closed stdout: nothing left to tell
             sys.stderr.write(f"emit failed: {error}\n")
 
