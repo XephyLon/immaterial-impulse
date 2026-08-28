@@ -52,6 +52,25 @@ def _synced_region(path: Path, tag: str) -> str:
     return text[start:text.index(end)]
 
 
+def _named_block(source: str, object_id: str) -> str:
+    """The body of the `Process`/`Timer` block carrying `id: <object_id>`.
+
+    Brace-counted forward from the brace that opened it, which is found by
+    walking back from the id - these blocks are located by what they are
+    called rather than by where they sit in the file.
+    """
+    marker = source.index("id: " + object_id + "\n")
+    start = source.rindex("{", 0, marker)
+    depth, index = 1, start + 1
+    while index < len(source) and depth:
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+        index += 1
+    return source[start:index]
+
+
 def _process_blocks(source: str):
     """Every `Process { ... }` block, brace-counted with string literals
     skipped, so a `}` inside a shell string cannot end a block early."""
@@ -285,6 +304,36 @@ def test_the_capability_probes_start_themselves_and_again_from_recheck():
                      "lsmodProbe", "modinfoProbe", "distroProbe"):
         assert probe_id in recheck.group(1), f"recheck() does not restart {probe_id}"
     assert '["scrcpy", "--version"]' in source, "the version probe is not the argv scrcpy --version"
+
+
+def test_the_three_spawned_tools_are_asked_whether_they_run_not_only_whether_they_exist():
+    """`command -v` answers presence; a package linked against a library the
+    system has moved past is present and dies before main. The three binaries
+    the tab spawns are therefore started as well, each from its own presence
+    probe rather than from a feature's activation, and each under a kill guard
+    so a tool that blocks cannot leave a probe outstanding for the session."""
+    source = _source("PhoneDeps")
+    assert '["adb", "--version"]' in source, "adb is never actually started"
+    assert '["droidcam-cli"]' in source, "droidcam-cli is never actually started"
+    assert '["scrcpy", "--version"]' in source, "scrcpy is never actually started"
+    for probe, presence in (("adbRunProbe", "adbProbe"),
+                            ("droidcamRunProbe", "droidcamProbe"),
+                            ("versionProbe", "scrcpyProbe")):
+        block = _named_block(source, presence)
+        assert "root.startProbe(%s)" % probe in block, (
+            f"{probe} is not started by {presence}, so it answers only once a feature asks"
+        )
+    for guard, probe in (("adbRunGuard", "adbRunProbe"),
+                         ("droidcamRunGuard", "droidcamRunProbe"),
+                         ("scrcpyRunGuard", "versionProbe")):
+        assert f"{guard}.restart()" in source and f"{probe}.signal(15)" in source, (
+            f"{probe} has no kill guard: a tool that blocks would hang its probe"
+        )
+    # Both halves, or a tool that merely quotes the phrase - or any non-zero
+    # exit at all - would be reported as unable to run.
+    parse = re.search(r"function parseLoaderFailure\(.*?\n    \}", source, re.S).group(0)
+    assert "exitCode !== 127" in parse, "the classifier does not require exit 127"
+    assert "error while loading shared libraries" in parse, "the classifier does not read the loader"
 
 
 def test_the_microphone_swap_is_persisted_and_undone_on_every_exit_path():
