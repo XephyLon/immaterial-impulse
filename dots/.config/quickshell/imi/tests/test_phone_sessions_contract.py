@@ -164,7 +164,7 @@ def test_the_only_shell_strings_are_phone_deps_constant_probes():
         )
     deps = _shell_strings(_source("PhoneDeps"))
     probes = [s for s in deps if s.startswith('"command -v ')]
-    assert len(probes) == 10, f"expected ten `command -v` probes, found {probes}"
+    assert len(probes) == 11, f"expected eleven `command -v` probes, found {probes}"
     for string in deps:
         assert string.startswith('"') and string.endswith('"'), f"not a plain literal: {string}"
         assert "${" not in string and "+" not in string, f"interpolation into a shell string: {string}"
@@ -291,7 +291,7 @@ def test_the_supervisor_idle_timer_is_ten_seconds_and_asks_before_stopping():
 def test_the_capability_probes_start_themselves_and_again_from_recheck():
     source = _source("PhoneDeps")
     probes = [block for block in _process_blocks(source) if '"command -v ' in block]
-    assert len(probes) == 10, f"expected ten probes, found {len(probes)}"
+    assert len(probes) == 11, f"expected eleven probes, found {len(probes)}"
     for block in probes:
         assert "Component.onCompleted: root.startProbe(this)" in block, f"a probe does not start itself: {block[:80]}"
         assert "onRunningChanged: if (!running) root.probeAnswered()" in block, (
@@ -301,7 +301,7 @@ def test_the_capability_probes_start_themselves_and_again_from_recheck():
     assert recheck, "recheck() missing"
     for probe_id in ("scrcpyProbe", "adbProbe", "droidcamProbe", "v4l2CtlProbe", "pactlProbe",
                      "mpvProbe", "ffplayProbe", "vlcProbe", "kdialogProbe", "wlPasteProbe",
-                     "lsmodProbe", "modinfoProbe", "distroProbe"):
+                     "avahiBrowseProbe", "lsmodProbe", "modinfoProbe", "distroProbe"):
         assert probe_id in recheck.group(1), f"recheck() does not restart {probe_id}"
     assert '["scrcpy", "--version"]' in source, "the version probe is not the argv scrcpy --version"
 
@@ -334,6 +334,34 @@ def test_the_three_spawned_tools_are_asked_whether_they_run_not_only_whether_the
     parse = re.search(r"function parseLoaderFailure\(.*?\n    \}", source, re.S).group(0)
     assert "exitCode !== 127" in parse, "the classifier does not require exit 127"
     assert "error while loading shared libraries" in parse, "the classifier does not read the loader"
+
+
+def test_the_adb_pair_and_connect_commands_are_constant_argv():
+    """The address and the pairing code are the user's own typing. They reach
+    adb as separate argv elements through a Process, with no shell anywhere on
+    the path - the sibling fork's wireless-ADB helpers are `bash -c` strings
+    with values pasted into them, which is the shape this may not take."""
+    source = _source("PhoneDeps")
+    for builder, expected in (("adbPairArgv", '["adb", "pair"'),
+                              ("adbConnectArgv", '["adb", "connect"'),
+                              ("avahiBrowseArgv", '["avahi-browse", "-rpt"')):
+        body = re.search(r"function %s\(.*?\n    \}" % builder, source, re.S)
+        assert body, f"{builder} is missing"
+        assert expected in body.group(0), f"{builder} does not build a constant argv"
+        assert '"-c"' not in body.group(0), f"{builder} reaches a shell"
+    for name in ("pairProcess", "connectProcess", "pairingBrowse", "connectBrowse"):
+        block = _named_block(source, name)
+        assert "command:" not in block, (
+            f"{name} declares a command instead of being handed one by an argv builder"
+        )
+    # `adb connect` exits 0 whatever happens, so the exit code alone may not
+    # decide it - and the phone turning up under `adb devices` is what the
+    # panel really waits for.
+    connect = re.search(r"function parseConnectResult\(.*?\n    \}", source, re.S).group(0)
+    assert "connected to" in connect, "the connect result is not read off what adb printed"
+    assert "root.refreshAdbDevices()" in _named_block(source, "connectProcess"), (
+        "a successful connect never re-asks adb devices, so nothing confirms it"
+    )
 
 
 def test_the_microphone_swap_is_persisted_and_undone_on_every_exit_path():
