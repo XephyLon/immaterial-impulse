@@ -40,6 +40,13 @@ Visible borders are not required for every surface. Many components rely entirel
 ### Grouped Settings
 
 - Use the standard `GroupedList` presentation when rows are related but remain visually distinct.
+  This is enforced: `tests/lint_hand_rolled_row_group.py` fails on rows of a `DialogListItem`-rooted
+  type wrapped in a list inside a rectangle. It exists because the phone roster was built that way
+  anyway, with this line already on the page. A group whose rows come from a model uses
+  `GroupedList`'s `model` and `rowDelegate` rather than a list view of its own; a row that paints
+  its own background is handed the plate's corners, because a plate cannot show through an opaque
+  row - and `clip` will not save it, since `clip` on a `Rectangle` clips to the bounding box and
+  not to the radius.
 - Use `GroupedList { cohesive: true }` when every row belongs to one continuous form or semantic
   unit. Cohesive groups have no gaps or rounded internal seams; only the outside corners are rounded.
 - Let `GroupedList` provide the common content inset. Child controls must not add another horizontal
