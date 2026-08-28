@@ -212,6 +212,11 @@ shows the install command for Arch, Fedora and Debian when one is missing. Insta
 - `mpv` (recommended), else `ffplay` (`ffmpeg`) or `vlc` — the webcam preview window.
 - `kdialog` (already in `immaterial-impulse-quickshell-git`) and `wl-clipboard` (already in
   `immaterial-impulse-hyprland`) — the Send file picker and the clipboard share.
+- `avahi` — `avahi-browse`, optional: the Android Apps page's **Find the ports** button, which
+  asks the network which wireless-debugging ports the phone is advertising instead of making you
+  read them off its screen. Android re-rolls both on every toggle of the switch. Without it the
+  button is not drawn and both addresses are typed. Arch: `avahi` (the daemon has to be running,
+  not just installed).
 
 # Actual packages
 ## immaterial-impulse-quickshell-git
