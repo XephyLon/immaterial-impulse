@@ -157,6 +157,15 @@ Button {
             if (!root.rippleEnabled) return;
             rippleFadeAnim.restart();
         }
+        // The touch spelling of the right-click action. A pointer has a
+        // second button; a finger has a long press, and every button built
+        // on this one should answer both the same way.
+        onPressAndHold: () => {
+            if (!root.altAction) return;
+            root.altAction();
+            root.down = false;
+            if (root.rippleEnabled) rippleFadeAnim.restart();
+        }
     }
 
     RippleAnim {
