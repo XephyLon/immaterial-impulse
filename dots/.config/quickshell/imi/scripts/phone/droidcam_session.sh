@@ -121,7 +121,7 @@ extract_ip() {
 # cmd_launch <session> <bin> <args...>
 cmd_launch() {
     local session="$1" bin="$2"; shift 2
-    [ $# -ge 1 ] || { echo "droidcam_session: launch needs args" >&2; exit 1; }
+    [ $# -ge 1 ] || { echo "droidcam_session: launch needs args" >&2; return 1; }
 
     local statefile logfile
     statefile="$(statefile_for "$session")"
@@ -145,7 +145,7 @@ cmd_launch() {
         atomically_write "$statefile" \
             "{\"pid\":\"$existing\",\"started\":$(date +%s),\"port\":\"$port\",\"mode\":\"$mode\",\"ip\":\"$ip\",\"cmdline\":\"$cl\"}"
         echo "$existing"
-        exit 0
+        return 0
     fi
 
     # An idle wireless ADB transport drops the first command thrown at it.
@@ -182,7 +182,7 @@ cmd_launch() {
     fi
     if [ -z "$pid" ]; then
         echo "droidcam_session: failed to start session '$session'" >&2
-        exit 1
+        return 1
     fi
 
     local cl
@@ -270,7 +270,7 @@ cmd_stop() {
             is_alive "$stray" && kill -KILL "$stray" 2>/dev/null || true
         fi
         echo "droidcam_session: no state for '$session'" >&2
-        exit 0
+        return 0
     fi
 
     local pid
@@ -278,7 +278,7 @@ cmd_stop() {
     if [ -z "$pid" ] || ! is_alive "$pid"; then
         rm -f "$statefile"
         echo "droidcam_session: '$session' not running" >&2
-        exit 0
+        return 0
     fi
 
     # Safety: only kill if the cmdline still looks like our kind of process.
@@ -303,10 +303,19 @@ cmd_stop() {
 }
 
 # cmd_killall — stop every tracked session.
+#
+# `exit` inside a function ends the SCRIPT, not the function: neither the
+# redirection nor a `|| true` makes a subshell of it. cmd_stop's two non-kill
+# paths used to end with `exit 0`, so the first session with no state file
+# ended this loop, the other two were never stopped, and the caller saw a 0.
+# Every cmd_* returns now, and `tests/test_phone_shell_scripts.py` counts the
+# process-table lookups to prove the loop got all the way round.
 cmd_killall() {
+    local session status=0
     for session in video audio scrcpy-mic; do
-        cmd_stop "$session" >/dev/null 2>&1 || true
+        cmd_stop "$session" >/dev/null 2>&1 || status=$?
     done
+    return "$status"
 }
 
 # ─── Dispatch ────────────────────────────────────────────────────────────

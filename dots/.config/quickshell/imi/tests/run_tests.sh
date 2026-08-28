@@ -1898,6 +1898,20 @@ if ! python3 "$SCRIPT_DIR/test_phone_contacts_contract.py"; then
     exit 1
 fi
 
+# The Phone tab's four SHELL scripts, run for real with stubbed pgrep,
+# pactl, v4l2-ctl, droidcam-cli, scrcpy and sudo first on PATH. Nothing had
+# ever run them: the contract check beside this one reads them as source text
+# and tst_phone_scrcpy.qml drives the QML that parses their output against
+# strings a human typed, so a producer that stopped emitting those strings
+# stayed green on both sides. What that cost: a `stop video` that sent
+# SIGTERM to the MICROPHONE, and a status probe whose JSON did not parse, so
+# every field in the payload was lost rather than one.
+echo "Running Phone shell script tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_shell_scripts.py"; then
+    echo "Phone shell script tests failed."
+    exit 1
+fi
+
 # The scrcpy supervisor over its real stdin/stdout, with fake scrcpy/adb/
 # hyprctl first on PATH: the exact argv, the events, focus by window title,
 # the USB-over-wireless rule, the app-list parse and its fallback, the cache
