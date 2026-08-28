@@ -75,6 +75,8 @@ ShellRoot {
     // this the glyph reads as sitting on the card's edge - measured at 4px
     // with the old fixed row height, and photographed by the maintainer.
     readonly property real minAvatarGap: Appearance.spacing.space100
+    // What each script's card measured for the chrome around its header.
+    property var cardPadding: ({})
 
     property string arabicId: ""
     property real arabicCollapsedHeight: 0
@@ -152,10 +154,16 @@ ShellRoot {
     // Everything about the row defect is a comparison between the card's own
     // box and the boxes of the three things it is supposed to contain.
     function scoreRow(tag, row) {
-        const pad = row.rowPadding;
         const headerBox = harness.boxIn(harness.firstNamed(row, "contactHeader"), row);
         const avatarBox = harness.boxIn(harness.firstNamed(row, "contactAvatar"), row);
         const identityBox = harness.boxIn(harness.firstNamed(row, "contactIdentity"), row);
+        // The panel owns the padding now that this card is the shell's own
+        // ExpandablePanel rather than a Rectangle that spelled its own; read
+        // it off the geometry instead of off a property the row no longer
+        // declares. A property that has gone reads as NaN, and every
+        // comparison against NaN is false, which is a check that cannot pass
+        // rather than one that caught something.
+        const pad = headerBox.top;
         console.log(`[PhoneTabLayout] ${tag} card h=${row.height} pad=${pad}`
                     + ` header ${headerBox.top}-${headerBox.bottom}`
                     + ` avatar ${avatarBox.top}-${avatarBox.bottom}`
@@ -172,8 +180,17 @@ ShellRoot {
                       avatarBox.top >= harness.minAvatarGap);
         harness.check(`${tag}: the card is its content plus its own padding and nothing`
                       + ` else, got ${row.height} against ${headerBox.bottom + pad}`,
-                      Math.abs(row.height - (headerBox.bottom + pad)) <= 1
-                      && Math.abs(headerBox.top - pad) <= 1);
+                      Math.abs(row.height - (headerBox.bottom + pad)) <= 1);
+        // ...and that padding is the panel's, so it is the SAME in both scripts:
+        // a card that grew its own chrome to fit a taller name would satisfy the
+        // line above on its own.
+        harness.cardPadding[tag] = pad;
+        const other = tag === "latin" ? "arabic" : "latin";
+        if (harness.cardPadding[other] !== undefined)
+            harness.check(`the chrome around the header is the panel's, so it is the same`
+                          + ` in both scripts, got ${harness.cardPadding.latin} and`
+                          + ` ${harness.cardPadding.arabic}`,
+                          Math.abs(harness.cardPadding[tag] - harness.cardPadding[other]) <= 1);
     }
 
     Process { id: fixtureStep }
@@ -405,6 +422,8 @@ ShellRoot {
                           arabic.height > latin.height);
             harness.arabicCollapsedHeight = arabic.height;
             harness.arabicId = String(arabic.modelData.id);
+            console.log(`[PhoneTabLayout] captured arabicId="${harness.arabicId}"`
+                        + ` from ${arabic.modelData?.id} collapsed=${harness.arabicCollapsedHeight}`);
         },
 
         // ---- ...and so does the stack it grows when it is expanded --------
@@ -420,7 +439,9 @@ ShellRoot {
             const detailsBox = harness.boxIn(details, arabic);
             console.log(`[PhoneTabLayout] arabic expanded card h=${arabic?.height}`
                         + ` details ${detailsBox.top}-${detailsBox.bottom}`
-                        + ` rows=${details?.children.length}`);
+                        + ` rows=${details?.children.length}`
+                        + ` panelExpanded=${arabic?.expanded}`
+                        + ` wantId=${harness.arabicId} rowId=${arabic?.modelData?.id}`);
             harness.check(`expanding the Arabic contact grows its card, got`
                           + ` ${arabic?.height} against ${harness.arabicCollapsedHeight}`,
                           arabic !== null && arabic.height > harness.arabicCollapsedHeight);

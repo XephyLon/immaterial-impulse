@@ -141,152 +141,203 @@ PhoneSubPage {
                 animateAppearance: false
                 visible: PhoneContacts.filtered.length > 0
 
-                delegate: Rectangle {
+                delegate: ExpandablePanel {
                     id: contactRow
                     required property var modelData
-
-                    readonly property bool expanded: root.expandedId === contactRow.modelData.id
                     readonly property bool favourite: PhoneContacts.isFavorite(contactRow.modelData.id, PhoneContacts.favorites)
                     readonly property var phones: contactRow.modelData.phones ?? []
 
-                    // The card's padding, spelled ONCE. It used to be two
-                    // numbers - `space50` on the column's anchors and
-                    // `space100` added to the height - which agree only while
-                    // one happens to be exactly twice the other, so changing
-                    // either leaves the card a different height from what is
-                    // in it. Same coupling `WindowDialog.contentPadding`
-                    // removed, one widget down.
-                    readonly property real rowPadding: Appearance.spacing.space50
-
+                    // The card the Docker manager already draws. It owns the
+                    // expand motion, the clipping, the input gating, the surface
+                    // and the ripple across its header - all of which this row
+                    // used to spell out for itself, which is why the two panels
+                    // in this shell behaved differently under the same gesture.
                     width: contactList.width
-                    implicitHeight: rowColumn.implicitHeight + contactRow.rowPadding * 2
-                    height: implicitHeight
-                    radius: Appearance.rounding.normal
-                    color: contactRow.expanded ? Appearance.colors.colLayer3 : Appearance.colors.colLayer2
+                    // A ListView delegate does not adopt its own implicit height,
+                    // and the panel's grows as it expands: without this the card
+                    // stayed at its collapsed height and drew the detail rows
+                    // outside itself.
+                    height: contactRow.implicitHeight
+                    expanded: root.expandedId === contactRow.modelData.id
+                    headerClickable: true
+                    onHeaderClicked: root.expandedId = contactRow.expanded ? "" : contactRow.modelData.id
 
-                    Behavior on height {
-                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                    }
-                    Behavior on color {
-                        animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-                    }
-
-                    ColumnLayout {
-                        id: rowColumn
-                        anchors {
-                            left: parent.left
-                            right: parent.right
-                            top: parent.top
-                            margins: contactRow.rowPadding
-                        }
-                        spacing: Appearance.spacing.space50
-
-                        RippleButton {
-                            // Named so a runtime harness can find the three
-                            // boxes this card is supposed to contain by name,
-                            // rather than by walking a tree whose shape is the
-                            // thing being measured.
+                    header: [
+                        RowLayout {
+                            // Named so the runtime harness can find the boxes this
+                            // card contains by name rather than by walking a tree
+                            // whose shape is the thing being measured.
                             objectName: "contactHeader"
                             Layout.fillWidth: true
-                            // No stated height, and the padding said out
-                            // loud. A Control sizes itself from its content
-                            // item, and what this row holds is a different
-                            // height in every script: measured in a real
-                            // window, the name-and-number column is 34px tall
-                            // for a Latin name and 47 for an Arabic one at
-                            // the same pixelSize, because the shell's font
-                            // carries no Arabic and the fallback sets taller.
-                            // `Layout.preferredHeight: huge * 2` therefore
-                            // fitted one script - the avatar ended 6px above
-                            // the card's own edge in Latin and 1px in Arabic,
-                            // and the NUMBER 3px below it, outside the card.
-                            // An aligned layout child answers a cell that is
-                            // too small by overflowing it, not by shrinking,
-                            // so nothing errors and nothing is logged.
-                            verticalPadding: Appearance.spacing.space75
-                            buttonRadius: Appearance.rounding.small
-                            colBackground: "transparent"
-                            colBackgroundHover: Appearance.colors.colLayer3Hover
-                            colRipple: Appearance.colors.colLayer3Active
-                            onClicked: root.expandedId = contactRow.expanded ? "" : contactRow.modelData.id
+                            spacing: Appearance.spacing.space125
 
-                            contentItem: RowLayout {
-                                spacing: Appearance.spacing.space125
+                            Rectangle {
+                                id: avatar
+                                objectName: "contactAvatar"
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space200
+                                Layout.preferredHeight: avatar.Layout.preferredWidth
+                                radius: Appearance.rounding.full
+                                color: Appearance.colors.colPrimaryContainer
 
-                                Rectangle {
-                                    id: avatar
-                                    objectName: "contactAvatar"
-                                    Layout.alignment: Qt.AlignVCenter
-                                    Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space200
-                                    Layout.preferredHeight: avatar.Layout.preferredWidth
-                                    radius: Appearance.rounding.full
-                                    color: Appearance.colors.colPrimaryContainer
+                                StyledText {
+                                    anchors.centerIn: parent
+                                    visible: photo.status !== Image.Ready
+                                    text: String(contactRow.modelData.displayName || "?").charAt(0).toUpperCase()
+                                    font.pixelSize: Appearance.font.pixelSize.normal
+                                    font.weight: Font.DemiBold
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                }
 
-                                    StyledText {
-                                        anchors.centerIn: parent
-                                        visible: photo.status !== Image.Ready
-                                        text: String(contactRow.modelData.displayName || "?").charAt(0).toUpperCase()
-                                        font.pixelSize: Appearance.font.pixelSize.normal
-                                        font.weight: Font.DemiBold
-                                        color: Appearance.colors.colOnPrimaryContainer
-                                    }
-
-                                    // The vCard carries the photo inline as a
-                                    // data URI, so this is the whole avatar
-                                    // pipeline - no file, no cache, nothing to
-                                    // invalidate when the phone re-syncs. The
-                                    // mask is what rounds it: `clip` on a
-                                    // rounded Rectangle clips to the box, not
-                                    // to the corner.
-                                    StyledImage {
-                                        id: photo
-                                        anchors.fill: parent
-                                        source: contactRow.modelData.photo ?? ""
-                                        sourceSize.width: avatar.width * 2
-                                        sourceSize.height: avatar.height * 2
-                                        fillMode: Image.PreserveAspectCrop
-                                        layer.enabled: true
-                                        layer.effect: OpacityMask {
-                                            maskSource: Rectangle {
-                                                width: avatar.width
-                                                height: avatar.height
-                                                radius: avatar.width / 2
-                                            }
+                                // The vCard carries the photo inline as a
+                                // data URI, so this is the whole avatar
+                                // pipeline - no file, no cache, nothing to
+                                // invalidate when the phone re-syncs. The
+                                // mask is what rounds it: `clip` on a
+                                // rounded Rectangle clips to the box, not
+                                // to the corner.
+                                StyledImage {
+                                    id: photo
+                                    anchors.fill: parent
+                                    source: contactRow.modelData.photo ?? ""
+                                    sourceSize.width: avatar.width * 2
+                                    sourceSize.height: avatar.height * 2
+                                    fillMode: Image.PreserveAspectCrop
+                                    layer.enabled: true
+                                    layer.effect: OpacityMask {
+                                        maskSource: Rectangle {
+                                            width: avatar.width
+                                            height: avatar.height
+                                            radius: avatar.width / 2
                                         }
                                     }
                                 }
+                            }
+
+                            ColumnLayout {
+                                objectName: "contactIdentity"
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
+                                spacing: 0
+
+                                StyledText {
+                                    Layout.fillWidth: true
+                                    // A contact's name is the phone's own;
+                                    // never markup.
+                                    textFormat: Text.PlainText
+                                    text: contactRow.modelData.displayName || Translation.tr("Unknown")
+                                    font.pixelSize: Appearance.font.pixelSize.small
+                                    font.weight: Font.DemiBold
+                                    color: Appearance.colors.colOnLayer2
+                                    elide: Text.ElideRight
+                                }
+                                StyledText {
+                                    Layout.fillWidth: true
+                                    textFormat: Text.PlainText
+                                    text: {
+                                        if (contactRow.modelData.organization)
+                                            return contactRow.modelData.organization;
+                                        if (contactRow.phones.length > 0)
+                                            return contactRow.phones[0].value;
+                                        const emails = contactRow.modelData.emails ?? [];
+                                        return emails.length > 0 ? emails[0].value : "";
+                                    }
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    color: Appearance.colors.colSubtext
+                                    elide: Text.ElideRight
+                                }
+                            }
+
+                            RippleButton {
+                                Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
+                                Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
+                                buttonRadius: Appearance.rounding.full
+                                colBackground: "transparent"
+                                colBackgroundHover: Appearance.colors.colLayer3Hover
+                                colRipple: Appearance.colors.colLayer3Active
+                                onClicked: PhoneContacts.toggleFavorite(contactRow.modelData.id)
+
+                                contentItem: MaterialSymbol {
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    text: contactRow.favourite ? "star" : "star_outline"
+                                    fill: contactRow.favourite ? 1 : 0
+                                    iconSize: Appearance.font.pixelSize.large
+                                    color: contactRow.favourite ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                                    animateChange: true
+                                }
+
+                                StyledToolTip {
+                                    // Starring is also what keeps a
+                                    // nameless card (a SIM import, a
+                                    // blocked number) out of the
+                                    // hide-unnamed filter.
+                                    text: contactRow.favourite
+                                        ? Translation.tr("Remove from favourites")
+                                        : Translation.tr("Add to favourites")
+                                }
+                            }
+
+                            MaterialSymbol {
+                                Layout.alignment: Qt.AlignVCenter
+                                text: contactRow.expanded ? "expand_less" : "expand_more"
+                                iconSize: Appearance.font.pixelSize.larger
+                                color: Appearance.colors.colSubtext
+                                animateChange: true
+                            }
+                        }
+                    ]
+
+                    ColumnLayout {
+                        objectName: "contactDetails"
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Appearance.spacing.space100
+                        Layout.rightMargin: Appearance.spacing.space100
+                        Layout.bottomMargin: Appearance.spacing.space50
+                        // Deliberately not `visible: contactRow.expanded`: the
+                        // panel hides its content with zero height and a clip,
+                        // and says in place why - `visible: false` collapses
+                        // the content column's implicit height to 0, which is
+                        // the height the panel animates TO, so the card would
+                        // never grow.
+                        spacing: Appearance.spacing.space75
+
+                        Repeater {
+                            model: contactRow.phones
+
+                            delegate: RowLayout {
+                                id: phoneRow
+                                required property var modelData
+
+                                Layout.fillWidth: true
+                                spacing: Appearance.spacing.space100
+
+                                MaterialSymbol {
+                                    Layout.alignment: Qt.AlignVCenter
+                                    text: phoneRow.modelData.type === "mobile" ? "smartphone" : "call"
+                                    iconSize: Appearance.font.pixelSize.large
+                                    color: Appearance.colors.colPrimary
+                                }
 
                                 ColumnLayout {
-                                    objectName: "contactIdentity"
                                     Layout.fillWidth: true
-                                    Layout.alignment: Qt.AlignVCenter
                                     spacing: 0
 
                                     StyledText {
                                         Layout.fillWidth: true
-                                        // A contact's name is the phone's own;
-                                        // never markup.
                                         textFormat: Text.PlainText
-                                        text: contactRow.modelData.displayName || Translation.tr("Unknown")
+                                        text: phoneRow.modelData.value
                                         font.pixelSize: Appearance.font.pixelSize.small
-                                        font.weight: Font.DemiBold
-                                        color: Appearance.colors.colOnLayer2
+                                        color: Appearance.colors.colOnLayer3
                                         elide: Text.ElideRight
                                     }
                                     StyledText {
                                         Layout.fillWidth: true
+                                        visible: String(phoneRow.modelData.type || "").length > 0
                                         textFormat: Text.PlainText
-                                        text: {
-                                            if (contactRow.modelData.organization)
-                                                return contactRow.modelData.organization;
-                                            if (contactRow.phones.length > 0)
-                                                return contactRow.phones[0].value;
-                                            const emails = contactRow.modelData.emails ?? [];
-                                            return emails.length > 0 ? emails[0].value : "";
-                                        }
-                                        font.pixelSize: Appearance.font.pixelSize.smaller
+                                        text: phoneRow.modelData.type
+                                        font.pixelSize: Appearance.font.pixelSize.smallest
                                         color: Appearance.colors.colSubtext
-                                        elide: Text.ElideRight
                                     }
                                 }
 
@@ -294,202 +345,113 @@ PhoneSubPage {
                                     Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
                                     Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
                                     buttonRadius: Appearance.rounding.full
-                                    colBackground: "transparent"
-                                    colBackgroundHover: Appearance.colors.colLayer3Hover
-                                    colRipple: Appearance.colors.colLayer3Active
-                                    onClicked: PhoneContacts.toggleFavorite(contactRow.modelData.id)
+                                    colBackground: Appearance.colors.colPrimaryContainer
+                                    colBackgroundHover: Appearance.colors.colPrimaryContainerHover
+                                    colRipple: Appearance.colors.colPrimaryContainerActive
+                                    onClicked: PhoneContacts.openDialer(phoneRow.modelData.value)
 
                                     contentItem: MaterialSymbol {
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
-                                        text: contactRow.favourite ? "star" : "star_outline"
-                                        fill: contactRow.favourite ? 1 : 0
-                                        iconSize: Appearance.font.pixelSize.large
-                                        color: contactRow.favourite ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
-                                        animateChange: true
+                                        text: "call"
+                                        iconSize: Appearance.font.pixelSize.small
+                                        color: Appearance.colors.colOnPrimaryContainer
                                     }
 
                                     StyledToolTip {
-                                        // Starring is also what keeps a
-                                        // nameless card (a SIM import, a
-                                        // blocked number) out of the
-                                        // hide-unnamed filter.
-                                        text: contactRow.favourite
-                                            ? Translation.tr("Remove from favourites")
-                                            : Translation.tr("Add to favourites")
+                                        text: Translation.tr("Open the dialer on the phone")
                                     }
                                 }
 
-                                MaterialSymbol {
-                                    Layout.alignment: Qt.AlignVCenter
-                                    text: contactRow.expanded ? "expand_less" : "expand_more"
-                                    iconSize: Appearance.font.pixelSize.larger
-                                    color: Appearance.colors.colSubtext
-                                    animateChange: true
+                                RippleButton {
+                                    Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
+                                    Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
+                                    buttonRadius: Appearance.rounding.full
+                                    colBackground: Appearance.colors.colSecondaryContainer
+                                    colBackgroundHover: Appearance.colors.colSecondaryContainerHover
+                                    colRipple: Appearance.colors.colSecondaryContainerActive
+                                    onClicked: PhoneContacts.composeSms(phoneRow.modelData.value)
+
+                                    contentItem: MaterialSymbol {
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        text: "sms"
+                                        iconSize: Appearance.font.pixelSize.small
+                                        color: Appearance.colors.colOnSecondaryContainer
+                                    }
+
+                                    StyledToolTip {
+                                        text: Translation.tr("Write a message on the phone")
+                                    }
+                                }
+
+                                RippleButton {
+                                    Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
+                                    Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
+                                    buttonRadius: Appearance.rounding.full
+                                    colBackground: Appearance.colors.colLayer4
+                                    colBackgroundHover: Appearance.colors.colLayer4Hover
+                                    colRipple: Appearance.colors.colLayer4Active
+                                    onClicked: Quickshell.clipboardText = phoneRow.modelData.value
+
+                                    contentItem: MaterialSymbol {
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        text: "content_copy"
+                                        iconSize: Appearance.font.pixelSize.small
+                                        color: Appearance.colors.colOnLayer4
+                                    }
+
+                                    StyledToolTip {
+                                        text: Translation.tr("Copy the number")
+                                    }
                                 }
                             }
                         }
 
-                        ColumnLayout {
-                            objectName: "contactDetails"
-                            Layout.fillWidth: true
-                            Layout.leftMargin: Appearance.spacing.space100
-                            Layout.rightMargin: Appearance.spacing.space100
-                            Layout.bottomMargin: Appearance.spacing.space50
-                            visible: contactRow.expanded
-                            spacing: Appearance.spacing.space75
+                        Repeater {
+                            model: contactRow.modelData.emails ?? []
 
-                            Repeater {
-                                model: contactRow.phones
+                            delegate: RowLayout {
+                                id: emailRow
+                                required property var modelData
 
-                                delegate: RowLayout {
-                                    id: phoneRow
-                                    required property var modelData
+                                Layout.fillWidth: true
+                                spacing: Appearance.spacing.space100
 
-                                    Layout.fillWidth: true
-                                    spacing: Appearance.spacing.space100
-
-                                    MaterialSymbol {
-                                        Layout.alignment: Qt.AlignVCenter
-                                        text: phoneRow.modelData.type === "mobile" ? "smartphone" : "call"
-                                        iconSize: Appearance.font.pixelSize.large
-                                        color: Appearance.colors.colPrimary
-                                    }
-
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 0
-
-                                        StyledText {
-                                            Layout.fillWidth: true
-                                            textFormat: Text.PlainText
-                                            text: phoneRow.modelData.value
-                                            font.pixelSize: Appearance.font.pixelSize.small
-                                            color: Appearance.colors.colOnLayer3
-                                            elide: Text.ElideRight
-                                        }
-                                        StyledText {
-                                            Layout.fillWidth: true
-                                            visible: String(phoneRow.modelData.type || "").length > 0
-                                            textFormat: Text.PlainText
-                                            text: phoneRow.modelData.type
-                                            font.pixelSize: Appearance.font.pixelSize.smallest
-                                            color: Appearance.colors.colSubtext
-                                        }
-                                    }
-
-                                    RippleButton {
-                                        Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                        Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                        buttonRadius: Appearance.rounding.full
-                                        colBackground: Appearance.colors.colPrimaryContainer
-                                        colBackgroundHover: Appearance.colors.colPrimaryContainerHover
-                                        colRipple: Appearance.colors.colPrimaryContainerActive
-                                        onClicked: PhoneContacts.openDialer(phoneRow.modelData.value)
-
-                                        contentItem: MaterialSymbol {
-                                            horizontalAlignment: Text.AlignHCenter
-                                            verticalAlignment: Text.AlignVCenter
-                                            text: "call"
-                                            iconSize: Appearance.font.pixelSize.small
-                                            color: Appearance.colors.colOnPrimaryContainer
-                                        }
-
-                                        StyledToolTip {
-                                            text: Translation.tr("Open the dialer on the phone")
-                                        }
-                                    }
-
-                                    RippleButton {
-                                        Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                        Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                        buttonRadius: Appearance.rounding.full
-                                        colBackground: Appearance.colors.colSecondaryContainer
-                                        colBackgroundHover: Appearance.colors.colSecondaryContainerHover
-                                        colRipple: Appearance.colors.colSecondaryContainerActive
-                                        onClicked: PhoneContacts.composeSms(phoneRow.modelData.value)
-
-                                        contentItem: MaterialSymbol {
-                                            horizontalAlignment: Text.AlignHCenter
-                                            verticalAlignment: Text.AlignVCenter
-                                            text: "sms"
-                                            iconSize: Appearance.font.pixelSize.small
-                                            color: Appearance.colors.colOnSecondaryContainer
-                                        }
-
-                                        StyledToolTip {
-                                            text: Translation.tr("Write a message on the phone")
-                                        }
-                                    }
-
-                                    RippleButton {
-                                        Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                        Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                        buttonRadius: Appearance.rounding.full
-                                        colBackground: Appearance.colors.colLayer4
-                                        colBackgroundHover: Appearance.colors.colLayer4Hover
-                                        colRipple: Appearance.colors.colLayer4Active
-                                        onClicked: Quickshell.clipboardText = phoneRow.modelData.value
-
-                                        contentItem: MaterialSymbol {
-                                            horizontalAlignment: Text.AlignHCenter
-                                            verticalAlignment: Text.AlignVCenter
-                                            text: "content_copy"
-                                            iconSize: Appearance.font.pixelSize.small
-                                            color: Appearance.colors.colOnLayer4
-                                        }
-
-                                        StyledToolTip {
-                                            text: Translation.tr("Copy the number")
-                                        }
-                                    }
+                                MaterialSymbol {
+                                    Layout.alignment: Qt.AlignVCenter
+                                    text: "mail"
+                                    iconSize: Appearance.font.pixelSize.large
+                                    color: Appearance.colors.colPrimary
                                 }
-                            }
-
-                            Repeater {
-                                model: contactRow.modelData.emails ?? []
-
-                                delegate: RowLayout {
-                                    id: emailRow
-                                    required property var modelData
-
+                                StyledText {
                                     Layout.fillWidth: true
-                                    spacing: Appearance.spacing.space100
+                                    textFormat: Text.PlainText
+                                    text: emailRow.modelData.value
+                                    font.pixelSize: Appearance.font.pixelSize.small
+                                    color: Appearance.colors.colOnLayer3
+                                    elide: Text.ElideRight
+                                }
+                                RippleButton {
+                                    Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
+                                    Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
+                                    buttonRadius: Appearance.rounding.full
+                                    colBackground: Appearance.colors.colLayer4
+                                    colBackgroundHover: Appearance.colors.colLayer4Hover
+                                    colRipple: Appearance.colors.colLayer4Active
+                                    onClicked: Quickshell.clipboardText = emailRow.modelData.value
 
-                                    MaterialSymbol {
-                                        Layout.alignment: Qt.AlignVCenter
-                                        text: "mail"
-                                        iconSize: Appearance.font.pixelSize.large
-                                        color: Appearance.colors.colPrimary
+                                    contentItem: MaterialSymbol {
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        text: "content_copy"
+                                        iconSize: Appearance.font.pixelSize.small
+                                        color: Appearance.colors.colOnLayer4
                                     }
-                                    StyledText {
-                                        Layout.fillWidth: true
-                                        textFormat: Text.PlainText
-                                        text: emailRow.modelData.value
-                                        font.pixelSize: Appearance.font.pixelSize.small
-                                        color: Appearance.colors.colOnLayer3
-                                        elide: Text.ElideRight
-                                    }
-                                    RippleButton {
-                                        Layout.preferredWidth: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                        Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
-                                        buttonRadius: Appearance.rounding.full
-                                        colBackground: Appearance.colors.colLayer4
-                                        colBackgroundHover: Appearance.colors.colLayer4Hover
-                                        colRipple: Appearance.colors.colLayer4Active
-                                        onClicked: Quickshell.clipboardText = emailRow.modelData.value
 
-                                        contentItem: MaterialSymbol {
-                                            horizontalAlignment: Text.AlignHCenter
-                                            verticalAlignment: Text.AlignVCenter
-                                            text: "content_copy"
-                                            iconSize: Appearance.font.pixelSize.small
-                                            color: Appearance.colors.colOnLayer4
-                                        }
-
-                                        StyledToolTip {
-                                            text: Translation.tr("Copy the address")
-                                        }
+                                    StyledToolTip {
+                                        text: Translation.tr("Copy the address")
                                     }
                                 }
                             }
