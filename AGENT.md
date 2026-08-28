@@ -2661,6 +2661,23 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   allowed to, the way `tst_grouped_list` already did: a Qt too old for the per-corner radii. When a
   widget moves onto a new base, its base's dependencies have to reach `tests/imports` too.
   80d970c89 ("test: resolve InteractionMotion, and fail rather than skip on a load error").
+- **...and the container a caller reaches for is `GroupedList`, which the guidelines already said.**
+  The first fix for the roster below wrapped the rows in a `StyledRectangle` of its own.
+  `docs/M3_GUIDELINES.md` names `GroupedList` for exactly that presentation, the component is used
+  in ten places including the phone's own webcam page, and the wrapper was written anyway. It drew
+  as a perfect rectangle, which is the second lesson: **`clip` on a `Rectangle` clips to the
+  bounding box, not to the radius**, so the opaque rows painted over all four corners while the
+  wrapper reported `radius: 17`. The runtime check written beside it asked for that property, was
+  told 17, and passed against a screen showing square corners - a property is not a pixel, and a
+  shape check reads the drawn rows. `GroupedList` takes a `model` and a `rowDelegate` now, because
+  the roster's rows are the daemon's and the component only took declared ones, and it hands a row
+  the plate's corners for the overpaint reason above.
+  `tests/lint_hand_rolled_row_group.py` fails on the shape now - and its own first version passed
+  over a file containing nothing but the offender, because it read the type from the text before
+  the colon and `delegate: PhoneDeviceItem {` is not that. Prove a lint in both directions.
+  d2c1f434a ("feat(widgets): let a GroupedList draw a model"), 777f32d30 ("fix(phone): the roster
+  is a GroupedList, not a rectangle of its own"), af8f55dcd ("test(lint): fail on a group of rows
+  wrapped in a rectangle of its own").
 - **`DialogListItem` is drawn for a container, and a caller that gives it none gets a bare list.**
   It carries `buttonRadius: 0` on the layer-3 tone because the Wi-Fi and Bluetooth pickers put it
   inside a dialog. The phone roster used it with nothing around it, so its rows sat straight on the
