@@ -143,6 +143,12 @@ own repo; the installer pins which revision it builds.
   shows the request as a card with Accept and Decline, so pairing no longer
   needs KDE Connect's own window — and it is answered only for the device
   that asked.
+- **`deploy-shell`, for maintainers**: copies this checkout's shell to
+  `~/.config/quickshell/imi` and refuses when the copy would take another open
+  PR's work off the running shell, naming the branches it would roll back. It
+  also records the SHA and branch it deployed in `.deployed-from`, so what is
+  live can be read rather than inferred from whichever branch you happen to be
+  on. Replaces an `rsync --delete` one-liner that had done exactly that revert.
 
 ### Changed
 - **The Phone tab's device roster unrolls instead of appearing all at once.**
