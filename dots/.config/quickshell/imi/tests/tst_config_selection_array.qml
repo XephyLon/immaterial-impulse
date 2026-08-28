@@ -23,38 +23,24 @@ TestCase {
     width: 700
     height: 500
 
-    Component {
-        id: rowComponent
-        Item {
-            id: host
-            property alias row: sel
-            property int hostWidth: 660
-            width: hostWidth
-            ColumnLayout {
-                width: parent.width
-                ConfigSelectionArray {
-                        id: sel
-                        Layout.fillWidth: true
-                        // The host's width is only a constraint if the row is
-                        // told it cannot exceed it: a QQuickLayout hands a child
-                        // its implicit width when nothing caps it, so without
-                        // this the "narrow" case is not narrow at all.
-                        Layout.maximumWidth: host.hostWidth - Appearance.spacing.space400
-                        text: "Bar position"
-                        icon: "swap_vert"
-                        currentValue: "top"
-                        options: [
-                            {"displayName": "Top", "icon": "arrow_upward", "value": "top"},
-                            {"displayName": "Left", "icon": "arrow_back", "value": "left"},
-                            {"displayName": "Bottom", "icon": "arrow_downward", "value": "bottom"},
-                            {"displayName": "Right", "icon": "arrow_forward", "value": "right"}
-                        ]
-                }
-            }
-        }
+
+    // Built from a URL rather than declared inline, the way
+    // tst_bar_group_collapse.qml does it: this row draws through RippleButton
+    // and the per-corner radii Qt below 6.7 does not have, and declared inline
+    // the whole FILE fails to compile there rather than this one check. Through
+    // createComponent the version dependency is a status the test can read.
+    property Component rowComponent: null
+    property var incubated: null
+
+    function initTestCase() {
+        rowComponent = Qt.createComponent("fixtures/ConfigSelectionArrayRow.qml");
     }
 
-    property var incubated: null
+    function ensureComponent() {
+        if (rowComponent.status === Component.Error)
+            skip("this Qt cannot build the row: " + rowComponent.errorString());
+        compare(rowComponent.status, Component.Ready, rowComponent.errorString());
+    }
 
     function buildAsync(props) {
         tc.incubated = null;
@@ -74,6 +60,7 @@ TestCase {
     // height. Asserting a literal height instead would pin the font metrics of
     // whichever machine ran it last.
     function test_an_incubated_row_lays_its_chips_out_like_a_built_one() {
+        ensureComponent();
         const built = rowComponent.createObject(tc);
         wait(400);
         const syncHeight = built.row.height;
@@ -92,6 +79,7 @@ TestCase {
     // do not fit on one line. Comparing only the roomy case would pass just as
     // well on a row that had stopped wrapping altogether.
     function test_the_two_builds_agree_when_the_row_is_cramped() {
+        ensureComponent();
         const built = rowComponent.createObject(tc, {hostWidth: 320});
         wait(400);
         const syncHeight = built.row.height;
