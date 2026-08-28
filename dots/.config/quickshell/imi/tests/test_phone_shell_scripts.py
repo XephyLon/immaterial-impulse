@@ -153,7 +153,7 @@ while :; do sleep 0.2; done
 """
 
 FAKE_RECORDER = r"""#!/usr/bin/env bash
-printf '%s\n' "$0 $*" >> "$FAKE_LOG/%(name)s.argv"
+printf '%%s\n' "$0 $*" >> "$FAKE_LOG/%(name)s.argv"
 exit %(code)s
 """
 
