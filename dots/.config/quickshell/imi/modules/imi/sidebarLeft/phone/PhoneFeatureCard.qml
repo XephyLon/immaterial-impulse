@@ -33,7 +33,7 @@ import qs.modules.common.functions
  * Transitions, and a string property shadowing it means a typo elsewhere in
  * the file silently becomes a state name that matches nothing.
  */
-Item {
+RippleButton {
     id: root
 
     property string cardState: "ready"
@@ -59,7 +59,7 @@ Item {
     // the install guide, and `active`, where it is the feature's own toggle.
     property bool hasSettings: false
 
-    signal clicked
+    // `clicked` comes from the Button underneath - not redeclared here.
     signal settingsClicked
     signal stopClicked
     signal filesDropped(var urls)
@@ -78,49 +78,25 @@ Item {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
 
-    Rectangle {
-        id: cardBackground
-        anchors.fill: parent
-        radius: Appearance.rounding.normal
-        color: root.isMuted ? Appearance.colors.colLayer3 : Appearance.colors.colPrimaryContainer
+    // The card IS the button. It used to be a Rectangle with a second
+    // Rectangle washing it at two hand-picked opacities and a MouseArea on top,
+    // which re-earned hover and press and got neither the ripple, the press
+    // radius morph, the keyboard, nor the disabled dim - and the tab's three
+    // primary actions were the only controls in this shell a keyboard could not
+    // reach. `RippleButton` drives InteractionMotion once, which is the whole
+    // point of f62673b7f's toolbar note: the states come from the control
+    // rather than being re-earned per widget.
+    buttonRadius: Appearance.rounding.normal
+    colBackground: root.isMuted ? Appearance.colors.colLayer3 : Appearance.colors.colPrimaryContainer
+    colBackgroundHover: root.isMuted ? Appearance.colors.colLayer3Hover : Appearance.colors.colPrimaryContainerHover
+    colRipple: root.isMuted ? Appearance.colors.colLayer3Active : Appearance.colors.colPrimaryContainerActive
 
-        Behavior on color {
-            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-        }
-
-        // The press/hover wash. Drawn as its own rectangle rather than by
-        // mixing the body's colour, so the two Behaviors do not fight over one
-        // property while a state change is also recolouring the card.
-        Rectangle {
-            anchors.fill: parent
-            radius: parent.radius
-            color: root.colForeground
-            opacity: cardArea.containsPress ? 0.14 : (cardArea.containsMouse ? 0.07 : 0)
-
-            Behavior on opacity {
-                animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)
-            }
-        }
+    Behavior on colBackground {
+        animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
     }
 
-    MouseArea {
-        id: cardArea
-        anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: root.clicked()
-    }
-
-    ColumnLayout {
+    contentItem: ColumnLayout {
         id: cardColumn
-        anchors {
-            left: parent.left
-            right: parent.right
-            top: parent.top
-            leftMargin: Appearance.spacing.space150
-            rightMargin: Appearance.spacing.space150
-            topMargin: Appearance.spacing.space100
-        }
         spacing: Appearance.spacing.space75
 
         RowLayout {
