@@ -81,6 +81,13 @@ Singleton {
     // One notification leaf's GetAll (a{sv}) onto the model. Every field the
     // leaf may omit degrades to its empty value; `dismissable` defaults to
     // true because a leaf that does not say is one the daemon will dismiss.
+    // An absolute path kdeconnectd wrote, as a URL an Image can load.
+    function iconUrl(path: string): string {
+        if (!path || path.length === 0)
+            return "";
+        return "file://" + path.split("/").map(encodeURIComponent).join("/");
+    }
+
     function normalizeNotification(publicId: string, deviceId: string, rawProps: var, receivedAt: real): var {
         const props = PhoneConnect.unwrapVariants(rawProps);
         const str = key => typeof props[key] === "string" ? props[key] : "";
@@ -97,7 +104,32 @@ Singleton {
             dismissable: props.dismissable !== false,
             replyId: str("replyId"),
             actions: Array.isArray(props.actions) ? props.actions.filter(a => typeof a === "string") : [],
-            receivedAt: receivedAt
+            receivedAt: receivedAt,
+            // ---- the same notification, in the shared card's vocabulary ----
+            //
+            // The shell's notification card reads `summary`, `body`, `image`
+            // and `urgency`; this model's own names stay above because the
+            // daemon's fields are what the service is a mirror OF, and its
+            // tests pin them. Carrying both is what lets the phone draw the
+            // shell's card instead of a second one written against these
+            // names - which is how the copy drifted from the original.
+            //
+            // `image` and not `appIcon`: the appIcon slot resolves through the
+            // icon THEME, and this is an absolute path kdeconnectd wrote, so
+            // it is spelled as a URL the way every other file source is.
+            summary: str("title"),
+            body: str("text"),
+            image: root.iconUrl(str("iconPath")),
+            // KDE Connect relays no urgency. Normal is what a phone
+            // notification is, and it keeps the card off its critical
+            // colours.
+            //
+            // The literal, not `NotificationUrgency.Normal`: that enum comes
+            // from Quickshell.Services.Notifications, whose plugin the bare
+            // qmltestrunner cannot load - importing it here took the WHOLE
+            // testservices module down with it, and every test that reaches
+            // any service in it reported "Type Battery unavailable".
+            urgency: 1
         };
     }
 
