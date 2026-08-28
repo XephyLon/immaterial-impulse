@@ -192,27 +192,40 @@ PhoneSubPage {
                 }
 
                 RippleButton {
+                    id: previewButton
                     Layout.fillWidth: true
                     Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space250
-                    enabled: PhoneCamera.active && PhoneCamera.device.length > 0
+                    // A preview that is up stays closable whatever the stream
+                    // is doing. The service already closes it with the session,
+                    // so this row only has to cover the one ending the shell
+                    // cannot see coming - the user changing their mind.
+                    enabled: PhoneCamera.previewRunning
+                        || (PhoneCamera.active && PhoneCamera.device.length > 0)
                     buttonRadius: Appearance.rounding.normal
                     colBackground: Appearance.colors.colLayer2
                     colBackgroundHover: Appearance.colors.colLayer2Hover
                     colRipple: Appearance.colors.colLayer2Active
-                    onClicked: PhoneCamera.openPreview()
+                    onClicked: {
+                        if (PhoneCamera.previewRunning)
+                            PhoneCamera.closePreview();
+                        else
+                            PhoneCamera.openPreview();
+                    }
 
                     contentItem: RowLayout {
                         spacing: Appearance.spacing.space75
 
                         MaterialSymbol {
                             Layout.alignment: Qt.AlignVCenter
-                            text: "preview"
+                            text: PhoneCamera.previewRunning ? "visibility_off" : "preview"
                             iconSize: Appearance.font.pixelSize.larger
                             color: Appearance.colors.colOnLayer2
                         }
                         StyledText {
                             Layout.alignment: Qt.AlignVCenter
-                            text: Translation.tr("Preview")
+                            text: PhoneCamera.previewRunning
+                                ? Translation.tr("Close preview")
+                                : Translation.tr("Preview")
                             font.pixelSize: Appearance.font.pixelSize.smaller
                             font.weight: Font.DemiBold
                             color: Appearance.colors.colOnLayer2
