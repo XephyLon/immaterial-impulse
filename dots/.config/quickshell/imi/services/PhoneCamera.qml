@@ -22,6 +22,12 @@ import qs.modules.common
  * Wi-Fi address is taken as written; otherwise `adb get-state` answering
  * `device` wins, then the first address KDE Connect reports for the phone.
  *
+ * The preview PLAYER is the one process this file owns outright, and it is
+ * deliberately the opposite arrangement to the stream's: the stream outlives
+ * the shell because a webcam other applications are using has to, while a
+ * preview is a view of that stream and its lifetime is the session's. See
+ * the `previewProc` block for what "owned" buys and what it costs.
+ *
  * Everything between the sync markers is kept byte-for-byte in sync with
  * the logic-only double (tests/imports/testservices/PhoneCamera.qml);
  * tests/test_phone_sessions_contract.py enforces it.
@@ -47,6 +53,7 @@ Singleton {
     property int startedAt: 0 // unix seconds
     property string lastError: ""
     property bool userStopped: false
+    readonly property bool previewRunning: previewProc.running
 
     readonly property string sessionScript: `${Directories.scriptPath}/phone/droidcam_session.sh`
     readonly property int connectTimeoutMs: 9000
@@ -272,16 +279,66 @@ Singleton {
             root.run(["v4l2-ctl", "-d", root.device, "--set-ctrl=horizontal_flip=" + (on ? "1" : "0")], null);
     }
 
+    // The preview belongs to the SESSION, not to the desktop: a player left
+    // on a /dev/videoN that has stopped producing frames holds its last frame
+    // on screen for ever, which is what it looks like when nothing owns it.
+    // So the player is started through startPreview() - a handle, never a
+    // detached spawn - and a second click while one is up is not a second
+    // window.
     function openPreview(): void {
+        if (root.previewRunning) return;
         const argv = root.previewCommand(root.device, PhoneDeps);
         if (argv.length === 0) {
             root.lastError = "No preview player found - install mpv";
             root.errorOccurred(root.lastError);
             return;
         }
-        Quickshell.execDetached(argv);
+        root.startPreview(argv);
     }
+
+    function closePreview(): void {
+        if (!root.previewRunning) return;
+        root.stopPreview();
+    }
+
+    // One observer rather than a closePreview() in stop(), in checkSession()'s
+    // death branch and in fail(): `active` IS the session, so every way the
+    // session can end arrives here - the stop button, the watchdog finding the
+    // pidfile dead, a connect that timed out, and the device disappearing,
+    // which reaches it through onActiveDeviceIdChanged's own stop().
+    onActiveChanged: if (!root.active) root.closePreview();
     // END phone-camera logic
+
+    // ---- the preview player ----
+    //
+    // Owned rather than detached, and that IS the fix. `Quickshell.
+    // execDetached` returns no handle, so nothing in the shell could stop the
+    // player: ending the session left its window on screen, frozen on the last
+    // frame the loopback device produced.
+    //
+    // The alternative - detach it and record the pid, the way the stream's own
+    // session script does - buys a stop and costs a stale one. A stream is
+    // stopped only by this shell, so its pid is good until it is used; a
+    // player is closed by the USER at any moment, so a pid recorded when it
+    // started is a number the kernel is free to hand to something else, and a
+    // later stop would kill a stranger. A Process cannot address anything it
+    // did not start, which is why that is the shape here and a pidfile is the
+    // shape beside droidcam_session.sh.
+    //
+    // What it costs: the player does not outlive a shell restart the way the
+    // stream deliberately does. A preview is one click to reopen; an
+    // unstoppable one is the bug being fixed.
+    function startPreview(argv: var): void { previewProc.exec(argv); }
+    function stopPreview(): void { previewProc.running = false; }
+
+    Process {
+        id: previewProc
+        // process-lifecycle: restart-safe -- no `running:` binding and no
+        // respawn of any kind. The player starts only from a click through
+        // openPreview() and stops only through closePreview(), so a player
+        // that exits instantly (a node it refuses, a missing codec) cannot
+        // become a respawn loop.
+    }
 
     // ---- timers ----
 
@@ -360,6 +417,12 @@ Singleton {
 
     // A webcam left running by the previous shell is adopted, not doubled.
     Component.onCompleted: root.checkSession()
+
+    // The player is this process's child, so a clean exit takes it with it.
+    // Saying so out loud makes a reload a decision rather than a property of
+    // Quickshell's teardown order - and the stream, which is not a child, is
+    // still there to be re-adopted when the shell comes back.
+    Component.onDestruction: root.closePreview()
 
     onActiveDeviceIdChanged: if (root.active || root.connecting) root.stop()
 }

@@ -254,16 +254,55 @@ Singleton {
             root.run(["v4l2-ctl", "-d", root.device, "--set-ctrl=horizontal_flip=" + (on ? "1" : "0")], null);
     }
 
+    // The preview belongs to the SESSION, not to the desktop: a player left
+    // on a /dev/videoN that has stopped producing frames holds its last frame
+    // on screen for ever, which is what it looks like when nothing owns it.
+    // So the player is started through startPreview() - a handle, never a
+    // detached spawn - and a second click while one is up is not a second
+    // window.
     function openPreview(): void {
+        if (root.previewRunning) return;
         const argv = root.previewCommand(root.device, PhoneDeps);
         if (argv.length === 0) {
             root.lastError = "No preview player found - install mpv";
             root.errorOccurred(root.lastError);
             return;
         }
-        Quickshell.execDetached(argv);
+        root.startPreview(argv);
     }
+
+    function closePreview(): void {
+        if (!root.previewRunning) return;
+        root.stopPreview();
+    }
+
+    // One observer rather than a closePreview() in stop(), in checkSession()'s
+    // death branch and in fail(): `active` IS the session, so every way the
+    // session can end arrives here - the stop button, the watchdog finding the
+    // pidfile dead, a connect that timed out, and the device disappearing,
+    // which reaches it through onActiveDeviceIdChanged's own stop().
+    onActiveChanged: if (!root.active) root.closePreview();
     // END phone-camera logic
+
+    // The player, as a record of what the service asked for: `run()`'s shape
+    // one process down. The real service hands these to a Process it owns
+    // (services/PhoneCamera.qml, the previewProc block); what a double can
+    // answer for is the DECISIONS - which argv, whether a second click opens
+    // a second window, and which endings close it.
+    property bool previewRunning: false
+    property var previewCommands: []
+    property int previewStops: 0
+
+    function startPreview(argv: var): void {
+        root.previewCommands = root.previewCommands.concat([argv]);
+        root.previewRunning = true;
+    }
+
+    function stopPreview(): void {
+        root.previewStops++;
+        root.previewRunning = false;
+    }
+
     property real connectStartedAt: 0
     property bool deadlinePassed: false
     function connectDeadlinePassed(): bool { return root.deadlinePassed; }
@@ -299,5 +338,11 @@ Singleton {
         root.watchdogArmed = 0;
         root.responder = null;
         root.ranCommands = [];
+        // After `active`, never before: clearing it above runs the same
+        // onActiveChanged the service does, which would spend a stop on the
+        // counter this line is resetting.
+        root.previewRunning = false;
+        root.previewCommands = [];
+        root.previewStops = 0;
     }
 }
