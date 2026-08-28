@@ -149,7 +149,13 @@ fi
 if command -v pactl >/dev/null 2>&1; then
     sources_output="$(pactl list sources short 2>/dev/null || true)"
     if [ -n "$sources_output" ]; then
-        match="$(echo "$sources_output" | awk '$0 ~ /DroidCam-Mic/ || $0 ~ /droidcam/ {print $1; exit}')"
+        # `pactl list sources short` is `<index>\t<name>\t...`, so the
+        # source's NAME is field 2. This printed field 1 - the index - while
+        # this file's own header documents a name
+        # (`alsa_output.droidcam_input.monitor`) and
+        # `tst_phone_scrcpy.qml` feeds `PhoneMic.parseStatus` a name. Both
+        # sides agreed with each other and neither agreed with the producer.
+        match="$(echo "$sources_output" | awk '$0 ~ /DroidCam-Mic/ || $0 ~ /droidcam/ {print $2; exit}')"
         if [ -n "$match" ]; then
             audio_source="$match"
         fi
