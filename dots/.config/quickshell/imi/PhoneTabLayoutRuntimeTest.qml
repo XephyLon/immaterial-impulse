@@ -75,6 +75,10 @@ ShellRoot {
     // this the glyph reads as sitting on the card's edge - measured at 4px
     // with the old fixed row height, and photographed by the maintainer.
     readonly property real minAvatarGap: Appearance.spacing.space100
+    // The chevron's own padding plus the header's right margin. Anything
+    // past this is the chevron floating in the middle of the card.
+    readonly property real maxChevronInset: 24
+    property string firstRowId: ""
     // What each script's card measured for the chrome around its header.
     property var cardPadding: ({})
 
@@ -415,6 +419,30 @@ ShellRoot {
                 return;
             harness.scoreRow("latin", latin);
             harness.scoreRow("arabic", arabic);
+            // The chevron is the LAST child of the header row, so it belongs
+            // against the card's trailing edge on every row. It was reported
+            // sitting mid-name on the first row only, which is a header that
+            // shrink-wrapped instead of filling - a defect no per-name lookup
+            // finds, because it is the row's INDEX that selects it. Scored
+            // over every row at once so the count does not follow collation.
+            let worstRow = -1;
+            let worstInset = -1;
+            for (let i = 0; i < list.count; i++) {
+                const row = list.itemAtIndex(i);
+                const chevron = harness.firstNamed(row, "contactChevron");
+                if (!row || !chevron)
+                    continue;
+                const inset = row.width - harness.boxIn(chevron, row).right;
+                console.log(`[PhoneTabLayout] row ${i} "${row.modelData?.displayName}"`
+                            + ` w=${row.width} chevron inset=${inset}`);
+                if (inset > worstInset) {
+                    worstInset = inset;
+                    worstRow = i;
+                }
+            }
+            harness.check(`every row's chevron sits at the card's trailing edge, worst is`
+                          + ` row ${worstRow} at ${worstInset} of ${harness.maxChevronInset}`,
+                          worstInset >= 0 && worstInset <= harness.maxChevronInset);
             // The half a per-row check cannot see: two cards that both fit
             // because both were made generously tall are still a constant.
             harness.check(`the card's height follows the script rather than a constant,`
@@ -464,6 +492,41 @@ ShellRoot {
             harness.check(`...and so does every one of the ${drawn} rows in it,`
                           + ` ${escaped} escaped`,
                           drawn > 0 && escaped === 0);
+        },
+        () => {
+            harness.first("PhoneContactsPage").expandedId = "";
+        },
+        () => {},
+
+        // ---- the glyph swap does not move the row it happens in ---------
+        // Expanding a row swaps its chevron for `expand_less`, and the text
+        // change is animated. The animation used to move the item's own x,
+        // which a layout also owns, and it returned the item to a position it
+        // captured at Component.onCompleted - before any layout had run. The
+        // FIRST delegate is the one built before its view had width, so its
+        // chevron was the one that came to rest mid-name.
+        () => {
+            const page = harness.first("PhoneContactsPage");
+            const list = harness.findAll(page, "StyledListView", [])[0] ?? null;
+            const row = list?.itemAtIndex(0) ?? null;
+            harness.firstRowId = String(row?.modelData?.id ?? "");
+            page.expandedId = harness.firstRowId;
+        },
+        () => {},
+        () => {
+            const page = harness.first("PhoneContactsPage");
+            const list = harness.findAll(page, "StyledListView", [])[0] ?? null;
+            const row = list?.itemAtIndex(0) ?? null;
+            const chevron = harness.firstNamed(row, "contactChevron");
+            const inset = row && chevron
+                ? row.width - harness.boxIn(chevron, row).right
+                : NaN;
+            console.log(`[PhoneTabLayout] first row expanded=${row?.expanded}`
+                        + ` glyph="${chevron?.text}" chevron inset=${inset}`);
+            harness.check(`the first row's chevron is still at the trailing edge once`
+                          + ` the expand glyph has swapped, got ${inset} of`
+                          + ` ${harness.maxChevronInset}`,
+                          inset >= 0 && inset <= harness.maxChevronInset);
         },
         () => {
             harness.first("PhoneContactsPage").expandedId = "";

@@ -279,6 +279,7 @@ PhoneSubPage {
                             }
 
                             MaterialSymbol {
+                                objectName: "contactChevron"
                                 Layout.alignment: Qt.AlignVCenter
                                 text: contactRow.expanded ? "expand_less" : "expand_more"
                                 iconSize: Appearance.font.pixelSize.larger
