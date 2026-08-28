@@ -33,6 +33,7 @@ stdin closing means the shell went away; every session is stopped then, so a
 shell restart never leaves headless scrcpy windows behind.
 """
 import argparse
+import collections
 import json
 import os
 import re
@@ -41,6 +42,13 @@ import sys
 import threading
 import time
 from pathlib import Path
+
+# scrcpy's last stderr line is what an `exited` event carries, so the drain
+# below only has to keep the tail. Bounded because the drain runs for the
+# life of the child and a chatty one is exactly the case it exists for.
+STDERR_TAIL_LINES = 40
+# How long to wait past the child's exit for the drain thread to see EOF.
+STDERR_DRAIN_TIMEOUT = 2.0
 
 CACHE_DIR = (Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
              / "immaterial-impulse" / "phone" / "apps")
@@ -243,16 +251,43 @@ class ScrcpySessionManager:
         threading.Thread(target=self._wait_process, args=(session_id, proc),
                          daemon=True).start()
 
-    def _wait_process(self, session_id, proc):
-        code = proc.wait()
-        err_msg = ""
+    @staticmethod
+    def _drain_stderr(proc, tail):
+        """Read the child's stderr for as long as it writes, keeping the tail.
+
+        This used to be a single `proc.stderr.read()` AFTER `proc.wait()`.
+        A pipe holds ~64 KiB: past that, scrcpy blocks in `write()` with
+        nobody reading, so it never exits, `wait()` never returns, no
+        `exited` event is ever emitted, and the card sits on "running" over a
+        frozen mirror with nothing in any log. Draining while it runs is what
+        `communicate()` does; a thread is used so the wait below still
+        returns the moment the child is gone rather than when its stderr
+        reaches EOF (a grandchild can hold that open).
+        """
+        stream = proc.stderr
+        if stream is None:
+            return
         try:
-            stderr_output = proc.stderr.read() if proc.stderr else ""
-            lines = [line for line in (stderr_output or "").splitlines() if line.strip()]
-            if lines:
-                err_msg = lines[-1].strip()
+            for line in stream:
+                stripped = line.strip()
+                if stripped:
+                    tail.append(stripped)
         except Exception:
             pass
+        finally:
+            try:
+                stream.close()
+            except Exception:
+                pass
+
+    def _wait_process(self, session_id, proc):
+        tail = collections.deque(maxlen=STDERR_TAIL_LINES)
+        drain = threading.Thread(target=self._drain_stderr, args=(proc, tail),
+                                 daemon=True)
+        drain.start()
+        code = proc.wait()
+        drain.join(timeout=STDERR_DRAIN_TIMEOUT)
+        err_msg = tail[-1] if tail else ""
         with self.lock:
             if self.processes.get(session_id) is proc:
                 del self.processes[session_id]
