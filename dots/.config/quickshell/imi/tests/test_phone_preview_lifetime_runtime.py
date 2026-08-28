@@ -87,7 +87,11 @@ case "$*" in
     printf '{"type":"a{sv}","data":[{"name":{"type":"s","data":"%(name)s"},"type":{"type":"s","data":"phone"},"isPaired":{"type":"b","data":true},"isReachable":{"type":"b","data":true},"isPairRequestedByPeer":{"type":"b","data":false},"pairState":{"type":"i","data":3},"reachableAddresses":{"type":"as","data":["%(address)s"]}}]}\\n'
     ;;
   *monitor*)
-    sleep 3600
+    # `exec`, so the pid the shell holds IS the sleep: a bash that merely
+    # waits on one leaves the sleep behind as an orphan every time the
+    # harness exits, which is how the machine collects an hour's worth of
+    # them over a few runs.
+    exec sleep 3600
     ;;
 esac
 exit 0

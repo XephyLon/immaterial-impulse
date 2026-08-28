@@ -296,8 +296,12 @@ def test_the_preview_watches_the_session_rather_than_each_way_it_can_end():
         "closePreview() is called somewhere other than the session observer and the "
         "destruction hook; every ending already writes `active`"
     )
+    # An intent pin rather than the mechanism: measured by planting the line
+    # out, Quickshell reaps a Process it owns at shutdown anyway. Removing it
+    # therefore reddens nothing at runtime, which is exactly why it is held
+    # here instead.
     assert "Component.onDestruction: root.closePreview()" in source, (
-        "a shell restart would leave the player behind"
+        "the preview's death at shutdown stops being stated anywhere"
     )
     assert "if (root.previewRunning) return;" in region, (
         "a second click opens a second player on the same node"
