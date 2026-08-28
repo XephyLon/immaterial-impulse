@@ -296,6 +296,7 @@ Item {
                 spacing: Appearance.spacing.space75
 
                 RippleButton {
+                    id: stopButton
                     Layout.fillWidth: true
                     Layout.preferredHeight: Appearance.font.pixelSize.huge + Appearance.spacing.space150
                     buttonRadius: Appearance.rounding.normal
@@ -304,22 +305,54 @@ Item {
                     colRipple: Appearance.colors.colErrorContainerActive
                     onClicked: root.stopClicked()
 
-                    contentItem: RowLayout {
-                        spacing: Appearance.spacing.space75
+                    // A Control stretches its content item to the padded rect
+                    // and places it itself, so a `RowLayout` declared there is
+                    // the width of a button that fills the card's row and lays
+                    // its two children out inside THAT - the glyph against the
+                    // left border and the word adrift somewhere after it.
+                    // Measured before this: at card widths of 200 and 460 the
+                    // pair sat 35.48px and 117.98px left of the button's own
+                    // centre, and grew from 97px to 192px wide as the gap
+                    // between the glyph and the word opened up with the
+                    // button. An anchor on the content item cannot repair
+                    // that - the Control ignores it, the same rule this file's
+                    // settings chip and the footer's two actions record for a
+                    // `MaterialSymbol` content item. What centres a PAIR is a
+                    // plain Item stretched to that rect with the row centred
+                    // INSIDE it, which is an ordinary parent-child anchor the
+                    // Control never touches.
+                    //
+                    // `RippleButtonWithIcon` is the shell's glyph-plus-label
+                    // button and is deliberately not what this is. Its label
+                    // slot is `Layout.fillWidth: true`, so on a button wider
+                    // than its content the label absorbs the leftover from
+                    // inside and the pair is left-packed exactly as this was:
+                    // measured at the same 460, 191.46px left of centre. That
+                    // is bd35286c3's finding from the other end, where the
+                    // label was empty rather than real.
+                    contentItem: Item {
+                        implicitWidth: stopRow.implicitWidth
+                        implicitHeight: stopRow.implicitHeight
 
-                        MaterialSymbol {
-                            Layout.alignment: Qt.AlignVCenter
-                            text: "stop_circle"
-                            fill: 1
-                            iconSize: Appearance.font.pixelSize.larger
-                            color: Appearance.colors.colOnErrorContainer
-                        }
-                        StyledText {
-                            Layout.alignment: Qt.AlignVCenter
-                            text: Translation.tr("Stop")
-                            font.pixelSize: Appearance.font.pixelSize.small
-                            font.weight: Font.DemiBold
-                            color: Appearance.colors.colOnErrorContainer
+                        RowLayout {
+                            id: stopRow
+                            anchors.centerIn: parent
+                            spacing: Appearance.spacing.space75
+
+                            MaterialSymbol {
+                                Layout.alignment: Qt.AlignVCenter
+                                text: "stop_circle"
+                                fill: 1
+                                iconSize: Appearance.font.pixelSize.larger
+                                color: Appearance.colors.colOnErrorContainer
+                            }
+                            StyledText {
+                                Layout.alignment: Qt.AlignVCenter
+                                text: Translation.tr("Stop")
+                                font.pixelSize: Appearance.font.pixelSize.small
+                                font.weight: Font.DemiBold
+                                color: Appearance.colors.colOnErrorContainer
+                            }
                         }
                     }
                 }
