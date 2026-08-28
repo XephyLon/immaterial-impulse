@@ -59,7 +59,12 @@ error" is not evidence a change works.
 
 The reliable loop used throughout this project's history:
 
-1. Make the edit.
+1. Make the edit, then **deploy it** — `./deploy-shell` at the repo root. The running shell reads
+   `~/.config/quickshell/imi`, which is a copy of `dots/.config/quickshell/imi/` and not a checkout,
+   so an edit here changes nothing that is running until it is copied over. Deploy through the
+   script rather than by hand: the copy is an `rsync --delete`, so deploying from a branch that
+   lacks another open PR's work silently takes that work off the live shell, and the script refuses
+   and names the branches instead. It also records what it deployed in `.deployed-from`.
 2. Wait ~2-3s for the hot-reload, then check the log for new errors:
    ```bash
    LOG=/run/user/$(id -u)/quickshell/by-id/$(ls /run/user/$(id -u)/quickshell/by-id/ | head -1)/log.log
@@ -107,6 +112,14 @@ Two real examples from this project's history that justify the paranoia:
   **Reproducing an effect by hand is not verifying that the code produces it.** Clear the state the
   code is supposed to create, restart the thing that should create it, and read it back. Here that
   also revealed the registration was unnecessary: fixed size hints already floated the window.
+- A deploy run from a branch cut off `main` reverted three fixes the maintainer was reviewing on
+  their own machine — the copy is `rsync --delete`, and the branch simply did not have them. It was
+  "verified" by grepping the live log for errors, which came back clean, because `main` is clean.
+  **A clean log says the shell loaded something without complaining; it does not say what.** The
+  branch you are standing on is not evidence either: read `.deployed-from` in the live tree, or grep
+  the live tree for a line only the code you expect contains. `./deploy-shell` now refuses this
+  deploy outright and names the branches it would roll back. 12cf54d00 ("tools: deploy the shell
+  through a guard, not an ad-hoc rsync").
 - A commit claiming to have "migrated existing plugins to the new format" only moved the files into
   new subdirectories - it never actually renamed the JSON schema key their content used, so both
   bundled example plugins silently stopped rendering. **A commit message describing what a change
@@ -395,10 +408,10 @@ pushing anything.
 
 ## Multi-agent / parallel workflows (git worktrees)
 
-This repo lives at `~/.config/quickshell/imi` and is loaded by exactly one running process,
-`qs -c imi`, pointed at that exact directory. That has real consequences once more than one
-agent (main session + subagents, or several parallel Claude Code sessions) is touching the repo at
-once:
+This repo deploys to `~/.config/quickshell/imi`, which is loaded by exactly one running process,
+`qs -c imi`, pointed at that exact directory. The deployed tree is a copy, so only a `./deploy-shell`
+run puts a change in front of that process. That has real consequences once more than one agent
+(main session + subagents, or several parallel Claude Code sessions) is touching the repo at once:
 
 - **Stop the primary shell before a multi-file edit burst.** Every QML source write hot-reloads the
   configuration and rebuilds Quickshell's desktop-entry registry. On systems with large Wine/Steam
