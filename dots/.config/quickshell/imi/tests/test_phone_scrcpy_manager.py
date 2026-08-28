@@ -12,9 +12,11 @@ apps_error that keeps a dropped phone from wiping the list on screen, the
 cache file the next launch reads back, and the stop-everything-on-EOF that
 keeps a shell restart from stranding headless scrcpy windows.
 """
+import importlib.util
 import json
 import os
 import queue
+import signal
 import subprocess
 import sys
 import tempfile
@@ -31,9 +33,19 @@ printf '%s\n' "$*" >> "$FAKE_LOG/scrcpy.argv"
 case " $* " in
   *" --version "*) echo "scrcpy 4.1 <https://github.com/Genymobile/scrcpy>"; exit 0 ;;
   *" --list-apps "*)
+    if [ -n "${FAKE_SCRCPY_LIST_DELAY:-}" ]; then sleep "$FAKE_SCRCPY_LIST_DELAY"; fi
     if [ -n "${FAKE_LIST_APPS:-}" ]; then cat "$FAKE_LIST_APPS"; fi
     exit 0 ;;
 esac
+if [ -n "${FAKE_SCRCPY_CHATTY:-}" ]; then
+  # Real scrcpy is talkative. Past the pipe buffer (~64 KiB on Linux) a child
+  # whose stderr nobody is reading blocks in write() and never exits.
+  i=0
+  while [ "$i" -lt "$FAKE_SCRCPY_CHATTY" ]; do
+    echo "WARN: [server] diagnostic line $i, padded out so the pipe fills quickly xxxxxxxxxxxxxxxxxxxxxxxxxxxx" >&2
+    i=$((i+1))
+  done
+fi
 if [ -n "${FAKE_SCRCPY_FAIL:-}" ]; then
   echo "WARN: something minor" >&2
   echo "ERROR: Could not find ADB device" >&2
@@ -311,6 +323,176 @@ class ScrcpySessionManagerTests(unittest.TestCase):
         sup.send(cmd="nonsense")
         sup.send(cmd="launch", id="mirror", type="mirror")
         sup.expect("started", id="mirror")
+
+    def test_a_chatty_scrcpy_still_reports_its_exit(self):
+        """`stderr=subprocess.PIPE` was drained only AFTER `wait()`. Once
+        scrcpy writes past the pipe buffer it blocks in `write()`, so
+        `wait()` never returns, no `exited` is ever emitted, and the card is
+        stuck on "running" over a frozen mirror. 3000 lines is ~300 KiB,
+        comfortably past Linux's 64 KiB."""
+        sup = self._start(FAKE_SCRCPY_CHATTY="3000", FAKE_SCRCPY_FAIL="1")
+        sup.send(cmd="launch", id="mirror", type="mirror")
+        sup.expect("started", id="mirror")
+        exited = sup.expect("exited", id="mirror", timeout=15)
+        self.assertEqual(exited["code"], 1)
+        self.assertEqual(exited["error"], "ERROR: Could not find ADB device")
+
+    def test_a_slow_app_scan_does_not_block_stop_and_focus(self):
+        """`list_apps` ran on the command loop: adb connect (4s) + adb
+        devices (4s) + `scrcpy --list-apps` (10s) + `pm list` (8s), during
+        which `stop`, `stop_all` and `focus` were not even read off stdin."""
+        sup = self._start(FAKE_SCRCPY_LIST_DELAY="4")
+        sup.send(cmd="launch", id="mirror", type="mirror")
+        sup.expect("started", id="mirror")
+        started = time.monotonic()
+        sup.send(cmd="list_apps", deviceId="dev_1")
+        sup.send(cmd="focus", id="mirror")
+        self.assertEqual(sup.argv("hyprctl", timeout=3.0),
+                         ["dispatch focuswindow title:^imi-phone-mirror-mirror$"],
+                         "a click during the app scan was not acted on")
+        self.assertLess(time.monotonic() - started, 3.0)
+        sup.expect("apps_list", deviceId="dev_1", timeout=20)
+
+    def test_a_sigtermed_supervisor_stops_its_scrcpy_children(self):
+        """The docstring promises that a shell restart never leaves headless
+        scrcpy windows behind, and only the clean-EOF path kept it:
+        `PhoneScrcpy.stopManager()` sets `running = false`, which is a
+        SIGTERM, and Python's default handler exits without running
+        `stop_all()`."""
+        sup = self._start()
+        sup.send(cmd="launch", id="mirror", type="mirror")
+        child = sup.expect("started", id="mirror")["pid"]
+        # `started` is emitted the instant Popen returns, so the fake may not
+        # have reached its `exec sleep` yet - and "comm is not sleep" is what
+        # this check reads as success. Wait for the child to BE the thing
+        # whose survival is the defect, or the whole test is vacuous.
+        self.assertTrue(self._wait_comm(child, "sleep"),
+                        "the fake scrcpy never reached its sleep")
+        sup.proc.send_signal(signal.SIGTERM)
+        try:
+            sup.proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            sup.proc.kill()
+            self.fail("the supervisor did not exit on SIGTERM")
+        if not self._wait_gone(child, "sleep"):
+            os.kill(child, signal.SIGKILL)
+            self.fail("the scrcpy child outlived a SIGTERMed supervisor")
+
+    @staticmethod
+    def _wait_comm(pid, name, timeout=5.0):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                if Path(f"/proc/{pid}/comm").read_text().strip() == name:
+                    return True
+            except OSError:
+                pass
+            time.sleep(0.05)
+        return False
+
+    @staticmethod
+    def _wait_gone(pid, name, timeout=5.0):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                if Path(f"/proc/{pid}/comm").read_text().strip() != name:
+                    return True
+            except OSError:
+                return True
+            time.sleep(0.05)
+        return False
+
+    def test_a_named_usb_serial_is_honoured_when_adb_lists_it(self):
+        """With two phones attached, `usb_devices[0]` is whichever `adb
+        devices` printed first and nothing could steer it."""
+        sup = self._start(FAKE_ADB_DEVICES="PHONE_A\\tdevice\\nPHONE_B\\tdevice")
+        sup.send(cmd="launch", id="mirror", type="mirror", target_args=["-s", "PHONE_B"])
+        sup.expect("started", id="mirror")
+        self.assertTrue(sup.argv("scrcpy")[0].startswith("-s PHONE_B "),
+                        sup.argv("scrcpy"))
+
+    def test_the_pick_among_several_usb_devices_does_not_follow_adbs_order(self):
+        """Unsteered, the choice is at least the same one twice: adb's print
+        order is not a decision anybody made."""
+        picks = []
+        for listing in ("PHONE_B\\tdevice\\nPHONE_A\\tdevice",
+                        "PHONE_A\\tdevice\\nPHONE_B\\tdevice"):
+            room = tempfile.TemporaryDirectory()
+            self.addCleanup(room.cleanup)
+            sup = Supervisor(room.name, {"FAKE_ADB_DEVICES": listing})
+            self.addCleanup(sup.close)
+            sup.send(cmd="launch", id="mirror", type="mirror")
+            sup.expect("started", id="mirror")
+            picks.append(sup.argv("scrcpy")[0].split()[1])
+        self.assertEqual(picks[0], picks[1], f"adb's print order decided the phone: {picks}")
+
+
+class EmitSerializationTests(unittest.TestCase):
+    """`emit` writes from every reaper thread as well as from the main one.
+
+    `print(json.dumps(event), flush=True)` is two writes into a shared
+    buffered stream, so an event large enough to flush part way - an
+    `apps_list` for a real phone is tens of kilobytes - can be split by
+    another thread's line. Interleaved NDJSON makes the QML parser return
+    null and BOTH events are dropped; a lost `exited` leaves a session row
+    live with no window behind it.
+
+    Observed against real stdout at roughly one corruption in three runs
+    (`{...apps_list...}{"event": "exited", ...}` on one line), which is too
+    rare to be a check. The stream below makes the window explicit instead of
+    waiting for the scheduler to open it: its `write` is deliberately not
+    atomic, which is exactly the property a buffered TextIOWrapper flushing
+    mid-write has. Without one lock around one write this fails every time.
+    """
+
+    class SplittingStream:
+        def __init__(self):
+            self.pieces = []
+
+        def write(self, text):
+            for index in range(0, len(text), 16):
+                self.pieces.append(text[index:index + 16])
+                time.sleep(0)
+            return len(text)
+
+        def flush(self):
+            time.sleep(0)
+
+    def test_every_event_is_one_whole_line(self):
+        spec = importlib.util.spec_from_file_location("scrcpy_session_manager", MANAGER)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        manager = module.ScrcpySessionManager()
+        stream = self.SplittingStream()
+        apps = [{"package": f"com.example.app{i}", "name": f"App {i}", "system": False}
+                for i in range(40)]
+
+        def reaper(index):
+            for step in range(20):
+                manager.emit({"event": "exited", "id": f"s-{index}-{step}",
+                              "code": 0, "error": ""})
+
+        def lister(index):
+            for step in range(20):
+                manager.emit({"event": "apps_list", "deviceId": f"dev-{index}-{step}",
+                              "apps": apps})
+
+        original = sys.stdout
+        sys.stdout = stream
+        try:
+            threads = ([threading.Thread(target=reaper, args=(n,)) for n in range(4)]
+                       + [threading.Thread(target=lister, args=(n,)) for n in range(2)])
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+        finally:
+            sys.stdout = original
+
+        lines = [line for line in "".join(stream.pieces).split("\n") if line]
+        self.assertEqual(len(lines), 120)
+        for line in lines:
+            json.loads(line)
 
 
 if __name__ == "__main__":
