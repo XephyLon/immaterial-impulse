@@ -52,6 +52,16 @@ ShellRoot {
     // three states: what the page draws is a consequence of what the tools
     // report, and the tools are asked again by the shell's own probes.
     readonly property string adbAttachedPath: Quickshell.env("PHONE_ADB_ATTACHED") ?? ""
+    // The two adb stubs and where one has to land to be found. `adb` is
+    // deliberately ABSENT from PATH when this harness starts - the driver
+    // strips every directory holding one - so the Apps page can be walked
+    // through all three states a tool has: not installed, installed and
+    // unable to start, installed and working.
+    readonly property string adbBinPath: Quickshell.env("PHONE_ADB_BIN") ?? ""
+    readonly property string adbOkPath: Quickshell.env("PHONE_ADB_OK") ?? ""
+    readonly property string adbBrokenPath: Quickshell.env("PHONE_ADB_BROKEN") ?? ""
+    readonly property string adbBrokenLibrary: Quickshell.env("PHONE_ADB_BROKEN_LIB") ?? ""
+    readonly property string phoneAddress: Quickshell.env("PHONE_LAN_ADDRESS") ?? ""
     readonly property string appsFilePath: Quickshell.env("PHONE_APPS_FILE") ?? ""
     readonly property string appsSourcePath: Quickshell.env("PHONE_APPS_SOURCE") ?? ""
     // The file the fake daemon reports as the first notification's iconPath.
@@ -73,6 +83,11 @@ ShellRoot {
     // the "cramped" step scored the tall page a second time - so the host's
     // own height is what the short-page step moves.
     property real viewportHeight: 900
+    // ...and how wide. A column pinned to one width passes every check at
+    // that width, which is what let a 600px settings column ship on a 440px
+    // panel (AGENT.md, ContentPage.baseWidth), so the pairing panel is
+    // measured at two.
+    property real viewportWidth: 460
     property real tallPageHeight: 0
 
     function check(label, ok) {
@@ -176,6 +191,31 @@ ShellRoot {
             && item.width > 0 && item.height > 0;
     }
 
+    // Every item of a given type that is really on screen, drawn inside the
+    // reference and reported by how far it escapes it. Used for the pairing
+    // panel, where the class of bug is a control asking for more width than
+    // the panel has and overflowing rather than shrinking.
+    function widestOverflow(page, types) {
+        let worst = 0;
+        let offender = "";
+        for (const type of types) {
+            for (const item of harness.findAll(page, type, [])) {
+                // Drawn, not necessarily lit: a control the interaction model
+                // has dimmed to 0.4 because it is disabled still occupies the
+                // width it asked for, which is the thing being measured.
+                if (!item.visible || item.width <= 0 || item.height <= 0)
+                    continue;
+                const box = harness.boxIn(item, page);
+                const over = Math.max(-box.left, box.right - page.width);
+                if (over > worst) {
+                    worst = over;
+                    offender = type;
+                }
+            }
+        }
+        return { over: worst, offender: offender };
+    }
+
     // Where an item is DRAWN, in another item's coordinates. Everything about
     // both defects is a comparison between two of these.
     function boxIn(item, reference) {
@@ -203,7 +243,7 @@ ShellRoot {
 
         Loader {
             id: loader
-            width: parent.width
+            width: harness.viewportWidth
             height: harness.viewportHeight
             active: false
             sourceComponent: Phone {}
@@ -412,50 +452,155 @@ ShellRoot {
         () => loader.item.popSubPage(),
         () => {},
 
-        // ---- the Apps page with no phone on ADB ---------------------------
+        // ---- the Apps page with no adb at all -----------------------------
         //
-        // The state the maintainer photographed: a phone paired to KDE Connect
-        // over the LAN, and `adb devices` listing nothing. What was on screen
-        // was a line of red text and an empty state under it, neither of which
-        // says what to do; what has to be on screen is one panel that does.
+        // The old panel assumed adb was installed and told the reader to go
+        // and turn something on on their phone. There is nothing to turn on:
+        // the tool is not here.
         () => loader.item.openSubPage("apps"),
         () => {},
         () => {},
         () => {
             const page = harness.first("PhoneAppsPage");
+            const panel = harness.findAll(page, "PhoneAdbPairPanel", [])[0] ?? null;
+            const notice = harness.findAll(page, "NoticeBox", [])[0] ?? null;
+            const fields = harness.findAll(panel, "ToolbarTextField", [])
+                .filter(f => harness.onScreen(f));
+            const noticeText = harness.findAll(notice, "StyledText", [])
+                .filter(item => harness.onScreen(item))
+                .map(item => String(item.text)).join(" | ");
+            console.log(`[PhoneTabLayout] no-adb-at-all: present=${PhoneDeps.adbPresent}`
+                        + ` adb=${PhoneDeps.adb} runError="${PhoneDeps.adbRunError}"`
+                        + ` mode=${panel?.mode} fields=${fields.length}`);
+
+            harness.check(`adb is genuinely absent for this step, got present=`
+                          + `${PhoneDeps.adbPresent} usable=${PhoneDeps.adb}`,
+                          PhoneDeps.ready && !PhoneDeps.adbPresent && !PhoneDeps.adb
+                          && PhoneDeps.adbRunError === "");
+            harness.check(`the panel says so rather than the phone does, got mode=${panel?.mode}`,
+                          panel !== null && panel.mode === "absent" && harness.onScreen(notice));
+            harness.check(`...naming adb and not the phone, got "${noticeText}"`,
+                          noticeText.indexOf("adb is not installed") >= 0
+                          && noticeText.indexOf("Developer options") < 0);
+            harness.check(`...and carrying the install command for this machine,`
+                          + ` got "${noticeText}"`,
+                          noticeText.indexOf("pacman -S android-tools") >= 0);
+            // A pairing form for a machine with no adb would be a form whose
+            // buttons cannot do anything.
+            harness.check(`no pairing form is offered, got ${fields.length} fields`,
+                          fields.length === 0);
+        },
+
+        // ---- adb is installed and cannot start ----------------------------
+        //
+        // The class of failure the whole probe change exists for, driven with
+        // an adb that answers the way the loader does: the sentence on stderr
+        // and exit 127. `command -v` alone reports this as present.
+        () => harness.writeFixture(["install", "-m", "755",
+                                    harness.adbBrokenPath, harness.adbBinPath]),
+        () => PhoneDeps.recheck(),
+        () => {},
+        () => {},
+        () => {
+            const page = harness.first("PhoneAppsPage");
+            const panel = harness.findAll(page, "PhoneAdbPairPanel", [])[0] ?? null;
+            const notice = harness.findAll(page, "NoticeBox", [])[0] ?? null;
+            const noticeText = harness.findAll(notice, "StyledText", [])
+                .filter(item => harness.onScreen(item))
+                .map(item => String(item.text)).join(" | ");
+            const fields = harness.findAll(panel, "ToolbarTextField", [])
+                .filter(f => harness.onScreen(f));
+            console.log(`[PhoneTabLayout] adb-broken: present=${PhoneDeps.adbPresent}`
+                        + ` adb=${PhoneDeps.adb} runError="${PhoneDeps.adbRunError}"`
+                        + ` mode=${panel?.mode}`);
+
+            harness.check(`command -v finds it and it still cannot start, got present=`
+                          + `${PhoneDeps.adbPresent} usable=${PhoneDeps.adb}`
+                          + ` runError="${PhoneDeps.adbRunError}"`,
+                          PhoneDeps.ready && PhoneDeps.adbPresent && !PhoneDeps.adb
+                          && PhoneDeps.adbRunError === harness.adbBrokenLibrary);
+            harness.check(`the panel names the library, got mode=${panel?.mode}`
+                          + ` text="${noticeText}"`,
+                          panel !== null && panel.mode === "broken"
+                          && noticeText.indexOf(harness.adbBrokenLibrary) >= 0);
+            // The message this replaced sent the maintainer to look at their
+            // phone. Nothing about a missing shared object is about a phone.
+            harness.check(`...and says nothing about the phone, got "${noticeText}"`,
+                          noticeText.indexOf("phone") < 0
+                          && noticeText.indexOf("rebuilding") >= 0);
+            harness.check(`no pairing form for a tool that cannot run, got`
+                          + ` ${fields.length} fields`, fields.length === 0);
+        },
+
+        // ---- adb works, and nothing is on it ------------------------------
+        () => harness.writeFixture(["install", "-m", "755",
+                                    harness.adbOkPath, harness.adbBinPath]),
+        () => PhoneDeps.recheck(),
+        () => {},
+        () => {},
+        () => {
+            const page = harness.first("PhoneAppsPage");
+            const panel = harness.findAll(page, "PhoneAdbPairPanel", [])[0] ?? null;
             const placeholder = harness.findAll(page, "PagePlaceholder", [])[0] ?? null;
             const notice = harness.findAll(page, "NoticeBox", [])[0] ?? null;
             const list = harness.findAll(page, "StyledListView", [])[0] ?? null;
             const region = placeholder?.parent ?? null;
             const column = region?.parent ?? null;
             const status = column?.children[1] ?? null;
-            const noticeText = harness.findAll(notice, "StyledText", [])
-                .map(t => String(t.text)).join(" | ");
-            console.log(`[PhoneTabLayout] no-adb: ready=${PhoneDeps.ready} adb=${PhoneDeps.adb}`
-                        + ` adbDevice=${PhoneDeps.adbDevice} appMode=${PhoneScrcpy.appModeSupported}`
-                        + ` appsError="${PhoneScrcpy.appsError}" notice h=${notice?.height}`
-                        + ` placeholderShown=${placeholder?.shown} status=${status?.visible}`
-                        + ` list=${list?.visible}`);
+            const fields = harness.findAll(panel, "ToolbarTextField", [])
+                .filter(f => harness.onScreen(f));
+            const pairAddress = fields[0] ?? null;
+            const pairCode = fields[1] ?? null;
+            const connectAddress = fields[2] ?? null;
+            // Every button, lit or not: a disabled RippleButton dims to 0.4
+            // through the interaction model, and the one being asked about
+            // here is disabled on purpose.
+            const buttons = harness.findAll(panel, "RippleButtonWithIcon", []);
+            console.log(`[PhoneTabLayout] no-device: adb=${PhoneDeps.adb}`
+                        + ` device=${PhoneDeps.adbDevice} mode=${panel?.mode}`
+                        + ` appMode=${PhoneScrcpy.appModeSupported}`
+                        + ` fields=${fields.length} buttons=${buttons.length}`
+                        + ` pairAddress="${pairAddress?.text}"`);
 
             harness.check(`the fake tooling answered: app mode is supported and adb sees`
-                          + ` no phone, got ready=${PhoneDeps.ready} adb=${PhoneDeps.adb}`
+                          + ` no phone, got adb=${PhoneDeps.adb}`
                           + ` device=${PhoneDeps.adbDevice} appMode=${PhoneScrcpy.appModeSupported}`,
                           PhoneDeps.ready && PhoneDeps.adb && !PhoneDeps.adbDevice
                           && PhoneScrcpy.appModeSupported);
             harness.check(`the page draws a panel, got ${notice?.height}px of one`,
-                          harness.onScreen(notice));
+                          harness.onScreen(notice) && panel !== null
+                          && panel.mode === "noDevice");
             harness.check(`...in the error container role, got ${notice?.color}`,
                           notice !== null && String(notice.color)
                           === String(Appearance.colors.colErrorContainer));
             // Both routes, because the machine this was reported from has
             // neither: a panel naming only the cable is no use to someone
             // whose phone is across the room.
+            const panelText = harness.findAll(panel, "StyledText", [])
+                .filter(item => harness.onScreen(item))
+                .map(item => String(item.text)).join(" | ");
             harness.check("...naming USB debugging and wireless debugging both",
-                          noticeText.indexOf("USB debugging") >= 0
-                          && noticeText.indexOf("Wireless debugging") >= 0);
-            harness.check("...and the pairing the wireless route needs by hand",
-                          noticeText.indexOf("adb pair") >= 0
-                          && noticeText.indexOf("adb connect") >= 0);
+                          panelText.indexOf("USB debugging") >= 0
+                          && panelText.indexOf("Wireless debugging") >= 0);
+            // The whole point of the round: the wireless route is a form the
+            // shell drives, not a command line to retype.
+            harness.check(`...and offering the pairing as controls rather than a`
+                          + ` recipe, got ${fields.length} fields and`
+                          + ` ${buttons.length} buttons`,
+                          fields.length === 3 && buttons.length === 3
+                          && panelText.indexOf("adb pair ") < 0
+                          && panelText.indexOf("in a terminal") < 0);
+            // The host is the half the shell honestly knows; the ports are
+            // not, so the button stays refused until one is typed or found.
+            harness.check(`the address KDE Connect reaches the phone on is prefilled,`
+                          + ` got "${pairAddress?.text}" and "${connectAddress?.text}"`,
+                          pairAddress !== null && connectAddress !== null
+                          && String(pairAddress.text) === harness.phoneAddress
+                          && String(connectAddress.text) === harness.phoneAddress);
+            const pairButton = buttons.find(b => String(b.mainText).indexOf("Pair") === 0) ?? null;
+            harness.check(`...and Pair is refused while there is no port and no code,`
+                          + ` got enabled=${pairButton?.enabled}`,
+                          pairButton !== null && !pairButton.enabled);
             // The two messages that used to say the same thing beside it.
             harness.check(`the empty state stands down, got shown=${placeholder?.shown}`,
                           placeholder !== null && !placeholder.shown);
@@ -464,6 +609,141 @@ ShellRoot {
                           status !== null && !status.visible);
             harness.check(`and no list is drawn, got visible=${list?.visible}`,
                           list === null || !list.visible);
+
+            const overflow = harness.widestOverflow(page,
+                ["ToolbarTextField", "RippleButtonWithIcon", "NoticeBox", "StyledText"]);
+            console.log(`[PhoneTabLayout] pairing panel at ${page.width}:`
+                        + ` worst overflow ${overflow.over} (${overflow.offender})`);
+            harness.check(`nothing on the pairing panel hangs off the page at`
+                          + ` ${page.width}, worst ${overflow.over}px`
+                          + ` (${overflow.offender})`,
+                          overflow.over <= 1);
+        },
+
+        // ---- ...and at a panel width nothing was tuned against -------------
+        () => {
+            harness.viewportWidth = 360;
+        },
+        () => {},
+        () => {
+            const page = harness.first("PhoneAppsPage");
+            const overflow = harness.widestOverflow(page,
+                ["ToolbarTextField", "RippleButtonWithIcon", "NoticeBox", "StyledText"]);
+            console.log(`[PhoneTabLayout] pairing panel at ${page.width}:`
+                        + ` worst overflow ${overflow.over} (${overflow.offender})`);
+            // Or the check is vacuous: a column pinned to 460 passes at 460.
+            harness.check(`the page really did get narrower, got ${page.width}`,
+                          page.width < 400);
+            harness.check(`nothing hangs off it there either, worst`
+                          + ` ${overflow.over}px (${overflow.offender})`,
+                          overflow.over <= 1);
+        },
+        () => {
+            harness.viewportWidth = 460;
+        },
+        () => {},
+
+        // ---- the ports come off the network, not off the phone's screen ----
+        () => {
+            const panel = harness.first("PhoneAdbPairPanel");
+            const discover = harness.findAll(panel, "RippleButtonWithIcon", [])
+                .find(b => String(b.mainText).indexOf("Find") === 0) ?? null;
+            harness.check(`avahi-browse is on PATH, so the lookup is offered, got`
+                          + ` ${discover === null ? "no button" : "one"}`,
+                          PhoneDeps.avahiBrowse && discover !== null
+                          && harness.onScreen(discover));
+            if (discover !== null)
+                discover.clicked();
+        },
+        () => {},
+        () => {},
+        () => {
+            const panel = harness.first("PhoneAdbPairPanel");
+            const fields = harness.findAll(panel, "ToolbarTextField", [])
+                .filter(f => harness.onScreen(f));
+            console.log(`[PhoneTabLayout] mdns: state=${PhoneDeps.mdnsState}`
+                        + ` pairing="${PhoneDeps.mdnsPairingAddress}"`
+                        + ` connect="${PhoneDeps.mdnsConnectAddress}"`
+                        + ` fields="${fields.map(f => f.text).join(", ")}"`);
+            harness.check(`both ports came back, got "${PhoneDeps.mdnsPairingAddress}"`
+                          + ` and "${PhoneDeps.mdnsConnectAddress}"`,
+                          PhoneDeps.mdnsState === "done"
+                          && PhoneDeps.mdnsPairingAddress === `${harness.phoneAddress}:37129`
+                          && PhoneDeps.mdnsConnectAddress === `${harness.phoneAddress}:41235`);
+            // The suggestion replaces the shell's own earlier one, which is
+            // the only text either field is holding.
+            harness.check(`...and both fields carry them, got "${fields[0]?.text}"`
+                          + ` and "${fields[2]?.text}"`,
+                          String(fields[0]?.text) === `${harness.phoneAddress}:37129`
+                          && String(fields[2]?.text) === `${harness.phoneAddress}:41235`);
+        },
+
+        // ---- and the two steps are commands the shell runs ------------------
+        () => {
+            const panel = harness.first("PhoneAdbPairPanel");
+            const fields = harness.findAll(panel, "ToolbarTextField", [])
+                .filter(f => harness.onScreen(f));
+            fields[1].text = "123456";
+        },
+        () => {},
+        () => {
+            const panel = harness.first("PhoneAdbPairPanel");
+            const pairButton = harness.findAll(panel, "RippleButtonWithIcon", [])
+                .find(b => String(b.mainText).indexOf("Pair") === 0) ?? null;
+            harness.check(`Pair is offered once the address carries a port and the`
+                          + ` code six digits, got enabled=${pairButton?.enabled}`,
+                          pairButton !== null && pairButton.enabled);
+            if (pairButton !== null)
+                pairButton.clicked();
+        },
+        () => {},
+        () => {},
+        () => {
+            const panel = harness.first("PhoneAdbPairPanel");
+            const lines = harness.findAll(panel, "StyledText", [])
+                .filter(item => harness.onScreen(item))
+                .map(item => String(item.text)).join(" | ");
+            console.log(`[PhoneTabLayout] pair: state=${PhoneDeps.pairState}`
+                        + ` message="${PhoneDeps.pairMessage}"`);
+            harness.check(`the pairing ran and adb answered, got state=`
+                          + `${PhoneDeps.pairState} message="${PhoneDeps.pairMessage}"`,
+                          PhoneDeps.pairState === "ok"
+                          && PhoneDeps.pairMessage.indexOf("Successfully paired") === 0);
+            // adb's OWN sentence reaches the panel - the point of running the
+            // command rather than printing it is that its answer is what the
+            // user is told.
+            harness.check(`...and it is on screen, got "${lines}"`,
+                          lines.indexOf(PhoneDeps.pairMessage) >= 0);
+        },
+        () => {
+            const panel = harness.first("PhoneAdbPairPanel");
+            const connectButton = harness.findAll(panel, "RippleButtonWithIcon", [])
+                .find(b => String(b.mainText).indexOf("Connect") === 0) ?? null;
+            harness.check(`Connect is offered, got enabled=${connectButton?.enabled}`,
+                          connectButton !== null && connectButton.enabled);
+            if (connectButton !== null)
+                connectButton.clicked();
+        },
+        () => {},
+        () => {},
+        () => {},
+        () => {
+            const page = harness.first("PhoneAppsPage");
+            const panel = harness.findAll(page, "PhoneAdbPairPanel", [])[0] ?? null;
+            console.log(`[PhoneTabLayout] connect: state=${PhoneDeps.connectState}`
+                        + ` message="${PhoneDeps.connectMessage}"`
+                        + ` device=${PhoneDeps.adbDevice} mode="${panel?.mode}"`);
+            harness.check(`the connect ran and adb answered, got state=`
+                          + `${PhoneDeps.connectState} message="${PhoneDeps.connectMessage}"`,
+                          PhoneDeps.connectState === "ok"
+                          && PhoneDeps.connectMessage.indexOf("connected to") === 0);
+            // adb exits 0 on a refused connection too, so the line adb printed
+            // is a claim: what takes the panel down is the phone turning up
+            // under `adb devices`, which the connect handler re-asks.
+            harness.check(`...and the device list is what took the panel down, got`
+                          + ` device=${PhoneDeps.adbDevice} mode="${panel?.mode}"`,
+                          PhoneDeps.adbDevice === true && panel !== null
+                          && panel.mode === "" && !panel.shown);
         },
 
         // ---- a phone appears on ADB, and the page asks for the list itself -
