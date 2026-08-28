@@ -37,7 +37,7 @@ import qs.modules.imi.sidebarLeft.phone
  * decisions themselves live in phone_cards.js and are driven by
  * tests/tst_phone_cards.qml.
  *
- * Four things here are WATCHED rather than read once, because each of them
+ * Five things here are WATCHED rather than read once, because each of them
  * is a defect that only exists between two settled states:
  *
  *  - the mirror launch. `Directories.scriptPath` resolves to this checkout,
@@ -52,6 +52,10 @@ import qs.modules.imi.sidebarLeft.phone
  *    opacity and scale, and the check that matters is that a MID-flight
  *    reading exists: every "was it ever out of range" assertion passes
  *    identically on a transition that never ran;
+ *  - the roster's reveal, in both directions. `rosterWatch` samples the box
+ *    that uncovers the device list, and what is asserted is that a MID-flight
+ *    height exists: a reveal that never ran and one that completed in a frame
+ *    settle on the same number;
  *  - the footer's clear action, across the one glyph swap this bar has. A
  *    deferred text swap on a Control's content item lands the glyph on the
  *    padded rect's corner rather than on its centre and leaves it there, so
@@ -190,6 +194,20 @@ ShellRoot {
     function cardGlyph(card) {
         const badge = harness.cardBadge(card);
         return badge ? (harness.findAll(badge, "MaterialSymbol", [])[0] ?? null) : null;
+    }
+
+    // The roster's list, and the box that reveals it. Reached through a row
+    // rather than by type: a ListView parents its delegates into its own
+    // content item, and the tab draws a second StyledListView - the
+    // notification list - that a search by type would reach first.
+    function rosterList() {
+        const row = harness.all("PhoneDeviceItem")[0] ?? null;
+        return row ? (row.parent?.parent ?? null) : null;
+    }
+
+    function rosterBox() {
+        const list = harness.rosterList();
+        return list ? list.parent : null;
     }
 
     // The Stop button of a card that is on its `active` rung, found by what it
@@ -423,17 +441,68 @@ ShellRoot {
 
         // ---- the roster, behind the chip's arrow --------------------------
         () => {
+            const list = harness.rosterList();
             harness.check("the roster is folded until the chip is opened",
                           harness.all("PhoneDeviceItem").filter(i => i.visible).length === 0);
+            // The component, not a shape of its own: the same StyledListView
+            // the Wi-Fi and Bluetooth device lists are, over the same model.
+            harness.check(`the roster is the shell's own list view over the daemon's devices,`
+                          + ` got ${harness.typeName(list)} of ${list?.count}`,
+                          list !== null && harness.typeName(list) === "StyledListView"
+                          && list.count === PhoneConnect.devices.length);
+            harness.rosterSaw = { samples: 0, mid: 0, maxHeight: 0 };
             harness.click(harness.first("PhoneDeviceChip"));
+            rosterWatch.running = true;
         },
+        () => {},
         () => {
+            rosterWatch.running = false;
+            const box = harness.rosterBox();
+            const list = harness.rosterList();
+            const saw = harness.rosterSaw;
+            console.log(`[PhoneTab] roster open: samples=${saw.samples} mid=${saw.mid}`
+                + ` peak=${saw.maxHeight.toFixed(2)} settled=${box?.height} of list ${list?.contentHeight}`);
+
+            // The sample count first: a watch that never ran reports the same
+            // "nothing was ever part way" a correct reveal does. Then the
+            // mid-flight frames, because an unrolled reading and a snapped one
+            // are the same reading once it settles - the two this repo has
+            // shipped that mistake on are recorded in AGENT.md.
+            harness.check(`the reveal was watched frame by frame, got ${saw.samples} samples`,
+                          saw.samples > 10);
+            harness.check(`the roster unrolls rather than appearing whole,`
+                          + ` ${saw.mid} frames strictly between`, saw.mid > 0);
+            harness.check(`...and settles at the list's own content height, got ${box?.height}`,
+                          box !== null && list !== null && list.contentHeight > 0
+                          && Math.abs(box.height - list.contentHeight) < 1);
+
             const rows = harness.all("PhoneDeviceItem").filter(i => i.visible);
             harness.check(`opening the chip lists both devices, got ${rows.length}`, rows.length === 2);
             const laptop = rows.find(r => r.device?.id === harness.laptopId) ?? null;
+            harness.rosterSaw = { samples: 0, mid: 0, maxHeight: 0 };
             if (laptop) harness.click(laptop);
+            rosterWatch.running = true;
         },
+        () => {},
         () => {
+            rosterWatch.running = false;
+            const box = harness.rosterBox();
+            const saw = harness.rosterSaw;
+            console.log(`[PhoneTab] roster fold: samples=${saw.samples} mid=${saw.mid}`
+                + ` peak=${saw.maxHeight.toFixed(2)} progress=${loader.item.rosterProgress}`
+                + ` visible=${box?.visible}`);
+
+            harness.check(`the fold was watched frame by frame too, got ${saw.samples} samples`,
+                          saw.samples > 10);
+            harness.check(`picking a row folds the roster rather than cutting it,`
+                          + ` ${saw.mid} frames strictly between`, saw.mid > 0);
+            // The scalar, not the box's height: an excluded layout child keeps
+            // the height its last laid-out frame left on it.
+            harness.check(`...and it ends folded and out of the column,`
+                          + ` progress ${loader.item.rosterProgress}`,
+                          box !== null && !box.visible && loader.item.rosterProgress === 0
+                          && harness.all("PhoneDeviceItem").every(i => !i.visible));
+
             const chip = harness.first("PhoneDeviceChip");
             harness.check(`picking a row shows that device on the chip, got ${chip?.device?.name}`,
                           chip?.device?.id === harness.laptopId);
@@ -929,6 +998,31 @@ ShellRoot {
                     saw.blankGlyph = `${badge?.text}|${glyph.text}`;
             }
             harness.launchSaw = saw;
+        }
+    }
+
+    property var rosterSaw: ({ samples: 0, mid: 0, maxHeight: 0 })
+
+    Timer {
+        id: rosterWatch
+        interval: 25
+        repeat: true
+        onTriggered: {
+            const box = harness.rosterBox();
+            const list = harness.rosterList();
+            if (!box || !list) return;
+            const saw = harness.rosterSaw;
+            saw.samples++;
+            // Only while the box is DRAWN. A QQuickLayout excludes an
+            // invisible child and stops writing its height, so a folded box
+            // keeps whatever height its last laid-out frame left on it - read
+            // ungated, that stale number sits in the mid-flight band for the
+            // rest of the run and the fold's own check passes on a snap.
+            if (box.visible) {
+                saw.maxHeight = Math.max(saw.maxHeight, box.height);
+                if (box.height > 1 && box.height < list.contentHeight - 1) saw.mid++;
+            }
+            harness.rosterSaw = saw;
         }
     }
 
