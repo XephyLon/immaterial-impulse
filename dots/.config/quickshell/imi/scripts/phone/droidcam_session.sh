@@ -117,6 +117,23 @@ find_running() {
     return 1
 }
 
+# split_cmdline <cmdline> → fills the global array CMDLINE_WORDS.
+#
+# `IFS` drops space at the top of this file, so an unquoted `$cl` does not
+# split a cmdline into words at all - it is one argument, and `cmdline_of`
+# has already turned the NULs into spaces. The rediscovery paths in
+# cmd_status passed `$cl` to extract_port/extract_ip that way, so both saw a
+# single non-numeric argument and answered empty: a session rediscovered
+# after a shell restart reported no port and no address, for ever. Splitting
+# here, under a local IFS, keeps both callers on argv arrays rather than
+# putting space back into the global IFS for every other expansion in the
+# file.
+split_cmdline() {
+    CMDLINE_WORDS=()
+    local IFS=' '
+    read -r -a CMDLINE_WORDS <<< "$1"
+}
+
 # extract_port <args...> → last standalone numeric token
 extract_port() {
     local a last=""
@@ -250,15 +267,16 @@ cmd_status() {
             alive="true"
             local cl
             cl="$(cmdline_of "$pid")"
+            split_cmdline "$cl"
             if [ -z "$port" ]; then
-                port="$(extract_port $cl)"
+                port="$(extract_port "${CMDLINE_WORDS[@]}")"
             fi
-            case "$cl" in
+            case " $cl " in
                 *" adb "*) mode="usb" ;;
                 *) mode="wifi" ;;
             esac
             if [ "$mode" = "wifi" ] && [ -z "$ip" ]; then
-                ip="$(extract_ip "$mode" $cl)"
+                ip="$(extract_ip "$mode" "${CMDLINE_WORDS[@]}")"
             fi
             [ -z "$started" ] && started="$(stat -c %Y "/proc/$pid" 2>/dev/null || echo 0)"
         fi
