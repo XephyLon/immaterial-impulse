@@ -192,6 +192,41 @@ ShellRoot {
         return badge ? (harness.findAll(badge, "MaterialSymbol", [])[0] ?? null) : null;
     }
 
+    // The Stop button of a card that is on its `active` rung, found by what it
+    // draws rather than by position: a card carries a settings chip and its
+    // inline actions in the same tree, and which RippleButton comes first is a
+    // property of the file's declaration order.
+    function stopButton(card) {
+        return harness.findAll(card, "RippleButton", [])
+            .find(b => harness.findAll(b, "MaterialSymbol", [])
+                              .some(g => `${g.text}` === "stop_circle")) ?? null;
+    }
+
+    // A glyph-plus-label pair's DRAWN extent inside its button, and where the
+    // middle of it lands against the button's own middle.
+    //
+    // The drawn extent, never the boxes: a Text a layout has stretched still
+    // PAINTS at its content width from its left edge, so a label slot reaching
+    // the right border reports a box that looks centred and a picture that is
+    // not. That difference is the whole question this measures.
+    function labelledPair(button) {
+        if (!button) return null;
+        const glyph = harness.findAll(button, "MaterialSymbol", [])[0] ?? null;
+        const label = harness.findAll(button, "StyledText", [])[0] ?? null;
+        if (!glyph || !label) return null;
+        const g = glyph.mapToItem(button, 0, 0);
+        const l = label.mapToItem(button, 0, 0);
+        const left = Math.min(g.x, l.x);
+        const right = Math.max(g.x + Math.min(glyph.width, glyph.contentWidth),
+                               l.x + Math.min(label.width, label.contentWidth));
+        return { left: left, right: right, width: right - left,
+                 offset: (left + right) / 2 - button.width / 2 };
+    }
+
+    function pairText(pair) {
+        return pair ? `${pair.width.toFixed(2)}w@${pair.offset.toFixed(2)}` : "none";
+    }
+
     FloatingWindow {
         id: window
         visible: true
@@ -210,6 +245,54 @@ ShellRoot {
             anchors.fill: parent
             active: false
             sourceComponent: Phone {}
+        }
+    }
+
+    // ---- the Stop button, at two widths, and the component it declined ----
+    //
+    // A Stop button exists only on a card's `active` rung, and nothing this
+    // harness can drive puts a card there: the fake `adb` lists no device, so
+    // every launch fails before it starts. The cards are built directly
+    // instead - in a window of their own, so a fixture can never take a click
+    // aimed at the tab - and at TWO widths, because a pair that is centred at
+    // one width is also exactly what a pair filling its button looks like.
+    //
+    // The third fixture is the control for the component decision.
+    // `RippleButtonWithIcon` is the shell's glyph-plus-label button and is the
+    // obvious thing to reach for here; what it does on a button wider than its
+    // content is the measured reason the card does not.
+    FloatingWindow {
+        id: stopWindow
+        visible: true
+        implicitWidth: 520
+        implicitHeight: 360
+        color: "black"
+
+        Column {
+            anchors.fill: parent
+            anchors.margins: Appearance.spacing.space100
+            spacing: Appearance.spacing.space100
+
+            PhoneFeatureCard {
+                id: narrowStopCard
+                width: 200
+                cardState: "active"
+                title: "Narrow"
+                subtitle: "stop fixture"
+            }
+            PhoneFeatureCard {
+                id: wideStopCard
+                width: 460
+                cardState: "active"
+                title: "Wide"
+                subtitle: "stop fixture"
+            }
+            RippleButtonWithIcon {
+                id: labelledControl
+                width: 460
+                materialIcon: "stop_circle"
+                mainText: "Stop"
+            }
         }
     }
 
@@ -633,6 +716,44 @@ ShellRoot {
             harness.check(`the chip opens the webcam page, got "${loader.item.subPage}"`,
                           loader.item.subPage === "webcam");
             loader.item.popSubPage();
+        },
+
+        // ---- a running card's Stop button, read off the fixture window ----
+        () => {
+            const narrow = harness.stopButton(narrowStopCard);
+            const wide = harness.stopButton(wideStopCard);
+            const pairs = [harness.labelledPair(narrow), harness.labelledPair(wide)];
+            const control = harness.labelledPair(labelledControl);
+            console.log(`[PhoneTab] stop buttons ${narrow?.width}/${wide?.width}`
+                + ` pairs ${pairs.map(p => harness.pairText(p))};`
+                + ` ${harness.typeName(labelledControl)} ${labelledControl.width}`
+                + ` pair ${harness.pairText(control)}`);
+
+            // Two controls before the claim. The pair has to be found at all,
+            // and each button has to be WIDER than it - a button the pair
+            // fills is centred by construction and says nothing.
+            harness.check(`the fixture drew a Stop button at two widths, got ${narrow?.width} and ${wide?.width}`,
+                          narrow !== null && wide !== null && wide.width > narrow.width);
+            harness.check(`...each with room around its pair, ${pairs.map(p => harness.pairText(p))}`,
+                          pairs.every(p => p !== null && p.width > 0)
+                          && narrow.width - pairs[0].width > 1
+                          && wide.width - pairs[1].width > 1);
+
+            // A Control stretches its content item to the padded rect and
+            // positions it itself, so a RowLayout declared there lays its
+            // children out from the LEFT edge of a button that fills its row.
+            harness.check(`the glyph and its label centre in the button at both widths,`
+                          + ` off by ${pairs.map(p => p.offset.toFixed(2))}`,
+                          pairs.every(p => Math.abs(p.offset) < 1));
+
+            // ...and why the shared component is not what does that. Its label
+            // slot is `Layout.fillWidth: true`, so on a button wider than its
+            // content the label absorbs the leftover from inside and the pair
+            // is left-packed - the same shape bd35286c3 measured from the
+            // other end, where the label was empty.
+            harness.check(`the shared labelled-icon button left-packs the same pair instead,`
+                          + ` off by ${control?.offset?.toFixed(2)}`,
+                          control !== null && control.offset < -1);
         },
 
         // ---- a launch that fails says so, on the card and in the toast ----
