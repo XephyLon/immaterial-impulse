@@ -90,7 +90,7 @@ PHONE_ADDRESS = "192.168.100.179"
 # 21 shared, 13 for the contact rows' geometry, 44 for the Apps page - the
 # three states adb itself can be in, the three states the page can be in, and
 # the pairing panel driven through discovery, pair and connect at two widths.
-EXPECTED_CHECKS = 78
+EXPECTED_CHECKS = 79
 
 # The two names the row-geometry steps measure, handed to the harness in the
 # environment so the fixture is the only place either is spelled. The Arabic
