@@ -32,9 +32,7 @@ TestCase {
             width: hostWidth
             ColumnLayout {
                 width: parent.width
-                GroupedList {
-                    Layout.fillWidth: true
-                    ConfigSelectionArray {
+                ConfigSelectionArray {
                         id: sel
                         Layout.fillWidth: true
                         // The host's width is only a constraint if the row is
@@ -51,7 +49,6 @@ TestCase {
                             {"displayName": "Bottom", "icon": "arrow_downward", "value": "bottom"},
                             {"displayName": "Right", "icon": "arrow_forward", "value": "right"}
                         ]
-                    }
                 }
             }
         }
