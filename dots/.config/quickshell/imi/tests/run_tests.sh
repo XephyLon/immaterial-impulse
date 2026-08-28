@@ -1860,6 +1860,18 @@ if ! python3 "$SCRIPT_DIR/test_phone_subpage_width_runtime.py"; then
     exit 1
 fi
 
+# The webcam preview player's lifetime, scored as a process rather than as a
+# flag: a stub stream is ended five ways - the stop button, the watchdog
+# finding it dead, the user closing the player's window, the phone leaving the
+# daemon, and the shell itself exiting - and each one asks `kill -0` about the
+# pid the player wrote. It used to be spawned with execDetached, which returns
+# no handle, so every one of those left a window frozen on a dead /dev/videoN.
+echo "Running Phone preview lifetime runtime tests..."
+if ! python3 "$SCRIPT_DIR/test_phone_preview_lifetime_runtime.py"; then
+    echo "Phone preview lifetime runtime tests failed."
+    exit 1
+fi
+
 # The phone's notification mirror: the parser region synced with its double,
 # argv only, dismiss on the LEAF, the declared reply refetch delay, one
 # stream, the desktop dedupe gate at ingestion, and the cache key declared.
