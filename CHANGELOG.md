@@ -33,6 +33,13 @@ own repo; the installer pins which revision it builds.
   corners rounded - instead of as a plain rectangle, and the device you
   picked is marked with a tick and its own colour instead of looking
   exactly like the ones you did not.
+- **A Wallpaper Engine wallpaper with sound no longer plays it once per
+  monitor.** The shell draws one live wallpaper per screen, and each was
+  playing the audio, so on two monitors you heard the track twice, slightly
+  out of phase. Sound now comes from one screen, chosen next to the volume
+  button in the wallpaper picker; if that screen is unplugged the sound moves
+  to another rather than going silent. ([#338](https://github.com/XephyLon/immaterial-impulse/issues/338))
+
 - **The phone panel's buttons behave like the rest of the shell's.** Its
   notification bar is the same one the right sidebar draws, so its two
   actions square off and swell under a press instead of sitting still;
