@@ -792,7 +792,10 @@ ShellRoot {
             // The settings chip is a SECOND affordance on the same card, and
             // it must not be what the card's own click reaches.
             const webcam = harness.cardTitled("Webcam");
-            const chip = harness.findAll(webcam, "RippleButton", [])[0] ?? null;
+            // By name, not by position: the card's surface is a RippleButton
+            // as well, so "the first one" is the surface rather than the chip.
+            const chip = harness.findAll(webcam, "RippleButton", [])
+                .find(b => b.objectName === "cardSettingsChip") ?? null;
             harness.check("the webcam card carries its settings chip", chip !== null);
             harness.check("the sub-page is closed before the chip is clicked",
                           loader.item.subPage === "");
