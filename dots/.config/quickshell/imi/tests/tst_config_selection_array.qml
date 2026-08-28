@@ -42,14 +42,19 @@ TestCase {
         // per-corner radii, exactly as `tst_grouped_list` says it.
         if (rowComponent.status === Component.Error) {
             const reason = rowComponent.errorString();
-            verify(/(top|bottom)(Left|Right)Radius/.test(reason),
+            // The row reaches `StyledText`, which sets `font.variableAxes` -
+            // Qt 6.7 and up. That, and not the per-corner radii this file
+            // first guessed at, is why the row cannot build on the CI Qt: the
+            // guess was never checked because a skip on ANY error printed the
+            // same green either way.
+            verify(/variableAxes|(top|bottom)(Left|Right)Radius/.test(reason),
                 "the row failed to build for a reason that is not Qt's version: " + reason);
         }
     }
 
     function ensureComponent() {
         if (rowComponent.status === Component.Error)
-            skip("Qt is older than 6.7, so the per-corner radii this row draws with do not exist here");
+            skip("Qt is older than 6.7, so the variable font axes this row's text sets do not exist here");
         compare(rowComponent.status, Component.Ready, rowComponent.errorString());
     }
 
