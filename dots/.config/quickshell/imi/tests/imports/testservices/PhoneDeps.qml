@@ -30,6 +30,14 @@ Singleton {
     property string distro: "unknown"
     property bool adbDevice: false
 
+    // Presence and usability are one writable flag each here: the real
+    // service derives `scrcpy`/`adb`/`droidcamCli` from a `command -v` and a
+    // run probe, and a test states the outcome rather than the two halves.
+    // The run errors are separate because missingDeps() reads them.
+    property string scrcpyRunError: ""
+    property string adbRunError: ""
+    property string droidcamCliRunError: ""
+
     readonly property bool appModeSupported: root.scrcpy && root.scrcpyMajor >= 4
 
     property int probesPending: 0
@@ -84,6 +92,28 @@ Singleton {
             if (parts.length >= 2 && parts[1] === "device") return true;
         }
         return false;
+    }
+
+    // Three states, not two, and the third is what `command -v` cannot see.
+    // Measured on this machine: `droidcam-cli` was on PATH and died before
+    // main with `error while loading shared libraries: libswscale.so.9:
+    // cannot open shared object file` - the package built against ffmpeg 8 on
+    // a system that had moved to ffmpeg 9's libswscale.so.10 - so the webcam
+    // card read `ready`, the click did nothing, and the message the user was
+    // given sent them to look at their phone.
+    //
+    // A dynamic-loader failure is distinctive and is NOT the same as a tool
+    // that runs and exits non-zero: the loader writes that sentence to stderr
+    // and the process comes back **127**, where `droidcam-cli` with no
+    // arguments prints its usage and exits 1. Both halves are required, so a
+    // tool that merely quotes the phrase is not classified by it, and 127
+    // cannot be a shell's "command not found" here because every probe is a
+    // constant argv with no shell on the path. Returns the soname the loader
+    // could not find, or "" for a binary that started.
+    function parseLoaderFailure(exitCode: int, stderrText: string): string {
+        if (exitCode !== 127) return "";
+        const match = /error while loading shared libraries:\s*([^\s:]+)/.exec(String(stderrText ?? ""));
+        return match ? match[1] : "";
     }
 
     // The install guide's rows: the sibling fork's table, verbatim.
@@ -167,32 +197,66 @@ Singleton {
         return { key: key, name: entry.name, description: entry.description, commands: entry.commands };
     }
 
+    // A dependency row for a tool that IS installed and cannot start. The
+    // install commands stay on it - reinstalling is the repair for a package
+    // linked against a library the system has moved past, and on Arch
+    // `yay -S droidcam` rebuilds it - but the description says what the
+    // problem actually is, because "install DroidCam CLI" is a lie told to
+    // somebody who has. An empty library name returns the row untouched, so
+    // an absent tool reads exactly as it did before.
+    function brokenDependency(entry: var, missingLibrary: string): var {
+        const library = String(missingLibrary ?? "");
+        if (!entry || library.length === 0) return entry;
+        return {
+            key: entry.key,
+            name: entry.name,
+            commands: entry.commands,
+            broken: true,
+            missingLibrary: library,
+            description: Translation.tr("Installed, but it cannot start: the dynamic loader cannot find %1. This package was built against an older library than the system now ships, so it needs rebuilding or reinstalling rather than installing.").arg(library)
+        };
+    }
+
     // Which dependencies a feature is missing, given the presence flags.
     // "mirror" is scrcpy + adb; "webcam" is DroidCam + the loopback module
     // (loaded or merely installed), with v4l-utils and mpv recommended;
     // "microphone" is pactl + either audio backend.
+    //
+    // A tool that is present and cannot start counts as missing here - the
+    // click does nothing either way, which is the whole complaint - and its
+    // row carries `broken` and the loader's own missing library.
     function missingDeps(feature: string, flags: var): var {
         const f = flags ?? {};
         const missing = [];
-        const need = (key, present) => { if (!present) missing.push(root.dependency(key)); };
+        const need = (key, present, brokenBy) => {
+            if (present) return;
+            missing.push(root.brokenDependency(root.dependency(key), brokenBy));
+        };
+        const scrcpyBroken = String(f.scrcpyRunError ?? "");
+        const adbBroken = String(f.adbRunError ?? "");
+        const droidcamBroken = String(f.droidcamCliRunError ?? "");
         if (feature === "mirror") {
-            need("scrcpy", f.scrcpy === true);
-            need("android-tools", f.adb === true);
+            need("scrcpy", f.scrcpy === true, scrcpyBroken);
+            need("android-tools", f.adb === true, adbBroken);
         } else if (feature === "webcam") {
-            need("droidcam-cli", f.droidcamCli === true);
-            need("v4l2loopback", f.v4l2loopbackLoaded === true || f.v4l2loopbackInstalled === true);
-            need("v4l-utils", f.v4l2Ctl === true);
-            need("mpv", f.mpv === true);
+            need("droidcam-cli", f.droidcamCli === true, droidcamBroken);
+            need("v4l2loopback", f.v4l2loopbackLoaded === true || f.v4l2loopbackInstalled === true, "");
+            need("v4l-utils", f.v4l2Ctl === true, "");
+            need("mpv", f.mpv === true, "");
         } else if (feature === "microphone") {
-            need("pactl", f.pactl === true);
-            need("audio-backend", f.scrcpy === true || f.droidcamCli === true);
+            need("pactl", f.pactl === true, "");
+            need("audio-backend", f.scrcpy === true || f.droidcamCli === true,
+                 scrcpyBroken.length > 0 ? scrcpyBroken : droidcamBroken);
         }
         return missing;
     }
+
     // END phone-deps logic
     function flags(): var {
         return {
             scrcpy: root.scrcpy, adb: root.adb, droidcamCli: root.droidcamCli,
+            scrcpyRunError: root.scrcpyRunError, adbRunError: root.adbRunError,
+            droidcamCliRunError: root.droidcamCliRunError,
             v4l2Ctl: root.v4l2Ctl, pactl: root.pactl, mpv: root.mpv, ffplay: root.ffplay,
             vlc: root.vlc, kdialog: root.kdialog, wlPaste: root.wlPaste,
             v4l2loopbackLoaded: root.v4l2loopbackLoaded,

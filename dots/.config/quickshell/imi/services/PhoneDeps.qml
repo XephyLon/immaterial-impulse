@@ -11,12 +11,19 @@ import QtQuick
  *
  * Nothing here is an installer dependency: scrcpy, adb, DroidCam, the
  * v4l2loopback module, pactl and the preview players are all probed with a
- * constant `command -v` at construction (tests/lint_capability_probe_gating.py
- * is why every probe starts itself), and `missingFor(feature)` turns the
- * flags into the install guide's rows - one per missing dependency, with
- * the sibling fork's per-distro commands verbatim. `recheck()` re-runs
- * every probe, which is what the guide's Re-check button and a finished
- * install script call.
+ * constant `command -v` at construction
+ * (tests/lint_capability_probe_gating.py is why every probe starts itself),
+ * and `missingFor(feature)` turns the flags into the install guide's rows -
+ * one per missing dependency, with the sibling fork's per-distro commands
+ * verbatim. `recheck()` re-runs every probe, which is what the guide's
+ * Re-check button and a finished install script call.
+ *
+ * A tool has THREE states here, not two. `command -v` answers presence; the
+ * three binaries the tab spawns - scrcpy, adb and droidcam-cli - are then
+ * actually STARTED, because a package linked against a library the system has
+ * moved past is on PATH and dies before main, and a flag that says "present"
+ * for it is a card that reads `ready` and does nothing when clicked. See
+ * `parseLoaderFailure` for the measurement.
  *
  * The dependency table and the feature -> dependency mapping between the
  * sync markers are kept byte-for-byte in sync with the logic-only double
@@ -26,9 +33,26 @@ import QtQuick
 Singleton {
     id: root
 
-    property bool scrcpy: false
-    property bool adb: false
-    property bool droidcamCli: false
+    // PRESENCE is `command -v`. USABILITY is presence plus the binary
+    // actually starting, and the three tools this tab SPAWNS are asked both
+    // questions - see the run-probe block below for the machine that made
+    // that difference matter. The plain names stay the ones every consumer
+    // reads, because "can I use this tool" is the question they were all
+    // really asking.
+    property bool scrcpyPresent: false
+    property bool adbPresent: false
+    property bool droidcamCliPresent: false
+
+    // The soname the dynamic loader could not find when one of those three is
+    // on PATH and cannot start; "" for a binary that starts.
+    property string scrcpyRunError: ""
+    property string adbRunError: ""
+    property string droidcamCliRunError: ""
+
+    readonly property bool scrcpy: root.scrcpyPresent && root.scrcpyRunError.length === 0
+    readonly property bool adb: root.adbPresent && root.adbRunError.length === 0
+    readonly property bool droidcamCli: root.droidcamCliPresent && root.droidcamCliRunError.length === 0
+
     property bool v4l2Ctl: false
     property bool pactl: false
     property bool mpv: false
@@ -61,6 +85,10 @@ Singleton {
     property int probesPending: 0
     property bool probed: false
     readonly property bool ready: root.probed && root.probesPending === 0
+
+    // How long a run probe may take before it is killed. Generous, because
+    // the only thing a short one buys is a wrong answer.
+    readonly property int runProbeTimeoutMs: 5000
 
     // BEGIN phone-deps logic (synced with tests/imports/testservices/PhoneDeps.qml)
     // `scrcpy --version` prints "scrcpy 4.1 <url>" on its first line.
@@ -109,6 +137,28 @@ Singleton {
             if (parts.length >= 2 && parts[1] === "device") return true;
         }
         return false;
+    }
+
+    // Three states, not two, and the third is what `command -v` cannot see.
+    // Measured on this machine: `droidcam-cli` was on PATH and died before
+    // main with `error while loading shared libraries: libswscale.so.9:
+    // cannot open shared object file` - the package built against ffmpeg 8 on
+    // a system that had moved to ffmpeg 9's libswscale.so.10 - so the webcam
+    // card read `ready`, the click did nothing, and the message the user was
+    // given sent them to look at their phone.
+    //
+    // A dynamic-loader failure is distinctive and is NOT the same as a tool
+    // that runs and exits non-zero: the loader writes that sentence to stderr
+    // and the process comes back **127**, where `droidcam-cli` with no
+    // arguments prints its usage and exits 1. Both halves are required, so a
+    // tool that merely quotes the phrase is not classified by it, and 127
+    // cannot be a shell's "command not found" here because every probe is a
+    // constant argv with no shell on the path. Returns the soname the loader
+    // could not find, or "" for a binary that started.
+    function parseLoaderFailure(exitCode: int, stderrText: string): string {
+        if (exitCode !== 127) return "";
+        const match = /error while loading shared libraries:\s*([^\s:]+)/.exec(String(stderrText ?? ""));
+        return match ? match[1] : "";
     }
 
     // The install guide's rows: the sibling fork's table, verbatim.
@@ -192,33 +242,67 @@ Singleton {
         return { key: key, name: entry.name, description: entry.description, commands: entry.commands };
     }
 
+    // A dependency row for a tool that IS installed and cannot start. The
+    // install commands stay on it - reinstalling is the repair for a package
+    // linked against a library the system has moved past, and on Arch
+    // `yay -S droidcam` rebuilds it - but the description says what the
+    // problem actually is, because "install DroidCam CLI" is a lie told to
+    // somebody who has. An empty library name returns the row untouched, so
+    // an absent tool reads exactly as it did before.
+    function brokenDependency(entry: var, missingLibrary: string): var {
+        const library = String(missingLibrary ?? "");
+        if (!entry || library.length === 0) return entry;
+        return {
+            key: entry.key,
+            name: entry.name,
+            commands: entry.commands,
+            broken: true,
+            missingLibrary: library,
+            description: Translation.tr("Installed, but it cannot start: the dynamic loader cannot find %1. This package was built against an older library than the system now ships, so it needs rebuilding or reinstalling rather than installing.").arg(library)
+        };
+    }
+
     // Which dependencies a feature is missing, given the presence flags.
     // "mirror" is scrcpy + adb; "webcam" is DroidCam + the loopback module
     // (loaded or merely installed), with v4l-utils and mpv recommended;
     // "microphone" is pactl + either audio backend.
+    //
+    // A tool that is present and cannot start counts as missing here - the
+    // click does nothing either way, which is the whole complaint - and its
+    // row carries `broken` and the loader's own missing library.
     function missingDeps(feature: string, flags: var): var {
         const f = flags ?? {};
         const missing = [];
-        const need = (key, present) => { if (!present) missing.push(root.dependency(key)); };
+        const need = (key, present, brokenBy) => {
+            if (present) return;
+            missing.push(root.brokenDependency(root.dependency(key), brokenBy));
+        };
+        const scrcpyBroken = String(f.scrcpyRunError ?? "");
+        const adbBroken = String(f.adbRunError ?? "");
+        const droidcamBroken = String(f.droidcamCliRunError ?? "");
         if (feature === "mirror") {
-            need("scrcpy", f.scrcpy === true);
-            need("android-tools", f.adb === true);
+            need("scrcpy", f.scrcpy === true, scrcpyBroken);
+            need("android-tools", f.adb === true, adbBroken);
         } else if (feature === "webcam") {
-            need("droidcam-cli", f.droidcamCli === true);
-            need("v4l2loopback", f.v4l2loopbackLoaded === true || f.v4l2loopbackInstalled === true);
-            need("v4l-utils", f.v4l2Ctl === true);
-            need("mpv", f.mpv === true);
+            need("droidcam-cli", f.droidcamCli === true, droidcamBroken);
+            need("v4l2loopback", f.v4l2loopbackLoaded === true || f.v4l2loopbackInstalled === true, "");
+            need("v4l-utils", f.v4l2Ctl === true, "");
+            need("mpv", f.mpv === true, "");
         } else if (feature === "microphone") {
-            need("pactl", f.pactl === true);
-            need("audio-backend", f.scrcpy === true || f.droidcamCli === true);
+            need("pactl", f.pactl === true, "");
+            need("audio-backend", f.scrcpy === true || f.droidcamCli === true,
+                 scrcpyBroken.length > 0 ? scrcpyBroken : droidcamBroken);
         }
         return missing;
     }
+
     // END phone-deps logic
 
     function flags(): var {
         return {
             scrcpy: root.scrcpy, adb: root.adb, droidcamCli: root.droidcamCli,
+            scrcpyRunError: root.scrcpyRunError, adbRunError: root.adbRunError,
+            droidcamCliRunError: root.droidcamCliRunError,
             v4l2Ctl: root.v4l2Ctl, pactl: root.pactl, mpv: root.mpv, ffplay: root.ffplay,
             vlc: root.vlc, kdialog: root.kdialog, wlPaste: root.wlPaste,
             v4l2loopbackLoaded: root.v4l2loopbackLoaded,
@@ -247,9 +331,10 @@ Singleton {
     }
 
     // Live state, so it is re-asked rather than answered once. Refused while
-    // adb is not installed: a Process whose binary is not on PATH never emits
+    // adb is not USABLE - a Process whose binary is not on PATH never emits
     // `exited`, so the flag would keep whatever it had while the probe count
-    // still moved.
+    // still moved, and one that cannot start answers 127 to every question
+    // there is.
     function refreshAdbDevices(): void {
         if (!root.adb) return;
         root.startProbe(adbDevicesProbe);
@@ -270,10 +355,11 @@ Singleton {
         Component.onCompleted: root.startProbe(this)
         onRunningChanged: if (!running) root.probeAnswered()
         onExited: (exitCode, exitStatus) => {
-            root.scrcpy = exitCode === 0;
-            if (root.scrcpy) {
+            root.scrcpyPresent = exitCode === 0;
+            if (root.scrcpyPresent) {
                 root.startProbe(versionProbe);
             } else {
+                root.scrcpyRunError = "";
                 root.scrcpyVersion = "";
                 root.scrcpyMajor = 0;
                 root.scrcpyMinor = 0;
@@ -281,12 +367,19 @@ Singleton {
         }
     }
 
+    // scrcpy's run probe and its version probe are the same run: it is the
+    // one of the three that already had to be started to be asked something.
     Process {
         id: versionProbe
         command: ["scrcpy", "--version"]
         stdout: StdioCollector { id: versionOut }
-        onRunningChanged: if (!running) root.probeAnswered()
+        stderr: StdioCollector { id: versionErr }
+        onRunningChanged: {
+            if (running) scrcpyRunGuard.restart();
+            else { scrcpyRunGuard.stop(); root.probeAnswered(); }
+        }
         onExited: (exitCode, exitStatus) => {
+            root.scrcpyRunError = root.parseLoaderFailure(exitCode, versionErr.text);
             const parsed = root.parseScrcpyVersion(versionOut.text.split("\n")[0] ?? "");
             root.scrcpyVersion = parsed?.version ?? "";
             root.scrcpyMajor = parsed?.major ?? 0;
@@ -300,12 +393,34 @@ Singleton {
         Component.onCompleted: root.startProbe(this)
         onRunningChanged: if (!running) root.probeAnswered()
         onExited: (exitCode, exitStatus) => {
-            root.adb = exitCode === 0;
-            if (root.adb) {
-                root.startProbe(adbDevicesProbe);
+            root.adbPresent = exitCode === 0;
+            if (root.adbPresent) {
+                root.startProbe(adbRunProbe);
             } else {
+                root.adbRunError = "";
                 root.adbDevice = false;
             }
+        }
+    }
+
+    // `adb --version` prints the client's banner and starts no server -
+    // measured, it answers instantly on a machine with no adb server running.
+    // Started by the presence probe's own exit rather than from anything a
+    // feature does, which is the capability-probe gating rule
+    // (tests/lint_capability_probe_gating.py) followed one hop along.
+    Process {
+        id: adbRunProbe
+        command: ["adb", "--version"]
+        stdout: StdioCollector {}
+        stderr: StdioCollector { id: adbRunErr }
+        onRunningChanged: {
+            if (running) adbRunGuard.restart();
+            else { adbRunGuard.stop(); root.probeAnswered(); }
+        }
+        onExited: (exitCode, exitStatus) => {
+            root.adbRunError = root.parseLoaderFailure(exitCode, adbRunErr.text);
+            if (root.adb) root.startProbe(adbDevicesProbe);
+            else root.adbDevice = false;
         }
     }
 
@@ -328,7 +443,54 @@ Singleton {
         command: ["sh", "-c", "command -v droidcam-cli"]
         Component.onCompleted: root.startProbe(this)
         onRunningChanged: if (!running) root.probeAnswered()
-        onExited: (exitCode, exitStatus) => { root.droidcamCli = exitCode === 0; }
+        onExited: (exitCode, exitStatus) => {
+            root.droidcamCliPresent = exitCode === 0;
+            if (root.droidcamCliPresent) root.startProbe(droidcamRunProbe);
+            else root.droidcamCliRunError = "";
+        }
+    }
+
+    // Bare, because nothing droidcam-cli accepts exits zero: with no
+    // arguments it prints its usage to stderr and exits 1, which is a tool
+    // that RAN. The loader failure this exists for happens before main, so
+    // the arguments are beside the point - what matters is that the command
+    // returns promptly, which a usage message does.
+    Process {
+        id: droidcamRunProbe
+        command: ["droidcam-cli"]
+        stdout: StdioCollector {}
+        stderr: StdioCollector { id: droidcamRunErr }
+        onRunningChanged: {
+            if (running) droidcamRunGuard.restart();
+            else { droidcamRunGuard.stop(); root.probeAnswered(); }
+        }
+        onExited: (exitCode, exitStatus) => {
+            root.droidcamCliRunError = root.parseLoaderFailure(exitCode, droidcamRunErr.text);
+        }
+    }
+
+    // A tool that BLOCKS is neither of the two states this file can report,
+    // and it must not become a probe that never answers: the guard kills it
+    // and lets its own exit classify it, which lands on "it runs" because a
+    // killed process is not a loader failure. Erring that way is deliberate -
+    // claiming a tool is broken on the strength of it being slow is a worse
+    // lie than the one this whole block replaced.
+    Timer {
+        id: scrcpyRunGuard
+        interval: root.runProbeTimeoutMs
+        onTriggered: if (versionProbe.running) versionProbe.signal(15)
+    }
+
+    Timer {
+        id: adbRunGuard
+        interval: root.runProbeTimeoutMs
+        onTriggered: if (adbRunProbe.running) adbRunProbe.signal(15)
+    }
+
+    Timer {
+        id: droidcamRunGuard
+        interval: root.runProbeTimeoutMs
+        onTriggered: if (droidcamRunProbe.running) droidcamRunProbe.signal(15)
     }
 
     Process {
