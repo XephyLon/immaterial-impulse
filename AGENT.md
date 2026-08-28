@@ -3003,6 +3003,25 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   glyph's centre through `mapToItem`. It was the only `mainText: ""` call site in the tree, so
   this is a note rather than a check.
   bd35286c3 ("fix(phone): the footer's two actions become soft rectangles, glyphs centred").
+- **...and the same slot from the other end: a labelled icon button that FILLS its row cannot be
+  `RippleButtonWithIcon` either, because that fillWidth label slot left-packs a real label
+  exactly as it did an empty one.** A `RowLayout` written as a content item is stretched to the
+  padded rect the same way a `MaterialSymbol` is, so a glyph-plus-label pair declared there lays
+  out from the button's LEFT edge — and a two-child row with room to spare opens the gap between
+  the two rather than keeping them together. The Phone tab's running-card Stop button is the
+  case: measured at card widths of 200 and 460, the pair sat **35.48px and 117.98px left of the
+  button's own centre** and grew from 97.03px to 192.03px wide as it went. An anchor on the
+  content item cannot repair it (the entry two up), so what centres a PAIR is a plain `Item`
+  stretched to that rect with the row centred INSIDE it — an ordinary parent-child anchor the
+  Control never touches; re-measured, 57.03px wide and 0.48px off centre at both widths, the
+  residual being the glyph's box against its painted extent. `RippleButtonWithIcon` was measured
+  rather than reasoned about before it was declined: one at 460px carrying the same glyph and the
+  same word reads **191.46px left of centre**, so it is the component for a button sized by what
+  it holds and not for one that fills a row. Measure the DRAWN extent when checking this, never
+  the boxes — a `Text` a layout has stretched still paints at its content width from its left
+  edge, so the box of a left-packed pair reaches the right border and reports itself centred.
+  df9794dbd ("fix(phone): the running card's Stop button centres its glyph and its label"),
+  238757407 ("test(phone): measure the Stop button's pair at two widths, against a control").
 - **A `Text` positioned with `anchors.centerIn` has no box, so `elide` cannot fire and the
   label paints over its neighbours instead.** Eliding needs a width, and `centerIn` gives a Text
   its implicit one — which is however wide the string happens to be, drawn straight out past its
@@ -4855,6 +4874,67 @@ the icon it went in with, having swapped nothing. Before reaching for
 `animateChange`, ask whether the thing behind the glyph fades with it and how
 often the value can change.
 3c82747df ("fix(phone): the feature card's glyph stops blanking its own badge").
+
+**...and on a `Control`'s content item that same swap also LATCHES the glyph off
+its own centre, permanently, because the coordinates it animates back to were
+read before the Control had placed it.** `StyledText` records
+`originalX`/`originalY` in its own `Component.onCompleted`, and a content item
+completes BEFORE the Control that owns it — so those are (0, 0), the swap ends
+by writing them onto the glyph's `x`/`y`, and the glyph sits on the top-left
+corner of the padded rect for the rest of the session rather than in the middle
+of it. The Phone tab's footer is the case: the clear action's glyph is a ternary
+on the notification count, so it is the one glyph on that bar whose text ever
+changes, and after a single swap it settled **4.00px left and 4.00px above** the
+button's own centre — exactly the Control's padding — having travelled 10.00px
+off it on the way, at a measured minimum opacity of **0.00** inside a button
+background that does not fade with it. The sync action beside it, whose text
+never changes, read (0.00, 0.00) throughout, which is what makes the two look
+like one broken button rather than one broken idiom. Note that none of it is
+reachable from a settled reading taken before the value first moves: a harness
+has to DRIVE the change and watch it, in both axes and signed — the first
+version of this check returned `|dx|` and could not have seen either half.
+`modules/common/widgets/IconToolbarButton.qml` carries the same
+`animateChange` on a content-item glyph and is the open neighbour: several of
+its call sites give it a `text` that really does change (`DockerPopup`'s
+expand chevron, `RecordingRegionPanel`'s play/pause, the wallpaper
+selector's dark/light mark, `FpsLimiterContent`'s state switch), so the same
+latch is available to every toolbar button in the shell. Unmeasured here on
+purpose — it is a shared widget with call sites in a dozen files and the
+repair is somebody's whole change, not a line in a phone fix.
+be89b6614 ("fix(phone): the footer's clear action stops latching its glyph off centre"),
+d9cc8acc9 ("test(phone): drive the count and watch the footer's one glyph swap").
+
+**A roster is a list, and this shell has one component for a multi-item
+selectable list — reaching for a `Repeater` writes a third variant of it.** The
+Phone tab's device roster was a `Repeater` of `PhoneDeviceItem`s in a
+`ColumnLayout`, while the Wi-Fi and Bluetooth device lists in
+`modules/imi/sidebarRight/` draw exactly this shape as a `StyledListView` whose
+delegate is a `DialogListItem` — which `PhoneDeviceItem` already was. Only the
+container differed, and what the view adds past one shape for three lists is its
+own add/remove transitions on the shared tier, so a device joining or leaving
+the network is a row that arrives or leaves instead of a column that jumps.
+Three things about wiring one into a `ColumnLayout` are worth not re-deriving.
+**A `ListView` told it is zero pixels tall builds no delegates**, so it reports a
+`contentHeight` of zero and can never grow out of one: a height that reveals the
+list has to be a box AROUND it, with the list at its own `contentHeight` inside
+(the `implicitHeight: contentHeight` idiom `NotificationGroup.qml` and
+`StyledComboBox.qml` already use). **The reveal rides ONE scalar with ONE
+`Behavior`** — `rosterProgress` beside the tab's own `subPageProgress` — on
+`Appearance.animation.elementMove` taken whole, so the motion-speed slider and
+the reduce-motion floor reach it; `elementMoveEnter`/`Exit` are the wrong tiers
+for a toggle the user reverses, because their curves are directional. And **a
+`QQuickLayout` stops writing the height of a child it has excluded**, so a folded
+box keeps whatever its last laid-out frame left on it (measured: 1.38px) — a test
+reading that number back sees a mid-flight height for the rest of the run and its
+"did this animate" check passes on a snap. Sample only while the box is drawn,
+and read the settled state off the scalar. Measured across the chip's click: the
+box travels 0 → 116 over 7 sampled frames, peaking at 117.61 because
+`expressiveDefaultSpatial` leaves the unit box, and back down over 8; with the
+`Behavior` planted out, both mid-flight counts go to 0 while both settled checks
+stay green, which is why the settled ones alone were never enough.
+ddb0546f8 ("refactor(phone): the device roster is drawn by the shell's own list view"),
+248474b8e ("feat(phone): the roster unrolls and folds instead of appearing whole"),
+3577cf4d8 ("test(phone): watch the roster's reveal in both directions").
 
 **And where the missing link is the whole page rather than one card's subtitle,
 it is drawn as a panel that says what to do.** The Phone tab's Android Apps
