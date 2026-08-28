@@ -145,6 +145,25 @@ if __name__ == "__main__":
 merely defines its functions and exits zero, and the whole file silently passes
 without executing a single assertion. Three modules shipped in that state.
 
+Two modules are the exception to "static assertions over source text", and both
+are named here so the paragraph above is not read as covering everything.
+`test_phone_scrcpy_manager.py` drives `scripts/phone/scrcpy_session_manager.py`
+over its real stdin/stdout with fake `scrcpy`/`adb`/`hyprctl` on PATH, and
+`test_phone_shell_scripts.py` runs the Phone tab's four shell scripts with
+stubbed `pgrep`, `pactl`, `v4l2-ctl`, `droidcam-cli`, `scrcpy` and `sudo`. In
+the second the stubs are the process TABLE and the sound server only: the
+processes are launched through `droidcam_session.sh launch` and are real, with
+real pids and real `/proc/<pid>/cmdline`, so the signature matching, the port
+disambiguation and the kill guard run against what they run against in
+production. `droidcam-cli` cannot run on this machine at all (built against
+ffmpeg 8, the system has 9), which is the other half of why the fakes are fakes.
+
+Every defect check in those two has a green CONTROL beside it - the microphone
+is still found by its own name, a four-digit port still reads, a teardown leaves
+an unrelated sink alone - because a check that only ever sees the working case
+passes on the defect, and one that only ever sees the broken case cannot tell a
+fix from a feature that stopped working.
+
 `test_discord_voice_plugin.py` verifies private token-cache permissions and RPC
 state minimization, requires one bounded bridge with capped restart backoff, and
 keeps the clickable Discord bar widget on its native single-owner geometry path.

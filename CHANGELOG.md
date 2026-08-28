@@ -156,6 +156,48 @@ own repo; the installer pins which revision it builds.
   The Android Apps page tells the same three states apart too — adb missing,
   adb unable to start, and adb working with no phone on it — where it used to
   assume the first two away.
+- **Turning the phone webcam off no longer kills the phone microphone.** The
+  webcam and the microphone are both `droidcam-cli`, and the shell told them
+  apart by looking for `droidcam-cli` in the running process's command line -
+  which the microphone's contains too. After a shell restart with only the
+  microphone running, the Webcam card came up claiming a stream that did not
+  exist, and switching it off sent the stop signal to the microphone instead.
+  The two are told apart properly now, and the same mistake could no longer
+  have let the webcam's stop reach a scrcpy microphone either.
+- **The Phone tab's webcam and microphone state stops disappearing
+  altogether.** The probe the two cards read builds one line of JSON, and
+  when it could not work out the connection's port it left that field empty -
+  which is not a missing port but a broken line, so the shell threw the
+  *whole* answer away: the webcam device, the audio source and both running
+  flags with it. A configured port shorter than three digits was enough on
+  its own. The probe also reported a webcam as running when the process it
+  had just seen exited underneath it, and lost the port and the address of
+  any session it re-adopted after a restart.
+- **A frozen phone mirror stops reading as a running one.** scrcpy is
+  talkative, and the supervisor that owns it only read what it printed after
+  it had finished - so once scrcpy had said about 64 KiB it stopped dead
+  waiting for someone to listen, and since it never exited, the mirror card
+  stayed on "running" over a window that had frozen or died, with no way back
+  but a restart. The Phone tab also stopped answering clicks for up to half a
+  minute while it fetched the phone's app list, and an event lost to two
+  writes colliding could leave a session on screen with no window behind it.
+  Stopping the shell now really does stop every mirror it started, rather
+  than only when it shuts down cleanly.
+- **Installing DroidCam on Arch no longer claims success when it failed, and
+  installs what the webcam needs.** The Arch branch of the installer printed
+  "✓ DroidCam installed" whatever the AUR helper did, and the closing note
+  then told you the Phone tab's cards should read "Ready". It also never
+  installed `v4l-utils` or `android-tools`, both of which the other
+  distributions' branches install and without which the webcam cannot be
+  found at all - so a completed install could leave the feature dead. On
+  every distribution, a failed download or extract no longer runs the
+  DroidCam installer as root from whatever directory you happened to be in.
+- **The DroidCam microphone stops collecting duplicate audio devices.** On a
+  sound server that names the null sink's monitor with a prefix, the setup
+  script could not see the sink it had loaded a moment earlier and loaded
+  another under the same name on every launch, while the teardown removed
+  exactly one per call. A setup that fails now takes its own sink back with
+  it.
 - **The Phone tab's Android Apps page says what to turn on when it cannot
   reach the phone.** App Mode drives the phone over ADB, which is a
   different link from the one KDE Connect pairs: with a phone reachable on
