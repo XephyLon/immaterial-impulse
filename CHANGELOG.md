@@ -12,6 +12,15 @@ own repo; the installer pins which revision it builds.
 
 ## [Unreleased]
 
+### Added
+- **Developer mode, off by default** (Settings > General > Developer). It adds
+  one thing today: a **Components** tab in the cheatsheet showing every shared
+  widget the shell is built from, live. Three views - a gallery of them by
+  family, an audit table of every widget's height, radius, padding and font
+  size so an inconsistency shows up as a number out of line, and a detail page
+  where one widget can be put on any surface layer with its properties changed
+  by hand. Every tile is the real widget, not a picture of one.
+
 ### Changed
 - **The phone's notifications are drawn by the same card as the shell's own**,
   so they behave the same way: the swipe, the stack's lean, the group that
