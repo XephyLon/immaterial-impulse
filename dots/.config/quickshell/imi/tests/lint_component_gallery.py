@@ -38,6 +38,22 @@ SHELL = HERE.parent
 GALLERY = SHELL / "modules/imi/cheatsheet/CheatsheetComponents.qml"
 BASE = "RippleButton"
 
+# Directory prefix -> why everything under it is out. A whole family of
+# near-identical presets is noise in a gallery, not coverage: the thing a
+# reviewer needs to see is the TYPE they all inherit, and that has its own tile.
+EXCLUDED_DIRS = {
+    "modules/imi/sidebarRight/quickToggles": (
+        "each file here is one concrete toggle - Wi-Fi, Bluetooth, VPN, night "
+        "light - built on QuickToggleButton or AndroidQuickToggleButton, and "
+        "BOTH of those are in the gallery. Thirty-two tiles of the same shape "
+        "with different glyphs would bury the sixty that differ, and most of "
+        "them would draw `needs its surroundings` anyway because a toggle "
+        "without its service has nothing to show. They joined this lint's set "
+        "the day GroupButton was re-rooted on RippleButton, which is the lint "
+        "working: the press morph really does reach them now."
+    ),
+}
+
 # Path relative to the shell root -> why it is not in the gallery.
 EXCLUDED = {
     "modules/common/plugins/designsystem/widgets/M3IconButton.qml":
@@ -109,10 +125,15 @@ class ComponentGalleryTests(unittest.TestCase):
         cls.listed = catalogued()
         cls.family = descendants_of(BASE)
 
+    @staticmethod
+    def excluded_by_dir(path):
+        return any(path.startswith(prefix + "/") for prefix in EXCLUDED_DIRS)
+
     def test_every_press_morphing_control_is_in_the_gallery(self):
         missing = sorted(
             path for path in self.family
             if path not in self.listed and path not in EXCLUDED
+            and not self.excluded_by_dir(path)
         )
         self.assertEqual(missing, [], "\n".join([
             "These inherit the press morph but are not in the Components gallery.",
@@ -125,6 +146,18 @@ class ComponentGalleryTests(unittest.TestCase):
         self.assertEqual(stale, [], "\n".join([
             "EXCLUDED names files that no longer exist - delete these entries:",
             *(f"  {path}" for path in stale),
+        ]))
+
+    def test_every_excluded_directory_still_holds_something(self):
+        """A directory exclusion that covers nothing is a rule nobody reads."""
+        empty = sorted(
+            prefix for prefix in EXCLUDED_DIRS
+            if not any(path.startswith(prefix + "/") for path in self.family)
+        )
+        self.assertEqual(empty, [], "\n".join([
+            "EXCLUDED_DIRS names directories holding no press-morphing type -",
+            "they moved or stopped inheriting. Delete these entries:",
+            *(f"  {prefix}" for prefix in empty),
         ]))
 
     def test_every_exclusion_still_inherits_the_morph(self):
