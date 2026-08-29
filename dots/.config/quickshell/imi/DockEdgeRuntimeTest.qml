@@ -4,6 +4,7 @@ import Quickshell
 import qs
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.imi.dock
 
 /**
  * Drives the dock's pinned-app reorder with real mouse events, at a horizontal

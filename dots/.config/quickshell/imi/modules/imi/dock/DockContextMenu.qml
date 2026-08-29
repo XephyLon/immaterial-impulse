@@ -6,7 +6,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
-import "../../imi/dock/dock_geometry.js" as DockGeometry
+import "dock_geometry.js" as DockGeometry
 
 /**
  * Right-click context menu for dock app icons (ported from upstream
