@@ -56,15 +56,17 @@ EXCLUDED = {
         "reads GlobalStates.sidebarRightOpen to decide its own behaviour; "
         "moves with the Player cluster",
     "Lyrics.qml": "LyricsService; moves with the Player cluster",
+    "NotificationController.qml":
+        "deliberate, and the only entry here that is not a to-do: this file IS "
+        "the seam. Its job is to name Notifications once so a subclass can "
+        "answer differently - PhoneNotificationController does - which is what "
+        "took the direct service reads out of NotificationGroup and "
+        "NotificationListView entirely. The coupling is the feature",
     "NotificationItem.qml":
-        "Notifications, and reads GlobalStates.sidebarRightOpen. The second is "
-        "the one to invert: a card that asks whether a particular panel is "
-        "open is a card the phone tab cannot reuse, which is exactly what it "
-        "could not, for a release",
-    "NotificationGroup.qml": "Notifications, with NotificationItem",
-    "NotificationListView.qml":
-        "Notifications, reached through the NotificationController seam - the "
-        "list is the seam's consumer, so this one is likely correct as it is",
+        "reads GlobalStates.sidebarRightOpen. Invert it into a property the "
+        "host supplies: a card that asks whether one particular panel is open "
+        "is a card another panel cannot reuse, which is exactly what the phone "
+        "tab could not do for a release",
     "StyledPopup.qml":
         "the bar popup protocol. Its arbitration moved to the slot "
         "(GlobalStates.claimBarPopup) and what remains is this object ASKING - "
