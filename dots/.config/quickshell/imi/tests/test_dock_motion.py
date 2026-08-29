@@ -12,8 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TRACKER = ROOT / "services" / "DockLaunchTracker.qml"
 MOTION = ROOT / "modules" / "common" / "widgets" / "DockIconMotion.qml"
-DOCK_APP_BUTTON = ROOT / "modules" / "common" / "widgets" / "DockAppButton.qml"
-DRAG_APPS = ROOT / "modules" / "common" / "widgets" / "DragApps.qml"
+DOCK_APP_BUTTON = ROOT / "modules" / "imi" / "dock" / "DockAppButton.qml"
+DRAG_APPS = ROOT / "modules" / "imi" / "dock" / "DragApps.qml"
 
 failures = []
 

@@ -28,12 +28,15 @@ SETTINGS = ROOT / "modules/imi/settings/pages/BarConfig.qml"
 RULES = ROOT.parents[2] / ".config/hypr/hyprland/rules.lua"
 
 WIDGETS = ROOT / "modules/common/widgets"
-DRAG_APPS = WIDGETS / "DragApps.qml"
-APP_BUTTON = WIDGETS / "DockAppButton.qml"
+# The dock's own pieces moved out of the shared folder: they drive four
+# services and pin apps through Config, which a shared widget may not.
+DOCK_DIR = ROOT / "modules/imi/dock"
+DRAG_APPS = DOCK_DIR / "DragApps.qml"
+APP_BUTTON = DOCK_DIR / "DockAppButton.qml"
 BUTTON = WIDGETS / "DockButton.qml"
 SEPARATOR = WIDGETS / "DockSeparator.qml"
 ICON_MOTION = WIDGETS / "DockIconMotion.qml"
-CONTEXT_MENU = WIDGETS / "DockContextMenu.qml"
+CONTEXT_MENU = DOCK_DIR / "DockContextMenu.qml"
 DOCK_TO_PANEL = ROOT / "modules/imi/bar/DocktoPanel.qml"
 
 # Everything that has to know which way the dock is facing. DockAppButton is
