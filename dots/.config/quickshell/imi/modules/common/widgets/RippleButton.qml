@@ -97,6 +97,15 @@ Button {
         rippleAnim.restart();
     }
 
+    // The other half of `startRipple`, made reachable for the same reason it
+    // is: a surface that drives this button's visuals without letting its
+    // click through - the Components workbench - can start a ripple and had no
+    // way to end one, so every previewed press left its ripple standing.
+    function fadeRipple() {
+        if (!root.rippleEnabled) return;
+        rippleFadeAnim.restart();
+    }
+
     component RippleAnim: NumberAnimation {
         duration: rippleDuration
         easing.type: Appearance?.animation.elementMoveEnter.type
