@@ -213,7 +213,8 @@ Item {
                 id: rosterGroup
                 objectName: "rosterGroup"
                 anchors { left: parent.left; right: parent.right; top: parent.top }
-                bgcolor: Appearance.colors.colLayer2
+                // No `bgcolor`: a PhoneDeviceItem paints its own surface, so
+                // the group draws no plate behind it - see GroupedList.
                 itemVerticalPadding: 0
                 model: PhoneConnect.devices
                 rowDelegate: Component {

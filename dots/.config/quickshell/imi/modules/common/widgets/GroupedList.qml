@@ -99,7 +99,17 @@ Item {
                 implicitHeight: (root.modelDriven
                     ? (rowLoader.item?.implicitHeight ?? 0)
                     : (root.items[index]?.implicitHeight ?? 0)) + root.itemVerticalPadding
-                color: root.bgcolor
+                // A row that takes the plate's corners is a row that paints its
+                // own background - that is what the corner protocol below is
+                // FOR, since a plate cannot show through an opaque row. Such a
+                // row IS the plate: painting a second surface behind it leaves
+                // only the inset showing, as a ring of `bgcolor` around every
+                // row. With several rows that ring passes for the group's seam
+                // material; with one row the ring is the entire group, and the
+                // device roster shipped looking like a frame drawn around a
+                // single item for no reason.
+                readonly property bool ownsItsSurface: rowLoader.item?.cornerTopLeft !== undefined
+                color: ownsItsSurface ? "transparent" : root.bgcolor
                 topLeftRadius:     isFirst ? root.bigRadius : (root.cohesive ? 0 : root.smallRadius)
                 topRightRadius:    isFirst ? root.bigRadius : (root.cohesive ? 0 : root.smallRadius)
                 bottomLeftRadius:  isLast  ? root.bigRadius : (root.cohesive ? 0 : root.smallRadius)
@@ -117,7 +127,12 @@ Item {
 
                 ColumnLayout {
                     id: contentArea
-                    anchors { fill: parent; margins: Appearance.spacing.space100 }
+                    anchors {
+                        fill: parent
+                        // The inset is the plate showing around its content. A
+                        // row that is its own plate has nothing to show.
+                        margins: plate.ownsItsSurface ? 0 : Appearance.spacing.space100
+                    }
                     spacing: 0
 
                     Loader {
