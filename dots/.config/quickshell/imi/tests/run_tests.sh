@@ -530,6 +530,18 @@ if ! python3 "$SCRIPT_DIR/lint_dumb_widgets.py"; then
     exit 1
 fi
 
+# The Components gallery covers every control that inherits the press morph.
+# The gallery's argument is that a shared interaction token can be reviewed
+# against everything it reaches; a catalogue missing eight of those types is
+# worse than no gallery, because it looks like the whole answer. The set is
+# computed from the tree rather than listed, so a new button joins it by
+# existing.
+echo "Running component gallery lint..."
+if ! python3 "$SCRIPT_DIR/lint_component_gallery.py"; then
+    echo "Component gallery lint failed."
+    exit 1
+fi
+
 echo "Running doc citation lint..."
 if ! python3 "$SCRIPT_DIR/lint_doc_citations.py"; then
     echo "Doc citation lint failed."
