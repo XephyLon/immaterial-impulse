@@ -1,6 +1,7 @@
 import QtQuick
 import qs.services
 import qs.modules.common
+import qs.modules.common.widgets
 import "WorldMapDots.js" as WorldMapDots
 import "WorldCities.js" as WorldCities
 
