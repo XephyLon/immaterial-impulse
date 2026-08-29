@@ -71,7 +71,6 @@ Item {
                 { type: "modules/common/widgets/ToolbarTabButton.qml", props: { materialSymbol: "tab", current: true } },
                 { type: "modules/common/widgets/FilterChip.qml", props: { label: "Unread", chipIcon: "filter_alt" } },
                 { type: "modules/common/widgets/FloatingActionButton.qml", props: { iconText: "add" } },
-                { type: "modules/common/widgets/CircleUtilButton.qml", props: {}, glyph: "refresh" },
                 { type: "modules/common/widgets/DockButton.qml", props: { } },
                 { type: "modules/common/widgets/EditRemoveBadge.qml", props: { } },
                 { type: "modules/common/widgets/NavigationRailExpandButton.qml", props: { } },
