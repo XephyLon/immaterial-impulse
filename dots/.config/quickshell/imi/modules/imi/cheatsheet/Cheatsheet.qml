@@ -13,16 +13,21 @@ import Quickshell.Hyprland
 
 Scope { // Scope
     id: root
-    property var tabButtonList: [
-        {
-            "icon": "keyboard",
-            "name": Translation.tr("Keybinds")
-        },
-        {
-            "icon": "experiment",
-            "name": Translation.tr("Elements")
-        },
-    ]
+    // The Components tab is developer-mode only, so the list is computed and
+    // NOT a literal: the tab bar and the SwipeView are indexed in lockstep,
+    // and a tab that appears in one but not the other silently shows the wrong
+    // page. One source for both, plus the clamp below for the index that was
+    // persisted while the tab existed.
+    readonly property bool showComponents: Config.options?.developer?.enable ?? false
+    readonly property var tabButtonList: {
+        const tabs = [
+            { "icon": "keyboard", "name": Translation.tr("Keybinds") },
+            { "icon": "experiment", "name": Translation.tr("Elements") },
+        ];
+        if (root.showComponents)
+            tabs.push({ "icon": "widgets", "name": Translation.tr("Components") });
+        return tabs;
+    }
 
     Loader {
         id: cheatsheetLoader
@@ -174,7 +179,12 @@ Scope { // Scope
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         spacing: Appearance.spacing.space125
-                        currentIndex: Persistent.states.cheatsheet.tabIndex
+                        // Clamped: the Components tab is the last one and it
+                        // can go away under a persisted index that named it,
+                        // which leaves a SwipeView pointing past its own end -
+                        // an empty page and a tab bar highlighting nothing.
+                        currentIndex: Math.min(Persistent.states.cheatsheet.tabIndex,
+                                               root.tabButtonList.length - 1)
                         onCurrentIndexChanged: {
                             Persistent.states.cheatsheet.tabIndex = currentIndex;
                         }
@@ -210,6 +220,18 @@ Scope { // Scope
                             }
                         }
                         CheatsheetPeriodicTable {}
+
+                        // A Loader rather than the page itself: the gallery
+                        // builds every shared widget in the library, and doing
+                        // that behind a tab nobody opened would cost the
+                        // cheatsheet its open time for a surface that is off by
+                        // default. `active` follows the toggle so turning the
+                        // mode off also takes the built page down.
+                        Loader {
+                            active: root.showComponents
+                            visible: active
+                            sourceComponent: CheatsheetComponents {}
+                        }
                     }
                 }
 
