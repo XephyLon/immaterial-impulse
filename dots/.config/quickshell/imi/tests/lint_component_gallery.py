@@ -63,7 +63,7 @@ EXCLUDED = {
         "vendored designsystem mirror of the shipped NotificationActionButton",
     "modules/common/plugins/designsystem/widgets/NotificationGroupExpandButton.qml":
         "vendored designsystem mirror of the shipped NotificationGroupExpandButton",
-    "modules/common/widgets/DockAppButton.qml":
+    "modules/imi/dock/DockAppButton.qml":
         "a dock entry is a running window's button - it takes a toplevel and "
         "an app id, and a bare one is an empty square that teaches nothing",
 }
