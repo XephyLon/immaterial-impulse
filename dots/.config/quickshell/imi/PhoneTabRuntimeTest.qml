@@ -525,6 +525,20 @@ ShellRoot {
                           first !== null
                           && first.cornerBottomLeft < Appearance.rounding.normal);
             harness.check(`opening the chip lists both devices, got ${rows.length}`, rows.length === 2);
+
+            // ...and NOTHING is drawn behind them. A row that takes the
+            // group's corners paints its own background, so a plate under it
+            // shows only as an inset ring - which is what shipped, and what a
+            // group of one is entirely made of.
+            const listWidth = harness.rosterList()?.width ?? 0;
+            const insets = rows.map(r => {
+                const left = r.mapToItem(harness.rosterList(), 0, 0).x;
+                return Math.max(left, listWidth - (left + r.width));
+            });
+            console.log(`[PhoneTab] roster row insets ${insets} of width ${listWidth}`);
+            harness.check(`each row is the group's full width - no plate ring around it,`
+                          + ` widest inset ${Math.max(...insets)}`,
+                          listWidth > 0 && insets.every(i => i < 0.5));
             const laptop = rows.find(r => r.device?.id === harness.laptopId) ?? null;
             harness.rosterSaw = { samples: 0, mid: 0, maxHeight: 0 };
             if (laptop) harness.click(laptop);
@@ -1016,6 +1030,40 @@ ShellRoot {
             harness.check(`popping the page brings the tab back, got ${column?.opacity} / ${column?.scale}`,
                           column !== null && Math.abs(column.opacity - 1) < 0.001
                           && Math.abs(column.scale - 1) < 0.001);
+        },
+
+        // ---- a roster of ONE ---------------------------------------------
+        //
+        // The reported shape: with a single device the group was a ring of
+        // `bgcolor` drawn around one row, because every row sat inset inside a
+        // plate it painted over. With several rows that ring passes for seam
+        // material, so two devices could not have caught it - a group of one is
+        // the case where the plate has nothing to be except a frame.
+        () => {
+            PhoneConnect.applyDevices([PhoneConnect.devices[0]]);
+            harness.click(harness.first("PhoneDeviceChip"));
+        },
+        () => {},
+        () => {
+            const rows = harness.rosterRows();
+            const only = rows[0] ?? null;
+            const listWidth = harness.rosterList()?.width ?? 0;
+            const inset = only !== null
+                ? only.mapToItem(harness.rosterList(), 0, 0).x : -1;
+            console.log(`[PhoneTab] lone row corners ${only?.cornerTopLeft}/${only?.cornerTopRight}`
+                        + `/${only?.cornerBottomLeft}/${only?.cornerBottomRight}`
+                        + ` inset ${inset} of ${listWidth}`);
+            harness.check(`one device draws one row, got ${rows.length}`, rows.length === 1);
+            harness.check(`the lone row carries the group's rounding on all four corners, got`
+                          + ` ${only?.cornerTopLeft}/${only?.cornerBottomRight}`,
+                          only !== null
+                          && only.cornerTopLeft === Appearance.rounding.normal
+                          && only.cornerTopRight === Appearance.rounding.normal
+                          && only.cornerBottomLeft === Appearance.rounding.normal
+                          && only.cornerBottomRight === Appearance.rounding.normal);
+            harness.check(`...and is the group, rather than sitting in a frame, inset ${inset}`,
+                          only !== null && listWidth > 0 && inset < 0.5
+                          && Math.abs(only.width - listWidth) < 0.5);
         },
 
         () => harness.finish()
