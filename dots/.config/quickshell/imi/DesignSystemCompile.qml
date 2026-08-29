@@ -55,8 +55,8 @@ ShellRoot {
                 // enabled on some monitor, so a bad property on it is invisible
                 // to a shell whose widgets are all off.
                 Quickshell.shellPath("modules/common/plugins/PluginWidget.qml"),
-                Quickshell.shellPath("modules/common/widgets/AutostartApps.qml"),
-                Quickshell.shellPath("modules/common/widgets/WallpaperSubmenu.qml"),
+                Quickshell.shellPath("modules/imi/settings/pages/AutostartApps.qml"),
+                Quickshell.shellPath("modules/imi/desktopMenu/WallpaperSubmenu.qml"),
                 // Every marquee call site is behind a surface that is unmapped
                 // when idle - the dock's window preview and three right-sidebar
                 // rows - which is deliberate (see MarqueeText.qml's gate) and
@@ -175,11 +175,11 @@ ShellRoot {
                 Quickshell.shellPath("modules/imi/dock/Dock.qml"),
                 Quickshell.shellPath("modules/imi/dock/DockMedia.qml"),
                 Quickshell.shellPath("modules/common/widgets/DockButton.qml"),
-                Quickshell.shellPath("modules/common/widgets/DockAppButton.qml"),
+                Quickshell.shellPath("modules/imi/dock/DockAppButton.qml"),
                 Quickshell.shellPath("modules/common/widgets/DockSeparator.qml"),
                 Quickshell.shellPath("modules/common/widgets/DockIconMotion.qml"),
-                Quickshell.shellPath("modules/common/widgets/DockContextMenu.qml"),
-                Quickshell.shellPath("modules/common/widgets/DragApps.qml"),
+                Quickshell.shellPath("modules/imi/dock/DockContextMenu.qml"),
+                Quickshell.shellPath("modules/imi/dock/DragApps.qml"),
 
                 // The two other places something is dragged into order.
                 // DocktoPanel is a bar widget the bar loads BY URL, so nothing
