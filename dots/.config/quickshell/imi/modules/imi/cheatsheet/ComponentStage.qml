@@ -27,6 +27,25 @@ Item {
     // control is rebuilt from one merged set rather than poked afterwards.
     property var overrides: ({})
 
+    // A tile is a PICTURE of a control, and every one of these is the real
+    // wired thing: pressing the gallery's PowerButton opened the power menu,
+    // and its LeftSidebarButton toggled the sidebar. A reference surface that
+    // can log you out is not a reference surface.
+    //
+    // So nothing real reaches the control. The shield below eats every button
+    // and every wheel event, and the press and hover VISUALS are driven
+    // straight into `interactionMotion` instead - which is the same scalar the
+    // control's own pointer state would have written, so the morph, the lift
+    // and the ripple's state layer are exactly what they would be. Writing
+    // those two properties replaces their bindings to the control's own
+    // `hovered`/`down`, which is the point: this instance's pointer state is
+    // the gallery's to say, and it has no other job.
+    property bool inert: true
+
+    // The shield swallows the click, so the tile cannot hear one itself - this
+    // is how it still opens the widget in Detail.
+    signal tapped()
+
     readonly property var control: builder.control
     readonly property string failure: builder.failure
     readonly property string typeName: (entry.type ?? "").split("/").pop().replace(".qml", "")
@@ -125,6 +144,25 @@ Item {
         }
 
         Component.onCompleted: builder.build()
+
+        MouseArea {
+            id: shield
+            anchors.fill: parent
+            z: 1000
+            enabled: stage.inert
+            visible: enabled
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
+            // Wheel included: a slider or a spin box would otherwise change
+            // its value under a scroll meant for the page.
+            onWheel: wheel => wheel.accepted = true
+
+            readonly property var motion: builder.control?.interactionMotion ?? null
+            onContainsMouseChanged: if (motion) motion.hovered = containsMouse
+            onPressedChanged: if (motion) motion.down = pressed
+            onCanceled: if (motion) motion.down = false
+            onClicked: stage.tapped()
+        }
 
         StyledText {
             visible: builder.failure !== ""
