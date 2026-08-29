@@ -447,11 +447,11 @@ Item {
             ? Appearance.colors.colPrimary
             : "transparent"
 
-        // The tile is a way IN, not just a picture: clicking it opens the same
-        // widget in Detail with the surface switcher and the knobs. The area
-        // sits UNDER the widget rather than over it, so pressing the widget
-        // still presses the widget - which is the whole reason the gallery
-        // draws live ones.
+        // Hover only. The tap comes from the stage's shield, because the
+        // widget itself must never receive a real click - an earlier draft put
+        // this area UNDER the widget so "pressing the widget still presses the
+        // widget", and pressing the widget is exactly the thing that opened
+        // the power menu.
         MouseArea {
             id: hoverArea
             anchors.fill: parent
@@ -490,6 +490,9 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 entry: tile.entry
+                // The widget itself cannot be pressed - see ComponentStage -
+                // so its shield reports the tap instead.
+                onTapped: root.show(tile.entry)
             }
 
             // The radius it is drawing, live. Reading `cornerTopLeft` rather
