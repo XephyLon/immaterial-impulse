@@ -90,7 +90,7 @@ LOCK_PREVIEW_CONTEXT = ROOT / "modules/common/panels/lock/LockPreviewContext.qml
 RULES = ROOT.parents[1] / "hypr/hyprland/rules.lua"
 BAR_CONTROLLER = ROOT / "modules/imi/bar/BarEditController.qml"
 LOCK_REORDER = ROOT / "modules/imi/lock/LockIslandReorder.qml"
-DRAG_APPS = ROOT / "modules/common/widgets/DragApps.qml"
+DRAG_APPS = ROOT / "modules/imi/dock/DragApps.qml"
 CATALOGUE_ROW = ROOT / "modules/common/widgets/CatalogueRow.qml"
 
 # Everything that takes part in the mode. Listed rather than globbed so a new

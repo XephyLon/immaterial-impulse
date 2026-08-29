@@ -21,7 +21,7 @@ class ThumbnailFallbackTests(unittest.TestCase):
         self.assertNotIn("        wait\n", source)
 
     def test_missing_cache_entry_falls_back_to_original_image(self):
-        thumbnail = (ROOT / "modules/common/widgets/ThumbnailImage.qml").read_text(
+        thumbnail = (ROOT / "modules/imi/wallpaperSelector/ThumbnailImage.qml").read_text(
             encoding="utf-8"
         )
         delegate = (
