@@ -41,13 +41,6 @@ Item {
     readonly property real tileHeight: 128
     readonly property real gap: Appearance.spacing.space150
 
-    // The shell's surface tokens carry the panels' transparency. Inside a
-    // panel that is the point; for a tile drawn on top of one it means no
-    // ground of its own, and a label with nothing under it reads as the label
-    // of the tile beside it.
-    function solid(colour: color): color {
-        return Qt.rgba(colour.r, colour.g, colour.b, 1);
-    }
 
     // Grouped by what the family is FOR, because that is the axis a decision
     // about a shared widget is taken on - a list row and a toolbar chip can
@@ -55,6 +48,8 @@ Item {
     readonly property var families: [
         {
             name: Translation.tr("The interaction base"),
+            icon: "touch_app",
+            shape: MaterialShape.Shape.Clover4Leaf,
             note: Translation.tr("what every pressable tile below inherits"),
             entries: [
                 { type: "modules/common/widgets/RippleButton.qml", props: {} },
@@ -64,6 +59,8 @@ Item {
         },
         {
             name: Translation.tr("Buttons and chips"),
+            icon: "smart_button",
+            shape: MaterialShape.Shape.Gem,
             note: Translation.tr("dialogs, toolbars, the dock, the FAB"),
             entries: [
                 { type: "modules/common/widgets/DialogButton.qml", props: { buttonText: "Cancel" } },
@@ -88,6 +85,8 @@ Item {
         },
         {
             name: Translation.tr("The group family"),
+            icon: "view_week",
+            shape: MaterialShape.Shape.Clover8Leaf,
             note: Translation.tr("GroupButton and what sits on it - segmented ends, one shared morph"),
             entries: [
                 { type: "modules/common/widgets/GroupButton.qml", props: { buttonText: "One" } },
@@ -99,6 +98,8 @@ Item {
         },
         {
             name: Translation.tr("Rows and groups"),
+            icon: "table_rows",
+            shape: MaterialShape.Shape.Clover4Leaf,
             note: Translation.tr("the grouped-list vocabulary a settings page is built from"),
             entries: [
                 { type: "modules/common/widgets/DialogListItem.qml", props: {} },
@@ -109,6 +110,8 @@ Item {
         },
         {
             name: Translation.tr("Settings controls"),
+            icon: "tune",
+            shape: MaterialShape.Shape.Gem,
             note: Translation.tr("what a ContentSection is made of"),
             entries: [
                 { type: "modules/common/widgets/ConfigSwitch.qml",
@@ -122,6 +125,8 @@ Item {
         },
         {
             name: Translation.tr("Quick toggles and chat controls"),
+            icon: "toggle_on",
+            shape: MaterialShape.Shape.Clover8Leaf,
             note: Translation.tr("the group vocabulary as the sidebars use it"),
             entries: [
                 { type: "modules/imi/sidebarRight/quickToggles/classicStyle/QuickToggleButton.qml",
@@ -140,6 +145,8 @@ Item {
         },
         {
             name: Translation.tr("Rows the shell fills from a service"),
+            icon: "dns",
+            shape: MaterialShape.Shape.Clover4Leaf,
             note: Translation.tr("each wants a model entry, so each says so here"),
             entries: [
                 { type: "modules/imi/sidebarRight/wifiNetworks/WifiNetworkItem.qml", props: {} },
@@ -153,6 +160,8 @@ Item {
         },
         {
             name: Translation.tr("Elsewhere in the shell"),
+            icon: "dashboard",
+            shape: MaterialShape.Shape.Gem,
             note: Translation.tr("bar, phone, calendar, mixer, todo, session, cheatsheet"),
             entries: [
                 { type: "modules/imi/bar/PowerButton.qml", props: {}, glyph: "power_settings_new" },
@@ -172,6 +181,8 @@ Item {
         },
         {
             name: Translation.tr("Indicators"),
+            icon: "speed",
+            shape: MaterialShape.Shape.Clover8Leaf,
             note: Translation.tr("progress, badges, state at a glance"),
             entries: [
                 { type: "modules/common/widgets/Badge.qml", props: {} },
@@ -194,19 +205,81 @@ Item {
         { span: 2, families: [7, 8] },        // elsewhere, indicators
     ]
 
+    // ---- what the workbench is showing -----------------------------------
+    //
+    // Gallery answers "what do we have", Audit answers "do they agree", and
+    // Detail answers "what does this one do" - three questions a design pass
+    // asks in that order, so they are three modes over one catalogue rather
+    // than three pages with three copies of it.
+    property int mode: 0            // 0 gallery, 1 audit, 2 detail
+    property var selected: null
+    property string filter: ""
+
+    // Every entry, flat, for the audit table and the search.
+    readonly property var allEntries: {
+        const out = [];
+        for (const family of root.families)
+            for (const entry of family.entries)
+                out.push(entry);
+        return out;
+    }
+
+    readonly property var visibleEntries: {
+        if (root.filter === "")
+            return root.allEntries;
+        const needle = root.filter.toLowerCase();
+        return root.allEntries.filter(entry => root.nameOf(entry).toLowerCase().includes(needle));
+    }
+
+    function nameOf(entry) {
+        return (entry?.type ?? "").split("/").pop().replace(".qml", "");
+    }
+
+    function show(entry) {
+        root.selected = entry;
+        root.mode = 2;
+    }
+
     ColumnLayout {
         anchors { fill: parent; margins: Appearance.spacing.space150 }
         spacing: Appearance.spacing.space100
 
-        StyledText {
+        Toolbar {
             Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            color: Appearance.colors.colSubtext
-            text: Translation.tr("Every tile is the real widget, built from its own file. Press one: the number under it is the corner radius it is drawing this frame, rest → held.")
+            enableShadow: false
+
+            ToolbarTabBar {
+                id: modeBar
+                currentIndex: root.mode
+                onCurrentIndexChanged: root.mode = currentIndex
+                tabButtonList: [
+                    { "icon": "grid_view", "name": Translation.tr("Gallery") },
+                    { "icon": "table_rows", "name": Translation.tr("Audit") },
+                    { "icon": "page_info", "name": Translation.tr("Detail") },
+                ]
+            }
+
+            ToolbarTextField {
+                Layout.preferredWidth: 260
+                placeholderText: Translation.tr("Filter by name…")
+                onTextChanged: root.filter = text
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+                color: Appearance.colors.colSubtext
+                text: root.mode === 2 && root.selected
+                    ? root.selected.type
+                    : Translation.tr("%1 widgets, built for real — press one to see what it draws")
+                        .arg(root.allEntries.length)
+            }
         }
 
+        // ---- gallery -----------------------------------------------------
         ScrollView {
             id: scroller
+            visible: root.mode === 0
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
@@ -243,46 +316,117 @@ Item {
                 }
             }
         }
+
+        // ---- audit -------------------------------------------------------
+        ComponentAudit {
+            visible: root.mode === 1
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            entries: root.visibleEntries
+            onPicked: entry => root.show(entry)
+        }
+
+        // ---- detail ------------------------------------------------------
+        RowLayout {
+            visible: root.mode === 2
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: Appearance.spacing.space150
+
+            // The picker stays beside the widget rather than sending you back
+            // to the gallery: comparing two chips means switching between them
+            // repeatedly, and a round trip through another mode loses the
+            // surface and the knobs you had set.
+            StyledFlickable {
+                Layout.preferredWidth: 260
+                Layout.fillHeight: true
+                contentHeight: pickerGroup.implicitHeight
+                clip: true
+
+                GroupedList {
+                    id: pickerGroup
+                    anchors { left: parent.left; right: parent.right; top: parent.top }
+                    model: root.visibleEntries
+                    rowDelegate: Component {
+                        DialogListItem {
+                            property var modelData: null
+                            active: root.selected?.type === modelData?.type
+                            implicitHeight: 34
+                            onClicked: root.selected = modelData
+                            contentItem: StyledText {
+                                anchors {
+                                    fill: parent
+                                    leftMargin: Appearance.spacing.space150
+                                    rightMargin: Appearance.spacing.space150
+                                }
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                                color: Appearance.colors.colOnLayer2
+                                text: root.nameOf(modelData)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                active: root.selected !== null
+                sourceComponent: ComponentDetail { entry: root.selected }
+            }
+
+            StyledText {
+                visible: root.selected === null
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                color: Appearance.colors.colSubtext
+                text: Translation.tr("Pick a widget from the list.")
+            }
+        }
     }
 
-    // ---- one family, as a bento block ------------------------------------
-    component FamilyBlock: Rectangle {
+    // ---- one family, as a section ----------------------------------------
+    component FamilyBlock: StyledRectangle {
         id: block
         required property var family
 
         implicitHeight: blockColumn.implicitHeight + Appearance.spacing.space200 * 2
         radius: Appearance.rounding.normal
-        color: root.solid(Appearance.colors.colLayer1)
-        border.width: 1
-        border.color: Appearance.colors.colOutlineVariant
+        contentLayer: StyledRectangle.ContentLayer.Pane
 
         ColumnLayout {
             id: blockColumn
             anchors { fill: parent; margins: Appearance.spacing.space200 }
             spacing: Appearance.spacing.space100
 
-            StyledText {
+            // The shell's own section header - the glyph in its Material
+            // shape, the title beside it - rather than two StyledTexts of
+            // hand-picked sizes, which is what this was and what made the
+            // page look like a debug view of the shell instead of part of it.
+            ContentSection {
                 Layout.fillWidth: true
-                font.pixelSize: Appearance.font.pixelSize.large
-                color: Appearance.colors.colPrimary
-                text: block.family.name
-            }
-            StyledText {
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                color: Appearance.colors.colSubtext
-                text: `${block.family.entries.length} — ${block.family.note}`
-            }
+                icon: block.family.icon ?? "widgets"
+                shape: block.family.shape ?? MaterialShape.Shape.Clover4Leaf
+                title: block.family.name
 
-            Flow {
-                Layout.fillWidth: true
-                spacing: root.gap
+                StyledText {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    color: Appearance.colors.colSubtext
+                    text: `${block.family.entries.length} — ${block.family.note}`
+                }
 
-                Repeater {
-                    model: block.family.entries
-                    delegate: ComponentTile {
-                        required property var modelData
-                        entry: modelData
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: root.gap
+
+                    Repeater {
+                        model: block.family.entries
+                        delegate: ComponentTile {
+                            required property var modelData
+                            entry: modelData
+                        }
                     }
                 }
             }
@@ -290,16 +434,31 @@ Item {
     }
 
     // ---- one real widget, in a cell with an edge --------------------------
-    component ComponentTile: Rectangle {
+    component ComponentTile: StyledRectangle {
         id: tile
         required property var entry
 
         width: root.tileWidth
         height: root.tileHeight
         radius: Appearance.rounding.small
-        color: root.solid(Appearance.colors.colLayer2)
+        contentLayer: StyledRectangle.ContentLayer.Group
         border.width: 1
-        border.color: Appearance.colors.colOutlineVariant
+        border.color: hoverArea.containsMouse
+            ? Appearance.colors.colPrimary
+            : "transparent"
+
+        // The tile is a way IN, not just a picture: clicking it opens the same
+        // widget in Detail with the surface switcher and the knobs. The area
+        // sits UNDER the widget rather than over it, so pressing the widget
+        // still presses the widget - which is the whole reason the gallery
+        // draws live ones.
+        MouseArea {
+            id: hoverArea
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton
+            onClicked: root.show(tile.entry)
+        }
 
         ColumnLayout {
             anchors { fill: parent; margins: Appearance.spacing.space100 }
@@ -309,7 +468,7 @@ Item {
                 Layout.fillWidth: true
                 implicitHeight: nameLabel.implicitHeight + Appearance.spacing.space50 * 2
                 radius: Appearance.rounding.unsharpenmore
-                color: root.solid(Appearance.colors.colLayer1)
+                color: Appearance.colors.colLayer1
 
                 StyledText {
                     id: nameLabel
@@ -322,70 +481,15 @@ Item {
                     horizontalAlignment: Text.AlignHCenter
                     elide: Text.ElideLeft
                     color: Appearance.colors.colOnLayer1
-                    text: (tile.entry.type ?? "").split("/").pop().replace(".qml", "")
+                    text: root.nameOf(tile.entry)
                 }
             }
 
-            Item {
+            ComponentStage {
                 id: stage
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-
-                property var control: null
-                property var symbol: null
-                property string failure: ""
-
-                // NO chrome of this page's own. A draft filled each control's
-                // rect and traced it so the corners could be seen moving, and
-                // the result looked like a debugger drawn over the shell
-                // rather than like the shell. What a widget looks like at rest
-                // IS part of the answer, transparent included; the numbers
-                // underneath carry the corner values instead.
-
-                Component {
-                    id: symbolComponent
-                    MaterialSymbol {
-                        iconSize: Appearance.font.pixelSize.larger
-                        color: Appearance.colors.colOnLayer2
-                    }
-                }
-
-                Component.onCompleted: {
-                    const url = Quickshell.shellPath(tile.entry.type);
-                    const component = Qt.createComponent(url);
-                    if (component.status === Component.Error) {
-                        stage.failure = component.errorString().split("\n")[0].split(":").pop().trim();
-                        return;
-                    }
-                    try {
-                        stage.control = component.createObject(stage, Object.assign({}, tile.entry.props));
-                        if (!stage.control) {
-                            stage.failure = Translation.tr("needs its surroundings");
-                            return;
-                        }
-                        stage.control.anchors.centerIn = stage;
-                        // Several of these take their content as a CHILD, not
-                        // as a property - ToolbarButton, the badges, the
-                        // expanders. Bare, they collapse to an empty box and
-                        // read as a broken widget rather than an empty one, so
-                        // the tile hands them the glyph their call sites do.
-                        if (tile.entry.glyph)
-                            stage.symbol = symbolComponent.createObject(
-                                stage.control, { text: tile.entry.glyph });
-                    } catch (error) {
-                        stage.failure = `${error}`.split("\n")[0];
-                    }
-                }
-
-                StyledText {
-                    visible: stage.failure !== ""
-                    anchors.centerIn: parent
-                    width: parent.width
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    color: Appearance.colors.colSubtext
-                    text: stage.failure
-                }
+                entry: tile.entry
             }
 
             // The radius it is drawing, live. Reading `cornerTopLeft` rather
@@ -395,17 +499,17 @@ Item {
             StyledText {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
+                visible: stage.measurements?.cornerTopLeft !== undefined
                 color: (stage.control?.down ?? false)
                     ? Appearance.colors.colPrimary
                     : Appearance.colors.colSubtext
-                visible: stage.control?.cornerTopLeft !== undefined
                 text: {
-                    const control = stage.control;
-                    if (!control || control.cornerTopLeft === undefined)
+                    const measured = stage.measurements;
+                    if (!measured || measured.cornerTopLeft === undefined)
                         return "";
-                    const rest = control.buttonRadius ?? 0;
-                    const held = control.buttonRadiusPressed ?? 0;
-                    return `${rest.toFixed(1)} → ${held.toFixed(1)}   ${control.cornerTopLeft.toFixed(1)}`;
+                    return `${(measured.radius ?? 0).toFixed(1)} → `
+                        + `${(measured.radiusPressed ?? 0).toFixed(1)}   `
+                        + `${measured.cornerTopLeft.toFixed(1)}`;
                 }
             }
         }
