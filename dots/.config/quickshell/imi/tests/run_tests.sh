@@ -519,6 +519,17 @@ if ! python3 "$SCRIPT_DIR/lint_runtime_bus_isolation.py"; then
     exit 1
 fi
 
+# A shared widget is presentational, and this is the ratchet. The folder is a
+# promise - anything in it can be used by any surface - and 23 files were
+# quietly breaking it: reading the user's config, writing global state, driving
+# a service, spawning a process. Eleven moved out to their only consumer; the
+# rest are named with reasons, so the list can shrink and cannot grow.
+echo "Running dumb widget lint..."
+if ! python3 "$SCRIPT_DIR/lint_dumb_widgets.py"; then
+    echo "Dumb widget lint failed."
+    exit 1
+fi
+
 echo "Running doc citation lint..."
 if ! python3 "$SCRIPT_DIR/lint_doc_citations.py"; then
     echo "Doc citation lint failed."
