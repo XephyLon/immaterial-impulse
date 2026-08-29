@@ -46,6 +46,26 @@ Item {
     // is how it still opens the widget in Detail.
     signal tapped()
 
+    // Some widgets are far bigger than a tile - the light/dark preference card
+    // is 210px wide and 120 tall. Left alone they paint straight over the tiles
+    // beside and below them, which is what the gallery did: two widgets
+    // covering four of their neighbours. Scaled to fit and clipped, with the
+    // factor shown, rather than cropped to a corner of themselves.
+    readonly property real fitScale: {
+        const control = builder.control;
+        if (!control || width <= 0 || height <= 0)
+            return 1;
+        // The control's own width when it declares no implicit one: a row that
+        // fills its parent reports 0 implicitly and 400px actually, and scaling
+        // by the implicit number leaves it overflowing at full size.
+        const own = Math.max(control.implicitWidth, control.width);
+        const high = Math.max(control.implicitHeight, control.height);
+        const wide = own > 0 ? width / own : 1;
+        const tall = high > 0 ? height / high : 1;
+        return Math.min(1, wide, tall);
+    }
+    readonly property bool scaledDown: fitScale < 0.999
+
     readonly property var control: builder.control
     readonly property string failure: builder.failure
     readonly property string typeName: (entry.type ?? "").split("/").pop().replace(".qml", "")
@@ -91,6 +111,15 @@ Item {
     Item {
         id: builder
         anchors.fill: parent
+        // The tile is the widget's whole world here; nothing of it may reach
+        // its neighbours.
+        clip: true
+        transform: Scale {
+            origin.x: builder.width / 2
+            origin.y: builder.height / 2
+            xScale: stage.fitScale
+            yScale: stage.fitScale
+        }
 
         property var control: null
         property var symbol: null
@@ -102,6 +131,43 @@ Item {
                 iconSize: Appearance.font.pixelSize.larger
                 color: Appearance.colors.colOnLayer2
             }
+        }
+
+        // Built through the type's MODULE, not its file path.
+        //
+        // `Qt.createComponent(shellPath(...))` compiles the file with no module
+        // context, so a type that reaches a sibling by the directory's implicit
+        // import fails to compile - the gallery reported "CliphistImage is not
+        // a type" for SearchItem, which builds perfectly well in the overview
+        // that imports its module. A false failure is worse here than no tile:
+        // this page's whole vocabulary for "cannot be built" is the sentence it
+        // prints in the cell, and one of them was a lie about working code.
+        //
+        // The module is the path: modules/imi/overview/SearchItem.qml is
+        // `qs.modules.imi.overview` and the type `SearchItem`.
+        // The WHOLE message, reduced to its most useful line. Taking the first
+        // line and everything after its last colon left the empty string for a
+        // QML build error - whose first line is "Error: Qt.createQmlObject():
+        // failed to create object:" - so twenty tiles drew nothing and said
+        // nothing about why, the reason having been formatted away.
+        function explain(error) {
+            const lines = `${error}`.split("\n")
+                .map(line => line.trim()).filter(line => line.length > 0);
+            const detail = lines.find(line =>
+                /unavailable|is not a type|not installed|not initialized|Cannot assign/i.test(line));
+            // The path is noise in a cell this size - "file:///home/…/inline:1:1:
+            // module … is not installed" tells you nothing the last clause does
+            // not, and it pushed the real sentence out of the tile.
+            return (detail ?? lines[lines.length - 1] ?? `${error}`)
+                .replace(/^.*\.qml:\d+:\d+:\s*/, "")
+                .replace(/^(file:|qs:)\S*:\d+:\d+:\s*/, "")
+                .replace(/^\S*inline:\d+:\d+:\s*/, "");
+        }
+
+        function moduleOf(path) {
+            const parts = path.split("/");
+            parts.pop();
+            return "qs." + parts.join(".");
         }
 
         function build() {
@@ -116,30 +182,130 @@ Item {
             builder.symbol = null;
             builder.failure = "";
 
-            const url = Quickshell.shellPath(stage.entry.type);
-            const component = Qt.createComponent(url);
-            if (component.status === Component.Error) {
-                builder.failure = component.errorString().split("\n")[0].split(":").pop().trim();
-                return;
+            const path = stage.entry.type;
+            const type = path.split("/").pop().replace(".qml", "");
+            const props = Object.assign({}, stage.entry.props, stage.overrides);
+
+            // Properties go in the OBJECT, not onto it afterwards.
+            //
+            // Assigning them after construction left a dozen tiles blank while
+            // the same widget built declaratively drew perfectly: a control
+            // whose size derives from its content measures that content once,
+            // when it is built, and a text set a moment later never moves the
+            // geometry that was computed around an empty one. Every real call
+            // site declares its properties, so the gallery does too.
+            //
+            // It also makes a wrong property name a loud compile error rather
+            // than a silently dropped assignment - which is how the catalogue
+            // came to offer `buttonIcon` to three types that call it something
+            // else.
+            const literal = name => {
+                const value = props[name];
+                if (typeof value === "string")
+                    return JSON.stringify(value);
+                return `${value}`;
+            };
+            const body = Object.keys(props).map(name => `${name}: ${literal(name)}`).join("; ");
+
+            // Two ways in, because neither reaches every type.
+            //
+            // A type reached by its MODULE gets that directory's other types
+            // for free, which is what a file-path build cannot do - SearchItem
+            // could not see its sibling CliphistImage and reported it as "not a
+            // type", a lie about working code. But Quickshell only registers
+            // SOME directories as modules, so the module route answers
+            // `module "qs.modules.imi.sidebarLeft" is not installed` for a
+            // dozen perfectly good widgets.
+            //
+            // So: module first, file second. Each covers the other's gap, and
+            // only a type that fails BOTH ways has actually failed.
+            try {
+                builder.control = Qt.createQmlObject(
+                    `import ${builder.moduleOf(path)}\n${type} { ${body} }`, builder);
+            } catch (moduleError) {
+                const component = Qt.createComponent(Quickshell.shellPath(path));
+                let fileTrouble = "";
+                if (component.status === Component.Error) {
+                    fileTrouble = component.errorString();
+                } else {
+                    try {
+                        builder.control = component.createObject(builder, props);
+                    } catch (fileError) {
+                        builder.control = null;
+                        fileTrouble = `${fileError}`;
+                    }
+                    // createObject returns null WITHOUT throwing when a
+                    // required property was never given - which is the whole
+                    // reason a row fed by a service cannot be built here. Say
+                    // that, rather than repeating the module lookup's
+                    // complaint, which is about the gallery and not the widget.
+                    if (!builder.control && fileTrouble === "")
+                        fileTrouble = component.errorString() !== ""
+                            ? component.errorString()
+                            : Translation.tr("needs its data");
+                }
+                // The FILE route's complaint when it has one: it is the route
+                // that actually reached the widget, so its answer is about the
+                // widget. The module route's "not installed" is about this
+                // gallery's own lookup and says nothing a reader can act on.
+                if (!builder.control)
+                    builder.failure = builder.explain(fileTrouble !== "" ? fileTrouble : moduleError);
+                if (builder.failure !== "")
+                    return;
             }
             try {
-                const props = Object.assign({}, stage.entry.props, stage.overrides);
-                builder.control = component.createObject(builder, props);
-                if (!builder.control) {
-                    builder.failure = Translation.tr("needs its surroundings");
-                    return;
+                if (false) {
+                // The WHOLE message, reduced to its most useful line.
+                //
+                // This used to take the first line and everything after its
+                // last colon, which for a QML build error - whose first line is
+                // "Error: Qt.createQmlObject(): failed to create object:" -
+                // leaves the empty string. Twenty tiles drew nothing at all and
+                // said nothing about why, because the reason had been formatted
+                // away.
+                    void 0;
                 }
-                builder.control.anchors.centerIn = builder;
-                // Several take their content as a CHILD rather than a
-                // property - the toolbars, the badges, the expanders. Bare
-                // they collapse to an empty box and read as broken rather
-                // than as empty, so they get the glyph their call sites give
-                // them.
-                if (stage.entry.glyph)
-                    builder.symbol = symbolComponent.createObject(
+            } catch (ignored) {
+            }
+            if (!builder.control) {
+                builder.failure = Translation.tr("needs its surroundings");
+                return;
+            }
+            builder.control.anchors.centerIn = builder;
+
+            // A widget with nothing to draw says so, instead of leaving an
+            // empty cell that reads as a broken tile.
+            //
+            // `Qt.createQmlObject` does NOT throw on an uninitialised required
+            // property - it warns and hands back an object - so the model-fed
+            // rows (a Wi-Fi network, a tray entry, a search result) came back
+            // alive and sized to nothing. Measuring the result is the honest
+            // test: whatever the reason, a widget that lays out to nothing has
+            // nothing to show here.
+            console.log("[Tile]", stage.typeName, "impl",
+                        builder.control.implicitWidth.toFixed(0),
+                        builder.control.implicitHeight.toFixed(0),
+                        "vis", builder.control.visible, "op", builder.control.opacity);
+            if (builder.control.implicitWidth < 4 || builder.control.implicitHeight < 4)
+                builder.failure = Translation.tr("needs its data");
+
+            // A glyph only where the control has NO content of its own.
+            //
+            // The first version parented a MaterialSymbol into every control
+            // that named one in the catalogue, as a plain child. For a type
+            // that already draws something that is a SECOND thing on top of
+            // the first, positioned at the origin rather than centred - which
+            // is what the off-centre and doubled contents in the tiles were.
+            // Assigned as `contentItem` instead, so the control lays it out
+            // the way it lays out its own, and only when there is nothing to
+            // displace.
+            if (stage.entry.glyph) {
+                const existing = builder.control.contentItem ?? null;
+                const empty = !existing
+                    || (existing.implicitWidth === 0 && existing.implicitHeight === 0);
+                if (empty)
+                    builder.control.contentItem = symbolComponent.createObject(
                         builder.control, { text: stage.entry.glyph });
-            } catch (error) {
-                builder.failure = `${error}`.split("\n")[0];
             }
         }
 
@@ -170,6 +336,11 @@ Item {
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
+            // Bounded: a QML build error is a paragraph, and one of them ran
+            // three lines past its tile and over the widget beside it.
+            maximumLineCount: 3
+            elide: Text.ElideRight
+            font.pixelSize: Appearance.font.pixelSize.smaller
             color: Appearance.colors.colSubtext
             text: builder.failure
         }
