@@ -127,12 +127,14 @@ Item {
 
                 ColumnLayout {
                     id: contentArea
-                    anchors {
-                        fill: parent
-                        // The inset is the plate showing around its content. A
-                        // row that is its own plate has nothing to show.
-                        margins: plate.ownsItsSurface ? 0 : Appearance.spacing.space100
-                    }
+                    // The inset stays whatever the group's rows have always
+                    // had, INCLUDING for a row that paints itself. What made
+                    // the roster look framed was the plate's colour showing
+                    // through it, not the inset - and the inset is also the
+                    // only room a row has to grow into when the interaction
+                    // model lifts it by `hoverScale` on hover. Take it away and
+                    // a hovered row grows straight past the group's edge.
+                    anchors { fill: parent; margins: Appearance.spacing.space100 }
                     spacing: 0
 
                     Loader {
