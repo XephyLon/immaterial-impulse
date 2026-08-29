@@ -35,6 +35,7 @@ VERTICAL_BAR = ROOT / "modules/imi/verticalBar/VerticalBar.qml"
 DOCK = ROOT / "modules/imi/dock/Dock.qml"
 STYLED_POPUP = ROOT / "modules/common/widgets/StyledPopup.qml"
 GLOBAL_STATES = ROOT / "GlobalStates.qml"
+BAR_POPUP_SLOT = ROOT / "modules/common/functions/bar_popup_slot.js"
 BAR_CONTENT = ROOT / "modules/imi/bar/BarContent.qml"
 VERTICAL_CONTENT = ROOT / "modules/imi/verticalBar/VerticalBarContent.qml"
 CONTROLLER = ROOT / "modules/imi/bar/BarEditController.qml"
@@ -144,15 +145,25 @@ def test_the_panels_leave_the_lockscreen_tab_the_way_they_leave_the_lock():
 def test_a_bar_popup_cannot_claim_the_card_while_the_mode_is_on():
     # The mode makes the bar's widgets inert; a hover popup opening over an
     # inert bar is the widget answering the pointer after all, through a
-    # HoverHandler or a claim path the input eater cannot reach. The refusal
-    # lives in claimSlot because that is the one gate all three claim paths
-    # (hover, popupVisible, completion) already share.
-    popup = code(STYLED_POPUP)
-    claim = re.search(r"function claimSlot\(\)\s*{(.*?)\n    }", popup, re.S)
-    assert claim, "StyledPopup no longer declares claimSlot"
-    assert "GlobalStates.editMode" in claim.group(1), (
-        "claimSlot does not refuse while the mode is on - a hover while "
-        "editing would put a popup card over the bar being edited")
+    # HoverHandler or a claim path the input eater cannot reach.
+    #
+    # The refusal used to be inside StyledPopup's claimSlot, and this test
+    # read it there. It has moved with the rest of the arbitration: the popup
+    # only ASKS now, and the rules live with the slot - the decision in
+    # bar_popup_slot.js, driven by the singleton that owns the slot. So the
+    # wiring is what is checked here, and the refusal itself is asserted
+    # behaviourally in tests/tst_bar_popup_slot.qml, which can simply call it.
+    decision = code(BAR_POPUP_SLOT)
+    assert "if (!state || state.editMode) return REFUSE;" in decision, (
+        "the slot's decision no longer refuses under Edit Mode - a hover "
+        "while editing would put a popup card over the bar being edited")
+
+    states = code(GLOBAL_STATES)
+    claim = re.search(r"function claimBarPopup\(popup\): bool \{(.*?)\n    \}", states, re.S)
+    assert claim, "GlobalStates no longer declares claimBarPopup"
+    assert "editMode: root.editMode" in claim.group(1), (
+        "claimBarPopup does not pass the mode into the decision, so the "
+        "refusal above can never fire")
 
 
 def test_entering_the_mode_dismisses_whatever_popup_holds_the_card():
@@ -164,7 +175,7 @@ def test_entering_the_mode_dismisses_whatever_popup_holds_the_card():
     states = code(GLOBAL_STATES)
     handler = re.search(r"onEditModeChanged:\s*{(.*?)\n    }", states, re.S)
     assert handler, "GlobalStates no longer answers the mode changing"
-    assert "activeBarPopup" in handler.group(1), (
+    assert "vacateBarPopup()" in handler.group(1), (
         "entering the mode leaves whatever bar popup was open holding the "
         "shared card, over the bar being edited")
 
@@ -324,7 +335,7 @@ def test_escape_sees_a_bar_drag_and_can_cancel_it():
 
 # ---- the dock's half --------------------------------------------------------
 
-DRAG_APPS = ROOT / "modules/common/widgets/DragApps.qml"
+DRAG_APPS = ROOT / "modules/imi/dock/DragApps.qml"
 
 
 def test_the_docks_pinned_icons_grow_the_badge_and_go_inert_in_the_mode():

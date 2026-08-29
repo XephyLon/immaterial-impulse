@@ -48,7 +48,7 @@ INFINITE_LINT = ROOT / "tests/lint_infinite_animation_visibility.py"
 # row is the review: name the string, and name the surface it sits on, which
 # must be one that is unmapped or hidden when idle.
 REVIEWED_ADOPTIONS = {
-    "modules/common/widgets/DragApps.qml":
+    "modules/imi/dock/DragApps.qml":
         "the dock's window-preview card - the title is the only thing telling "
         "several windows of one application apart, and the popup is an "
         "xdg-popup that does not exist while it is not shown",
