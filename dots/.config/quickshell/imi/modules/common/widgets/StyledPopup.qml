@@ -144,11 +144,4 @@ QtObject {
             }
         }
     }
-
-    readonly property bool barVertical: Config.options.bar.vertical
-    readonly property string barEdge: {
-        if (!barVertical) return Config.options.bar.bottom ? "bottom" : "top"
-        return Config.options.bar.bottom ? "right" : "left"
-    }
-    readonly property real barThickness: barVertical ? Appearance.sizes.verticalBarWidth : Appearance.sizes.barHeight
 }
