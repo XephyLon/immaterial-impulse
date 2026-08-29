@@ -570,6 +570,14 @@ Singleton {
                 property bool migratedWorldClockTimezones: false
             }
 
+            // Tools for whoever is working ON the shell rather than in it.
+            // Off by default and deliberately not discoverable from anywhere
+            // else: what it reveals is a reference surface, not a feature, and
+            // a user who has not asked for it should never meet one.
+            property JsonObject developer: JsonObject {
+                property bool enable: false
+            }
+
             property JsonObject policies: JsonObject {
                 property int ai: 1 // 0: No | 1: Yes | 2: Local
                 property int weeb: 1 // 0: No | 1: Open | 2: Closet
