@@ -80,8 +80,6 @@ EXCLUDED = {
     "Favicon.qml":
         "spawns a fetch for a site icon. Wants a service behind it, the way "
         "every other network read in this shell has one",
-    "AttachedFileIndicator.qml":
-        "spawns to inspect a file; belongs with the AI chat that uses it",
     "WeekRow.qml":
         "DateTime, for today's column. Wants the date as a property from the "
         "calendar that builds it",
