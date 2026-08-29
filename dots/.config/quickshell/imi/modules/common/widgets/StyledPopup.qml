@@ -1,5 +1,6 @@
 import qs
 import qs.modules.common
+import "../functions/bar_popup_slot.js" as BarPopupSlot
 import QtQuick
 
 // A bar popup is a declaration plus a hover state machine; it owns no surface.
@@ -82,9 +83,7 @@ QtObject {
     // tray empties, a plugin is disabled), and that destroys this popup and its
     // content out from under the overlay. Vacate the slot so the card exits
     // instead of stranding at its last size with a live input mask.
-    Component.onDestruction: {
-        if (GlobalStates.activeBarPopup === root) GlobalStates.activeBarPopup = null;
-    }
+    Component.onDestruction: GlobalStates.releaseBarPopup(root)
 
     function updateHoverHold() {
         if (targetHovered || popupHovered) {
@@ -100,26 +99,31 @@ QtObject {
         onTriggered: root.hoverHeld = false
     }
 
-    // Claim the shared slot, which is also a claim on the shared card.
-    // A pinned popup holds it: pinning is a deliberate click, often with a focus
-    // grab over it, while a hover is an accident of where the pointer passed, so
-    // travelling across the bar must not take the tray overflow or the Docker
-    // panel out from under the pointer. The accepted cost is that while a popup
-    // is pinned, hovering another bar widget produces nothing at all.
+    // Ask for the shared card. Whether the answer is yes is not this object's
+    // business: the rules live with the slot, in GlobalStates.claimBarPopup.
     //
-    // The refusal lives here rather than in the overlay because the slot is the
-    // shared resource: refusing to honour a claim would leave
-    // GlobalStates.activeBarPopup pointing at a popup the card is not showing.
+    // This used to arbitrate here - read the slot, compare occupants, gate on
+    // Edit Mode and write itself in - which made a widget in the shared folder
+    // the referee for a global resource shared by ten of its own instances,
+    // three of them in bundled plugins.
     function claimSlot() {
-        // Edit Mode makes the bar's widgets inert, and a popup opening over an
-        // inert bar is the widget answering the pointer after all - through a
-        // claim path the mode's input eater cannot reach. Refused here because
-        // this is the one gate all three claim paths (hover, popupVisible,
-        // completion) already share.
-        if (GlobalStates.editMode) return;
-        const occupant = GlobalStates.activeBarPopup;
-        if (occupant && occupant !== root && occupant.pinnedOpen && !root.pinnedOpen) return;
-        GlobalStates.activeBarPopup = root;
+        GlobalStates.claimBarPopup(root);
+    }
+
+    // Asked by the arbiter when another popup takes the card: drop the hover
+    // grace if that is all that is keeping this one up. The CONDITION stays
+    // here because it is about this popup's own pointer state and nothing
+    // else - the arbiter knows who is holding the card, not where the pointer
+    // is.
+    function releaseHoverHold() {
+        if (BarPopupSlot.shouldDropHoverHold({
+            hoverHeld: root.hoverHeld,
+            targetHovered: root.targetHovered,
+            popupHovered: root.popupHovered,
+        })) {
+            root.hoverCloseTimer.stop();
+            root.hoverHeld = false;
+        }
     }
 
     onTargetHoveredChanged: {
@@ -130,18 +134,4 @@ QtObject {
     }
     onPopupHoveredChanged: updateHoverHold()
 
-    // A different bar popup just took over. If we're only lingering on the
-    // hover-hold grace period (pointer no longer on our widget or our card),
-    // drop it now so the morph starts on the frame the pointer lands on the new
-    // widget rather than 180ms later.
-    property Connections slotWatcher: Connections {
-        target: GlobalStates
-        function onActiveBarPopupChanged() {
-            if (GlobalStates.activeBarPopup !== root && root.hoverHeld
-                    && !root.targetHovered && !root.popupHovered) {
-                root.hoverCloseTimer.stop();
-                root.hoverHeld = false;
-            }
-        }
-    }
 }
