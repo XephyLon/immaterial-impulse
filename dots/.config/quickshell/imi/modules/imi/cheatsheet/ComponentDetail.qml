@@ -56,13 +56,19 @@ Item {
                 : typeof value === "number" ? "number" : "text";
             out.push({ name: name, kind: kind, initial: value });
         }
-        // Every RippleButton has these two and neither is in any call site's
-        // props, but they are the two states a design review spends its time
-        // in - so they are offered whether or not the catalogue named them.
-        const measured = stage.measurements;
-        if (measured?.hasToggled)
+        // `toggled` only where the type MEANS it.
+        //
+        // Every RippleButton descendant inherits the property, so offering it
+        // wherever it exists put a toggle switch on 46 of 62 component pages
+        // that changed nothing visible - a control claiming a state it has no
+        // appearance for. The catalogue names the sixteen that read it, and
+        // lint_component_gallery.py checks that claim against the source.
+        //
+        // `enabled` is different and stays everywhere: disabled is a real M3
+        // state with a defined appearance, and every one of these has it.
+        if (root.entry?.toggles)
             out.push({ name: "toggled", kind: "bool", initial: false });
-        if (measured?.hasEnabled)
+        if (stage.measurements?.hasEnabled)
             out.push({ name: "enabled", kind: "bool", initial: true });
         return out;
     }

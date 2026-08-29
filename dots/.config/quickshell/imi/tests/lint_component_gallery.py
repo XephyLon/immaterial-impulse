@@ -114,6 +114,26 @@ def descendants_of(base):
     return found
 
 
+def toggle_claims():
+    """{path: whether the catalogue says this type is a toggle}."""
+    # An entry may wrap over two lines, so the claim is read from the whole
+    # entry - everything between one `{ type: "` and the next. Matching up to
+    # the first `},` instead finds the end of the PROPS object, which is where
+    # the first version stopped, and every claim after it read as absent.
+    text = GALLERY.read_text()
+    chunks = text.split('{ type: "')[1:]
+    claims = {}
+    for chunk in chunks:
+        path = chunk.split('"', 1)[0]
+        claims[path] = "toggles: true" in chunk.split('{ type: "')[0]
+    return claims
+
+
+def reads_toggled(path):
+    body = re.sub(r"//.*", "", (SHELL / path).read_text(errors="replace"))
+    return re.search(r"\btoggled\b", body) is not None
+
+
 def catalogued():
     text = GALLERY.read_text()
     return set(re.findall(r'type:\s*"([^"]+)"', text))
@@ -170,6 +190,27 @@ class ComponentGalleryTests(unittest.TestCase):
             "EXCLUDED names files that no longer inherit RippleButton, so the",
             "gallery never wanted them - delete these entries:",
             *(f"  {path}" for path in irrelevant),
+        ]))
+
+    def test_the_toggle_claim_matches_the_source(self):
+        """`toggles: true` is a claim about the widget, so it is checked.
+
+        Every RippleButton descendant INHERITS `toggled` whether or not it
+        draws anything different for it, so "has the property" is not the same
+        question as "is a toggle" - and answering the first put a switch that
+        changed nothing on 46 of 62 component pages. The catalogue answers the
+        second, and this holds it to the source.
+        """
+        wrong = []
+        for path, claimed in toggle_claims().items():
+            if not (SHELL / path).exists():
+                continue
+            actual = reads_toggled(path)
+            if claimed != actual:
+                wrong.append(f"{path}: catalogue says {claimed}, source says {actual}")
+        self.assertEqual(wrong, [], "\n".join([
+            "The catalogue's `toggles:` claim disagrees with the widget:",
+            *(f"  {line}" for line in wrong),
         ]))
 
     def test_every_catalogued_path_exists(self):

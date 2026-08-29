@@ -319,14 +319,46 @@ Item {
             visible: enabled
             hoverEnabled: true
             acceptedButtons: Qt.AllButtons
-            // Wheel included: a slider or a spin box would otherwise change
-            // its value under a scroll meant for the page.
-            onWheel: wheel => wheel.accepted = true
+            // Buttons only, NOT the wheel. Eating the wheel stopped a preview
+            // slider changing under a scroll, and stopped the page scrolling
+            // at all: the tiles cover most of the surface, so every scroll
+            // landed on a shield and died there. A moved preview slider costs
+            // nothing; a gallery that cannot be scrolled costs everything.
 
             readonly property var motion: builder.control?.interactionMotion ?? null
+
             onContainsMouseChanged: if (motion) motion.hovered = containsMouse
-            onPressedChanged: if (motion) motion.down = pressed
-            onCanceled: if (motion) motion.down = false
+
+            // A previewed press does everything a real one does EXCEPT act.
+            //
+            // Driving `interactionMotion` alone gave the lift and the corner
+            // morph and left the ripple behind, because the ripple is the
+            // control's own animation and the control never saw the press.
+            // `startRipple` and `fadeRipple` are its public pair, so the
+            // preview can spend them.
+            onPressed: mouse => {
+                if (motion) motion.down = true;
+                if (builder.control?.startRipple)
+                    builder.control.startRipple(mouse.x, mouse.y);
+            }
+            onReleased: {
+                if (motion) motion.down = false;
+                if (builder.control?.fadeRipple)
+                    builder.control.fadeRipple();
+                // Nothing else. A press is TRANSIENT - ripple, lift, corner
+                // morph - and it ends where it started. Flipping the control's
+                // `toggled` here was a state change dressed as a preview: it
+                // outlived the press, left no way back except rebuilding, and
+                // fought the Detail page's own `toggled` knob for ownership of
+                // the same property. State belongs to the knobs; a tile is a
+                // picture of a widget, and pressing a picture shows you the
+                // press, not a different picture.
+            }
+            onCanceled: {
+                if (motion) motion.down = false;
+                if (builder.control?.fadeRipple)
+                    builder.control.fadeRipple();
+            }
             onClicked: stage.tapped()
         }
 

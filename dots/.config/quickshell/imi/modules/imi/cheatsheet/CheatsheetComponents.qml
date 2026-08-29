@@ -52,7 +52,7 @@ Item {
             shape: MaterialShape.Shape.Clover4Leaf,
             note: Translation.tr("what every pressable tile below inherits"),
             entries: [
-                { type: "modules/common/widgets/RippleButton.qml", props: { buttonText: "Button" } },
+                { type: "modules/common/widgets/RippleButton.qml", props: { buttonText: "Button" }, toggles: true },
                 { type: "modules/common/widgets/RippleButtonWithIcon.qml", props: { materialIcon: "download", mainText: "Install" } },
             ]
         },
@@ -65,16 +65,16 @@ Item {
                 { type: "modules/common/widgets/DialogButton.qml", props: { buttonText: "Cancel" } },
                 { type: "modules/common/widgets/MenuButton.qml", props: { buttonText: "Open" } },
                 { type: "modules/common/widgets/ToolbarButton.qml", props: { buttonText: "Bold" } },
-                { type: "modules/common/widgets/IconToolbarButton.qml", props: { text: "edit" } },
-                { type: "modules/common/widgets/IconAndTextToolbarButton.qml", props: { iconText: "save", buttonText: "Save" } },
+                { type: "modules/common/widgets/IconToolbarButton.qml", props: { text: "edit" }, toggles: true },
+                { type: "modules/common/widgets/IconAndTextToolbarButton.qml", props: { iconText: "save", buttonText: "Save" }, toggles: true },
                 { type: "modules/common/widgets/VibrantToolbarButton.qml", props: { buttonText: "Star" } },
                 { type: "modules/common/widgets/ToolbarTabButton.qml", props: { materialSymbol: "tab", current: true } },
-                { type: "modules/common/widgets/FilterChip.qml", props: { label: "Unread", chipIcon: "filter_alt" } },
+                { type: "modules/common/widgets/FilterChip.qml", props: { label: "Unread", chipIcon: "filter_alt" }, toggles: true },
                 { type: "modules/common/widgets/FloatingActionButton.qml", props: { iconText: "add" } },
                 { type: "modules/common/widgets/DockButton.qml", props: { } },
                 { type: "modules/common/widgets/EditRemoveBadge.qml", props: { } },
                 { type: "modules/common/widgets/NavigationRailExpandButton.qml", props: { } },
-                { type: "modules/common/widgets/LightDarkPreferenceButton.qml", props: { dark: true } },
+                { type: "modules/common/widgets/LightDarkPreferenceButton.qml", props: { dark: true }, toggles: true },
                 { type: "modules/common/widgets/NotificationActionButton.qml", props: { buttonText: "Reply" } },
                 { type: "modules/common/widgets/NotificationGroupExpandButton.qml", props: { count: 3, expanded: false } },
             ]
@@ -85,9 +85,9 @@ Item {
             shape: MaterialShape.Shape.Clover8Leaf,
             note: Translation.tr("GroupButton and what sits on it - segmented ends, one shared morph"),
             entries: [
-                { type: "modules/common/widgets/GroupButton.qml", props: { buttonText: "One" } },
-                { type: "modules/common/widgets/SelectionGroupButton.qml", props: { buttonIcon: "check" } },
-                { type: "modules/common/widgets/NotificationStatusButton.qml", props: { buttonIcon: "notifications", buttonText: "3" } },
+                { type: "modules/common/widgets/GroupButton.qml", props: { buttonText: "One" }, toggles: true },
+                { type: "modules/common/widgets/SelectionGroupButton.qml", props: { buttonIcon: "check" }, toggles: true },
+                { type: "modules/common/widgets/NotificationStatusButton.qml", props: { buttonIcon: "notifications", buttonText: "3" }, toggles: true },
                 { type: "modules/common/widgets/ButtonGroup.qml", props: {} },
             ]
         },
@@ -100,7 +100,7 @@ Item {
                 { type: "modules/common/widgets/DialogListItem.qml", props: { } },
                 { type: "modules/common/widgets/CatalogueRow.qml", props: { rowIcon: "info", title: "A row", description: "with a description" } },
                 { type: "modules/common/widgets/ConfigRow.qml", props: {} },
-                { type: "modules/common/widgets/GroupedList.qml", props: {} },
+                { type: "modules/common/widgets/GroupedList.qml", props: {} }, toggles: true,
             ]
         },
         {
@@ -114,7 +114,7 @@ Item {
                 { type: "modules/common/widgets/ConfigSpinBox.qml", props: { text: "Count", icon: "tag", value: 3 } },
                 { type: "modules/common/widgets/ConfigComboBox.qml", props: { text: "Choice", buttonIcon: "list" } },
                 { type: "modules/common/widgets/ConfigTextArea.qml", props: { text: "Notes", placeholderText: "Type here" } },
-                { type: "modules/common/widgets/ConfigSelectionArray.qml", props: { text: "Pick one", icon: "tune" } },
+                { type: "modules/common/widgets/ConfigSelectionArray.qml", props: { text: "Pick one", icon: "tune" }, toggles: true },
             ]
         },
         {
@@ -123,11 +123,11 @@ Item {
             shape: MaterialShape.Shape.Clover8Leaf,
             note: Translation.tr("the group vocabulary as the sidebars use it"),
             entries: [
-                { type: "modules/imi/sidebarRight/quickToggles/classicStyle/QuickToggleButton.qml", props: { buttonIcon: "wifi" } },
+                { type: "modules/imi/sidebarRight/quickToggles/classicStyle/QuickToggleButton.qml", props: { buttonIcon: "wifi" }, toggles: true },
                 { type: "modules/imi/sidebarRight/quickToggles/androidStyle/AndroidQuickToggleButton.qml",
-                  props: { buttonIcon: "bluetooth", buttonText: "Bluetooth" } },
+                  props: { buttonIcon: "bluetooth", buttonText: "Bluetooth" }, toggles: true },
                 { type: "modules/imi/sidebarLeft/ApiCommandButton.qml", props: { buttonText: "/model" } },
-                { type: "modules/imi/sidebarLeft/aiChat/AiMessageControlButton.qml", props: { buttonIcon: "content_copy" } },
+                { type: "modules/imi/sidebarLeft/aiChat/AiMessageControlButton.qml", props: { buttonIcon: "content_copy" }, toggles: true },
                 { type: "modules/imi/sidebarLeft/aiChat/SearchQueryButton.qml", props: { query: "wallpaper" } },
                 { type: "modules/imi/sidebarLeft/aiChat/AnnotationSourceButton.qml", props: { displayText: "source", url: "https://example.invalid" } },
                 { type: "modules/imi/sidebarLeft/ScrollToBottomButton.qml", props: {} },
@@ -146,7 +146,7 @@ Item {
                 { type: "modules/imi/phone/PhoneDeviceItem.qml", props: {} },
                 { type: "modules/imi/bar/SysTrayMenuEntry.qml", props: {} },
                 { type: "modules/imi/overview/SearchItem.qml", props: {} },
-                { type: "modules/imi/onScreenKeyboard/OskKey.qml", props: {} },
+                { type: "modules/imi/onScreenKeyboard/OskKey.qml", props: {} }, toggles: true,
             ]
         },
         {
@@ -156,12 +156,12 @@ Item {
             note: Translation.tr("bar, phone, calendar, mixer, todo, session, cheatsheet"),
             entries: [
                 { type: "modules/imi/bar/PowerButton.qml", props: { } },
-                { type: "modules/imi/bar/LeftSidebarButton.qml", props: { } },
+                { type: "modules/imi/bar/LeftSidebarButton.qml", props: { }, toggles: true },
                 { type: "modules/imi/bar/CircleUtilButton.qml", props: {}, glyph: "search" },
                 { type: "modules/imi/phone/PhoneActionButton.qml", props: { glyph: "call", label: "Call" } },
                 { type: "modules/imi/phone/PhoneDeviceChip.qml", props: {} },
                 { type: "modules/imi/sidebarRight/calendar/CalendarHeaderButton.qml", props: { buttonText: "‹", tooltipText: "Previous month" } },
-                { type: "modules/imi/sidebarRight/calendar/CalendarDayButton.qml", props: { day: 12, isToday: true } },
+                { type: "modules/imi/sidebarRight/calendar/CalendarDayButton.qml", props: { day: 12, isToday: true }, toggles: true },
                 { type: "modules/imi/sidebarRight/volumeMixer/AudioDeviceSelectorButton.qml", props: {} },
                 { type: "modules/imi/sidebarRight/todo/TodoItemActionButton.qml", props: { buttonText: "Done", tooltipText: "Mark done" } },
                 { type: "modules/imi/sessionScreen/SessionActionButton.qml", props: { buttonIcon: "logout", buttonText: "Log out" } },
@@ -200,7 +200,16 @@ Item {
     // Detail answers "what does this one do" - three questions a design pass
     // asks in that order, so they are three modes over one catalogue rather
     // than three pages with three copies of it.
-    property int mode: 0            // 0 gallery, 1 audit, 2 detail
+    // The tab bar OWNS which mode is showing; nothing binds its currentIndex.
+    //
+    // It used to be `currentIndex: root.mode` plus
+    // `onCurrentIndexChanged: root.mode = currentIndex`, which is a binding and
+    // an imperative write to the same property - the bar assigns its own index
+    // on a click, that assignment destroys the binding, and from then on the
+    // two disagree about which tab is open. It is the same fault
+    // lint_config_switch_intent.py exists for, in a widget that lint does not
+    // look at.
+    readonly property int mode: modeBar.currentIndex
     property var selected: null
     property string filter: ""
 
@@ -226,7 +235,7 @@ Item {
 
     function show(entry) {
         root.selected = entry;
-        root.mode = 2;
+        modeBar.currentIndex = 2;
     }
 
     ColumnLayout {
@@ -239,8 +248,6 @@ Item {
 
             ToolbarTabBar {
                 id: modeBar
-                currentIndex: root.mode
-                onCurrentIndexChanged: root.mode = currentIndex
                 tabButtonList: [
                     { "icon": "grid_view", "name": Translation.tr("Gallery") },
                     { "icon": "table_rows", "name": Translation.tr("Audit") },
