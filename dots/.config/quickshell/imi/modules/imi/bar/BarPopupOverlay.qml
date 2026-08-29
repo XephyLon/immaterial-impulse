@@ -388,8 +388,8 @@ Scope {
                 card.width = 0;
                 card.animate = true;
 
-                if (leaving && GlobalStates.activeBarPopup === leaving)
-                    GlobalStates.activeBarPopup = null;
+                if (leaving)
+                    GlobalStates.releaseBarPopup(leaving);
             }
 
             function release(popup) {
