@@ -213,9 +213,11 @@ Item {
                 id: rosterGroup
                 objectName: "rosterGroup"
                 anchors { left: parent.left; right: parent.right; top: parent.top }
-                // No `bgcolor`: a PhoneDeviceItem paints its own surface, so
-                // the group draws no plate behind it - see GroupedList.
-                itemVerticalPadding: 0
+                // No `bgcolor` and no padding override: a PhoneDeviceItem
+                // paints its own surface, so the group draws no plate behind
+                // it, and the row is then inset exactly like every other
+                // group's rows - which is also the room its hover lift grows
+                // into. See GroupedList.
                 model: PhoneConnect.devices
                 rowDelegate: Component {
                     PhoneDeviceItem {

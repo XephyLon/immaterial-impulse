@@ -121,6 +121,27 @@ ShellRoot {
         driver.mouseClick(loader.item, centre.x, centre.y, Qt.LeftButton);
     }
 
+    // The plate a group drew for this row, or null. Walked rather than counted:
+    // a row sits under a Loader under the plate's content column, and reading
+    // `parent.parent` off that structure was one level short - which threw on
+    // an Item with no `color` and took the REST of the step with it, including
+    // the click that followed. A lookup in a harness fails by returning null.
+    function plateOf(row) {
+        let item = row?.parent ?? null;
+        while (item) {
+            if (item.color !== undefined && item.topLeftRadius !== undefined)
+                return item;
+            item = item.parent;
+        }
+        return null;
+    }
+
+    // Hover, for the states a click cannot leave an element in.
+    function hover(item) {
+        const centre = item.mapToItem(loader.item, item.width / 2, item.height / 2);
+        driver.mouseMove(loader.item, centre.x, centre.y);
+    }
+
     // The tab's content column: the one ColumnLayout whose children include
     // the notification list.
     function contentColumn() {
@@ -526,19 +547,16 @@ ShellRoot {
                           && first.cornerBottomLeft < Appearance.rounding.normal);
             harness.check(`opening the chip lists both devices, got ${rows.length}`, rows.length === 2);
 
-            // ...and NOTHING is drawn behind them. A row that takes the
-            // group's corners paints its own background, so a plate under it
-            // shows only as an inset ring - which is what shipped, and what a
-            // group of one is entirely made of.
-            const listWidth = harness.rosterList()?.width ?? 0;
-            const insets = rows.map(r => {
-                const left = r.mapToItem(harness.rosterList(), 0, 0).x;
-                return Math.max(left, listWidth - (left + r.width));
-            });
-            console.log(`[PhoneTab] roster row insets ${insets} of width ${listWidth}`);
-            harness.check(`each row is the group's full width - no plate ring around it,`
-                          + ` widest inset ${Math.max(...insets)}`,
-                          listWidth > 0 && insets.every(i => i < 0.5));
+            // ...and NOTHING is PAINTED behind them. A row that takes the
+            // group's corners paints its own background, so the plate under it
+            // is covered except for the inset, where it shows as a ring of
+            // `bgcolor` around every row - which is what shipped. The inset
+            // itself stays: it is the room the hover lift grows into.
+            const plates = rows.map(r => harness.plateOf(r));
+            console.log(`[PhoneTab] roster plates ${plates.map(p => p === null ? "none" : p.color.a)}`);
+            harness.check(`the plate behind a self-painting row paints nothing,`
+                          + ` got ${plates.map(p => p === null ? "no plate" : p.color.a)}`,
+                          plates.length > 0 && plates.every(p => p !== null && p.color.a === 0));
             const laptop = rows.find(r => r.device?.id === harness.laptopId) ?? null;
             harness.rosterSaw = { samples: 0, mid: 0, maxHeight: 0 };
             if (laptop) harness.click(laptop);
@@ -1061,9 +1079,32 @@ ShellRoot {
                           && only.cornerTopRight === Appearance.rounding.normal
                           && only.cornerBottomLeft === Appearance.rounding.normal
                           && only.cornerBottomRight === Appearance.rounding.normal);
-            harness.check(`...and is the group, rather than sitting in a frame, inset ${inset}`,
-                          only !== null && listWidth > 0 && inset < 0.5
-                          && Math.abs(only.width - listWidth) < 0.5);
+            const lonePlate = harness.plateOf(only);
+            harness.check(`...and no plate is painted behind it, got`
+                          + ` ${lonePlate === null ? "no plate" : lonePlate.color.a}`,
+                          lonePlate !== null && lonePlate.color.a === 0);
+            harness.loneRow = only;
+            harness.loneInset = inset;
+            if (only) harness.hover(only);
+        },
+        () => {},
+        () => {
+            // The lift, MEASURED - `interactionMotion.scale` is the number the
+            // transform is actually reading, not the token it was asked for.
+            // A row grows about its own centre, so the width it gains is split
+            // between its two sides and the inset has to cover half of it. The
+            // roster had no inset for one build and the hovered row grew
+            // straight past the panel's edge.
+            const row = harness.loneRow;
+            const scale = row?.interactionMotion?.scale ?? 1;
+            const overhang = row !== null ? row.width * (scale - 1) / 2 : 0;
+            console.log(`[PhoneTab] hovered scale ${scale} over width ${row?.width}`
+                        + ` -> overhang ${overhang.toFixed(2)} against inset ${harness.loneInset}`);
+            harness.check(`hovering a row lifts it, got scale ${scale}`,
+                          scale > 1.001);
+            harness.check(`...and the lift stays inside the group: overhang`
+                          + ` ${overhang.toFixed(2)} within inset ${harness.loneInset}`,
+                          overhang <= harness.loneInset + 0.01);
         },
 
         () => harness.finish()
@@ -1072,6 +1113,9 @@ ShellRoot {
     property var footerButtons: []
     property var footerPill: null
     property var footerLabel: null
+
+    property var loneRow: null
+    property real loneInset: 0
 
     property real listWithCard: 0
     property real cardHeight: 0
