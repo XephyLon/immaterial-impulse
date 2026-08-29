@@ -8,13 +8,13 @@ import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import "../functions/edit_mode.js" as EditMode
+import "../../common/functions/edit_mode.js" as EditMode
 import Quickshell.Io
 import Quickshell
 import Quickshell.Widgets
 import Quickshell.Wayland
-import "../../imi/dock/dock_geometry.js" as DockGeometry
-import "../functions/layout_ops.js" as LayoutOps
+import "dock_geometry.js" as DockGeometry
+import "../../common/functions/layout_ops.js" as LayoutOps
 
 Item {
     id: root

@@ -7,7 +7,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
-import "../../imi/dock/dock_geometry.js" as DockGeometry
+import "dock_geometry.js" as DockGeometry
 
 DockButton {
     id: root
