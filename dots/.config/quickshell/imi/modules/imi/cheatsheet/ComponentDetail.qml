@@ -24,6 +24,12 @@ Item {
     // and rebuilds. Reset when the selection changes, or a text knob typed for
     // one widget would follow you to the next.
     property var overrides: ({})
+    // The switch below expresses INTENT and this holds the state, rather than
+    // the switch answering its own click with `checked = !checked` - which
+    // destroys the binding every settings page puts on that property. 159 call
+    // sites shipped that once; lint_config_switch_intent.py is why, and it
+    // caught this one.
+    property bool showBounds: false
     onEntryChanged: {
         root.overrides = ({});
         surfaces.currentIndex = 2;
@@ -99,7 +105,7 @@ Item {
             // half the alignment bugs in this repo, and it is invisible until
             // something outlines it.
             Rectangle {
-                visible: stage.control !== null && bounds.checked
+                visible: stage.control !== null && root.showBounds
                 anchors.centerIn: stage
                 width: stage.control?.implicitWidth ?? 0
                 height: stage.control?.implicitHeight ?? 0
@@ -123,10 +129,9 @@ Item {
             }
             Item { Layout.fillWidth: true }
             ConfigSwitch {
-                id: bounds
                 text: Translation.tr("Implicit size")
-                checked: false
-                onToggleRequested: bounds.checked = !bounds.checked
+                checked: root.showBounds
+                onToggleRequested: root.showBounds = !root.showBounds
             }
         }
 
