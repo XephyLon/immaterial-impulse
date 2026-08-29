@@ -24,7 +24,7 @@ CATALOGUE = ROOT / "modules" / "common" / "WallpaperTransitions.qml"
 SHADER_DIR = ROOT / "modules" / "imi" / "background" / "shaders"
 BACKGROUND = ROOT / "modules" / "imi" / "background" / "Background.qml"
 SETTINGS_PAGE = ROOT / "modules" / "imi" / "settings" / "pages" / "BackgroundConfig.qml"
-SUBMENU = ROOT / "modules" / "common" / "widgets" / "WallpaperSubmenu.qml"
+SUBMENU = ROOT / "modules" / "imi" / "desktopMenu" / "WallpaperSubmenu.qml"
 
 ENTRY = re.compile(r'\{\s*value:\s*"([^"]*)"[^}]*\}')
 
