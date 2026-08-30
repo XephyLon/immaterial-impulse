@@ -28,7 +28,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTENT = ROOT / "modules" / "imi" / "sidebarLeft" / "SidebarLeftContent.qml"
-BAR_BUTTON = ROOT / "modules" / "imi" / "bar" / "LeftSidebarButton.qml"
 GLOBAL_STATES = ROOT / "GlobalStates.qml"
 
 # Every tab, in order: the gate it is drawn behind, the label the tab bar
@@ -142,21 +141,10 @@ def test_a_tab_request_is_resolved_against_the_ids_and_then_cleared():
     )
 
 
-def test_the_bar_button_is_hidden_only_when_every_tab_is_off():
-    """A user who has switched everything off but one tab must still have a
-    way into the sidebar from the bar. The button already omits
-    `mediaEnabled` - a known hole, kept rather than widened here - so this
-    pins the tabs the button does claim to cover, Phone included."""
-    text = BAR_BUTTON.read_text()
-    visible = re.search(r"^\s*visible: (.+)$", text, re.M)
-    assert visible, "the bar button declares no visibility"
-    terms = {term.strip() for term in visible.group(1).split("||")}
-    for flag in ("aiChatEnabled", "translatorEnabled", "animeEnabled", "phoneEnabled"):
-        assert flag in terms, f"the bar button's visibility does not include {flag}"
-        assert re.search(rf"^\s*property bool {flag}:", text, re.M), (
-            f"{flag} is not declared on the bar button"
-        )
-
+# There is no bar button to pin any more: modules/imi/bar/LeftSidebarButton.qml
+# had no consumer anywhere in the shell and was deleted. The sidebar opens
+# from the screen corners and the shortcut; a bar button that returns gets
+# its visibility contract back here.
 
 if __name__ == "__main__":
     import sys
