@@ -33,6 +33,9 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **Following a link in a phone notification closes the phone's sidebar, not
+  the other one.** The card closed the right sidebar whichever panel it was
+  in; which sidebar a card sits in is now the notification backend's to say.
 - **A contact's expand arrow stays where it belongs.** Opening the first
   contact in the list used to fling its arrow into the middle of the
   person's name and leave it there. Anything in the shell whose text

@@ -1,3 +1,4 @@
+import qs
 import qs.services
 import QtQuick
 
@@ -57,6 +58,14 @@ QtObject {
     }
 
     function reply(notif, text): void {
+    }
+    // A link in the body was followed. The shell's own cards live in the
+    // right sidebar, which closes so the browser is not under it; the card
+    // used to write that GlobalStates key itself, which made it a card no
+    // other panel could show.
+    function openLink(link): void {
+        Qt.openUrlExternally(link);
+        GlobalStates.sidebarRightOpen = false;
     }
 
     // ---- the list's end of the same seam -------------------------------
