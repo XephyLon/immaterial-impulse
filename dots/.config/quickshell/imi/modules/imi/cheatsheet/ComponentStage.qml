@@ -278,8 +278,12 @@ Item {
             // displace.
             if (stage.entry.glyph) {
                 const existing = builder.control.contentItem ?? null;
+                // A RippleButton's default content is a StyledText of its
+                // `buttonText`; with none, that is 0 wide and a font tall, so
+                // "measures to nothing" missed it and DockButton drew blank.
                 const empty = !existing
-                    || (existing.implicitWidth === 0 && existing.implicitHeight === 0);
+                    || (existing.implicitWidth === 0 && existing.implicitHeight === 0)
+                    || (existing.text !== undefined && existing.text === "");
                 if (empty)
                     builder.control.contentItem = symbolComponent.createObject(
                         builder.control, { text: stage.entry.glyph });
