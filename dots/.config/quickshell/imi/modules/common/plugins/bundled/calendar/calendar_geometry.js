@@ -112,24 +112,77 @@ function monthSurfaceRect(span, width, height, scale, labelWidth, cardRadius) {
     return null;
 }
 
-// The month name in long form ("August 2026"), which lives at both wide spans
-// and travels between them: out of the pill and up to the card's own inset,
-// growing a step and changing ink. It has no home at 1x1, where the banner
-// says the month in short form as its own element - swapping one label's text
-// mid-morph is the content snap this architecture exists to kill.
-function monthLabelRect(span, width, height, scale) {
-    if (span === "1x1") return null;
-    // The 3x2 says the month in the hero column (heroRect "month"), not as a
-    // title over the grid.
-    if (span === "3x2") return null;
+// THE month text - one element, a home at every span (the maintainer's
+// rule: an element is never hidden and replaced by another with the same
+// purpose; it morphs to fit the layout). Its form follows the span - "AUG"
+// in the 1x1 band, "August 2026" in the pill and as the 2x2 title, "AUGUST"
+// atop the 3x2 hero column - which is a text rewrite at the span commit
+// inside ONE travelling element, not two elements crossfading. `form` says
+// which spelling the widget renders.
+function monthTextRect(span, width, height, scale) {
+    if (span === "1x1") return {
+        // The band centres the month-weekday pair; the widget computes the
+        // pair's x from its rulers, so this slot is the band's line only.
+        x: 0, y: 0, width: width, height: BANNER_H * scale,
+        size: MONTH_FONT_PILL * scale, form: "short"
+    };
     if (span === "2x1") return {
         x: (CARD_INSET + PILL_PADDING) * scale, y: CARD_INSET * scale,
-        height: PILL_H * scale, size: MONTH_FONT_PILL * scale
+        height: PILL_H * scale, size: MONTH_FONT_PILL * scale, form: "long"
+    };
+    if (span === "3x2") return {
+        x: HERO_LEFT * scale, y: HERO_MONTH_TOP * scale,
+        width: _surface3x2Left(width, scale) - (HERO_LEFT + CARD_INSET) * scale,
+        height: HERO_MONTH_H * scale, size: HERO_MONTH_FONT * scale, form: "hero"
     };
     return {
         x: CARD_INSET * scale, y: CARD_INSET * scale,
-        height: HEADER_H * scale, size: MONTH_FONT_TITLE * scale
+        height: HEADER_H * scale, size: MONTH_FONT_TITLE * scale, form: "long"
     };
+}
+
+// The weekday name ("SUN" in the band, "Sunday" under the hero month). Two
+// homes; everywhere else it fades where it stands.
+function weekdayTextRect(span, width, height, scale) {
+    if (span === "1x1") return {
+        x: 0, y: 0, width: width, height: BANNER_H * scale,
+        size: MONTH_FONT_PILL * scale, form: "short"
+    };
+    if (span === "3x2") return {
+        x: HERO_LEFT * scale, y: HERO_WEEKDAY_TOP * scale,
+        width: _surface3x2Left(width, scale) - (HERO_LEFT + CARD_INSET) * scale,
+        height: HERO_WEEKDAY_H * scale, size: HERO_WEEKDAY_FONT * scale, form: "hero"
+    };
+    return null;
+}
+
+// TODAY, written large - one element for the 1x1's whole-card date and the
+// 3x2's hero date. At the two spans that have no hero, its home is today's
+// own GRID cell, so the fade out of (or into) the hero happens exactly over
+// the cell that carries today there: leaving 1x1 for 2x2 still reads as the
+// big date shrinking into its circle, but the element doing it is the same
+// one at every span - never a twin.
+function heroDayRect(span, width, height, scale, weekRow, todayIndex) {
+    if (span === "1x1") return {
+        x: 0, y: BANNER_H * scale,
+        width: width, height: height - BANNER_H * scale,
+        size: HERO_FONT * scale, present: true
+    };
+    if (span === "3x2") return {
+        x: HERO_LEFT * scale, y: HERO_DAY_TOP * scale,
+        width: _surface3x2Left(width, scale) - (HERO_LEFT + CARD_INSET) * scale,
+        height: height - (HERO_DAY_TOP + CARD_INSET) * scale,
+        size: HERO_DAY_FONT * scale, present: true
+    };
+    var cell = dayCellRect(todayIndex, span, width, height, scale, weekRow, todayIndex);
+    if (cell === null) {
+        // Today is not on the card at all (a shifted month): fade dead
+        // centre rather than at a cell that does not exist.
+        return { x: width / 2, y: height / 2, width: 0, height: 0,
+                 size: DAY_FONT * scale, present: false };
+    }
+    cell.present = false;
+    return cell;
 }
 
 // The 2x2 month steppers. index 0 is the previous month, 1 the next, and they
@@ -233,9 +286,12 @@ function _gridTop(width, height, scale) {
 // Forty-two of them, one per cell of the month matrix, and the whole morph is
 // which of those have a home:
 //
-//   2x2  all of them, in six rows
-//   2x1  the seven of `weekRow`, which travel up into one row
-//   1x1  `todayIndex` alone, which grows into the hero date and loses its pill
+//   2x2 / 3x2  all of them, in six rows
+//   2x1        the seven of `weekRow`, which travel up into one row
+//   1x1        none: the card is the hero date (heroDayRect), which is one
+//              element across 1x1 and 3x2 and fades over today's cell at the
+//              spans between - a cell that also carried the hero would be a
+//              second element with the same purpose
 //
 // `pill` is the highlight's box rather than a flag, so today's marker shrinks
 // to nothing on the way to the hero rather than blinking off: a fill of zero
@@ -245,14 +301,7 @@ function dayCellRect(index, span, width, height, scale, weekRow, todayIndex) {
     var row = Math.floor(index / COLUMNS);
     var column = index % COLUMNS;
 
-    if (span === "1x1") {
-        if (index !== todayIndex) return null;
-        return {
-            x: 0, y: BANNER_H * scale,
-            width: width, height: height - BANNER_H * scale,
-            size: HERO_FONT * scale, pill: 0
-        };
-    }
+    if (span === "1x1") return null;
 
     var columnW = columnWidth(span, width, scale);
     var x = columnLeft(span, scale, width) + column * columnW + (columnW - DAY * scale) / 2;

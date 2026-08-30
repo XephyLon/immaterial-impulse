@@ -197,6 +197,26 @@ Item {
         font.pixelSize: Math.round(Geometry.MONTH_FONT_PILL * root.uiScale)
         font.weight: Font.Bold
     }
+    // The band pair's centring, off the settled short forms - same reasoning
+    // as the pill ruler: the pair must centre at the band's OWN metrics, not
+    // at whatever the travelling elements currently measure.
+    StyledText {
+        id: monthShortRuler
+        visible: false
+        text: root.today.toLocaleDateString(Qt.locale(), "MMM").toUpperCase()
+        font.pixelSize: Math.round(Geometry.MONTH_FONT_PILL * root.uiScale)
+        font.weight: Font.Bold
+    }
+    StyledText {
+        id: weekdayShortRuler
+        visible: false
+        text: root.today.toLocaleDateString(Qt.locale(), "ddd").toUpperCase()
+        font.pixelSize: Math.round(Geometry.MONTH_FONT_PILL * root.uiScale)
+        font.weight: Font.Bold
+    }
+    readonly property real bandPairGap: Appearance.spacing.space50
+    readonly property real bandPairX: (root.snapWidth1
+        - (monthShortRuler.paintedWidth + root.bandPairGap + weekdayShortRuler.paintedWidth)) / 2
 
     // The surface every other desktop widget already composes. It owns the
     // tint pair, the rounding (this widget's own `verylarge` was the token the
@@ -262,58 +282,40 @@ Item {
             Behavior on opacity { Expressive.SpanFade {} }
             visible: opacity > 0
 
-            // The band's own label, which says the month in short form beside
-            // the weekday. It is not the long month name travelling in from
-            // 2x1 - one element cannot swap its text mid-morph without a
-            // content snap - so it is its own pair, riding the surface.
-            Row {
-                anchors.centerIn: parent
-                spacing: Appearance.spacing.space50
-                opacity: root.sizeMode === "1x1" ? 1 : 0
-                Behavior on opacity { Expressive.SpanFade {} }
-                visible: opacity > 0
-
-                StyledText {
-                    text: root.today.toLocaleDateString(Qt.locale(), "MMM").toUpperCase()
-                    font.pixelSize: Appearance.font.pixelSize.normal
-                    font.weight: Font.Bold
-                    color: Appearance.colors.colOnPrimary
-                }
-                StyledText {
-                    text: root.today.toLocaleDateString(Qt.locale(), "ddd").toUpperCase()
-                    font.pixelSize: Appearance.font.pixelSize.normal
-                    font.weight: Font.Bold
-                    color: Appearance.colors.colOnPrimary
-                    opacity: 0.7
-                }
-            }
         }
 
-        // ---- the long month name, out of the pill and up to the title ----
+        // ---- THE month text: one element, a home at every span ------------
+        //
+        // The maintainer's rule: an element is never hidden and replaced by
+        // another with the same purpose - it morphs to fit the layout. So
+        // the band's short form, the pill label, the 2x2 title and the hero
+        // column's small caps are ONE StyledText whose position, size and
+        // ink travel, and whose SPELLING follows the span (a rewrite at the
+        // commit, inside one moving element - not two elements crossfading).
         StyledText {
-            id: monthLabel
+            id: monthText
             objectName: "calendarMonthLabel"
-            readonly property bool present: root.sizeMode === "2x1" || root.sizeMode === "2x2"
-            readonly property string homeSpan: monthLabel.present ? root.sizeMode : "2x2"
-            readonly property var slot: Geometry.monthLabelRect(
-                monthLabel.homeSpan,
-                root.spanWidthOf(monthLabel.homeSpan),
-                root.spanHeightOf(monthLabel.homeSpan),
-                root.uiScale)
+            readonly property var slot: Geometry.monthTextRect(
+                root.sizeMode, root.spanW, root.spanH, root.uiScale)
 
-            x: slot.x
+            x: slot.form === "short" ? root.bandPairX : slot.x
             y: slot.y
             height: slot.height
             Behavior on x { Expressive.SpanTravel {} }
             Behavior on y { Expressive.SpanTravel {} }
             Behavior on height { Expressive.SpanTravel {} }
+            verticalAlignment: Text.AlignVCenter
 
-            text: root.monthLongText
-            font.pixelSize: Math.round(monthLabel.slot.size)
+            text: monthText.slot.form === "short"
+                ? root.today.toLocaleDateString(Qt.locale(), "MMM").toUpperCase()
+                : monthText.slot.form === "hero"
+                    ? root.viewingDate.toLocaleDateString(Qt.locale(), "MMMM").toUpperCase()
+                    : root.monthLongText
+            font.pixelSize: Math.round(monthText.slot.size)
             Behavior on font.pixelSize { Expressive.SpanTravel {} }
             font.weight: root.sizeMode === "2x2" ? Font.Medium : Font.Bold
             Behavior on font.weight { Expressive.SpanTravel {} }
-            color: root.sizeMode === "2x1"
+            color: root.sizeMode === "2x1" || root.sizeMode === "1x1"
                 ? Appearance.colors.colOnPrimary
                 : Appearance.colors.colOnPrimaryContainer
             Behavior on color {
@@ -323,7 +325,86 @@ Item {
                     easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
                 }
             }
-            opacity: monthLabel.present ? 1 : 0
+            opacity: monthText.slot.form === "hero" ? 0.6 : 1
+            Behavior on opacity { Expressive.SpanFade {} }
+        }
+
+        // ---- the weekday name: the band's "SUN", the hero's "Sunday" ------
+        StyledText {
+            id: weekdayText
+            readonly property bool present: root.sizeMode === "1x1" || root.sizeMode === "3x2"
+            // Fades where it last stood: a fixed fallback home would march
+            // it across the card before disappearing.
+            property string lastHome: "1x1"
+            onPresentChanged: if (present) weekdayText.lastHome = root.sizeMode
+            Component.onCompleted: if (present) weekdayText.lastHome = root.sizeMode
+            readonly property string homeSpan: weekdayText.present ? root.sizeMode : weekdayText.lastHome
+            readonly property var slot: Geometry.weekdayTextRect(
+                weekdayText.homeSpan,
+                root.spanWidthOf(weekdayText.homeSpan),
+                root.spanHeightOf(weekdayText.homeSpan),
+                root.uiScale)
+
+            x: slot.form === "short"
+                ? root.bandPairX + monthShortRuler.paintedWidth + root.bandPairGap
+                : slot.x
+            y: slot.y
+            height: slot.height
+            Behavior on x { Expressive.SpanTravel {} }
+            Behavior on y { Expressive.SpanTravel {} }
+            Behavior on height { Expressive.SpanTravel {} }
+            verticalAlignment: Text.AlignVCenter
+
+            text: weekdayText.slot.form === "short"
+                ? root.today.toLocaleDateString(Qt.locale(), "ddd").toUpperCase()
+                : root.today.toLocaleDateString(Qt.locale(), "dddd")
+            font.pixelSize: Math.round(weekdayText.slot.size)
+            Behavior on font.pixelSize { Expressive.SpanTravel {} }
+            font.weight: weekdayText.slot.form === "short" ? Font.Bold : Font.Medium
+            color: root.sizeMode === "1x1"
+                ? Appearance.colors.colOnPrimary
+                : Appearance.colors.colOnPrimaryContainer
+            Behavior on color {
+                ColorAnimation {
+                    duration: Appearance.animation.elementMove.duration
+                    easing.type: Appearance.animation.elementMove.type
+                    easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                }
+            }
+            opacity: weekdayText.present ? (weekdayText.slot.form === "short" ? 0.7 : 1) : 0
+            Behavior on opacity { Expressive.SpanFade {} }
+            visible: opacity > 0
+        }
+
+        // ---- TODAY, written large: one hero from 1x1 to 3x2 ---------------
+        //
+        // Its fade-home is today's own grid cell (heroDayRect), so leaving
+        // 1x1 for 2x2 still reads as the big date shrinking into its circle
+        // - and the element doing it is the same one the 3x2 shows, never a
+        // twin.
+        StyledText {
+            id: heroDay
+            readonly property var slot: Geometry.heroDayRect(
+                root.sizeMode, root.spanW, root.spanH, root.uiScale,
+                root.weekRow, root.todayIndex)
+
+            x: slot.x
+            y: slot.y
+            width: slot.width
+            height: slot.height
+            Behavior on x { Expressive.SpanTravel {} }
+            Behavior on y { Expressive.SpanTravel {} }
+            Behavior on width { Expressive.SpanTravel {} }
+            Behavior on height { Expressive.SpanTravel {} }
+
+            text: root.today.getDate()
+            font.pixelSize: Math.round(heroDay.slot.size)
+            Behavior on font.pixelSize { Expressive.SpanTravel {} }
+            font.weight: Font.Medium
+            color: Appearance.colors.colOnPrimaryContainer
+            horizontalAlignment: root.sizeMode === "3x2" ? Text.AlignLeft : Text.AlignHCenter
+            verticalAlignment: root.sizeMode === "3x2" ? Text.AlignTop : Text.AlignVCenter
+            opacity: heroDay.slot.present ? 1 : 0
             Behavior on opacity { Expressive.SpanFade {} }
             visible: opacity > 0
         }
@@ -517,31 +598,5 @@ Item {
             visible: opacity > 0
         }
 
-        Repeater {
-            model: ["month", "weekday", "day"]
-            delegate: StyledText {
-                id: heroText
-                required property string modelData
-                readonly property var slot: Geometry.heroRect(heroText.modelData,
-                    "3x2", root.snapWidth3, root.tallHeight, root.uiScale)
-                x: slot.x
-                y: slot.y
-                width: slot.width
-                height: slot.height
-                verticalAlignment: heroText.modelData === "day" ? Text.AlignTop : Text.AlignVCenter
-                text: heroText.modelData === "month"
-                    ? root.viewingDate.toLocaleDateString(Qt.locale(), "MMMM").toUpperCase()
-                    : heroText.modelData === "weekday"
-                        ? root.today.toLocaleDateString(Qt.locale(), "dddd")
-                        : root.today.getDate()
-                font.pixelSize: Math.round(heroText.slot.size)
-                font.weight: heroText.modelData === "month" ? Font.Bold : Font.Medium
-                color: Appearance.colors.colOnPrimaryContainer
-                opacity: root.sizeMode === "3x2"
-                    ? (heroText.modelData === "month" ? 0.6 : 1) : 0
-                Behavior on opacity { Expressive.SpanFade {} }
-                visible: opacity > 0
-            }
-        }
     }
 }

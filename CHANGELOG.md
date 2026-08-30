@@ -21,7 +21,11 @@ own repo; the installer pins which revision it builds.
   An icon in its Material shape, the month in small caps, the weekday and
   the big date on the left; the whole month on its own surface to the
   right, with today circled - no steppers, like the two small sizes this
-  span joins. The calendar also hands its size to the shell with this:
+  span joins. Every purpose is one element across all four sizes - the
+  month text rewrites its spelling (AUG, August 2026, AUGUST) while it
+  travels rather than being replaced by a twin, and the big date is the
+  same element at 1x1 and 3x2, fading out over today's own circled cell
+  in between. The calendar also hands its size to the shell with this:
   the two corner handles are gone, and the resize grip, the Settings size
   row and the edit-menu stepper - the same three faces every resizable
   widget has - walk its four sizes. A size chosen with the old handles
