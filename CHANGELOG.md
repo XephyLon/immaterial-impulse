@@ -53,6 +53,12 @@ own repo; the installer pins which revision it builds.
   by hand. Every tile is the real widget, not a picture of one.
 
 ### Changed
+- **The privacy card speaks the shell's design language.** A shield in
+  its error-toned Material shape heads the card; every section leads
+  with its glyph in a shape of its own; the app rows and notes sit on
+  tonal plates instead of floating on the card; and the controls are
+  tonal buttons - the destructive pair on the error container - rather
+  than bare glyphs.
 - **The ambient RGB loop samples the screen without spawning anything.**
   Each sample was a `grim` process writing a downscaled JPEG to the cache
   directory. The colour now comes off the compositor's own frame through

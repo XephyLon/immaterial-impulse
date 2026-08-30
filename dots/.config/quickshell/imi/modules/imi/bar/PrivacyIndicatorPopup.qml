@@ -38,8 +38,72 @@ StyledPopup {
     readonly property int fadeDuration: Appearance.animation.elementMoveFast.duration
     readonly property list<real> fadeCurve: Appearance.animationCurves.expressiveEffects
 
-    // The indent that lines a row's text up under its section header's label.
-    readonly property real rowIndent: Appearance.font.pixelSize.large + Appearance.spacing.space50
+    // The indent that lines a section's plate up under its header's label:
+    // the shaped icon's width plus the header row's gap.
+    readonly property real rowIndent: 32 + Appearance.spacing.space100
+
+    // A section header: the glyph in its Material shape - the same treatment
+    // the clock and weather cards carry - with the label beside it. The
+    // shape varies per section, which is the design language's way of making
+    // a list of headers scannable; the error-toned pair is the title's.
+    component SectionHeader: RowLayout {
+        id: header
+        required property string icon
+        required property string label
+        property var shape: MaterialShape.Shape.Clover4Leaf
+        property bool errorTone: false
+        Layout.fillWidth: true
+        spacing: Appearance.spacing.space100
+        MaterialShapeWrappedMaterialSymbol {
+            wrappedShape: header.shape
+            text: header.icon
+            iconSize: Appearance.font.pixelSize.normal
+            implicitSize: 32
+            color: header.errorTone
+                ? Appearance.colors.colErrorContainer
+                : Appearance.colors.colPrimaryContainer
+            colSymbol: header.errorTone
+                ? Appearance.colors.colError
+                : Appearance.colors.colPrimary
+        }
+        StyledText {
+            Layout.fillWidth: true
+            text: header.label
+            font.weight: Font.DemiBold
+            color: Appearance.colors.colOnLayer0
+        }
+    }
+
+    // The tonal plate a section's rows sit on - the grouped-surface reading
+    // every settings page and the clock popup's task cards already have,
+    // instead of bare text floating on the card.
+    component SectionPlate: Rectangle {
+        id: plate
+        default property alias content: plateColumn.data
+        Layout.fillWidth: true
+        Layout.leftMargin: root.rowIndent
+        implicitHeight: plateColumn.implicitHeight + Appearance.spacing.space100 * 2
+        radius: Appearance.rounding.normal
+        color: Appearance.colors.colSurfaceContainerHigh
+        Behavior on implicitHeight {
+            NumberAnimation {
+                duration: root.revealDuration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: root.revealCurve
+            }
+        }
+        ColumnLayout {
+            id: plateColumn
+            anchors {
+                left: parent.left
+                right: parent.right
+                verticalCenter: parent.verticalCenter
+                leftMargin: Appearance.spacing.space150
+                rightMargin: Appearance.spacing.space100
+            }
+            spacing: Appearance.spacing.space25
+        }
+    }
 
     // A control that grows in from nothing along the row. Width carries the
     // layout (so the label beside it slides rather than jumps), opacity and
@@ -112,9 +176,23 @@ StyledPopup {
     component ActionButton: RippleButton {
         id: actionButton
         required property string symbol
-        property color symbolColor: Appearance.colors.colOnSurfaceVariant
+        property bool errorTone: false
+        property color symbolColor: actionButton.errorTone
+            ? Appearance.colors.colOnErrorContainer
+            : Appearance.colors.colOnSecondaryContainer
         anchors.fill: parent
         buttonRadius: Appearance.rounding.full
+        // Tonal, not bare glyphs on the plate: a control should look like
+        // one. The destructive pair sits on the error container.
+        colBackground: actionButton.errorTone
+            ? Appearance.colors.colErrorContainer
+            : Appearance.colors.colSecondaryContainer
+        colBackgroundHover: actionButton.errorTone
+            ? Appearance.colors.colErrorContainerHover
+            : Appearance.colors.colSecondaryContainerHover
+        colRipple: actionButton.errorTone
+            ? Appearance.colors.colErrorContainerActive
+            : Appearance.colors.colSecondaryContainerActive
         MaterialSymbol {
             anchors.centerIn: parent
             text: actionButton.symbol
@@ -131,7 +209,6 @@ StyledPopup {
         property var stream: null      // a mic stream, when there is one to act on
         property string note: ""       // what to say when nothing can act
         Layout.fillWidth: true
-        Layout.leftMargin: root.rowIndent
         spacing: Appearance.spacing.space50
 
         StyledText {
@@ -170,9 +247,6 @@ StyledPopup {
             on: root.expanded && appRow.stream !== null
             ActionButton {
                 symbol: appRow.stream?.muted ? "mic_off" : "mic"
-                symbolColor: appRow.stream?.muted
-                    ? Appearance.colors.colPrimary
-                    : Appearance.colors.colOnSurfaceVariant
                 toggled: appRow.stream?.muted ?? false
                 releaseAction: () => CaptureControl.toggleStreamMuted(appRow.stream)
             }
@@ -183,7 +257,7 @@ StyledPopup {
             on: root.expanded && appRow.stream !== null && CaptureControl.allowForceStop
             ActionButton {
                 symbol: "block"
-                symbolColor: Appearance.colors.colError
+                errorTone: true
                 releaseAction: () => CaptureControl.forceStopStream(appRow.stream)
             }
         }
@@ -196,43 +270,36 @@ StyledPopup {
         id: section
         required property string icon
         required property string label
+        property var shape: MaterialShape.Shape.Clover4Leaf
         property var entries: []
         property var streams: []
         property string rowNote: ""
         Layout.fillWidth: true
-        spacing: Appearance.spacing.space25
+        spacing: Appearance.spacing.space50
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Appearance.spacing.space50
-            MaterialSymbol {
-                text: section.icon
-                iconSize: Appearance.font.pixelSize.large
-                color: Appearance.colors.colOnSurfaceVariant
-            }
-            StyledText {
-                Layout.fillWidth: true
-                text: section.label
-                font.weight: Font.Medium
-                color: Appearance.colors.colOnSurfaceVariant
-            }
+        SectionHeader {
+            icon: section.icon
+            label: section.label
+            shape: section.shape
         }
 
-        Repeater {
-            model: section.streams.length > 0 ? section.streams : section.entries
-            delegate: AppRow {
-                required property var modelData
-                // Streams arrive as objects, plain listings as strings.
-                name: (modelData && modelData.name !== undefined) ? modelData.name : String(modelData)
-                stream: (modelData && modelData.name !== undefined) ? modelData : null
-                note: section.rowNote
+        SectionPlate {
+            Repeater {
+                model: section.streams.length > 0 ? section.streams : section.entries
+                delegate: AppRow {
+                    required property var modelData
+                    // Streams arrive as objects, plain listings as strings.
+                    name: (modelData && modelData.name !== undefined) ? modelData.name : String(modelData)
+                    stream: (modelData && modelData.name !== undefined) ? modelData : null
+                    note: section.rowNote
+                }
             }
         }
     }
 
     Item {
         id: contentRoot
-        implicitWidth: root.expanded ? 340 : 260
+        implicitWidth: root.expanded ? 360 : 280
         implicitHeight: column.implicitHeight
 
         // The card follows this size instead of easing toward it (see
@@ -255,12 +322,20 @@ StyledPopup {
 
             RowLayout {
                 Layout.fillWidth: true
-                Layout.leftMargin: Appearance.spacing.space50
+                spacing: Appearance.spacing.space100
+                MaterialShapeWrappedMaterialSymbol {
+                    wrappedShape: MaterialShape.Shape.Cookie9Sided
+                    text: "privacy_tip"
+                    iconSize: Appearance.font.pixelSize.normal
+                    implicitSize: 32
+                    color: Appearance.colors.colErrorContainer
+                    colSymbol: Appearance.colors.colError
+                }
                 StyledText {
                     Layout.fillWidth: true
                     text: Translation.tr("Privacy")
-                    font.pixelSize: Appearance.font.pixelSize.normal
-                    font.weight: Font.Medium
+                    font.pixelSize: Appearance.font.pixelSize.large
+                    font.weight: Font.DemiBold
                     color: Appearance.colors.colError
                 }
                 StyledText {
@@ -285,6 +360,7 @@ StyledPopup {
                 visible: MediaCapture.micActive
                 icon: "mic"
                 label: Translation.tr("Microphone")
+                shape: MaterialShape.Shape.Cookie12Sided
                 streams: MediaCapture.micStreams
                 entries: MediaCapture.micApps.length > 0
                     ? MediaCapture.micApps
@@ -295,6 +371,7 @@ StyledPopup {
                 visible: MediaCapture.cameraActive
                 icon: "videocam"
                 label: Translation.tr("Camera")
+                shape: MaterialShape.Shape.Clover4Leaf
                 entries: MediaCapture.cameraApps.length > 0
                     ? MediaCapture.cameraApps
                     : [Translation.tr("In use")]
@@ -309,6 +386,7 @@ StyledPopup {
                 visible: MediaCapture.screencastActive
                 icon: "screen_share"
                 label: Translation.tr("Screen")
+                shape: MaterialShape.Shape.Slanted
                 entries: [Translation.tr("Shared or recorded")]
                 rowNote: Translation.tr("stop it from that app")
             }
@@ -319,27 +397,17 @@ StyledPopup {
                 Layout.fillWidth: true
                 spacing: Appearance.spacing.space25
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space50
-                    MaterialSymbol {
-                        text: ScreenRecord.recording ? "screen_record" : "replay"
-                        iconSize: Appearance.font.pixelSize.large
-                        color: Appearance.colors.colOnSurfaceVariant
-                    }
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: ScreenRecord.recording
-                            ? Translation.tr("Recording")
-                            : Translation.tr("Instant replay")
-                        font.weight: Font.Medium
-                        color: Appearance.colors.colOnSurfaceVariant
-                    }
+                SectionHeader {
+                    icon: ScreenRecord.recording ? "screen_record" : "replay"
+                    label: ScreenRecord.recording
+                        ? Translation.tr("Recording")
+                        : Translation.tr("Instant replay")
+                    shape: MaterialShape.Shape.Sunny
                 }
 
+                SectionPlate {
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.leftMargin: root.rowIndent
                     spacing: Appearance.spacing.space50
 
                     StyledText {
@@ -364,7 +432,7 @@ StyledPopup {
                         on: root.expanded && ScreenRecord.recording
                         ActionButton {
                             symbol: "stop"
-                            symbolColor: Appearance.colors.colError
+                            errorTone: true
                             releaseAction: () => ScreenRecord.stopRecord()
                         }
                     }
@@ -382,36 +450,24 @@ StyledPopup {
                         on: root.expanded && ScreenRecord.replaying
                         ActionButton {
                             symbol: "stop"
-                            symbolColor: Appearance.colors.colError
+                            errorTone: true
                             releaseAction: () => ScreenRecord.toggleReplay()
                         }
                     }
+                }
                 }
             }
 
             Reveal {
                 shown: root.expanded
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space50
-                    MaterialSymbol {
-                        text: "key"
-                        iconSize: Appearance.font.pixelSize.large
-                        color: Appearance.colors.colOnSurfaceVariant
-                    }
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: Translation.tr("Granted permissions")
-                        font.weight: Font.Medium
-                        color: Appearance.colors.colOnSurfaceVariant
-                    }
+                SectionHeader {
+                    icon: "key"
+                    label: Translation.tr("Granted permissions")
+                    shape: MaterialShape.Shape.Gem
                 }
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.space25
-
+                SectionPlate {
                     Repeater {
                         model: CaptureControl.permissions
                         delegate: ColumnLayout {
@@ -427,7 +483,6 @@ StyledPopup {
                                     id: permissionAppRow
                                     required property var modelData
                                     Layout.fillWidth: true
-                                    Layout.leftMargin: root.rowIndent
                                     spacing: Appearance.spacing.space50
 
                                     StyledText {
@@ -443,7 +498,7 @@ StyledPopup {
                                         on: root.expanded
                                         ActionButton {
                                             symbol: "block"
-                                            symbolColor: Appearance.colors.colError
+                                            errorTone: true
                                             releaseAction: () => CaptureControl.revokePermission(
                                                 permissionEntry.modelData.id, permissionAppRow.modelData.app)
                                         }
@@ -460,7 +515,6 @@ StyledPopup {
                         // a failure, and not a claim that nothing is recording.
                         visible: CaptureControl.permissions.every(p => p.apps.length === 0)
                         Layout.fillWidth: true
-                        Layout.leftMargin: root.rowIndent
                         text: Translation.tr("Nothing granted through the desktop portal. Apps that open the device directly do not appear here.")
                         wrapMode: Text.Wrap
                         color: Appearance.colors.colOnSurfaceVariant
