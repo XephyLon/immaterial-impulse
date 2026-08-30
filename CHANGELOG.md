@@ -29,7 +29,9 @@ own repo; the installer pins which revision it builds.
   taking the press (the popup still opens on release, a row still chooses).
   The lift is on the button's parts rather than the button: a first cut
   scaled the whole control, and the list opened where the shrunken button
-  was and stayed there.
+  was and stayed there. The list also arrives and leaves now - it fades in
+  while it unfolds down from the button and folds back faster - where its
+  old entrance animated an opacity from 1 to 1.
 - **Option rows draw their icon plain.** Twenty-seven rows across Capture,
   Phone & Devices and the phone pages put their icon in a tile while the
   other hundred and forty did not, and a row wearing one read as a second

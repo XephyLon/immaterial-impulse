@@ -213,6 +213,7 @@ ComboBox {
     }
 
     popup: Popup {
+        id: popup
         y: root.height + 4
         width: root.width
         clip: true
@@ -231,24 +232,47 @@ ComboBox {
             }
         }
 
+        // One scalar, 0 -> 1, and everything else bound to it - see
+        // StyledComboBox for why the previous enter, an animation from 1 to
+        // 1, was no enter at all.
+        property real reveal: 1
+        opacity: popup.reveal
+
         enter: Transition {
-            PropertyAnimation {
-                properties: "opacity"; to: 1
-                duration: Appearance.animation.elementMoveFast.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
-            }
-        }
-        exit: Transition {
-            PropertyAnimation {
-                properties: "opacity"; to: 0
-                duration: Appearance.animation.elementMoveFast.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+            NumberAnimation {
+                target: popup
+                property: "reveal"
+                from: 0
+                to: 1
+                duration: Appearance.animation.elementMoveEnter.duration
+                easing.type: Appearance.animation.elementMoveEnter.type
+                easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
             }
         }
 
+        exit: Transition {
+            NumberAnimation {
+                target: popup
+                property: "reveal"
+                from: 1
+                to: 0
+                duration: Appearance.animation.elementMoveExit.duration
+                easing.type: Appearance.animation.elementMoveExit.type
+                easing.bezierCurve: Appearance.animation.elementMoveExit.bezierCurve
+            }
+        }
+
+        component Unfold: Scale {
+            required property Item part
+            origin.x: part.width / 2
+            origin.y: 0
+            xScale: 0.96 + 0.04 * popup.reveal
+            yScale: 0.8 + 0.2 * popup.reveal
+        }
+
         background: Item {
+            id: popupBackdrop
+            transform: Unfold { part: popupBackdrop }
             StyledRectangularShadow { target: popupBackground }
             Rectangle {
                 id: popupBackground
@@ -259,6 +283,8 @@ ComboBox {
         }
 
         contentItem: ColumnLayout {
+            id: popupContent
+            transform: Unfold { part: popupContent }
             spacing: Appearance.spacing.space50
 
             Rectangle {

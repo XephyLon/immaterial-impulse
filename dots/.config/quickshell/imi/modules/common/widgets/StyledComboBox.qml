@@ -199,32 +199,59 @@ ComboBox {
     }
 
     popup: Popup {
+        id: popup
         y: root.height + 4
         width: root.width
         height: Math.min(listView.contentHeight + topPadding + bottomPadding, 300)
         padding: Appearance.spacing.space100
 
+        // One scalar, 0 -> 1, and everything else bound to it: the list fades
+        // in while it unfolds down from the button's edge, and folds back the
+        // same way. The previous enter was `PropertyAnimation { to: 1 }` on
+        // an opacity that was already 1 - an animation from 1 to 1, so the
+        // list simply appeared ("entering and leaving should not be
+        // immediate"). Enter takes the enter tier, exit the exit tier: a
+        // menu arrives with a decel and leaves faster than it came.
+        property real reveal: 1
+        opacity: popup.reveal
+
         enter: Transition {
-            PropertyAnimation {
-                properties: "opacity"
+            NumberAnimation {
+                target: popup
+                property: "reveal"
+                from: 0
                 to: 1
-                duration: Appearance.animation.elementMoveFast.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                duration: Appearance.animation.elementMoveEnter.duration
+                easing.type: Appearance.animation.elementMoveEnter.type
+                easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
             }
         }
 
         exit: Transition {
-            PropertyAnimation {
-                properties: "opacity"
+            NumberAnimation {
+                target: popup
+                property: "reveal"
+                from: 1
                 to: 0
-                duration: Appearance.animation.elementMoveFast.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                duration: Appearance.animation.elementMoveExit.duration
+                easing.type: Appearance.animation.elementMoveExit.type
+                easing.bezierCurve: Appearance.animation.elementMoveExit.bezierCurve
             }
         }
 
+        // The unfold, on the two parts the popup draws. Anchored to the top
+        // edge, where the button is, so the list grows away from it.
+        component Unfold: Scale {
+            required property Item part
+            origin.x: part.width / 2
+            origin.y: 0
+            xScale: 0.96 + 0.04 * popup.reveal
+            yScale: 0.8 + 0.2 * popup.reveal
+        }
+
         background: Item {
+            id: popupBackdrop
+            transform: Unfold { part: popupBackdrop }
             StyledRectangularShadow {
                 target: popupBackground
             }
@@ -239,6 +266,7 @@ ComboBox {
 
         contentItem: StyledListView {
             id: listView
+            transform: Unfold { part: listView }
             clip: true
             implicitHeight: contentHeight
             spacing: Appearance.spacing.space25
