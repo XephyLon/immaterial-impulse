@@ -254,13 +254,18 @@ Item { // Notification item area
                         RowLayout {
                             id: actionRowLayout
                             Layout.alignment: Qt.AlignBottom
+                            // As wide as the card when the chips fit, their
+                            // own width when they do not (then the flickable
+                            // scrolls). The chips share the room through
+                            // fillWidth; the old arithmetic split the width
+                            // in two by hand and put a third chip - Reply -
+                            // off the edge.
+                            width: Math.max(implicitWidth, actionsFlickable.width)
 
                             NotificationActionButton {
                                 Layout.fillWidth: true
                                 buttonText: Translation.tr("Close")
                                 urgency: notificationObject.urgency
-                                implicitWidth: (root.controller.actionsOf(root.notificationObject).length == 0) ? ((actionsFlickable.width - actionRowLayout.spacing) / 2) : 
-                                    (contentItem.implicitWidth + leftPadding + rightPadding)
 
                                 onClicked: {
                                     root.destroyWithAnimation()
@@ -294,10 +299,9 @@ Item { // Notification item area
                             NotificationActionButton {
                                 id: replyToggle
                                 visible: root.canReply
+                                Layout.fillWidth: true
                                 urgency: notificationObject.urgency
                                 toggled: root.replying
-                                implicitWidth: replyToggle.contentItem.implicitWidth
-                                    + replyToggle.leftPadding + replyToggle.rightPadding
                                 onClicked: root.replying = !root.replying
 
                                 contentItem: MaterialSymbol {
@@ -306,8 +310,7 @@ Item { // Notification item area
                                     verticalAlignment: Text.AlignVCenter
                                     text: "reply"
                                     iconSize: Appearance.font.pixelSize.larger
-                                    color: (notificationObject.urgency == NotificationUrgency.Critical) ?
-                                        Appearance.m3colors.m3onSurfaceVariant : Appearance.m3colors.m3onSurface
+                                    color: replyToggle.colText
                                 }
 
                                 StyledToolTip {
@@ -318,8 +321,6 @@ Item { // Notification item area
                             NotificationActionButton {
                                 Layout.fillWidth: true
                                 urgency: notificationObject.urgency
-                                implicitWidth: (root.controller.actionsOf(root.notificationObject).length == 0) ? ((actionsFlickable.width - actionRowLayout.spacing) / 2) : 
-                                    (contentItem.implicitWidth + leftPadding + rightPadding)
 
                                 onClicked: {
                                     Quickshell.clipboardText = notificationObject.body
@@ -362,7 +363,12 @@ Item { // Notification item area
                     ToolbarTextField {
                         id: replyField
                         Layout.fillWidth: true
+                        // The chip height, with padding that fits it: the
+                        // field's default 12px padding around a 14px font
+                        // wants 38, and squeezed to 34 it drew its text past
+                        // the top edge.
                         implicitHeight: 34
+                        padding: Appearance.spacing.space100
                         colBackground: Appearance.colors.colLayer3
                         placeholderText: Translation.tr("Reply…")
                         onAccepted: replySendButton.send()
@@ -372,8 +378,6 @@ Item { // Notification item area
                         id: replySendButton
                         urgency: notificationObject.urgency
                         enabled: replyField.text.length > 0
-                        implicitWidth: replySendButton.contentItem.implicitWidth
-                            + replySendButton.leftPadding + replySendButton.rightPadding
 
                         function send(): void {
                             if (replyField.text.length === 0)
