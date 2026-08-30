@@ -2597,6 +2597,22 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   vacated the nested-dim rule for every component rooted on one - a detector that knows only one
   idiom stops detecting the moment the idiom changes.
   af09ed3b9 ("feat(widgets): one driver wires a control to the model").
+- **A control that keeps its own input presses on a `PassiveRippleSurface`, and the lift never goes
+  on the control.** A `ComboBox` opens its popup on its own release and an `ItemDelegate` reports
+  the click that chooses a row, so neither can be a `RippleButton`, and for a year both answered a
+  press with a colour swap and nothing else - the one kind of control in the shell that did. The
+  surface is a `RippleButton` with `passive: true`: its containment mask is an Item with no area, so
+  no point is inside it and neither its `MouseArea` nor the `AbstractButton` under it sees a press.
+  Disabling the `MouseArea` alone is NOT enough (an `AbstractButton` accepts presses itself, and as a
+  Control's background it is above the control in delivery order - it swallowed the popup's toggle);
+  a `QtObject` with a JS `contains` is not enough either (Qt wants an invokable it can see from C++,
+  and warns and ignores the mask). The host binds `hostHovered`/`hostDown`/`hostPressPoint` and
+  applies `interactionMotion.scale` to its PARTS - background, content, arrow - never to itself: a
+  popup is positioned by mapping through its parent's transform, so a Scale on the `ComboBox` opened
+  the list where the shrunken button was at the instant of release and left it there.
+  `test_combo_box_press.py` refuses a root transform; `ComboProbe.qml` is the probe that found it.
+  53285a0e5 ("feat(widgets): a combo box ripples, on a surface that takes no press"),
+  2b319b896 ("feat(widgets): a dropdown's list unfolds in and folds out").
 - **The model's motion is applied by the CONTROL, and a caller that adds its own composites with it
   rather than replacing it.** `Item.scale` and a `Scale` transform multiply down the scene graph
   exactly the way `opacity` does, so the mirror image of the doubled-dim rule above holds for the
@@ -3210,6 +3226,18 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   widget that declares none is rendered anyway rather than omitted, since omitting it is the same
   silent disappearance this fixed. a47462fcc ("fix(verticalBar): render plugin bar widgets instead
   of an empty stub"), 06d31aabc ("test(bar): pin the two bars to one widget-url resolution").
+- **A layout id is a consumer. "Nothing instantiates it, nothing names it" is not true of a bar
+  widget until `BarWidgets.qml` has been read.** The dumb-widget audit deleted
+  `modules/imi/bar/PowerButton.qml` and `LeftSidebarButton.qml` as orphans: no QML instantiated them
+  and no source named them. The bar names its widgets by id from `Config.options.bar.layouts.*`,
+  Settings > Bar offers every id in `BarWidgets.qml`, and `fileNameFor` capitalises the id into the
+  file - `leftSidebarButton` was the first entry of the maintainer's own left layout and
+  `powerButton` sat in the right one. Both vanished from the live bar; the only trace was one
+  `WARN scene: ... File not found` line per reload, in a log nobody reads for a change that passed
+  the whole suite. `test_bar_widget_parity.py` now holds every palette id to a file on disk - the
+  direction its existing check did not cover, which read the names the RESOLVER could produce rather
+  than the ones the USER could pick. e2f25db06 ("refactor(bar): delete two buttons nothing built"),
+  9ebfa2acd ("fix(bar): bring back the two buttons the layout still names").
 - **A `Process`'s `onExited` handler that ignores its `exitCode` argument will happily act on stale
   data.** `TempScreenshotProcess` writes to a deterministic path (`image-${screen.name}`), so a failed
   `grim` run used to leave the *previous* successful capture sitting there untouched - the region
