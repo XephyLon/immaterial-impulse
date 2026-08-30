@@ -4,7 +4,6 @@ import qs.modules.common.widgets
 import qs.modules.common.functions
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 
 RippleButton {
     id: lightDarkButtonRoot
@@ -16,9 +15,11 @@ RippleButton {
     Layout.fillWidth: true
     colBackground: Appearance.colors.colLayer2
     toggled: Appearance.m3colors.darkmode === dark
-    onClicked: {
-        Quickshell.execDetached(["bash", "-c", `${Directories.wallpaperSwitchScriptPath} --mode ${dark ? "dark" : "light"} --noswitch`])
-    }
+    // The button says which mode was picked; whoever built it applies it.
+    // It used to run the wallpaper switch script itself, which made a
+    // preference card that could not be shown without switching the theme.
+    signal picked(bool dark)
+    onClicked: lightDarkButtonRoot.picked(lightDarkButtonRoot.dark)
     contentItem: Item {
         anchors.centerIn: parent
         implicitWidth: buttonContentLayout.implicitWidth
