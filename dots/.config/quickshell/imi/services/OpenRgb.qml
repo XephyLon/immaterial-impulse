@@ -15,8 +15,18 @@ import Quickshell.Io
  * upstream implementation shells into a Python SDK client (openrgb-python +
  * scipy fade interpolation) from applycolor.sh; here that is replaced by a
  * single `openrgb --mode static --color <hex>` invocation - no extra Python
- * dependencies, and the openrgb CLI already talks to a running OpenRGB
- * server instance when one exists.
+ * dependencies.
+ *
+ * Every write goes through the SDK server. The CLI does NOT talk to a
+ * running server on its own: without `--client` each invocation runs a full
+ * hardware detection pass of its own - seconds long, and it resets every
+ * device to its default colour on the way, so the lights blinked white on
+ * every palette step and every ambient sample ("the flicker each second").
+ * So the service brings a server up whenever the sync is enabled (its own
+ * `openrgb --server`, unless one already answers on 127.0.0.1:6742), holds
+ * writes until the port accepts, and prefixes every openrgb argv with
+ * `--client` from then on. A server that fails to start leaves the plain
+ * CLI as the fallback - slow and blinking, but working.
  *
  * Trigger: upstream fires when applycolor.sh runs after matugen generates a
  * new palette. The equivalent moment in this shell is
@@ -58,6 +68,27 @@ Singleton {
     // singleton is instantiated at startup and starts tracking palette changes.
     function load() {}
 
+    // The address serverProbeProc checks and serverProc listens on.
+    readonly property list<string> sdkClientArgs: ["--client", "127.0.0.1:6742"]
+    // Our own server is on its way up: hold the write rather than let a
+    // detecting CLI race the detecting server for the same devices.
+    readonly property bool serverStarting: !root.serverReady
+        && (serverProc.running || (detectorSyncProc.running && detectorSyncProc.thenStartServer))
+    onServerReadyChanged: {
+        if (root.serverReady)
+            root.startPendingApply();
+    }
+
+    // An openrgb argv, routed through the SDK server once one answers. Pure
+    // in shape - `["openrgb", ...rest]` in, the same with the client flag
+    // spliced after the binary out - so the per-device builder below stays
+    // the tested, server-agnostic function it was.
+    function sdkCommand(argv) {
+        if (!root.serverReady || argv.length === 0 || argv[0] !== "openrgb")
+            return argv;
+        return [argv[0]].concat(root.sdkClientArgs, argv.slice(1));
+    }
+
     function hexOf(color) {
         let hex = color.toString(); // "#rrggbb" or "#aarrggbb"
         if (hex.length === 9)
@@ -97,6 +128,8 @@ Singleton {
     function startPendingApply() {
         if (applyProc.running)
             return; // Re-dispatched from applyProc.onExited
+        if (root.serverStarting)
+            return; // Re-dispatched from onServerReadyChanged
         if (root.pendingColor === "" || root.pendingColor === root.lastAppliedColor) {
             root.pendingColor = "";
             return;
@@ -122,7 +155,7 @@ Singleton {
         root.lastAppliedColor = hex;
         // Color is passed as its own argv element - never spliced into a
         // shell string.
-        applyProc.command = ["openrgb", "--mode", root.pendingMode, "--color", hex];
+        applyProc.command = root.sdkCommand(["openrgb", "--mode", root.pendingMode, "--color", hex]);
         applyProc.running = true;
     }
 
@@ -144,7 +177,7 @@ Singleton {
             return;
         }
         root.lastAppliedColor = hex;
-        applyProc.command = cmd;
+        applyProc.command = root.sdkCommand(cmd);
         applyProc.running = true;
     }
 
@@ -199,7 +232,10 @@ Singleton {
 
     Timer {
         id: debounceTimer
-        interval: 1000
+        // 200, not the 1000 it was: a write through the server is a client
+        // call, not a detection pass, so the debounce only has to swallow
+        // the palette animation's per-frame steps, not hide a blink.
+        interval: 200
         repeat: false
         onTriggered: root.requestApply()
     }
@@ -217,6 +253,9 @@ Singleton {
             if (!root.enabled)
                 return;
             root.lastAppliedColor = ""; // Force a sync on (re-)enable
+            root.serverSpawnAttempted = false;
+            serverProbeProc.running = false;
+            serverProbeProc.running = true;
             root.scheduleApply();
         }
         function onExcludedDevicesChanged() {
@@ -258,8 +297,10 @@ Singleton {
             LANG: "C",
             LC_ALL: "C"
         })
-        // Constant argv - nothing is spliced in.
-        command: ["openrgb", "--list-devices"]
+        // Constant argv - nothing is spliced in. Through the server when
+        // one answers: a scan without it is a detection pass, and a
+        // detection pass blinks every device white.
+        command: root.sdkCommand(["openrgb", "--list-devices"])
         stdout: StdioCollector {
             // The stream closes on process exit, so the parse (and the
             // handed-off apply) always sees the complete listing.
@@ -426,7 +467,9 @@ Singleton {
     // server starting up and one the user runs themselves).
     Timer {
         id: serverPollTimer
-        running: root.ambientActive && !root.serverReady
+        // Whenever the sync is on, not only while the ambient loop runs:
+        // the accent path's writes blinked for the same reason.
+        running: root.enabled && root.available && !root.serverReady
         interval: 1000
         repeat: true
         onTriggered: {
@@ -462,7 +505,7 @@ Singleton {
         command: ["bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6742"]
         onExited: (exitCode, exitStatus) => {
             root.serverReady = exitCode === 0;
-            if (root.serverReady || !root.ambientActive)
+            if (root.serverReady || !root.enabled)
                 return;
             if (!root.serverSpawnAttempted && !serverProc.running && !detectorSyncProc.running) {
                 root.serverSpawnAttempted = true;

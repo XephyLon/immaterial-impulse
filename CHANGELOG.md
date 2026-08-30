@@ -60,6 +60,16 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **RGB devices no longer blink white on every colour change.** Every
+  write went through the `openrgb` CLI without `--client`, and the CLI
+  does not talk to a running server on its own: each call ran a full
+  hardware detection pass, which resets every device to its default
+  colour before the new one lands - once per second while a colour was
+  being adjusted, and once per ambient sample. The service now brings a
+  server up whenever the sync is on (its own, unless one already answers
+  on 127.0.0.1:6742), holds writes until it does, and routes every
+  openrgb call - the apply, the per-device apply, the device scan -
+  through it. The palette debounce drops from 1000 ms to 200 ms with it.
 - **Quick > Bar & Screen: the choice chips sit on one line again.** The
   four cards there use the segmented row without a label, and on that path
   the row's chip flow still sized itself from its own width - the circle an
