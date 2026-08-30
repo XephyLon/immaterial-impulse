@@ -42,10 +42,6 @@ Item {
     // the gallery's to say, and it has no other job.
     property bool inert: true
 
-    // The shield swallows the click, so the tile cannot hear one itself - this
-    // is how it still opens the widget in Detail.
-    signal tapped()
-
     // Some widgets are far bigger than a tile - the light/dark preference card
     // is 210px wide and 120 tall. Left alone they paint straight over the tiles
     // beside and below them, which is what the gallery did: two widgets
@@ -328,7 +324,6 @@ Item {
                 if (builder.control?.fadeRipple)
                     builder.control.fadeRipple();
             }
-            onClicked: stage.tapped()
         }
 
         StyledText {
