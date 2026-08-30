@@ -128,6 +128,13 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **The privacy card names the recording source where one can be
+  known.** A portal cast - a Discord or browser share, OBS's PipeWire
+  capture - is a PipeWire video consumer carrying its app identity, and
+  the Screen section now lists those by name (with the same
+  electron-alias resolution the microphone rows use). Captures that
+  never touch PipeWire - grim, gpu-screen-recorder - are anonymous by
+  nature, so the generic line stays as the honest fallback.
 - **The Edit Mode drawer's app search works, and looks like the shell.**
   The Dock tab's field could never be typed into: the chrome surface
   declares no keyboard focus so the mode's Escape ladder keeps working,

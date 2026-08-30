@@ -110,4 +110,48 @@ Singleton {
         }
         return names;
     }
+
+    // Verbatim from services/MediaCapture.qml (video consumer graph).
+    function parseVideoConsumers(raw: var): var {
+        let arr;
+        try {
+            arr = JSON.parse(raw);
+        } catch (e) {
+            return { screen: [], camera: [] };
+        }
+        if (!Array.isArray(arr)) return { screen: [], camera: [] };
+        const nodes = {};
+        const sourceOf = {};
+        for (const item of arr) {
+            if (!item) continue;
+            if (item.type === "PipeWire:Interface:Node") {
+                const props = item.info?.props ?? {};
+                nodes[item.id] = {
+                    mediaClass: props["media.class"] ?? "",
+                    api: props["device.api"] ?? "",
+                    state: item.info?.state ?? "",
+                    name: root.resolveAppName(
+                        props["application.name"] ?? props["node.name"],
+                        props["application.process.binary"]),
+                };
+            } else if (item.type === "PipeWire:Interface:Link") {
+                const output = item.info?.["output-node-id"];
+                const input = item.info?.["input-node-id"];
+                if (output !== undefined && input !== undefined)
+                    sourceOf[input] = output;
+            }
+        }
+        const screen = [];
+        const camera = [];
+        for (const id in nodes) {
+            const node = nodes[id];
+            if (node.mediaClass !== "Stream/Input/Video") continue;
+            if (node.state !== "running") continue;
+            if (!node.name) continue;
+            const source = nodes[sourceOf[id]];
+            const list = (source && source.api === "v4l2") ? camera : screen;
+            if (list.indexOf(node.name) === -1) list.push(node.name);
+        }
+        return { screen: screen, camera: camera };
+    }
 }

@@ -50,6 +50,13 @@ Singleton {
     // none). Event-driven, so a cast already running before the shell started
     // isn't reflected until it next toggles.
     property bool screencastActive: false
+    // Who holds the cast, where that can be known at all. Portal casts -
+    // Discord and browser shares, OBS's pipewire capture - are PipeWire
+    // video consumers and carry their app identity; wlr-screencopy and kms
+    // captures (grim, gpu-screen-recorder) never touch PipeWire and cannot
+    // be named by anyone, so an empty list here means "active but
+    // anonymous", not "nothing".
+    property var screencastApps: []
 
     // Parses `pactl -f json list source-outputs`. Returns { active, apps }.
     // Falls back to text-block parsing when the JSON path is unavailable.
@@ -140,6 +147,59 @@ Singleton {
         return { active: apps.length > 0, apps: apps, streams: streams };
     }
 
+    // The PipeWire video graph, reduced to who is consuming what. A RUNNING
+    // Stream/Input/Video node is a video consumer; the link table says what
+    // it reads. A consumer whose source is a v4l2 node is watching a camera
+    // (the camera section's business); everything else is reading a screen
+    // cast. Pure, for the fixture tests.
+    function parseVideoConsumers(raw: var): var {
+        let arr;
+        try {
+            arr = JSON.parse(raw);
+        } catch (e) {
+            return { screen: [], camera: [] };
+        }
+        if (!Array.isArray(arr)) return { screen: [], camera: [] };
+        const nodes = {};
+        const sourceOf = {};
+        for (const item of arr) {
+            if (!item) continue;
+            if (item.type === "PipeWire:Interface:Node") {
+                const props = item.info?.props ?? {};
+                nodes[item.id] = {
+                    mediaClass: props["media.class"] ?? "",
+                    api: props["device.api"] ?? "",
+                    state: item.info?.state ?? "",
+                    name: root.resolveAppName(
+                        props["application.name"] ?? props["node.name"],
+                        props["application.process.binary"]),
+                };
+            } else if (item.type === "PipeWire:Interface:Link") {
+                const output = item.info?.["output-node-id"];
+                const input = item.info?.["input-node-id"];
+                if (output !== undefined && input !== undefined)
+                    sourceOf[input] = output;
+            }
+        }
+        const screen = [];
+        const camera = [];
+        for (const id in nodes) {
+            const node = nodes[id];
+            if (node.mediaClass !== "Stream/Input/Video") continue;
+            if (node.state !== "running") continue;
+            if (!node.name) continue;
+            const source = nodes[sourceOf[id]];
+            const list = (source && source.api === "v4l2") ? camera : screen;
+            if (list.indexOf(node.name) === -1) list.push(node.name);
+        }
+        return { screen: screen, camera: camera };
+    }
+
+    function refreshScreencast(): void {
+        if (!root.enableService || !root.showScreencast || !root.screencastActive) return;
+        if (!pwDumpProc.running) pwDumpProc.running = true;
+    }
+
     // Extracts unique integer PIDs from `fuser` stdout.
     function parsePids(text: string): var {
         const pids = [];
@@ -171,7 +231,11 @@ Singleton {
 
     onShowMicChanged: if (!showMic) { micActive = false; micApps = []; micStreams = []; }
     onShowCameraChanged: if (!showCamera) { cameraActive = false; cameraApps = []; }
-    onShowScreencastChanged: if (!showScreencast) screencastActive = false;
+    onShowScreencastChanged: if (!showScreencast) { screencastActive = false; screencastApps = []; }
+    onScreencastActiveChanged: {
+        if (root.screencastActive) root.refreshScreencast();
+        else root.screencastApps = [];
+    }
 
     Connections {
         target: Hyprland
@@ -213,6 +277,7 @@ Singleton {
         onTriggered: {
             root.refreshMic();
             root.refreshCamera();
+            root.refreshScreencast();
         }
     }
 
@@ -250,6 +315,20 @@ Singleton {
         }
     }
 
+    Process {
+        id: pwDumpProc
+        environment: ({ LANG: "C", LC_ALL: "C" })
+        command: ["pw-dump"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.screencastApps = root.parseVideoConsumers(text).screen;
+            }
+        }
+        onExited: (exitCode, exitStatus) => {
+            // pw-dump missing or failing keeps the generic line - graceful.
+            if (exitCode !== 0) root.screencastApps = [];
+        }
+    }
     Process {
         id: commProc
         environment: ({ LANG: "C", LC_ALL: "C" })

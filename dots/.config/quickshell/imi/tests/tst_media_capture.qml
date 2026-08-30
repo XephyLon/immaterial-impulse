@@ -201,4 +201,42 @@ TestCase {
         ]);
         compare(MediaCapture.parseSourceOutputs(json).streams, []);
     }
+
+    function pwFixture(state, sourceApi, appName) {
+        return JSON.stringify([
+            { id: 1, type: "PipeWire:Interface:Node", info: { state: "running",
+                props: { "media.class": "Video/Source", "device.api": sourceApi,
+                         "node.name": "the-source" } } },
+            { id: 2, type: "PipeWire:Interface:Node", info: { state: state,
+                props: { "media.class": "Stream/Input/Video",
+                         "application.name": appName,
+                         "application.process.binary": "vesktop" } } },
+            { id: 3, type: "PipeWire:Interface:Link",
+                info: { "output-node-id": 1, "input-node-id": 2 } }
+        ]);
+    }
+
+    function test_a_running_portal_consumer_names_the_screen_cast() {
+        const result = MediaCapture.parseVideoConsumers(pwFixture("running", "", "Chromium"));
+        compare(result.screen.length, 1);
+        compare(result.screen[0], "Vesktop",
+                "the electron alias resolves through the process binary, like the mic path");
+        compare(result.camera.length, 0);
+    }
+
+    function test_a_camera_consumer_is_not_a_screen_cast() {
+        const result = MediaCapture.parseVideoConsumers(pwFixture("running", "v4l2", "OBS Studio"));
+        compare(result.screen.length, 0);
+        compare(result.camera[0], "OBS Studio");
+    }
+
+    function test_an_idle_consumer_is_nobody() {
+        compare(MediaCapture.parseVideoConsumers(pwFixture("suspended", "", "OBS")).screen.length, 0);
+    }
+
+    function test_garbage_is_an_empty_graph() {
+        compare(MediaCapture.parseVideoConsumers("").screen.length, 0);
+        compare(MediaCapture.parseVideoConsumers(null).screen.length, 0);
+        compare(MediaCapture.parseVideoConsumers("{not json").screen.length, 0);
+    }
 }

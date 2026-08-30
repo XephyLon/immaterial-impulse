@@ -387,7 +387,12 @@ StyledPopup {
                 icon: "screen_share"
                 label: Translation.tr("Screen")
                 shape: MaterialShape.Shape.Slanted
-                entries: [Translation.tr("Shared or recorded")]
+                // Portal casts carry their app identity through PipeWire;
+                // screencopy and kms captures are anonymous by nature, so
+                // the generic line survives as the honest fallback.
+                entries: MediaCapture.screencastApps.length > 0
+                    ? MediaCapture.screencastApps
+                    : [Translation.tr("Shared or recorded")]
                 rowNote: Translation.tr("stop it from that app")
             }
 
