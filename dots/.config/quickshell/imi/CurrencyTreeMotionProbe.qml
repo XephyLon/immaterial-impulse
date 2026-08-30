@@ -88,7 +88,7 @@ ShellRoot {
     }
 
     readonly property var transitions: [
-        ["2x1", "1x1"], ["1x1", "2x1"]
+        ["2x1", "1x1"], ["1x1", "2x1"], ["2x1", "3x1"], ["3x1", "1x1"]
     ]
     property int transitionIndex: 0
     property var trails: ({})

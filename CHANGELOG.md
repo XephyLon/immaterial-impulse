@@ -13,6 +13,16 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The currency widget takes a 3x1, with a real day behind it.** The
+  maintainer's design: the base currency as a hero block - Rates, the
+  giant code, its flag, the payments chip - beside all four quotes in a
+  two-column grid, each with which way the day went (arrow, percent,
+  absolute), dividers between the columns and a "Last updated" stamp.
+  The chart line is dynamic now: the rates API is a daily dataset, so
+  the shell keeps its own 24-hour ring of the hourly refreshes (persisted
+  across restarts) and the line, the arrows and the deltas all read what
+  this machine actually observed. Until two samples exist the line keeps
+  its old decorative curve and the movement columns stay quiet.
 - **The world clock hands its size to the shell.** Its corner toggle is
   gone; the resize grip, the Settings size row and the edit-menu stepper
   walk its two shapes (the card, the row of dials), and a size chosen

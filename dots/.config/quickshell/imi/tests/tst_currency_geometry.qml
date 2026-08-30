@@ -68,6 +68,45 @@ TestCase {
                "the morph travels, it does not snap");
     }
 
+    function test_the_3x1_hero_block_owns_the_left_and_the_quotes_the_rest() {
+        const hero = Geometry.baseLabelRect("3x1", 420, 108, 1);
+        const divider = Geometry.dividerRect(0, "3x1", 420, 108, 1);
+        verify(hero.x < divider.x, "the code lives left of the first divider");
+        const chart = Geometry.chartRect("3x1", 420, 108, 1);
+        verify(chart.x + chart.width <= divider.x + 0.01, "so does the chart");
+        for (let i = 0; i < 4; i++) {
+            const cell = Geometry.quoteCellRect(i, "3x1", 420, 108, 1);
+            verify(cell !== null, "all four quotes live at 3x1");
+            verify(cell.detailed, "with their movement column");
+            verify(cell.x > divider.x, "right of the hero block");
+            verify(cell.x + cell.width <= 420 - 13.9, "inside the card");
+        }
+        const cell0 = Geometry.quoteCellRect(0, "3x1", 420, 108, 1);
+        const cell2 = Geometry.quoteCellRect(2, "3x1", 420, 108, 1);
+        const divider1 = Geometry.dividerRect(1, "3x1", 420, 108, 1);
+        verify(cell0.x + cell0.width <= divider1.x + 0.01,
+               "the first column stops at the second divider");
+        verify(cell2.x >= divider1.x, "and the second starts past it");
+    }
+
+    function test_the_3x1_extras_exist_only_there() {
+        for (const span of ["1x1", "2x1"]) {
+            compare(Geometry.flagRect(span, 276, 108, 1), null);
+            compare(Geometry.chartRect(span, 276, 108, 1), null);
+            compare(Geometry.dividerRect(0, span, 276, 108, 1), null);
+            compare(Geometry.updatedRect(span, 276, 108, 1), null);
+        }
+        verify(Geometry.flagRect("3x1", 420, 108, 1) !== null);
+        verify(Geometry.updatedRect("3x1", 420, 108, 1) !== null);
+    }
+
+    function test_the_container_takes_the_chip_home_at_3x1() {
+        const chip = Geometry.containerRect("3x1", 420, 108, 1);
+        compare(chip.shape, "bun", "the badge shape returns, small, under the code");
+        verify(chip.width < 60, "a chip, not a panel");
+        verify(chip.y > 60, "at the hero block's foot");
+    }
+
     function test_the_panel_shape_carries_its_aspect() {
         const panel = CurrencyShapes.containerAt("panel", "panel", 1);
         const aspect = (panel.maxX - panel.minX) / (panel.maxY - panel.minY);
