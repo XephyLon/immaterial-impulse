@@ -93,7 +93,6 @@ Item {
             verticalPadding: value("verticalPadding", undefined),
             fontSize: control.font?.pixelSize,
             background: value("colBackground", undefined),
-            hasEnabled: control.enabled !== undefined,
         };
     }
 
