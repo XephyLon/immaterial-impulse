@@ -10,6 +10,10 @@ RippleButton {
     property string url
 
     property real faviconSize: 20
+    // Where the site's icon is on disk and whether it has arrived - both from
+    // the message, which asks the Favicons service; this chip cannot fetch.
+    property string faviconPath: ""
+    property bool faviconReady: false
     implicitHeight: 30
     leftPadding: (implicitHeight - faviconSize) / 2
     rightPadding: Appearance.spacing.space150
@@ -32,9 +36,9 @@ RippleButton {
             anchors.fill: parent
             spacing: Appearance.spacing.space100
             Favicon {
-                url: root.url
+                iconPath: root.faviconPath
+                ready: root.faviconReady
                 size: root.faviconSize
-                displayText: root.displayText
             }
             StyledText {
                 id: text
