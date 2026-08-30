@@ -265,15 +265,17 @@ def test_ambient_schema_defaults_to_accent():
 
 def test_ambient_loop_is_gated():
     source = _source()
-    # The sampling clock only runs while ambient mode is active, grim is
-    # known to exist AND an OpenRGB SDK server answers - serverless CLI
-    # writes do a full detection pass per call, which resets devices to
-    # their default (white) and takes seconds.
+    # The sampling clock only runs while ambient mode is active AND an
+    # OpenRGB SDK server answers - serverless CLI writes do a full
+    # detection pass per call, which resets devices to their default
+    # (white) and takes seconds. grim left the gate when the screencopy
+    # sampler arrived: it is only required once the sampler has broken.
     assert re.search(
         r"Timer \{\s*\n\s*id: ambientTimer\s*\n\s*"
-        r"running: root\.ambientActive && root\.grimAvailable && root\.serverReady",
+        r"running: root\.ambientActive && root\.serverReady\s*\n\s*"
+        r"&& \(!root\.samplerBroken \|\| root\.grimAvailable\)",
         source,
-    ), "the ambient Timer must be gated on ambientActive && grimAvailable && serverReady"
+    ), "the ambient Timer must be gated on ambientActive, serverReady, and grim only as the broken-sampler fallback"
     # The managed server is a constant argv and only spawned once per
     # activation (no crash-loop respawns from the poll timer), and the spawn
     # goes through the detector sync so an excluded device is never even
