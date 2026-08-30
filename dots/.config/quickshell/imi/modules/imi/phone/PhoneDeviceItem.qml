@@ -2,6 +2,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
+import "device_glyph.js" as DeviceGlyph
 import QtQuick
 import QtQuick.Layouts
 
@@ -41,16 +42,7 @@ DialogListItem {
 
         MaterialSymbol {
             iconSize: Appearance.font.pixelSize.larger
-            text: {
-                switch (root.device?.type ?? "") {
-                case "phone": return "smartphone";
-                case "tablet": return "tablet";
-                case "laptop": return "laptop";
-                case "desktop": return "computer";
-                case "tv": return "tv";
-                default: return "devices";
-                }
-            }
+            text: DeviceGlyph.forType(root.device?.type)
             color: root.active ? Appearance.colors.colOnSecondaryContainer
                 : root.online ? Appearance.colors.colPrimary
                 : Appearance.colors.colOnSurfaceVariant
