@@ -120,7 +120,64 @@ Item {
                 // device roster shipped looking like a frame drawn around a
                 // single item for no reason.
                 readonly property bool ownsItsSurface: rowLoader.item?.cornerTopLeft !== undefined
-                color: ownsItsSurface ? "transparent" : root.bgcolor
+                // The plate paints nothing itself: `surface` below carries the
+                // colour, and with it the hover lift and the ripple. The
+                // radii stay on the plate, which is what the phone tab's
+                // harness reads them from.
+                color: "transparent"
+
+                // The row's own control when the row IS a control - a
+                // ConfigSwitch on a settings page - so the plate can be what
+                // presses. It used to be the only thing that did not: the
+                // switch rippled and lifted inside its own bounds and the
+                // plate around it sat still, which reads as pressing the
+                // label rather than the row. M3 makes the list item the
+                // interactive surface; this makes the plate that.
+                readonly property var rowControl: {
+                    const item = root.modelDriven ? rowLoader.item : root.items[index];
+                    return item && item.interactionMotion !== undefined && item.startRipple !== undefined
+                        && !plate.ownsItsSurface ? item : null;
+                }
+                onRowControlChanged: {
+                    if (!plate.rowControl) return;
+                    // The plate draws the press; the control draws only its
+                    // content. Both drawing it doubled every ripple.
+                    plate.rowControl.rippleEnabled = false;
+                    plate.rowControl.interactionMotionEnabled = false;
+                }
+                RippleButton {
+                    id: surface
+                    anchors.fill: parent
+                    z: -1
+                    colBackground: plate.ownsItsSurface ? "transparent" : root.bgcolor
+                    colBackgroundHover: plate.ownsItsSurface ? "transparent" : root.bgcolor
+                    cornerTopLeft: plate.topLeftRadius
+                    cornerTopRight: plate.topRightRadius
+                    cornerBottomLeft: plate.bottomLeftRadius
+                    cornerBottomRight: plate.bottomRightRadius
+                    rippleEnabled: plate.rowControl !== null
+                    interactionMotionEnabled: plate.rowControl !== null
+                    // The plate's own pointer (over the padding) or the row
+                    // control's: one hover, one press, on the plate.
+                    interactionMotion.hovered: surface.interactionMotionEnabled
+                        && (surface.hovered || (plate.rowControl?.hovered ?? false))
+                    interactionMotion.down: surface.interactionMotionEnabled
+                        && (surface.down || (plate.rowControl?.down ?? false))
+                    // Pressing the padding presses the row.
+                    onClicked: plate.rowControl?.clicked()
+                    Connections {
+                        target: plate.rowControl
+                        function onDownChanged() {
+                            if (plate.rowControl.down) {
+                                const at = surface.mapFromItem(plate.rowControl,
+                                    plate.rowControl.pressPoint.x, plate.rowControl.pressPoint.y);
+                                surface.startRipple(at.x, at.y);
+                            } else {
+                                surface.fadeRipple();
+                            }
+                        }
+                    }
+                }
                 topLeftRadius:     isFirst ? root.bigRadius : (root.cohesive ? 0 : root.smallRadius)
                 topRightRadius:    isFirst ? root.bigRadius : (root.cohesive ? 0 : root.smallRadius)
                 bottomLeftRadius:  isLast  ? root.bigRadius : (root.cohesive ? 0 : root.smallRadius)

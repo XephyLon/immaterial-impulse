@@ -54,6 +54,10 @@ Button {
     // opacity only. The button keeps owning its colours and its ripple - this
     // drives the motion, and only the motion.
     property bool interactionMotionEnabled: true
+    // Where the last press landed, in this button's coordinates. A surface
+    // that mirrors this button's press - a GroupedList plate under a row
+    // that is itself a button - starts its ripple from here.
+    property point pressPoint: Qt.point(0, 0)
     property InteractionMotion interactionMotion: InteractionMotion {
         hovered: root.hovered && root.interactionMotionEnabled
         down: root.down && root.interactionMotionEnabled
@@ -148,6 +152,7 @@ Button {
                 return;
             }
             root.down = true
+            root.pressPoint = Qt.point(event.x, event.y);
             if (root.downAction) root.downAction();
             if (!root.rippleEnabled) return;
             const {x,y} = event

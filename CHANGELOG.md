@@ -22,6 +22,11 @@ own repo; the installer pins which revision it builds.
   by hand. Every tile is the real widget, not a picture of one.
 
 ### Changed
+- **A settings row presses as a whole.** A switch row in a grouped list
+  rippled and lifted inside its own bounds while the plate around it sat
+  still, which read as pressing the label rather than the row. The plate is
+  the pressed surface now - hover lift, ripple from where the pointer landed
+  - and pressing the plate's padding presses the row.
 - **The classic quick toggles are drawn from the same models as the Android
   ones.** Ten classic tiles re-derived their icon, state and actions from the
   services by hand and had started to disagree with the models. Two of them
