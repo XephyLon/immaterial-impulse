@@ -4,6 +4,10 @@ import qs.services
 import "../services"
 
 Canvas {
+    // FBO + cooperative: the paint runs on the render thread. On the default
+    // Image target every cava frame was a software raster on the GUI thread.
+    renderTarget: Canvas.FramebufferObject
+    renderStrategy: Canvas.Cooperative
     id: root
 
     property list<real> points: CavaService.values

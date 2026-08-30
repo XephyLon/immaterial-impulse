@@ -200,6 +200,14 @@ Item {
             Canvas {
                 id: body
                 anchors.fill: parent
+                // On an FBO, cooperatively: this canvas repaints on every
+                // cava frame and every ring-wave frame while a track plays,
+                // and on an Image target that was a software raster on the
+                // GUI thread each time - gdb-sampled as QRasterPaintEngine
+                // on the shell's main thread. The paint runs on the render
+                // thread now; the main thread only records the commands.
+                renderTarget: Canvas.FramebufferObject
+                renderStrategy: Canvas.Cooperative
                 // ONE painter owns the body at every span - handing the face
                 // to a second canvas at any settle has now blanked it twice
                 // (the visualizer crossfade, then a seeker-fill handoff), so
@@ -222,7 +230,11 @@ Item {
                 // ---- the breath: the lobe envelope, tuned in visualizer_bands.js ----
                 readonly property bool visualizing: root.span === "2x2"
                     && Math.abs(morphT - 1) < 0.01 && MprisController.isPlaying && root.visible
-                property list<real> levels: []
+                // A JS array, not `list<real>`: a QML sequence indexed from
+                // JS turns every index into a property-key string first
+                // (gdb-sampled as numberToString under toPropertyKey), twelve
+                // times per 16ms tick.
+                property var levels: []
                 property bool settlingLevels: false
                 readonly property var cavaClaim: CavaRef { active: body.visualizing }
                 function stepLevels() {
