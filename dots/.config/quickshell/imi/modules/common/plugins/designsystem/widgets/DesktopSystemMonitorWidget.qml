@@ -80,8 +80,22 @@ Item {
     readonly property int cardCount: root.cards.length
     property real baseWidth: isVertical ? 132 : (cardCount * 132 + (cardCount - 1) * 12)
     property real baseHeight: isVertical ? (cardCount * 108 + (cardCount - 1) * 12) : 108
-    implicitWidth: baseWidth * Appearance.effectiveScale
-    implicitHeight: baseHeight * Appearance.effectiveScale
+    // The settled span, and the box travelling towards it: the manifest
+    // declares no grid, so the host animates nothing here (docs/
+    // widget-grid.md - a grid-less widget that changes size brings its own
+    // motion), and the orientation toggle used to SNAP between the row and
+    // the column ("changing orientation should be animated"). The cards
+    // travel to their new places on the same tier while the box does.
+    readonly property real spanW: baseWidth * Appearance.effectiveScale
+    readonly property real spanH: baseHeight * Appearance.effectiveScale
+    property real boxW: spanW
+    property real boxH: spanH
+    Behavior on boxW { SpanTravel {} }
+    Behavior on boxH { SpanTravel {} }
+    readonly property bool selfBoxInMotion: Math.abs(root.boxW - root.spanW) > 0.5
+        || Math.abs(root.boxH - root.spanH) > 0.5
+    implicitWidth: boxW
+    implicitHeight: boxH
 
     // Spacings and sizes
     property real cardSpacing: 12 * Appearance.effectiveScale
@@ -127,7 +141,7 @@ Item {
         implicitWidth: root.cardWidth
         implicitHeight: root.cardHeight
         dragging: root.dragging
-        hostMotionActive: root.boxInMotion
+        hostMotionActive: root.boxInMotion || root.selfBoxInMotion
         radius: Appearance.rounding.large
         tint: card.roles.tint
         useBlurBackground: root.useBlurBackground
@@ -218,17 +232,20 @@ Item {
     }
 
 
-    Grid {
-        id: gridLayout
-        columns: root.isVertical ? 1 : root.cardCount
-        spacing: root.cardSpacing
-
-        Repeater {
-            id: cardRepeater
-            model: root.cards
-            onItemAdded: root.cardsReady++
-            onItemRemoved: root.cardsReady++
-            delegate: MetricCard {}
+    // No Grid: a Grid repositions its children in one frame when its
+    // `columns` flips, which is exactly the snap the travel replaces. Each
+    // card owns its place as a function of the SETTLED orientation and
+    // rides a Behavior to it.
+    Repeater {
+        id: cardRepeater
+        model: root.cards
+        onItemAdded: root.cardsReady++
+        onItemRemoved: root.cardsReady++
+        delegate: MetricCard {
+            x: root.isVertical ? 0 : index * (root.cardWidth + root.cardSpacing)
+            y: root.isVertical ? index * (root.cardHeight + root.cardSpacing) : 0
+            Behavior on x { SpanTravel {} }
+            Behavior on y { SpanTravel {} }
         }
     }
 

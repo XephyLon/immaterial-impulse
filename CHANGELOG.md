@@ -72,6 +72,10 @@ own repo; the installer pins which revision it builds.
   by hand. Every tile is the real widget, not a picture of one.
 
 ### Changed
+- **The system monitor's orientation flip travels.** Toggling between
+  the row and the column snapped every card to its new place in one
+  frame; the box and the cards ride the spatial tier now, and the
+  shadows drop for the motion like every other resize.
 - **The privacy card speaks the shell's design language.** A shield in
   its error-toned Material shape heads the card; every section leads
   with its glyph in a shape of its own; the app rows and notes sit on
