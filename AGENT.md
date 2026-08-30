@@ -1811,6 +1811,16 @@ row. ("perf(search): rebuild the launcher results once per turn, not per input c
   Note also that `Layout.alignment` hands a child its preferred size and
   positions it, never resizes it, so an aligned Flow overflows a narrow
   row instead of wrapping; that is a separate, older question.
+  The preferred width goes on EVERY path the row has. The first fix handed
+  it over only for a labelled row (`root.text ? naturalWidth : -1`), and the
+  Quick page's Bar & Screen cards use the row without a label - right-aligned
+  under a heading of their own - so the same four chips latched one per line
+  there ("This broke again"). `QuickPageProbe.qml` builds the real page
+  through an asynchronous `Loader` and walks it for every Flow: 4/4/3/2 lines
+  before, one each after. `test_selection_array_flow.py` refuses a
+  conditional preferred width.
+  4ef84e521 ("fix(settings): a segmented row's chips lay out on the width the row has"),
+  0a44ed17c ("fix(settings): a segmented row without a label lays out on its natural width too").
 
 - **CI's Qt is older than yours, and its JS parser is too.** The workflow
   installs Ubuntu's `qt6-declarative-dev`; a developer here runs Arch's
