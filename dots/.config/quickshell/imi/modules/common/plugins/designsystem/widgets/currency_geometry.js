@@ -97,7 +97,10 @@ function quoteCellRect(index, span, width, height, scale) {
         var gridX = (HERO_W_3X1 + 14) * scale;
         var gridW = width - gridX - 14 * scale;
         var colW = (gridW - 22 * scale) / 2;
-        var col3 = Math.floor(index / 2), row3 = index % 2;
+        // Row-major, exactly as the 2x1 panel reads: quotes 1-2 across the
+        // top, 3-4 across the bottom. Column-major shipped first and swapped
+        // EUR and JPY between the spans.
+        var col3 = index % 2, row3 = Math.floor(index / 2);
         var cellH3 = (height - 36 * scale) / 2;
         return {
             x: gridX + col3 * (colW + 22 * scale),

@@ -81,12 +81,22 @@ TestCase {
             verify(cell.x > divider.x, "right of the hero block");
             verify(cell.x + cell.width <= 420 - 13.9, "inside the card");
         }
+        // The same reading order as the 2x1 panel: quotes 1-2 across the
+        // top row, 3-4 across the bottom - a resize must not reshuffle
+        // which quote sits where.
         const cell0 = Geometry.quoteCellRect(0, "3x1", 420, 108, 1);
+        const cell1 = Geometry.quoteCellRect(1, "3x1", 420, 108, 1);
         const cell2 = Geometry.quoteCellRect(2, "3x1", 420, 108, 1);
         const divider1 = Geometry.dividerRect(1, "3x1", 420, 108, 1);
         verify(cell0.x + cell0.width <= divider1.x + 0.01,
-               "the first column stops at the second divider");
-        verify(cell2.x >= divider1.x, "and the second starts past it");
+               "quote 1 stops at the second divider");
+        verify(cell1.x >= divider1.x, "quote 2 starts past it, beside quote 1");
+        compare(cell0.y, cell1.y, "1 and 2 share the top row");
+        compare(cell2.x, cell0.x, "quote 3 sits under quote 1");
+        verify(cell2.y > cell0.y, "on the bottom row");
+        const at2x1 = i => Geometry.quoteCellRect(i, "2x1", 276, 108, 1);
+        verify((at2x1(1).x > at2x1(0).x) === (cell1.x > cell0.x),
+               "both spans read the quotes in the same order");
     }
 
     function test_the_3x1_extras_exist_only_there() {
