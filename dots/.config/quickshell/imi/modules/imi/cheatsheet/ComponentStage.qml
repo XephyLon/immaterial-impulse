@@ -182,6 +182,10 @@ Item {
             // contentItem sized from an icon), and a control that quietly
             // ignored half the knobs would be worse than one that flickers.
             if (builder.control) {
+                // destroy() is deferred to the event loop; a build that fails
+                // in between leaves the old widget painted under the new
+                // failure text. Hidden first, so the tile shows one thing.
+                builder.control.visible = false;
                 builder.control.destroy();
                 builder.control = null;
             }
