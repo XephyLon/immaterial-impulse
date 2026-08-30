@@ -58,7 +58,7 @@ ShellRoot {
                 id: card
                 Layout.fillWidth: true
                 expanded: true
-                replying: true
+                replying: false
                 controller: PhoneNotificationController {}
                 notificationObject: ({ publicId: "1", appName: "Peachy", summary: "Lmao", body: "Test eh msh fahem",
                     urgency: 0, replyId: "r1", actions: [], image: "", appIcon: "", time: Date.now(), notificationId: 1 })
