@@ -367,14 +367,35 @@ Singleton {
             // is a secret and baseUrl comes from custom-provider config (which flows
             // through shareable presets), so interpolating them into a double-quoted
             // bash string - where $()/backticks expand - was a command-injection hole.
-            command: ["bash", "-c", 'curl -sL --max-time 10 -H "Authorization: Bearer $1" "$2/models" 2>/dev/null', "bash", apiKey, baseUrl]
+            // The status code rides on the last line, so a failure can say
+            // what it was: the old "Failed to fetch" covered a 404 from a
+            // base URL that already ended in /models, a 401 from a missing
+            // key and a server that was not there, and a reader could act on
+            // none of them.
+            command: ["bash", "-c", 'curl -sL --max-time 10 -H "Authorization: Bearer $1" -w "\n%{http_code}" "$2/models" 2>/dev/null', "bash", apiKey, baseUrl]
             stdout: StdioCollector {
                 onStreamFinished: {
-                    if (text.length === 0) {
-                        root.customProviderFeedbackText = Translation.tr("Failed to fetch from %1.").arg(fetcherProcess.providerName);
+                    const cut = text.lastIndexOf("\n");
+                    const status = cut >= 0 ? parseInt(text.slice(cut + 1), 10) : 0;
+                    const body = cut >= 0 ? text.slice(0, cut) : "";
+                    const where = `${fetcherProcess.baseUrl}/models`;
+                    if (!status) {
+                        root.customProviderFeedbackText = Translation.tr("No response from %1 at %2 - unreachable, or it took more than 10s.").arg(fetcherProcess.providerName).arg(where);
                         return;
                     }
-                    const parsedModels = AiModelsParser.parseCustomProviderModels(text, fetcherProcess.baseUrl, fetcherProcess.providerName, `custom_provider_${fetcherProcess.providerIndex}`);
+                    if (status === 401 || status === 403) {
+                        root.customProviderFeedbackText = Translation.tr("%1 refused the request (HTTP %2) - check its API key.").arg(fetcherProcess.providerName).arg(status);
+                        return;
+                    }
+                    if (status === 404) {
+                        root.customProviderFeedbackText = Translation.tr("%1 has nothing at %2 (HTTP 404) - the base URL should end where /models is appended, usually at /v1.").arg(fetcherProcess.providerName).arg(where);
+                        return;
+                    }
+                    if (status < 200 || status >= 300) {
+                        root.customProviderFeedbackText = Translation.tr("HTTP %2 from %1 at %3.").arg(fetcherProcess.providerName).arg(status).arg(where);
+                        return;
+                    }
+                    const parsedModels = AiModelsParser.parseCustomProviderModels(body, fetcherProcess.baseUrl, fetcherProcess.providerName, `custom_provider_${fetcherProcess.providerIndex}`);
                     if (parsedModels.length > 0) {
                         parsedModels.forEach(model => {
                             const safeModelName = root.safeModelName(model.model);
@@ -403,7 +424,7 @@ Singleton {
             if (!provider.enabled) continue;
             anyEnabled = true;
             let fetcher = customModelFetcherComponent.createObject(root, {
-                baseUrl: provider.baseUrl || "",
+                baseUrl: AiModelsParser.normalizeBaseUrl(provider.baseUrl || ""),
                 apiKey: KeyringStorage.loaded ? (KeyringStorage.keyringData.apiKeys?.[`custom_provider_${i}`] || "") : "",
                 providerName: provider.name || "Custom",
                 providerIndex: i

@@ -13,16 +13,26 @@ function guessModelName(model) {
     return result;
 }
 
+// The base of an OpenAI-compatible API, from whatever the user typed. The
+// fetch appends `/models` and the models' endpoints append
+// `/chat/completions`, so a base that already ends in either - pasted from
+// the browser bar, which is how one gets `http://host/v1/models` into a
+// field labelled Base URL - produced `/v1/models/models`, a 404 with an empty
+// body, and a fetch that "gave nothing".
+function normalizeBaseUrl(url) {
+    let base = `${url ?? ""}`.trim();
+    base = base.replace(/\/+$/, "");
+    base = base.replace(/\/(models|chat\/completions)$/i, "");
+    return base.replace(/\/+$/, "");
+}
+
 function parseCustomProviderModels(responseJsonString, baseUrl, providerName, keyId) {
     try {
         if (!responseJsonString || responseJsonString.trim() === "") return [];
         const data = JSON.parse(responseJsonString);
         if (!data || !Array.isArray(data.data)) return [];
         let result = [];
-        let sanitizedBaseUrl = baseUrl;
-        if (sanitizedBaseUrl.endsWith("/")) {
-            sanitizedBaseUrl = sanitizedBaseUrl.slice(0, -1);
-        }
+        const sanitizedBaseUrl = normalizeBaseUrl(baseUrl);
         data.data.forEach(model => {
             if (!model.id) return;
             result.push({

@@ -5,6 +5,22 @@ import "../services/AiModelsParser.js" as AiModelsParser
 TestCase {
     name: "AiCustomModelsTest"
 
+    function test_normalizeBaseUrl() {
+        // What a base URL pasted from a browser bar looks like, and what the
+        // fetch needs: the fetch appends /models, so a base that already ends
+        // there produced /v1/models/models - a 404 with an empty body.
+        compare(AiModelsParser.normalizeBaseUrl("http://127.0.0.1:8317/v1/models"), "http://127.0.0.1:8317/v1")
+        compare(AiModelsParser.normalizeBaseUrl("https://api.example.com/v1/"), "https://api.example.com/v1")
+        compare(AiModelsParser.normalizeBaseUrl("https://api.example.com/v1/chat/completions"), "https://api.example.com/v1")
+        compare(AiModelsParser.normalizeBaseUrl("  https://api.example.com/v1  "), "https://api.example.com/v1")
+        compare(AiModelsParser.normalizeBaseUrl("https://api.example.com/v1/MODELS/"), "https://api.example.com/v1")
+        compare(AiModelsParser.normalizeBaseUrl(""), "")
+        compare(AiModelsParser.normalizeBaseUrl(undefined), "")
+        // ...and the endpoint built from a base that ended in /models
+        var parsed = AiModelsParser.parseCustomProviderModels(JSON.stringify({ data: [{ id: "m" }] }), "http://127.0.0.1:8317/v1/models", "CLIP", "custom_provider_0")
+        compare(parsed[0].endpoint, "http://127.0.0.1:8317/v1/chat/completions")
+    }
+
     function test_parseCustomProviderModels() {
         // Valid response
         var validResponse = JSON.stringify({
