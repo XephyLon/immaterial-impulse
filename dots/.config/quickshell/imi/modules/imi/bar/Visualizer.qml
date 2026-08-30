@@ -29,6 +29,20 @@ Item {
     // producer emits more bands than this widget has dots, and picking one
     // index per dot threw away the ones in between.
     readonly property var levels: CavaBands.bands(root.points, root.barCount, root.maxVisualizerValue)
+    // Temporal smoothing as one filter over the array per cava frame, not a
+    // `Behavior on height` per dot: twenty NumberAnimations restarted sixty
+    // times a second, twice over (the bar carries two of these), on the main
+    // thread the sidebars' slide runs on. Same fix as the desktop widget's.
+    // k = 0.55 at 60 frames/s is the 80ms the animation gave.
+    property var displayed: []
+    onLevelsChanged: {
+        const target = root.levels, prev = root.displayed, next = new Array(target.length);
+        for (let j = 0; j < target.length; j++) {
+            const was = prev[j] ?? 0;
+            next[j] = was + (target[j] - was) * 0.55;
+        }
+        root.displayed = next;
+    }
 
     // A fullscreen window on this monitor covers the bar - Bar.qml:67 chooses
     // the Top layer precisely so that it does, except while a special workspace
@@ -81,14 +95,13 @@ Item {
                 width: root.dotSize
                 property real pointValue: {
                     if (!root.isPlaying || root.points.length === 0) return root.dotSize
-                    return Math.max(root.dotSize, (root.levels[index] ?? 0) * root.maxBarHeight)
+                    return Math.max(root.dotSize, (root.displayed[index] ?? 0) * root.maxBarHeight)
                 }
                 height: pointValue
                 radius: width / 2
                 anchors.verticalCenter: parent.verticalCenter
                 color: Appearance.colors.colPrimary
                 opacity: root.isPlaying ? 0.85 : 0.3
-                Behavior on height { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
                 Behavior on opacity { NumberAnimation { duration: 300 } }
             }
         }
@@ -108,14 +121,13 @@ Item {
                 property real pointValue: {
                     if (!root.isPlaying || root.points.length === 0) return root.dotSize
                     const rawIndex = root.mirrored ? (root.barCount - 1 - index) : index
-                    return Math.max(root.dotSize, (root.levels[rawIndex] ?? 0) * root.maxBarHeight)
+                    return Math.max(root.dotSize, (root.displayed[rawIndex] ?? 0) * root.maxBarHeight)
                 }
                 width: pointValue
                 radius: height / 2
                 anchors.horizontalCenter: parent.horizontalCenter
                 color: Appearance.colors.colPrimary
                 opacity: root.isPlaying ? 0.85 : 0.3
-                Behavior on width { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
                 Behavior on opacity { NumberAnimation { duration: 300 } }
             }
         }
