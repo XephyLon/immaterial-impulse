@@ -229,10 +229,6 @@ hl.layer_rule({ match = { namespace = "quickshell:dock" }, blur = false})
 -- overview itself). See WindowBlurRegion in OnScreenDisplay.qml / Overview.qml.
 hl.layer_rule({ match = { namespace = "quickshell:onScreenDisplay" }, blur = false})
 hl.layer_rule({ match = { namespace = "quickshell:overview" }, blur = false})
--- The cheatsheet has drawn a StyledRectangularShadow all along; the
--- whole-surface blur was frosting it, which is why the card read as having no
--- shadow at all. See WindowBlurRegion in Cheatsheet.qml.
-hl.layer_rule({ match = { namespace = "quickshell:cheatsheet" }, blur = false})
 -- Notification popups: each card carries its own shadow, so the whole-surface
 -- blur frosted every one of them. The shell publishes a region per card
 -- instead, leaving the gaps between them unblurred. See WindowBlurRegion in
