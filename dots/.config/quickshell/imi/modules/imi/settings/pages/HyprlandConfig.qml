@@ -533,6 +533,8 @@ ContentPage {
 
                 KeybindEditor {
                     id: settingsKeybindEditor
+                    overrides: HyprlandKeybindOverrides
+                    submap: HyprlandSubmap
                     anchors {
                         top: parent.top
                         left: parent.left
