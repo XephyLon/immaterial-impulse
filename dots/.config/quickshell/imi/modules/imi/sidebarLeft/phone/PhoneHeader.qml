@@ -43,6 +43,10 @@ Item {
         // sit at the chip height now, on one radius and one tone.
         FilterChip {
             id: deviceChip
+            objectName: "deviceChip"
+            // The device this chip stands for, for whoever asks the header
+            // (the runtime harness does) - the chip itself draws only text.
+            readonly property var device: root.device
             chipIcon: DeviceGlyph.forType(root.device?.type)
             label: root.device ? (root.device.name || root.device.id) : Translation.tr("No device")
             trailingIcon: PhoneConnect.devices.length > 0
