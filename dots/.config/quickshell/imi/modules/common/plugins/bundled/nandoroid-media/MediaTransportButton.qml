@@ -282,7 +282,36 @@ Item {
                 onWidthChanged: requestPaint()
                 onHeightChanged: requestPaint()
                 onAvailableChanged: if (available) requestPaint()
-
+                property var ringX: null
+                property var ringY: null
+                property var ringNX: null
+                property var ringNY: null
+                property string ringKey: ""
+                function rebuildRing(N, w, h, dia) {
+                    const key = `${w}|${h}|${dia}`;
+                    if (key === body.ringKey && body.ringX) return;
+                    body.ringKey = key;
+                    const ring = MediaShapes.ringMeasuredAt(1, PathLength.measureCubics);
+                    const cubics = ring.cubics, measure = ring.measure;
+                    const bx = new Float64Array(N + 1), by = new Float64Array(N + 1);
+                    const nx = new Float64Array(N + 1), ny = new Float64Array(N + 1);
+                    for (let i = 0; i <= N; i++) {
+                        const target = (i / N) * measure.total;
+                        let index = 0;
+                        while (index < cubics.length - 1 && measure.lengths[index + 1] < target) index++;
+                        const span = measure.lengths[index + 1] - measure.lengths[index];
+                        const tt = span > 0 ? (target - measure.lengths[index]) / span : 0;
+                        const point = PathLength.pointOnCubic(cubics[index], tt);
+                        bx[i] = w / 2 + point.x * dia; by[i] = h / 2 + point.y * dia;
+                    }
+                    for (let i = 0; i <= N; i++) {
+                        const b = Math.max(0, i - 1), a = Math.min(N, i + 1);
+                        let x = -(by[a] - by[b]), y = bx[a] - bx[b];
+                        const len = Math.hypot(x, y) || 1;
+                        nx[i] = x / len; ny[i] = y / len;
+                    }
+                    body.ringX = bx; body.ringY = by; body.ringNX = nx; body.ringNY = ny;
+                }
                 onPaint: {
                     const ctx = getContext("2d");
                     ctx.clearRect(0, 0, width, height);
@@ -295,36 +324,22 @@ Item {
                         // Same cache the seeker uses - this canvas was
                         // rebuilding and re-measuring the identical constant
                         // shape (ringAt(1)) once per frame beside it.
-                        const ring = MediaShapes.ringMeasuredAt(1, PathLength.measureCubics);
-                        const cubics = ring.cubics;
-                        const measure = ring.measure;
                         const amp = stroke * 0.6 * root.ringWaveLevel;
                         // VERBATIM the seeker's construction - arc-length
                         // samples, normals from RAW neighbours, sine along the
                         // normal - so the filled contour and the stroked ring
                         // are the same curve at the same phase, crest for
-                        // crest. The first version improvised a radial-scale
-                        // wobble and the two visibly disagreed.
-                        const base = [];
-                        for (let i = 0; i <= N; i++) {
-                            const u = i / N;
-                            const target = u * measure.total;
-                            let index = 0;
-                            while (index < cubics.length - 1 && measure.lengths[index + 1] < target) index++;
-                            const span = measure.lengths[index + 1] - measure.lengths[index];
-                            const t = span > 0 ? (target - measure.lengths[index]) / span : 0;
-                            const point = PathLength.pointOnCubic(cubics[index], t);
-                            base.push({ x: width / 2 + point.x * dia, y: height / 2 + point.y * dia });
-                        }
+                        // crest. The samples and normals are cached (see
+                        // rebuildRing): they depend on the size, not on the
+                        // phase, and rebuilding 161 point objects a frame kept
+                        // the garbage collector marking the whole shell.
+                        body.rebuildRing(N, width, height, dia);
+                        const bx = body.ringX, by = body.ringY, nx = body.ringNX, ny = body.ringNY;
+                        const k = 12 * 2 * Math.PI / N, phase = root.ringPhase;
                         ctx.beginPath();
                         for (let i = 0; i <= N; i++) {
-                            const before = base[Math.max(0, i - 1)];
-                            const after = base[Math.min(N, i + 1)];
-                            let nx = -(after.y - before.y), ny = after.x - before.x;
-                            const len = Math.hypot(nx, ny) || 1;
-                            nx /= len; ny /= len;
-                            const w = amp * Math.sin(12 * 2 * Math.PI * (i / N) + root.ringPhase);
-                            const x = base[i].x + nx * w, y = base[i].y + ny * w;
+                            const w = amp * Math.sin(k * i + phase);
+                            const x = bx[i] + nx[i] * w, y = by[i] + ny[i] * w;
                             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
                         }
                         ctx.closePath();
