@@ -171,7 +171,8 @@ function heroDayRect(span, width, height, scale, weekRow, todayIndex) {
     if (span === "3x2") return {
         x: HERO_LEFT * scale, y: HERO_DAY_TOP * scale,
         width: _surface3x2Left(width, scale) - (HERO_LEFT + CARD_INSET) * scale,
-        height: height - (HERO_DAY_TOP + CARD_INSET) * scale,
+        // Stops above the steppers at the column's foot.
+        height: height - (HERO_DAY_TOP + CARD_INSET + NAV + LABEL_GAP) * scale,
         size: HERO_DAY_FONT * scale, present: true
     };
     var cell = dayCellRect(todayIndex, span, width, height, scale, weekRow, todayIndex);
@@ -185,9 +186,18 @@ function heroDayRect(span, width, height, scale, weekRow, todayIndex) {
     return cell;
 }
 
-// The 2x2 month steppers. index 0 is the previous month, 1 the next, and they
-// sit at the right end of the title row in that order.
+// The month steppers. index 0 is the previous month, 1 the next. At 2x2
+// they sit at the right end of the title row; at 3x2 the same PAIR travels
+// to the foot of the hero column (one element per purpose - the maintainer
+// asked for them at 3x2, and a second pair fading in would be the twin the
+// rule forbids). The two small spans have no month to step - they are about
+// today - so the pair fades there.
 function navButtonRect(index, span, width, height, scale) {
+    if (span === "3x2") return {
+        x: HERO_LEFT * scale + index * (NAV + LABEL_GAP) * scale,
+        y: height - (CARD_INSET + NAV) * scale,
+        width: NAV * scale, height: NAV * scale
+    };
     if (span !== "2x2") return null;
     var fromRight = (1 - index) * (NAV + LABEL_GAP) * scale;
     return {

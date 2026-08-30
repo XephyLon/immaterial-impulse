@@ -89,14 +89,25 @@ TestCase {
         compare(inPill.height, pill.height);
     }
 
-    function test_the_month_steppers_exist_only_at_2x2_and_in_order() {
-        compare(nav(0, "1x1"), null);
+    function test_the_month_steppers_live_at_both_whole_month_spans() {
+        compare(nav(0, "1x1"), null, "the small spans are about today");
         compare(nav(0, "2x1"), null);
         const prev = nav(0, "2x2");
         const next = nav(1, "2x2");
         verify(prev.x < next.x, "previous, then next");
         compare(next.x + next.width, 276 - 12, "flush with the card inset");
         verify(prev.x + prev.width < next.x, "and they do not overlap");
+        // The SAME pair travels to the foot of the hero column at 3x2.
+        const heroPrev = nav(0, "3x2");
+        const heroNext = nav(1, "3x2");
+        compare(heroPrev.x, 16, "on the hero column's own inset");
+        verify(heroPrev.x < heroNext.x);
+        compare(heroPrev.y + heroPrev.height, 228 - 12, "at the column's foot");
+        verify(heroNext.x + heroNext.width <= Geometry.dayGridSurfaceRect(
+            "3x2", 420, 228, 1, cardRadius).x + 0.01, "clear of the grid surface");
+        const dayRect = hero("3x2");
+        verify(dayRect.y + dayRect.height <= heroPrev.y + 0.01,
+               "the hero date stops above the steppers");
     }
 
     function test_the_weekday_letters_divide_their_own_content_width() {
@@ -228,8 +239,7 @@ TestCase {
         for (const slot of [month, weekdayRow, dayRect])
             verify(slot.x + slot.width <= surfaceRect.x + 0.01,
                    "the hero column stays clear of the grid surface");
-        compare(nav(0, "3x2"), null, "no steppers: this span is about today");
-        compare(surface("3x2"), null, "no band and no pill either");
+        compare(surface("3x2"), null, "no band and no pill");
     }
 
     function test_the_hero_date_is_one_element_from_1x1_to_3x2() {

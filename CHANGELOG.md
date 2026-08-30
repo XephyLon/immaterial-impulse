@@ -20,8 +20,8 @@ own repo; the installer pins which revision it builds.
 - **The calendar takes a 3x2: today as a hero column beside the month.**
   An icon in its Material shape, the month in small caps, the weekday and
   the big date on the left; the whole month on its own surface to the
-  right, with today circled - no steppers, like the two small sizes this
-  span joins. Every purpose is one element across all four sizes - the
+  right, with today circled, and the month steppers at the column's foot
+  (the same travelling pair the 2x2 title row has). Every purpose is one element across all four sizes - the
   month text rewrites its spelling (AUG, August 2026, AUGUST) while it
   travels rather than being replaced by a twin, and the big date is the
   same element at 1x1 and 3x2, fading out over today's own circled cell

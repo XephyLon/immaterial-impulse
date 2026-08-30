@@ -87,11 +87,15 @@ Item {
 
     readonly property string sizeMode: root.normalizeSizeMode(root.hostGridSize)
 
-    // The month steppers only exist at 2x2, and the two smaller spans are both
-    // about *today* - the hero date and the current week. Leaving a shift on
-    // when the card shrinks would show a week of some other month with today's
-    // date nowhere in it, and would leave the hero cell with no home at all.
-    onSizeModeChanged: if (root.sizeMode !== "2x2") root.monthShift = 0
+    // The month steppers exist at the two spans that show a whole month
+    // (2x2, 3x2); the two smaller spans are about *today* - the hero date
+    // and the current week. Leaving a shift on when the card shrinks to
+    // them would show a week of some other month with today's date nowhere
+    // in it.
+    onSizeModeChanged: {
+        if (root.sizeMode !== "2x2" && root.sizeMode !== "3x2")
+            root.monthShift = 0;
+    }
 
     // ---- the span, and the box travelling towards it ---------------------
     //
@@ -409,15 +413,22 @@ Item {
             visible: opacity > 0
         }
 
-        // ---- the two month steppers, 2x2 only ----------------------------
+        // ---- the two month steppers: the title row's pair, and the hero
+        // column's - one pair, travelling between its two homes ------------
         Repeater {
             model: 2
             delegate: Rectangle {
                 id: navButton
                 required property int index
-                readonly property bool present: root.sizeMode === "2x2"
+                readonly property bool present: root.sizeMode === "2x2" || root.sizeMode === "3x2"
+                property string lastHome: "2x2"
+                onPresentChanged: if (present) navButton.lastHome = root.sizeMode
+                Component.onCompleted: if (present) navButton.lastHome = root.sizeMode
+                readonly property string homeSpan: navButton.present ? root.sizeMode : navButton.lastHome
                 readonly property var slot: Geometry.navButtonRect(
-                    navButton.index, "2x2", root.snapWidth2, root.tallHeight, root.uiScale)
+                    navButton.index, navButton.homeSpan,
+                    root.spanWidthOf(navButton.homeSpan),
+                    root.spanHeightOf(navButton.homeSpan), root.uiScale)
 
                 x: slot.x
                 y: slot.y
