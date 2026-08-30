@@ -9,7 +9,7 @@ import QtQuick.Layouts
  * per-row edit affordance and the settings page. Takes an annotated binding
  * from HyprlandKeybinds (identity, chord, dispatcher/params/flags, editable/
  * removable/overridden/added) and writes only through
- * HyprlandKeybindOverrides - never to any keybind file directly.
+ * the override model it is handed - never to any keybind file directly.
  *
  * Conflicts for the captured chord are recomputed reactively against the full
  * occupancy scan and block Apply; the scan cannot see loop-generated binds,
@@ -18,6 +18,12 @@ import QtQuick.Layouts
  */
 ColumnLayout {
     id: root
+    // The override model and the submap state, handed in by whoever built
+    // the editor - HyprlandKeybindOverrides and HyprlandSubmap in both places
+    // today. Naming the services here made an editor with two consumers in
+    // two modules the one widget that could be shown nowhere else.
+    required property var overrides
+    property var submap: null
 
     property var bindingData: null
     signal done()
@@ -27,30 +33,30 @@ ColumnLayout {
         capture.forceActiveFocus();
     }
 
-    readonly property bool foreignShim: HyprlandKeybindOverrides.shimStatus === "foreign"
+    readonly property bool foreignShim: root.overrides.shimStatus === "foreign"
     readonly property bool writable: !root.foreignShim && root.bindingData !== null
 
     readonly property var conflicts: {
         // Referenced so the binding re-evaluates when the scans or the
         // override set change, not only when the capture does.
-        const flatDefault = HyprlandKeybindOverrides.flatDefaultBinds;
-        const flatUser = HyprlandKeybindOverrides.flatUserBinds;
-        const overrideState = HyprlandKeybindOverrides.state;
+        const flatDefault = root.overrides.flatDefaultBinds;
+        const flatUser = root.overrides.flatUserBinds;
+        const overrideState = root.overrides.state;
         void flatDefault; void flatUser; void overrideState;
         if (!capture.hasChord || root.bindingData === null)
             return [];
-        return HyprlandKeybindOverrides.conflictsFor(
+        return root.overrides.conflictsFor(
             capture.mods, capture.key, root.bindingData.identity);
     }
 
     readonly property bool chordChanged: capture.hasChord && root.bindingData !== null
-        && HyprlandKeybindOverrides.identityFor(capture.mods, capture.key)
-           !== HyprlandKeybindOverrides.identityFor(root.bindingData.mods, root.bindingData.key)
+        && root.overrides.identityFor(capture.mods, capture.key)
+           !== root.overrides.identityFor(root.bindingData.mods, root.bindingData.key)
     // Acknowledging a conflict is per-chord: capturing a different one has to
     // re-ask, or a stale "yes" from an earlier attempt would carry over.
     property string acknowledgedChord: ""
     readonly property string capturedIdentity: capture.hasChord
-        ? HyprlandKeybindOverrides.identityFor(capture.mods, capture.key) : ""
+        ? root.overrides.identityFor(capture.mods, capture.key) : ""
     readonly property bool conflictAcknowledged: root.conflicts.length === 0
         || (root.capturedIdentity.length > 0 && root.acknowledgedChord === root.capturedIdentity)
     readonly property bool canApply: root.writable && root.chordChanged
@@ -62,12 +68,12 @@ ColumnLayout {
             return;
         const data = root.bindingData;
         if (data.added) {
-            const entry = HyprlandKeybindOverrides.overrideFor(data.identity);
-            HyprlandKeybindOverrides.reset(data.identity);
-            HyprlandKeybindOverrides.addBinding(
+            const entry = root.overrides.overrideFor(data.identity);
+            root.overrides.reset(data.identity);
+            root.overrides.addBinding(
                 capture.mods, capture.key, entry?.command ?? "", entry?.description ?? "");
         } else {
-            HyprlandKeybindOverrides.setRebind(data.identity, capture.mods, capture.key, data);
+            root.overrides.setRebind(data.identity, capture.mods, capture.key, data);
         }
         root.done();
     }
@@ -125,7 +131,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: root.foreignShim
         text: Translation.tr("The generated override file was edited by hand, so the shell refuses to change it. Delete %1 to edit shortcuts from here again.")
-            .arg(HyprlandKeybindOverrides.shimPath)
+            .arg(root.overrides.shimPath)
         color: Appearance.colors.colError
         font.pixelSize: Appearance.font.pixelSize.smaller
         wrapMode: Text.Wrap
@@ -133,9 +139,9 @@ ColumnLayout {
 
     StyledText {
         Layout.fillWidth: true
-        visible: HyprlandSubmap.active
+        visible: root.submap?.active ?? false
         text: Translation.tr("A keybind submap (%1) is active right now; the default shortcuts are suspended until it exits.")
-            .arg(HyprlandSubmap.submapName)
+            .arg(root.submap?.submapName ?? "")
         color: Appearance.colors.colError
         font.pixelSize: Appearance.font.pixelSize.smaller
         wrapMode: Text.Wrap
@@ -220,7 +226,7 @@ ColumnLayout {
             enabled: root.writable
             buttonText: Translation.tr("Reset to default")
             onClicked: {
-                HyprlandKeybindOverrides.reset(root.bindingData.identity);
+                root.overrides.reset(root.bindingData.identity);
                 root.done();
             }
         }
@@ -235,9 +241,9 @@ ColumnLayout {
             colEnabled: Appearance.colors.colError
             onClicked: {
                 if (root.bindingData.added)
-                    HyprlandKeybindOverrides.reset(root.bindingData.identity);
+                    root.overrides.reset(root.bindingData.identity);
                 else
-                    HyprlandKeybindOverrides.removeBinding(root.bindingData.identity);
+                    root.overrides.removeBinding(root.bindingData.identity);
                 root.done();
             }
         }

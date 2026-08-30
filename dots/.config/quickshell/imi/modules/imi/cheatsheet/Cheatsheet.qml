@@ -260,6 +260,8 @@ Scope { // Scope
 
                         KeybindEditor {
                             id: keybindEditorContent
+                            overrides: HyprlandKeybindOverrides
+                            submap: HyprlandSubmap
                             anchors {
                                 top: parent.top
                                 left: parent.left
