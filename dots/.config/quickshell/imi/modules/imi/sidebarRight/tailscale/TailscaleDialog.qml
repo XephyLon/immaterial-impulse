@@ -55,7 +55,9 @@ WindowDialog {
         // First row clears the exit node; the rest are the advertised peers.
         header: TailscaleExitNodeItem {
             exitNode: null
+            active: !Tailscale.exitNodeActive
             width: ListView.view.width
+            onPicked: Tailscale.clearExitNode()
         }
         model: ScriptModel {
             values: Tailscale.exitNodes
@@ -63,7 +65,9 @@ WindowDialog {
         delegate: TailscaleExitNodeItem {
             required property var modelData
             exitNode: modelData
+            active: modelData.active === true
             width: ListView.view.width
+            onPicked: node => Tailscale.setExitNode(node.ip)
         }
     }
     StyledText {
