@@ -48,6 +48,7 @@ WindowDialog {
         delegate: BluetoothDeviceItem {
             required property BluetoothDevice modelData
             device: modelData
+            batterySuffix: BluetoothStatus.formatBatterySuffix(modelData)
             anchors {
                 left: parent?.left
                 right: parent?.right
