@@ -44,11 +44,6 @@ ALLOWED_SINGLETONS = {"Translation"}
 
 # file -> why it is still allowed to reach past presentation.
 EXCLUDED = {
-    "DropShelf.qml":
-        "not a widget at all: `pragma Singleton` with a call-site API "
-        "(DropShelf.show(...)) owning four GlobalStates keys. A service in the "
-        "wrong folder - and moving a singleton changes registration, which "
-        "needs a full shell restart to verify, so it wants its own change",
     "NotificationController.qml":
         "deliberate, and the only entry here that is not a to-do: this file IS "
         "the seam. Its job is to name Notifications once so a subclass can "
@@ -60,15 +55,6 @@ EXCLUDED = {
         "the bar popup protocol. Its arbitration moved to the slot "
         "(GlobalStates.claimBarPopup) and what remains is this object ASKING - "
         "the inverted shape. Named here so the exception stays visible",
-    "KeybindEditor.qml":
-        "HyprlandKeybindOverrides and HyprlandSubmap. Two consumers in two "
-        "modules (the cheatsheet and the Hyprland settings page), so it cannot "
-        "simply move; the services want inverting into a model it is handed",
-    "Favicon.qml":
-        "spawns a fetch for a site icon, and reads the user agent from "
-        "Config. Wants a service behind it, the way every other network read "
-        "in this shell has one - and its two consumers are dumb rows, so the "
-        "path has to arrive through them as a property",
 }
 
 
