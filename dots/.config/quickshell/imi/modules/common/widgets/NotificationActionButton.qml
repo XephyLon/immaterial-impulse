@@ -15,10 +15,20 @@ RippleButton {
     colBackground: (urgency == NotificationUrgency.Critical) ? Appearance.colors.colSecondaryContainer : Appearance.colors.colLayer4
     colBackgroundHover: (urgency == NotificationUrgency.Critical) ? Appearance.colors.colSecondaryContainerHover : Appearance.colors.colLayer4Hover
     colRipple: (urgency == NotificationUrgency.Critical) ? Appearance.colors.colSecondaryContainerActive : Appearance.colors.colLayer4Active
+    // Toggled (the reply chip while replying): the secondary container,
+    // not RippleButton's default primary - an on-surface glyph on a bright
+    // primary was near invisible, and this is a selected chip, not a
+    // filled button.
+    colBackgroundToggled: Appearance.colors.colSecondaryContainer
+    colBackgroundToggledHover: Appearance.colors.colSecondaryContainerHover
+    colRippleToggled: Appearance.colors.colSecondaryContainerActive
+    readonly property color colText: toggled ? Appearance.colors.colOnSecondaryContainer
+        : (urgency == NotificationUrgency.Critical) ? Appearance.m3colors.m3onSurfaceVariant
+        : Appearance.m3colors.m3onSurface
 
     contentItem: StyledText {
         horizontalAlignment: Text.AlignHCenter
         text: buttonText
-        color: (urgency == NotificationUrgency.Critical) ? Appearance.m3colors.m3onSurfaceVariant : Appearance.m3colors.m3onSurface
+        color: button.colText
     }
 }

@@ -33,6 +33,22 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **The Phone tab's header is one row of one size.** The device chip is the
+  shared filter chip with a trailing arrow, and the connection and battery
+  facts beside it are plain icon-and-label metadata with no container - a
+  36px pill next to two 22px pills, all three looking clickable, is what it
+  was.
+- **The device roster's rows sit together.** A row that paints its own
+  surface no longer gets the plate's padding and inset stacked under it,
+  which was 24px of nothing between every two devices.
+- **Replying to a phone notification: the field is whole, the three chips
+  share the width, and the active Reply chip is readable.** The reply field
+  drew its text past its top edge, the action row split its width in two by
+  hand and pushed the third chip off the card, and the toggled chip used
+  the primary colour under an on-surface glyph.
+- **The cheatsheet opens on the key, not three seconds after it.** The
+  Components tab built its audit table's sixty-two off-screen widgets at
+  open whether or not the Audit was showing.
 - **Following a link in a phone notification closes the phone's sidebar, not
   the other one.** The card closed the right sidebar whichever panel it was
   in; which sidebar a card sits in is now the notification backend's to say.
