@@ -211,6 +211,12 @@ Item {
                             color: noteRowArea.containsMouse
                                 ? Appearance.colors.colLayer2Hover
                                 : Appearance.colors.colLayer2
+                            // The tier, whole (the audit's G10: this row
+                            // snapped between its two colours - not the
+                            // wrong curve, no curve at all).
+                            Behavior on color {
+                                animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                            }
 
                             MouseArea {
                                 id: noteRowArea

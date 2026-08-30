@@ -95,6 +95,9 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **A note row's hover fades instead of snapping.** The row flipped
+  between its two colours with no motion at all - the widget audit's G10,
+  closed with the tier every other hover already rides.
 - **RGB devices no longer blink on every colour change, and colours fade
   instead of stepping.** Every write went through the `openrgb` CLI, and
   every CLI call is a fresh client handshake followed by a mode command -
