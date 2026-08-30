@@ -88,8 +88,13 @@ Item {
     signal lockPresenceResetRequested()
 
     // The chrome surface reads this to take OnDemand keyboard focus while
-    // the search field is being typed into - and only then.
-    readonly property bool searchTakesKeys: appSearchField.activeFocus
+    // the search field is being typed into - and only then. Scene `focus`,
+    // NOT `activeFocus`: activeFocus requires the window to hold the very
+    // keyboard this flag exists to request, so gating on it could never
+    // turn true ("Still can't type"). A click sets the field's scene focus
+    // regardless; the surface then asks, the compositor grants, and
+    // activeFocus follows.
+    readonly property bool searchTakesKeys: appSearchField.focus && root.section === "dock"
     onSectionChanged: appSearchField.focus = false
 
     // Which screen this drawer is arranging - handed in by the surface, so
