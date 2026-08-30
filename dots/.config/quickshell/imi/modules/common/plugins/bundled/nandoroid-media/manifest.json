@@ -8,7 +8,7 @@
   ],
   "grid": {
     "cols": 3, "rows": 2,
-    "sizes": [ { "cols": 3, "rows": 2 }, { "cols": 2, "rows": 2 }, { "cols": 2, "rows": 1 } ]
+    "sizes": [ { "cols": 3, "rows": 2 }, { "cols": 2, "rows": 2 }, { "cols": 2, "rows": 1 }, { "cols": 1, "rows": 1 } ]
   },
   "desktopWidget": { "component": "Widget.qml", "blur": false }
 }

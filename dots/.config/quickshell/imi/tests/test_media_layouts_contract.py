@@ -46,7 +46,7 @@ class TheManifestAndTheTableNameTheSameSpans(unittest.TestCase):
     def test_the_table_is_not_empty(self):
         # The regex is the only thing standing between this whole module and a
         # vacuous pass, so say so out loud.
-        self.assertEqual(len(table()), 3, "media_layouts.js parsed to nothing")
+        self.assertEqual(len(table()), 4, "media_layouts.js parsed to nothing")
 
     def test_every_offered_span_is_in_the_table(self):
         offered = [f"{size['cols']}x{size['rows']}" for size in grid()["sizes"]]

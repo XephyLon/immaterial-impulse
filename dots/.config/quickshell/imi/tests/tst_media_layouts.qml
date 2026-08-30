@@ -14,6 +14,8 @@ TestCase {
         compare(MediaLayouts.spanFor("2x2").rows, 2);
         compare(MediaLayouts.spanFor("2x1").cols, 2);
         compare(MediaLayouts.spanFor("2x1").rows, 1);
+        compare(MediaLayouts.spanFor("1x1").cols, 1);
+        compare(MediaLayouts.spanFor("1x1").rows, 1);
     }
 
     function test_an_unresolved_span_falls_back_to_the_3x2() {
@@ -26,7 +28,7 @@ TestCase {
     }
 
     function test_the_table_offers_exactly_the_manifest_spans() {
-        compare(MediaLayouts.SPANS.length, 3,
+        compare(MediaLayouts.SPANS.length, 4,
                 "a span added here needs geometry in media_geometry.js too");
     }
 }

@@ -84,8 +84,8 @@ ShellRoot {
     // of these checks. A part with fewer than 3 recorded intermediate values
     // snapped, and the sweep says which part on which transition.
     readonly property var transitions: [
-        ["3x2", "2x2"], ["2x2", "2x1"], ["2x1", "3x2"],
-        ["3x2", "2x1"], ["2x1", "2x2"], ["2x2", "3x2"]
+        ["3x2", "2x2"], ["2x2", "2x1"], ["2x1", "1x1"], ["1x1", "3x2"],
+        ["3x2", "2x1"], ["2x1", "2x2"], ["2x2", "3x2"], ["1x1", "2x1"]
     ]
     property int transitionIndex: 0
     property var trails: ({})
@@ -168,7 +168,7 @@ ShellRoot {
     // shipped broken: a click on the play button's FACE must reach the
     // button (the ring passes it through), and a click ON the ring's stroke
     // must seek and not activate.
-    property var pointerSpans: ["3x2", "2x2", "2x1"]
+    property var pointerSpans: ["3x2", "2x2", "2x1", "1x1"]
     property int pointerIndex: 0
     property int activatedCount: 0
     property int soughtCount: 0

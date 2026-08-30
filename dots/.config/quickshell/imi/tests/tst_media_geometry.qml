@@ -124,10 +124,32 @@ TestCase {
         fuzzyCompare(progress.width, t.play.width * 1.28, 0.01);
     }
 
+    // ---- 1x1 -------------------------------------------------------------
+
+    function test_1x1_row_rides_low_and_centred_on_the_tile() {
+        const t = Geometry.transportRects("1x1", 132, 108, 1);
+        compare(t.prev.width, 26);
+        compare(t.play.width, 48);
+        // row: 26 + 10 + 48 + 10 + 26 = 120, centred in 132.
+        compare(t.prev.x, 6);
+        compare(t.play.x, 42);
+        compare(t.next.x, 100);
+        compare(t.play.y, 108 - 12 - 48, "12 clear of the bottom edge");
+        compare(t.prev.y - t.play.y, (48 - 26) / 2, "sides centred on play");
+    }
+
+    function test_1x1_shows_no_seek_no_time_no_button_artwork() {
+        // The card itself is the artwork at this span (Widget.qml's tiny art
+        // layer); the seek and the time yield the stage. Null is a fade.
+        compare(Geometry.progressRect("1x1", 132, 108, 1), null);
+        compare(Geometry.timeLabelRect("1x1", 132, 108, 1), null);
+        compare(Geometry.artworkRect("1x1", 132, 108, 1), null);
+    }
+
     // ---- cross-span, and scale -------------------------------------------
 
     function test_every_span_has_the_full_transport_set() {
-        for (const span of ["3x2", "2x2", "2x1"]) {
+        for (const span of ["3x2", "2x2", "2x1", "1x1"]) {
             const t = Geometry.transportRects(span, 276, 108, 1);
             verify(t.prev && t.play && t.next,
                    span + ": a shared element exists at every span");

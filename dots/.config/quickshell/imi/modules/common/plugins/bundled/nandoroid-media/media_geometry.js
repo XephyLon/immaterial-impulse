@@ -46,6 +46,13 @@ var COMPACT_CONTROL = 56;      // prev/next pills
 var COMPACT_PLAY = 72;         // the cookie play button
 var COMPACT_SPACING = 12;      // Appearance.spacing.space150
 
+// ---- 1x1 constants (designed against the maintainer's reference shot:
+// artwork fills the card, a small transport row sits low on it) -----------
+var TINY_PLAY = 48;            // the cookie play button
+var TINY_SIDE = 26;            // prev/next discs
+var TINY_GAP = 10;
+var TINY_BOTTOM = 12;          // the row's clearance from the card's bottom
+
 // ---- 2x2 constants -------------------------------------------------------
 var COOKIE_INSET = 12;         // cardInset = Appearance.spacing.space150
 var COOKIE_ART_RATIO = 0.72;   // artClip diameter / frame size
@@ -98,6 +105,23 @@ function transportRects(span, width, height, scale) {
             play: _rect(frame.x, frame.y, frame.size, frame.size),
             next: _rect(frame.x + frame.size - badge,
                         frame.y + frame.size - badge, badge, badge)
+        };
+    }
+    if (span === "1x1") {
+        // The card is the artwork (Widget.qml's tiny art layer); the
+        // transport rides low across it, play centred, sides on its axis.
+        var tinyPlay = TINY_PLAY * scale;
+        var tinySide = TINY_SIDE * scale;
+        var tinyGap = TINY_GAP * scale;
+        var tinyW = 2 * tinySide + tinyPlay + 2 * tinyGap;
+        var tinyX = (width - tinyW) / 2;
+        var tinyPlayY = height - (TINY_BOTTOM * scale) - tinyPlay;
+        var tinySideY = tinyPlayY + (tinyPlay - tinySide) / 2;
+        return {
+            prev: _rect(tinyX, tinySideY, tinySide, tinySide),
+            play: _rect(tinyX + tinySide + tinyGap, tinyPlayY, tinyPlay, tinyPlay),
+            next: _rect(tinyX + tinySide + tinyGap + tinyPlay + tinyGap, tinySideY,
+                        tinySide, tinySide)
         };
     }
     if (span === "2x1") {

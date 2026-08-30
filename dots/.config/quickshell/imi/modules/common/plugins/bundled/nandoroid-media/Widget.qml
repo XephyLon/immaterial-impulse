@@ -128,6 +128,52 @@ Item {
         }
     }
 
+    // 1x1: the card IS the artwork (the maintainer's reference: cover art
+    // fills the tile, the transport rides on it). Unshared content, like the
+    // 3x2's text page: nothing at another span morphs into a full-bleed
+    // image, so it enters and exits behind a span-gated Loader.
+    Loader {
+        id: tinyArt
+        objectName: "tinyArt"
+        readonly property bool wanted: root.spanName === "1x1"
+        active: wanted || opacity > 0.01
+        opacity: wanted ? 1 : 0
+        Behavior on opacity { Expressive.SpanFade {} }
+        anchors.fill: parent
+        z: 0.5
+        sourceComponent: Item {
+            // Clipped to the card's own radius through a rounded clip, not
+            // an OpacityMask - one less ShaderEffectSource on the desktop
+            // (the artwork-circle lesson in MediaTransportButton).
+            Rectangle {
+                id: tinyArtFrame
+                anchors.fill: parent
+                // The card's own radius, not a copy of its constant.
+                radius: bgCard.radius
+                color: "transparent"
+                clip: true
+                Image {
+                    anchors.fill: parent
+                    source: root.artUrl
+                    fillMode: Image.PreserveAspectCrop
+                    cache: false
+                    sourceSize.width: width
+                    sourceSize.height: height
+                    visible: root.artUrl !== ""
+                }
+                // No track, no art: the card face stays, with the glyph the
+                // 2x2's empty artwork disc uses.
+                Expressive.MaterialSymbol {
+                    anchors.centerIn: parent
+                    visible: root.artUrl === ""
+                    text: "music_note"
+                    iconSize: 34 * Appearance.effectiveScale
+                    color: Appearance.colors.colPrimary
+                }
+            }
+        }
+    }
+
     // ---- the shared elements ---------------------------------------------
 
     MediaTransportButton {
@@ -208,7 +254,10 @@ Item {
         progress: root.playbackProgress
         playing: MprisController.isPlaying
         behindSpecial: root.behindSpecial
-        opacity: root.lyricsUp ? 0 : 1
+        // Null slot (the 1x1 shows no seek) parks it invisible, which is
+        // also what stops its wave clocks - a 0x0 seeker still ticking is a
+        // timer for nothing.
+        opacity: (root.lyricsUp || root.progressSlot === null) ? 0 : 1
         Behavior on opacity { Expressive.SpanFade {} }
         visible: opacity > 0
         z: 3

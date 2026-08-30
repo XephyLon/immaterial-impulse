@@ -38,7 +38,7 @@ Item {
 
     // "prev" | "play" | "next"
     required property string role
-    // "3x2" | "2x2" | "2x1"
+    // "3x2" | "2x2" | "2x1" | "1x1"
     required property string span
 
     // 2x1 play only: the seek ring's fill.
@@ -157,6 +157,7 @@ Item {
                 text: root.role === "prev" ? "skip_previous" : "skip_next"
                 iconSize: root.span === "3x2" ? 28 * Appearance.effectiveScale
                     : root.span === "2x2" ? parent.height * 0.46
+                    : root.span === "1x1" ? 16 * Appearance.effectiveScale
                     : 26 * Appearance.effectiveScale
                 fill: 0
                 color: root.hoveredNow
@@ -457,7 +458,8 @@ Item {
                 anchors.centerIn: parent
                 visible: !artClip.visible || !artClip.artLoaded || root.hoveredNow
                 text: MprisController.isPlaying ? "pause" : "play_arrow"
-                iconSize: (root.span === "3x2" ? 40 : root.span === "2x2" ? 34 : 30) * Appearance.effectiveScale
+                iconSize: (root.span === "3x2" ? 40 : root.span === "2x2" ? 34
+                    : root.span === "1x1" ? 22 : 30) * Appearance.effectiveScale
                 fill: 0
                 color: hitArea.pressed
                     ? Functions.ColorUtils.applyAlpha(Appearance.colors.colOnPrimary, 0.7)

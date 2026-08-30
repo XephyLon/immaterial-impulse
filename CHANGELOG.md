@@ -13,6 +13,10 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The media widget takes a 1x1.** Cover art fills the tile and a small
+  transport row rides low across it - previous and next on discs, play on
+  the same scalloped cookie the other sizes morph through. No seek ring,
+  no time, no lyrics at this size; the resize grip walks to it after 2x1.
 - **The Custom Image widget plays GIFs and can drop its backing.** A
   dropped .gif animates instead of freezing on its first frame, and a new
   "Transparent background" option removes the container colour behind the

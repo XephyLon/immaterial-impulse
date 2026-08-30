@@ -9,7 +9,8 @@
 var SPANS = [
     { size: "3x2", cols: 3, rows: 2 },
     { size: "2x2", cols: 2, rows: 2 },
-    { size: "2x1", cols: 2, rows: 1 }
+    { size: "2x1", cols: 2, rows: 1 },
+    { size: "1x1", cols: 1, rows: 1 }
 ];
 
 function entryFor(gridSize) {
