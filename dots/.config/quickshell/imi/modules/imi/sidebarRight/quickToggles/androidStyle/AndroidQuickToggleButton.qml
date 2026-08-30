@@ -1,4 +1,3 @@
-import qs
 import QtQuick
 import QtQuick.Layouts
 import qs.services
@@ -23,6 +22,16 @@ GroupButton {
     property var gridRef: null
 
     signal openMenu()
+    // What a tile asks of the panel that holds the stored toggle list: to be
+    // moved onto another tile's slot after a drag, or added from the unused
+    // shelf. The list is the config's; the tile has no business writing it.
+    signal moveRequested(int fromIndex, int toIndex)
+    signal addRequested(string type)
+    signal removeRequested(int index)
+    signal resizeRequested(int index, int size)
+    // Whether the sidebar this tile sits in is open, for the entrance: a
+    // tile built while the panel is closed appears at once.
+    property bool panelOpen: false
 
     property QuickToggleModel toggleModel
     property string name: toggleModel?.name ?? ""
@@ -84,7 +93,7 @@ GroupButton {
             const wave = root.gridRef?.entranceWave ?? null;
             if (wave && (wave.active.length > 0 || wave.pendingEnter))
                 return;
-            if (!GlobalStates.sidebarRightOpen) {
+            if (!root.panelOpen) {
                 root.appear = 1;
                 return;
             }
@@ -275,24 +284,12 @@ GroupButton {
                     const sceneX = centroid.scenePosition.x;
                     const sceneY = centroid.scenePosition.y;
                     const nearest = findNearest(sceneX, sceneY);
-                    if (nearest) {
-                        const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-                        // The model carries each row's index in the stored
-                        // list, so the commit addresses the entry the tile was
-                        // built from. Looking it up by type again asks a
-                        // question the list may answer twice.
-                        const myIdx = root.buttonIndex;
-                        const sibIdx = nearest.buttonIndex;
-                        // Mutated in place, deliberately: 26b625905 measured
-                        // that every mutation form notifies and reverted the
-                        // copy-and-reassign indirection added on the belief
-                        // that they do not. Only the arithmetic changes here -
-                        // the dragged toggle travels to the tile it was
-                        // dropped on and the ones it passed shift back one,
-                        // instead of the two exchanging places and the other
-                        // one landing wherever the drag began.
-                        LayoutOps.moveInPlace(toggleList, myIdx, sibIdx);
-                    }
+                    // The model carries each row's index in the stored
+                    // list, so the request addresses the entry the tile was
+                    // built from. Looking it up by type again asks a
+                    // question the list may answer twice.
+                    if (nearest)
+                        root.moveRequested(root.buttonIndex, nearest.buttonIndex);
                 }
             }
 
@@ -329,12 +326,7 @@ GroupButton {
         visible: root.editMode && root.isUnused
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: {
-            const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-            const buttonType = root.buttonData.type;
-            if (!toggleList.find(t => t.type === buttonType))
-                toggleList.push({ type: buttonType, size: 1 });
-        }
+        onClicked: root.addRequested(root.buttonData.type)
     }
 
     // del
@@ -371,11 +363,7 @@ GroupButton {
             anchors.margins: -Appearance.spacing.space50
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: {
-                const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-                if (root.buttonIndex >= 0 && root.buttonIndex < toggleList.length)
-                    toggleList.splice(root.buttonIndex, 1);
-            }
+            onClicked: root.removeRequested(root.buttonIndex)
         }
     }
 
@@ -429,11 +417,8 @@ GroupButton {
                 const dx = scene.x - pressSceneX;
                 const steps = Math.round(dx / root.baseCellWidth);
                 const newSize = Math.max(1, Math.min(3, pressSize + steps));
-                if (newSize !== root.cellSize) {
-                    const toggleList = Config.options.sidebar.quickToggles.android.toggles;
-                    if (root.buttonIndex >= 0 && root.buttonIndex < toggleList.length)
-                        toggleList[root.buttonIndex].size = newSize;
-                }
+                if (newSize !== root.cellSize)
+                    root.resizeRequested(root.buttonIndex, newSize);
             }
         }
     }

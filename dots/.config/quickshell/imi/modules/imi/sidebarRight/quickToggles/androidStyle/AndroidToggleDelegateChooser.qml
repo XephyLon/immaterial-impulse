@@ -1,7 +1,9 @@
 pragma ComponentBehavior: Bound
+import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import "../../../../common/functions/layout_ops.js" as LayoutOps
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -24,6 +26,34 @@ DelegateChooser {
     signal openTailscaleDialog()
     signal openPhoneTab()
 
+    // The stored toggle list is written HERE, on a tile's request, not by the
+    // tile: a tile that edits Config cannot be shown anywhere the config is
+    // not the real one. The four bodies moved verbatim from the tile.
+    function moveToggle(fromIndex, toIndex) {
+        const toggleList = Config.options.sidebar.quickToggles.android.toggles;
+        // Mutated in place, deliberately: 26b625905 measured that every
+        // mutation form notifies and reverted the copy-and-reassign
+        // indirection added on the belief that they do not. The dragged
+        // toggle travels to the tile it was dropped on and the ones it passed
+        // shift back one, instead of the two exchanging places.
+        LayoutOps.moveInPlace(toggleList, fromIndex, toIndex);
+    }
+    function addToggle(type) {
+        const toggleList = Config.options.sidebar.quickToggles.android.toggles;
+        if (!toggleList.find(t => t.type === type))
+            toggleList.push({ type: type, size: 1 });
+    }
+    function removeToggle(index) {
+        const toggleList = Config.options.sidebar.quickToggles.android.toggles;
+        if (index >= 0 && index < toggleList.length)
+            toggleList.splice(index, 1);
+    }
+    function resizeToggle(index, size) {
+        const toggleList = Config.options.sidebar.quickToggles.android.toggles;
+        if (index >= 0 && index < toggleList.length)
+            toggleList[index].size = size;
+    }
+
     // The role a choice is picked by is the one `StableQuickToggleModel`
     // binds permanently to a row's id, and it is the whole reason a delegate
     // may be reused across a reorder: a chooser reading anything a surviving
@@ -45,6 +75,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
         onOpenMenu: root.openNightLightDialog()
     } }
 
@@ -62,6 +97,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "audio"; AndroidAudioToggle {
@@ -78,6 +118,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
         onOpenMenu: root.openAudioOutputDialog()
     } }
 
@@ -95,6 +140,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
         onOpenMenu: root.openBluetoothDialog()
     } }
 
@@ -112,6 +162,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
         onOpenMenu: root.openTailscaleDialog()
     } }
 
@@ -129,6 +184,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
         onOpenMenu: root.openPhoneTab()
     } }
 
@@ -146,6 +206,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "cloudflareWarp"; AndroidCloudflareWarpToggle {
@@ -162,6 +227,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "colorPicker"; AndroidColorPickerToggle {
@@ -178,6 +248,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "darkMode"; AndroidDarkModeToggle {
@@ -194,6 +269,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "easyEffects"; AndroidEasyEffectsToggle {
@@ -210,6 +290,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "gameMode"; AndroidGameModeToggle {
@@ -226,6 +311,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "idleInhibitor"; AndroidIdleInhibitorToggle {
@@ -242,6 +332,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "mic"; AndroidMicToggle {
@@ -257,6 +352,11 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
         dropIndicatorRef: root.dropIndicatorRef
         onOpenMenu: root.openAudioInputDialog()
     } }
@@ -275,6 +375,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "network"; AndroidNetworkToggle {
@@ -290,6 +395,11 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
         dropIndicatorRef: root.dropIndicatorRef
         onOpenMenu: root.openWifiDialog()
     } }
@@ -307,6 +417,11 @@ DelegateChooser {
         cellSpacing: root.spacing
         cellSize: modelData.size
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
         dropIndicatorRef: root.dropIndicatorRef
         onOpenMenu: root.openNightLightDialog()
     } }
@@ -325,6 +440,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "onScreenKeyboard"; AndroidOnScreenKeyboardToggle {
@@ -341,6 +461,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "powerProfile"; AndroidPowerProfileToggle {
@@ -357,6 +482,11 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 
     DelegateChoice { roleValue: "screenSnip"; AndroidScreenSnipToggle {
@@ -373,5 +503,10 @@ DelegateChooser {
         cellSize: modelData.size
         dropIndicatorRef: root.dropIndicatorRef
         isUnused: root.isUnused
+        panelOpen: GlobalStates.sidebarRightOpen
+        onMoveRequested: (fromIndex, toIndex) => root.moveToggle(fromIndex, toIndex)
+        onAddRequested: type => root.addToggle(type)
+        onRemoveRequested: index => root.removeToggle(index)
+        onResizeRequested: (index, size) => root.resizeToggle(index, size)
     } }
 }
