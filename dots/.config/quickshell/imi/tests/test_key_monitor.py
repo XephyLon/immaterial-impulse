@@ -29,6 +29,11 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts/keyboard/key_monitor.py"
 SERVICE = ROOT / "services/KeyMonitor.qml"
 OSK_KEY = ROOT / "modules/imi/onScreenKeyboard/OskKey.qml"
+# The key is a dumb widget: it takes `physicallyDown` and `locked` as
+# properties, and the BOARD that builds every key binds them to the services.
+# The bindings below are contracts on where the data comes from, so they read
+# the board.
+OSK_BOARD = ROOT / "modules/imi/onScreenKeyboard/OskContent.qml"
 LOCKS = ROOT / "services/KeyboardLocks.qml"
 
 EVENT_FORMAT = "llHHi"
@@ -160,13 +165,14 @@ class WhenItIsAllowedToRun(unittest.TestCase):
         (`pressed now {"30":true}`) and no key ever redrew. Same shape as the
         `heuristicLookup` trap in AGENT.md: bind to the data, not to a call
         over the data."""
-        text = OSK_KEY.read_text(encoding="utf-8")
-        self.assertIn("KeyMonitor.pressed[root.keycode] === true", text)
+        text = OSK_BOARD.read_text(encoding="utf-8")
+        self.assertIn("physicallyDown: KeyMonitor.pressed[oskKey.keycode] === true", text)
         # Comments stripped first: the sentence explaining why the call is
         # wrong necessarily contains the call, and a check that reads prose
         # fails on its own documentation. Same trap as the bus-isolation lint.
-        code = re.sub(r"//[^\n]*", "", text)
-        self.assertNotIn("KeyMonitor.isDown(", code)
+        for path in (OSK_BOARD, OSK_KEY):
+            code = re.sub(r"//[^\n]*", "", path.read_text(encoding="utf-8"))
+            self.assertNotIn("KeyMonitor.isDown(", code)
         self.assertNotIn("isDown", re.sub(r"//[^\n]*", "",
                                           (ROOT / "services/KeyMonitor.qml").read_text()),
                          "the helper is back - a binding through it loses the "
@@ -189,10 +195,11 @@ class TheLatchedKeys(unittest.TestCase):
         """Deriving them from the reader's own LED events would be a second
         source of truth, and two of them disagree the first time either misses
         a toggle. `KeyboardLocks` already answers this for the OSD."""
-        text = OSK_KEY.read_text(encoding="utf-8")
+        text = OSK_BOARD.read_text(encoding="utf-8")
         self.assertIn("KeyboardLocks.capsLockOn", text)
         self.assertIn("KeyboardLocks.numLockOn", text)
-        self.assertNotIn("EV_LED", text)
+        for path in (OSK_BOARD, OSK_KEY):
+            self.assertNotIn("EV_LED", path.read_text(encoding="utf-8"))
 
     def test_a_lock_key_is_lit_by_its_lock_and_not_only_by_the_press(self):
         """A latch drawn from the momentary press is the one pair on the board
