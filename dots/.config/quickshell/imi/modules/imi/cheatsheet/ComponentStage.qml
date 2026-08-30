@@ -121,11 +121,22 @@ Item {
         // The tile is the widget's whole world here; nothing of it may reach
         // its neighbours.
         clip: true
-        transform: Scale {
-            origin.x: builder.width / 2
-            origin.y: builder.height / 2
-            xScale: stage.fitScale
-            yScale: stage.fitScale
+
+        // The scale lives on a CHILD, never on the clipping item. Qt clips
+        // an item in its own coordinates, before its transform, so a clip
+        // and a Scale on one item scale the clip rect too: at 0.7 a 220px
+        // tile showed a 154px window of a widget that had been sized to fit
+        // 220 exactly, and cut "Pick one" to "ck one" on the left and
+        // "Option 2" to "Opt" on the right.
+        Item {
+            id: scaled
+            anchors.fill: parent
+            transform: Scale {
+                origin.x: scaled.width / 2
+                origin.y: scaled.height / 2
+                xScale: stage.fitScale
+                yScale: stage.fitScale
+            }
         }
 
         property var control: null
@@ -216,7 +227,7 @@ Item {
             // only a type that fails BOTH ways has actually failed.
             try {
                 builder.control = Qt.createQmlObject(
-                    `import ${builder.moduleOf(path)}\n${type} { ${body} }`, builder);
+                    `import ${builder.moduleOf(path)}\n${type} { ${body} }`, scaled);
             } catch (moduleError) {
                 const component = Qt.createComponent(Quickshell.shellPath(path));
                 let fileTrouble = "";
@@ -224,7 +235,7 @@ Item {
                     fileTrouble = component.errorString();
                 } else {
                     try {
-                        builder.control = component.createObject(builder, props);
+                        builder.control = component.createObject(scaled, props);
                     } catch (fileError) {
                         builder.control = null;
                         fileTrouble = `${fileError}`;
@@ -252,7 +263,7 @@ Item {
                 builder.failure = Translation.tr("needs its surroundings");
                 return;
             }
-            builder.control.anchors.centerIn = builder;
+            builder.control.anchors.centerIn = scaled;
 
             // A widget with nothing to draw says so, instead of leaving an
             // empty cell that reads as a broken tile.
