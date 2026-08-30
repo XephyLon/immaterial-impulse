@@ -117,6 +117,50 @@ TestCase {
         verify(chip.y > 60, "at the hero block's foot");
     }
 
+    function test_the_3x2_grows_the_3x1_without_moving_its_hero() {
+        // The hero corner holds still on a 3x1 <-> 3x2 resize: same label,
+        // same code, same flag, same chip - only the card under them grows.
+        for (const fn of ["ratesLabelRect", "baseLabelRect", "flagRect"]) {
+            const a = Geometry[fn]("3x1", 420, 108, 1);
+            const b = Geometry[fn]("3x2", 420, 228, 1);
+            compare(b.x, a.x, fn);
+            compare(b.y, a.y, fn);
+        }
+        const chip1 = Geometry.containerRect("3x1", 420, 108, 1);
+        const chip2 = Geometry.containerRect("3x2", 420, 228, 1);
+        compare(chip2.x, chip1.x);
+        compare(chip2.y, chip1.y, "the chip stays at the hero block's foot");
+        compare(chip2.shape, "bun");
+    }
+
+    function test_the_3x2_cells_keep_the_reading_order_and_gain_trends() {
+        for (let i = 0; i < 4; i++) {
+            const cell = Geometry.quoteCellRect(i, "3x2", 420, 228, 1);
+            verify(cell !== null && cell.trend, "cell " + i + " carries its trend chart");
+        }
+        const cell0 = Geometry.quoteCellRect(0, "3x2", 420, 228, 1);
+        const cell1 = Geometry.quoteCellRect(1, "3x2", 420, 228, 1);
+        const cell2 = Geometry.quoteCellRect(2, "3x2", 420, 228, 1);
+        compare(cell0.y, cell1.y, "1 and 2 share the top row");
+        compare(cell2.x, cell0.x, "3 sits under 1 - the 3x1's order, grown");
+        verify(cell0.height > 80, "room for the numbers AND the chart");
+        const at3x1 = Geometry.quoteCellRect(0, "3x1", 420, 108, 1);
+        verify(at3x1.trend === undefined, "no trend charts in the single row");
+    }
+
+    function test_the_3x2_name_block_lives_under_the_hero() {
+        const name = Geometry.nameRect("3x2", 420, 228, 1);
+        const chart = Geometry.chart30Rect("3x2", 420, 228, 1);
+        const caption = Geometry.caption30Rect("3x2", 420, 228, 1);
+        const divider = Geometry.dividerRect(0, "3x2", 420, 228, 1);
+        verify(name.y > 108, "below the hero block's storey");
+        verify(name.y < chart.y && chart.y < caption.y, "name, chart, caption");
+        for (const slot of [name, chart, caption])
+            verify(slot.x + slot.width <= divider.x + 0.01, "left of the divider");
+        compare(Geometry.nameRect("3x1", 420, 108, 1), null, "3x2 only");
+        compare(Geometry.chart30Rect("2x1", 276, 108, 1), null);
+    }
+
     function test_the_panel_shape_carries_its_aspect() {
         const panel = CurrencyShapes.containerAt("panel", "panel", 1);
         const aspect = (panel.maxX - panel.minX) / (panel.maxY - panel.minY);

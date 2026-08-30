@@ -88,13 +88,14 @@ ShellRoot {
     }
 
     readonly property var transitions: [
-        ["2x1", "1x1"], ["1x1", "2x1"], ["2x1", "3x1"], ["3x1", "1x1"]
+        ["2x1", "1x1"], ["1x1", "2x1"], ["2x1", "3x1"], ["3x1", "1x1"],
+        ["3x1", "3x2"], ["3x2", "2x1"]
     ]
     property int transitionIndex: 0
     property var trails: ({})
     property var connections: []
 
-    function spanOf(name) { return { cols: parseInt(name[0]), rows: 1 }; }
+    function spanOf(name) { return { cols: parseInt(name[0]), rows: parseInt(name[2]) || 1 }; }
 
     function watch(label, object, signalName, getter) {
         if (!object) { console.log(`[CurrencyTreeMotion] missing: ${label}`); return; }

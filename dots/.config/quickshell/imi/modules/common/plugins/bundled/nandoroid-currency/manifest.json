@@ -5,7 +5,7 @@
   "capabilities": ["desktop-widget"], "permissions": ["network", "settings_read", "settings_write"],
   "grid": {
     "cols": 2, "rows": 1,
-    "sizes": [ { "cols": 1, "rows": 1 }, { "cols": 2, "rows": 1 }, { "cols": 3, "rows": 1 } ]
+    "sizes": [ { "cols": 1, "rows": 1 }, { "cols": 2, "rows": 1 }, { "cols": 3, "rows": 1 }, { "cols": 3, "rows": 2 } ]
   },
   "options": [
     { "key": "baseCurrency", "type": "text", "label": "Base currency", "icon": "payments", "default": "USD", "placeholder": "USD", "uppercase": true, "maxLength": 8 },

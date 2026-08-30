@@ -28,8 +28,9 @@ Item {
     // the host's animating box is the resize (weather's wrapper shipped the
     // self-sized version of this and its card teleported).
     readonly property int spanCols: parseInt((root.hostGridSize || "2x1")[0]) || 2
+    readonly property int spanRows: parseInt((root.hostGridSize || "2x1")[2]) || 1
     implicitWidth: Appearance.sizes.widgetGridSpanX(root.spanCols)
-    implicitHeight: Appearance.sizes.widgetGridSpanY(1)
+    implicitHeight: Appearance.sizes.widgetGridSpanY(root.spanRows)
     readonly property string baseCode: PluginState.option("nandoroid_currency", "baseCurrency", "USD")
     readonly property string quoteOne: PluginState.option("nandoroid_currency", "quote1", "EUR")
     readonly property string quoteTwo: PluginState.option("nandoroid_currency", "quote2", "GBP")

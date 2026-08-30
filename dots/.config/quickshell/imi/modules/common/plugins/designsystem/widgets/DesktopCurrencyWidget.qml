@@ -11,6 +11,7 @@ import "."
 import "currency_geometry.js" as Geometry
 import "currency_shapes.js" as CurrencyShapes
 import "../services/currency_history.js" as History
+import "../services/currency_daily.js" as Daily
 
 Item {
     id: root
@@ -43,11 +44,12 @@ Item {
     readonly property real width1x1: baseWidth
     readonly property real width2x1: (baseWidth * 2) + gap
     readonly property real width3x1: (baseWidth * 3) + gap * 2
+    readonly property real height2: (baseHeight * 2) + gap
 
-    implicitHeight: baseHeight
+    implicitHeight: sizeMode === "3x2" ? height2 : baseHeight
     implicitWidth: {
         if (sizeMode === "1x1") return width1x1;
-        if (sizeMode === "3x1") return width3x1;
+        if (sizeMode === "3x1" || sizeMode === "3x2") return width3x1;
         return width2x1;
     }
 
@@ -57,8 +59,8 @@ Item {
     // whose x depends on the right edge - the panel, its cells - would crawl
     // behind the card instead of travelling with it.
     readonly property real spanW: root.sizeMode === "1x1" ? root.width1x1
-        : root.sizeMode === "3x1" ? root.width3x1 : root.width2x1
-    readonly property real spanH: root.baseHeight
+        : root.sizeMode === "3x1" || root.sizeMode === "3x2" ? root.width3x1 : root.width2x1
+    readonly property real spanH: root.sizeMode === "3x2" ? root.height2 : root.baseHeight
 
     // The clock the 24h readings tick against: the movement columns, the
     // chart's x axis and the refresh stamp all age even when no new sample
@@ -86,6 +88,49 @@ Item {
     // The base currency's flag, from the ISO code's country half. EUR's
     // "EU" is a real regional-indicator pair; a code with no letters there
     // yields nothing and the element hides.
+    // One painter for every trend chart: the smoothed line, optionally a
+    // soft fill down to the baseline (the 3x2's look). Points are unit-box.
+    function drawTrend(ctx, w, h, points, strokeColor, fill) {
+        if (!points || points.length < 2) {
+            // The honest-quiet placeholder: a flat baseline, not a fake curve.
+            ctx.strokeStyle = Functions.ColorUtils.applyAlpha(strokeColor, 0.35);
+            ctx.lineWidth = 2 * Appearance.effectiveScale;
+            ctx.beginPath();
+            ctx.moveTo(0, h - 2);
+            ctx.lineTo(w, h - 2);
+            ctx.stroke();
+            return;
+        }
+        const pts = points.map(p => ({ x: p.x * w, y: (0.08 + p.y * 0.8) * h }));
+        ctx.lineWidth = 2 * Appearance.effectiveScale;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) {
+            const mid = (pts[i].x - pts[i - 1].x) / 2;
+            ctx.bezierCurveTo(pts[i - 1].x + mid, pts[i - 1].y,
+                pts[i].x - mid, pts[i].y, pts[i].x, pts[i].y);
+        }
+        if (fill) {
+            ctx.save();
+            ctx.lineTo(pts[pts.length - 1].x, h);
+            ctx.lineTo(pts[0].x, h);
+            ctx.closePath();
+            ctx.fillStyle = Functions.ColorUtils.applyAlpha(strokeColor, 0.18);
+            ctx.fill();
+            ctx.restore();
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) {
+                const mid = (pts[i].x - pts[i - 1].x) / 2;
+                ctx.bezierCurveTo(pts[i - 1].x + mid, pts[i - 1].y,
+                    pts[i].x - mid, pts[i].y, pts[i].x, pts[i].y);
+            }
+        }
+        ctx.strokeStyle = strokeColor;
+        ctx.stroke();
+    }
+
     function flagEmoji(code) {
         const letters = String(code || "").toUpperCase().slice(0, 2);
         if (!/^[A-Z]{2}$/.test(letters)) return "";
@@ -206,7 +251,8 @@ Item {
                 Behavior on y { SpanTravel {} }
                 Behavior on width { SpanTravel {} }
                 Behavior on height { SpanTravel {} }
-                opacity: root.sizeMode === "2x1" ? 0.35 : root.sizeMode === "3x1" ? 0.6 : 0
+                opacity: root.sizeMode === "2x1" ? 0.35
+                    : (root.sizeMode === "3x1" || root.sizeMode === "3x2") ? 0.6 : 0
                 Behavior on opacity { SpanFade {} }
                 visible: opacity > 0
                 readonly property var series: History.seriesFor(
@@ -311,7 +357,7 @@ Item {
                 MaterialSymbol {
                     anchors.centerIn: parent
                     text: "payments"
-                    iconSize: (root.sizeMode === "3x1" ? 14 : 18) * Appearance.effectiveScale
+                    iconSize: (root.sizeMode === "1x1" ? 18 : 14) * Appearance.effectiveScale
                     color: Appearance.colors.colOnPrimary
                     opacity: root.sizeMode !== "2x1" ? 1 : 0
                     Behavior on opacity { SpanFade {} }
@@ -453,6 +499,58 @@ Item {
                 color: Appearance.colors.colOnPrimaryContainer
             }
 
+            // ---- 3x2 only: the base spelled out, and its month ------------
+            StyledText {
+                readonly property var slot: Geometry.nameRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+                visible: opacity > 0
+                opacity: slot !== null ? 1 : 0
+                Behavior on opacity { SpanFade {} }
+                x: slot ? slot.x : 16 * Appearance.effectiveScale
+                y: slot ? slot.y : root.spanH
+                width: slot ? slot.width : 100
+                wrapMode: Text.WordWrap
+                maximumLineCount: 2
+                elide: Text.ElideRight
+                text: CurrencyService.nameFor(CurrencyService.baseCurrency)
+                font.pixelSize: Appearance.font.pixelSize.normal
+                font.weight: Font.Medium
+                color: Appearance.colors.colOnPrimaryContainer
+            }
+            Canvas {
+                id: monthCanvas
+                readonly property var slot: Geometry.chart30Rect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+                visible: opacity > 0
+                opacity: slot !== null ? 0.9 : 0
+                Behavior on opacity { SpanFade {} }
+                x: slot ? slot.x : 16 * Appearance.effectiveScale
+                y: slot ? slot.y : root.spanH
+                width: slot ? slot.width : 100
+                height: slot ? slot.height : 40
+                readonly property var trend: Daily.trendFor(
+                    CurrencyService.daily, CurrencyService.quote1, root.nowTick, 30)
+                onTrendChanged: requestPaint()
+                onWidthChanged: requestPaint()
+                onPaint: {
+                    const ctx = getContext("2d");
+                    ctx.reset();
+                    ctx.clearRect(0, 0, width, height);
+                    root.drawTrend(ctx, width, height, monthCanvas.trend.points,
+                        Appearance.colors.colOnPrimaryContainer, true);
+                }
+            }
+            StyledText {
+                readonly property var slot: Geometry.caption30Rect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
+                visible: opacity > 0
+                opacity: slot !== null ? 0.55 : 0
+                Behavior on opacity { SpanFade {} }
+                x: slot ? slot.x : 16 * Appearance.effectiveScale
+                y: slot ? slot.y : root.spanH
+                width: slot ? slot.width : 100
+                text: monthCanvas.trend.points.length >= 2 ? "30 days period" : "collecting the month..."
+                font.pixelSize: Appearance.font.pixelSize.smallest
+                color: Appearance.colors.colOnPrimaryContainer
+            }
+
             // ---- the quote cells: 1-2 shared, 3-4 enter and exit ----------
             Repeater {
                 model: 4
@@ -576,6 +674,47 @@ Item {
                             opacity: 0.7
                             color: quoteCell.inkColor
                         }
+                    }
+
+                    // 3x2 only: the quote's own week, drawn under the
+                    // numbers in the direction's colour.
+                    Canvas {
+                        id: cellTrend
+                        readonly property bool wanted: quoteCell.lastSlot.trend ?? false
+                        visible: opacity > 0
+                        opacity: wanted ? 1 : 0
+                        Behavior on opacity { SpanFade {} }
+                        x: 0
+                        y: quoteCell.height * 0.45
+                        width: quoteCell.width
+                        height: quoteCell.height * 0.38
+                        readonly property var trend: cellTrend.wanted
+                            ? Daily.trendFor(CurrencyService.daily, quoteCell.quoteCurrency, root.nowTick, 7)
+                            : ({ points: [], direction: 0 })
+                        readonly property color trendColor: trend.direction > 0 ? Appearance.m3colors.m3success
+                            : trend.direction < 0 ? Appearance.m3colors.m3error
+                            : Appearance.colors.colOnPrimaryContainer
+                        onTrendChanged: requestPaint()
+                        onTrendColorChanged: requestPaint()
+                        onWidthChanged: requestPaint()
+                        onPaint: {
+                            const ctx = getContext("2d");
+                            ctx.reset();
+                            ctx.clearRect(0, 0, width, height);
+                            root.drawTrend(ctx, width, height,
+                                cellTrend.trend.points, cellTrend.trendColor, true);
+                        }
+                    }
+                    StyledText {
+                        visible: opacity > 0
+                        opacity: (quoteCell.lastSlot.trend ?? false) ? 0.55 : 0
+                        Behavior on opacity { SpanFade {} }
+                        width: quoteCell.width
+                        y: quoteCell.height - height
+                        horizontalAlignment: Text.AlignHCenter
+                        text: cellTrend.trend.points.length >= 2 ? "7-Day Trend" : "collecting..."
+                        font.pixelSize: Appearance.font.pixelSize.smallest
+                        color: Appearance.colors.colOnPrimaryContainer
                     }
 
                     StyledText {

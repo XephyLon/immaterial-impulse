@@ -13,6 +13,15 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The currency widget takes a 3x2: a month of real closes.** The
+  maintainer's design grown from the 3x1: the hero corner holds still,
+  the base gains its full name and a filled 30-day chart beneath, and
+  every quote carries its own 7-day trend chart in the direction's
+  colour. The trends are fetched truth, not decoration: the rates
+  dataset publishes one snapshot per day, so the service walks the last
+  month's dated files - politely, one file per step, ~30 cached CDN hits
+  once and then one new file a day, persisted with the rest - and the
+  charts stay on their honest flat placeholder until two closes exist.
 - **The currency widget takes a 3x1, with a real day behind it.** The
   maintainer's design: the base currency as a hero block - Rates, the
   giant code, its flag, the payments chip - beside all four quotes in a
