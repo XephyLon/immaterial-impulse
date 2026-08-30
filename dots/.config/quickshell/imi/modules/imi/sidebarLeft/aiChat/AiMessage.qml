@@ -335,9 +335,13 @@ Rectangle {
                     values: root.messageData?.annotationSources || []
                 }
                 delegate: AnnotationSourceButton {
+                    id: sourceChip
                     required property var modelData
                     displayText: modelData.text
                     url: modelData.url
+                    faviconPath: Favicons.pathFor(modelData.url, modelData.text)
+                    faviconReady: Favicons.ready[sourceChip.faviconPath] === true
+                    Component.onCompleted: Favicons.request(modelData.url, modelData.text)
                     onFollowed: url => {
                         Qt.openUrlExternally(url);
                         GlobalStates.sidebarLeftOpen = false;

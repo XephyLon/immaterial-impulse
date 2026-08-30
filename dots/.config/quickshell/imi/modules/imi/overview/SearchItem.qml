@@ -35,6 +35,10 @@ RippleButton {
     // Whether the clipboard entry is an image, decided by whoever can read
     // clipboard entries; the row only chooses a thumbnail over text.
     property bool imageEntry: false
+    // url -> icon path on disk, and the Favicons service's readiness map:
+    // the overview asks for the fetches, this row only draws.
+    property var faviconPaths: ({})
+    property var faviconReady: ({})
     property bool blurImage: entry?.blurImage ?? false
     
     visible: root.entryShown
@@ -237,9 +241,11 @@ RippleButton {
                 Repeater { // Favicons for links
                     model: root.query == root.itemName ? [] : root.urls
                     Favicon {
+                        id: favicon
                         required property var modelData
                         size: parent.height
-                        url: modelData
+                        iconPath: root.faviconPaths[modelData] ?? ""
+                        ready: root.faviconReady[favicon.iconPath] === true
                     }
                 }
                 StyledText { // Item name/content
