@@ -105,11 +105,18 @@ class BlurRegionPairingLint(unittest.TestCase):
             ["the whole-surface blur is still on, so the region fixes nothing:"]
             + offenders))
 
+    # A surface with no translucent body has no region to scope a blur to;
+    # its blur = false is the whole point, not half of a pairing.
+    OPAQUE = {
+        "quickshell:background": "the wallpaper layer is opaque edge to edge; "
+                                 "blurring it was a fullscreen pass per frame for nothing",
+    }
+
     def test_every_disabled_namespace_publishes_a_region(self):
         offenders = sorted(
             f"{ns} has blur = false in rules.lua, but no QML under modules/ "
             f"publishes a WindowBlurRegion for it"
-            for ns in self.disabled if ns not in self.publishers)
+            for ns in self.disabled if ns not in self.publishers and ns not in self.OPAQUE)
         self.assertEqual(offenders, [], "\n".join(
             ["these panels have no blur at all, not body-scoped blur:"]
             + offenders))

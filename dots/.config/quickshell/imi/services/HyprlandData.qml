@@ -45,6 +45,17 @@ Singleton {
         return out;
     }
 
+    // Monitors with a special workspace showing. `hyprctl monitors -j` names
+    // it in `specialWorkspace`, and the list refreshes on every event, the
+    // `activespecial` one included. Hyprland blurs the whole screen behind a
+    // special workspace, so anything drawing sixty frames a second under one
+    // is paying for a fullscreen blur nobody can see through.
+    readonly property var specialWorkspaceByMonitorName: {
+        const out = ({});
+        for (const mon of root.monitors)
+            out[mon.name] = (mon.specialWorkspace?.name ?? "") !== "";
+        return out;
+    }
     // The focused monitor's entry in the map above. Drives OpenRgb's ambient
     // (monitor color) sync, and is reusable by anything else that cares.
     readonly property bool focusedMonitorHasFullscreen: {
