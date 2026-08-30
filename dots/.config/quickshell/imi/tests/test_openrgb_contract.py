@@ -138,6 +138,34 @@ def test_colours_stream_through_one_open_client():
     )
 
 
+def test_the_ambient_sample_is_a_screencopy_not_a_grim_spawn():
+    """The loop reads the compositor's frame through a ScreencopyView: no
+    process spawn, no JPEG encode. The view lives in a one-pixel
+    transparent input-masked bottom-layer window because `grabToImage`
+    refuses an item whose window is not visible (measured in
+    ScreenSampleProbe.qml), the sample lands on tmpfs, and grim survives
+    only as the fallback behind `samplerBroken`."""
+    source = _source()
+    start = source.find("id: samplerWindow")
+    end = source.find("id: ambientTimer")
+    assert 0 < start < end, "no sampler window ahead of the ambient timer"
+    body = source[start:end]
+    for line in ("implicitWidth: 1", "implicitHeight: 1", 'color: "transparent"',
+                 "WlrLayershell.layer: WlrLayer.Bottom", "mask: Region {}",
+                 "exclusionMode: ExclusionMode.Ignore"):
+        assert line in body, f"sampler window lost `{line}` - it must stay one invisible, input-free pixel"
+    assert "live: false" in body, "a live view captures every frame; the loop samples on its own clock"
+    assert "paintCursor: false" in body
+    assert "XDG_RUNTIME_DIR" in source, "the sample belongs on tmpfs, not the cache"
+    assert "if (!root.samplerBroken && samplerLoader.item !== null)" in source, (
+        "captureAmbientFrame no longer prefers the screencopy sampler"
+    )
+    assert re.search(r"running: root\.ambientActive && root\.serverReady\s*\n\s*"
+                     r"&& \(!root\.samplerBroken \|\| root\.grimAvailable\)", source), (
+        "the loop must run without grim installed unless the sampler broke"
+    )
+
+
 def _function_block(source: str, name: str) -> str:
     """Extracts a brace-balanced `function <name>(...) { ... }` block."""
     start = source.index(f"function {name}")

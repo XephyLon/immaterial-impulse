@@ -22,6 +22,12 @@ own repo; the installer pins which revision it builds.
   by hand. Every tile is the real widget, not a picture of one.
 
 ### Changed
+- **The ambient RGB loop samples the screen without spawning anything.**
+  Each sample was a `grim` process writing a downscaled JPEG to the cache
+  directory. The colour now comes off the compositor's own frame through
+  a screencopy view inside the shell - an 8x8 grab to tmpfs, quantized as
+  before - which also frees the loop of its grim dependency (grim stays
+  as a fallback). Measured: 1.3% of one core at five samples a second.
 - **A dropdown ripples.** Both combo boxes - the closed button and every row
   of the open list - answered a press with a colour swap and nothing else,
   the one kind of control in the shell that did. They now draw the same

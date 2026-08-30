@@ -7,6 +7,7 @@ import qs.modules.common.functions
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
 
 /**
  * Syncs RGB peripherals to the Material You accent color via the OpenRGB CLI.
@@ -459,6 +460,14 @@ Singleton {
     property bool ambientScanDone: false
     readonly property string ambientDir: FileUtils.trimFileProtocol(`${Directories.cache}/openrgb`)
     readonly property string ambientFramePath: `${root.ambientDir}/ambient-frame.jpg`
+    // The screencopy sample. tmpfs, not the cache: this file is rewritten
+    // up to five times a second and never needs to survive anything.
+    readonly property string sampleFramePath: `${Quickshell.env("XDG_RUNTIME_DIR")}/quickshell-imi-rgb-sample.png`
+    // Sampling reads the compositor's own frame through a ScreencopyView -
+    // no grim process, no JPEG encode. grim remains the fallback for the
+    // day the screencopy path breaks (`samplerBroken` latches on the first
+    // refused grab), which is also why its availability probe stays.
+    property bool samplerBroken: false
     readonly property string detectorSyncScript: `${Directories.scriptPath}/rgb/sync_openrgb_detectors.py`
     readonly property string detectorStatePath: FileUtils.trimFileProtocol(`${Directories.state}/user/openrgb-detectors.json`)
 
@@ -482,6 +491,10 @@ Singleton {
     }
 
     function captureAmbientFrame() {
+        if (!root.samplerBroken && samplerLoader.item !== null) {
+            samplerLoader.item.sample();
+            return;
+        }
         if (grimProc.running)
             return;
         // The name comes straight from hyprctl's monitor list; no focused
@@ -542,9 +555,81 @@ Singleton {
         return (hex(ch(16)) + hex(ch(8)) + hex(ch(0))).toUpperCase();
     }
 
+
+    // The sampler needs a mapped window: `grabToImage` refuses an item
+    // whose window is not visible (measured; a hidden FloatingWindow, an
+    // unparented view and a Canvas.loadImage of the grab URL all fail in
+    // their own ways - see ScreenSampleProbe.qml). So the view lives in a
+    // one-pixel, transparent, input-masked window on the bottom layer,
+    // which exists only while the ambient loop can run.
+    LazyLoader {
+        id: samplerLoader
+        active: root.monitorMode
+
+        PanelWindow {
+            id: samplerWindow
+            implicitWidth: 1
+            implicitHeight: 1
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Bottom
+            WlrLayershell.namespace: "quickshell:rgbsampler"
+            anchors { left: true; bottom: true }
+            mask: Region {}
+
+            function sample() {
+                const name = HyprlandData.monitors.find(m => m.focused)?.name ?? "";
+                const screen = Quickshell.screens.find(s => s.name === name) ?? null;
+                if (screen === null)
+                    return;
+                if (copyView.captureSource !== screen)
+                    copyView.captureSource = screen;
+                copyView.captureFrame();
+                grabTimer.restart();
+            }
+
+            ScreencopyView {
+                id: copyView
+                // A view that is not visible cannot be grabbed; near-zero
+                // opacity keeps it in the render loop and out of sight
+                // (its window is one transparent pixel regardless).
+                opacity: 0.004
+                width: 8
+                height: 8
+                live: false
+                paintCursor: false
+            }
+
+            // captureFrame() is asynchronous; one frame of grace before the
+            // grab reads the view. 32ms, measured end-to-end at 22ms.
+            Timer {
+                id: grabTimer
+                interval: 32
+                onTriggered: {
+                    if (!copyView.hasContent)
+                        return; // First tick after activation; the next has it.
+                    const started = copyView.grabToImage(result => {
+                        if (!result.saveToFile(root.sampleFramePath)) {
+                            root.samplerBroken = true;
+                            console.warn("[OpenRgb] sampler cannot write", root.sampleFramePath, "- falling back to grim");
+                            return;
+                        }
+                        ambientQuantizer.source = "";
+                        ambientQuantizer.source = "file://" + root.sampleFramePath;
+                    }, Qt.size(8, 8));
+                    if (!started) {
+                        root.samplerBroken = true;
+                        console.warn("[OpenRgb] grabToImage refused - falling back to grim");
+                    }
+                }
+            }
+        }
+    }
+
     Timer {
         id: ambientTimer
-        running: root.ambientActive && root.grimAvailable && root.serverReady
+        running: root.ambientActive && root.serverReady
+            && (!root.samplerBroken || root.grimAvailable)
         interval: Config.options.appearance.openrgb.monitorPollInterval ?? 200
         repeat: true
         triggeredOnStart: true
