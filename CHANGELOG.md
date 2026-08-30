@@ -22,6 +22,11 @@ own repo; the installer pins which revision it builds.
   by hand. Every tile is the real widget, not a picture of one.
 
 ### Changed
+- **Option rows draw their icon plain.** Twenty-seven rows across Capture,
+  Phone & Devices and the phone pages put their icon in a tile while the
+  other hundred and forty did not, and a row wearing one read as a second
+  control. The tile is a category title's; every option row now carries the
+  icon without a background, and the opt-in that drew it is gone.
 - **A settings row presses as a whole.** A switch row in a grouped list
   rippled and lifted inside its own bounds while the plate around it sat
   still, which read as pressing the label rather than the row. The plate is

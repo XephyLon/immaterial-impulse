@@ -207,7 +207,6 @@ PhoneSubPage {
                 }
 
                 ConfigSwitch {
-                    iconChip: true
                     buttonIcon: "star"
                     text: Translation.tr("Use as the default input now")
                     infoText: Translation.tr("Points every application that records at the phone until it stops, then puts the previous source back.")
@@ -225,7 +224,6 @@ PhoneSubPage {
                 }
 
                 ConfigSwitch {
-                    iconChip: true
                     buttonIcon: "star_border"
                     text: Translation.tr("Make it the default input every time it starts")
                     checked: root.micConfig?.setAsDefault ?? false

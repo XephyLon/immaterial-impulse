@@ -128,28 +128,24 @@ ContentPage {
                     onValueModified: { Config.options.screenRecord.fps = newValue }
                 }
                 ConfigSwitch {
-                    iconChip: true
                     buttonIcon: "volume_up"
                     text: Translation.tr("Record desktop audio")
                     checked: Config.options.screenRecord.recordAudio
                     onToggleRequested: Config.options.screenRecord.recordAudio = !Config.options.screenRecord.recordAudio
                 }
                 ConfigSwitch {
-                    iconChip: true
                     buttonIcon: "mic"
                     text: Translation.tr("Merge microphone into the audio track")
                     checked: Config.options.screenRecord.recordMic
                     onToggleRequested: Config.options.screenRecord.recordMic = !Config.options.screenRecord.recordMic
                 }
                 ConfigSwitch {
-                    iconChip: true
                     buttonIcon: "point_scan"
                     text: Translation.tr("Show cursor")
                     checked: Config.options.screenRecord.showCursor
                     onToggleRequested: Config.options.screenRecord.showCursor = !Config.options.screenRecord.showCursor
                 }
                 ConfigSwitch {
-                    iconChip: true
                     buttonIcon: "brightness_6"
                     text: Translation.tr("Record SDR on HDR displays")
                     infoText: Translation.tr("HDR recordings look washed out in players that can't tonemap (VLC, Discord, browsers). On: fullscreen recordings capture through the screen-share portal — correctly toned SDR instantly, with a one-time approval it remembers. Region recordings and replays record HDR and convert to SDR in the background a few seconds after saving. Off = true HDR files.")
@@ -163,7 +159,6 @@ ContentPage {
                 title: Translation.tr("Instant replay")
                 GroupedList {
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "replay"
                         text: Translation.tr("Enable (keep the last moments in a buffer)")
                         checked: Config.options.screenRecord.replay.enable
@@ -179,7 +174,6 @@ ContentPage {
                         onValueModified: { Config.options.screenRecord.replay.duration = newValue }
                     }
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "save"
                         text: Translation.tr("Buffer on disk instead of RAM")
                         infoText: Translation.tr("A long buffer at a high quality is gigabytes; on disk it costs storage instead of memory.")
@@ -220,7 +214,6 @@ ContentPage {
 
             GroupedList {
                 ConfigSwitch {
-                    iconChip: true
                     buttonIcon: "preview"
                     text: Translation.tr("Show result popup")
                     description: Translation.tr("Preview with save/edit/discard after every screenshot")
@@ -250,21 +243,18 @@ ContentPage {
                 title: Translation.tr("Hint target regions")
                 GroupedList {
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "select_window"
                         text: Translation.tr('Windows')
                         checked: Config.options.regionSelector.targetRegions.windows
                         onToggleRequested: Config.options.regionSelector.targetRegions.windows = !Config.options.regionSelector.targetRegions.windows
                     }
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "right_panel_open"
                         text: Translation.tr('Layers')
                         checked: Config.options.regionSelector.targetRegions.layers
                         onToggleRequested: Config.options.regionSelector.targetRegions.layers = !Config.options.regionSelector.targetRegions.layers
                     }
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "nearby"
                         text: Translation.tr('Content')
                         checked: Config.options.regionSelector.targetRegions.content
@@ -298,7 +288,6 @@ ContentPage {
                 title: Translation.tr("Rectangular selection")
                 GroupedList {
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "point_scan"
                         text: Translation.tr("Show aim lines")
                         checked: Config.options.regionSelector.rect.showAimLines

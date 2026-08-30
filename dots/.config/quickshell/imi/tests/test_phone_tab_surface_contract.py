@@ -412,12 +412,12 @@ class SettingsPageTests(unittest.TestCase):
         self.assertNotIn("page.contentY =", self.page,
                          "a direct contentY write snaps under momentum scrolling")
 
-    def test_every_toggle_row_carries_an_icon_chip(self):
+    def test_every_toggle_row_carries_a_plain_icon(self):
         rows = re.findall(r"ConfigSwitch \{[^}]*?\}", self.page, re.S)
         self.assertGreaterEqual(len(rows), 10, "the page lost most of its switches")
         for row in rows:
-            self.assertIn("iconChip: true", row,
-                          f"a toggle row has no icon chip:\n{row[:160]}")
+            self.assertRegex(row, r'\bbuttonIcon:\s*"[a-z0-9_]+"',
+                             f"a toggle row has no icon:\n{row[:160]}")
 
     def test_every_choice_option_carries_an_icon_and_a_label(self):
         for row in re.finditer(r"ConfigSelectionArray \{(.*?)\n {16}\}", self.page, re.S):

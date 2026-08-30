@@ -62,7 +62,6 @@ ContentPage {
 
             GroupedList {
                 ConfigSwitch {
-                    iconChip: true
                     buttonIcon: "view_in_ar"
                     text: Translation.tr("Show the mirror, webcam and microphone cards")
                     infoText: Translation.tr("The bottom of the Phone tab. Turning this off leaves the tab's notifications, actions and pages alone; a pairing request still appears, because that is a question a phone asked rather than a peripheral.")
@@ -79,7 +78,6 @@ ContentPage {
 
             GroupedList {
                 ConfigSwitch {
-                    iconChip: true
                     buttonIcon: "sync"
                     text: Translation.tr("Read the phone's contacts")
                     infoText: Translation.tr("KDE Connect writes one vCard per contact into ~/.local/share/kpeoplevcard when its Contacts plugin is on. Nothing is fetched over the network; this only reads what is already on disk.")
@@ -88,7 +86,6 @@ ContentPage {
                 }
 
                 ConfigSwitch {
-                    iconChip: true
                     buttonIcon: "filter_alt"
                     text: Translation.tr("Hide contacts with no name")
                     infoText: Translation.tr("SIM imports and call-blocker lists arrive with a number where a name should be. A starred contact is never hidden - starring one is saying its number matters.")
@@ -120,7 +117,6 @@ ContentPage {
 
                 GroupedList {
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "wifi_tethering"
                         text: Translation.tr("Reach the phone over the network")
                         infoText: Translation.tr("Off, adb chooses, and a phone plugged in over USB always wins. On, scrcpy is aimed at an address instead - which is what wireless debugging needs.")
@@ -129,7 +125,6 @@ ContentPage {
                     }
 
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "auto_mode"
                         text: Translation.tr("Use the address KDE Connect reports")
                         enabled: page.scrcpyConfig?.useWireless ?? false
@@ -187,7 +182,6 @@ ContentPage {
 
                 GroupedList {
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "coffee"
                         text: Translation.tr("Keep the phone awake while mirroring")
                         checked: page.scrcpyConfig?.stayAwake ?? false
@@ -195,7 +189,6 @@ ContentPage {
                     }
 
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "mobile_off"
                         text: Translation.tr("Turn the phone's screen off")
                         checked: page.scrcpyConfig?.turnScreenOff ?? false
@@ -203,7 +196,6 @@ ContentPage {
                     }
 
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "power_settings_new"
                         text: Translation.tr("Do not wake the phone on connect")
                         checked: page.scrcpyConfig?.noPowerOn ?? false
@@ -211,7 +203,6 @@ ContentPage {
                     }
 
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "volume_off"
                         text: Translation.tr("Leave the phone's audio on the phone")
                         infoText: Translation.tr("scrcpy forwards the phone's audio to this machine by default. Off is what the Phone Microphone card wants, which captures the microphone instead.")
@@ -220,7 +211,6 @@ ContentPage {
                     }
 
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "touch_app"
                         text: Translation.tr("Show touches on the phone")
                         checked: page.scrcpyConfig?.showTouches ?? false
@@ -228,7 +218,6 @@ ContentPage {
                     }
 
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "fullscreen"
                         text: Translation.tr("Open the mirror fullscreen")
                         checked: page.scrcpyConfig?.fullscreen ?? false
@@ -236,7 +225,6 @@ ContentPage {
                     }
 
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "vertical_align_top"
                         text: Translation.tr("Keep the mirror above other windows")
                         checked: page.scrcpyConfig?.alwaysOnTop ?? false
@@ -297,7 +285,6 @@ ContentPage {
 
                 GroupedList {
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "apps"
                         text: Translation.tr("Offer the phone's apps")
                         infoText: Translation.tr("Needs scrcpy 4.0 or newer, which is what can start one app on a display of its own instead of mirroring the whole phone.")
@@ -306,7 +293,6 @@ ContentPage {
                     }
 
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "desktop_windows"
                         text: Translation.tr("Give each app a display of its own")
                         infoText: Translation.tr("Off, an app is started on the phone's own screen and mirrored, so opening two means seeing one.")
@@ -315,7 +301,6 @@ ContentPage {
                     }
 
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "keep"
                         text: Translation.tr("Keep the app running when its window closes")
                         enabled: page.appModeConfig?.flexDisplay ?? true
@@ -324,7 +309,6 @@ ContentPage {
                     }
 
                     ConfigSwitch {
-                        iconChip: true
                         buttonIcon: "web_asset"
                         text: Translation.tr("Draw Android's own navigation bar")
                         enabled: page.appModeConfig?.flexDisplay ?? true

@@ -278,7 +278,6 @@ PhoneSubPage {
                 }
 
                 ConfigSwitch {
-                    iconChip: true
                     buttonIcon: "flip"
                     text: Translation.tr("Mirror horizontally")
                     // Through the service, not straight into the config: a

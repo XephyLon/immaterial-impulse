@@ -6,7 +6,7 @@ The grammar is the set of row shapes the maintainer rated on the sibling fork
 (docs/p3drovfx-feature-delta-2026-08-24.md and the 2026-08-27 trial notes):
 a subsection header with a leading icon, a segmented single-choice row whose
 every option carries an icon and a label, a computed live hint under such a
-row, a toggle row with a leading icon chip, a dropdown with a leading icon and
+row, a toggle row with a plain leading icon, a dropdown with a leading icon and
 a "(Recommended)" suffix on its default choice, a text field with a floating
 label, and an (i) affordance on any row that has a rationale. It lives in the
 existing widgets as opt-in properties rather than in new ones - the fork's
@@ -21,9 +21,17 @@ Two halves, both of which decay on their own:
    tests/lint_motion_tier_partial.py the half-taken tier; this holds the rest
    of the grammar's surface - radius, font size, colour, duration, curve - on
    the six files that carry it.
-2. CaptureConfig.qml uses every piece. A page can lose one row's `iconChip`
-   or a new option can arrive without its icon, and nothing about the page
-   errors; the shape just stops being the grammar.
+2. CaptureConfig.qml uses every piece. A subsection can lose its icon or a
+   new option can arrive without one, and nothing about the page errors; the
+   shape just stops being the grammar.
+
+The toggle row's icon is PLAIN. It was drawn on a tonal chip (`iconChip`, an
+opt-in) from the grammar's first day until 2026-08-30, when the maintainer
+looked at Phone & Devices and settled it: "those icons should exist, the
+backgrounds should not" - a glyph in a tile is a category title's, and an
+option row wearing one looks like a second control. The property is gone
+rather than defaulted off, and `test_no_row_puts_its_icon_on_a_chip` holds
+the word out of the tree.
 
 Static, because the widgets are StyledText-and-layout QML that qmltestrunner
 cannot build (see tst_placeholder_fit.qml for why). The arithmetic behind the
@@ -119,30 +127,34 @@ class RowGrammarWidgetTests(unittest.TestCase):
                          "the subsection's icon property is declared but no "
                          "glyph draws it")
 
-    def test_a_toggle_rows_icon_chip_is_opt_in(self):
-        row = self.widget("CatalogueRow.qml")
-        self.assertIn("property bool iconChip: false", row,
-                      "CatalogueRow's icon chip must be declared and default "
-                      "off: 159 ConfigSwitch call sites draw this row, and the "
-                      "chip is adopted page by page")
-        switch = self.widget("ConfigSwitch.qml")
-        self.assertIn("property alias iconChip: catalogueRow.iconChip", switch,
-                      "ConfigSwitch does not expose the chip, so no settings "
-                      "page can turn it on")
+    def test_no_row_puts_its_icon_on_a_chip(self):
+        """The tile behind a glyph is a category title's. Every option row
+        draws its icon plain - and the property that once put a chip there
+        is gone, not defaulted off, so this searches the whole tree for the
+        word rather than the pages for `true`."""
+        offenders = sorted(
+            str(path.relative_to(ROOT))
+            for path in (ROOT / "modules").rglob("*.qml")
+            if re.search(r"\biconChip\b", strip_comments(read(path))))
+        self.assertEqual(offenders, [], "\n".join([
+            "An option row's icon sits on a chip. The icon-in-a-tile belongs to",
+            "ContentSection/ContentSubsection headers; option rows draw the",
+            "glyph plain (maintainer, 2026-08-30):",
+            *(f"  {path}" for path in offenders),
+        ]))
 
-    def test_the_chip_never_decides_the_rows_height(self):
+    def test_the_glyph_never_decides_the_rows_height(self):
         """CatalogueRow's rule: the row's height comes from its labels and its
         affordance, never from its leading glyph - the glyph wrapper reports
-        width only. A chip that reported its height would stretch every row
-        it sits in, which is the reflow the row's own docs forbid."""
+        width only. A wrapper that reported its height would stretch every
+        row it sits in, which is the reflow the row's own docs forbid."""
         row = strip_comments(self.widget("CatalogueRow.qml"))
         glyph = [b for b in blocks(row, "Component") if "id: glyphIcon" in b]
         self.assertEqual(len(glyph), 1, "CatalogueRow's glyph component is gone")
         self.assertNotIn("implicitHeight", glyph[0],
-                         "the glyph wrapper reports a height - the chip now "
-                         "sizes the row")
-        self.assertIn("root.iconChip", glyph[0],
-                      "the glyph component does not draw the chip")
+                         "the glyph wrapper reports a height - it now sizes the row")
+        self.assertNotIn("Rectangle", glyph[0],
+                         "the glyph wrapper draws a surface behind the icon")
 
     def test_a_choice_row_has_a_hint_slot_and_an_info_affordance(self):
         source = self.widget("ConfigSelectionArray.qml")
@@ -260,23 +272,31 @@ class TokensOnlyTests(unittest.TestCase):
 class AdoptionRegisterTests(unittest.TestCase):
     """Who has adopted the grammar, in both directions."""
 
-    # The chip is the opt-in no page carries by accident: it defaults off
-    # precisely because 159 ConfigSwitch call sites draw that row and the
-    # chip must not move any of them.
-    MARKER = "iconChip: true"
+    # The marker is the piece no page carries by accident: EVERY subsection
+    # header on the page leads with an icon. It was the icon chip until the
+    # chip was retired (2026-08-30); a page that gave one or two headers an
+    # icon (SidebarsPanels has two of six) has not adopted the grammar, and a
+    # page with no subsections has nothing to adopt it with.
+    @staticmethod
+    def adopted(path: Path) -> bool:
+        headers = blocks(strip_comments(read(path)), "ContentSubsection")
+        # The header's OWN properties end at its first child's brace; an
+        # `icon:` on a row inside it is not the header's (Profile.qml).
+        own = [h[:h.find("{", h.find("{") + 1)] for h in headers]
+        return bool(own) and all(re.search(r"\bicon:", h) for h in own)
 
     def test_every_registered_adopter_still_carries_the_grammar(self):
         for name in sorted(ADOPTERS):
             path = PAGES / name
             self.assertTrue(path.is_file(), f"{name} is registered as an adopter and is gone")
-            self.assertIn(self.MARKER, read(path),
-                          f"{name} is registered as an adopter and has dropped the "
-                          f"grammar's icon chips")
+            self.assertTrue(self.adopted(path),
+                            f"{name} is registered as an adopter and has a subsection "
+                            f"header without its icon")
 
     def test_a_page_that_adopted_the_grammar_is_in_the_register(self):
         unregistered = sorted(
             path.name for path in PAGES.glob("*.qml")
-            if self.MARKER in read(path) and path.name not in ADOPTERS)
+            if self.adopted(path) and path.name not in ADOPTERS)
         self.assertEqual(unregistered, [], "these pages carry the row grammar but are "
                                            "not in ADOPTERS - add the line and say where "
                                            "the page's own adoption is checked")
@@ -290,12 +310,12 @@ class CaptureConfigAdoptionTests(unittest.TestCase):
         cls.source = read(PAGE)
         cls.code = strip_comments(cls.source)
 
-    def test_every_toggle_row_carries_an_icon_chip(self):
+    def test_every_toggle_row_carries_a_plain_icon(self):
         rows = blocks(self.code, "ConfigSwitch")
         self.assertGreaterEqual(len(rows), 8, "the page lost most of its switches")
         for row in rows:
-            self.assertIn("iconChip: true", row,
-                          f"a toggle row on the reference page has no icon chip:\n{row}")
+            self.assertRegex(row, r'\bbuttonIcon:\s*"[a-z0-9_]+"',
+                             f"a toggle row on the reference page has no icon:\n{row}")
 
     def test_every_choice_option_carries_an_icon_and_a_label(self):
         rows = blocks(self.code, "ConfigSelectionArray")

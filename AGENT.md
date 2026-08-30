@@ -6416,8 +6416,13 @@ than a new widget: (a) a subsection header with a leading icon (`ContentSubsecti
 segmented single-choice row whose every option carries an icon and a label (`ConfigSelectionArray`
 options' `icon`); (c) a computed live hint under such a row (`ConfigSelectionArray.detailContent`, a
 full-width slot whose gap follows what is DRAWN in it, so a hint that hides itself takes its gap with
-it); (d) a toggle row with a leading icon chip (`ConfigSwitch.iconChip`, drawn by
-`CatalogueRow.iconChip`); (e) a dropdown with a leading icon and a "(Recommended)" suffix on its
+it); (d) a toggle row with a PLAIN leading icon (`ConfigSwitch.buttonIcon`, drawn by
+`CatalogueRow` with nothing behind it). It was an icon on a tonal chip, `iconChip`, from the grammar's
+first day until 2026-08-30, when the maintainer looked at Phone & Devices: "those icons should exist,
+the backgrounds should not. This only applies to the panels/options themselves. The category titles
+should have both the icon and the background." The tile is a header's (a); an option row wearing one
+reads as a second control. The property is GONE, not defaulted off, and the grammar test refuses the
+word anywhere under `modules/`; (e) a dropdown with a leading icon and a "(Recommended)" suffix on its
 default choice (a `recommended: true` entry in `ConfigComboBox`'s model - the widget suffixes it
 through `Translation.tr`, so no call site spells the word); (f) a text field with a floating label
 (`ConfigTextArea.floatingLabel` - the label rests where the value goes, floats to the top edge on
@@ -6450,9 +6455,10 @@ label is a rationale, and a rationale is the (i)'s). Three things about it are n
   wherever that page's other contracts already live, so the file does not grow one class per page
   while the reference stays the thing that defines the grammar. It fails in both directions: a page
   carrying the opt-ins without an entry (the grammar adopted and nothing holding it there) and an
-  entry whose page has dropped them (a register nobody rechecks). The marker is `iconChip: true`,
-  which is the one opt-in no page carries by accident - it defaults off precisely because 159
-  `ConfigSwitch` call sites draw that row.
+  entry whose page has dropped them (a register nobody rechecks). The marker is EVERY subsection
+  header on the page leading with an icon - the piece no page carries by accident (a page that gave
+  two of six headers an icon has not adopted the grammar, and one with no subsections has nothing to
+  adopt it with). It was `iconChip: true` until the chip was retired on 2026-08-30 (item (d) above).
   4c7fe3e1f ("test(settings): the row grammar gets an adopter register, running both ways"),
   1d2823bf4 ("feat(settings): a Devices & Phone page, on the row grammar").
 
