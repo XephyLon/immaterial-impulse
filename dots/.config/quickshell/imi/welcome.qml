@@ -19,6 +19,9 @@ import qs.modules.common.functions
 
 ApplicationWindow {
     id: root
+    function switchMode(dark) {
+        Quickshell.execDetached(["bash", "-c", `${Directories.wallpaperSwitchScriptPath} --mode ${dark ? "dark" : "light"} --noswitch`]);
+    }
     property string firstRunFilePath: FileUtils.trimFileProtocol(`${Directories.state}/user/first_run.txt`)
     property string firstRunFileContent: "This file is just here to confirm you've been greeted :>"
     property real contentPadding: 8
@@ -281,9 +284,11 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignHCenter
                         LightDarkPreferenceButton {
                             dark: false
+                            onPicked: dark => root.switchMode(dark)
                         }
                         LightDarkPreferenceButton {
                             dark: true
+                            onPicked: dark => root.switchMode(dark)
                         }
                     }
 

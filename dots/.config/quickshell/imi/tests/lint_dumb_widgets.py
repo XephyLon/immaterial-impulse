@@ -74,9 +74,6 @@ EXCLUDED = {
     "KeybindEditor.qml":
         "HyprlandKeybindOverrides and HyprlandSubmap. A keybind editor is a "
         "feature; it wants moving to settings beside the cheatsheet that uses it",
-    "LightDarkPreferenceButton.qml":
-        "spawns the theme switch - and has NO consumer, because QuickConfig "
-        "declares its own local copy instead. Dead code to delete, not to fix",
     "Favicon.qml":
         "spawns a fetch for a site icon. Wants a service behind it, the way "
         "every other network read in this shell has one",
