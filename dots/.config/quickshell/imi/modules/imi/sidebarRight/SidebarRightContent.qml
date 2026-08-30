@@ -2,6 +2,7 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.imi.mediaControls
 import qs.modules.common.functions
 import qs.modules.common.plugins.designsystem.services
 import Quickshell.Services.Mpris
