@@ -1,4 +1,3 @@
-import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
@@ -12,18 +11,28 @@ RippleButton {
     property string type: keyData.keytype
     property var keycode: keyData.keycode
     property string shape: keyData.shape
-    property bool isShift: Ydotool.shiftKeys.includes(keycode)
+    // Everything the key knows about the KEYBOARD - which codes are shifts,
+    // which physical key is down, which lock is latched, what shift mode the
+    // typist is in - arrives from the board that built it. The key draws a
+    // cap and reports gestures; it cannot press anything, and the board that
+    // owns the input service answers the signals below.
+    property bool isShift: false
+    // 0 none, 1 shift held for one key, 2 caps: the board's state, mirrored.
+    property int shiftMode: 0
+
+    signal pressKey(var keycode)
+    signal releaseKey(var keycode)
+    signal shiftModeRequested(int mode)
+    signal shiftKeysReleaseRequested()
     // The PHYSICAL key of the same code is down. Separate from the button's
     // own pressed state on purpose: this one is not a gesture on this widget,
     // it is a report about the hardware, and a key can be both (the user
     // taps the OSK's Shift while holding the real one).
-    // Read the property, do not call a function that reads it. A binding
-    // captures the properties touched while it evaluates, and routing that
-    // through `KeyMonitor.isDown()` made the dependency easy to lose - the map
-    // updated (measured, live: `pressed now {"30":true}`) and the key never
-    // redrew. This is the same shape as the `heuristicLookup` trap in
-    // AGENT.md: bind to the data, not to a call over it.
-    readonly property bool physicallyDown: KeyMonitor.pressed[root.keycode] === true
+    // Bound by the board to KeyMonitor's map - to the DATA, not to a call
+    // over it: a binding captures the properties touched while it evaluates,
+    // and routing it through `KeyMonitor.isDown()` once lost the dependency,
+    // so the map updated and the key never redrew.
+    property bool physicallyDown: false
     property bool isBackspace: (key.toLowerCase() == "backspace")
     property bool isEnter: (key.toLowerCase() == "enter" || key.toLowerCase() == "return")
     property real baseWidth: KeyShapes.baseKeyWidth
@@ -48,15 +57,15 @@ RippleButton {
     // a lock state nothing can answer for.
     readonly property bool isCapsLock: root.keycode === 58
     readonly property bool isNumLock: root.keycode === 69
-    readonly property bool locked: (root.isCapsLock && KeyboardLocks.capsLockOn)
-        || (root.isNumLock && KeyboardLocks.numLockOn)
+    // Bound by the board from KeyboardLocks, for the two keys above.
+    property bool locked: false
 
     // A held physical key wears the toggled treatment rather than a surface a
     // tier up: `colLayer1` and `colLayer2` differ by a few levels on this
     // palette, which is legible on a panel and invisible on a key the size of
     // a fingertip. The toggled colour is the shell's own "this control is
     // active" language and needs no new token.
-    toggled: root.locked || root.physicallyDown || (isShift ? Ydotool.shiftMode : false)
+    toggled: root.locked || root.physicallyDown || (isShift && root.shiftMode !== 0)
 
     enabled: shape != "empty"
     colBackground: shape == "empty" ? ColorUtils.transparentize(Appearance.colors.colLayer1)
@@ -71,14 +80,9 @@ RippleButton {
     implicitHeight: root.baseHeight * root.heightUnits
         + root.keyGap * Math.max(0, root.heightUnits - 1)
 
-    Connections {
-        target: Ydotool
-        enabled: isShift
-        function onShiftModeChanged() {
-            if (Ydotool.shiftMode == 0) {
-                capsLockTimer.hasStarted = false;
-            }
-        }
+    onShiftModeChanged: {
+        if (isShift && root.shiftMode == 0)
+            capsLockTimer.hasStarted = false;
     }
 
     Timer {
@@ -97,36 +101,36 @@ RippleButton {
     }
 
     downAction: () => {
-        Ydotool.press(root.keycode);
-        if (isShift && Ydotool.shiftMode == 0) Ydotool.shiftMode = 1;
+        root.pressKey(root.keycode);
+        if (isShift && root.shiftMode == 0) root.shiftModeRequested(1);
     }
     releaseAction: () => {
         if (root.type == "normal") {
-            Ydotool.release(root.keycode);
-            if (Ydotool.shiftMode == 1) {
-                Ydotool.releaseShiftKeys()
+            root.releaseKey(root.keycode);
+            if (root.shiftMode == 1) {
+                root.shiftKeysReleaseRequested()
             }
         } else if (isShift) {
-            if (Ydotool.shiftMode == 1) {
+            if (root.shiftMode == 1) {
                 if (!capsLockTimer.hasStarted) {
                     capsLockTimer.startWaiting();
                 } else {
                     if (capsLockTimer.canCaps) {
-                        Ydotool.shiftMode = 2; // Caps lock mode
+                        root.shiftModeRequested(2); // Caps lock mode
                     } else {
-                        Ydotool.releaseShiftKeys()
+                        root.shiftKeysReleaseRequested()
                     }
                 }
-            } else if (Ydotool.shiftMode == 2) {
-                Ydotool.releaseShiftKeys();
+            } else if (root.shiftMode == 2) {
+                root.shiftKeysReleaseRequested();
             }
         } else if (root.type == "modkey") {
             root.toggled = !root.toggled;
             if (!root.toggled) {
                 if (isShift) {
-                    Ydotool.releaseShiftKeys();
+                    root.shiftKeysReleaseRequested();
                 } else { 
-                    Ydotool.release(root.keycode);
+                    root.releaseKey(root.keycode);
                 }
             }
         }
@@ -149,8 +153,8 @@ RippleButton {
         horizontalAlignment: Text.AlignHCenter
         color: root.toggled ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer1
         text: root.isBackspace ? "backspace" : root.isEnter ? "subdirectory_arrow_left" :
-            Ydotool.shiftMode == 2 ? (root.keyData.labelCaps || root.keyData.labelShift || root.keyData.label) :
-            Ydotool.shiftMode == 1 ? (root.keyData.labelShift || root.keyData.label) : 
+            root.shiftMode == 2 ? (root.keyData.labelCaps || root.keyData.labelShift || root.keyData.label) :
+            root.shiftMode == 1 ? (root.keyData.labelShift || root.keyData.label) : 
             root.keyData.label
     }
 }
