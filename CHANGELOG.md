@@ -22,6 +22,14 @@ own repo; the installer pins which revision it builds.
   by hand. Every tile is the real widget, not a picture of one.
 
 ### Changed
+- **A dropdown ripples.** Both combo boxes - the closed button and every row
+  of the open list - answered a press with a colour swap and nothing else,
+  the one kind of control in the shell that did. They now draw the same
+  hover, ripple and lift as a button, on a surface that paints without
+  taking the press (the popup still opens on release, a row still chooses).
+  The lift is on the button's parts rather than the button: a first cut
+  scaled the whole control, and the list opened where the shrunken button
+  was and stayed there.
 - **Option rows draw their icon plain.** Twenty-seven rows across Capture,
   Phone & Devices and the phone pages put their icon in a tile while the
   other hundred and forty did not, and a row wearing one read as a second

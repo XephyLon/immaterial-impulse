@@ -63,6 +63,10 @@ EXCLUDED = {
         "vendored designsystem mirror of the shipped NotificationActionButton",
     "modules/common/plugins/designsystem/widgets/NotificationGroupExpandButton.qml":
         "vendored designsystem mirror of the shipped NotificationGroupExpandButton",
+    "modules/common/widgets/PassiveRippleSurface.qml":
+        "not a control: the pressed LOOK of one that keeps its own input (a "
+        "ComboBox, a list row). It receives no press, so a tile of it would "
+        "be a rectangle that answers nothing; the combo box tile shows it",
     "modules/imi/dock/DockAppButton.qml":
         "a dock entry is a running window's button - it takes a toplevel and "
         "an app id, and a bare one is an empty square that teaches nothing",

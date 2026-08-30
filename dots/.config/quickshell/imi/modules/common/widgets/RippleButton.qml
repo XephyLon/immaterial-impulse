@@ -58,6 +58,27 @@ Button {
     // that mirrors this button's press - a GroupedList plate under a row
     // that is itself a button - starts its ripple from here.
     property point pressPoint: Qt.point(0, 0)
+    // A surface only. Draws the hover, the ripple and the lift for a control
+    // that keeps its own input - a ComboBox, a list row - and receives no
+    // input itself: the mask below is an Item with no area, so no point is
+    // inside this button and neither the MouseArea nor the AbstractButton
+    // underneath it ever sees a press. (Disabling the MouseArea alone is not
+    // enough: an AbstractButton accepts presses on its own, and as a
+    // Control's background it sits ABOVE the control in delivery order and
+    // would swallow the popup's toggle. A QtObject with a JS `contains` is
+    // not enough either - Qt wants an invokable it can see from C++, and
+    // warns and ignores the mask.) The host binds `interactionMotion
+    // .hovered`/`.down` and calls `startRipple`/`fadeRipple` at its own
+    // press points - see PassiveRippleSurface, which packages exactly that.
+    property bool passive: false
+    containmentMask: root.passive ? nothing : null
+    Item {
+        id: nothing
+        parent: root
+        width: 0
+        height: 0
+        visible: false
+    }
     property InteractionMotion interactionMotion: InteractionMotion {
         hovered: root.hovered && root.interactionMotionEnabled
         down: root.down && root.interactionMotionEnabled
