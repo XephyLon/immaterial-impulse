@@ -1,4 +1,3 @@
-import qs
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.services
@@ -9,12 +8,21 @@ import QtQuick.Layouts
 DialogListItem {
     id: root
     required property WifiAccessPoint wifiNetwork
-    enabled: !(Network.wifiConnectTarget === root.wifiNetwork && !wifiNetwork?.active)
+    // True while the shell is trying to join THIS network - the dialog knows
+    // which one it asked the service for; the row draws the in-between icon.
+    property bool connecting: false
 
+    // Everything a row can ask for, as intent. The dialog holds the network
+    // service and the sidebar; a row that called them itself could not be
+    // shown anywhere the real network stack was not.
+    signal connectRequested()
+    signal passwordSubmitted(string password)
+    signal passwordCancelled()
+    signal portalRequested()
+
+    enabled: !(root.connecting && !wifiNetwork?.active)
     active: (wifiNetwork?.askingPassword || wifiNetwork?.active) ?? false
-    onClicked: {
-        Network.connectToWifiNetwork(wifiNetwork);
-    }
+    onClicked: root.connectRequested()
 
     contentItem: ColumnLayout {
         anchors {
@@ -47,7 +55,7 @@ DialogListItem {
             }
             MaterialSymbol {
                 visible: (root.wifiNetwork?.isSecure || root.wifiNetwork?.active) ?? false
-                text: root.wifiNetwork?.active ? "check" : Network.wifiConnectTarget === root.wifiNetwork ? "settings_ethernet" : "lock"
+                text: root.wifiNetwork?.active ? "check" : root.connecting ? "settings_ethernet" : "lock"
                 iconSize: Appearance.font.pixelSize.larger
                 color: Appearance.colors.colOnSurfaceVariant
             }
@@ -68,7 +76,7 @@ DialogListItem {
                 inputMethodHints: Qt.ImhSensitiveData
 
                 onAccepted: {
-                    Network.changePassword(root.wifiNetwork, passwordField.text);
+                    root.passwordSubmitted(passwordField.text);
                 }
             }
 
@@ -82,14 +90,14 @@ DialogListItem {
                 DialogButton {
                     buttonText: Translation.tr("Cancel")
                     onClicked: {
-                        root.wifiNetwork.askingPassword = false;
+                        root.passwordCancelled();
                     }
                 }
 
                 DialogButton {
                     buttonText: Translation.tr("Connect")
                     onClicked: {
-                        Network.changePassword(root.wifiNetwork, passwordField.text);
+                        root.passwordSubmitted(passwordField.text);
                     }
                 }
             }
@@ -107,10 +115,7 @@ DialogListItem {
                     colBackground: Appearance.colors.colLayer4
                     colBackgroundHover: Appearance.colors.colLayer4Hover
                     colRipple: Appearance.colors.colLayer4Active
-                    onClicked: {
-                        Network.openPublicWifiPortal()
-                        GlobalStates.sidebarRightOpen = false
-                    }
+                    onClicked: root.portalRequested()
                 }
             }
         }

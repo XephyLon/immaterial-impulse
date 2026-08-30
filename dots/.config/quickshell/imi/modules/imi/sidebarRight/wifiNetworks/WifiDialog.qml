@@ -83,6 +83,14 @@ WindowDialog {
             required property WifiAccessPoint modelData
             wifiNetwork: modelData
             width: ListView.view.width
+            connecting: Network.wifiConnectTarget === modelData
+            onConnectRequested: Network.connectToWifiNetwork(modelData)
+            onPasswordSubmitted: password => Network.changePassword(modelData, password)
+            onPasswordCancelled: modelData.askingPassword = false
+            onPortalRequested: {
+                Network.openPublicWifiPortal();
+                GlobalStates.sidebarRightOpen = false;
+            }
         }
     }
     WindowDialogSeparator {}
