@@ -3248,6 +3248,20 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   direction its existing check did not cover, which read the names the RESOLVER could produce rather
   than the ones the USER could pick. e2f25db06 ("refactor(bar): delete two buttons nothing built"),
   9ebfa2acd ("fix(bar): bring back the two buttons the layout still names").
+- **RGB lighting is driven through ONE open SDK client, never the `openrgb` CLI per write.** The
+  CLI cannot stream: each invocation is a fresh client handshake (1.0 s measured, `--nodetect` or
+  not), it autoconnects to the local server on top of `--client` so every device is listed and
+  written twice (`--noautoconnect` lists nothing), and it ends in a mode command - and a mode
+  command re-initialises the controller, which is the white blink the lights showed on every
+  palette step ("the flicker each second"). The OpenRGB Effects plugin is the reference: Direct
+  mode once when zones are assigned, then only `UpdateLEDs` per tick with per-frame interpolation.
+  `scripts/rgb/openrgb_stream.py` is that as a process `OpenRgb.qml` keeps open - Direct once per
+  controller and not for one already there, then frames at 30 fps ramping to each target on stdin;
+  1 ms to set up, 0.3 ms for 20 frames. The CLI path survives only as the fallback for a server
+  that never answers. `test_openrgb_stream.py` runs the script against a fake server; the contract
+  test holds both colour paths to handing the streamer their colour first.
+  9944abb97 ("fix(openrgb): every write goes through the SDK server, so the lights stop blinking"),
+  ddf80fde5 ("feat(openrgb): stream colours through one open SDK client, the Effects plugin's way").
 - **A `Process`'s `onExited` handler that ignores its `exitCode` argument will happily act on stale
   data.** `TempScreenshotProcess` writes to a deterministic path (`image-${screen.name}`), so a failed
   `grim` run used to leave the *previous* successful capture sitting there untouched - the region
