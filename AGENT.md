@@ -3248,6 +3248,17 @@ arrays, etc.) rather than static declarations - e.g. the plugin system in
   direction its existing check did not cover, which read the names the RESOLVER could produce rather
   than the ones the USER could pick. e2f25db06 ("refactor(bar): delete two buttons nothing built"),
   9ebfa2acd ("fix(bar): bring back the two buttons the layout still names").
+- **Reading a pixel off the screen from inside the shell: `ScreencopyView` -> `grabToImage` ->
+  `saveToFile`, hosted in a mapped window.** Four dead ends first, all recorded in
+  `ScreenSampleProbe.qml`: `grabToImage` REFUSES an item whose window is not visible; a
+  `ColorQuantizer` pointed at the grab's `itemgrabber:` URL fails (it loads through the file
+  engine); `Canvas.loadImage` of that URL never completes under any render strategy; and a Canvas
+  that is not visible never paints (opacity 0.004 keeps one in the render loop, out of sight). What
+  works: a one-pixel transparent input-masked bottom-layer window hosts the view, `captureFrame()`
+  on the sampling clock (`live: false` - a live view copies every compositor frame), a 32ms timer
+  bridges the asynchronous capture, and an 8x8 grab saved to tmpfs feeds the existing quantizer.
+  22ms capture-to-colour, 1.3% of a core at 5Hz, and the colour agrees with the grim pipeline it
+  replaced. dae047147 ("feat(openrgb): sample the screen through a screencopy view, not a grim spawn").
 - **RGB lighting is driven through ONE open SDK client, never the `openrgb` CLI per write.** The
   CLI cannot stream: each invocation is a fresh client handshake (1.0 s measured, `--nodetect` or
   not), it autoconnects to the local server on top of `--client` so every device is listed and
