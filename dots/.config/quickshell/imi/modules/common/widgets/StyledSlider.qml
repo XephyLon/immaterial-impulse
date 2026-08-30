@@ -165,8 +165,12 @@ Slider {
                         function onValueChanged() { wavyFill.requestPaint(); }
                         function onHighlightColorChanged() { wavyFill.requestPaint(); }
                     }
+                    // Only while the wave is there to see - see the
+                    // designsystem StyledSlider: an ungated wave repaint per
+                    // frame for a slider in a closed panel was a software
+                    // raster nobody saw.
                     FrameAnimation {
-                        running: root.animateWave
+                        running: root.animateWave && root.wavy && root.visible
                         onTriggered: {
                             wavyFill.requestPaint()
                         }

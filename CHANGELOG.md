@@ -51,7 +51,13 @@ own repo; the installer pins which revision it builds.
   on every frame the widget changed it (opaque, so for nothing - a fifth of
   the GPU, measured), and behind a special workspace the widget kept moving
   under a fullscreen blur nobody could see it through. The layer rule is
-  gone and the widget stands down while a special workspace is up.
+  gone and the widget stands down while a special workspace is up. The rest
+  of the music-time load was in the media surfaces: the media card's wavy
+  progress slider repainted itself sixty times a second inside a sidebar
+  kept loaded but closed, and the media widget's wave and ring rebuilt
+  their geometry as hundreds of objects per frame, keeping the garbage
+  collector busy. Sampled on the live shell: the main thread while a track
+  plays went from about half a core to a quarter.
 - **The Phone tab's header is one row of one size.** The device chip is the
   shared filter chip with a trailing arrow, and the connection and battery
   facts beside it are plain icon-and-label metadata with no container - a

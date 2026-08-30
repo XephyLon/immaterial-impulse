@@ -2,6 +2,10 @@ import qs.modules.common
 import QtQuick
 
 Canvas {
+    // FBO + cooperative: the paint runs on the render thread rather than as
+    // a software raster on the GUI thread.
+    renderTarget: Canvas.FramebufferObject
+    renderStrategy: Canvas.Cooperative
     id: root
     property real amplitudeMultiplier: 0.5
     property real frequency: 6
