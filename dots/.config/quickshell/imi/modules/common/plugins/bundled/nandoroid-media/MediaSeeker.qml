@@ -155,60 +155,68 @@ Item {
         onWidthChanged: requestPaint()
         onHeightChanged: requestPaint()
 
+        // The baseline and its normals, cached: they depend on the size, the
+        // bend and the ring, not on the wave's phase - and rebuilding them
+        // as 161 point objects (plus the ring's cubics) on every frame was
+        // ~20k short-lived objects a second, which kept the QML garbage
+        // collector marking the shell's whole heap. gdb-sampled: two thirds
+        // of the main thread in the collector while a track played. Typed
+        // arrays, rebuilt only when their inputs change; the per-frame paint
+        // allocates nothing.
+        property var baseX: null
+        property var baseY: null
+        property var normX: null
+        property var normY: null
+        property string baseKey: ""
+        function rebuildBase(N) {
+            const key = `${width}|${height}|${root.bend}|${root.ringT}|${root.lineWidthPx}`;
+            if (key === canvas.baseKey && canvas.baseX) return;
+            canvas.baseKey = key;
+            const base = root.baselinePoints(N);
+            const bx = new Float64Array(N + 1), by = new Float64Array(N + 1);
+            const nx = new Float64Array(N + 1), ny = new Float64Array(N + 1);
+            for (let i = 0; i <= N; i++) { bx[i] = base[i].x; by[i] = base[i].y; }
+            for (let i = 0; i <= N; i++) {
+                const b = Math.max(0, i - 1), a = Math.min(N, i + 1);
+                let x = -(by[a] - by[b]), y = bx[a] - bx[b];
+                const len = Math.hypot(x, y) || 1;
+                nx[i] = x / len; ny[i] = y / len;
+            }
+            canvas.baseX = bx; canvas.baseY = by; canvas.normX = nx; canvas.normY = ny;
+        }
         onPaint: {
             const ctx = getContext("2d");
             ctx.clearRect(0, 0, width, height);
             const N = 160;
             const stroke = root.lineWidthPx;
-            const pad = stroke;
-            const cx = width / 2, cy = height / 2;
-            const dia = Math.min(width, height) - stroke;
-
-            // Wavelength: 6 cycles across the bar; an INTEGER count around the
-            // closed ring or the wave beats against its own seam (the spec's
-            // arc-length note). 12 matches the cookie's lobes.
+            canvas.rebuildBase(N);
+            const bx = canvas.baseX, by = canvas.baseY, nx = canvas.normX, ny = canvas.normY;
             const freq = Math.round(6 + (12 - 6) * canvas.bendNow);
             const amp = stroke * 0.6 * root.waveLevel;
-
-            const base = root.baselinePoints(N);
-            // Normals from the RAW baseline, displaced into a second array.
-            // Displacing in place fed each point's normal from an already-
-            // displaced neighbour - a feedback loop that turned the sine into
-            // a knotted scribble, and it shipped because the visual check was
-            // graded at thumbnail size.
-            const points = [];
-            for (let i = 0; i <= N; i++) {
-                const before = base[Math.max(0, i - 1)];
-                const after = base[Math.min(N, i + 1)];
-                let nx = -(after.y - before.y), ny = after.x - before.x;
-                const len = Math.hypot(nx, ny) || 1;
-                nx /= len; ny /= len;
-                const w = amp * Math.sin(freq * 2 * Math.PI * (i / N) + root.phase);
-                points.push({ x: base[i].x + nx * w, y: base[i].y + ny * w });
-            }
-
+            const phase = root.phase, k = freq * 2 * Math.PI / N;
+            function px(i) { return bx[i] + nx[i] * amp * Math.sin(k * i + phase); }
+            function py(i) { return by[i] + ny[i] * amp * Math.sin(k * i + phase); }
             function strokeRun(from, to, colour) {
                 if (to <= from) return;
                 ctx.beginPath();
-                ctx.moveTo(points[from].x, points[from].y);
-                for (let i = from + 1; i <= to; i++) ctx.lineTo(points[i].x, points[i].y);
+                ctx.moveTo(px(from), py(from));
+                for (let i = from + 1; i <= to; i++) ctx.lineTo(px(i), py(i));
                 ctx.strokeStyle = colour;
                 ctx.lineWidth = stroke;
                 ctx.lineCap = "round";
                 ctx.lineJoin = "round";
                 ctx.stroke();
             }
-
             const split = Math.round(canvas.progressNow * N);
             strokeRun(split, N, canvas.trackColor);
             strokeRun(0, split, canvas.arcColor);
 
             // the bar's handle dot, dissolving as the bar curls up
             if (canvas.bendNow < 1) {
-                const at = points[split] ?? points[N];
+                const at = Math.min(split, N);
                 ctx.beginPath();
                 ctx.globalAlpha = 1 - canvas.bendNow;
-                ctx.arc(at.x, at.y, 7 * Appearance.effectiveScale, 0, Math.PI * 2);
+                ctx.arc(px(at), py(at), 7 * Appearance.effectiveScale, 0, Math.PI * 2);
                 ctx.fillStyle = Appearance.colors.colPrimary;
                 ctx.fill();
                 ctx.globalAlpha = 1;
