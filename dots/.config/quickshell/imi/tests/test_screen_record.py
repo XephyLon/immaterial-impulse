@@ -398,8 +398,10 @@ class WiringTests(unittest.TestCase):
         self.assertIn('"instantReplay"', panel)
         chooser = (ROOT / "modules/imi/sidebarRight/quickToggles/androidStyle/AndroidToggleDelegateChooser.qml").read_text()
         self.assertIn('roleValue: "instantReplay"', chooser)
+        # The classic style renders the same model; there is no classic
+        # InstantReplay type any more.
         classic = (ROOT / "modules/imi/sidebarRight/quickToggles/ClassicQuickPanel.qml").read_text()
-        self.assertIn("InstantReplay {}", classic)
+        self.assertIn("toggleModel: InstantReplayToggle {}", classic)
 
     def test_no_wf_recorder_left_in_shell(self):
         hits = []
