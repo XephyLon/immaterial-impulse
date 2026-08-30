@@ -306,73 +306,81 @@ Item {
             // landed on a shield and died there. A moved preview slider costs
             // nothing; a gallery that cannot be scrolled costs everything.
 
-            readonly property var motion: builder.control?.interactionMotion ?? null
+            // The INNERMOST pressable thing under the pointer, not the control.
+            //
+            // Driving the control alone left every composite dead: a
+            // ConfigSelectionArray's two options, a ConfigSwitch's switch, the
+            // buttons in a row - none of them the control, so none of them
+            // saw a hover or a press. The pointer is resolved down through
+            // `childAt` and the deepest item that knows `startRipple` is the
+            // one driven; the point is mapped into ITS coordinates.
+            //
+            // Coordinates matter here for the same reason they did one fix
+            // ago: `startRipple` sizes its ripple from the button's own
+            // corners, so an origin outside the button never reaches it.
+            function pressableAt(x, y) {
+                let item = builder.control;
+                if (!item) return null;
+                let point = item.mapFromItem(shield, x, y);
+                if (point.x < 0 || point.y < 0 || point.x > item.width || point.y > item.height)
+                    return null;
+                let best = item.startRipple ? item : null;
+                for (let depth = 0; depth < 32; depth++) {
+                    const child = item.childAt(point.x, point.y);
+                    if (!child) break;
+                    point = child.mapFromItem(item, point.x, point.y);
+                    item = child;
+                    if (item.startRipple && item.enabled) best = item;
+                }
+                if (!best) return null;
+                return { item: best, point: best.mapFromItem(shield, x, y) };
+            }
 
-            // The cursor the control would show, since the shield is what the
+            property var hoverTarget: null
+            property var pressTarget: null
+            function motionOf(item) { return item?.interactionMotion ?? null; }
+            function hover(item) {
+                if (hoverTarget === item) return;
+                const was = motionOf(hoverTarget);
+                if (was) was.hovered = false;
+                hoverTarget = item;
+                const now = motionOf(item);
+                if (now) now.hovered = true;
+            }
+            onPositionChanged: mouse => hover(pressableAt(mouse.x, mouse.y)?.item ?? null)
+            onExited: hover(null)
+
+            // The cursor the target would show, since the shield is what the
             // pointer is actually over. RippleButton declares it as
-            // `pointingHandCursor`; a control without that property, or a
-            // tile with no control, keeps the arrow rather than promising a
-            // press it does not draw.
-            cursorShape: builder.control?.pointingHandCursor === true
+            // `pointingHandCursor`; nothing pressable under the pointer keeps
+            // the arrow rather than promising a press it does not draw.
+            cursorShape: hoverTarget?.pointingHandCursor === true
                 ? Qt.PointingHandCursor : Qt.ArrowCursor
 
-            // In the CONTROL's coordinates, and only inside it.
-            //
-            // The shield covers the whole tile and the control sits centred
-            // in it, scaled to fit, so a point in the shield is not a point
-            // in the control. `startRipple` was being handed tile coordinates:
-            // the ripple's radius is sized from the button's own corners, so
-            // one started a hundred pixels outside a forty-pixel button never
-            // reached it, and every small button looked like it had no ripple
-            // at all. The wide rows that fill their tile hid the bug - their
-            // origin happened to land inside.
-            //
-            // The same mapping is what makes hover honest: hovering the tile
-            // margin is not hovering the button.
-            function within(x, y) {
-                const control = builder.control;
-                if (!control) return null;
-                const point = control.mapFromItem(shield, x, y);
-                const inside = point.x >= 0 && point.y >= 0
-                    && point.x <= control.width && point.y <= control.height;
-                return inside ? point : null;
-            }
-            property bool overControl: false
-            onOverControlChanged: if (motion) motion.hovered = overControl
-            onPositionChanged: mouse => overControl = within(mouse.x, mouse.y) !== null
-            onExited: overControl = false
-
             // A previewed press does everything a real one does EXCEPT act.
-            //
-            // Driving `interactionMotion` alone gave the lift and the corner
-            // morph and left the ripple behind, because the ripple is the
-            // control's own animation and the control never saw the press.
-            // `startRipple` and `fadeRipple` are its public pair, so the
-            // preview can spend them.
             onPressed: mouse => {
-                const point = within(mouse.x, mouse.y);
-                if (!point) return;
-                if (motion) motion.down = true;
-                if (builder.control?.startRipple)
-                    builder.control.startRipple(point.x, point.y);
+                const hit = pressableAt(mouse.x, mouse.y);
+                if (!hit) return;
+                pressTarget = hit.item;
+                const m = motionOf(hit.item);
+                if (m) m.down = true;
+                hit.item.startRipple(hit.point.x, hit.point.y);
             }
             onReleased: {
-                if (motion) motion.down = false;
-                if (builder.control?.fadeRipple)
-                    builder.control.fadeRipple();
+                const m = motionOf(pressTarget);
+                if (m) m.down = false;
+                if (pressTarget?.fadeRipple) pressTarget.fadeRipple();
+                pressTarget = null;
                 // Nothing else. A press is TRANSIENT - ripple, lift, corner
-                // morph - and it ends where it started. Flipping the control's
-                // `toggled` here was a state change dressed as a preview: it
-                // outlived the press, left no way back except rebuilding, and
-                // fought the Detail page's own `toggled` knob for ownership of
-                // the same property. State belongs to the knobs; a tile is a
-                // picture of a widget, and pressing a picture shows you the
-                // press, not a different picture.
+                // morph - and it ends where it started. State belongs to the
+                // knobs; a tile is a picture of a widget, and pressing a
+                // picture shows you the press, not a different picture.
             }
             onCanceled: {
-                if (motion) motion.down = false;
-                if (builder.control?.fadeRipple)
-                    builder.control.fadeRipple();
+                const m = motionOf(pressTarget);
+                if (m) m.down = false;
+                if (pressTarget?.fadeRipple) pressTarget.fadeRipple();
+                pressTarget = null;
             }
         }
 
