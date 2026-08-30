@@ -260,6 +260,12 @@ Item {
                 onSeriesChanged: requestPaint()
                 onWidthChanged: requestPaint()
                 onHeightChanged: requestPaint()
+                // A requestPaint before the canvas is available is dropped
+                // silently - the geometry and data settle during creation,
+                // so without this the first REAL paint never comes and the
+                // line simply is not there (the play-button canvas records
+                // the same lesson).
+                onAvailableChanged: if (available) requestPaint()
                 onPaint: {
                     var ctx = getContext("2d");
                     ctx.reset();
@@ -530,6 +536,7 @@ Item {
                     CurrencyService.daily, CurrencyService.quote1, root.nowTick, 30)
                 onTrendChanged: requestPaint()
                 onWidthChanged: requestPaint()
+                onAvailableChanged: if (available) requestPaint()
                 onPaint: {
                     const ctx = getContext("2d");
                     ctx.reset();
@@ -697,6 +704,7 @@ Item {
                         onTrendChanged: requestPaint()
                         onTrendColorChanged: requestPaint()
                         onWidthChanged: requestPaint()
+                        onAvailableChanged: if (available) requestPaint()
                         onPaint: {
                             const ctx = getContext("2d");
                             ctx.reset();
