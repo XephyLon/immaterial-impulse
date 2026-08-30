@@ -300,7 +300,31 @@ Item {
             cursorShape: builder.control?.pointingHandCursor === true
                 ? Qt.PointingHandCursor : Qt.ArrowCursor
 
-            onContainsMouseChanged: if (motion) motion.hovered = containsMouse
+            // In the CONTROL's coordinates, and only inside it.
+            //
+            // The shield covers the whole tile and the control sits centred
+            // in it, scaled to fit, so a point in the shield is not a point
+            // in the control. `startRipple` was being handed tile coordinates:
+            // the ripple's radius is sized from the button's own corners, so
+            // one started a hundred pixels outside a forty-pixel button never
+            // reached it, and every small button looked like it had no ripple
+            // at all. The wide rows that fill their tile hid the bug - their
+            // origin happened to land inside.
+            //
+            // The same mapping is what makes hover honest: hovering the tile
+            // margin is not hovering the button.
+            function within(x, y) {
+                const control = builder.control;
+                if (!control) return null;
+                const point = control.mapFromItem(shield, x, y);
+                const inside = point.x >= 0 && point.y >= 0
+                    && point.x <= control.width && point.y <= control.height;
+                return inside ? point : null;
+            }
+            property bool overControl: false
+            onOverControlChanged: if (motion) motion.hovered = overControl
+            onPositionChanged: mouse => overControl = within(mouse.x, mouse.y) !== null
+            onExited: overControl = false
 
             // A previewed press does everything a real one does EXCEPT act.
             //
@@ -310,9 +334,11 @@ Item {
             // `startRipple` and `fadeRipple` are its public pair, so the
             // preview can spend them.
             onPressed: mouse => {
+                const point = within(mouse.x, mouse.y);
+                if (!point) return;
                 if (motion) motion.down = true;
                 if (builder.control?.startRipple)
-                    builder.control.startRipple(mouse.x, mouse.y);
+                    builder.control.startRipple(point.x, point.y);
             }
             onReleased: {
                 if (motion) motion.down = false;
