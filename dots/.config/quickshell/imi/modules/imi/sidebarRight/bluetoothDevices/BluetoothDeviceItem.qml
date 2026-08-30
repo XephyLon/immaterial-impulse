@@ -9,6 +9,9 @@ import QtQuick.Layouts
 DialogListItem {
     id: root
     required property var device
+    // " • 80%" or "", worked out by whoever has the battery sources; the
+    // row only appends it.
+    property string batterySuffix: ""
     property bool expanded: false
     pointingHandCursor: !expanded
 
@@ -63,7 +66,7 @@ DialogListItem {
                     text: {
                         if (!root.device?.paired) return "";
                         const statusText = root.device?.connected ? Translation.tr("Connected") : Translation.tr("Paired");
-                        return statusText + BluetoothStatus.formatBatterySuffix(root.device);
+                        return statusText + root.batterySuffix;
                     }
                 }
             }
