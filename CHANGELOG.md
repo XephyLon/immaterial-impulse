@@ -40,6 +40,13 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **The Visualizer desktop widget no longer slows the sidebars.** On a wide
+  monitor it is several hundred bars, and each had its own height animation
+  restarted on every one of cava's sixty frames a second, plus four colour
+  mixes - a third of the shell's main thread, which is the thread the sidebar
+  slide runs on. The bars now follow one smoothing filter over the whole
+  array and take their colour from a palette; the widget costs a quarter of
+  what it did per frame, measured, and looks the same.
 - **The Phone tab's header is one row of one size.** The device chip is the
   shared filter chip with a trailing arrow, and the connection and battery
   facts beside it are plain icon-and-label metadata with no container - a
