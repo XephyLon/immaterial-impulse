@@ -26,6 +26,10 @@ Item {
     // ...and the host's own box animation: the manifest declares a grid, so
     // the box is the host's.
     property bool hostBoxInMotion: false
+    // The grip's elastic pull, forwarded to the card (wired late, like the
+    // calendar's - the grid adoption removed the no-grip reason without
+    // adding the wire).
+    property point hostResizeBow: Qt.point(0, 0)
 
     // The span the host resolved (docs/widget-grid.md): the stored choice,
     // then the manifest default. Empty until the host answers, and for a
@@ -156,6 +160,8 @@ Item {
             tint: Appearance.colors.colPrimaryContainer
             useBlurBackground: root.blurEnabled
             backgroundOpacity: root.backgroundOpacity
+            tensionX: root.hostResizeBow.x
+            tensionY: root.hostResizeBow.y
             dragging: root.hostDragging
             hostMotionActive: root.hostBoxInMotion
 

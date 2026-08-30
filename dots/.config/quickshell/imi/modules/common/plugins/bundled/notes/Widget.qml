@@ -31,6 +31,8 @@ Item {
     // Set by the host while its own box is animating; the card drops its
     // shadow for the duration rather than re-blurring into a resizing FBO.
     property bool hostBoxInMotion: false
+    // The grip's elastic pull, forwarded to the card.
+    property point hostResizeBow: Qt.point(0, 0)
 
     // "list" | "edit". The card flips between the two rather than growing a
     // second surface - it is a 2x2 tile, there is no room for both.
@@ -97,10 +99,13 @@ Item {
     // hover and drag lift - which is what this widget had none of while the
     // root Rectangle painted the card's surface over the top of it.
     //
-    // No `tensionX`/`tensionY`: the manifest offers one span, so the host
-    // draws no resize grip here and there is never a bow to render.
+    // The grip's elastic pull. One offered span means the drag never
+    // changes size - the whole gesture is the rubber-band bow, which is
+    // exactly the give the card renders here.
     Expressive.WidgetCard {
         id: card
+        tensionX: root.hostResizeBow.x
+        tensionY: root.hostResizeBow.y
         anchors.fill: parent
         tint: Appearance.colors.colSecondaryContainer
         useBlurBackground: root.blurEnabled

@@ -161,6 +161,15 @@ AbstractBackgroundWidget {
     readonly property var gridSpec: (manifest && manifest.grid) ? manifest.grid : null
     readonly property var offeredGridSizes: GridSizes.offeredSizes(rootWidget.gridSpec)
     readonly property bool gridResizable: rootWidget.offeredGridSizes.length > 1
+    // The grip is armed for EVERY grid-sized widget, not only the resizable
+    // ones: with a single offered span the elastic walk finds no next size,
+    // so the whole drag becomes the clamped rubber-band bow and the release
+    // commits the span the widget already has (which pushes no undo entry).
+    // The pull is part of how the desktop feels ("the elastic effect...
+    // does not exist for Notes"), and a widget with one span deserves the
+    // same give as its neighbours. The Size row and the edit stepper stay
+    // gated on gridResizable - they act on a CHOICE, and one span is none.
+    readonly property bool gripArmed: rootWidget.gridSized
     // Stored -> manifest default -> null, which is the content-sized path.
     readonly property var storedGridSize: GridSizes.resolveSize(rootWidget.gridSpec,
         manifest ? PluginState.gridSize(manifest.id, screenName) : undefined)
@@ -928,7 +937,7 @@ AbstractBackgroundWidget {
         opacity: (GlobalStates.editMode || rootWidget.containsMouse
                 || resizeArea.containsMouse || rootWidget.resizingGrid)
             ? 0.5 : 0
-        visible: opacity > 0 && rootWidget.gridResizable && !rootWidget.interactionLocked
+        visible: opacity > 0 && rootWidget.gripArmed && !rootWidget.interactionLocked
 
         // The whole tier, not just its duration. Taking the number and leaving
         // the curve hands the animation Qt's default, which is Easing.Linear -

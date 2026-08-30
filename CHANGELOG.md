@@ -124,6 +124,13 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **The elastic corner pull reaches every widget.** Calendar and the
+  world clock adopted the shell-owned resize without wiring the grip's
+  rubber-band bow into their cards, and Notes - one offered size - never
+  got a grip at all. All three bow now: the pull is forwarded to the
+  cards, and the grip arms on every grid-sized widget, with a single-size
+  widget's whole drag becoming the bow (the size row still appears only
+  where there is a choice).
 - **The world clock's settings face no longer shows the front through
   it.** The four city tiles kept drawing under the timezone pickers
   after the flip; they yield with it now.

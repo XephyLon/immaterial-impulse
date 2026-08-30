@@ -30,7 +30,7 @@ BUNDLED = ROOT / "modules/common/plugins/bundled"
 # The widgets that draw a grip of their own. Kept explicit rather than
 # discovered, so a fourth one growing a grip has to be added here on purpose
 # instead of quietly inheriting whatever these three happen to assert.
-GRIP_WIDGETS = ("calendar", "world-clock", "custom-image")
+GRIP_WIDGETS = ("custom-image",)
 
 
 def source(path: Path) -> str:
@@ -136,12 +136,17 @@ class EveryGripGatesOnIt(unittest.TestCase):
         or reflow the `id:` line and the block scan finds nothing, at which
         point "no handle violates the rule" is true and worthless.
         """
+        # calendar and world-clock graduated to the host's grip when their
+        # manifests grew grid.sizes; custom-image is the one widget left
+        # with a grip of its own (freely resizable, off the grid by design).
         found = {widget: sorted(self._handles(widget)) for widget in GRIP_WIDGETS}
         self.assertEqual(found, {
-            "calendar": ["resizeHandle", "toggleHandle"],
             "custom-image": ["resizeHandle"],
-            "world-clock": ["toggleHandle"],
         })
+        for graduate in ("calendar", "world-clock"):
+            self.assertEqual(self._handles(graduate), {},
+                             f"{graduate} grew a grip of its own back - the "
+                             f"host's grip owns its size now")
 
     def test_every_grip_is_hidden_by_the_host_lock(self):
         for widget_id in GRIP_WIDGETS:
@@ -194,10 +199,10 @@ class TheHostsOwnResizeGrip(unittest.TestCase):
     def test_it_only_exists_for_a_widget_that_offers_more_than_one_span(self):
         """Otherwise every grid widget grows a grip that can only ever pick the
         span it already has."""
-        self.assertIn("rootWidget.gridResizable", self._grip())
+        self.assertIn("rootWidget.gripArmed", self._grip())
 
     def test_the_gate_is_on_visible_so_the_grip_is_dead_and_not_just_hidden(self):
-        self.assertRegex(self._grip(), r"visible:[^\n]*rootWidget\.gridResizable")
+        self.assertRegex(self._grip(), r"visible:[^\n]*rootWidget\.gripArmed")
 
     def test_it_claims_the_press_from_drag_to_move(self):
         """`AbstractWidget`'s drag-to-move is this widget's own root MouseArea,

@@ -28,6 +28,11 @@ Item {
     // shadow for the duration rather than re-blurring into a resizing FBO.
     // The manifest declares a grid now, so the box is the host's.
     property bool hostBoxInMotion: false
+    // The grip's elastic pull, forwarded to the card so the corner bows
+    // while it is dragged - adopted with the grid, wired late: the old
+    // comment said "no grid, no grip, never a bow", and the conversion
+    // removed the reason without adding the wire.
+    property point hostResizeBow: Qt.point(0, 0)
 
     // The span the host resolved (docs/widget-grid.md): the stored choice,
     // then the manifest default. Empty until the host answers, and for a
@@ -241,6 +246,8 @@ Item {
         tint: Appearance.colors.colPrimaryContainer
         useBlurBackground: root.blurEnabled
         backgroundOpacity: root.backgroundOpacity
+        tensionX: root.hostResizeBow.x
+        tensionY: root.hostResizeBow.y
         dragging: root.hostDragging
         hostMotionActive: root.hostBoxInMotion
 
