@@ -19,19 +19,21 @@ Item { // Notification item area
     readonly property bool canReply: root.controller.supportsReply
         && root.controller.canReply(root.notificationObject)
     property bool replying: false
-    // The reply row's reveal, as one scalar: its height and its opacity both
-    // follow this, so the card's content height is continuous on the way in
-    // and on the way out. Flipping `visible` instead removed the row in one
-    // frame while the card's height was still animating, and the column
-    // re-spread everything above it into the slack - the body text dropped a
-    // line and came back.
+    // The reply row's reveal, the way the card's own expansion moves: the
+    // HEIGHT on the spatial curve (elementMove, the one the card's height
+    // takes when it expands) and the contents fading on the faster effects
+    // curve (elementMoveFast, the one the expanded body fades with). One
+    // scalar for the height keeps the card's content height continuous both
+    // ways - flipping `visible` removed the row in one frame while the card
+    // was still shrinking, and the column spread the body text into the
+    // slack.
     property real replyReveal: root.canReply && root.replying ? 1 : 0
     Behavior on replyReveal {
         NumberAnimation {
             id: replyRevealAnimation
-            duration: Appearance.animation.elementMoveFast.duration
-            easing.type: Appearance.animation.elementMoveFast.type
-            easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+            duration: Appearance.animation.elementMove.duration
+            easing.type: Appearance.animation.elementMove.type
+            easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
         }
     }
     property bool expanded: false
@@ -378,7 +380,10 @@ Item { // Notification item area
                 Item {
                     Layout.fillWidth: true
                     visible: root.replyReveal > 0
-                    opacity: root.replyReveal
+                    opacity: root.canReply && root.replying ? 1 : 0
+                    Behavior on opacity {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    }
                     clip: true
                     implicitHeight: replyRow.implicitHeight * root.replyReveal
                     RowLayout {
