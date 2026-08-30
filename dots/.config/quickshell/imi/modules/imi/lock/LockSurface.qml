@@ -347,6 +347,7 @@ MouseArea {
         id: passwordComponent
         PasswordField {
             id: passwordBox
+            materialShapeChars: passwordBox.masked && Config.options.lock.materialShapeChars
             placeholderText: GlobalStates.screenUnlockFailed ? Translation.tr("Incorrect password") : Translation.tr("Enter password")
 
             // The pull as well as the publication: a slot rebuild (a reorder

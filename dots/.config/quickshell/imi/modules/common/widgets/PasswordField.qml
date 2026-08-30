@@ -35,7 +35,9 @@ ToolbarTextField {
     property color colText: Appearance.colors.colOnLayer1
     property int charSize: 20
 
-    readonly property bool materialShapeChars: root.masked && Config.options.lock.materialShapeChars
+    // Whether the mask is drawn as Material shapes rather than dots: a lock
+    // option, handed in by the surface that reads the lock's config.
+    property bool materialShapeChars: false
 
     echoMode: root.masked ? TextInput.Password : TextInput.Normal
     inputMethodHints: root.masked ? Qt.ImhSensitiveData : Qt.ImhNone

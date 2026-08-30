@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
+import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -90,6 +91,7 @@ Item {
         // card it would be sitting on and reads as a hole in it.
         PasswordField {
             id: inputField
+            materialShapeChars: inputField.masked && Config.options.lock.materialShapeChars
             Layout.fillWidth: true
             Layout.fillHeight: false
             focus: true
