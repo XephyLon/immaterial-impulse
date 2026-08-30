@@ -1,3 +1,4 @@
+import qs
 import qs.services
 import qs.modules.common.widgets
 
@@ -26,6 +27,12 @@ NotificationController {
 
     function discard(notif): void {
         PhoneNotifications.dismiss(notif.publicId);
+    }
+    // The phone's cards are in the LEFT sidebar. Before the seam carried this,
+    // following a link from one closed the right sidebar instead.
+    function openLink(link): void {
+        Qt.openUrlExternally(link);
+        GlobalStates.sidebarLeftOpen = false;
     }
 
     // The mirror has no popup half, so there is no timeout to run or cancel.

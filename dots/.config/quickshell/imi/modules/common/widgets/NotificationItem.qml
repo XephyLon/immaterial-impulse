@@ -1,4 +1,3 @@
-import qs
 import qs.modules.common
 import qs.services
 import qs.modules.common.functions
@@ -209,10 +208,10 @@ Item { // Notification item area
                             `${NotificationUtils.processNotificationBody(notificationObject.body, notificationObject.appName || notificationObject.summary).replace(/\n/g, "<br/>")}`
                     }
 
-                    onLinkActivated: (link) => {
-                        Qt.openUrlExternally(link)
-                        GlobalStates.sidebarRightOpen = false
-                    }
+                    // Which sidebar (if any) closes behind a followed link
+                    // is the backend's to say: the shell's cards sit in the
+                    // right sidebar, the phone's in the left.
+                    onLinkActivated: link => root.controller.openLink(link)
                     
                     PointingHandLinkHover {}
                 }
