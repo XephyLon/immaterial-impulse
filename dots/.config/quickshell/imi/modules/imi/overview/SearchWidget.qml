@@ -347,6 +347,8 @@ Item { // Wrapper
                     anchors.left: parent?.left
                     anchors.right: parent?.right
                     entry: modelData
+                    imageEntry: searchItem.cliphistRawString !== "" && Cliphist.entryIsImage(searchItem.cliphistRawString)
+                    onActivated: GlobalStates.overviewOpen = false
                     clearBtnHasFocus: root.clearBtnHasFocus
                     query: StringUtils.cleanOnePrefix(root.searchingText, [Config.options.search.prefix.action, Config.options.search.prefix.app, Config.options.search.prefix.clipboard, Config.options.search.prefix.emojis, Config.options.search.prefix.symbols, Config.options.search.prefix.math, Config.options.search.prefix.shellCommand, Config.options.search.prefix.webSearch])
 

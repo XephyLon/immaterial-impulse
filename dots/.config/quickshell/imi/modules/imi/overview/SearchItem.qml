@@ -1,5 +1,4 @@
 // pragma NativeMethodBehavior: AcceptThisObject
-import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.models
@@ -33,6 +32,9 @@ RippleButton {
     property string bigText: entry?.iconType === LauncherSearchResult.IconType.Text ? entry?.iconName ?? "" : ""
     property string materialSymbol: entry.iconType === LauncherSearchResult.IconType.Material ? entry?.iconName ?? "" : ""
     property string cliphistRawString: entry?.rawValue ?? ""
+    // Whether the clipboard entry is an image, decided by whoever can read
+    // clipboard entries; the row only chooses a thumbnail over text.
+    property bool imageEntry: false
     property bool blurImage: entry?.blurImage ?? false
     
     visible: root.entryShown
@@ -105,9 +107,11 @@ RippleButton {
         anchors.rightMargin: root.horizontalMargin
     }
 
+    // The result runs its entry; closing the overview is the overview's.
+    signal activated()
     onClicked: {
-        GlobalStates.overviewOpen = false
-        root.itemExecute()
+        root.activated();
+        root.itemExecute();
     }
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Delete && event.modifiers === Qt.ShiftModifier) {
@@ -259,7 +263,7 @@ RippleButton {
                 text: root.itemTags
             }
             Loader { // Clipboard image preview
-                active: root.cliphistRawString && Cliphist.entryIsImage(root.cliphistRawString)
+                active: root.imageEntry
                 sourceComponent: CliphistImage {
                     Layout.fillWidth: true
                     entry: root.cliphistRawString
