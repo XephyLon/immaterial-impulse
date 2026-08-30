@@ -130,7 +130,7 @@ class ButtonWatcherTests(unittest.TestCase):
 class QmlWiringTests(unittest.TestCase):
     def setUp(self):
         self.panel = (ROOT / "modules/imi/dropShelf/DropShelfPanel.qml").read_text()
-        self.shelf = (ROOT / "modules/common/widgets/DropShelf.qml").read_text()
+        self.shelf = (ROOT / "modules/imi/dropShelf/DropShelf.qml").read_text()
         self.bar = (ROOT / "modules/imi/bar/Bar.qml").read_text()
 
     def test_global_shortcut_name(self):
