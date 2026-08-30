@@ -97,7 +97,6 @@ Item {
             verticalPadding: value("verticalPadding", undefined),
             fontSize: control.font?.pixelSize,
             background: value("colBackground", undefined),
-            hasToggled: control.toggled !== undefined,
             hasEnabled: control.enabled !== undefined,
         };
     }
@@ -133,18 +132,6 @@ Item {
             }
         }
 
-        // Built through the type's MODULE, not its file path.
-        //
-        // `Qt.createComponent(shellPath(...))` compiles the file with no module
-        // context, so a type that reaches a sibling by the directory's implicit
-        // import fails to compile - the gallery reported "CliphistImage is not
-        // a type" for SearchItem, which builds perfectly well in the overview
-        // that imports its module. A false failure is worse here than no tile:
-        // this page's whole vocabulary for "cannot be built" is the sentence it
-        // prints in the cell, and one of them was a lie about working code.
-        //
-        // The module is the path: modules/imi/overview/SearchItem.qml is
-        // `qs.modules.imi.overview` and the type `SearchItem`.
         // The WHOLE message, reduced to its most useful line. Taking the first
         // line and everything after its last colon left the empty string for a
         // QML build error - whose first line is "Error: Qt.createQmlObject():
@@ -253,20 +240,6 @@ Item {
                 if (builder.failure !== "")
                     return;
             }
-            try {
-                if (false) {
-                // The WHOLE message, reduced to its most useful line.
-                //
-                // This used to take the first line and everything after its
-                // last colon, which for a QML build error - whose first line is
-                // "Error: Qt.createQmlObject(): failed to create object:" -
-                // leaves the empty string. Twenty tiles drew nothing at all and
-                // said nothing about why, because the reason had been formatted
-                // away.
-                    void 0;
-                }
-            } catch (ignored) {
-            }
             if (!builder.control) {
                 builder.failure = Translation.tr("needs its surroundings");
                 return;
@@ -282,10 +255,6 @@ Item {
             // alive and sized to nothing. Measuring the result is the honest
             // test: whatever the reason, a widget that lays out to nothing has
             // nothing to show here.
-            console.log("[Tile]", stage.typeName, "impl",
-                        builder.control.implicitWidth.toFixed(0),
-                        builder.control.implicitHeight.toFixed(0),
-                        "vis", builder.control.visible, "op", builder.control.opacity);
             if (builder.control.implicitWidth < 4 || builder.control.implicitHeight < 4)
                 builder.failure = Translation.tr("needs its data");
 
