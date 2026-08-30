@@ -13,12 +13,14 @@ PLUGIN_ROOT = ROOT / "modules/common/plugins/bundled"
 PLUGIN_DIRS = (
     "nandoroid-media",
     "nandoroid-system-monitor",
+    "nandoroid-system-monitor-gpu",
     "nandoroid-weather",
     "nandoroid-currency",
 )
 EXPECTED_OPTIONS = {
     "nandoroid-media": {"showLyrics", "useRomaji"},
     "nandoroid-system-monitor": {"vertical", "showBattery"},
+    "nandoroid-system-monitor-gpu": {"vertical"},
     # Both widgets declared a `sizeMode` choice option until the host's
     # `__gridSize` took the concept over; their spans are `grid.sizes` now.
     "nandoroid-weather": set(),
@@ -27,6 +29,7 @@ EXPECTED_OPTIONS = {
 EXPECTED_ENTRY_TYPES = {
     "nandoroid-media": "Expressive.DesktopMediaWidget",
     "nandoroid-system-monitor": "Expressive.DesktopSystemMonitorWidget",
+    "nandoroid-system-monitor-gpu": "Expressive.DesktopSystemMonitorWidget",
     "nandoroid-weather": "Expressive.DesktopWeatherWidget",
     "nandoroid-currency": "Expressive.DesktopCurrencyWidget",
 }
@@ -44,7 +47,8 @@ SIZED_BY_THE_HOST_GRID = {"nandoroid-media", "nandoroid-weather", "nandoroid-cur
 # host's drag. `calendar` is not in PLUGIN_DIRS above - it is a first-party
 # bundled widget with no upstream to attribute - but its card lifts like the
 # rest of them.
-TOLD_ABOUT_THE_DRAG = SIZED_BY_THE_HOST_GRID | {"nandoroid-system-monitor", "calendar"}
+TOLD_ABOUT_THE_DRAG = SIZED_BY_THE_HOST_GRID | {
+    "nandoroid-system-monitor", "nandoroid-system-monitor-gpu", "calendar"}
 
 
 def entry_file(directory):

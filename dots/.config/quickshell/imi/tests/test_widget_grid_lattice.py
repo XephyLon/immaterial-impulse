@@ -43,6 +43,7 @@ DELEGATES_TO_THE_DESIGN_SYSTEM = {
     "nandoroid-currency",
     "nandoroid-media",
     "nandoroid-system-monitor",
+    "nandoroid-system-monitor-gpu",
     "nandoroid-weather",
 }
 

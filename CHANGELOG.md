@@ -13,6 +13,12 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **A GPU Monitor widget: GPU, VRAM, and swap.** The system monitor's
+  missing metrics, as their own placeable widget - the host places one
+  instance per plugin, so a separate package is what lets the graphics row
+  sit beside the original three (or replace them). Same cards, same
+  liquid-shape gauges, palette cycling the same three roles; the numbers
+  come from the shell's existing resource service.
 - **The media widget takes a 1x1.** Cover art fills the tile and a small
   transport row rides low across it - previous and next on discs, play on
   the same scalloped cookie the other sizes morph through. No seek ring,

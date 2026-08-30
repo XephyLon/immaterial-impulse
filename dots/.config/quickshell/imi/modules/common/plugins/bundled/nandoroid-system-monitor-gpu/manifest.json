@@ -1,0 +1,9 @@
+{
+  "id": "nandoroid_system_monitor_gpu", "name": "GPU Monitor", "description": "Expressive GPU, VRAM, and swap dashboard - the system monitor's cards for the graphics side, placeable beside or instead of it", "version": "1.0.0", "apiVersion": 1,
+  "author": "na-ive / nandoroid-shell", "license": "AGPL-3.0", "sourceUrl": "https://github.com/na-ive/nandoroid-shell", "upstreamRevision": "4994e2d2a264a015d5a6dac4786c60cfe94e5d8a",
+  "capabilities": ["desktop-widget"], "permissions": ["settings_read", "settings_write"],
+  "options": [
+    { "key": "vertical", "type": "boolean", "label": "Vertical layout", "icon": "view_agenda", "default": false }
+  ],
+  "desktopWidget": { "component": "Widget.qml", "blur": false }
+}

@@ -32,18 +32,61 @@ Item {
     readonly property string thirdCardIcon: showBattery ? "battery_full" : "storage"
     readonly property string thirdCardLabel: showBattery ? "Battery" : "Disk"
 
+    // Which metrics this instance shows, in order. The default IS the
+    // upstream rendering - CPU, RAM, and the disk/battery card - per the
+    // port rule (docs/PLUGIN_DESIGN_SYSTEM.md): a host that knows nothing
+    // about this property is unchanged. The GPU Monitor package sets
+    // ["gpu", "vram", "swap"]; any composition of the six keys is legal,
+    // and the palette cycles by POSITION (primary, secondary, tertiary),
+    // which is what the upstream trio already did.
+    property var cards: ["cpu", "ram", "third"]
+    readonly property var metricTable: ({
+        cpu:   { icon: "planner_review", shape: MaterialShape.Shape.Gem,           label: "CPU" },
+        ram:   { icon: "memory",         shape: MaterialShape.Shape.Cookie4Sided,  label: "RAM" },
+        third: { icon: root.thirdCardIcon, shape: MaterialShape.Shape.Cookie12Sided, label: root.thirdCardLabel },
+        gpu:   { icon: "developer_board", shape: MaterialShape.Shape.Sunny,        label: "GPU" },
+        vram:  { icon: "memory_alt",     shape: MaterialShape.Shape.Clover4Leaf,   label: "VRAM" },
+        swap:  { icon: "swap_horiz",     shape: MaterialShape.Shape.Pentagon,      label: "Swap" }
+    })
+    function metricLevel(key) {
+        switch (key) {
+        case "cpu":   return SystemData.cpuUsage;
+        case "ram":   return SystemData.memUsage;
+        case "third": return root.thirdCardLevel;
+        case "gpu":   return SystemData.gpuUsage;
+        case "vram":  return SystemData.vramUsage;
+        case "swap":  return SystemData.swapUsage;
+        }
+        return 0;
+    }
+    // The three-role palette, cycled by card position - card 1 was always
+    // primary, card 2 secondary, card 3 tertiary, and a fourth card starts
+    // the cycle again.
+    readonly property var palettes: [
+        { tint: Appearance.colors.colPrimaryContainer,   accent: Appearance.colors.colPrimary,
+          onAccent: Appearance.colors.colOnPrimary,       onContainer: Appearance.colors.colOnPrimaryContainer },
+        { tint: Appearance.colors.colSecondaryContainer, accent: Appearance.colors.colSecondary,
+          onAccent: Appearance.colors.colOnSecondary,     onContainer: Appearance.colors.colOnSecondaryContainer },
+        { tint: Appearance.colors.colTertiaryContainer,  accent: Appearance.colors.colTertiary,
+          onAccent: Appearance.colors.colOnTertiary,      onContainer: Appearance.colors.colOnTertiaryContainer }
+    ]
+
     // Scale dimensions cleanly based on Choice A (Grid: 132x108, Gap: 12)
     // Horizontal 3x1: 420 x 108
     // Vertical 1x3: 132 x 348 (108 * 3 + 12 * 2)
-    property real baseWidth: isVertical ? 132 : 420
-    property real baseHeight: isVertical ? 348 : 108
+    // N cards on the widget-grid lattice: N cells plus the gaps between
+    // them, which for the default three is the 420x108 / 132x348 it always
+    // was (docs/widget-grid.md - the cell is 132x108, the gap 12).
+    readonly property int cardCount: root.cards.length
+    property real baseWidth: isVertical ? 132 : (cardCount * 132 + (cardCount - 1) * 12)
+    property real baseHeight: isVertical ? (cardCount * 108 + (cardCount - 1) * 12) : 108
     implicitWidth: baseWidth * Appearance.effectiveScale
     implicitHeight: baseHeight * Appearance.effectiveScale
 
     // Spacings and sizes
     property real cardSpacing: 12 * Appearance.effectiveScale
     property real cardHeight: isVertical ? (108 * Appearance.effectiveScale) : (108 * Appearance.effectiveScale)
-    property real cardWidth: isVertical ? (132 * Appearance.effectiveScale) : ((420 * Appearance.effectiveScale - cardSpacing * 2) / 3)
+    property real cardWidth: 132 * Appearance.effectiveScale
     // The grip sits at the widget's bottom-right, so the tension lands on the
     // card under it - thirdCard. All three bowing identically would read as
     // jelly, not as a pull.
@@ -52,300 +95,140 @@ Item {
     property bool dragging: false
     // The host's box is animating; the cards drop their shadow for it.
     property bool boxInMotion: false
-    readonly property var blurRegions: [
-        cpuCard.blurRegion,
-        ramCard.blurRegion,
-        thirdCard.blurRegion
-    ]
+    // One region per card, rebuilt when the set or the layout changes.
+    // `cardsReady` is the notify itemAt() does not have: the Repeater bumps
+    // it as delegates land, so the binding re-runs once they exist rather
+    // than reading nulls at creation. The regions themselves are static per
+    // layout - a card never moves inside the widget - so those are the only
+    // dependencies the list needs.
+    property int cardsReady: 0
+    readonly property var blurRegions: {
+        void root.cardsReady;
+        void root.isVertical;
+        const out = [];
+        for (let i = 0; i < cardRepeater.count; i++) {
+            const card = cardRepeater.itemAt(i);
+            if (card) out.push(card.blurRegion);
+        }
+        return out;
+    }
+
+    // One metric's face - the upstream card, generalised only in WHICH
+    // metric it reads: the 38px liquid shape up top (fill height = usage,
+    // glyph flips past 0.55), the % and label centred at the bottom.
+    component MetricCard: WidgetCard {
+        id: card
+        required property int index
+        required property string modelData
+        readonly property var face: root.metricTable[card.modelData]
+        readonly property real level: root.metricLevel(card.modelData)
+        readonly property var roles: root.palettes[card.index % root.palettes.length]
+
+        implicitWidth: root.cardWidth
+        implicitHeight: root.cardHeight
+        dragging: root.dragging
+        hostMotionActive: root.boxInMotion
+        radius: Appearance.rounding.large
+        tint: card.roles.tint
+        useBlurBackground: root.useBlurBackground
+        backgroundOpacity: root.backgroundOpacity
+        // The grip sits at the widget's bottom-right, so the tension lands
+        // on the card under it - the last one. All bowing identically would
+        // read as jelly, not as a pull.
+        tensionX: card.index === root.cardCount - 1 ? root.resizeBow.x : 0
+        tensionY: card.index === root.cardCount - 1 ? root.resizeBow.y : 0
+
+        Item {
+            id: visual
+            width: 38 * Appearance.effectiveScale
+            height: 38 * Appearance.effectiveScale
+            anchors {
+                top: parent.top
+                horizontalCenter: parent.horizontalCenter
+                topMargin: 12 * Appearance.effectiveScale
+            }
+
+            MaterialShape {
+                id: shapeMask
+                anchors.fill: parent
+                shape: card.face.shape
+                color: "black"
+                visible: false
+            }
+
+            Item {
+                id: shapeContent
+                anchors.fill: parent
+                visible: false
+
+                MaterialShape {
+                    anchors.fill: parent
+                    shape: card.face.shape
+                    color: Functions.ColorUtils.applyAlpha(card.roles.accent, 0.15)
+                }
+
+                Rectangle {
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        bottom: parent.bottom
+                    }
+                    height: parent.height * card.level
+                    color: card.roles.accent
+                }
+            }
+
+            OpacityMask {
+                anchors.fill: parent
+                source: shapeContent
+                maskSource: shapeMask
+            }
+
+            MaterialSymbol {
+                anchors.centerIn: parent
+                text: card.face.icon
+                iconSize: 16 * Appearance.effectiveScale
+                color: card.level > 0.55 ? card.roles.onAccent : card.roles.accent
+            }
+        }
+
+        ColumnLayout {
+            spacing: -2 * Appearance.effectiveScale
+            anchors {
+                bottom: parent.bottom
+                horizontalCenter: parent.horizontalCenter
+                bottomMargin: 10 * Appearance.effectiveScale
+            }
+
+            StyledText {
+                Layout.alignment: Qt.AlignHCenter
+                text: Math.round(card.level * 100) + "%"
+                font.pixelSize: Appearance.font.pixelSize.normal
+                font.weight: Font.Bold
+                color: card.roles.onContainer
+            }
+            StyledText {
+                Layout.alignment: Qt.AlignHCenter
+                text: card.face.label
+                font.pixelSize: Appearance.font.pixelSize.smallest
+                color: card.roles.onContainer
+                opacity: 0.6
+            }
+        }
+    }
 
 
     Grid {
         id: gridLayout
-        columns: root.isVertical ? 1 : 3
+        columns: root.isVertical ? 1 : root.cardCount
         spacing: root.cardSpacing
 
-        // CARD 1: CPU (Split-Level Centered Layout)
-        WidgetCard {
-            id: cpuCard
-            implicitWidth: root.cardWidth
-            implicitHeight: root.cardHeight
-            dragging: root.dragging
-            hostMotionActive: root.boxInMotion
-            radius: Appearance.rounding.large
-            tint: Appearance.colors.colPrimaryContainer
-            useBlurBackground: root.useBlurBackground
-            backgroundOpacity: root.backgroundOpacity
-
-            // Sisi Atas: Liquid Gem (Centered Top)
-            Item {
-                id: cpuVisualContainer
-                width: 38 * Appearance.effectiveScale
-                height: 38 * Appearance.effectiveScale
-                anchors {
-                    top: parent.top
-                    horizontalCenter: parent.horizontalCenter
-                    topMargin: 12 * Appearance.effectiveScale
-                }
-
-                MaterialShape {
-                    id: cpuMask
-                    anchors.fill: parent
-                    shape: MaterialShape.Shape.Gem
-                    color: "black"
-                    visible: false
-                }
-
-                Item {
-                    id: cpuContent
-                    anchors.fill: parent
-                    visible: false
-
-                    MaterialShape {
-                        anchors.fill: parent
-                        shape: MaterialShape.Shape.Gem
-                        color: Functions.ColorUtils.applyAlpha(Appearance.colors.colPrimary, 0.15)
-                    }
-
-                    Rectangle {
-                        anchors {
-                            left: parent.left
-                            right: parent.right
-                            bottom: parent.bottom
-                        }
-                        height: parent.height * SystemData.cpuUsage
-                        color: Appearance.colors.colPrimary
-                    }
-                }
-
-                OpacityMask {
-                    anchors.fill: parent
-                    source: cpuContent
-                    maskSource: cpuMask
-                }
-
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    text: "planner_review"
-                    iconSize: 16 * Appearance.effectiveScale
-                    color: SystemData.cpuUsage > 0.55 ? Appearance.colors.colOnPrimary : Appearance.colors.colPrimary
-                }
-            }
-
-            // Sisi Bawah: Text Info (Centered Bottom)
-            ColumnLayout {
-                spacing: -2 * Appearance.effectiveScale
-                anchors {
-                    bottom: parent.bottom
-                    horizontalCenter: parent.horizontalCenter
-                    bottomMargin: 10 * Appearance.effectiveScale
-                }
-                
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: Math.round(SystemData.cpuUsage * 100) + "%"
-                    font.pixelSize: Appearance.font.pixelSize.normal
-                    font.weight: Font.Bold
-                    color: Appearance.colors.colOnPrimaryContainer
-                }
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "CPU"
-                    font.pixelSize: Appearance.font.pixelSize.smallest
-                    color: Appearance.colors.colOnPrimaryContainer
-                    opacity: 0.6
-                }
-            }
-        }
-
-        // CARD 2: RAM (Split-Level Centered Layout)
-        WidgetCard {
-            id: ramCard
-            implicitWidth: root.cardWidth
-            implicitHeight: root.cardHeight
-            dragging: root.dragging
-            hostMotionActive: root.boxInMotion
-            radius: Appearance.rounding.large
-            tint: Appearance.colors.colSecondaryContainer
-            useBlurBackground: root.useBlurBackground
-            backgroundOpacity: root.backgroundOpacity
-
-            // Sisi Atas: Liquid Cookie4Sided (Centered Top)
-            Item {
-                id: ramVisualContainer
-                width: 38 * Appearance.effectiveScale
-                height: 38 * Appearance.effectiveScale
-                anchors {
-                    top: parent.top
-                    horizontalCenter: parent.horizontalCenter
-                    topMargin: 12 * Appearance.effectiveScale
-                }
-
-                MaterialShape {
-                    id: ramMask
-                    anchors.fill: parent
-                    shape: MaterialShape.Shape.Cookie4Sided
-                    color: "black"
-                    visible: false
-                }
-
-                Item {
-                    id: ramContent
-                    anchors.fill: parent
-                    visible: false
-
-                    MaterialShape {
-                        anchors.fill: parent
-                        shape: MaterialShape.Shape.Cookie4Sided
-                        color: Functions.ColorUtils.applyAlpha(Appearance.colors.colSecondary, 0.15)
-                    }
-
-                    Rectangle {
-                        anchors {
-                            left: parent.left
-                            right: parent.right
-                            bottom: parent.bottom
-                        }
-                        height: parent.height * SystemData.memUsage
-                        color: Appearance.colors.colSecondary
-                    }
-                }
-
-                OpacityMask {
-                    anchors.fill: parent
-                    source: ramContent
-                    maskSource: ramMask
-                }
-
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    text: "memory"
-                    iconSize: 16 * Appearance.effectiveScale
-                    color: SystemData.memUsage > 0.55 ? Appearance.colors.colOnSecondary : Appearance.colors.colSecondary
-                }
-            }
-
-            // Sisi Bawah: Text Info (Centered Bottom)
-            ColumnLayout {
-                spacing: -2 * Appearance.effectiveScale
-                anchors {
-                    bottom: parent.bottom
-                    horizontalCenter: parent.horizontalCenter
-                    bottomMargin: 10 * Appearance.effectiveScale
-                }
-
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: Math.round(SystemData.memUsage * 100) + "%"
-                    font.pixelSize: Appearance.font.pixelSize.normal
-                    font.weight: Font.Bold
-                    color: Appearance.colors.colOnSecondaryContainer
-                }
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "RAM"
-                    font.pixelSize: Appearance.font.pixelSize.smallest
-                    color: Appearance.colors.colOnSecondaryContainer
-                    opacity: 0.6
-                }
-            }
-        }
-
-        // CARD 3: DISK or BATTERY (Split-Level Centered Layout)
-        WidgetCard {
-            id: thirdCard
-            implicitWidth: root.cardWidth
-            implicitHeight: root.cardHeight
-            radius: Appearance.rounding.large
-            tint: Appearance.colors.colTertiaryContainer
-            useBlurBackground: root.useBlurBackground
-            backgroundOpacity: root.backgroundOpacity
-            tensionX: root.resizeBow.x
-            tensionY: root.resizeBow.y
-            dragging: root.dragging
-            hostMotionActive: root.boxInMotion
-
-            // Sisi Atas: Liquid Cookie12Sided (Centered Top)
-            Item {
-                id: thirdVisualContainer
-                width: 38 * Appearance.effectiveScale
-                height: 38 * Appearance.effectiveScale
-                anchors {
-                    top: parent.top
-                    horizontalCenter: parent.horizontalCenter
-                    topMargin: 12 * Appearance.effectiveScale
-                }
-
-                MaterialShape {
-                    id: thirdMask
-                    anchors.fill: parent
-                    shape: MaterialShape.Shape.Cookie12Sided
-                    color: "black"
-                    visible: false
-                }
-
-                Item {
-                    id: thirdContent
-                    anchors.fill: parent
-                    visible: false
-
-                    MaterialShape {
-                        anchors.fill: parent
-                        shape: MaterialShape.Shape.Cookie12Sided
-                        color: Functions.ColorUtils.applyAlpha(Appearance.colors.colTertiary, 0.15)
-                    }
-
-                    Rectangle {
-                        anchors {
-                            left: parent.left
-                            right: parent.right
-                            bottom: parent.bottom
-                        }
-                        height: parent.height * root.thirdCardLevel
-                        color: Appearance.colors.colTertiary
-                    }
-                }
-
-                OpacityMask {
-                    anchors.fill: parent
-                    source: thirdContent
-                    maskSource: thirdMask
-                }
-
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    text: root.thirdCardIcon
-                    iconSize: 16 * Appearance.effectiveScale
-                    // Inverts once the fill has risen past the glyph, so this
-                    // tracks the fill level rather than meaning "too high".
-                    color: root.thirdCardLevel > 0.55
-                        ? Appearance.colors.colOnTertiary : Appearance.colors.colTertiary
-                }
-            }
-
-            // Sisi Bawah: Text Info (Centered Bottom)
-            ColumnLayout {
-                spacing: -2 * Appearance.effectiveScale
-                anchors {
-                    bottom: parent.bottom
-                    horizontalCenter: parent.horizontalCenter
-                    bottomMargin: 10 * Appearance.effectiveScale
-                }
-
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: Math.round(root.thirdCardLevel * 100) + "%"
-                    font.pixelSize: Appearance.font.pixelSize.normal
-                    font.weight: Font.Bold
-                    color: Appearance.colors.colOnTertiaryContainer
-                }
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: root.thirdCardLabel
-                    font.pixelSize: Appearance.font.pixelSize.smallest
-                    color: Appearance.colors.colOnTertiaryContainer
-                    opacity: 0.6
-                }
-            }
+        Repeater {
+            id: cardRepeater
+            model: root.cards
+            onItemAdded: root.cardsReady++
+            onItemRemoved: root.cardsReady++
+            delegate: MetricCard {}
         }
     }
 

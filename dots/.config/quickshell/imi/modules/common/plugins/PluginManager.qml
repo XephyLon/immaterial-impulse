@@ -121,6 +121,7 @@ Singleton {
         let map = {};
         [clockManifestFile, dockerManifestFile, discordVoiceManifestFile,
                 nandoroidMediaManifestFile, nandoroidSystemMonitorManifestFile,
+                nandoroidSystemMonitorGpuManifestFile,
                 nandoroidWeatherManifestFile, nandoroidCurrencyManifestFile,
                 notesManifestFile, visualizerManifestFile,
                 customImageManifestFile, imageConverterManifestFile,
@@ -374,6 +375,12 @@ Singleton {
     FileView {
         id: nandoroidSystemMonitorManifestFile
         property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/nandoroid-system-monitor")
+        path: pluginBase + "/manifest.json"
+        onLoaded: root.scheduleRebuild()
+    }
+    FileView {
+        id: nandoroidSystemMonitorGpuManifestFile
+        property string pluginBase: Quickshell.shellPath("modules/common/plugins/bundled/nandoroid-system-monitor-gpu")
         path: pluginBase + "/manifest.json"
         onLoaded: root.scheduleRebuild()
     }

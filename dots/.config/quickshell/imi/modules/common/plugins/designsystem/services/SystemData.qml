@@ -7,6 +7,9 @@ Singleton {
     readonly property real memUsage: ResourceUsage.memoryUsedPercentage
     readonly property real swapUsage: ResourceUsage.swapUsedPercentage
     readonly property real cpuTemperature: ResourceUsage.cpuTemp
+    readonly property real gpuUsage: ResourceUsage.gpuUsage
+    readonly property real vramUsage: ResourceUsage.vramUsedPercentage
+    readonly property bool gpuAvailable: ResourceUsage.gpuVendor !== ""
     readonly property real networkRxRate: 0
     readonly property real networkTxRate: 0
     readonly property real diskReadRate: 0
