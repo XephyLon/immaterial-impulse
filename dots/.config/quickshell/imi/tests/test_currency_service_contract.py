@@ -13,7 +13,10 @@ def test_currency_service_fetches_one_target_table_from_api():
     assert "currencies/" in schedule and "encodeURIComponent(baseCode)" in schedule
     assert "cdn.jsdelivr.net" in schedule, "the documented mirror"
     assert "CurrencyMath.ratesIntoTarget(table, uniqueQuotes)" in source
-    assert source.count("new XMLHttpRequest()") == 1
+    # Three requests live here and only three: the live rates, the daily
+    # walker's one-date-at-a-time step, and the names table. A fourth is a
+    # question to ask before it ships.
+    assert source.count("new XMLHttpRequest()") == 3
 
 
 def test_currency_service_retries_instead_of_giving_up():
@@ -88,8 +91,27 @@ def test_service_remembers_a_day_of_rates():
     assert "historyFile.setText" in source, "the day must survive a restart"
     assert "History.prune(stored.history, Date.now())" in source,         "a stale file must load as the empty ring it really is"
     assert "MIN_GAP_MS" in history and "PRUNE_MS" in history
-    # The sampling adds no network of its own.
-    assert source.count("new XMLHttpRequest()") == 1
+    # The sampling adds no network of its own (the daily walker and the
+    # names fetch are counted in the fetch test).
+    assert "History.pushSample" in source
+
+
+def test_service_walks_the_dated_snapshots_politely():
+    """The 3x2's 7- and 30-day charts read fetched daily closes. One date
+    per step on a spaced timer - a cold store is ~30 polite CDN hits, a
+    warm one asks for one file a day - a 404'd date is recorded for the
+    session rather than re-asked every pass, and a change of base clears
+    the store through the same fold that fills it."""
+    source = SERVICE.read_text()
+    daily = (SERVICE.parent / "currency_daily.js").read_text()
+    assert "Daily.missingDates" in source
+    assert "Daily.foldSnapshot" in source
+    assert "dailyUnavailable" in source
+    assert "interval: 400" in source, "the walker is spaced, not a burst"
+    assert "currency-api@${date}" in source and ".currency-api.pages.dev" in source,         "both dated hosts, like the live pair"
+    assert "DAYS_KEPT" in daily
+    assert '"daily: root.daily' not in source  # sanity: no stringified typo
+    assert "daily: root.daily" in source, "the month must survive a restart"
 
 
 if __name__ == "__main__":
