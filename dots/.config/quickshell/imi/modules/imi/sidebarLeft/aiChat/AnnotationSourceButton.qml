@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 
-import qs
 import qs.modules.common
 import qs.modules.common.widgets
 
@@ -20,12 +19,9 @@ RippleButton {
     colRipple: Appearance.colors.colSurfaceContainerHighestActive
 
     PointingHandInteraction {}
-    onClicked: {
-        if (url) {
-            Qt.openUrlExternally(url)
-            GlobalStates.sidebarLeftOpen = false
-        }
-    }
+    // Opening the link and closing the sidebar are the chat's decisions.
+    signal followed(string url)
+    onClicked: if (root.url) root.followed(root.url)
 
     contentItem: Item {
         anchors.centerIn: parent

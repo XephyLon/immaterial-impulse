@@ -1,5 +1,3 @@
-import qs
-import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
@@ -19,14 +17,10 @@ RippleButton {
     colRipple: Appearance.colors.colSurfaceContainerHighestActive
 
     PointingHandInteraction {}
-    onClicked: {
-        let url = Config.options.search.engineBaseUrl + root.query;
-        for (let site of (Config?.options?.search.excludedSites ?? [])) {
-            url += ` -site:${site}`;
-        }
-        Qt.openUrlExternally(url);
-        GlobalStates.sidebarLeftOpen = false;
-    }
+    // Which engine, which excluded sites, and whether the sidebar closes are
+    // the chat's to know; the chip only says which query was asked for.
+    signal searched(string query)
+    onClicked: root.searched(root.query)
 
     contentItem: Item {
         anchors.centerIn: parent

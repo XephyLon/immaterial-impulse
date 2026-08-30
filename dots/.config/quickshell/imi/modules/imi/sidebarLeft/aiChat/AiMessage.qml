@@ -1,3 +1,4 @@
+import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -337,6 +338,10 @@ Rectangle {
                     required property var modelData
                     displayText: modelData.text
                     url: modelData.url
+                    onFollowed: url => {
+                        Qt.openUrlExternally(url);
+                        GlobalStates.sidebarLeftOpen = false;
+                    }
                 }
             }
         }
@@ -354,6 +359,13 @@ Rectangle {
                 delegate: SearchQueryButton {
                     required property var modelData
                     query: modelData
+                    onSearched: query => {
+                        let url = Config.options.search.engineBaseUrl + query;
+                        for (const site of (Config.options.search.excludedSites ?? []))
+                            url += ` -site:${site}`;
+                        Qt.openUrlExternally(url);
+                        GlobalStates.sidebarLeftOpen = false;
+                    }
                 }
             }
         }
