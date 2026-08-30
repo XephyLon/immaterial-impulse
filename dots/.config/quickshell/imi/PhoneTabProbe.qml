@@ -19,8 +19,17 @@ ShellRoot {
             cellularNetworkType: "LTE", reachableAddresses: [], batteryAvailable: true, batteryCharge: 75, batteryCharging: false })
         readonly property var laptop: ({ id: "l", name: "Laptop", type: "laptop", paired: false, reachable: false, batteryAvailable: false })
 
+        property var probeIpc: probeIpc
+        property var samples: []
         IpcHandler {
+            id: probeIpc
             target: "probe"
+            function trace(): void {
+                win.samples = [];
+                sampler.count = 0;
+                sampler.start();
+            }
+            function traceResult(): string { return win.samples.join(" "); }
             function buttons(): string {
                 const out = [];
                 function walk(o) {
@@ -33,6 +42,17 @@ ShellRoot {
                 }
                 walk(win.contentItem);
                 return out.join("\n");
+            }
+        }
+        Timer {
+            id: sampler
+            property int count: 0
+            interval: 16; repeat: true
+            onTriggered: {
+                const s = win.samples.slice();
+                s.push(`${card.replyReveal.toFixed(2)}:${card.height.toFixed(0)}`);
+                win.samples = s;
+                if (++count >= 60) stop();
             }
         }
         ColumnLayout {
