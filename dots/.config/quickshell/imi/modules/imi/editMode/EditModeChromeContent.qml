@@ -75,6 +75,8 @@ Item {
     signal lockWidgetToggleRequested(string pluginId)
     signal lockLayoutResetRequested()
     signal lockPresenceResetRequested()
+    // The drawer's search field holds keyboard focus; the surface follows it.
+    readonly property bool searchTakesKeys: drawerPanel.searchTakesKeys
 
     // Where in its band each chrome piece sits, as a fraction of the band's
     // slack - `edit_mode.js`'s `chromeBandFraction`, which is 0.5 exactly when

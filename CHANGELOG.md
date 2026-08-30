@@ -128,6 +128,13 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **The Edit Mode drawer's app search works, and looks like the shell.**
+  The Dock tab's field could never be typed into: the chrome surface
+  declares no keyboard focus so the mode's Escape ladder keeps working,
+  and the field never got an exception. The surface now takes on-demand
+  focus for exactly as long as the field holds it - the field's own first
+  Escape hands the keyboard straight back - and the outlined box is the
+  filled search row every other list carries.
 - **Currency polish, three notes.** The flat 24h state draws a quiet
   dash instead of a rightward arrow that read as a signal; the hero
   chart line prefers the fetched 7-day series and is decorative only

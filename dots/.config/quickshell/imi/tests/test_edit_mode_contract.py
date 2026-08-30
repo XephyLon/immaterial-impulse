@@ -720,7 +720,8 @@ def test_the_chrome_surface_leaves_the_keyboard_to_the_desktop():
     # edit_mode.js's ladder. A chrome surface on Overlay taking OnDemand focus
     # sits in front of it and swallows the key - and the mode's own exit is
     # what stops working.
-    assert re.search(r"WlrLayershell\.keyboardFocus:\s*WlrKeyboardFocus\.None",
+    assert re.search(r"WlrLayershell\.keyboardFocus:\s*chrome\.searchTakesKeys\s*\n\s*"
+                     r"\? WlrKeyboardFocus\.OnDemand : WlrKeyboardFocus\.None",
                      read(CHROME_SURFACE)), \
         "the chrome surface must not take keyboard focus"
 

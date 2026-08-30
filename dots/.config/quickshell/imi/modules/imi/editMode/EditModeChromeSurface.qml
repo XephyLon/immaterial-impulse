@@ -45,9 +45,13 @@ import "../../common/plugins/gridSizes.js" as GridSizes
  * `ignore_alpha = 1` is inherited by every xdg-popup opened from the surface,
  * which is how the tray menus stopped being blurred.
  *
- * **Keyboard.** `None`, deliberately. Escape is answered by `WidgetCanvas` on
- * the background surface, through `edit_mode.js`'s ladder; a chrome surface
- * taking `OnDemand` focus would sit in front of it and swallow the key.
+ * **Keyboard.** `None` by default, deliberately: Escape is answered by
+ * `WidgetCanvas` on the background surface, through `edit_mode.js`'s ladder,
+ * and a chrome surface holding `OnDemand` focus would sit in front of it and
+ * swallow the key. The one exception is the drawer's app search field, which
+ * cannot be typed into at `None` at all - the surface follows its focus, so
+ * it is `OnDemand` for exactly as long as the field is being typed into, and
+ * the field's own first Escape hands the keyboard straight back.
  */
 PanelWindow {
     id: root
@@ -66,7 +70,8 @@ PanelWindow {
     property bool underneath: false
 
     WlrLayershell.layer: root.underneath ? WlrLayer.Bottom : WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: chrome.searchTakesKeys
+        ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore
     exclusiveZone: 0
 
