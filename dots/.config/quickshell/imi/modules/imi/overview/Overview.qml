@@ -117,7 +117,18 @@ Scope {
             property string searchingText: ""
 
             WlrLayershell.namespace: "quickshell:overview"
-            WlrLayershell.layer: WlrLayer.Top
+            // Overlay only while open over a TRUE fullscreen window on this
+            // monitor (#339): Hyprland composites fullscreen windows above the
+            // Top layer, so the overview opened behind a game or a video.
+            // Closed, and open anywhere else, it stays on Top - an overlay
+            // surface covering the screen while a game runs would cost the
+            // game its direct scanout, which is the cost the issue's reply
+            // promised not to add. `fullscreenByMonitorName` reads hyprctl's
+            // fullscreen integer, so a maximized window does not count.
+            readonly property bool monitorHasFullscreen:
+                HyprlandData.fullscreenByMonitorName[panelWindow.screen?.name ?? ""] ?? false
+            WlrLayershell.layer: (GlobalStates.overviewOpen && panelWindow.isTarget && panelWindow.monitorHasFullscreen)
+                ? WlrLayer.Overlay : WlrLayer.Top
             // Gated on being the target as well as on the flag: with one surface
             // per screen, every sibling would otherwise turn OnDemand on the same
             // open and the compositor would pick which of them gets the keyboard.

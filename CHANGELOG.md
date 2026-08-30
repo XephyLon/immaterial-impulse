@@ -40,6 +40,12 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **The overview opens above fullscreen windows** (#339). It sat on the
+  compositor's Top layer, which fullscreen windows are composited over, so in
+  a game or a video it opened behind them. It moves to the Overlay layer only
+  while it is open over a truly fullscreen window on that monitor, and stays
+  on Top otherwise - closed, it never covers a game, so the game keeps its
+  direct scanout.
 - **The Visualizer desktop widget no longer slows the sidebars.** On a wide
   monitor it is several hundred bars, and each had its own height animation
   restarted on every one of cava's sixty frames a second, plus four colour
