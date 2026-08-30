@@ -595,6 +595,12 @@ Item {
                 property real appear: 1
                 visible: root.section === "dock"
                 Layout.fillWidth: true
+                // Content-height, STATED: ToolbarTextField declares
+                // Layout.fillHeight: true of its own, and left to defaults
+                // this row soaked up the column's spare height and centred
+                // the field in the middle of the drawer (the phone apps
+                // page records the same remedy for the same field).
+                Layout.fillHeight: false
                 spacing: Appearance.spacing.space100
 
                 MaterialSymbol {
