@@ -116,6 +116,28 @@ def test_every_write_goes_through_the_sdk_server():
     )
 
 
+def test_colours_stream_through_one_open_client():
+    """The Effects plugin's model: connect once, Direct mode once, then
+    frames. The streamer is a Process kept open with stdin; both the accent
+    path and the ambient loop hand their colour to `pushColor` first and
+    fall through to the CLI only while no streamer is ready."""
+    source = _source()
+    assert "readonly property string streamScript: `${Directories.scriptPath}/rgb/openrgb_stream.py`" in source
+    assert (ROOT / "scripts/rgb/openrgb_stream.py").is_file()
+    proc = re.search(r"Process\s*\{\s*id: streamProc(.*?)\n    \}", source, re.S)
+    assert proc, "no streamProc"
+    assert "stdinEnabled: true" in proc.group(1)
+    assert "running: root.streamWanted" in proc.group(1)
+    assert 'data.startsWith("ready")' in proc.group(1), "the streamer's ready line gates the writes"
+    assert 'streamProc.write(hex + "\\n");' in source
+    assert 'args.push("--exclude-name", name);' in source, "name exclusions must be their own argv elements"
+    assert 'args.push("--exclude-type", type);' in source
+    # Both paths try the stream before the CLI.
+    assert source.count("if (root.pushColor(hex))\n            return;") == 2, (
+        "the accent path and the ambient loop must both hand the colour to the streamer first"
+    )
+
+
 def _function_block(source: str, name: str) -> str:
     """Extracts a brace-balanced `function <name>(...) { ... }` block."""
     start = source.index(f"function {name}")

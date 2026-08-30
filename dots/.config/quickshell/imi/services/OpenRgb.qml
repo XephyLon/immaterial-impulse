@@ -23,10 +23,17 @@ import Quickshell.Io
  * device to its default colour on the way, so the lights blinked white on
  * every palette step and every ambient sample ("the flicker each second").
  * So the service brings a server up whenever the sync is enabled (its own
- * `openrgb --server`, unless one already answers on 127.0.0.1:6742), holds
- * writes until the port accepts, and prefixes every openrgb argv with
- * `--client` from then on. A server that fails to start leaves the plain
- * CLI as the fallback - slow and blinking, but working.
+ * `openrgb --server`, unless one already answers on 127.0.0.1:6742) and,
+ * once it answers, keeps ONE client open to it: scripts/rgb/openrgb_stream.py,
+ * which puts each controller into its Direct mode once and from then on
+ * sends nothing but LED frames - the way the OpenRGB Effects plugin drives
+ * hardware. `--client` on the CLI was tried first and is not enough: every
+ * CLI call is a fresh handshake (a second, measured) followed by a mode
+ * command, and the mode command is the re-initialisation that blinks. The
+ * streamer takes a target colour per line on stdin and ramps the devices
+ * to it at 30 fps, so a palette animation or an ambient sample arrives as
+ * a fade rather than a step. The CLI path below survives as the fallback
+ * for a server that never comes up - slow and blinking, but working.
  *
  * Trigger: upstream fires when applycolor.sh runs after matugen generates a
  * new palette. The equivalent moment in this shell is
@@ -67,6 +74,83 @@ Singleton {
     // Referenced from shell.qml's Component.onCompleted so this lazily-loaded
     // singleton is instantiated at startup and starts tracking palette changes.
     function load() {}
+
+    // ---- the streaming client ----------------------------------------
+    readonly property string streamScript: `${Directories.scriptPath}/rgb/openrgb_stream.py`
+    // Ready once the streamer has its controllers set up; every colour
+    // goes through `pushColor` from then on, and the CLI path only when
+    // this is false.
+    property bool streamReady: false
+    readonly property bool streamWanted: root.enabled && root.available && root.serverReady
+    // Exclusions travel as argv (names as their own elements, nothing
+    // shell-spliced). The type exclusions are the ambient loop's - GPU RGB
+    // rides the graphics card's i2c bus and a frame stream to it mid-game
+    // stalls rendering - so they apply while the loop drives the lights and
+    // the accent path, one fade per palette change, still reaches the GPU.
+    readonly property list<string> streamArgs: {
+        const args = ["python3", root.streamScript, "--fps", "30", "--smoothing", "0.25"];
+        for (const name of root.excludedDevices)
+            args.push("--exclude-name", name);
+        if (root.ambientActive)
+            for (const type of root.ambientTypeExclusions)
+                args.push("--exclude-type", type);
+        return args;
+    }
+    // A change in what the streamer excludes is a restart: the process
+    // reads its argv once. Cheap - reconnecting is a millisecond and a
+    // controller already in Direct gets no mode command - and the colour is
+    // re-pushed once it reports ready.
+    onStreamArgsChanged: {
+        if (!streamProc.running)
+            return;
+        root.streamReady = false;
+        streamProc.running = false;
+        streamProc.running = Qt.binding(() => root.streamWanted);
+    }
+    function pushColor(hex) {
+        if (!root.streamReady)
+            return false;
+        streamProc.write(hex + "\n");
+        root.lastAppliedColor = hex;
+        return true;
+    }
+    // What the lights should show right now, for a streamer that just came
+    // up. The ambient loop's next sample answers for itself.
+    function pushCurrentColor() {
+        if (root.ambientActive || !Config.ready || GlobalStates.screenLocked)
+            return;
+        root.pushColor(root.hexOf(Appearance.m3colors.m3primary));
+    }
+    Process {
+        id: streamProc
+        command: root.streamArgs
+        running: root.streamWanted
+        stdinEnabled: true
+        stdout: SplitParser {
+            onRead: data => {
+                if (data.startsWith("ready")) {
+                    root.streamReady = true;
+                    root.lastAppliedColor = "";
+                    root.pushCurrentColor();
+                } else if (data.startsWith("lost")) {
+                    root.streamReady = false;
+                }
+            }
+        }
+        // The streamer's notices - which controllers it skips and why, a
+        // mode switch, a rescan - are diagnostics, not warnings.
+        stderr: SplitParser {
+            onRead: data => console.log("[OpenRgb]", data)
+        }
+        onRunningChanged: {
+            if (!running)
+                root.streamReady = false;
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0 && root.streamWanted)
+                console.warn("[OpenRgb] streamer exited with code", exitCode);
+        }
+    }
 
     // The address serverProbeProc checks and serverProc listens on.
     readonly property list<string> sdkClientArgs: ["--client", "127.0.0.1:6742"]
@@ -116,6 +200,8 @@ Singleton {
             return;
         const hex = root.hexOf(Appearance.m3colors.m3primary);
         if (hex === root.lastAppliedColor)
+            return;
+        if (root.pushColor(hex))
             return;
         root.pendingColor = hex;
         // "static" persists on-device where supported (the CLI counterpart of
@@ -422,6 +508,8 @@ Singleton {
             if (Config.options.appearance.openrgb.monitorSmooth ?? true)
                 hex = root.mixHex(root.lastAppliedColor, hex, 0.5);
         }
+        if (root.pushColor(hex))
+            return;
         root.pendingColor = hex;
         // Transient streaming mode: no per-write mode persistence, and it
         // exists on devices that lack "static" (gamepads, some keyboards).

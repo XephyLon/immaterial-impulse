@@ -60,16 +60,17 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
-- **RGB devices no longer blink white on every colour change.** Every
-  write went through the `openrgb` CLI without `--client`, and the CLI
-  does not talk to a running server on its own: each call ran a full
-  hardware detection pass, which resets every device to its default
-  colour before the new one lands - once per second while a colour was
-  being adjusted, and once per ambient sample. The service now brings a
-  server up whenever the sync is on (its own, unless one already answers
-  on 127.0.0.1:6742), holds writes until it does, and routes every
-  openrgb call - the apply, the per-device apply, the device scan -
-  through it. The palette debounce drops from 1000 ms to 200 ms with it.
+- **RGB devices no longer blink on every colour change, and colours fade
+  instead of stepping.** Every write went through the `openrgb` CLI, and
+  every CLI call is a fresh client handshake followed by a mode command -
+  the mode command re-initialises the controller, which is the white
+  blink, once per second while a colour was being adjusted and once per
+  ambient sample. The service now keeps one client open to the SDK server
+  (its own `openrgb --server` unless one already answers), the way the
+  OpenRGB Effects plugin does: each controller is put into Direct mode
+  once, and from then on only LED frames are sent, at 30 fps, ramping to
+  each new colour. The CLI path survives only as the fallback for a server
+  that never comes up; the palette debounce drops from 1000 ms to 200 ms.
 - **Quick > Bar & Screen: the choice chips sit on one line again.** The
   four cards there use the segmented row without a label, and on that path
   the row's chip flow still sized itself from its own width - the circle an
