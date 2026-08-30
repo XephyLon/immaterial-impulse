@@ -292,6 +292,14 @@ Item {
 
             readonly property var motion: builder.control?.interactionMotion ?? null
 
+            // The cursor the control would show, since the shield is what the
+            // pointer is actually over. RippleButton declares it as
+            // `pointingHandCursor`; a control without that property, or a
+            // tile with no control, keeps the arrow rather than promising a
+            // press it does not draw.
+            cursorShape: builder.control?.pointingHandCursor === true
+                ? Qt.PointingHandCursor : Qt.ArrowCursor
+
             onContainsMouseChanged: if (motion) motion.hovered = containsMouse
 
             // A previewed press does everything a real one does EXCEPT act.
