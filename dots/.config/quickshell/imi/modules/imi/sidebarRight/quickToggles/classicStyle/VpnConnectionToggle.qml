@@ -3,6 +3,8 @@ import qs.modules.common
 import qs.modules.common.widgets
 import QtQuick
 
+// One tile PER connection, which the aggregate VpnToggle model is not -
+// so this keeps its own bindings, and its own name.
 QuickToggleButton {
     id: root
     required property var connection
