@@ -128,6 +128,13 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **The currency chart line is back, and the flag sits on the code.**
+  Three fixes: a chart canvas's first paint was requested before the
+  canvas could accept one and never re-asked; a day (or month) with zero
+  movement normalised to an invisible mid-band line - it keeps the
+  decorative curve now, with the movement columns saying "flat" in
+  numbers; and the base's flag rides the code's own painted end instead
+  of a guessed offset that floated it into the divider.
 - **The elastic corner pull reaches every widget.** Calendar and the
   world clock adopted the shell-owned resize without wiring the grip's
   rubber-band bow into their cards, and Notes - one offered size - never

@@ -96,10 +96,17 @@ function seriesFor(history, code, now) {
         hi = Math.max(hi, points[j].value);
     }
     var span = hi - lo;
+    // A day with no movement is not a shape worth drawing: normalised, it
+    // is a straight line through the middle of the band, which on the card
+    // is indistinguishable from nothing ("the graph line is gone" - the
+    // maintainer, looking at exactly that). The widget keeps its decorative
+    // curve until the day has a real shape; the movement columns already
+    // say "flat" honestly, in numbers.
+    if (span <= 0) return [];
     return points.map(function(point) {
         return {
             x: Math.max(0, Math.min(1, (point.t - t0) / WINDOW_MS)),
-            y: span > 0 ? 1 - (point.value - lo) / span : 0.5
+            y: 1 - (point.value - lo) / span
         };
     });
 }

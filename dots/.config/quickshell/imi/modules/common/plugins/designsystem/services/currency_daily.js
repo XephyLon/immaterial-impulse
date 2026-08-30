@@ -87,10 +87,13 @@ function trendFor(store, code, now, count) {
         hi = Math.max(hi, closes[i].value);
     }
     var span = hi - lo;
+    // A flat month draws no line (same reasoning as the 24h series): the
+    // caption and the movement column carry the flatness in words.
+    if (span <= 0) return { points: [], direction: 0 };
     var points = closes.map(function(close, index) {
         return {
             x: closes.length > 1 ? index / (closes.length - 1) : 0,
-            y: span > 0 ? 1 - (close.value - lo) / span : 0.5
+            y: 1 - (close.value - lo) / span
         };
     });
     var first = closes[0].value, last = closes[closes.length - 1].value;

@@ -82,7 +82,9 @@ Item {
         return (change.pct >= 0 ? "+" : "") + change.pct.toFixed(2) + "%";
     }
     function signedAbs(change) {
-        const digits = Math.min(6, CurrencyMath.fractionDigits(Math.abs(change.abs)) + 1);
+        // A zero delta is three quiet decimals, not six trailing zeros.
+        const digits = change.abs === 0 ? 3
+            : Math.min(6, CurrencyMath.fractionDigits(Math.abs(change.abs)) + 1);
         return "(" + (change.abs >= 0 ? "+" : "") + change.abs.toFixed(digits) + ")";
     }
     // The base currency's flag, from the ISO code's country half. EUR's
@@ -266,6 +268,7 @@ Item {
                 // line simply is not there (the play-button canvas records
                 // the same lesson).
                 onAvailableChanged: if (available) requestPaint()
+                Component.onCompleted: requestPaint()
                 onPaint: {
                     var ctx = getContext("2d");
                     ctx.reset();
@@ -439,6 +442,7 @@ Item {
 
             // ---- shared: the base currency --------------------------------
             StyledText {
+                id: baseCode
                 objectName: "currencyBase"
                 readonly property var slot: Geometry.baseLabelRect(root.sizeMode, root.spanW, root.spanH, Appearance.effectiveScale)
                 // The group's left edge travels; the code then sits after
@@ -470,8 +474,11 @@ Item {
                 visible: opacity > 0 && flag !== ""
                 opacity: slot !== null ? 1 : 0
                 Behavior on opacity { SpanFade {} }
-                x: slot ? slot.x : root.spanW * 0.3
-                y: slot ? slot.y : 28 * Appearance.effectiveScale
+                // Riding the code's own painted end, superscript - the
+                // geometry slot guessed a fixed x and floated the flag into
+                // the divider when the code ran shorter ("mispositioned").
+                x: baseCode.x + baseCode.paintedWidth + 4 * Appearance.effectiveScale
+                y: baseCode.y + 2 * Appearance.effectiveScale
                 text: flag
                 font.pixelSize: Math.round((slot ? slot.size : 16) * 1.0)
             }
@@ -537,6 +544,7 @@ Item {
                 onTrendChanged: requestPaint()
                 onWidthChanged: requestPaint()
                 onAvailableChanged: if (available) requestPaint()
+                Component.onCompleted: requestPaint()
                 onPaint: {
                     const ctx = getContext("2d");
                     ctx.reset();
@@ -705,6 +713,7 @@ Item {
                         onTrendColorChanged: requestPaint()
                         onWidthChanged: requestPaint()
                         onAvailableChanged: if (available) requestPaint()
+                        Component.onCompleted: requestPaint()
                         onPaint: {
                             const ctx = getContext("2d");
                             ctx.reset();

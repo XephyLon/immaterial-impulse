@@ -43,6 +43,17 @@ TestCase {
         compare(flat.direction, 0, "the dead band holds a wobble at flat");
     }
 
+    function test_a_flat_day_is_no_line_either() {
+        // Identical samples normalise to a mid-band straight line, which on
+        // the card is indistinguishable from nothing - the widget keeps its
+        // decorative curve instead, and the movement columns say "flat".
+        let list = History.pushSample([], nowMs - 2 * hourMs, "USD", { EUR: 1.5 });
+        list = History.pushSample(list, nowMs, "USD", { EUR: 1.5 });
+        compare(History.seriesFor(list, "EUR", nowMs).length, 0);
+        verify(History.changeOf(list, "EUR", nowMs, 1.5) !== null,
+               "the delta still reports, honestly flat");
+    }
+
     function test_one_sample_is_no_delta_and_no_line() {
         const list = sampleRun([0]);
         compare(History.changeOf(list, "EUR", nowMs, 1.0), null,
