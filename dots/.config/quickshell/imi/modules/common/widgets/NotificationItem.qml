@@ -379,8 +379,14 @@ Item { // Notification item area
                 // only while the user is actually replying.
                 Item {
                     Layout.fillWidth: true
-                    visible: root.replyReveal > 0
-                    opacity: root.canReply && root.replying ? 1 : 0
+                    // Always laid out, never toggled: flipping `visible` made
+                    // the column add or drop its spacing in one frame, a 6px
+                    // snap at each end of an otherwise eased reveal. The
+                    // spacing rides the reveal instead, as a margin that
+                    // cancels it while the row is away.
+                    visible: root.canReply
+                    Layout.topMargin: -(parent?.spacing ?? 0) * (1 - root.replyReveal)
+                    opacity: root.replying ? 1 : 0
                     Behavior on opacity {
                         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                     }
