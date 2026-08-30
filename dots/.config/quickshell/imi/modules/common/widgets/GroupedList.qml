@@ -51,6 +51,11 @@ Item {
     property bool cohesive: false
     property color bgcolor: Appearance.colors.colLayer1
     property real itemVerticalPadding: Appearance.spacing.space300
+    // The inset a row that paints itself keeps: not the plate's 8px plus
+    // 24px of padding, which put 40px between the phone roster's devices,
+    // and not nothing, which let the hover lift bleed past the plate's edge
+    // (the runtime harness pins it inside). 6px holds the 4.4px lift.
+    readonly property real selfSurfacedInset: Appearance.spacing.space75
     Layout.fillWidth: true
     implicitHeight: col.implicitHeight
 
@@ -104,7 +109,7 @@ Item {
                 implicitHeight: (root.modelDriven
                     ? (rowLoader.item?.implicitHeight ?? 0)
                     : (root.items[index]?.implicitHeight ?? 0))
-                    + (ownsItsSurface ? 0 : root.itemVerticalPadding)
+                    + (ownsItsSurface ? root.selfSurfacedInset * 2 : root.itemVerticalPadding)
                 // A row that takes the plate's corners is a row that paints its
                 // own background - that is what the corner protocol below is
                 // FOR, since a plate cannot show through an opaque row. Such a
@@ -147,7 +152,7 @@ Item {
                     // related-but-distinct gap the group already draws - and
                     // the hover lift may overflow its plate the way every
                     // other button's does.
-                    anchors { fill: parent; margins: ownsItsSurface ? 0 : Appearance.spacing.space100 }
+                    anchors { fill: parent; margins: ownsItsSurface ? root.selfSurfacedInset : Appearance.spacing.space100 }
                     spacing: 0
 
                     Loader {
