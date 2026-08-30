@@ -414,7 +414,28 @@ Singleton {
         }
     }
 
+    // The keyring is loaded on demand, and until this asked for it nothing on
+    // this path did: with a local model selected nothing else loads it, so a
+    // custom provider's key read as "" and every fetch went out with an empty
+    // bearer - a 401 the page called "Failed to fetch", whatever key the user
+    // had typed. Ask, and run once it is here.
+    property bool customFetchWaitingForKeyring: false
+    readonly property Connections keyringArrival: Connections {
+        target: KeyringStorage
+        function onLoadedChanged() {
+            if (KeyringStorage.loaded && root.customFetchWaitingForKeyring) {
+                root.customFetchWaitingForKeyring = false;
+                root.fetchCustomModels();
+            }
+        }
+    }
     function fetchCustomModels() {
+        if (!KeyringStorage.loaded) {
+            customProviderFeedbackText = Translation.tr("Unlocking the keyring...");
+            root.customFetchWaitingForKeyring = true;
+            KeyringStorage.fetchKeyringData();
+            return;
+        }
         customProviderFeedbackText = Translation.tr("Fetching models...");
         let providers = Config.options.ai.customProviders || [];
         let anyEnabled = false;

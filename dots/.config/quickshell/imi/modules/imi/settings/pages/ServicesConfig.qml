@@ -6,6 +6,13 @@ import qs.modules.common.widgets
 
 ContentPage {
     id: page
+    // The keyring loads on demand, and this page is a demand: its key fields
+    // read "" and silently drop what is typed into them until it has loaded,
+    // and nothing else loads it while a local model is selected.
+    Component.onCompleted: {
+        if (!KeyringStorage.loaded)
+            KeyringStorage.fetchKeyringData();
+    }
     forceWidth: true
     bottomContentPadding: 15
 

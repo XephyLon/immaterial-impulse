@@ -40,6 +40,11 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **Custom AI providers see their API keys.** The keyring loads on demand,
+  and neither the AI settings page nor "Fetch Models" ever asked for it - so
+  with a local model selected the key fields read empty, typed keys were
+  silently dropped, and every fetch went out with no key at all, which the
+  provider refused. Both ask now, and the fetch waits for the keyring.
 - **Removing a custom AI provider no longer hands its neighbour's API key to
   the one below it.** Keys are stored by the provider's position in the list,
   and removal blanked the removed slot only, so every provider after it read
