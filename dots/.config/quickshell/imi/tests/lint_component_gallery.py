@@ -114,18 +114,58 @@ def descendants_of(base):
     return found
 
 
+def strip_comments(text):
+    # Only a `//` after whitespace is a comment. The first version stripped
+    # every `//`, which took `//example.invalid" }` off a URL prop - the entry
+    # never closed, swallowed its neighbour, and inherited that neighbour's
+    # `toggles: true`.
+    return re.sub(r"(^|\s)//.*", r"\1", text)
+
+
+def catalogue_entries():
+    """Each `{ type: ... }` entry as its own balanced text, with what follows it.
+
+    Returns [(entry_text, tail)] where `tail` is the run of characters between
+    the entry's closing brace and the next `{`, `]` or end of file. Both halves
+    are read: the entry for its claims, the tail for whether the entry really
+    ended where its brace did.
+    """
+    text = strip_comments(GALLERY.read_text())
+    found = []
+    pos = 0
+    while True:
+        start = text.find('{ type: "', pos)
+        if start < 0:
+            return found
+        depth = 0
+        end = None
+        for index in range(start, len(text)):
+            char = text[index]
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    end = index + 1
+                    break
+        if end is None:
+            return found
+        stop = re.search(r"[{\]]", text[end:])
+        tail = text[end:end + stop.start()] if stop else text[end:]
+        found.append((text[start:end], tail))
+        pos = end
+
+
 def toggle_claims():
     """{path: whether the catalogue says this type is a toggle}."""
-    # An entry may wrap over two lines, so the claim is read from the whole
-    # entry - everything between one `{ type: "` and the next. Matching up to
-    # the first `},` instead finds the end of the PROPS object, which is where
-    # the first version stopped, and every claim after it read as absent.
-    text = GALLERY.read_text()
-    chunks = text.split('{ type: "')[1:]
+    # Read off the balanced entry, not the line or the text up to a `},`:
+    # an entry may wrap, and its props are a nested object whose own `},`
+    # is the first one a naive scan meets. Both earlier readings were wrong
+    # in ways that read a real claim as absent.
     claims = {}
-    for chunk in chunks:
-        path = chunk.split('"', 1)[0]
-        claims[path] = "toggles: true" in chunk.split('{ type: "')[0]
+    for entry, _ in catalogue_entries():
+        path = entry.split('"', 2)[1]
+        claims[path] = re.search(r"\btoggles:\s*true\b", entry) is not None
     return claims
 
 
@@ -190,6 +230,28 @@ class ComponentGalleryTests(unittest.TestCase):
             "EXCLUDED names files that no longer inherit RippleButton, so the",
             "gallery never wanted them - delete these entries:",
             *(f"  {path}" for path in irrelevant),
+        ]))
+
+    def test_every_entry_is_one_object(self):
+        """Between one entry's closing brace and the next thing, only a comma.
+
+        `{ type: "X", props: {} }, toggles: true,` is a JS syntax error - the
+        claim landed in the ARRAY, after the object had closed - and it took
+        the whole catalogue's compile down with it. The claim lint of the day
+        still passed, because it grepped for the words and found them. A lint
+        that a syntax error satisfies is checking the wrong thing; this one
+        checks the shape.
+        """
+        stray = []
+        for entry, tail in catalogue_entries():
+            if re.fullmatch(r"\s*,?\s*", tail):
+                continue
+            path = entry.split('"', 2)[1]
+            stray.append(f"{path}: `{tail.strip()}` sits outside the entry")
+        self.assertEqual(stray, [], "\n".join([
+            "These catalogue entries have text between their closing brace",
+            "and the next entry. Inside the braces or nowhere:",
+            *(f"  {line}" for line in stray),
         ]))
 
     def test_the_toggle_claim_matches_the_source(self):

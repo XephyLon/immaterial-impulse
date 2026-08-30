@@ -100,7 +100,7 @@ Item {
                 { type: "modules/common/widgets/DialogListItem.qml", props: { } },
                 { type: "modules/common/widgets/CatalogueRow.qml", props: { rowIcon: "info", title: "A row", description: "with a description" } },
                 { type: "modules/common/widgets/ConfigRow.qml", props: {} },
-                { type: "modules/common/widgets/GroupedList.qml", props: {} }, toggles: true,
+                { type: "modules/common/widgets/GroupedList.qml", props: {}, toggles: true },
             ]
         },
         {
@@ -146,7 +146,7 @@ Item {
                 { type: "modules/imi/phone/PhoneDeviceItem.qml", props: {} },
                 { type: "modules/imi/bar/SysTrayMenuEntry.qml", props: {} },
                 { type: "modules/imi/overview/SearchItem.qml", props: {} },
-                { type: "modules/imi/onScreenKeyboard/OskKey.qml", props: {} }, toggles: true,
+                { type: "modules/imi/onScreenKeyboard/OskKey.qml", props: {}, toggles: true },
             ]
         },
         {
