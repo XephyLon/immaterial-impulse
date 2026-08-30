@@ -105,6 +105,9 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **The world clock's settings face no longer shows the front through
+  it.** The four city tiles kept drawing under the timezone pickers
+  after the flip; they yield with it now.
 - **A note row's hover fades instead of snapping.** The row flipped
   between its two colours with no motion at all - the widget audit's G10,
   closed with the tier every other hover already rides.

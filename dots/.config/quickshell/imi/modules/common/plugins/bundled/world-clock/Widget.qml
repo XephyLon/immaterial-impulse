@@ -294,6 +294,16 @@ Item {
                     Behavior on y { Expressive.SpanTravel {} }
                     Behavior on width { Expressive.SpanTravel {} }
                     Behavior on height { Expressive.SpanTravel {} }
+                    // The settings back replaces the whole face, but the
+                    // tiles are siblings of the gated chrome, not children -
+                    // so they kept drawing through the pickers ("still shows
+                    // the front's elements"). They yield with the flip; the
+                    // fast tier hides inside the flip's own half-turn.
+                    opacity: root.showingSettings ? 0 : 1
+                    Behavior on opacity {
+                        animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)
+                    }
+                    visible: opacity > 0
 
                     // The offset's own width decides where the name has to
                     // stop, and it has to be the SETTLED width - a ruler at the
