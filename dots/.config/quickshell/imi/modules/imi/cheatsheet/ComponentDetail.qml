@@ -104,6 +104,13 @@ Item {
                 height: Math.max(implicitHeight, 48)
                 entry: root.entry
                 overrides: root.overrides
+                // LIVE. Detail is the bench: the widget under it takes real
+                // presses, so a composite's inner buttons - the two options
+                // of a ConfigSelectionArray - ripple and answer like they do
+                // in a settings page. The Gallery keeps its shield because a
+                // tile is a picture; this is the one place the picture is
+                // meant to be touched.
+                inert: false
             }
 
             // The box the widget claims, drawn around what it drew. A control
@@ -156,46 +163,47 @@ Item {
                     Layout.fillWidth: true
                     title: Translation.tr("Knobs")
                     icon: "tune"
-                }
-                StyledText {
-                    visible: root.knobs.length === 0
-                    color: Appearance.colors.colSubtext
-                    text: Translation.tr("This widget takes nothing the catalogue knows how to edit.")
-                    wrapMode: Text.WordWrap
-                    Layout.fillWidth: true
-                }
 
-                Repeater {
-                    model: root.knobs
-                    delegate: RowLayout {
-                        id: knob
-                        required property var modelData
+                    StyledText {
+                        visible: root.knobs.length === 0
+                        color: Appearance.colors.colSubtext
+                        text: Translation.tr("This widget takes nothing the catalogue knows how to edit.")
+                        wrapMode: Text.WordWrap
                         Layout.fillWidth: true
-                        spacing: Appearance.spacing.space100
+                    }
 
-                        StyledText {
-                            Layout.preferredWidth: 120
-                            elide: Text.ElideRight
-                            color: Appearance.colors.colOnLayer1
-                            text: knob.modelData.name
-                        }
+                    Repeater {
+                        model: root.knobs
+                        delegate: RowLayout {
+                            id: knob
+                            required property var modelData
+                            Layout.fillWidth: true
+                            spacing: Appearance.spacing.space100
 
-                        MaterialTextField {
-                            visible: knob.modelData.kind === "text"
-                            Layout.fillWidth: true
-                            text: `${knob.modelData.initial}`
-                            onTextEdited: root.setOverride(knob.modelData.name, text)
-                        }
-                        ConfigSpinBox {
-                            visible: knob.modelData.kind === "number"
-                            Layout.fillWidth: true
-                            value: knob.modelData.kind === "number" ? knob.modelData.initial : 0
-                            onValueModified: newValue => root.setOverride(knob.modelData.name, newValue)
-                        }
-                        StyledSwitch {
-                            visible: knob.modelData.kind === "bool"
-                            checked: knob.modelData.initial === true
-                            onToggled: root.setOverride(knob.modelData.name, checked)
+                            StyledText {
+                                Layout.preferredWidth: 120
+                                elide: Text.ElideRight
+                                color: Appearance.colors.colOnLayer1
+                                text: knob.modelData.name
+                            }
+
+                            MaterialTextField {
+                                visible: knob.modelData.kind === "text"
+                                Layout.fillWidth: true
+                                text: `${knob.modelData.initial}`
+                                onTextEdited: root.setOverride(knob.modelData.name, text)
+                            }
+                            ConfigSpinBox {
+                                visible: knob.modelData.kind === "number"
+                                Layout.fillWidth: true
+                                value: knob.modelData.kind === "number" ? knob.modelData.initial : 0
+                                onValueModified: newValue => root.setOverride(knob.modelData.name, newValue)
+                            }
+                            StyledSwitch {
+                                visible: knob.modelData.kind === "bool"
+                                checked: knob.modelData.initial === true
+                                onToggled: root.setOverride(knob.modelData.name, checked)
+                            }
                         }
                     }
                 }
@@ -210,7 +218,7 @@ Item {
                     Layout.fillWidth: true
                     title: Translation.tr("Measured")
                     icon: "straighten"
-                }
+
                 StyledText {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
@@ -262,6 +270,7 @@ Item {
                     wrapMode: Text.WordWrap
                     color: Appearance.colors.colSubtext
                     text: root.entry?.type ?? ""
+                }
                 }
             }
         }
