@@ -148,6 +148,7 @@ Item {
             Component {
                 id: controlsComponent
                 PlayerControls {
+        lyricsToggleShown: !GlobalStates.sidebarRightOpen
                     player: root.player
                     blendedColors: root.blendedColors
                     displayedArtFilePath: root.displayedArtFilePath

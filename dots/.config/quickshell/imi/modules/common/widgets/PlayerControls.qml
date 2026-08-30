@@ -1,5 +1,4 @@
 pragma ComponentBehavior: Bound
-import qs
 import qs.modules.common
 import qs.modules.common.models
 import qs.modules.common.widgets
@@ -15,6 +14,10 @@ import Quickshell.Services.Mpris
 
 Item {
     id: root
+    // The lyrics toggle is hidden where the lyrics already have a panel of
+    // their own (the right sidebar); which surface this sits in is the
+    // Player's to know.
+    property bool lyricsToggleShown: true
     required property MprisPlayer player
     required property QtObject blendedColors
     required property string displayedArtFilePath
@@ -179,7 +182,7 @@ Item {
 
                     TrackChangeButton {
                         iconName: "lyrics"
-                        visible: !GlobalStates.sidebarRightOpen
+                        visible: root.lyricsToggleShown
                         downAction: () => root.toggleLyrics()
                     }
                 }
