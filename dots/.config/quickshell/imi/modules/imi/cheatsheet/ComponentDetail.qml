@@ -1,6 +1,7 @@
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import "radius_label.js" as RadiusLabel
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -247,9 +248,13 @@ Item {
                                 rows.push({ name: label,
                                             value: `${value.toFixed ? value.toFixed(1) : value}` });
                         };
-                        maybe(Translation.tr("corner radius"), measured.radius);
-                        maybe(Translation.tr("...held"), measured.radiusPressed);
-                        maybe(Translation.tr("drawing now"), measured.cornerTopLeft);
+                        const radius = (label, value) => {
+                            if (value !== undefined)
+                                rows.push({ name: label, value: RadiusLabel.label(value) });
+                        };
+                        radius(Translation.tr("corner radius"), measured.radius);
+                        radius(Translation.tr("...held"), measured.radiusPressed);
+                        radius(Translation.tr("drawing now"), measured.cornerTopLeft);
                         maybe(Translation.tr("padding across"), measured.horizontalPadding);
                         maybe(Translation.tr("padding down"), measured.verticalPadding);
                         maybe(Translation.tr("font size"), measured.fontSize);

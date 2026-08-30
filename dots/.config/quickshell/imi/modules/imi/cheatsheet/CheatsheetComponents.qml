@@ -1,6 +1,7 @@
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import "radius_label.js" as RadiusLabel
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -75,7 +76,7 @@ Item {
                 { type: "modules/common/widgets/EditRemoveBadge.qml", props: { } },
                 { type: "modules/common/widgets/NavigationRailExpandButton.qml", props: { } },
                 { type: "modules/common/widgets/LightDarkPreferenceButton.qml", props: { dark: true }, toggles: true },
-                { type: "modules/common/widgets/NotificationActionButton.qml", props: { buttonText: "Reply" } },
+                { type: "modules/common/widgets/NotificationActionButton.qml", props: { buttonText: "Reply" }, toggles: true },
                 { type: "modules/common/widgets/NotificationGroupExpandButton.qml", props: { count: 3, expanded: false } },
             ]
         },
@@ -157,7 +158,6 @@ Item {
             entries: [
                 { type: "modules/imi/bar/CircleUtilButton.qml", props: {}, glyph: "search" },
                 { type: "modules/imi/phone/PhoneActionButton.qml", props: { glyph: "call", label: "Call" } },
-                { type: "modules/imi/phone/PhoneDeviceChip.qml", props: {} },
                 { type: "modules/imi/sidebarRight/calendar/CalendarHeaderButton.qml", props: { buttonText: "‹", tooltipText: "Previous month" } },
                 { type: "modules/imi/sidebarRight/calendar/CalendarDayButton.qml", props: { day: 12, isToday: true }, toggles: true },
                 { type: "modules/imi/sidebarRight/volumeMixer/AudioDeviceSelectorButton.qml", props: {} },
@@ -302,6 +302,11 @@ Item {
                             delegate: FamilyBlock {
                                 required property var modelData
                                 Layout.fillWidth: true
+                                // Capped at the column: a long family title or
+                                // note otherwise widens the block's minimum,
+                                // the column grows past its span and paints
+                                // over the next one.
+                                Layout.maximumWidth: column.Layout.preferredWidth
                                 family: root.families[modelData]
                             }
                         }
@@ -388,6 +393,7 @@ Item {
         implicitHeight: blockColumn.implicitHeight + Appearance.spacing.space200 * 2
         radius: Appearance.rounding.normal
         contentLayer: StyledRectangle.ContentLayer.Pane
+        clip: true
 
         ColumnLayout {
             id: blockColumn
@@ -504,9 +510,9 @@ Item {
                     const measured = stage.measurements;
                     if (!measured || measured.cornerTopLeft === undefined)
                         return "";
-                    return `${(measured.radius ?? 0).toFixed(1)} → `
-                        + `${(measured.radiusPressed ?? 0).toFixed(1)}   `
-                        + `${measured.cornerTopLeft.toFixed(1)}`;
+                    return `${RadiusLabel.label(measured.radius ?? 0)} → `
+                        + `${RadiusLabel.label(measured.radiusPressed ?? 0)}   `
+                        + `${RadiusLabel.label(measured.cornerTopLeft)}`;
                 }
             }
         }

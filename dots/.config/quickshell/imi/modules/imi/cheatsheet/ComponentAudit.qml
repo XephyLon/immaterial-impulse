@@ -1,6 +1,7 @@
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import "radius_label.js" as RadiusLabel
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -43,6 +44,10 @@ Item {
     // Held here rather than in the delegate so sorting does not rebuild fifty
     // widgets on every click.
     property var measured: ({})
+    // Once shown, the probers stay: the table must not empty when the user
+    // switches away and back.
+    property bool measuredOnce: false
+    onVisibleChanged: if (visible) measuredOnce = true
 
     function record(type, measurements) {
         const next = Object.assign({}, root.measured);
@@ -88,7 +93,11 @@ Item {
     Item {
         visible: false
         Repeater {
-            model: root.entries
+            // Built only once the Audit has been shown: sixty-two widgets
+            // built behind a tab nobody opened doubled the cheatsheet's open
+            // time, which is what made SUPER+/ look dead - the window came
+            // up three seconds after the key.
+            model: root.visible || root.measuredOnce ? root.entries : []
             delegate: ComponentStage {
                 id: prober
                 required property var modelData
@@ -215,6 +224,8 @@ Item {
                                         const value = row.modelData?.[cell.modelData.key];
                                         if (value === undefined)
                                             return "—";
+                                        if (cell.modelData.key === "radius")
+                                            return RadiusLabel.label(value);
                                         return typeof value === "number"
                                             ? value.toFixed(0) : `${value}`;
                                     }
