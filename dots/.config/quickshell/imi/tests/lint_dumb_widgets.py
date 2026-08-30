@@ -113,6 +113,14 @@ def offences(path, services):
     return found
 
 
+GALLERY = SHELL / "modules/imi/cheatsheet/CheatsheetComponents.qml"
+
+
+def catalogued_components():
+    """Every path the Components gallery names, wherever it lives."""
+    return sorted(set(re.findall(r'type:\s*"([^"]+)"', GALLERY.read_text())))
+
+
 class DumbWidgetTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -132,6 +140,31 @@ class DumbWidgetTests(unittest.TestCase):
             "into a property its caller supplies, or add it to EXCLUDED here",
             "WITH THE REASON - a bare name teaches the next reader nothing:",
             *(f"  {name}: {', '.join(found)}" for name, found in broken.items()),
+        ]))
+
+    def test_catalogued_components_stay_presentational(self):
+        """The gallery's own list, not only the shared folder.
+
+        The folder rule caught nothing about the two bar buttons that opened
+        the power menu and the sidebar from inside the gallery: they lived in
+        modules/imi/bar. A UI component is whatever the Components page can
+        show, and every one of those is held to the same rule - eleven were
+        inverted to get here (services and GlobalStates out of the widget,
+        into the host that builds it), and this keeps the count at zero.
+        """
+        broken = {}
+        for rel in catalogued_components():
+            path = SHELL / rel
+            if not path.exists():
+                continue
+            found = offences(path, self.services)
+            if found:
+                broken[rel] = found
+        self.assertEqual(broken, {}, "\n".join([
+            "These are shown in the Components gallery but reach past",
+            "presentation. Turn the call into a signal or the read into a",
+            "property, and let the host that builds the widget answer it:",
+            *(f"  {rel}: {', '.join(found)}" for rel, found in broken.items()),
         ]))
 
     def test_the_exclusion_list_only_shrinks(self):
