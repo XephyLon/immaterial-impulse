@@ -151,7 +151,6 @@ Item {
         // ---- knobs and measurements, side by side -------------------------
         RowLayout {
             Layout.fillWidth: true
-            Layout.fillHeight: true
             spacing: Appearance.spacing.space150
 
             ColumnLayout {
@@ -274,5 +273,12 @@ Item {
                 }
             }
         }
+
+        // Takes the slack. A layout's maximum height is its content's, so
+        // the knob row above cannot absorb what the page has left over, and
+        // the column spread it between the canvas, the toolbar and the
+        // knobs instead - the page floated to the middle with its widget a
+        // quarter of the way down. A plain Item has no maximum.
+        Item { Layout.fillHeight: true }
     }
 }
