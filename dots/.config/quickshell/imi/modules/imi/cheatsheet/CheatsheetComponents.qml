@@ -267,7 +267,7 @@ Item {
                 color: Appearance.colors.colSubtext
                 text: root.mode === 2 && root.selected
                     ? root.selected.type
-                    : Translation.tr("%1 widgets, built for real — press one to see what it draws")
+                    : Translation.tr("%1 widgets, built for real — hover and press to see their states")
                         .arg(root.allEntries.length)
             }
         }
@@ -443,17 +443,17 @@ Item {
             ? Appearance.colors.colPrimary
             : "transparent"
 
-        // Hover only. The tap comes from the stage's shield, because the
-        // widget itself must never receive a real click - an earlier draft put
-        // this area UNDER the widget so "pressing the widget still presses the
-        // widget", and pressing the widget is exactly the thing that opened
-        // the power menu.
+        // Hover only, for the outline. The Gallery is DISPLAY: a tile shows
+        // the widget and its hover and press states, and does nothing else -
+        // it used to open the widget in Detail on release, which made one
+        // gesture do two things and bounced you off the page on the first
+        // press you wanted to watch. Detail has its own list; Audit's rows
+        // open it too.
         MouseArea {
             id: hoverArea
             anchors.fill: parent
             hoverEnabled: true
-            acceptedButtons: Qt.LeftButton
-            onClicked: root.show(tile.entry)
+            acceptedButtons: Qt.NoButton
         }
 
         ColumnLayout {
@@ -489,9 +489,6 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 entry: tile.entry
-                // The widget itself cannot be pressed - see ComponentStage -
-                // so its shield reports the tap instead.
-                onTapped: root.show(tile.entry)
             }
 
             // The radius it is drawing, live. Reading `cornerTopLeft` rather
