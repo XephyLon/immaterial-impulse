@@ -107,6 +107,11 @@ ShellRoot {
     function first(type) {
         return harness.all(type)[0] ?? null;
     }
+    // The header's chip is the shared FilterChip, found by name: the tab
+    // has other filter chips.
+    function deviceChip() {
+        return harness.all("FilterChip").find(c => c.objectName === "deviceChip") ?? null;
+    }
 
     function badge(label) {
         return harness.all("Badge").find(b => b.label === label) ?? null;
@@ -394,7 +399,7 @@ ShellRoot {
 
         // ---- the chip and its pills read the active phone ---------------
         () => {
-            const chip = harness.first("PhoneDeviceChip");
+            const chip = harness.deviceChip();
             harness.check(`the chip names the paired phone, got ${chip?.device?.name}`,
                           chip !== null && chip.device?.id === harness.phoneId);
             // The pill says the CELLULAR type where the daemon reported one,
@@ -423,7 +428,7 @@ ShellRoot {
         // ---- the notification list owns the leftover height --------------
         () => {
             const list = harness.first("PhoneNotificationList");
-            const chip = harness.first("PhoneDeviceChip");
+            const chip = harness.deviceChip();
             const action = harness.first("PhoneActionButton");
             console.log(`[PhoneTab] list=${list?.height} chip=${chip?.height} action=${action?.height}`);
             harness.check("the notification list stands taller than the fixed rows around it",
@@ -496,7 +501,7 @@ ShellRoot {
                           list !== null && harness.typeName(list) === "GroupedList"
                           && (list.model?.length ?? -1) === PhoneConnect.devices.length);
             harness.rosterSaw = { samples: 0, mid: 0, maxHeight: 0 };
-            harness.click(harness.first("PhoneDeviceChip"));
+            harness.click(harness.deviceChip());
             rosterWatch.running = true;
         },
         () => {},
@@ -582,7 +587,7 @@ ShellRoot {
                           box !== null && !box.visible && loader.item.rosterProgress === 0
                           && harness.all("PhoneDeviceItem").every(i => !i.visible));
 
-            const chip = harness.first("PhoneDeviceChip");
+            const chip = harness.deviceChip();
             harness.check(`picking a row shows that device on the chip, got ${chip?.device?.name}`,
                           chip?.device?.id === harness.laptopId);
             const buttons = harness.all("PhoneActionButton");
@@ -1059,7 +1064,7 @@ ShellRoot {
         // the case where the plate has nothing to be except a frame.
         () => {
             PhoneConnect.applyDevices([PhoneConnect.devices[0]]);
-            harness.click(harness.first("PhoneDeviceChip"));
+            harness.click(harness.deviceChip());
         },
         () => {},
         () => {
