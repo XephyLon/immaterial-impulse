@@ -98,7 +98,13 @@ ColumnLayout {
                 }
                 return counted > 0 ? total + spacing * (counted - 1) : 0;
             }
-            Layout.preferredWidth: root.text ? buttonsFlow.naturalWidth : -1
+            // On BOTH paths. The first fix handed the natural width over only
+            // when the row had a label - the unlabelled row, which the Quick
+            // page's Bar & Screen cards use (`Layout.fillWidth: false`,
+            // right-aligned under a heading of their own), kept the circle,
+            // and the same four chips latched one per line there once the
+            // page was built across frames ("This broke again").
+            Layout.preferredWidth: buttonsFlow.naturalWidth
             // Not paired with a `Layout.minimumWidth: 0`: an ALIGNED child is
             // handed its preferred size and positioned, never resized, so the
             // minimum is never consulted. A row too narrow for its chips

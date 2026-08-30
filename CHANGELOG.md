@@ -60,6 +60,12 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **Quick > Bar & Screen: the choice chips sit on one line again.** The
+  four cards there use the segmented row without a label, and on that path
+  the row's chip flow still sized itself from its own width - the circle an
+  earlier fix had broken only for labelled rows - so Top / Left / Bottom /
+  Right latched one per line when the page was built across frames. The
+  flow now hands the layout its chips' natural width on both paths.
 - **Custom AI providers see their API keys.** The keyring loads on demand,
   and neither the AI settings page nor "Fetch Models" ever asked for it - so
   with a local model selected the key fields read empty, typed keys were
