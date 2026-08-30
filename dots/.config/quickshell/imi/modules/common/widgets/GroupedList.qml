@@ -96,9 +96,15 @@ Item {
                 // and leaving the other.
                 visible: root.drawnIndices.indexOf(index) !== -1
                 Layout.fillWidth: true
+                // The plate's vertical padding is the room a plain row's text
+                // gets on the plate. A row that paints its OWN surface has
+                // its own padding already, and the plate behind it is
+                // transparent - so the padding showed as 24px of nothing
+                // between the device rows of the phone roster.
                 implicitHeight: (root.modelDriven
                     ? (rowLoader.item?.implicitHeight ?? 0)
-                    : (root.items[index]?.implicitHeight ?? 0)) + root.itemVerticalPadding
+                    : (root.items[index]?.implicitHeight ?? 0))
+                    + (ownsItsSurface ? 0 : root.itemVerticalPadding)
                 // A row that takes the plate's corners is a row that paints its
                 // own background - that is what the corner protocol below is
                 // FOR, since a plate cannot show through an opaque row. Such a
@@ -134,7 +140,14 @@ Item {
                     // only room a row has to grow into when the interaction
                     // model lifts it by `hoverScale` on hover. Take it away and
                     // a hovered row grows straight past the group's edge.
-                    anchors { fill: parent; margins: Appearance.spacing.space100 }
+                    // No inset for a row that paints itself: with the plate
+                    // transparent the inset was pure gap, and stacked with
+                    // the plate padding it put 24px of nothing between the
+                    // phone roster's rows. The rows sit `spacing` apart - the
+                    // related-but-distinct gap the group already draws - and
+                    // the hover lift may overflow its plate the way every
+                    // other button's does.
+                    anchors { fill: parent; margins: ownsItsSurface ? 0 : Appearance.spacing.space100 }
                     spacing: 0
 
                     Loader {
