@@ -180,7 +180,10 @@ Item {
         id: card
         objectName: "nandoroidCurrencyCard"
         anchors.fill: parent
-        tint: Appearance.colors.colPrimaryContainer
+        // The card's own default tint - the darker surface the weather card
+        // sits on (the maintainer: "use the darker background color... same
+        // one used for weather"). The container-colour override this carried
+        // was the one thing separating the two cards.
         useBlurBackground: root.useBlurBackground
         backgroundOpacity: root.backgroundOpacity
         tensionX: root.resizeBow.x
@@ -257,8 +260,16 @@ Item {
                     : (root.sizeMode === "3x1" || root.sizeMode === "3x2") ? 0.6 : 0
                 Behavior on opacity { SpanFade {} }
                 visible: opacity > 0
-                readonly property var series: History.seriesFor(
-                    CurrencyService.history, CurrencyService.quote1, root.nowTick)
+                // The fetched week first (the maintainer's rule: the curve
+                // is only decorative when there is no 7-day data), then the
+                // observed 24h ring, then the ornament.
+                readonly property var series: {
+                    const week = Daily.trendFor(CurrencyService.daily,
+                        CurrencyService.quote1, root.nowTick, 7).points;
+                    if (week.length >= 2) return week;
+                    return History.seriesFor(
+                        CurrencyService.history, CurrencyService.quote1, root.nowTick);
+                }
                 onSeriesChanged: requestPaint()
                 onWidthChanged: requestPaint()
                 onHeightChanged: requestPaint()
@@ -656,10 +667,13 @@ Item {
                         Behavior on opacity { SpanFade {} }
                         x: valueText.x + valueText.implicitWidth + 3 * Appearance.effectiveScale
                         y: valueText.y + (valueText.height - height) / 2
-                        text: quoteCell.movement === null ? "trending_flat"
+                        // The flat state is a DASH: trending_flat renders as
+                        // a rightward arrow, which beside a falling weekly
+                        // chart read as a signal nobody could name.
+                        text: quoteCell.movement === null ? "remove"
                             : quoteCell.movement.direction > 0 ? "trending_up"
                             : quoteCell.movement.direction < 0 ? "trending_down"
-                            : "trending_flat"
+                            : "remove"
                         iconSize: Appearance.font.pixelSize.normal
                         color: quoteCell.movement === null ? Appearance.colors.colOnPrimaryContainer
                             : quoteCell.movement.direction > 0 ? Appearance.m3colors.m3success

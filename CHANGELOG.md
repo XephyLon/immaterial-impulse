@@ -128,6 +128,11 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **Currency polish, three notes.** The flat 24h state draws a quiet
+  dash instead of a rightward arrow that read as a signal; the hero
+  chart line prefers the fetched 7-day series and is decorative only
+  before any data exists; and the card sits on the same darker surface
+  the weather card uses.
 - **The currency chart line is back, and the flag sits on the code.**
   Three fixes: a chart canvas's first paint was requested before the
   canvas could accept one and never re-asked; a day (or month) with zero
