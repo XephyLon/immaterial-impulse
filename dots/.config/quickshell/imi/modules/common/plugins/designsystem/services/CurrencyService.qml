@@ -1,14 +1,24 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Io
+import qs.modules.common
 import "CurrencyMath.js" as CurrencyMath
 import "currency_schedule.js" as Schedule
+import "currency_history.js" as History
 
 Singleton {
     id: root
     property bool loading: false
     property string errorMessage: ""
     property var rates: ({})
+    // The shell's own 24-hour memory of those rates (currency_history.js):
+    // one sample per successful refresh, persisted so a restart does not
+    // forget the day. The 3x1's chart line and the per-quote movement read
+    // it - the upstream dataset is daily, so what this machine observed IS
+    // the past 24 hours, honestly.
+    property var history: []
+    property double lastSuccessTime: 0
     property string baseCurrency: "USD"
     property string quote1: "EUR"
     property string quote2: "GBP"
@@ -95,8 +105,42 @@ Singleton {
     function attemptSucceeded() {
         root.loading = false;
         root.failureCount = 0;
+        const now = Date.now();
+        root.lastSuccessTime = now;
+        root.history = History.pushSample(root.history, now,
+            normalizedCode(root.baseCurrency).toUpperCase(), root.rates);
+        historySave.restart();
         nextAttempt.interval = Schedule.REFRESH_MS;
         nextAttempt.restart();
+    }
+
+    // ---- the day's memory, on disk ------------------------------------
+    readonly property string historyPath: `${Directories.cache}/currency-history.json`
+    property Timer historySave: Timer {
+        interval: 2000
+        onTriggered: historyFile.setText(JSON.stringify({
+            history: root.history, lastSuccessTime: root.lastSuccessTime }))
+    }
+    property FileView historyFile: FileView {
+        path: root.historyPath
+        onLoaded: {
+            try {
+                const stored = JSON.parse(historyFile.text());
+                // Pruned on the way in, so a file from last week loads as
+                // the empty ring it really is.
+                root.history = History.prune(stored.history, Date.now());
+                const t = Number(stored.lastSuccessTime);
+                if (Number.isFinite(t) && t > 0 && t <= Date.now())
+                    root.lastSuccessTime = t;
+            } catch (error) {
+                console.warn("[CurrencyService] unreadable history, starting fresh");
+                root.history = [];
+            }
+        }
+        onLoadFailed: error => {
+            if (error !== FileViewError.FileNotFound)
+                console.warn("[CurrencyService] history load failed:", error);
+        }
     }
 
     function refresh() {

@@ -76,6 +76,22 @@ def test_currency_service_has_bounded_non_reentrant_request():
         "the timeout feeds the retry schedule now, not a terminal message"
 
 
+def test_service_remembers_a_day_of_rates():
+    """The 3x1's chart line and movement columns read the shell's own
+    observations - the upstream dataset is daily, so sampled refreshes are
+    the only honest 24-hour history. Sampled on success, pruned to the
+    window, persisted so a restart does not forget the day."""
+    source = SERVICE.read_text()
+    history = (SERVICE.parent / "currency_history.js").read_text()
+    assert "History.pushSample(root.history, now" in source
+    assert "root.lastSuccessTime = now" in source
+    assert "historyFile.setText" in source, "the day must survive a restart"
+    assert "History.prune(stored.history, Date.now())" in source,         "a stale file must load as the empty ring it really is"
+    assert "MIN_GAP_MS" in history and "PRUNE_MS" in history
+    # The sampling adds no network of its own.
+    assert source.count("new XMLHttpRequest()") == 1
+
+
 if __name__ == "__main__":
     import sys
     from contract_runner import run
