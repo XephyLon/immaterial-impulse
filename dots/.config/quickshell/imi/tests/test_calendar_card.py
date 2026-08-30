@@ -25,7 +25,7 @@ PROBE = ROOT / "tests/run_calendar_probe.sh"
 
 # The spans the three modes are built from (docs/widget-grid.md): one cell is
 # 132x108 and two are 276 wide, 228 tall, with the 12px gap between them.
-EXPECTED_BOXES = [(132, 108), (276, 108), (276, 228), (276, 228)]
+EXPECTED_BOXES = [(132, 108), (276, 108), (276, 228), (420, 228), (276, 228)]
 
 
 def darkness(shot, geometry):
@@ -84,7 +84,8 @@ class CalendarCardTest(unittest.TestCase):
             field = darkness(shot, f"{width}x{height}+{x}+{y}")
 
             rest = darkness_below(shot, *boxes[2]) - field
-            dragged = darkness_below(shot, *boxes[3]) - field
+            # boxes[3] is the 3x2; the dragged twin renders last.
+            dragged = darkness_below(shot, *boxes[4]) - field
             self.assertGreater(rest, 2.5,
                                f"the card casts no shadow at rest ({rest:.1f} "
                                f"over a field of {field:.1f})")

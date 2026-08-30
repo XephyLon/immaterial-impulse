@@ -27,7 +27,7 @@ ShellRoot {
 
     FloatingWindow {
         id: window
-        implicitWidth: 1180
+        implicitWidth: 1660
         implicitHeight: 420
         color: "white"
 
@@ -48,6 +48,7 @@ ShellRoot {
                 Loader { id: oneByOne; source: harness.widgetUrl }
                 Loader { id: twoByOne; source: harness.widgetUrl }
                 Loader { id: twoByTwo; source: harness.widgetUrl }
+                Loader { id: threeByTwo; source: harness.widgetUrl }
                 // The same card the host is dragging: its shadow lifts.
                 Loader { id: dragged; source: harness.widgetUrl }
             }
@@ -58,12 +59,13 @@ ShellRoot {
         running: true
         interval: 900
         onTriggered: {
-            // Assigning breaks the PluginState binding, which is exactly what
-            // the widget's own handles do for live feedback.
-            oneByOne.item.sizeMode = "1x1";
-            twoByOne.item.sizeMode = "2x1";
-            twoByTwo.item.sizeMode = "2x2";
-            dragged.item.sizeMode = "2x2";
+            // The span the host would resolve, handed down the same way
+            // PluginNode does (the widget's own sizeMode is derived now).
+            oneByOne.item.hostGridSize = "1x1";
+            twoByOne.item.hostGridSize = "2x1";
+            twoByTwo.item.hostGridSize = "2x2";
+            threeByTwo.item.hostGridSize = "3x2";
+            dragged.item.hostGridSize = "2x2";
             dragged.item.hostDragging = true;
             shotTimer.start();
         }
@@ -79,7 +81,7 @@ ShellRoot {
                 Qt.quit();
                 return;
             }
-            const boxes = [oneByOne, twoByOne, twoByTwo, dragged].map(
+            const boxes = [oneByOne, twoByOne, twoByTwo, threeByTwo, dragged].map(
                 loader => `${Math.round(loader.x + harness.leftMargin)},`
                     + `${harness.fieldTop},${Math.round(loader.width)},`
                     + `${Math.round(loader.height)}`);

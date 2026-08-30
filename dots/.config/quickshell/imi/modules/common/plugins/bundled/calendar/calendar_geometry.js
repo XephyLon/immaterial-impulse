@@ -7,6 +7,11 @@
 //   1x1  132x108  the month banner and today's date, alone
 //   2x1  276x108  the month pill, the weekday letters and the current week
 //   2x2  276x228  the month title, the weekday letters and the whole month
+//   3x2  420x228  today as a hero column beside the whole month on its own
+//                 surface (the maintainer's reference shot: icon-in-shape,
+//                 the month in small caps, the weekday, the big date - and
+//                 the grid right of it, with no steppers: this span is about
+//                 TODAY, like the two small ones)
 //
 // Numbers measured off a render of the three destroyed-and-rebuilt layouts this
 // replaces rather than read out of their source: the two text-row heights (the
@@ -34,6 +39,21 @@ var HERO_FONT = 54;          // today's date, alone on the 1x1 card
 var MONTH_FONT_PILL = 15;    // pixelSize.small
 var MONTH_FONT_TITLE = 16;   // pixelSize.normal
 
+// ---- the 3x2 hero column (left of the grid surface) ----------------------
+var CHIP = 40;               // the icon-in-shape
+var CHIP_TOP = 14;
+var HERO_LEFT = 16;          // the column's own inset, one step past the card's
+var HERO_MONTH_TOP = 92;     // "AUGUST", small caps
+var HERO_MONTH_H = 16;
+var HERO_MONTH_FONT = 13;
+var HERO_WEEKDAY_TOP = 110;  // "Saturday"
+var HERO_WEEKDAY_H = 20;
+var HERO_WEEKDAY_FONT = 16;
+var HERO_DAY_TOP = 128;      // the big date
+var HERO_DAY_FONT = 54;
+var ROW_PITCH_3X2 = 26;      // roomier than the 2x2's 22: the surface is taller
+var STRIP_TOP_3X2 = 10;      // the weekday strip, inside the surface
+
 var ROWS = 6;
 var COLUMNS = 7;
 var CELLS = ROWS * COLUMNS;
@@ -47,11 +67,23 @@ function _rect(x, y, w, h) { return { x: x, y: y, width: w, height: h }; }
 function columnWidth(span, width, scale) {
     if (span === "2x2")
         return (width - (CARD_INSET + GRID_INSET) * 2 * scale) / COLUMNS;
+    if (span === "3x2")
+        // The 3x2 surface is the 2x2's, moved: same 252 width, so the seven
+        // columns keep the 2x2's pitch and the grid reads as the same grid.
+        return (252 - GRID_INSET * 2) * scale / COLUMNS;
     return (width - CARD_INSET * 2 * scale) / COLUMNS;
 }
 
-function columnLeft(span, scale) {
+function columnLeft(span, scale, width) {
+    if (span === "3x2")
+        return _surface3x2Left(width, scale) + GRID_INSET * scale;
     return (span === "2x2" ? CARD_INSET + GRID_INSET : CARD_INSET) * scale;
+}
+
+// The 3x2 grid surface hugs the card's right edge; the hero column owns the
+// rest.
+function _surface3x2Left(width, scale) {
+    return width - (CARD_INSET + 252) * scale;
 }
 
 // Where the 2x2 weekday strip sits, and so where everything under it starts.
@@ -87,6 +119,9 @@ function monthSurfaceRect(span, width, height, scale, labelWidth, cardRadius) {
 // mid-morph is the content snap this architecture exists to kill.
 function monthLabelRect(span, width, height, scale) {
     if (span === "1x1") return null;
+    // The 3x2 says the month in the hero column (heroRect "month"), not as a
+    // title over the grid.
+    if (span === "3x2") return null;
     if (span === "2x1") return {
         x: (CARD_INSET + PILL_PADDING) * scale, y: CARD_INSET * scale,
         height: PILL_H * scale, size: MONTH_FONT_PILL * scale
@@ -108,7 +143,9 @@ function navButtonRect(index, span, width, height, scale) {
     };
 }
 
-// A weekday letter, over the column it labels. Present at both wide spans.
+// A weekday letter, over the column it labels. Present at every span but the
+// 1x1; at 3x2 it moves INSIDE the grid surface, which carries its own strip
+// (the reference shot), rather than sitting on the card above it.
 function weekdayHeaderRect(index, span, width, height, scale) {
     if (span === "1x1") return null;
     var column = columnWidth(span, width, scale);
@@ -116,8 +153,40 @@ function weekdayHeaderRect(index, span, width, height, scale) {
         columnLeft(span, scale) + index * column,
         (CARD_INSET + PILL_H + BLOCK_GAP) * scale,
         column, STRIP_H_SHORT * scale);
+    if (span === "3x2") return _rect(
+        columnLeft(span, scale, width) + index * column,
+        (CARD_INSET + STRIP_TOP_3X2) * scale,
+        column, STRIP_H_WIDE * scale);
     return _rect(columnLeft(span, scale) + index * column,
         _stripTop(scale), column, STRIP_H_WIDE * scale);
+}
+
+// The 3x2 hero column: the icon-in-shape, the month in small caps, the
+// weekday, and the big date. One function keyed by part, so the widget's
+// elements and the tests read the same table. Null anywhere else - every
+// part fades in place.
+function heroRect(part, span, width, height, scale) {
+    if (span !== "3x2") return null;
+    var right = _surface3x2Left(width, scale) - CARD_INSET * scale;
+    if (part === "chip") return _rect(HERO_LEFT * scale, CHIP_TOP * scale,
+        CHIP * scale, CHIP * scale);
+    if (part === "month") return {
+        x: HERO_LEFT * scale, y: HERO_MONTH_TOP * scale,
+        width: right - HERO_LEFT * scale, height: HERO_MONTH_H * scale,
+        size: HERO_MONTH_FONT * scale
+    };
+    if (part === "weekday") return {
+        x: HERO_LEFT * scale, y: HERO_WEEKDAY_TOP * scale,
+        width: right - HERO_LEFT * scale, height: HERO_WEEKDAY_H * scale,
+        size: HERO_WEEKDAY_FONT * scale
+    };
+    if (part === "day") return {
+        x: HERO_LEFT * scale, y: HERO_DAY_TOP * scale,
+        width: right - HERO_LEFT * scale,
+        height: height - (HERO_DAY_TOP + CARD_INSET) * scale,
+        size: HERO_DAY_FONT * scale
+    };
+    return null;
 }
 
 function _surfaceBox(width, height, scale) {
@@ -129,10 +198,27 @@ function _surfaceBox(width, height, scale) {
 // The surface the month grid is drawn on. 2x2 only - the 2x1 week is drawn on
 // the card itself. Its radius stays concentric with the card's.
 function dayGridSurfaceRect(span, width, height, scale, cardRadius) {
+    if (span === "3x2") {
+        var rect3 = _rect(_surface3x2Left(width, scale), CARD_INSET * scale,
+            252 * scale, height - CARD_INSET * 2 * scale);
+        rect3.radius = cardRadius - CARD_INSET * scale;
+        return rect3;
+    }
     if (span !== "2x2") return null;
     var rect = _surfaceBox(width, height, scale);
     rect.radius = cardRadius - CARD_INSET * scale;
     return rect;
+}
+
+// The top of the six-row block inside the 3x2 surface: under its own strip,
+// centred in what is left of the surface.
+function _gridTop3x2(width, height, scale) {
+    var surfaceTop = CARD_INSET * scale;
+    var surfaceH = height - CARD_INSET * 2 * scale;
+    var stripBottom = (STRIP_TOP_3X2 + STRIP_H_WIDE + LABEL_GAP) * scale;
+    var block = (ROWS * DAY - (ROWS - 1) * (DAY - ROW_PITCH_3X2)) * scale;
+    return surfaceTop + stripBottom
+        + (surfaceH - stripBottom - block) / 2;
 }
 
 // The top of the six-row block inside that surface, which is centred in it.
@@ -169,7 +255,7 @@ function dayCellRect(index, span, width, height, scale, weekRow, todayIndex) {
     }
 
     var columnW = columnWidth(span, width, scale);
-    var x = columnLeft(span, scale) + column * columnW + (columnW - DAY * scale) / 2;
+    var x = columnLeft(span, scale, width) + column * columnW + (columnW - DAY * scale) / 2;
 
     if (span === "2x1") {
         if (row !== weekRow) return null;
@@ -179,6 +265,12 @@ function dayCellRect(index, span, width, height, scale, weekRow, todayIndex) {
             size: DAY_FONT * scale, pill: DAY * scale
         };
     }
+
+    if (span === "3x2") return {
+        x: x, y: _gridTop3x2(width, height, scale) + row * ROW_PITCH_3X2 * scale,
+        width: DAY * scale, height: DAY * scale,
+        size: DAY_FONT * scale, pill: DAY * scale
+    };
 
     return {
         x: x, y: _gridTop(width, height, scale) + row * ROW_PITCH * scale,

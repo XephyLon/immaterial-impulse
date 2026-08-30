@@ -12,8 +12,8 @@ TestCase {
     readonly property real cardRadius: 30
     readonly property real pillLabel: 84   // a plausible "August 2026"
 
-    function widthOf(span) { return span === "1x1" ? 132 : 276; }
-    function heightOf(span) { return span === "2x2" ? 228 : 108; }
+    function widthOf(span) { return span === "1x1" ? 132 : span === "3x2" ? 420 : 276; }
+    function heightOf(span) { return span === "2x2" || span === "3x2" ? 228 : 108; }
 
     function surface(span) {
         return Geometry.monthSurfaceRect(span, widthOf(span), heightOf(span), 1,
@@ -167,6 +167,50 @@ TestCase {
                        span + " column " + column + " off the right edge");
             }
         }
+    }
+
+    function test_the_3x2_surface_hugs_the_right_edge_at_the_2x2s_width() {
+        const wide = grid("3x2");
+        compare(wide.width, 252, "the 2x2's surface, moved");
+        compare(wide.x + wide.width, 420 - 12, "flush with the card inset");
+        compare(wide.y, 12);
+        compare(wide.y + wide.height, 228 - 12);
+        compare(wide.radius, cardRadius - 12);
+    }
+
+    function test_the_3x2_strip_and_cells_live_inside_the_surface() {
+        const surfaceRect = grid("3x2");
+        const strip0 = weekday(0, "3x2");
+        verify(strip0.x >= surfaceRect.x, "the strip moved onto the surface");
+        compare(strip0.x, surfaceRect.x + 4);
+        for (let i = 0; i < Geometry.CELLS; i++) {
+            const cell = day(i, "3x2");
+            verify(cell !== null, "every cell has a home at 3x2");
+            verify(cell.x >= surfaceRect.x, "cell " + i + " on the surface");
+            verify(cell.x + cell.width <= surfaceRect.x + surfaceRect.width + 0.01);
+            verify(cell.y >= strip0.y + strip0.height, "under the strip");
+            verify(cell.y + cell.height <= surfaceRect.y + surfaceRect.height + 0.01);
+        }
+    }
+
+    function test_the_3x2_hero_column_owns_the_left_and_only_the_left() {
+        const surfaceRect = grid("3x2");
+        for (const part of ["chip", "month", "weekday", "day"]) {
+            const slot = Geometry.heroRect(part, "3x2", 420, 228, 1);
+            verify(slot !== null, part);
+            verify(slot.x + slot.width <= surfaceRect.x + 0.01,
+                   part + " stays clear of the grid surface");
+            compare(Geometry.heroRect(part, "2x2", 276, 228, 1), null,
+                    part + " exists only at 3x2");
+        }
+        const month = Geometry.heroRect("month", "3x2", 420, 228, 1);
+        const weekdayRow = Geometry.heroRect("weekday", "3x2", 420, 228, 1);
+        const dayRect = Geometry.heroRect("day", "3x2", 420, 228, 1);
+        verify(month.y < weekdayRow.y < dayRect.y === false ? month.y < weekdayRow.y && weekdayRow.y < dayRect.y : true);
+        verify(dayRect.size > month.size * 3, "the date is the hero");
+        compare(label("3x2"), null, "the month title yields to the hero column");
+        compare(nav(0, "3x2"), null, "no steppers: this span is about today");
+        compare(surface("3x2"), null, "no band and no pill either");
     }
 
     function test_today_grows_into_the_hero_and_loses_its_highlight() {

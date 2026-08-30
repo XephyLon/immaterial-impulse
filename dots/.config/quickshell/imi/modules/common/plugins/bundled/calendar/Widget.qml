@@ -26,10 +26,17 @@ Item {
     property bool hostDragging: false
     // Set by the host while its own box is animating; the cards drop their
     // shadow for the duration rather than re-blurring into a resizing FBO.
-    // It is always false here - the host only animates a box it sizes itself,
-    // and this widget declares no `grid` - so the widget publishes its own
-    // `boxInMotion` below and the card takes both.
+    // The manifest declares a grid now, so the box is the host's.
     property bool hostBoxInMotion: false
+
+    // The span the host resolved (docs/widget-grid.md): the stored choice,
+    // then the manifest default. Empty until the host answers, and for a
+    // bare `qs -p` probe of this file.
+    property string hostGridSize: ""
+    // This tree has no destroy on a span change - every element travels or
+    // fades on its own Behaviors - so the host's midpoint cross-fade would
+    // be a dissolve on top of a morph (the media widget's reasoning).
+    readonly property bool handlesSpanTransition: true
 
     // The card fills the whole widget, so the host's default frost region has
     // the right extent - but not the right corner radius (PluginWidget falls
@@ -58,39 +65,27 @@ Item {
     // See docs/widget-grid.md.
     readonly property real snapWidth1: Appearance.sizes.widgetGridSpanX(1)   // 132
     readonly property real snapWidth2: Appearance.sizes.widgetGridSpanX(2)   // 276
+    readonly property real snapWidth3: Appearance.sizes.widgetGridSpanX(3)   // 420
     readonly property real shortHeight: Appearance.sizes.widgetGridSpanY(1)  // 108
     readonly property real tallHeight: Appearance.sizes.widgetGridSpanY(2)   // 228
 
-    // The corner handle resizes this widget and the opposite handle flips the
-    // wide size between a month and a week, so the manifest declares no `grid`:
-    // a span is a fixed pixel size the host assigns on every load, and it would
-    // overwrite whichever size the handles last chose. The widget stays
-    // content-sized instead, which is also why this root must not
-    // `anchors.fill: parent` - the host derives its own size from this one, so
-    // anchoring is a binding loop (see PluginNode.qml).
+    // The manifest offers four spans, so the size is the HOST's
+    // (`__gridSize`: the grip, the Size row and the edit-menu stepper are
+    // its three faces) and the two corner handles this widget carried are
+    // gone with the option they wrote. The old stored `sizeMode` is folded
+    // into `__gridSize` by gridSizes.migrateSizeMode the moment the manifest
+    // offers more than one span - which is now.
     //
-    // The wide-short mode was called "1x2" while being two columns by one row,
-    // and every mode was 120 tall on the assumption of a 120px cell - the cell
-    // is 108. Normalising on read maps the legacy string onto the mode it
-    // actually described; without it "1x2" falls through the switch default
-    // below and silently promotes the user's week strip to the full month.
+    // Normalising still guards the probe's empty string and any span this
+    // manifest stops offering: an unknown mode falls to the default rather
+    // than to a branch nothing draws.
     function normalizeSizeMode(mode) {
-        if (mode === "1x1")
-            return "1x1";
-        if (mode === "2x1" || mode === "1x2")
-            return "2x1";
+        if (mode === "1x1" || mode === "2x1" || mode === "3x2")
+            return mode;
         return "2x2";
     }
 
-    property string sizeMode: root.normalizeSizeMode(PluginState.option("calendar", "sizeMode", "2x2"))
-
-    // The handles assign `sizeMode` directly for live feedback, which breaks
-    // the binding above on purpose (the same trade custom-image makes), so
-    // persisting has to write the property as well as the option.
-    function setSizeMode(mode) {
-        root.sizeMode = mode;
-        PluginState.setOption("calendar", "sizeMode", mode);
-    }
+    readonly property string sizeMode: root.normalizeSizeMode(root.hostGridSize)
 
     // The month steppers only exist at 2x2, and the two smaller spans are both
     // about *today* - the hero date and the current week. Leaving a shift on
@@ -106,28 +101,22 @@ Item {
     // converges (test_geometry_rects_come_from_the_settled_span_not_the_
     // animating_box).
     function spanWidthOf(span) {
-        return span === "1x1" ? root.snapWidth1 : root.snapWidth2;
+        return span === "1x1" ? root.snapWidth1
+            : span === "3x2" ? root.snapWidth3 : root.snapWidth2;
     }
     function spanHeightOf(span) {
-        return span === "2x2" ? root.tallHeight : root.shortHeight;
+        return span === "2x2" || span === "3x2" ? root.tallHeight : root.shortHeight;
     }
     readonly property real spanW: root.spanWidthOf(root.sizeMode)
     readonly property real spanH: root.spanHeightOf(root.sizeMode)
     readonly property real uiScale: Appearance.effectiveScale
 
-    property real widgetWidth: root.spanW
-    property real widgetHeight: root.spanH
-    Behavior on widgetWidth { Expressive.SpanTravel {} }
-    Behavior on widgetHeight { Expressive.SpanTravel {} }
-
-    // The host publishes `boxInMotion` only for a box it sizes itself, and a
-    // content-sized widget's box is this one - so the card would never drop its
-    // shadow for the one motion that reallocates the layer every frame.
-    readonly property bool boxInMotion: Math.abs(root.widgetWidth - root.spanW) > 0.5
-        || Math.abs(root.widgetHeight - root.spanH) > 0.5
-
-    implicitWidth: root.widgetWidth
-    implicitHeight: root.widgetHeight
+    // The box is the host's now (the manifest declares a grid): it animates
+    // between spans and publishes hostBoxInMotion for the length of it. The
+    // implicit size is the settled span - a fallback for a bare probe; the
+    // host sizes the node to its own animating box.
+    implicitWidth: root.spanW
+    implicitHeight: root.spanH
 
     // ---- the month matrix ------------------------------------------------
 
@@ -209,12 +198,6 @@ Item {
         font.weight: Font.Bold
     }
 
-    // The host (PluginWidget) is the MouseArea that drags this widget; a
-    // HoverHandler reads hover without taking press events away from it.
-    HoverHandler {
-        id: widgetHover
-    }
-
     // The surface every other desktop widget already composes. It owns the
     // tint pair, the rounding (this widget's own `verylarge` was the token the
     // shared card's 30 had drifted from), the frost record above, and the drop
@@ -235,7 +218,7 @@ Item {
         useBlurBackground: root.blurEnabled
         backgroundOpacity: root.backgroundOpacity
         dragging: root.hostDragging
-        hostMotionActive: root.hostBoxInMotion || root.boxInMotion
+        hostMotionActive: root.hostBoxInMotion
 
         // ---- the month surface: the 1x1 band, the 2x1 pill ---------------
         //
@@ -244,8 +227,8 @@ Item {
         // rather than travelling to a place it does not have.
         Rectangle {
             id: monthSurface
-            readonly property bool present: root.sizeMode !== "2x2"
-            readonly property string homeSpan: root.sizeMode === "2x2" ? "2x1" : root.sizeMode
+            readonly property bool present: root.sizeMode === "1x1" || root.sizeMode === "2x1"
+            readonly property string homeSpan: monthSurface.present ? root.sizeMode : "2x1"
             readonly property var slot: Geometry.monthSurfaceRect(
                 monthSurface.homeSpan,
                 root.spanWidthOf(monthSurface.homeSpan),
@@ -310,8 +293,8 @@ Item {
         StyledText {
             id: monthLabel
             objectName: "calendarMonthLabel"
-            readonly property bool present: root.sizeMode !== "1x1"
-            readonly property string homeSpan: root.sizeMode === "1x1" ? "2x2" : root.sizeMode
+            readonly property bool present: root.sizeMode === "2x1" || root.sizeMode === "2x2"
+            readonly property string homeSpan: monthLabel.present ? root.sizeMode : "2x2"
             readonly property var slot: Geometry.monthLabelRect(
                 monthLabel.homeSpan,
                 root.spanWidthOf(monthLabel.homeSpan),
@@ -510,88 +493,54 @@ Item {
             }
         }
 
-        Rectangle {
-            id: resizeHandle
-            width: 16
-            height: 16
-            radius: Appearance.rounding.unsharpenslight
-            color: Appearance.colors.colOnPrimaryContainer
-            // The card routes its children into its own content item, so the
-            // handles anchor to that rather than reaching back up to `card` -
-            // an anchor may only name a parent or a sibling. It fills the
-            // card, so the corner is the same corner.
-            anchors {
-                right: parent.right
-                bottom: parent.bottom
-                margins: Appearance.spacing.space50
-            }
-            opacity: (widgetHover.hovered || resizeArea.containsMouse || resizeArea.pressed) ? 0.5 : 0
-            visible: opacity > 0 && !root.hostInteractionLocked
-            Behavior on opacity {
-                animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)
-            }
-
-            MouseArea {
-                id: resizeArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.SizeHorCursor
-                preventStealing: true
-                property real startWidth: 0
-                property real startX: 0
-                onPressed: mouse => {
-                    // The SETTLED width, never the animating one: a press
-                    // landing mid-morph would otherwise measure the gesture
-                    // against a box that is still moving.
-                    resizeArea.startWidth = root.spanW;
-                    resizeArea.startX = resizeArea.mapToItem(null, mouse.x, mouse.y).x;
-                }
-                onPositionChanged: mouse => {
-                    if (!resizeArea.pressed)
-                        return;
-                    var globalX = resizeArea.mapToItem(null, mouse.x, mouse.y).x;
-                    var dx = globalX - resizeArea.startX;
-                    var newW = resizeArea.startWidth + dx;
-                    var mid = (root.snapWidth1 + root.snapWidth2) / 2;
-                    if (newW < mid)
-                        root.sizeMode = "1x1";
-                    else if (root.sizeMode === "1x1")
-                        root.sizeMode = "2x2";
-                }
-                onReleased: root.setSizeMode(root.sizeMode)
-            }
+        // ---- the 3x2 hero column: today, written large ---------------------
+        //
+        // Four elements with one home each (the maintainer's reference
+        // shot): the icon-in-shape, the month in small caps, the weekday,
+        // and the big date. They fade in place - nothing at another span
+        // morphs into them, and today's GRID cell keeps its own circled
+        // home on the surface beside them.
+        MaterialShapeWrappedMaterialSymbol {
+            readonly property var slot: Geometry.heroRect("chip", "3x2",
+                root.snapWidth3, root.tallHeight, root.uiScale)
+            x: slot.x
+            y: slot.y
+            width: slot.width
+            height: slot.height
+            wrappedShape: MaterialShape.Shape.Cookie12Sided
+            colSymbol: root.tinted(Appearance.colors.colPrimary)
+            color: Appearance.colors.colOnPrimary
+            text: "calendar_month"
+            iconSize: slot.height * 0.5
+            opacity: root.sizeMode === "3x2" ? 1 : 0
+            Behavior on opacity { Expressive.SpanFade {} }
+            visible: opacity > 0
         }
 
-        Rectangle {
-            id: toggleHandle
-            width: 16
-            height: 16
-            radius: Appearance.rounding.unsharpenslight
-            color: Appearance.colors.colOnPrimaryContainer
-            anchors {
-                left: parent.left
-                bottom: parent.bottom
-                margins: Appearance.spacing.space50
-            }
-            opacity: (widgetHover.hovered || toggleArea.containsMouse) && root.sizeMode !== "1x1" ? 0.5 : 0
-            visible: opacity > 0 && !root.hostInteractionLocked
-            Behavior on opacity {
-                animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this)
-            }
-
-            MaterialSymbol {
-                anchors.centerIn: parent
-                text: root.sizeMode === "2x1" ? "calendar_view_month" : "calendar_view_week"
-                iconSize: 11
-                color: Appearance.colors.colPrimaryContainer
-            }
-
-            MouseArea {
-                id: toggleArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.setSizeMode(root.sizeMode === "2x2" ? "2x1" : "2x2")
+        Repeater {
+            model: ["month", "weekday", "day"]
+            delegate: StyledText {
+                id: heroText
+                required property string modelData
+                readonly property var slot: Geometry.heroRect(heroText.modelData,
+                    "3x2", root.snapWidth3, root.tallHeight, root.uiScale)
+                x: slot.x
+                y: slot.y
+                width: slot.width
+                height: slot.height
+                verticalAlignment: heroText.modelData === "day" ? Text.AlignTop : Text.AlignVCenter
+                text: heroText.modelData === "month"
+                    ? root.viewingDate.toLocaleDateString(Qt.locale(), "MMMM").toUpperCase()
+                    : heroText.modelData === "weekday"
+                        ? root.today.toLocaleDateString(Qt.locale(), "dddd")
+                        : root.today.getDate()
+                font.pixelSize: Math.round(heroText.slot.size)
+                font.weight: heroText.modelData === "month" ? Font.Bold : Font.Medium
+                color: Appearance.colors.colOnPrimaryContainer
+                opacity: root.sizeMode === "3x2"
+                    ? (heroText.modelData === "month" ? 0.6 : 1) : 0
+                Behavior on opacity { Expressive.SpanFade {} }
+                visible: opacity > 0
             }
         }
     }
