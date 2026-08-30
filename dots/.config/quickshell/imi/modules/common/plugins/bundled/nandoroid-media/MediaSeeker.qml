@@ -41,7 +41,10 @@ Item {
     // on screen - a FrameAnimation with no gate is the idle-repaint bug. At
     // 2x2 the ring is a STILL perfect circle (the review's call): no wave,
     // no travel, so no frame ticks either.
-    readonly property bool waves: root.playing && root.span !== "2x2"
+    // Not behind a special workspace: Hyprland blurs everything under one,
+    // and a wave nobody can see was still a Canvas repaint every frame.
+    property bool behindSpecial: false
+    readonly property bool waves: root.playing && root.span !== "2x2" && !root.behindSpecial
     // The wave's amplitude is a LEVEL, not a switch: pause snapped it to zero
     // in one frame and the spring visibly chopped flat (the review). It eases
     // out and back in, and the frame clock runs until the fade completes so
@@ -121,6 +124,14 @@ Item {
     Canvas {
         id: canvas
         anchors.fill: parent
+        // On an FBO, cooperatively: the paint runs on the render thread and
+        // the main thread only records the commands. The default (an Image
+        // target, painted on the GUI thread) was a software raster of this
+        // whole card on every frame the wave moved - a fifth of the shell's
+        // main thread while a track played, measured, on the thread the
+        // sidebars' slide runs on.
+        renderTarget: Canvas.FramebufferObject
+        renderStrategy: Canvas.Cooperative
 
         readonly property real bendNow: root.bend
         readonly property real waveLevelNow: root.waveLevel
