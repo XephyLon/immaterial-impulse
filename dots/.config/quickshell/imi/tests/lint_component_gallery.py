@@ -67,6 +67,14 @@ EXCLUDED = {
         "not a control: the pressed LOOK of one that keeps its own input (a "
         "ComboBox, a list row). It receives no press, so a tile of it would "
         "be a rectangle that answers nothing; the combo box tile shows it",
+    "modules/imi/bar/LeftSidebarButton.qml":
+        "a bar widget the layout names by id (`leftSidebarButton`); it opens "
+        "the sidebar from its own press, which the gallery's dumb rule "
+        "(lint_dumb_widgets.py) forbids a tile to do. It WAS a tile, and was "
+        "deleted as an orphan on the strength of that - but a layout id is a "
+        "consumer, and the maintainer's bar had it in the first slot",
+    "modules/imi/bar/PowerButton.qml":
+        "the same: `powerButton` in a layout, opens the session menu on press",
     "modules/imi/dock/DockAppButton.qml":
         "a dock entry is a running window's button - it takes a toplevel and "
         "an app id, and a bare one is an empty square that teaches nothing",

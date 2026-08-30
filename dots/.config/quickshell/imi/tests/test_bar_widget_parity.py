@@ -177,6 +177,27 @@ class BarWidgetResolutionParityTests(unittest.TestCase):
                 f"would draw an empty group and log one 'No such file or "
                 f"directory' line per widget.")
 
+    def test_every_palette_id_resolves_to_a_file(self):
+        """The other direction: not what the resolver can NAME, what the
+        user can PICK. Settings > Bar offers every id in BarWidgets.qml, a
+        layout stores it, and both bars resolve it through fileNameFor - so
+        an id whose file is gone is a widget that silently vanishes from
+        every bar that has it. e2f25db06 deleted LeftSidebarButton.qml and
+        PowerButton.qml as orphans 'nothing named'; the maintainer's own
+        layout named both, and the only trace was one WARN line per reload."""
+        palette = (ROOT / "modules/common/plugins/BarWidgets.qml").read_text()
+        ids = re.findall(r'\{\s*id:\s*"([A-Za-z]+)"', palette)
+        self.assertGreaterEqual(len(ids), 20, "the palette lost most of its rows")
+        missing = []
+        for widget_id in ids:
+            component = widget_id[0].upper() + widget_id[1:] + ".qml"
+            if not (BAR_DIR / component).is_file():
+                missing.append(f"{widget_id} -> {component}")
+        self.assertEqual(missing, [], "\n".join([
+            "Settings > Bar offers these, and no file draws them:",
+            *(f"  {entry}" for entry in missing),
+        ]))
+
 
 if __name__ == "__main__":
     unittest.main()
