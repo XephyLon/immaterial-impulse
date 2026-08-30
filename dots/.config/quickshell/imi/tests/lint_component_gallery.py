@@ -169,9 +169,16 @@ def toggle_claims():
     return claims
 
 
+def source_of(path):
+    return re.sub(r"//.*", "", (SHELL / path).read_text(errors="replace"))
+
+
+def declares_toggled(path):
+    return re.search(r"\bproperty\s+bool\s+toggled\b", source_of(path)) is not None
+
+
 def reads_toggled(path):
-    body = re.sub(r"//.*", "", (SHELL / path).read_text(errors="replace"))
-    return re.search(r"\btoggled\b", body) is not None
+    return re.search(r"\btoggled\b", source_of(path)) is not None
 
 
 def catalogued():
@@ -267,7 +274,14 @@ class ComponentGalleryTests(unittest.TestCase):
         for path, claimed in toggle_claims().items():
             if not (SHELL / path).exists():
                 continue
-            actual = reads_toggled(path)
+            # Two conditions, both needed. HAS the property: a RippleButton
+            # descendant, or a type declaring its own. USES it: the word
+            # appears in the source. Inheriting alone put a switch that changed
+            # nothing on 46 pages; the word alone counted ConfigSelectionArray,
+            # a ColumnLayout that hands `toggled:` to the buttons it lays out
+            # and has no such property itself - and the knob that claim
+            # produced wrote `toggled: false` into a type that cannot take it.
+            actual = (path in self.family and reads_toggled(path)) or declares_toggled(path)
             if claimed != actual:
                 wrong.append(f"{path}: catalogue says {claimed}, source says {actual}")
         self.assertEqual(wrong, [], "\n".join([

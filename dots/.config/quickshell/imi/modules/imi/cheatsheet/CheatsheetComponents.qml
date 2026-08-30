@@ -100,7 +100,7 @@ Item {
                 { type: "modules/common/widgets/DialogListItem.qml", props: { } },
                 { type: "modules/common/widgets/CatalogueRow.qml", props: { rowIcon: "info", title: "A row", description: "with a description" } },
                 { type: "modules/common/widgets/ConfigRow.qml", props: {} },
-                { type: "modules/common/widgets/GroupedList.qml", props: {}, toggles: true },
+                { type: "modules/common/widgets/GroupedList.qml", props: {} },
             ]
         },
         {
@@ -114,7 +114,7 @@ Item {
                 { type: "modules/common/widgets/ConfigSpinBox.qml", props: { text: "Count", icon: "tag", value: 3 } },
                 { type: "modules/common/widgets/ConfigComboBox.qml", props: { text: "Choice", buttonIcon: "list" } },
                 { type: "modules/common/widgets/ConfigTextArea.qml", props: { text: "Notes", placeholderText: "Type here" } },
-                { type: "modules/common/widgets/ConfigSelectionArray.qml", props: { text: "Pick one", icon: "tune" }, toggles: true },
+                { type: "modules/common/widgets/ConfigSelectionArray.qml", props: { text: "Pick one", icon: "tune" } },
             ]
         },
         {
