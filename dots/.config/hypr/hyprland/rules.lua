@@ -222,6 +222,13 @@ hl.layer_rule({ match = { namespace = "quickshell:sidebarLeft" }, blur = false})
 -- WindowBlurRegion in Bar.qml / VerticalBar.qml / Dock.qml).
 hl.layer_rule({ match = { namespace = "quickshell:bar" }, blur = false})
 hl.layer_rule({ match = { namespace = "quickshell:verticalBar" }, blur = false})
+-- The wallpaper layer is opaque edge to edge, so the catch-all blur above
+-- bought nothing there - and cost a fullscreen three-pass blur on every frame
+-- the desktop widgets changed it. With the Visualizer running that was every
+-- frame: GPU 81% with this rule absent, 62% with it (measured live, music
+-- playing, 5120x1440). No region is published for it; there is nothing
+-- translucent on the surface to scope a blur to.
+hl.layer_rule({ match = { namespace = "quickshell:background" }, blur = false})
 hl.layer_rule({ match = { namespace = "quickshell:dock" }, blur = false})
 -- And the transient surfaces, which were the last panels still frosting their
 -- own shadow (#89): every OSD indicator sits in an elevation margin, and the

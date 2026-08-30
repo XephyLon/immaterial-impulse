@@ -46,7 +46,12 @@ own repo; the installer pins which revision it builds.
   mixes - a third of the shell's main thread, which is the thread the sidebar
   slide runs on. The bars now follow one smoothing filter over the whole
   array and take their colour from a palette; the widget costs a quarter of
-  what it did per frame, measured, and looks the same.
+  what it did per frame, measured, and looks the same. Two more things fed
+  the same slowness: the wallpaper layer was being blurred by the compositor
+  on every frame the widget changed it (opaque, so for nothing - a fifth of
+  the GPU, measured), and behind a special workspace the widget kept moving
+  under a fullscreen blur nobody could see it through. The layer rule is
+  gone and the widget stands down while a special workspace is up.
 - **The Phone tab's header is one row of one size.** The device chip is the
   shared filter chip with a trailing arrow, and the connection and battery
   facts beside it are plain icon-and-label metadata with no container - a

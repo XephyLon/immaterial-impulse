@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Window
 import Quickshell
+import qs.services
 import qs.modules.common
 import qs.modules.common.plugins.designsystem.services
 import "../../../functions/cavaBands.js" as CavaBands
@@ -20,6 +21,14 @@ Item {
     // fullscreen, and `visible` is the effective value - so this claim drops
     // when the wallpaper stops being drawn, without knowing why it stopped.
     CavaRef { active: root.visible }
+    // Not drawn behind a special workspace. Hyprland blurs everything under
+    // one (decoration:blur:special), so the bars are unreadable there - and
+    // every frame they moved re-blurred the whole 5120x1440 screen, which is
+    // where the sidebars' slowness with this widget running came from once
+    // the per-bar animations were gone. `visible` carries the cava claim
+    // with it, the way it does for fullscreen.
+    readonly property bool behindSpecial: HyprlandData.specialWorkspaceByMonitorName[root.screenName] ?? false
+    visible: !root.behindSpecial
 
     // The visualiser draws bars straight onto the wallpaper - it has no panel,
     // card or tint of its own - so it opts out of the host's frost entirely by
