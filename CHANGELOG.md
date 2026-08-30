@@ -22,6 +22,10 @@ own repo; the installer pins which revision it builds.
   by hand. Every tile is the real widget, not a picture of one.
 
 ### Changed
+- **The cheatsheet is a window now, like Settings** - focused, moved and closed
+  by the compositor, instead of an overlay layer. The layer took no keyboard
+  input at all, which the keybind table never needed and the Components
+  workbench does: its filter, text and number knobs typed into nothing.
 - **The phone's notifications are drawn by the same card as the shell's own**,
   so they behave the same way: the swipe, the stack's lean, the group that
   expands and the buttons are one implementation instead of two that had

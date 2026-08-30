@@ -8,7 +8,6 @@ import Qt.labs.synchronizer
 import Qt5Compat.GraphicalEffects
 import Quickshell.Io
 import Quickshell
-import Quickshell.Wayland
 import Quickshell.Hyprland
 
 Scope { // Scope
@@ -33,16 +32,16 @@ Scope { // Scope
         id: cheatsheetLoader
         active: false
 
-        sourceComponent: PanelWindow { // Window
+        // A real toplevel, like Settings, not an overlay layer. A layer-shell
+        // surface takes keyboard input only with a keyboardFocus mode the
+        // Hyprland focus grab could not coexist with, so the sheet had none -
+        // and the Components workbench is a page you TYPE into: a filter, a
+        // text knob, a number. As a window it is focused, moved and closed
+        // by the compositor like any other, and its text fields just work.
+        sourceComponent: FloatingWindow { // Window
             id: cheatsheetRoot
             visible: cheatsheetLoader.active
-
-            anchors {
-                top: true
-                bottom: true
-                left: true
-                right: true
-            }
+            title: Translation.tr("Cheatsheet")
 
             // The binding currently open in the keybind editor overlay, null
             // when the overlay is closed.
@@ -51,55 +50,47 @@ Scope { // Scope
             function hide() {
                 cheatsheetLoader.active = false;
             }
-            exclusiveZone: 0
-            implicitWidth: cheatsheetBackground.width + Appearance.sizes.elevationMargin * 2
-            implicitHeight: cheatsheetBackground.height + Appearance.sizes.elevationMargin * 2
-            WlrLayershell.namespace: "quickshell:cheatsheet"
-            // Hyprland 0.49: Focus is always exclusive and setting this breaks mouse focus grab
-            // WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+
+            // Constant on purpose - see Settings.qml: a clear colour that once
+            // reaches alpha 255 costs the surface its compositor blur for the
+            // session. The backdrop below carries the colour.
             color: "transparent"
 
-            mask: Region {
-                item: cheatsheetBackground
+            // Sized to the page, and fixed: equal minimum and maximum size
+            // hints are what make Hyprland float and centre a toplevel on its
+            // own (AGENT.md), with no rule matching on a title. The size
+            // follows the tab, since the keybind table and the workbench are
+            // nothing like each other.
+            implicitWidth: cheatsheetBackground.implicitWidth
+            implicitHeight: cheatsheetBackground.implicitHeight
+            minimumSize.width: cheatsheetBackground.implicitWidth
+            minimumSize.height: cheatsheetBackground.implicitHeight
+            maximumSize.width: cheatsheetBackground.implicitWidth
+            maximumSize.height: cheatsheetBackground.implicitHeight
+
+            // Closing from the compositor (a kill, a titlebar it may grow)
+            // has to feed back into the loader the IPC and shortcuts drive.
+            onVisibleChanged: {
+                if (!visible && cheatsheetLoader.active)
+                    cheatsheetLoader.active = false;
             }
 
-            Component.onCompleted: {
-                GlobalFocusGrab.addDismissable(cheatsheetRoot);
-            }
-            Component.onDestruction: {
-                GlobalFocusGrab.removeDismissable(cheatsheetRoot);
-            }
-            Connections {
-                target: GlobalFocusGrab
-                function onDismissed() {
-                    cheatsheetRoot.hide();
-                }
-            }
-
-            // Scope the compositor's blur to the painted card so the drop
-            // shadow below stays crisp instead of being frosted along with it
-            // (#82, #89); pairs with rules.lua turning the layerrule blur off
-            // for this namespace.
-            WindowBlurRegion {
-                targetWindow: cheatsheetRoot
-                regionItem: cheatsheetBackground
-                regionRadius: cheatsheetBackground.radius
-            }
-
-            // Background
-            StyledRectangularShadow {
-                target: cheatsheetBackground
-            }
             Rectangle {
                 id: cheatsheetBackground
-                anchors.centerIn: parent
+                anchors.fill: parent
                 color: Appearance.colors.colLayer0
-                border.width: 1
-                border.color: Appearance.colors.colLayer0Border
-                radius: Appearance.rounding.windowRounding
+                // The window's corners are the compositor's; the border was
+                // the card's edge against the wallpaper and there is no
+                // wallpaper behind a window's own rectangle.
+                radius: 0
                 property real padding: Appearance.spacing.space250
                 implicitWidth: cheatsheetColumnLayout.implicitWidth + padding * 2
                 implicitHeight: cheatsheetColumnLayout.implicitHeight + padding * 2
+
+                // Keyboard input lands here and bubbles up: a text field the
+                // user clicks takes focus, and an Escape it does not consume
+                // reaches the handler below.
+                focus: true
 
                 Keys.onPressed: event => { // Esc to close
                     if (event.key === Qt.Key_Escape) {
@@ -131,7 +122,6 @@ Scope { // Scope
 
                 RippleButton { // Close button
                     id: closeButton
-                    focus: cheatsheetRoot.visible
                     implicitWidth: 40
                     implicitHeight: 40
                     buttonRadius: Appearance.rounding.full

@@ -69,9 +69,6 @@ SURFACES = {
 # monitor focused when the user asked", which is the behaviour #297 wants.
 # The bug is a surface that OUTLIVES the gesture; these do not.
 EXEMPT = {
-    ROOT / "modules/imi/cheatsheet/Cheatsheet.qml":
-        "built by cheatsheetLoader, whose `active` starts false and is set false again by hide() - "
-        "the window exists only while the sheet is up, so it is created on the focused monitor",
     ROOT / "modules/imi/dropShelf/DropShelfPanel.qml":
         "built by a LazyLoader gated on GlobalStates.dropShelfOpen - created per open",
     ROOT / "modules/imi/mediaControls/MediaControls.qml":
