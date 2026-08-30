@@ -13,6 +13,10 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The Custom Image widget plays GIFs and can drop its backing.** A
+  dropped .gif animates instead of freezing on its first frame, and a new
+  "Transparent background" option removes the container colour behind the
+  image, so a PNG's alpha shows the wallpaper through the shape.
 - **Developer mode, off by default** (Settings > General > Developer). It adds
   one thing today: a **Components** tab in the cheatsheet showing every shared
   widget the shell is built from, live. Three views - a gallery of them by

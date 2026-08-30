@@ -28,6 +28,12 @@ Item {
     readonly property var blurRegions: []
 
     readonly property string imagePath: PluginState.option("custom-image", "path", "")
+    // With a background, a PNG's alpha shows the container colour through
+    // it; without one, it shows the wallpaper. Only meaningful once there
+    // is an image - the empty tile keeps its surface either way, or the
+    // placeholder glyph floats on nothing.
+    readonly property bool transparentBackground: PluginState.option("custom-image", "transparentBackground", false)
+    readonly property bool animated: root.imagePath.toLowerCase().endsWith(".gif")
     readonly property string shapeName: PluginState.option("custom-image", "shape", "Cookie4Sided")
     property bool dropHover: false
     // The resize handle assigns this directly, which breaks the binding on
@@ -116,7 +122,8 @@ Item {
                 id: imageShape
                 anchors.fill: parent
                 z: 0
-                color: Appearance.colors.colPrimaryContainer
+                color: (root.transparentBackground && root.imagePath !== "")
+                    ? "transparent" : Appearance.colors.colPrimaryContainer
                 shape: root.getShape(root.shapeName)
 
                 layer.enabled: true
@@ -130,13 +137,28 @@ Item {
 
                 StyledImage {
                     anchors.fill: parent
-                    source: root.imagePath !== "" ? root.imagePath : ""
+                    source: (root.imagePath !== "" && !root.animated) ? root.imagePath : ""
                     fillMode: Image.PreserveAspectCrop
                     cache: false
                     antialiasing: true
                     sourceSize.width: parent.width
                     sourceSize.height: parent.height
-                    visible: root.imagePath !== ""
+                    visible: root.imagePath !== "" && !root.animated
+                }
+
+                // A .gif plays. AnimatedImage decodes every frame on the GUI
+                // thread, so it is only in the tree for a gif rather than
+                // carrying every static image too - and it holds its frames
+                // rather than re-decoding (`cache: true` is its default,
+                // kept deliberately; the shell's perf work showed per-frame
+                // decode on this thread is what stalls the compositor side).
+                AnimatedImage {
+                    anchors.fill: parent
+                    source: (root.imagePath !== "" && root.animated) ? "file://" + root.imagePath : ""
+                    fillMode: Image.PreserveAspectCrop
+                    antialiasing: true
+                    visible: root.imagePath !== "" && root.animated
+                    playing: visible
                 }
 
                 // Placeholder + hover hint
