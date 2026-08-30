@@ -155,8 +155,6 @@ Item {
             shape: MaterialShape.Shape.Gem,
             note: Translation.tr("bar, phone, calendar, mixer, todo, session, cheatsheet"),
             entries: [
-                { type: "modules/imi/bar/PowerButton.qml", props: { } },
-                { type: "modules/imi/bar/LeftSidebarButton.qml", props: { }, toggles: true },
                 { type: "modules/imi/bar/CircleUtilButton.qml", props: {}, glyph: "search" },
                 { type: "modules/imi/phone/PhoneActionButton.qml", props: { glyph: "call", label: "Call" } },
                 { type: "modules/imi/phone/PhoneDeviceChip.qml", props: {} },
