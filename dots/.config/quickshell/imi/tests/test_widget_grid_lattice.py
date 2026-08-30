@@ -142,20 +142,9 @@ class RootSizesGoThroughTheGridHelpers(unittest.TestCase):
 class PortedWidgetsDeclareTheSpansTheyActuallyOccupy(unittest.TestCase):
     """The two widgets this test was written for, pinned mode by mode."""
 
-    # `widgetWidth`/`widgetHeight` used to name the spans on their own line.
-    # They are the ANIMATING box now - both widgets morph in one tree, so the
-    # box travels towards a settled span rather than snapping to it - and the
-    # span helpers moved one step back, into the `spanWidthOf`/`spanHeightOf`
-    # every element's geometry is evaluated at. Both halves are still pinned:
-    # the file reaches the lattice through the helpers, and the animating box
-    # follows a span rather than a literal.
-    def assertBoxFollowsTheSpan(self, src, name):
-        width = re.search(r"property real widgetWidth:\s*(.+)", src).group(1)
-        height = re.search(r"property real widgetHeight:\s*(.+)", src).group(1)
-        self.assertEqual(width.strip(), "root.spanW",
-                         f"{name}'s animating box must follow the settled span")
-        self.assertEqual(height.strip(), "root.spanH", name)
-
+    # Both widgets own only their settled spans now: the manifest declares
+    # `grid.sizes`, the host owns and animates the box, and the widget's
+    # implicit size is the settled-span fallback a bare probe renders at.
     def test_world_clock_is_2x2_or_3x1(self):
         src = (BUNDLED / "world-clock/Widget.qml").read_text(encoding="utf-8")
         self.assertIn("widgetGridSpanX(2)", src)
@@ -164,7 +153,8 @@ class PortedWidgetsDeclareTheSpansTheyActuallyOccupy(unittest.TestCase):
         self.assertIn("widgetGridSpanY(2)", src)
         self.assertIn("widgetGridSpanY(1)", src,
                       "the wide mode is one row, so 108 tall - not 120")
-        self.assertBoxFollowsTheSpan(src, "world-clock")
+        self.assertIn("implicitWidth: root.spanW", src,
+                      "the probe fallback is the settled span")
 
     def test_calendar_reaches_the_lattice_through_the_span_helpers(self):
         """calendar adopted `grid.sizes`, so the host owns its box and the
@@ -199,17 +189,19 @@ class ManifestFloorsAreRealSpans(unittest.TestCase):
                 self.assertIn(manifest["defaultHeight"], SPAN_Y.values(),
                               f"{name} defaultHeight is not a spanY value")
 
-    def test_floors_are_the_smallest_span_the_widget_can_take(self):
-        """A floor larger than the widget's smallest mode makes that mode
-        unreachable, because the host takes the max of floor and content.
+    def test_no_grid_manifest_carries_a_floor_besides_its_grid(self):
+        """A manifest with a grid has no floor to get wrong - the host sizes
+        the widget to the span. Both widgets that once needed their floor
+        pinned to their smallest mode (world-clock, calendar) adopted
+        `grid.sizes`, so what remains to hold is that neither slid back to
+        carrying both mechanisms at once.
         """
-        # calendar left this list when it adopted `grid.sizes`: a manifest
-        # with a grid has no floor to get wrong.
-        for name, width, height in (("world-clock", SPAN_X[2], SPAN_Y[1]),):
+        for name in ("world-clock", "calendar"):
             manifest = json.loads(
                 (BUNDLED / name / "manifest.json").read_text(encoding="utf-8"))
-            self.assertEqual(manifest["defaultWidth"], width, name)
-            self.assertEqual(manifest["defaultHeight"], height, name)
+            self.assertIn("grid", manifest, name)
+            self.assertNotIn("defaultWidth", manifest, name)
+            self.assertNotIn("defaultHeight", manifest, name)
 
 
 class RenamedModesStillReadOldState(unittest.TestCase):

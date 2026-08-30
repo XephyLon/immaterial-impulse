@@ -162,12 +162,13 @@ function steppedSize(grid, stored, direction) {
 // idempotent - a second pass finds no `sizeMode` and answers null. Four rules
 // beyond the obvious mapping, each one a refusal to invent or destroy a size:
 //   - **a manifest that does not offer several spans is left alone entirely.**
-//     `sizeMode` is not only a retired manifest option: `world-clock` declares
-//     no `grid` and manages a `sizeMode` of its own through its own toggle, so
-//     it is a live setting there. Migrating on the key name alone deletes it
-//     and resets the widget - the exact loss this function exists to prevent,
-//     aimed at the wrong widget. (`calendar` was in this list until it adopted
-//     `grid.sizes`; the same gate is what folds its old option in now.)
+//     `sizeMode` was not only a retired manifest option: `world-clock` and
+//     `calendar` managed one of their own through their own toggles while they
+//     declared no `grid`, and migrating on the key name alone would have
+//     deleted a live setting and reset both widgets. Both have since adopted
+//     `grid.sizes` - the same gate that protected their options is what folds
+//     them in - but the gate stays: the next widget in that shape is protected
+//     the day it exists.
 //   - a stored mode the manifest does not offer is dropped without being
 //     written, exactly as resolveSize refuses to honour a stored span that is
 //     no longer offered. The widget falls back to its default rather than

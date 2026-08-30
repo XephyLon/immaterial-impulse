@@ -23,10 +23,18 @@ Item {
     // The host's drag, forwarded to the card so it lifts while it is handled.
     // A card never told about the drag silently never lifts.
     property bool hostDragging: false
-    // ...and the host's own box animation, which is always false here: the
-    // host only reports motion for a box it sizes itself, and this widget
-    // declares no `grid`. It publishes its own `boxInMotion` below.
+    // ...and the host's own box animation: the manifest declares a grid, so
+    // the box is the host's.
     property bool hostBoxInMotion: false
+
+    // The span the host resolved (docs/widget-grid.md): the stored choice,
+    // then the manifest default. Empty until the host answers, and for a
+    // bare `qs -p` probe of this file.
+    property string hostGridSize: ""
+    // Every element travels or fades on its own Behaviors; the host's
+    // midpoint dissolve would sit on top of that (the media widget's
+    // reasoning).
+    readonly property bool handlesSpanTransition: true
 
     // The card fills the whole widget, so the host's default region already has
     // the right extent - but not the right corner radius (it falls back to
@@ -45,24 +53,18 @@ Item {
             : surfaceColor;
     }
 
-    // The corner handle switches the widget between a 2x2 card and a 3x1 row of
-    // dials, so the manifest can declare no `grid`: a span is a fixed pixel size
-    // the host assigns, and it would overwrite the toggled size on every load.
-    // The widget stays content-sized instead, which is also why its root must
-    // not `anchors.fill: parent` (PluginNode derives its own size from this
-    // one - anchoring is a binding loop). Both sizes come from the component
-    // grid helpers rather than pixel literals, so they land on the lattice and
-    // follow effectiveScale. See docs/widget-grid.md.
-    //
-    // The wide mode was called "4x1" and sized 420x120, but 420 is spanX(3) and
-    // no row is 120 tall - the grid cell is 132x108. Normalising on read keeps
-    // an install that persisted "4x1" on the same mode; without it the string
-    // matches neither branch and the card renders empty with no error.
+    // The manifest offers both spans, so the size is the HOST's
+    // (`__gridSize`: the grip, the Size row and the edit stepper) and the
+    // corner toggle this widget carried went with the option it wrote -
+    // gridSizes.migrateSizeMode folds the stored choice in now that the
+    // manifest offers more than one span. Normalising still guards the
+    // probe's empty string ("4x1", the wide mode's dead name, went with the
+    // option: migration drops a span the manifest never offered).
     function normalizeSizeMode(mode) {
-        return (mode === "3x1" || mode === "4x1") ? "3x1" : "2x2";
+        return mode === "3x1" ? "3x1" : "2x2";
     }
 
-    property string sizeMode: root.normalizeSizeMode(PluginState.option("world-clock", "sizeMode", "2x2"))
+    readonly property string sizeMode: root.normalizeSizeMode(root.hostGridSize)
 
     // ---- the span, and the box travelling towards it ---------------------
     //
@@ -83,16 +85,11 @@ Item {
     readonly property real spanH: root.spanHeightOf(root.sizeMode)
     readonly property real uiScale: Appearance.effectiveScale
 
-    property real widgetWidth: root.spanW
-    property real widgetHeight: root.spanH
-    Behavior on widgetWidth { Expressive.SpanTravel {} }
-    Behavior on widgetHeight { Expressive.SpanTravel {} }
-
-    readonly property bool boxInMotion: Math.abs(root.widgetWidth - root.spanW) > 0.5
-        || Math.abs(root.widgetHeight - root.spanH) > 0.5
-
-    implicitWidth: root.widgetWidth
-    implicitHeight: root.widgetHeight
+    // The box is the host's: it animates between spans and publishes
+    // hostBoxInMotion for the length of it. The implicit size is the settled
+    // span - the fallback for a bare probe.
+    implicitWidth: root.spanW
+    implicitHeight: root.spanH
 
     // The card's own padding, shared by the 2x2 face and its settings back.
     // The wide mode deliberately does not use it - see world_clock_geometry.js.
@@ -115,12 +112,6 @@ Item {
     onSizeModeChanged: if (root.sizeMode !== "2x2") root.showingSettings = false
 
     function toggleFlip() { flipAnim.start() }
-
-    // The host (PluginWidget) is the MouseArea that drags this widget; a
-    // HoverHandler reads hover without taking press events away from it.
-    HoverHandler {
-        id: widgetHover
-    }
 
     Item {
         id: cardWrapper
@@ -166,7 +157,7 @@ Item {
             useBlurBackground: root.blurEnabled
             backgroundOpacity: root.backgroundOpacity
             dragging: root.hostDragging
-            hostMotionActive: root.hostBoxInMotion || root.boxInMotion
+            hostMotionActive: root.hostBoxInMotion
 
             // ---- the 2x2's own chrome ------------------------------------
             //
@@ -536,32 +527,6 @@ Item {
                 }
             }
 
-            Rectangle {
-                id: toggleHandle
-                width: 16; height: 16; radius: Appearance.rounding.unsharpenslight
-                color: Appearance.colors.colOnPrimaryContainer
-                anchors { right: parent.right; bottom: parent.bottom; margins: Appearance.spacing.space50 }
-                opacity: (widgetHover.hovered || toggleArea.containsMouse || toggleArea.pressed) ? 0.5 : 0
-                visible: opacity > 0 && !root.hostInteractionLocked
-
-                Behavior on opacity { animation: Appearance.animation.elementMoveFaster.numberAnimation.createObject(this) }
-
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    text: root.sizeMode === "2x2" ? "calendar_view_month" : "calendar_view_week"
-                    iconSize: 11
-                    color: Appearance.colors.colPrimaryContainer
-                }
-
-                MouseArea {
-                    id: toggleArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: PluginState.setOption("world-clock", "sizeMode",
-                        root.sizeMode === "2x2" ? "3x1" : "2x2")
-                }
-            }
         }
     }
 }

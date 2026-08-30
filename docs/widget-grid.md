@@ -358,8 +358,7 @@ it also stays square, which no span can be (the cell is 132x108), and its manife
 fights the user's choice.
 
 **Omitting `grid` is not permission to hardcode pixels.** A widget that toggles or drags between
-a fixed set of sizes — the bundled `world-clock` (2x2 / 3x1; `calendar` graduated to `grid.sizes`
-with its fourth span) —
+a fixed set of sizes —
 still has to name each of those sizes with `Appearance.sizes.widgetGridSpanX/Y`. Skipping the
 helpers costs twice: the size drifts off the lattice, and it stops following `effectiveScale`,
 so it is wrong on every scaled setup even if the unscaled number happens to be right. Only a
@@ -392,12 +391,12 @@ moves every frame and never converge
 (`test_geometry_rects_come_from_the_settled_span_not_the_animating_box`).
 
 **A widget-owned `sizeMode` is not the same thing as the retired manifest option, and a
-migration keyed on the name alone destroys it.** `world-clock` declares no
-`grid` and drives a `sizeMode` of its own from its own toggle, so for it the key is
+migration keyed on the name alone destroys it.** `world-clock` and `calendar` declared no
+`grid` and drove a `sizeMode` of their own from their own toggles, so for them the key was
 a live setting; weather and currency declared one as a manifest *option*, which is what
-`__gridSize` took over (and `calendar`, once its manifest grew `grid.sizes`, crossed from the
-first camp to the second — the same gate that once protected its option is what folds it in
-now). The `sizeMode` → `__gridSize` migration therefore acts only where
+`__gridSize` took over. Both of the first camp have since crossed to the second — the manifest
+grew `grid.sizes`, and the same gate that once protected their options is what folds them in.
+The `sizeMode` → `__gridSize` migration therefore acts only where
 the manifest offers more than one span — measured against a real shell, a pass keyed on
 the key name emptied world-clock's and calendar's options and reset both widgets, which is
 the migration's own failure mode aimed at the wrong widgets. The migration maps the stored

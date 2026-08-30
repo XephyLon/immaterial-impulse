@@ -13,6 +13,10 @@ own repo; the installer pins which revision it builds.
 ## [Unreleased]
 
 ### Added
+- **The world clock hands its size to the shell.** Its corner toggle is
+  gone; the resize grip, the Settings size row and the edit-menu stepper
+  walk its two shapes (the card, the row of dials), and a size chosen
+  with the old toggle carries over.
 - **The calendar takes a 3x2: today as a hero column beside the month.**
   An icon in its Material shape, the month in small caps, the weekday and
   the big date on the left; the whole month on its own surface to the

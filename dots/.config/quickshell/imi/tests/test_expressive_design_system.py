@@ -269,10 +269,12 @@ class ExpressiveDesignSystemTest(unittest.TestCase):
                     f"the span, so the span destroys and rebuilds the content:"
                     f"\n{binding.strip()}")
 
-        # calendar owned its span until it adopted `grid.sizes`; world-clock
-        # is the one remaining owner.
-        self.assertEqual(sorted(swept), ["world-clock"],
-                         "the sweep stopped seeing a widget that owns its span")
+        # calendar and world-clock owned their spans until both adopted
+        # `grid.sizes`; the sweep stays armed for the next widget that
+        # declares a sizeMode of its own.
+        self.assertEqual(sorted(swept), [],
+                         "a widget owns its span again - its dispatches are "
+                         "held to the one-tree rule above")
 
     def test_every_card_is_told_when_its_widget_is_handled(self):
         """A card that never receives `dragging` silently never lifts.
