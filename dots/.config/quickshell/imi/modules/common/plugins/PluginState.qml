@@ -273,7 +273,16 @@ Singleton {
     // waits for the manifest loads to settle before calling at all.
     //
     // The per-plugin work itself deletes the old key (gridSizes.migrateSizeMode),
-    // so the pass is idempotent on its own and the marker only saves the walk.
+    // so the pass is idempotent on its own - and the walk, not the marker, is
+    // what decides whether to run. The marker was the gate once, and it
+    // stranded the second wave: weather and currency burned it in 0.6, so
+    // when calendar and world-clock crossed from live `sizeMode` to
+    // `grid.sizes` months later, their freshly-retired options could never be
+    // folded - a stored 3x1 or 1x1 silently reset to the default on upgrade,
+    // which is the precise loss this migration exists to prevent. A marker
+    // records that a pass ran; only the data can say whether the NEXT pass
+    // has work. It is still written, as a record, and still never burned
+    // against an empty manifest list.
     //
     // Split in two so the substance can be driven from a TestCase: the whole
     // point of the pass is which options come out the other side, and a
@@ -298,12 +307,27 @@ Singleton {
         return nextState;
     }
 
+    // Whether any manifest offering several spans still has a stored
+    // `sizeMode` to fold. Pure, so the gate itself is drivable from a
+    // TestCase - the marker-shaped gate this replaces could only be observed
+    // by mutating the live singleton.
+    function sizeModesPending(state, manifests) {
+        if (!Array.isArray(manifests)) return false;
+        for (const manifest of manifests) {
+            if (!manifest || !manifest.id) continue;
+            if (GridSizes.offeredSizes(manifest.grid).length <= 1) continue;
+            if (state?.pluginOptions?.[manifest.id]?.sizeMode !== undefined)
+                return true;
+        }
+        return false;
+    }
+
     function migrateSizeModes(manifests) {
         if (!root.ready) return;
-        if (root.migrationRan(root.sizeModeMarker)) return;
         // Returning without marking is the whole guard: a pass over an empty
         // manifest list would burn the marker having read nothing.
         if (!Array.isArray(manifests) || manifests.length === 0) return;
+        if (!root.sizeModesPending(root.state, manifests)) return;
 
         root.state = root.stateWithSizeModesMigrated(root.state, manifests);
         writeTimer.restart();

@@ -402,10 +402,13 @@ the key name emptied world-clock's and calendar's options and reset both widgets
 the migration's own failure mode aimed at the wrong widgets. The migration maps the stored
 value onto `__gridSize` (dropping a mode the manifest does not offer, exactly as
 `resolveSize` refuses a stored span no longer on offer), deletes the old key so it is
-idempotent on its own, and is marked done under `migrations.migratedSizeMode` in
-`plugin-state.json`. It is driven by `PluginManager` on a settle timer rather than fired
-on the first non-empty manifest list, because a marker records that a pass *ran*, not
-that it saw anything, and manifests load one FileView at a time.
+idempotent on its own, and runs whenever any multi-span manifest still has a `sizeMode`
+stored — the data is the gate, not the `migrations.migratedSizeMode` marker (which is still
+written, as a record): the marker gated it once, and stranded calendar's and world-clock's
+options when they adopted `grid.sizes` after the first wave had burned it. It is driven by
+`PluginManager` on a settle timer rather than fired on the first non-empty manifest list,
+because a marker records that a pass *ran*, not that it saw anything, and manifests load
+one FileView at a time.
 db3a7d009 ("refactor(plugins): retire sizeMode in favour of the host's __gridSize").
 
 **Name a size mode after the shape it really is.** `world-clock`'s wide mode was called `"4x1"`

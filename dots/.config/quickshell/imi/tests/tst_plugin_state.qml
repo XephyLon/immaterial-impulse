@@ -309,6 +309,41 @@ TestCase {
         const next = migratedState({});
         compare(next.migrations[PluginState.sizeModeMarker], true);
     }
+    function test_a_later_adopter_is_folded_even_after_the_marker_burned() {
+        // Weather and currency migrated in 0.6 and set the marker; calendar
+        // and world-clock adopted grid.sizes months later with their own
+        // stored sizeMode. The DATA is the gate: pending must say yes while
+        // any multi-span manifest still has a sizeMode stored, whatever the
+        // marker says - the marker-shaped gate stranded exactly this case.
+        const state = {
+            migrations: { migratedSizeMode: true },
+            pluginOptions: { "calendar": { sizeMode: "2x1", blurEnabled: true } }
+        };
+        const manifests = [{ id: "calendar", grid: { cols: 2, rows: 2, sizes: [
+            { cols: 1, rows: 1 }, { cols: 2, rows: 1 },
+            { cols: 2, rows: 2 }, { cols: 3, rows: 2 }] } }];
+        verify(PluginState.sizeModesPending(state, manifests),
+               "a stranded sizeMode behind a burned marker is still pending");
+        const next = PluginState.stateWithSizeModesMigrated(state, manifests);
+        compare(next.pluginOptions["calendar"].sizeMode, undefined);
+        compare(next.pluginOptions["calendar"].__gridSize, "2x1");
+        compare(next.pluginOptions["calendar"].blurEnabled, true);
+        verify(!PluginState.sizeModesPending(next, manifests),
+               "folded state has nothing pending - the pass converges");
+    }
+
+    function test_nothing_pending_means_no_pass_at_all() {
+        const state = { pluginOptions: { "calendar": { blurEnabled: true } } };
+        const manifests = [
+            { id: "calendar", grid: { cols: 2, rows: 2, sizes: [
+                { cols: 2, rows: 2 }, { cols: 3, rows: 2 }] } },
+            { id: "notes", grid: { cols: 2, rows: 2 } }
+        ];
+        verify(!PluginState.sizeModesPending(state, manifests));
+        verify(!PluginState.sizeModesPending(null, manifests));
+        verify(!PluginState.sizeModesPending(state, "not-a-list"));
+    }
+
 
     function test_sizeModeMigrationLeavesAWidgetOwnedSizeModeAlone() {
         // world-clock declares no `grid` and drives its own sizeMode from its
