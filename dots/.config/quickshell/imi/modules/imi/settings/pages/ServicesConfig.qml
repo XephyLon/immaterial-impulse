@@ -186,12 +186,21 @@ ContentPage {
                                         colRipple: Appearance.colors.colErrorActive
                                         onClicked: {
                                             const removedIndex = index;
+                                            const count = Config.options.ai.customProviders.length;
                                             let providers = [...Config.options.ai.customProviders];
                                             providers.splice(removedIndex, 1);
                                             Config.options.ai.customProviders = providers;
 
+                                            // Keys are stored by list index, so every provider
+                                            // below the removed one moves up a slot and its key
+                                            // has to move with it - blanking the removed slot
+                                            // alone left the next provider reading its
+                                            // neighbour's key. See ai_provider_keys.js.
                                             if (KeyringStorage.loaded) {
-                                                KeyringStorage.setNestedField(["apiKeys", `custom_provider_${removedIndex}`], "");
+                                                const before = KeyringStorage.keyringData.apiKeys ?? {};
+                                                const after = ProviderKeys.apiKeysAfterRemoval(before, removedIndex, count);
+                                                for (const id of ProviderKeys.changedIds(before, after))
+                                                    KeyringStorage.setNestedField(["apiKeys", id], after[id]);
                                             }
                                         }
                                     }

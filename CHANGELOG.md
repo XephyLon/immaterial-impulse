@@ -40,6 +40,18 @@ own repo; the installer pins which revision it builds.
   own actions still work exactly where they did.
 
 ### Fixed
+- **Removing a custom AI provider no longer hands its neighbour's API key to
+  the one below it.** Keys are stored by the provider's position in the list,
+  and removal blanked the removed slot only, so every provider after it read
+  the slot above - a fetch with the wrong key, answered with a 401 the page
+  called "Failed to fetch". The keys move up with their providers now. If a
+  provider of yours already fetches with a 401, re-enter its key once.
+- **Fetching models from a custom AI provider works with the URL you have, and
+  says why when it does not.** A base URL pasted as `.../v1/models` had
+  `/models` appended again, a 404 with an empty body, and "Failed to fetch".
+  The base is normalised (a trailing `/models` or `/chat/completions` is
+  dropped), and a failure now names the HTTP status and what to do about it -
+  a 401 is the key, a 404 is the URL, no status is the server not answering.
 - **The overview opens above fullscreen windows** (#339). It sat on the
   compositor's Top layer, which fullscreen windows are composited over, so in
   a game or a video it opened behind them. It moves to the Overlay layer only
