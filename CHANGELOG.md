@@ -22,6 +22,13 @@ own repo; the installer pins which revision it builds.
   by hand. Every tile is the real widget, not a picture of one.
 
 ### Changed
+- **The classic quick toggles are drawn from the same models as the Android
+  ones.** Ten classic tiles re-derived their icon, state and actions from the
+  services by hand and had started to disagree with the models. Two of them
+  change on right-click as a result: Night Light opens its dialog (it used
+  to flip Auto), and Bluetooth opens the devices dialog (it used to launch
+  the external app). The Cloudflare WARP classic tile, which was hidden, is
+  gone.
 - **The cheatsheet is a window now, like Settings** - focused, moved and closed
   by the compositor, instead of an overlay layer. The layer took no keyboard
   input at all, which the keybind table never needed and the Components
