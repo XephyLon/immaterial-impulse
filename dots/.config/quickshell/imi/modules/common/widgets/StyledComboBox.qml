@@ -239,12 +239,17 @@ ComboBox {
             }
         }
 
-        // The unfold, on the two parts the popup draws. Anchored to the top
-        // edge, where the button is, so the list grows away from it.
+        // The unfold, on the two parts the popup draws, anchored to the
+        // edge the BUTTON is on. The popup asks for `root.height + 4` but
+        // the positioner flips it above the button when the window has no
+        // room below - and a menu that opens upward while unfolding from
+        // its top edge grows away from the button it came out of. The
+        // resolved `y` says which way it went: negative is above.
+        readonly property bool opensUpward: popup.y < 0
         component Unfold: Scale {
             required property Item part
             origin.x: part.width / 2
-            origin.y: 0
+            origin.y: popup.opensUpward ? part.height : 0
             xScale: 0.96 + 0.04 * popup.reveal
             yScale: 0.8 + 0.2 * popup.reveal
         }

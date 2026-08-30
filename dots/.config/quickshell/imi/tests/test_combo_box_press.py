@@ -71,6 +71,17 @@ class ComboBoxTests(unittest.TestCase):
                 self.assertIn(f"transform: Lift {{ part: {part} }}", source,
                               f"{name}: the {part} does not take the lift")
 
+    def test_the_unfold_grows_out_of_the_button(self):
+        """The positioner flips the menu above the button when the window
+        has no room below; the unfold must anchor to whichever edge the
+        button is on, or the list grows away from what it opened from."""
+        for name in COMBOS:
+            source = strip_comments((WIDGETS / name).read_text())
+            self.assertIn("readonly property bool opensUpward: popup.y < 0", source,
+                          f"{name} no longer reads which way the popup resolved")
+            self.assertIn("origin.y: popup.opensUpward ? part.height : 0", source,
+                          f"{name}'s unfold is anchored to one edge regardless of direction")
+
 
 if __name__ == "__main__":
     unittest.main()

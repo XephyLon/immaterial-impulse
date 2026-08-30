@@ -37,7 +37,9 @@ own repo; the installer pins which revision it builds.
   scaled the whole control, and the list opened where the shrunken button
   was and stayed there. The list also arrives and leaves now - it fades in
   while it unfolds down from the button and folds back faster - where its
-  old entrance animated an opacity from 1 to 1.
+  old entrance animated an opacity from 1 to 1. A menu that flips above
+  its button - no room below - unfolds from its bottom edge, out of the
+  button, not away from it.
 - **Option rows draw their icon plain.** Twenty-seven rows across Capture,
   Phone & Devices and the phone pages put their icon in a tile while the
   other hundred and forty did not, and a row wearing one read as a second

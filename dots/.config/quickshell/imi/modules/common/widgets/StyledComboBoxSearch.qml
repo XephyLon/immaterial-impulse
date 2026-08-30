@@ -262,10 +262,12 @@ ComboBox {
             }
         }
 
+        // Anchored to the edge the button is on - see StyledComboBox.
+        readonly property bool opensUpward: popup.y < 0
         component Unfold: Scale {
             required property Item part
             origin.x: part.width / 2
-            origin.y: 0
+            origin.y: popup.opensUpward ? part.height : 0
             xScale: 0.96 + 0.04 * popup.reveal
             yScale: 0.8 + 0.2 * popup.reveal
         }

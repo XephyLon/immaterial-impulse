@@ -14,7 +14,7 @@ ShellRoot {
         color: "transparent"
         Rectangle { anchors.fill: parent; color: Appearance.colors.colLayer1 }
         ColumnLayout {
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 24 }
+            anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: 24 }
             ConfigComboBox {
                 id: combo
                 Layout.fillWidth: true
