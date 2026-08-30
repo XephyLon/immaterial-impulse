@@ -10,13 +10,10 @@ DialogListItem {
     property var exitNode: null
     readonly property bool isNone: root.exitNode === null
 
-    active: root.isNone ? !Tailscale.exitNodeActive : (root.exitNode.active === true)
-    onClicked: {
-        if (root.isNone)
-            Tailscale.clearExitNode();
-        else
-            Tailscale.setExitNode(root.exitNode.ip);
-    }
+    // Whether this row is the current exit node, and what a pick does, are
+    // the dialog's: it has the service. The row draws.
+    signal picked(var exitNode)
+    onClicked: root.picked(root.exitNode)
 
     contentItem: RowLayout {
         anchors {
