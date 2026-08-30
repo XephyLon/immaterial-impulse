@@ -184,7 +184,7 @@ Item {
                             visible: knob.modelData.kind === "text"
                             Layout.fillWidth: true
                             text: `${knob.modelData.initial}`
-                            onTextChanged: root.setOverride(knob.modelData.name, text)
+                            onTextEdited: root.setOverride(knob.modelData.name, text)
                         }
                         ConfigSpinBox {
                             visible: knob.modelData.kind === "number"
@@ -195,7 +195,7 @@ Item {
                         StyledSwitch {
                             visible: knob.modelData.kind === "bool"
                             checked: knob.modelData.initial === true
-                            onCheckedChanged: root.setOverride(knob.modelData.name, checked)
+                            onToggled: root.setOverride(knob.modelData.name, checked)
                         }
                     }
                 }
