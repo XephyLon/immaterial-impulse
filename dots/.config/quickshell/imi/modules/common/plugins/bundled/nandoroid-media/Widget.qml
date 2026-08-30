@@ -29,6 +29,10 @@ import "media_geometry.js" as Geometry
 // cava claim for a size that shows no visualiser.
 Item {
     id: root
+    // The monitor this instance lives on; PluginNode forwards it to any
+    // widget that declares the property. Only the seeker's wave reads it.
+    property string screenName: ""
+    readonly property bool behindSpecial: HyprlandData.specialWorkspaceByMonitorName[root.screenName] ?? false
 
     // The span the host resolved, handed down by PluginNode: the stored choice,
     // then the manifest default. Empty until the host answers, and for a bare
@@ -203,6 +207,7 @@ Item {
         span: root.spanName
         progress: root.playbackProgress
         playing: MprisController.isPlaying
+        behindSpecial: root.behindSpecial
         opacity: root.lyricsUp ? 0 : 1
         Behavior on opacity { Expressive.SpanFade {} }
         visible: opacity > 0
