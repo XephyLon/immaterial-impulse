@@ -145,10 +145,23 @@ Item {
                     plate.rowControl.rippleEnabled = false;
                     plate.rowControl.interactionMotionEnabled = false;
                 }
+                // The lift is the PLATE's, so the row's content rides it:
+                // the surface's own scale moved only the surface, and the
+                // text and the switch stood still on a plate that moved
+                // under them. The surface keeps the ripple and the colour;
+                // its transform is emptied and the same scalar drives the
+                // plate.
+                transform: Scale {
+                    origin.x: plate.width / 2
+                    origin.y: plate.height / 2
+                    xScale: surface.interactionMotion.scale
+                    yScale: surface.interactionMotion.scale
+                }
                 RippleButton {
                     id: surface
                     anchors.fill: parent
                     z: -1
+                    transform: []
                     colBackground: plate.ownsItsSurface ? "transparent" : root.bgcolor
                     colBackgroundHover: plate.ownsItsSurface ? "transparent" : root.bgcolor
                     cornerTopLeft: plate.topLeftRadius
