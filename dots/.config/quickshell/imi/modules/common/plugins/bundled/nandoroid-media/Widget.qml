@@ -155,10 +155,14 @@ Item {
                 Image {
                     anchors.fill: parent
                     source: root.artUrl
+                    // Crop-fill the 132x108 tile. No sourceSize: with both
+                    // axes set the decode is fitted INSIDE them first, so a
+                    // square album art arrived 108x108 and the crop had
+                    // nothing left to crop - the tile showed a centred
+                    // square with card bars either side ("perfectly squared
+                    // when it shouldn't").
                     fillMode: Image.PreserveAspectCrop
                     cache: false
-                    sourceSize.width: width
-                    sourceSize.height: height
                     visible: root.artUrl !== ""
                 }
                 // No track, no art: the card face stays, with the glyph the
