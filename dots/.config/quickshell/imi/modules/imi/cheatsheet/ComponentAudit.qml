@@ -106,44 +106,61 @@ Item {
         spacing: 0
 
         // ---- header, and the sort ----------------------------------------
-        ButtonGroup {
+        //
+        // Laid out with the ROWS' geometry - same left inset, same cell
+        // widths - rather than as a ButtonGroup of pills. The pills took the
+        // group's fill width for themselves, so "Component" became a 660px
+        // bar and every other heading sat a full column off the numbers it
+        // named.
+        RowLayout {
             Layout.fillWidth: true
+            Layout.leftMargin: Appearance.spacing.space100 + Appearance.spacing.space150
+            Layout.rightMargin: Appearance.spacing.space100 + Appearance.spacing.space150
             Layout.bottomMargin: Appearance.spacing.space50
+            spacing: 0
 
             Repeater {
                 model: root.columns
-                delegate: GroupButton {
+                delegate: Item {
                     id: header
                     required property var modelData
+                    readonly property bool active: root.sortKey === header.modelData.key
                     Layout.preferredWidth: header.modelData.width
-                    baseWidth: header.modelData.width
-                    toggled: root.sortKey === header.modelData.key
-                    onClicked: {
-                        if (root.sortKey === header.modelData.key)
-                            root.descending = !root.descending;
-                        else {
-                            root.sortKey = header.modelData.key;
-                            root.descending = false;
+                    implicitHeight: 28
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (header.active)
+                                root.descending = !root.descending;
+                            else {
+                                root.sortKey = header.modelData.key;
+                                root.descending = false;
+                            }
                         }
                     }
-                    contentItem: RowLayout {
-                        anchors.centerIn: parent
+                    RowLayout {
+                        anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                         spacing: Appearance.spacing.space25
                         StyledText {
-                            color: header.toggled
-                                ? Appearance.colors.colOnPrimaryContainer
-                                : Appearance.colors.colOnLayer1
+                            font.weight: Font.Medium
+                            color: header.active
+                                ? Appearance.colors.colPrimary
+                                : Appearance.colors.colSubtext
                             text: header.modelData.name
                         }
                         MaterialSymbol {
-                            visible: header.toggled
+                            visible: header.active
                             iconSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnPrimaryContainer
+                            color: Appearance.colors.colPrimary
                             text: root.descending ? "arrow_downward" : "arrow_upward"
                         }
                     }
                 }
             }
+            Item { Layout.fillWidth: true }
         }
 
         StyledFlickable {
