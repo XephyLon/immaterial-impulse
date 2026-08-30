@@ -59,7 +59,18 @@ DialogListItem {
             iconSize: Appearance.font.pixelSize.larger
             color: Appearance.colors.colOnSurfaceVariant
 
+            // A StyledToolTip follows its parent's `hovered`, and a symbol
+            // has none - which reads as "always", so an offline node's
+            // tooltip was pinned open. Gated on a hover area of its own.
+            MouseArea {
+                id: offlineHover
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+            }
             StyledToolTip {
+                extraVisibleCondition: false
+                alternativeVisibleCondition: offlineHover.containsMouse
                 text: Translation.tr("Offline")
             }
         }
