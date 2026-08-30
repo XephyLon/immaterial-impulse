@@ -147,8 +147,15 @@ Slider {
                     function onValueChanged() { wavyFill.requestPaint(); }
                     function onHighlightColorChanged() { wavyFill.requestPaint(); }
                 }
+                // Only while the wave is there to see: this ran on every
+                // frame for any wavy slider that existed, and the media
+                // card's, in a sidebar kept loaded but closed, was a software
+                // raster of its canvas sixty times a second while a track
+                // played - fourteen points of the shell's main thread,
+                // measured with nothing on screen. `visible` here is the
+                // effective value, so a closed panel's slider rests.
                 FrameAnimation {
-                    running: root.animateWave
+                    running: root.animateWave && root.wavy && root.visible
                     onTriggered: {
                         wavyFill.requestPaint()
                     }
