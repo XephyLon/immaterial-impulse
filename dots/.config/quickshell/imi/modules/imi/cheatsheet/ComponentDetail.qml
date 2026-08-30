@@ -47,14 +47,24 @@ Item {
     // what a widget takes, and their JS types say how to edit them. A knob
     // list maintained by hand beside a 60-entry catalogue is a list that goes
     // stale on the first new widget.
+    //
+    // Derived from the entry and the overrides ONLY. It used to read
+    // `stage.measurements` too, and measurements change on every rebuild -
+    // so flipping one knob rebuilt the widget, which recomputed this list,
+    // which re-created every switch from the catalogue's initial values while
+    // the overrides still held the flipped one: the widget sat dimmed under
+    // an `enabled` switch showing on. A knob's initial is the override when
+    // there is one, so a rebuilt row shows the state it is in.
     readonly property var knobs: {
         const out = [];
         const props = root.entry?.props ?? {};
+        const current = name => root.overrides[name] !== undefined
+            ? root.overrides[name] : props[name];
         for (const name of Object.keys(props)) {
             const value = props[name];
             const kind = typeof value === "boolean" ? "bool"
                 : typeof value === "number" ? "number" : "text";
-            out.push({ name: name, kind: kind, initial: value });
+            out.push({ name: name, kind: kind, initial: current(name) });
         }
         // `toggled` only where the type MEANS it.
         //
@@ -67,9 +77,11 @@ Item {
         // `enabled` is different and stays everywhere: disabled is a real M3
         // state with a defined appearance, and every one of these has it.
         if (root.entry?.toggles)
-            out.push({ name: "toggled", kind: "bool", initial: false });
-        if (stage.measurements?.hasEnabled)
-            out.push({ name: "enabled", kind: "bool", initial: true });
+            out.push({ name: "toggled", kind: "bool",
+                       initial: root.overrides.toggled === true });
+        // Every Item has `enabled`; no measurement needed to offer it.
+        out.push({ name: "enabled", kind: "bool",
+                   initial: root.overrides.enabled !== false });
         return out;
     }
 
