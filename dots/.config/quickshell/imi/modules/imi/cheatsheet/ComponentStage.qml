@@ -100,7 +100,20 @@ Item {
         builder.build();
     }
 
-    onOverridesChanged: builder.build()
+    // Both through callLater, for one reason each and one together.
+    //
+    // A new ENTRY has to rebuild - there was no handler for it, so the
+    // stage under Detail rebuilt only when Detail reset the overrides, and
+    // that handler runs before this stage's `entry` binding has taken the
+    // new value: it rebuilt the widget it already had. Every second pick in
+    // Detail showed the previous widget, and the next knob "fixed" it. Nobody
+    // saw it because nobody had picked twice without relaunching.
+    //
+    // callLater coalesces: a pick changes the entry AND resets the
+    // overrides, and that is one build after every binding has settled, not
+    // two with the first one reading stale.
+    onEntryChanged: Qt.callLater(builder.build)
+    onOverridesChanged: Qt.callLater(builder.build)
 
     Item {
         id: builder
