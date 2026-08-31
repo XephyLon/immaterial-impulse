@@ -586,17 +586,19 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     const end = messageListView.originY + messageListView.contentHeight
                         + messageListView.bottomMargin - messageListView.height;
                     if (end - messageListView.contentY < 1) return;
-                    followAnim.stop();
-                    followAnim.from = messageListView.contentY;
+                    // Retarget, never restart: a restarted NumberAnimation
+                    // re-eased from zero velocity on every chunk, which
+                    // pulsed. SmoothedAnimation re-aims mid-flight and
+                    // keeps its speed.
                     followAnim.to = end;
-                    followAnim.start();
+                    if (!followAnim.running) followAnim.start();
                 }
-                NumberAnimation {
+                SmoothedAnimation {
                     id: followAnim
                     target: messageListView
                     property: "contentY"
-                    duration: 220
-                    easing.type: Easing.OutCubic
+                    velocity: 1200
+                    maximumEasingTime: 250
                 }
                 onContentHeightChanged: if (following) followToEnd()
                 onCountChanged: if (following) followToEnd()

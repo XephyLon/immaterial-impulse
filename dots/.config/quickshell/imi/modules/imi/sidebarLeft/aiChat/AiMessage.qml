@@ -66,7 +66,34 @@ Rectangle {
         }
     }
 
-    property list<var> messageBlocks: StringUtils.splitMarkdownBlocks(root.messageData?.content)
+    // The renderer's input is a COALESCED copy of the content: chunks land
+    // every few milliseconds, and re-splitting the whole markdown per chunk
+    // was the frame-dropping half of the recorded stutter. While streaming,
+    // the copy refreshes at most every 50ms; done syncs it immediately.
+    property string shownContent: root.messageData?.content ?? ""
+    Timer {
+        id: coalesceTimer
+        interval: 50
+        onTriggered: root.shownContent = root.messageData?.content ?? ""
+    }
+    Connections {
+        target: root.messageData
+        function onContentChanged() {
+            if (root.messageData?.done ?? true) {
+                coalesceTimer.stop();
+                root.shownContent = root.messageData?.content ?? "";
+            } else if (!coalesceTimer.running) {
+                coalesceTimer.start();
+            }
+        }
+        function onDoneChanged() {
+            coalesceTimer.stop();
+            root.shownContent = root.messageData?.content ?? "";
+        }
+    }
+    onMessageDataChanged: root.shownContent = root.messageData?.content ?? ""
+
+    property list<var> messageBlocks: StringUtils.splitMarkdownBlocks(root.shownContent)
     // The streaming tail re-parses on every chunk, and a Repeater over the
     // whole split rebuilt EVERY block's delegate each time - settled
     // paragraphs flashed and the trailing heading morphed between shapes
