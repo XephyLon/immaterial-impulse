@@ -1,5 +1,6 @@
 import QtQuick
 import qs.modules.common
+import Quickshell.Widgets
 import qs.modules.common.functions as Functions
 import qs.modules.common.plugins
 import qs.services
@@ -145,13 +146,15 @@ Item {
             // Clipped to the card's own radius through a rounded clip, not
             // an OpacityMask - one less ShaderEffectSource on the desktop
             // (the artwork-circle lesson in MediaTransportButton).
-            Rectangle {
+            ClippingRectangle {
                 id: tinyArtFrame
                 anchors.fill: parent
-                // The card's own radius, not a copy of its constant.
+                // The card's own radius, not a copy of its constant. A
+                // ClippingRectangle, because a plain clip is SQUARE - the
+                // full-bleed artwork painted straight over the card's
+                // rounded corners (the image-skeleton lesson, again).
                 radius: bgCard.radius
                 color: "transparent"
-                clip: true
                 Image {
                     anchors.fill: parent
                     source: root.artUrl
