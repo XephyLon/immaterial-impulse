@@ -843,21 +843,60 @@ Item {
                                     Layout.fillWidth: true
                                 }
 
-                                ConfigTextArea {
-                                    // The system prompt, finally editable
-                                    // where the rest of the AI setup lives.
+                                RowLayout {
                                     Layout.fillWidth: true
                                     Layout.topMargin: Appearance.spacing.space100
-                                    buttonIcon: "psychology"
-                                    text: Translation.tr("System prompt")
-                                    placeholderText: Translation.tr("Extra instructions for every chat")
-                                    value: Config.options.ai.systemPrompt ?? ""
-                                    onValueChanged: {
-                                        // Keystrokes only; a dying view must
-                                        // not write (the provider-wipe rule).
-                                        if (!textArea.activeFocus || !visible) return;
-                                        if (Config.options.ai.systemPrompt !== value)
-                                            Config.options.ai.systemPrompt = value;
+                                    spacing: Appearance.spacing.space100
+                                    MaterialSymbol {
+                                        text: "psychology"
+                                        iconSize: Appearance.font.pixelSize.larger
+                                        color: Appearance.colors.colOnLayer1
+                                    }
+                                    StyledText {
+                                        text: Translation.tr("System prompt")
+                                        color: Appearance.colors.colOnLayer1
+                                        font.pixelSize: Appearance.font.pixelSize.small
+                                    }
+                                }
+                                Rectangle {
+                                    // A document deserves a document editor -
+                                    // the one-row field clipped the prompt
+                                    // into an unreadable sliver.
+                                    Layout.fillWidth: true
+                                    implicitHeight: 140
+                                    radius: Appearance.rounding.normal
+                                    color: Appearance.colors.colLayer2
+                                    border.width: 1
+                                    border.color: Appearance.colors.colOutlineVariant
+
+                                    StyledFlickable {
+                                        anchors.fill: parent
+                                        anchors.margins: Appearance.spacing.space100
+                                        clip: true
+                                        contentHeight: promptEditor.implicitHeight
+
+                                        TextArea {
+                                            id: promptEditor
+                                            width: parent.width
+                                            wrapMode: TextEdit.Wrap
+                                            background: null
+                                            renderType: Text.NativeRendering
+                                            font.family: Appearance.font.family.main
+                                            font.pixelSize: Appearance.font.pixelSize.small
+                                            color: Appearance.colors.colOnLayer2
+                                            selectionColor: Appearance.colors.colSecondaryContainer
+                                            placeholderText: Translation.tr("Extra instructions for every chat")
+                                            placeholderTextColor: Appearance.colors.colSubtext
+                                            text: Config.options.ai.systemPrompt ?? ""
+                                            onTextChanged: {
+                                                // Keystrokes only; a dying
+                                                // view must not write (the
+                                                // provider-wipe rule).
+                                                if (!activeFocus || !visible) return;
+                                                if (Config.options.ai.systemPrompt !== text)
+                                                    Config.options.ai.systemPrompt = text;
+                                            }
+                                        }
                                     }
                                 }
 
