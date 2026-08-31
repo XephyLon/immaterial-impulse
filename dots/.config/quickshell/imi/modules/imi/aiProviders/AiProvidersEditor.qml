@@ -230,8 +230,11 @@ ColumnLayout {
         // outline, where the next card will appear.
         id: addProviderButton
         Layout.fillWidth: true
+        // Inset from the window edges - full-bleed clipped the dashes.
+        Layout.leftMargin: Appearance.spacing.space100
+        Layout.rightMargin: Appearance.spacing.space100
         Layout.topMargin: Appearance.spacing.space100
-        implicitHeight: 48
+        implicitHeight: 44
         buttonRadius: Appearance.rounding.normal
         colBackground: "transparent"
         colBackgroundHover: Appearance.colors.colLayer2Hover
@@ -256,7 +259,7 @@ ColumnLayout {
                 ctx.lineWidth = 1.5;
                 ctx.setLineDash([6, 6]);
                 const r = Appearance.rounding.normal;
-                const inset = 1;
+                const inset = 2; // full stroke width inside the canvas
                 ctx.beginPath();
                 ctx.roundedRect(inset, inset, width - inset * 2, height - inset * 2, r, r);
                 ctx.stroke();
