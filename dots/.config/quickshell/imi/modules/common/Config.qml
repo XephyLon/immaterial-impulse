@@ -138,10 +138,17 @@ Singleton {
     }
 
     function migrateSplitCheatsheetButtons() {
-        if (root.options.cheatsheet.migratedSplitButtons)
-            return;
-        root.setNestedValue("cheatsheet.splitButtons", true);
-        root.setNestedValue("cheatsheet.migratedSplitButtons", true);
+        if (!root.options.cheatsheet.migratedSplitButtons) {
+            root.setNestedValue("cheatsheet.splitButtons", true);
+            root.setNestedValue("cheatsheet.migratedSplitButtons", true);
+        }
+        // The first pass ran once and cannot see a false written after it:
+        // the p3drovfx fork trial rewrote the whole config without this
+        // migration, keeping the marker and reverting the value.
+        if (!root.options.cheatsheet.migratedSplitButtons2) {
+            root.setNestedValue("cheatsheet.splitButtons", true);
+            root.setNestedValue("cheatsheet.migratedSplitButtons2", true);
+        }
     }
 
     function migrateDesktopWidgetsToPlugins() {
@@ -853,6 +860,12 @@ Singleton {
                 // Without this the change above is invisible to anyone who has
                 // ever run the shell, because a stored value beats a QML one.
                 property bool migratedSplitButtons: false
+                // Second pass: a config the p3drovfx fork trial rewrote
+                // (2026-08-27) kept the first marker but lost the value, and
+                // defaults/config.json shipped the pre-migration false until
+                // 2026-08-31 - both leave a false nobody chose behind a
+                // marker saying it was handled.
+                property bool migratedSplitButtons2: false
                 property bool useMouseSymbol: false
                 property bool useFnSymbol: false
                 property JsonObject fontSize: JsonObject {

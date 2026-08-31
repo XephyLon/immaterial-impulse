@@ -172,3 +172,33 @@ class ShippedDesktopWidgetsSurviveTheMigration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class MigrationSeedTests(unittest.TestCase):
+    """defaults/config.json seeds fresh installs, so it must look like a
+    config no migration has ever touched - and never like one a migration
+    has already handled."""
+
+    def setUp(self):
+        self.config = json.loads(DEFAULT_CONFIG.read_text(encoding="utf-8"))
+
+    def test_no_migration_markers_shipped(self):
+        # A shipped migrated* marker tells Config.qml the pass already ran,
+        # so the value next to it is frozen forever - which is exactly how a
+        # pre-migration value gets re-seeded onto every fresh install.
+        def walk(obj, path):
+            found = []
+            if isinstance(obj, dict):
+                for key, value in obj.items():
+                    if key.startswith("migrated"):
+                        found.append(f"{path}.{key}")
+                    found += walk(value, f"{path}.{key}")
+            return found
+        self.assertEqual(walk(self.config, "$"), [],
+            "defaults/config.json must not ship migration markers")
+
+    def test_split_buttons_ships_migrated_value(self):
+        # The migration exists because the default changed to true; shipping
+        # false re-creates the pre-migration world on fresh installs (it did,
+        # until 2026-08-31).
+        self.assertIs(self.config["cheatsheet"]["splitButtons"], True)
+
