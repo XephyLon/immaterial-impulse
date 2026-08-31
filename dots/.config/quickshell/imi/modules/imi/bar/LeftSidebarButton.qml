@@ -55,6 +55,34 @@ RippleButton {
         }
     }
 
+    // The lit state: an expressive M3 shape grows in behind the distro
+    // icon while the sidebar is open - the glyph IS the "on" light, so the
+    // icon inks to onPrimary over it and the pop reverses on close.
+    MaterialShape {
+        id: litGlyph
+        anchors.centerIn: parent
+        shape: MaterialShape.Shape.Cookie6Sided
+        implicitSize: 28
+        color: Appearance.colors.colPrimary
+        scale: root.toggled ? 1 : 0
+        opacity: root.toggled ? 1 : 0
+        rotation: root.toggled ? 0 : -90
+        visible: opacity > 0.01
+        Behavior on scale {
+            NumberAnimation {
+                duration: Appearance.animation.elementMove.duration
+                easing.type: Easing.OutBack
+                easing.overshoot: 1.3
+            }
+        }
+        Behavior on rotation {
+            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+        }
+        Behavior on opacity {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
+    }
+
     CustomIcon {
         id: distroIcon
         anchors.centerIn: parent
@@ -64,7 +92,10 @@ RippleButton {
             ? Config.options.custom.distroIcon
             : `${SystemInfo.distroIcon}.svg`
         colorize: Config.options.custom.colorizeIcon
-        color: Appearance.colors.colPrimary
+        color: root.toggled ? Appearance.m3colors.m3onPrimary : Appearance.colors.colPrimary
+        Behavior on color {
+            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+        }
 
         Rectangle {
             opacity: root.showPing ? 1 : 0
